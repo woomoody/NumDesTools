@@ -1,0 +1,3 @@
+<DnaLibrary Name="NumDesTools" RuntimeVersion="v4.0" Language="CS" >
+	<ExternalLibrary Path="NumDesTools.dll" Pack="true" ExplicitExports="true" LoadFromBytes="true"/>
+</DnaLibrary>
