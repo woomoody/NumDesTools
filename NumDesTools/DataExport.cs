@@ -1232,7 +1232,8 @@ namespace NumDesTools
 
         public void TestBar2_Click(IRibbonControl control)
         {
-            DotaLegendBattle.LocalRC(8,3,3);
+            DotaLegendBattle.xxx();
+            //DotaLegendBattle.LocalRC(8,3,3);
             //SVNTools.FileLogs();
             //SVNTools.CommitFile();
             //SVNTools.DiffFile();

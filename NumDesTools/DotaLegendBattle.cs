@@ -20,14 +20,39 @@ namespace NumDesTools
 {
     internal class DotaLegendBattle
     {
+        public static void xxx()
+        {
+            dynamic app = ExcelDnaUtil.Application;
+            Worksheet ws = app.Worksheets["战斗模拟"];
+            var groupAnum = Convert.ToInt32(ws.Range["D7"].Value);
+            var groupARowMax = Convert.ToInt32(ws.Range["C5"].Value);
+            var groupAColMax = Convert.ToInt32(ws.Range["C6"].Value);
+            var groupBnum = Convert.ToInt32(ws.Range["J7"].Value);
+            var groupBRowMax = Convert.ToInt32(ws.Range["K5"].Value);
+            var groupBColMax = Convert.ToInt32(ws.Range["K6"].Value);
+            //A、B两个阵营位置和人员确认
+            String[] groupA = new String[groupAnum];
+            String[] groupB = new String[groupBnum];
+            for (var i = 0;i <  groupAnum ;i++)
+            {
+                groupA[i] = Convert.ToString(ws.Cells[10+i,5].Value);
+            }
+            for (var i = 0; i < groupBnum ; i++)
+            {
+                groupB[i] = Convert.ToString( ws.Cells[21 + i, 5].Value);
+            }
+        }
         //确定每个角色位置
         public static void LocalRC(int roleNum, int rowMax, int colMax)
         {
-            var localR = ((roleNum + rowMax - 1) % rowMax) + 1;
-            var localC = Math.Floor((double)((roleNum - 1) / colMax)) + 1;
+            var roleR = ((roleNum + rowMax - 1) % rowMax) + 1;
+            var roleC = Math.Floor((double)((roleNum - 1) / colMax)) + 1;
         }
         //判断离自己最近位置的角色
+        public static void Distance(int roleNum1, int roleNum2)
+        { 
 
+        }
         //伤害计算逻辑
     }
 }
