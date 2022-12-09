@@ -92,11 +92,10 @@ namespace NumDesTools
                     continue;
                 }
             }
-            //给A选择目标
+            //给A选择目标--抽象为方法
             List<int> targetA = new List<int>();
             foreach (int item1 in roleA)
             {
-                var xx = item1;
                 List<double> disA = new List<double>();
                 foreach (int item2 in roleB)
                 {
@@ -104,11 +103,8 @@ namespace NumDesTools
                     var dis = Math.Pow(Convert.ToInt32(arrA.GetValue(item1, posRow)) - Convert.ToInt32(arrB.GetValue(item2, posRow)), 2) + Math.Pow(Convert.ToInt32(arrA.GetValue(item1, posCol)) - Convert.ToInt32(arrB.GetValue(item2, posCol)), 2);
                     disA.Add(dis);
                 }
-                //筛选出最小的，多个最小随机选取一个
-                var minv = disA.Min();
-                var minvIndex = disA.IndexOf(minv);
+                //筛选出最小值，多个最小随机选取一个
                 var mintemp = int.MaxValue;
-                List<int> minT = new List<int>();
                 List<int> minIN = new List<int>();
                 foreach (int i in disA)
                 {
@@ -117,23 +113,19 @@ namespace NumDesTools
                         mintemp = i;
                     }
                 }
-                foreach (int i in disA)
+                for (int i =0;i<disA.Count;i++)
                 {
-                    var aa = 0;
-                    if (i == mintemp)
+                    if (disA[i] == mintemp)
                     {
-                        minIN.Add(aa);
+                        minIN.Add(i);
                     }
-                    aa++;
                 }
                 var lc = minIN.Count();
                 Random rndTar = new Random();
                 var rndSeed = rndTar.Next(lc);
                 var target = minIN[rndSeed];
-                var xxx = rndTar.Next(100);
-
+                targetA.Add(target);
             }
-            //给B选择目标
 
         }
         //判断离自己最近位置的角色
