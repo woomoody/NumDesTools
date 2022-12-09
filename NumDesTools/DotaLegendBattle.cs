@@ -58,64 +58,91 @@ namespace NumDesTools
             var atkSpeed = 14;//攻速
             var autoRatio = 15;//普攻占比
             var skillCD = 16;//大招CD
-            var skillDamge = 17;//伤害倍率
-            var skillHealUseSelfAtk = 18;//治疗倍率/D
-            var skillHealUseSelfHp = 19;//治疗被驴/H
-            var skillHealUseAllHp = 20;//治疗倍率/A
+            var skillCDstart = 17;//大招CD初始
+            var skillDamge = 18;//伤害倍率
+            var skillHealUseSelfAtk = 19;//治疗倍率/D
+            var skillHealUseSelfHp = 20;//治疗被驴/H
+            var skillHealUseAllHp = 21;//治疗倍率/A
+            //数据List化，不然老转类型nnd
             Range rangeA = ws.Range[ws.Cells[groupARowMin, groupAColMin], ws.Cells[groupARowMax, groupAColMax]];
             Array arrA = rangeA.Value2;
-            //过滤空位置A
-            List<int> roleA = new List<int>();
-            for (int i = 1; i < groupARowNum + 1; i++)
-            {
-                if (arrA.GetValue(i, name) != null)
-                {
-                    roleA.Add(i);
-                }
-                else
-                {
-                    continue;
-                }
-            }
+            //过滤空数据
+            var posA = DataList(groupARowNum,pos,arrA);
+            var atkA = DataList(groupARowNum, atk, arrA);
+
+            //List<int> posA = new List<int>();
+            //for (int i = 1; i < groupARowNum + 1; i++)
+            //{
+            //    if (arrA.GetValue(i, name) != null)
+            //    {
+            //        posA.Add(i);
+            //    }
+            //    else
+            //    {
+            //        continue;
+            //    }
+            //}
             Range rangeB = ws.Range[ws.Cells[groupBRowMin, groupBColMin], ws.Cells[groupBRowMax, groupBColMax]];
             Array arrB = rangeB.Value2;
-            //过滤空位置B
-            List<int> roleB = new List<int>();
-            for (int i = 1; i < groupBRowNum + 1; i++)
+            //过滤空位置
+            var posB = DataList(groupARowNum, pos, arrB);
+            var hpB = DataList(groupARowNum, hp, arrB);
+            //List<double> posB = new List<double>();
+            //for (int i = 1; i < groupBRowNum + 1; i++)
+            //{
+            //    if (arrB.GetValue(i, name) != null)
+            //    {
+            //        posB.Add(i);
+            //    }
+            //    else
+            //    {
+            //        continue;
+            //    }
+            //}
+            //获得攻击目标role索引
+            var targetA = Target(posA, posB, arrA,arrB,posRow,posCol);
+            var targetB = Target(posB, posA, arrB, arrA, posRow, posCol);
+            //posA或者posB中至少一组元素空时战斗结束
+            var numA = posA.Count;
+            var numB = posB.Count;
+            var turn = 0;
+            //while (numA <= 0 || numB <= 0)
+            //{
+            //    turn++;
+            //}
+            //A组攻击后，B组的状态
+            for (int i = 0; i < numA; i++)
             {
-                if (arrB.GetValue(i, name) != null)
-                {
-                    roleB.Add(i);
-                }
-                else
-                {
-                    continue;
-                }
+                var atktempA = atkA[i];
+                var hptempB = hpB[targetA[i]];
             }
-            //给A选择目标--抽象为方法
-            List<int> targetA = new List<int>();
-            foreach (int item1 in roleA)
+        }
+        //选择目标：距离最近
+        public static List<int> Target(List<double> posA, List<double> posB, Array arrA, Array arrB, int posRow, int posCol)
+        {
+            List<int> target= new List<int>();
+            foreach (int item1 in posA)
             {
-                List<double> disA = new List<double>();
-                foreach (int item2 in roleB)
+                List<double> disAll = new List<double>();
+                foreach (int item2 in posB)
                 {
                     //计算距离
                     var dis = Math.Pow(Convert.ToInt32(arrA.GetValue(item1, posRow)) - Convert.ToInt32(arrB.GetValue(item2, posRow)), 2) + Math.Pow(Convert.ToInt32(arrA.GetValue(item1, posCol)) - Convert.ToInt32(arrB.GetValue(item2, posCol)), 2);
-                    disA.Add(dis);
+                    disAll.Add(dis);
                 }
                 //筛选出最小值，多个最小随机选取一个
                 var mintemp = int.MaxValue;
                 List<int> minIN = new List<int>();
-                foreach (int i in disA)
+                foreach (int i in disAll)
                 {
                     if (i < mintemp)
                     {
                         mintemp = i;
                     }
                 }
-                for (int i =0;i<disA.Count;i++)
+                for (int i = 0; i < disAll.Count; i++)
                 {
-                    if (disA[i] == mintemp)
+                    if (disAll[i] == mintemp)
                     {
                         minIN.Add(i);
                     }
@@ -123,17 +150,31 @@ namespace NumDesTools
                 var lc = minIN.Count();
                 Random rndTar = new Random();
                 var rndSeed = rndTar.Next(lc);
-                var target = minIN[rndSeed];
-                targetA.Add(target);
+                var targetIndex = minIN[rndSeed];
+                target.Add(targetIndex);
             }
-
-        }
-        //判断离自己最近位置的角色
-        public static void Distance(object role1Row, object role1Col, object role2Row, object role2Col)
-        {
-            var dis = (Convert.ToInt32(role1Row) - Convert.ToInt32(role2Row)) + (Convert.ToInt32(role2Col) - Convert.ToInt32(role2Row));
+            return target;
         }
         //伤害计算逻辑
+        public static void BattleLogic(Array arrA,Array arrB)
+        {
+
+        }
+        //过滤arr数据，并且List化
+        public static List<double> DataList(int row,int col,Array arr)
+        {
+            List<double> data = new List<double>();
+            for (int i = 1; i < row + 1; i++)
+            {
+                var xxx = arr.GetValue(i, col);
+                var sss = string.IsNullOrWhiteSpace(Convert.ToString(arr.GetValue(i, col)));
+                if (sss==false)
+                {
+                    data.Add(Convert.ToDouble(arr.GetValue(i,col)));
+                }
+            }
+            return data;
+        }
     }
 }
 
