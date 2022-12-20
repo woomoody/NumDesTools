@@ -166,7 +166,7 @@ namespace NumDesTools
                 }
             }
         }
-
+        //伤害计算逻辑
         private static void DamageCaculate(dynamic defB, int i, dynamic critA, dynamic atkA, dynamic critMultiA, dynamic countSkillA,
             dynamic skillDamgeA, dynamic hpB, dynamic targetA, dynamic numA, dynamic hpA, dynamic skillHealUseAllHpA,
             dynamic hpAMax, dynamic skillHealUseSelfAtkA, dynamic skillHealUseSelfHpA)
@@ -231,11 +231,6 @@ namespace NumDesTools
             var rndSeed = rndTar.Next(lc);
             var targetIndex = minIN[rndSeed];
             return targetIndex;
-        }
-        //伤害计算逻辑
-        public static void BattleLogic(Array arrA,Array arrB)
-        {
-
         }
         //过滤arr数据，并且List化
         public static List<double> DataList(int row,int col,Array arr,int mode)
