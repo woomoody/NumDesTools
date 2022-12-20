@@ -66,9 +66,12 @@ namespace NumDesTools
             Range rangeA = ws.Range[ws.Cells[groupARowMin, groupAColMin], ws.Cells[groupARowMax, groupAColMax]];
             Array arrA = rangeA.Value2;
             //过滤空数据,A数据List化
+            var posRowA = DataList(groupARowNum, posRow, arrA, 1);
+            var posColA = DataList(groupARowNum, posCol, arrA, 1);
             var posA = DataList(groupARowNum,pos,arrA,1);
             var atkA = DataList(groupARowNum, atk, arrA, 1);
             var hpA = DataList(groupARowNum, hp, arrA, 1);
+            var hpAMax = DataList(groupARowNum, hp, arrA, 1);
             var defA = DataList(groupARowNum, def, arrA, 1);
             var critA = DataList(groupARowNum, crit, arrA, 1);
             var critMultiA = DataList(groupARowNum, critMulti, arrA, 1);
@@ -96,9 +99,12 @@ namespace NumDesTools
             Range rangeB = ws.Range[ws.Cells[groupBRowMin, groupBColMin], ws.Cells[groupBRowMax, groupBColMax]];
             Array arrB = rangeB.Value2;
             //过滤空数据,B数据List化
+            var posRowB = DataList(groupARowNum, posRow, arrB, 1);
+            var posColB = DataList(groupARowNum, posCol, arrB, 1);
             var posB = DataList(groupBRowNum, pos, arrB,1);
             var atkB = DataList(groupBRowNum, atk, arrB,1);
             var hpB = DataList(groupBRowNum, hp, arrB, 1);
+            var hpBMax = DataList(groupBRowNum, hp, arrB, 1);
             var defB = DataList(groupBRowNum, def, arrB, 1);
             var critB = DataList(groupBRowNum, crit, arrB, 1);
             var critMultiB = DataList(groupBRowNum, critMulti, arrB, 1);
@@ -124,12 +130,12 @@ namespace NumDesTools
             //    }
             //}
             //获得攻击目标role索引
-            var targetA = Target(posA, posB, arrA,arrB,posRow,posCol);
-            var targetB = Target(posB, posA, arrB, arrA, posRow, posCol);
+            //var targetA = Target(posA, posB, arrA,arrB,posRow,posCol);
+            //var targetB = Target(posB, posA, arrB, arrA, posRow, posCol);
             //战斗计算，攻速和CD放大100倍进行判定，posA或者posB中至少一组元素为空时战斗结束
-            var numA = posA.Count;
-            var numB = posB.Count;
-            var turn = 5;
+            var numA = posRowA.Count;
+            //var numB = posB.Count;
+            var turn = 0;
             //while (numA <= 0 || numB <= 0)
             //{
             //    turn++;
@@ -137,53 +143,94 @@ namespace NumDesTools
             //A组攻击后，B组的状态，判断什么时候放技能或普攻，记录次数并推算当前回合是否能释放
             for (int i = 0; i < numA; i++)
             {
-                var dmg = atkA[i];
-                var redmg = atkB[i];
-                var hptempB = hpB[targetA[i]];
-                if ((countSkillA[i] * skillCDA[i] + skillCDstartA[i] == turn))
+                //普攻效果比例默认100%
+                List<double> atkDamgeA = new List<double>();
+                atkDamgeA.Add(1);
+                //即时选择目标
+                var targetA = Target(i, posRowA, posRowB, posColA, posColB);
+                if (countSkillA[i] * Convert.ToInt32(skillCDA[i] * 100) + Convert.ToInt32(skillCDstartA[i] * 100) == turn)//判断技能CD
                 {
-                    var dsd = 2222;
-                    countSkillA[i]++;
+                    DamageCaculate(defB, i, critA, atkA, critMultiA, countSkillA, skillDamgeA, hpB, targetA, numA, hpA, skillHealUseAllHpA, hpAMax, skillHealUseSelfAtkA, skillHealUseSelfHpA);
+                    countSkillA[i]++;//释放技能，技能使用次数增加
+                }
+                else if (countATKA[i] * Convert.ToInt32(1/atkSpeedA[i] * 100) == turn)//判断普攻CD（攻速）
+                {
+                    DamageCaculate(defB, i, critA, atkA, critMultiA, countSkillA, atkDamgeA, hpB, targetA, numA, hpA, skillHealUseAllHpA, hpAMax, skillHealUseSelfAtkA, skillHealUseSelfHpA);
+                    countATKA[i]++;//释放普攻，普攻使用次数增加
+                }
+                //剔除已经死亡目标
+                if (hpB[targetA] <= 0)
+                {
+                    posRowB.RemoveAt(targetA);
+                    posColB.RemoveAt(targetA);
                 }
             }
         }
-        //选择目标：距离最近
-        public static List<int> Target(List<double> posA, List<double> posB, Array arrA, Array arrB, int posRow, int posCol)
+
+        private static void DamageCaculate(dynamic defB, int i, dynamic critA, dynamic atkA, dynamic critMultiA, dynamic countSkillA,
+            dynamic skillDamgeA, dynamic hpB, dynamic targetA, dynamic numA, dynamic hpA, dynamic skillHealUseAllHpA,
+            dynamic hpAMax, dynamic skillHealUseSelfAtkA, dynamic skillHealUseSelfHpA)
         {
-            List<int> target= new List<int>();
-            foreach (int item1 in posA)
+            Random rndCrit = new Random();
+            var rSeed = rndCrit.Next(10000);
+            double dmg = 0;
+            double redmg = defB[i] / 100000 + 1;
+            if (Convert.ToInt32(critA[i] * 10000) >= rSeed)
             {
-                List<double> disAll = new List<double>();
-                foreach (int item2 in posB)
-                {
-                    //计算距离
-                    var dis = Math.Pow(Convert.ToInt32(arrA.GetValue(item1, posRow)) - Convert.ToInt32(arrB.GetValue(item2, posRow)), 2) + Math.Pow(Convert.ToInt32(arrA.GetValue(item1, posCol)) - Convert.ToInt32(arrB.GetValue(item2, posCol)), 2);
-                    disAll.Add(dis);
-                }
-                //筛选出最小值，多个最小随机选取一个
-                var mintemp = int.MaxValue;
-                List<int> minIN = new List<int>();
-                foreach (int i in disAll)
-                {
-                    if (i < mintemp)
-                    {
-                        mintemp = i;
-                    }
-                }
-                for (int i = 0; i < disAll.Count; i++)
-                {
-                    if (disAll[i] == mintemp)
-                    {
-                        minIN.Add(i);
-                    }
-                }
-                var lc = minIN.Count();
-                Random rndTar = new Random();
-                var rndSeed = rndTar.Next(lc);
-                var targetIndex = minIN[rndSeed];
-                target.Add(targetIndex);
+                dmg = atkA[i] * critMultiA[i];
             }
-            return target;
+            else
+            {
+                dmg = atkA[i];
+            }
+            countSkillA[i]++; //释放技能，技能使用次数增加
+            dmg = dmg / redmg * skillDamgeA[i]; //目标血量减少量
+            hpB[targetA] -= dmg;
+            //遍历群体加血
+            for (int j = 0; j < numA; j++)
+            {
+                hpA[j] += skillHealUseAllHpA[i] * hpA[j];
+                hpA[j] = Math.Min(hpA[j], hpAMax[j]);
+            }
+            hpA[i] += skillHealUseSelfAtkA[i] * atkA[i] + skillHealUseSelfHpA[i] * hpA[i];
+            hpA[i] = Math.Min(hpA[i], hpAMax[i]);
+        }
+
+        //选择目标：距离最近
+        public static int Target(int item1,dynamic posRowA, dynamic posRowB,dynamic posColA,dynamic posColB)
+        {
+            List<double> disAll = new List<double>();
+            var countEle = posRowB.Count;
+            for (int item2=0;item2<countEle;item2++)
+            {
+                //计算距离
+                var disRow = Math.Pow(Convert.ToInt32(posRowA[item1]- posRowB[item2]), 2);
+                var disCol = Math.Pow(Convert.ToInt32(posColA[item1]- posColB[item2]), 2);
+                var dis = disRow + disCol;
+                disAll.Add(dis);
+            }
+            //筛选出最小值，多个最小随机选取一个
+            var mintemp = int.MaxValue;
+            List<int> minIN = new List<int>();
+            foreach (int i in disAll)
+            {
+                if (i < mintemp)
+                {
+                    mintemp = i;
+                }
+            }
+            for (int i = 0; i < disAll.Count; i++)
+            {
+                if (disAll[i] == mintemp)
+                {
+                    minIN.Add(i);
+                }
+            }
+            var lc = minIN.Count();
+            Random rndTar = new Random();
+            var rndSeed = rndTar.Next(lc);
+            var targetIndex = minIN[rndSeed];
+            return targetIndex;
         }
         //伤害计算逻辑
         public static void BattleLogic(Array arrA,Array arrB)
