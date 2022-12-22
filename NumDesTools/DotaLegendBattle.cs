@@ -20,12 +20,20 @@ using System.Collections.Generic;
 using System.Web.Security;
 using System.Security.Cryptography;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace NumDesTools
 {
     internal class DotaLegendBattle
     {
         static string battleLog = "";
+
+        public static void test()
+        {
+            var i=0;
+            Parallel.For(0, 100, i => {xxx(); });
+        }
+
         public static void xxx()
         {
            dynamic app = ExcelDnaUtil.Application;
@@ -70,12 +78,12 @@ namespace NumDesTools
             int skillHealUseSelfHp = 20; //治疗被驴/H
             int skillHealUseAllHp = 21; //治疗倍率/A
             ;
-            var testBattleMax = battleTimes;
+            //var testBattleMax = battleTimes;
             var vicAcount = 0;
             var vicBcount = 0;
             var vicABcount = 0;
-            for (int testBattle =0; testBattle< testBattleMax;testBattle++)
-            {
+            //for (int testBattle =0; testBattle< testBattleMax;testBattle++)
+            //{
                 //初始化A、B两个阵营的
                 Range rangeA = ws.Range[ws.Cells[groupARowMin, groupAColMin], ws.Cells[groupARowMax, groupAColMax]];
                 Array arrA = rangeA.Value2;
@@ -199,15 +207,15 @@ namespace NumDesTools
                 var ad = numA;
                 var acd = numB;
                 var log = battleLog;
-            }
-            ws.Range["D3"].Value2 = vicAcount;
-            ws.Range["J3"].Value2 = vicBcount;
-            ws.Range["G3"].Value2 = vicABcount;
+            //}
+            //ws.Range["D3"].Value2 = vicAcount;
+            //ws.Range["J3"].Value2 = vicBcount;
+            //ws.Range["G3"].Value2 = vicABcount;
 
-            if (testBattleMax == 1)
-            {
-                ws.Range["Z1"].Value = battleLog;
-            }
+            //if (testBattleMax == 1)
+            //{
+            //    ws.Range["Z1"].Value = battleLog;
+            //}
         }
 
         private static void BattleMethod(dynamic num1, dynamic posRow1, dynamic posRow2, dynamic posCol1, dynamic posCol2,
