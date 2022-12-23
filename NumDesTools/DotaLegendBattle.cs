@@ -24,6 +24,66 @@ using System.Threading.Tasks;
 
 namespace NumDesTools
 {
+    public  class DotaLegendBattleTem
+    {
+        public static void batimeTem()
+        {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+
+            //初始化数据，执行1次，循环验证不用再操作excel了
+            string battleLog = "";
+             dynamic app = ExcelDnaUtil.Application;
+             Worksheet ws = app.Worksheets["战斗模拟"];
+            dynamic groupARowMin = Convert.ToInt32(ws.Range["C9"].Value);
+            dynamic groupAColMin = Convert.ToInt32(ws.Range["C10"].Value); 
+            dynamic groupARowMax = Convert.ToInt32(ws.Range["C11"].Value);
+         dynamic groupAColMax = Convert.ToInt32(ws.Range["C12"].Value);
+         dynamic groupARowNum = groupARowMax - groupARowMin + 1;
+        dynamic groupAColNum = groupAColMax - groupAColMin + 1;
+         dynamic groupBRowMin = Convert.ToInt32(ws.Range["C20"].Value);
+         dynamic groupBColMin = Convert.ToInt32(ws.Range["C21"].Value);
+         dynamic groupBRowMax = Convert.ToInt32(ws.Range["C22"].Value);
+         dynamic groupBColMax = Convert.ToInt32(ws.Range["C23"].Value);
+         dynamic groupBRowNum = groupBRowMax - groupBRowMin + 1;
+        dynamic groupBColNum = groupBColMax - groupBColMin + 1;
+        dynamic battleTimes = Convert.ToInt32(ws.Range["G1"].Value);
+
+         dynamic battleFirst = Convert.ToString(ws.Range["G4"].Value);
+
+        //声明角色各属性所在列
+         int posRow = 1; //角色所在行
+         int posCol = 2; //角色所在列
+         int pos = 3; //角色在阵型中的位置
+         int name = 4; //角色名
+        int detailType = 5; //扩展类型
+        int type = 6; //大类型
+        int lvl = 7; //角色等级
+        int skillLv = 8; //技能等级
+         int atk = 9; //攻击力
+         int hp = 10; //生命值
+         int def = 11; //防御力
+         int crit = 12; // 暴击率
+         int critMulti = 13; //暴击倍率 
+         int atkSpeed = 14; //攻速
+        int autoRatio = 15; //普攻占比
+         int skillCD = 16; //大招CD
+         int skillCDstart = 17; //大招CD初始
+         int skillDamge = 18; //伤害倍率
+         int skillHealUseSelfAtk = 19; //治疗倍率/D
+         int skillHealUseSelfHp = 20; //治疗被驴/H
+
+         int skillHealUseAllHp = 21; //治疗倍率/A
+
+        //初始化A、B两个阵营的
+         Range rangeA = ws.Range[ws.Cells[groupARowMin, groupAColMin], ws.Cells[groupARowMax, groupAColMax]];
+         Array arrA = rangeA.Value2;
+         Range rangeB = ws.Range[ws.Cells[groupBRowMin, groupBColMin], ws.Cells[groupBRowMax, groupBColMax]];
+         Array arrB = rangeB.Value2;
+
+        }
+    }
+
     internal class DotaLegendBattle
     {
         //初始化数据，执行1次，循环验证不用再操作excel了
@@ -82,15 +142,31 @@ namespace NumDesTools
              int vicBcountTotal = 0;
              int vicABcountTotal = 0;
              int testBattleMax = Convert.ToInt32(ws.Range["G1"].Value);
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
             Parallel.For<int>(0, testBattleMax, () => 0, (testBattle, loop, vicAcount) =>
-                { 
+                {
                     vicAcount += xxx();
                     return vicAcount;
                     Thread.Sleep(1);
                 },
                 (x) => Interlocked.Add(ref vicAcountTotal, x)
             );
+            sw.Stop();
+            TimeSpan ts2 = sw.Elapsed;
+
+            //Stopwatch sw2 = new Stopwatch();
+            //sw2.Start();
+            //for (int testBattle = 0; testBattle < testBattleMax; testBattle++)
+            //{
+            //    vicAcount += xxx();
             //}
+
+            //vicAcountTotal = vicAcount;
+            //sw2.Stop();
+            //TimeSpan ts3 = sw2.Elapsed;
+            //Debug.Print(ts3.ToString());
+
             ws.Range["D3"].Value2 = vicAcountTotal;
             ws.Range["J3"].Value2 = testBattleMax - vicAcountTotal;
             //if (testBattleMax == 1)
@@ -164,8 +240,8 @@ namespace NumDesTools
                 //var firstSeed = firtATK.Next(1);
                 if (battleFirst == "A")
                 {
-                    numA = posRowA.Count;
                     //A组攻击后，B组的状态
+                    numA = posRowA.Count;
                     BattleMethod(numA, posRowA, posRowB, posColA, posColB, countSkillA, skillCDA, skillCDstartA,
                         turn, defB,
                         critA, atkA, critMultiA, skillDamgeA, hpB, hpA, skillHealUseAllHpA, hpAMax,
@@ -175,16 +251,9 @@ namespace NumDesTools
                         skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB, nameA, nameB,
                         countSkillB,
                         countATKB, true, hpBMax);
-                    //numB = posRowB.Count;
-                    ////B组攻击后，A组的状态
-                    //Thread thread = new Thread(() => BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCDB, skillCDstartB, turn, defA,
-                    //    critB, atkB, critMultiB, skillDamgeB, hpA, hpB, skillHealUseAllHpB, hpBMax, skillHealUseSelfAtkB,
-                    //    skillHealUseSelfHpB, countATKB, atkSpeedB, posA,
-                    //    atkA, critA, critMultiA, atkSpeedA, skillCDA, skillCDstartA, skillDamgeA,
-                    //    skillHealUseSelfAtkA, skillHealUseSelfHpA, skillHealUseAllHpA, nameB, nameA, countSkillA, countATKA, false, hpAMax));
-                    //thread.Start();
-                    numB = posRowB.Count;
+
                     //B组攻击后，A组的状态
+                    numB = posRowB.Count;
                     BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCDB, skillCDstartB,
                         turn, defA,
                         critB, atkB, critMultiB, skillDamgeB, hpA, hpB, skillHealUseAllHpB, hpBMax,
@@ -194,44 +263,46 @@ namespace NumDesTools
                         skillHealUseSelfAtkA, skillHealUseSelfHpA, skillHealUseAllHpA, nameB, nameA,
                         countSkillA,
                         countATKA, false, hpAMax);
-
                 }
+                //else
+                //{
+                    //B组攻击后，A组的状态
+                    numB = posRowB.Count;
+                    BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCDB, skillCDstartB,
+                        turn,
+                        defA,
+                        critB, atkB, critMultiB, skillDamgeB, hpA, hpB, skillHealUseAllHpB, hpBMax,
+                        skillHealUseSelfAtkB,
+                        skillHealUseSelfHpB, countATKB, atkSpeedB, posA,
+                        atkA, critA, critMultiA, atkSpeedA, skillCDA, skillCDstartA, skillDamgeA,
+                        skillHealUseSelfAtkA, skillHealUseSelfHpA, skillHealUseAllHpA, nameB, nameA, countSkillA,
+                        countATKA, false, hpAMax);
 
-                numB = posRowB.Count;
-                //B组攻击后，A组的状态
-                BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCDB, skillCDstartB,
-                    turn,
-                    defA,
-                    critB, atkB, critMultiB, skillDamgeB, hpA, hpB, skillHealUseAllHpB, hpBMax,
-                    skillHealUseSelfAtkB,
-                    skillHealUseSelfHpB, countATKB, atkSpeedB, posA,
-                    atkA, critA, critMultiA, atkSpeedA, skillCDA, skillCDstartA, skillDamgeA,
-                    skillHealUseSelfAtkA, skillHealUseSelfHpA, skillHealUseAllHpA, nameB, nameA, countSkillA,
-                    countATKA, false, hpAMax);
-                //A组攻击后，B组的状态
-                numA = posRowA.Count;
-                BattleMethod(numA, posRowA, posRowB, posColA, posColB, countSkillA, skillCDA, skillCDstartA,
-                    turn,
-                    defB,
-                    critA, atkA, critMultiA, skillDamgeA, hpB, hpA, skillHealUseAllHpA, hpAMax,
-                    skillHealUseSelfAtkA,
-                    skillHealUseSelfHpA, countATKA, atkSpeedA, posB,
-                    atkB, critB, critMultiB, atkSpeedB, skillCDB, skillCDstartB, skillDamgeB,
-                    skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB, nameA, nameB, countSkillB,
-                    countATKB, true, hpBMax);
+                    //A组攻击后，B组的状态
+                    numA = posRowA.Count;
+                    BattleMethod(numA, posRowA, posRowB, posColA, posColB, countSkillA, skillCDA, skillCDstartA,
+                        turn,
+                        defB,
+                        critA, atkA, critMultiA, skillDamgeA, hpB, hpA, skillHealUseAllHpA, hpAMax,
+                        skillHealUseSelfAtkA,
+                        skillHealUseSelfHpA, countATKA, atkSpeedA, posB,
+                        atkB, critB, critMultiB, atkSpeedB, skillCDB, skillCDstartB, skillDamgeB,
+                        skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB, nameA, nameB, countSkillB,
+                        countATKB, true, hpBMax);
+                    //}
                 turn++;
             } while (numA > 0 && numB > 0);
             //lock (obj)
             //{
-            var vicAcounttemp=0;
+            var ad = numA;
+            var acd = numB;
+            var log = battleLog;
+            var vicAcounttemp =0;
             if (numA > numB)
             {
                 vicAcounttemp=1;
             }
             return vicAcounttemp;
-            var ad = numA;
-            var acd = numB;
-            var log = battleLog;
         }
 
         private static void BattleMethod(dynamic num1, dynamic posRow1, dynamic posRow2, dynamic posCol1, dynamic posCol2,

@@ -1232,7 +1232,15 @@ namespace NumDesTools
 
         public void TestBar2_Click(IRibbonControl control)
         {
+            
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            //DotaLegendBattle.xxx();
             DotaLegendBattle.batime();
+            //DotaLegendBattleTem.batimeTem();
+            sw.Stop();
+            TimeSpan ts2 = sw.Elapsed;
+            Debug.Print(ts2.ToString());
             //DotaLegendBattle.LocalRC(8,3,3);
             //SVNTools.FileLogs();
             //SVNTools.CommitFile();
