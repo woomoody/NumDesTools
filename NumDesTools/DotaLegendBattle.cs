@@ -21,66 +21,194 @@ using System.Web.Security;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.Configuration;
 
 namespace NumDesTools
 {
+    public class duoxianchengceshi
+    {
+        private static object m_monitorObject = new object();
+        private static int hhc=100;
+        [STAThread]
+        public static void Main()
+        {
+            Thread thread = new Thread(new ThreadStart(Do));
+            thread.Name = " Thread1 ";
+            Thread thread2 = new Thread(new ThreadStart(Do));
+            thread2.Name = " Thread2 ";
+            thread.Start();
+            thread2.Start();
+            thread.Join();
+            thread2.Join();
+            Console.Read();
+            var adsd = hhc;
+            Debug.Print(adsd.ToString());
+        }
+
+        static void Do()
+        {
+            if (!Monitor.TryEnter(m_monitorObject))
+            {
+                Console.WriteLine(" Can't visit Object " + Thread.CurrentThread.Name);
+                Debug.Print(" Can't visit Object " + Thread.CurrentThread.Name);
+                return;
+            }
+
+            try
+            {
+                Monitor.Enter(m_monitorObject);
+                Console.WriteLine(" Enter Monitor " + Thread.CurrentThread.Name);
+                Debug.Print(" Enter Monitor " + Thread.CurrentThread.Name);
+                hhc -= 10;
+                return;
+                Thread.Sleep(5000);
+            }
+            finally
+            {
+                Monitor.Exit(m_monitorObject);
+            }
+        }
+    }
+
     public  class DotaLegendBattleTem
     {
+        private static object m_monitorObject = new object();
+        private static int hpB;
         public static void batimeTem()
         {
+            //    Stopwatch sw = new Stopwatch();
+            //    sw.Start();
+
+            //    //初始化数据，执行1次，循环验证不用再操作excel了
+            //    string battleLog = "";
+            //     dynamic app = ExcelDnaUtil.Application;
+            //     Worksheet ws = app.Worksheets["战斗模拟"];
+            //    dynamic groupARowMin = Convert.ToInt32(ws.Range["C9"].Value);
+            //    dynamic groupAColMin = Convert.ToInt32(ws.Range["C10"].Value); 
+            //    dynamic groupARowMax = Convert.ToInt32(ws.Range["C11"].Value);
+            // dynamic groupAColMax = Convert.ToInt32(ws.Range["C12"].Value);
+            // dynamic groupARowNum = groupARowMax - groupARowMin + 1;
+            //dynamic groupAColNum = groupAColMax - groupAColMin + 1;
+            // dynamic groupBRowMin = Convert.ToInt32(ws.Range["C20"].Value);
+            // dynamic groupBColMin = Convert.ToInt32(ws.Range["C21"].Value);
+            // dynamic groupBRowMax = Convert.ToInt32(ws.Range["C22"].Value);
+            // dynamic groupBColMax = Convert.ToInt32(ws.Range["C23"].Value);
+            // dynamic groupBRowNum = groupBRowMax - groupBRowMin + 1;
+            //dynamic groupBColNum = groupBColMax - groupBColMin + 1;
+            //dynamic battleTimes = Convert.ToInt32(ws.Range["G1"].Value);
+
+            // dynamic battleFirst = Convert.ToString(ws.Range["G4"].Value);
+
+            ////声明角色各属性所在列
+            // int posRow = 1; //角色所在行
+            // int posCol = 2; //角色所在列
+            // int pos = 3; //角色在阵型中的位置
+            // int name = 4; //角色名
+            //int detailType = 5; //扩展类型
+            //int type = 6; //大类型
+            //int lvl = 7; //角色等级
+            //int skillLv = 8; //技能等级
+            // int atk = 9; //攻击力
+            // int hp = 10; //生命值
+            // int def = 11; //防御力
+            // int crit = 12; // 暴击率
+            // int critMulti = 13; //暴击倍率 
+            // int atkSpeed = 14; //攻速
+            //int autoRatio = 15; //普攻占比
+            // int skillCD = 16; //大招CD
+            // int skillCDstart = 17; //大招CD初始
+            // int skillDamge = 18; //伤害倍率
+            // int skillHealUseSelfAtk = 19; //治疗倍率/D
+            // int skillHealUseSelfHp = 20; //治疗被驴/H
+
+            // int skillHealUseAllHp = 21; //治疗倍率/A
+
+            ////初始化A、B两个阵营的
+            // Range rangeA = ws.Range[ws.Cells[groupARowMin, groupAColMin], ws.Cells[groupARowMax, groupAColMax]];
+            // Array arrA = rangeA.Value2;
+            // Range rangeB = ws.Range[ws.Cells[groupBRowMin, groupBColMin], ws.Cells[groupBRowMax, groupBColMax]];
+            // Array arrB = rangeB.Value2;
+
+            //Thread.CurrentThread.Name = "Main";
+            hpB = 100;
+            //Thread readThread = new(new ThreadStart(test134));
+            //readThread.Name = "ReadThread1";
+            //Thread readThread2 = new (new ThreadStart(test134));
+            //readThread2.Name = "ReadThread2";
+            //readThread.Start();
+            //readThread2.Start();
+
+            //同步血量,尝试计算
+            int a = 0;
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            //初始化数据，执行1次，循环验证不用再操作excel了
-            string battleLog = "";
-             dynamic app = ExcelDnaUtil.Application;
-             Worksheet ws = app.Worksheets["战斗模拟"];
-            dynamic groupARowMin = Convert.ToInt32(ws.Range["C9"].Value);
-            dynamic groupAColMin = Convert.ToInt32(ws.Range["C10"].Value); 
-            dynamic groupARowMax = Convert.ToInt32(ws.Range["C11"].Value);
-         dynamic groupAColMax = Convert.ToInt32(ws.Range["C12"].Value);
-         dynamic groupARowNum = groupARowMax - groupARowMin + 1;
-        dynamic groupAColNum = groupAColMax - groupAColMin + 1;
-         dynamic groupBRowMin = Convert.ToInt32(ws.Range["C20"].Value);
-         dynamic groupBColMin = Convert.ToInt32(ws.Range["C21"].Value);
-         dynamic groupBRowMax = Convert.ToInt32(ws.Range["C22"].Value);
-         dynamic groupBColMax = Convert.ToInt32(ws.Range["C23"].Value);
-         dynamic groupBRowNum = groupBRowMax - groupBRowMin + 1;
-        dynamic groupBColNum = groupBColMax - groupBColMin + 1;
-        dynamic battleTimes = Convert.ToInt32(ws.Range["G1"].Value);
+            Task taskA = Task.Run(() =>
+             {
+                 hpB -= test134(a);
+                 hpB = Math.Min(hpB, 1000);
+                 Debug.Print(hpB.ToString()+"taskA");
+             }
+            );
+            taskA.Wait();
+            Task taskB = Task.Run(() =>
+                {
+                    hpB += test134(a);
+                    hpB += 1000;
+                    hpB = Math.Min(hpB, 1000);
+                    Debug.Print(hpB.ToString() + "taskB");
+                }
+            );
+            taskB.Wait();
 
-         dynamic battleFirst = Convert.ToString(ws.Range["G4"].Value);
+            sw.Stop();
+            TimeSpan ts2 = sw.Elapsed;
+            Debug.Print(ts2.ToString());
 
-        //声明角色各属性所在列
-         int posRow = 1; //角色所在行
-         int posCol = 2; //角色所在列
-         int pos = 3; //角色在阵型中的位置
-         int name = 4; //角色名
-        int detailType = 5; //扩展类型
-        int type = 6; //大类型
-        int lvl = 7; //角色等级
-        int skillLv = 8; //技能等级
-         int atk = 9; //攻击力
-         int hp = 10; //生命值
-         int def = 11; //防御力
-         int crit = 12; // 暴击率
-         int critMulti = 13; //暴击倍率 
-         int atkSpeed = 14; //攻速
-        int autoRatio = 15; //普攻占比
-         int skillCD = 16; //大招CD
-         int skillCDstart = 17; //大招CD初始
-         int skillDamge = 18; //伤害倍率
-         int skillHealUseSelfAtk = 19; //治疗倍率/D
-         int skillHealUseSelfHp = 20; //治疗被驴/H
+            Stopwatch sw2= new Stopwatch();
+            sw2.Start();
 
-         int skillHealUseAllHp = 21; //治疗倍率/A
+            hpB -= test134(a);
+            hpB = Math.Min(hpB, 1000);
+            Debug.Print(hpB.ToString() + "11");
+            hpB += test134(a);
+            hpB += 1000;
+            hpB = Math.Min(hpB, 1000);
+            Debug.Print(hpB.ToString() + "22");
 
-        //初始化A、B两个阵营的
-         Range rangeA = ws.Range[ws.Cells[groupARowMin, groupAColMin], ws.Cells[groupARowMax, groupAColMax]];
-         Array arrA = rangeA.Value2;
-         Range rangeB = ws.Range[ws.Cells[groupBRowMin, groupBColMin], ws.Cells[groupBRowMax, groupBColMax]];
-         Array arrB = rangeB.Value2;
+            sw.Stop();
+            TimeSpan ts3 = sw2.Elapsed;
+            Debug.Print(ts3.ToString());
 
+
+            var asd = hpB;
+        }
+
+        public static int test134(int a)
+        {
+            var cad = 0;
+            for (int i = 0; i < 10; i++)
+            {
+                cad++;
+            }
+            return cad;
+        }
+        public static void test234()
+        {
+            if (!Monitor.TryEnter(m_monitorObject))
+            {
+                hpB += 15;
+                return;
+            }
+            try
+            {
+                Monitor.Enter(m_monitorObject);
+                Thread.Sleep(5000);
+            }
+            finally
+            {
+                Monitor.Exit(m_monitorObject);
+            }
         }
     }
 
@@ -148,7 +276,6 @@ namespace NumDesTools
                 {
                     vicAcount += xxx();
                     return vicAcount;
-                    Thread.Sleep(1);
                 },
                 (x) => Interlocked.Add(ref vicAcountTotal, x)
             );
@@ -236,10 +363,12 @@ namespace NumDesTools
             var turn = 0;
             do
             {
-                //Random firtATK = new Random();
-                //var firstSeed = firtATK.Next(1);
-                if (battleFirst == "A")
+                Random firtATK = new Random();
+                var firstSeed = firtATK.Next(2);
+                if (firstSeed == 0)
                 {
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
                     //A组攻击后，B组的状态
                     numA = posRowA.Count;
                     BattleMethod(numA, posRowA, posRowB, posColA, posColB, countSkillA, skillCDA, skillCDstartA,
@@ -251,7 +380,8 @@ namespace NumDesTools
                         skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB, nameA, nameB,
                         countSkillB,
                         countATKB, true, hpBMax);
-
+                    TimeSpan ts2 = sw.Elapsed;
+                    Debug.Print(ts2.ToString());
                     //B组攻击后，A组的状态
                     numB = posRowB.Count;
                     BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCDB, skillCDstartB,
@@ -265,7 +395,7 @@ namespace NumDesTools
                         countATKA, false, hpAMax);
                 }
                 //else
-                //{
+                {
                     //B组攻击后，A组的状态
                     numB = posRowB.Count;
                     BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCDB, skillCDstartB,
@@ -289,9 +419,9 @@ namespace NumDesTools
                         atkB, critB, critMultiB, atkSpeedB, skillCDB, skillCDstartB, skillDamgeB,
                         skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB, nameA, nameB, countSkillB,
                         countATKB, true, hpBMax);
-                    //}
+                }
                 turn++;
-            } while (numA > 0 && numB > 0);
+            } while (numA > 0 && numB > 0 && turn <9001);
             //lock (obj)
             //{
             var ad = numA;
@@ -322,7 +452,11 @@ namespace NumDesTools
 
                 atkDamgeA.Add(1);
                 //即时选择目标
+               // Stopwatch sw = new Stopwatch();
+                //sw.Start();
                 var targetA = Target(i, posRow1, posRow2, posCol1, posCol2, num1);
+                //TimeSpan ts4 = sw.Elapsed;
+                //Debug.Print(ts4.ToString());
                 if (targetA != 9999)
                 {
                     //战斗计算，攻速和CD放大100倍进行判定
@@ -331,15 +465,23 @@ namespace NumDesTools
                     var cc = countATK1[i] * Convert.ToInt32(1 / atkSpeed1[i] * 100);
                     if (aa+bb == turn) //判断技能CD
                     {
+                        //Stopwatch sw2 = new Stopwatch();
+                        //sw2.Start();
                         DamageCaculate(def2, i, crit1, atk1, critMulti1, skillDamge1, hp2, targetA, num1,
                             hp1, skillHealUseAllHp1, hp1Max, skillHealUseSelfAtk1, skillHealUseSelfHp1,true,name1,name2,isAB);
                         countSkill1[i]++; //释放技能，技能使用次数增加
+                        //TimeSpan ts3 = sw2.Elapsed;
+                        //Debug.Print(ts3.ToString());
                     }
                     else if(cc == turn) //判断普攻CD（攻速）
                     {
+                        //Stopwatch sw2 = new Stopwatch();
+                        //sw2.Start();
                         DamageCaculate(def2, i, crit1, atk1, critMulti1, atkDamgeA, hp2, targetA, num1,
                             hp1, skillHealUseAllHp1, hp1Max, skillHealUseSelfAtk1, skillHealUseSelfHp1, false,name1, name2, isAB);
                         countATK1[i]++; //释放普攻，普攻使用次数增加
+                        //TimeSpan ts5 = sw2.Elapsed;
+                        //Debug.Print(ts5.ToString());
                     }
 
                     //剔除已经死亡目标的所有数据
@@ -496,5 +638,3 @@ namespace NumDesTools
         }
     }
 }
-
-

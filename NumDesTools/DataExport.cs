@@ -1236,8 +1236,9 @@ namespace NumDesTools
             Stopwatch sw = new Stopwatch();
             sw.Start();
             //DotaLegendBattle.xxx();
-            DotaLegendBattle.batime();
-            //DotaLegendBattleTem.batimeTem();
+            //DotaLegendBattle.batime();
+            DotaLegendBattleTem.batimeTem();
+            //duoxianchengceshi.Main();
             sw.Stop();
             TimeSpan ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
