@@ -17,11 +17,13 @@ using CheckBox = System.Windows.Forms.CheckBox;
 
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.Web.Security;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Configuration;
+using System.Xml.Linq;
 
 namespace NumDesTools
 {
@@ -263,16 +265,16 @@ namespace NumDesTools
 
         public static void batime()
         {
-             int vicAcount = 0;
-             int vicBcount = 0;
-             int vicABcount = 0;
-             int vicAcountTotal = 0;
-             int vicBcountTotal = 0;
-             int vicABcountTotal = 0;
-             int testBattleMax = Convert.ToInt32(ws.Range["G1"].Value);
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            Parallel.For<int>(0, testBattleMax, () => 0, (testBattle, loop, vicAcount) =>
+            int vicAcount = 0;
+            int vicBcount = 0;
+            int vicABcount = 0;
+            int vicAcountTotal = 0;
+            int vicBcountTotal = 0;
+            int vicABcountTotal = 0;
+            int testBattleMax = Convert.ToInt32(ws.Range["G1"].Value);
+             Parallel.For<int>(0, testBattleMax, () => 0, (testBattle, loop, vicAcount) =>
                 {
                     vicAcount += xxx();
                     return vicAcount;
@@ -281,7 +283,7 @@ namespace NumDesTools
             );
             sw.Stop();
             TimeSpan ts2 = sw.Elapsed;
-
+            Debug.Print(ts2.ToString() + "多线程开销");
             //Stopwatch sw2 = new Stopwatch();
             //sw2.Start();
             //for (int testBattle = 0; testBattle < testBattleMax; testBattle++)
@@ -306,6 +308,8 @@ namespace NumDesTools
         {
             //for (int testBattle =0; testBattle< testBattleMax;testBattle++)
             //{
+            Stopwatch sw2 = new Stopwatch();
+            sw2.Start();
             //过滤空数据,A数据List化
             var posRowA = DataList(groupARowNum, posRow, arrA, 1);
             var nameA = NameList(groupARowNum, name, arrA, 1);
@@ -361,15 +365,22 @@ namespace NumDesTools
             var numA = 0;
             var numB = 0;
             var turn = 0;
+            var batime = 0;
+            TimeSpan ts3 = sw2.Elapsed;
+            Debug.Print(ts3.ToString() + "List数据开销");
+            Stopwatch sw3 = new Stopwatch();
+            sw3.Start();
             do
             {
                 Random firtATK = new Random();
                 var firstSeed = firtATK.Next(2);
                 if (firstSeed == 0)
                 {
-                    Stopwatch sw = new Stopwatch();
-                    sw.Start();
-                    //A组攻击后，B组的状态
+                    Stopwatch sw5 = new Stopwatch();
+                    sw5.Start();
+                    //Task taskA = Task.Run(() =>
+                    //    {
+                            //A组攻击后，B组的状态
                     numA = posRowA.Count;
                     BattleMethod(numA, posRowA, posRowB, posColA, posColB, countSkillA, skillCDA, skillCDstartA,
                         turn, defB,
@@ -380,10 +391,13 @@ namespace NumDesTools
                         skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB, nameA, nameB,
                         countSkillB,
                         countATKB, true, hpBMax);
-                    TimeSpan ts2 = sw.Elapsed;
-                    Debug.Print(ts2.ToString());
-                    //B组攻击后，A组的状态
-                    numB = posRowB.Count;
+                    //    }
+                    //);
+                    //taskA.Wait();
+                    //Task taskB = Task.Run(() =>
+                    //     {
+                        //B组攻击后，A组的状态
+                        numB = posRowB.Count;
                     BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCDB, skillCDstartB,
                         turn, defA,
                         critB, atkB, critMultiB, skillDamgeB, hpA, hpB, skillHealUseAllHpB, hpBMax,
@@ -393,11 +407,21 @@ namespace NumDesTools
                         skillHealUseSelfAtkA, skillHealUseSelfHpA, skillHealUseAllHpA, nameB, nameA,
                         countSkillA,
                         countATKA, false, hpAMax);
+                    //     }
+                    //);
+                    //taskB.Wait();
+                    TimeSpan ts2 = sw5.Elapsed;
+                    batime++;
+                    Debug.Print(ts2.ToString() + "每次计算开销:计算次数"+ batime);
                 }
                 //else
                 {
-                    //B组攻击后，A组的状态
-                    numB = posRowB.Count;
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
+                    //Task taskD = Task.Run(() =>
+                    //    {
+                        //B组攻击后，A组的状态
+                        numB = posRowB.Count;
                     BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCDB, skillCDstartB,
                         turn,
                         defA,
@@ -407,9 +431,13 @@ namespace NumDesTools
                         atkA, critA, critMultiA, atkSpeedA, skillCDA, skillCDstartA, skillDamgeA,
                         skillHealUseSelfAtkA, skillHealUseSelfHpA, skillHealUseAllHpA, nameB, nameA, countSkillA,
                         countATKA, false, hpAMax);
-
-                    //A组攻击后，B组的状态
-                    numA = posRowA.Count;
+                    //    }
+                    //);
+                    //taskD.Wait();
+                    //Task taskC = Task.Run(() =>
+                    //    {
+                        //A组攻击后，B组的状态
+                        numA = posRowA.Count;
                     BattleMethod(numA, posRowA, posRowB, posColA, posColB, countSkillA, skillCDA, skillCDstartA,
                         turn,
                         defB,
@@ -419,11 +447,19 @@ namespace NumDesTools
                         atkB, critB, critMultiB, atkSpeedB, skillCDB, skillCDstartB, skillDamgeB,
                         skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB, nameA, nameB, countSkillB,
                         countATKB, true, hpBMax);
+                    //    }
+                    //);
+                    //taskC.Wait();
+                    TimeSpan ts2 = sw.Elapsed;
+                    batime++;
+                    Debug.Print(ts2.ToString() + "每次计算开销:计算次数"+ batime);
                 }
                 turn++;
             } while (numA > 0 && numB > 0 && turn <9001);
             //lock (obj)
             //{
+            TimeSpan ts5 = sw2.Elapsed;
+            Debug.Print(ts5.ToString() + "do循环开销");
             var ad = numA;
             var acd = numB;
             var log = battleLog;
@@ -443,21 +479,17 @@ namespace NumDesTools
         {
             //普攻效果比例默认100%
             List<double> atkDamgeA = new List<double>();
-            for (int i = 0; i < num1; i++)
+            int i;
+            for (i = 0; i < num1; i++)
             {
-                if (i >= countSkill1.Count)
-                {
-                    i = countSkill1.Count - 1;
-                }
-
                 atkDamgeA.Add(1);
                 //即时选择目标
                // Stopwatch sw = new Stopwatch();
                 //sw.Start();
-                var targetA = Target(i, posRow1, posRow2, posCol1, posCol2, num1);
+                i = Target(i, posRow1, posRow2, posCol1, posCol2);
                 //TimeSpan ts4 = sw.Elapsed;
                 //Debug.Print(ts4.ToString());
-                if (targetA != 9999)
+                if (i != 9999)
                 {
                     //战斗计算，攻速和CD放大100倍进行判定
                     var aa = countSkill1[i] * Convert.ToInt32(skillCD1[i] * 100);
@@ -465,9 +497,8 @@ namespace NumDesTools
                     var cc = countATK1[i] * Convert.ToInt32(1 / atkSpeed1[i] * 100);
                     if (aa+bb == turn) //判断技能CD
                     {
-                        //Stopwatch sw2 = new Stopwatch();
-                        //sw2.Start();
-                        DamageCaculate(def2, i, crit1, atk1, critMulti1, skillDamge1, hp2, targetA, num1,
+
+                        DamageCaculate(def2, i, crit1, atk1, critMulti1, skillDamge1, hp2, i, num1,
                             hp1, skillHealUseAllHp1, hp1Max, skillHealUseSelfAtk1, skillHealUseSelfHp1,true,name1,name2,isAB);
                         countSkill1[i]++; //释放技能，技能使用次数增加
                         //TimeSpan ts3 = sw2.Elapsed;
@@ -477,7 +508,7 @@ namespace NumDesTools
                     {
                         //Stopwatch sw2 = new Stopwatch();
                         //sw2.Start();
-                        DamageCaculate(def2, i, crit1, atk1, critMulti1, atkDamgeA, hp2, targetA, num1,
+                        DamageCaculate(def2, i, crit1, atk1, critMulti1, atkDamgeA, hp2, i, num1,
                             hp1, skillHealUseAllHp1, hp1Max, skillHealUseSelfAtk1, skillHealUseSelfHp1, false,name1, name2, isAB);
                         countATK1[i]++; //释放普攻，普攻使用次数增加
                         //TimeSpan ts5 = sw2.Elapsed;
@@ -485,26 +516,26 @@ namespace NumDesTools
                     }
 
                     //剔除已经死亡目标的所有数据
-                    if (hp2[targetA] <= 0)
+                    if (hp2[i] <= 0)
                     {
-                        posRow2.RemoveAt(targetA);
-                        posCol2.RemoveAt(targetA);
-                        hp2.RemoveAt(targetA);
-                        def2.RemoveAt(targetA);
-                        //pos2.RemoveAt(targetA);
-                        atk2.RemoveAt(targetA);
-                        crit2.RemoveAt(targetA);
-                        critMulti2.RemoveAt(targetA);
-                        atkSpeed2.RemoveAt(targetA);
-                        skillCD2.RemoveAt(targetA);
-                        skillCDstart2.RemoveAt(targetA);
-                        skillDamge2.RemoveAt(targetA);
-                        skillHealUseSelfAtk2.RemoveAt(targetA);
-                        skillHealUseSelfHp2.RemoveAt(targetA);
-                        skillHealUseAllHp2.RemoveAt(targetA);
-                        countSkill2.RemoveAt(targetA);
-                        countATK2.RemoveAt(targetA);
-                        hp2Max.RemoveAt(targetA);
+                        posRow2.RemoveAt(i);
+                        posCol2.RemoveAt(i);
+                        hp2.RemoveAt(i);
+                        def2.RemoveAt(i);
+                        //pos2.RemoveAt(i);
+                        atk2.RemoveAt(i);
+                        crit2.RemoveAt(i);
+                        critMulti2.RemoveAt(i);
+                        atkSpeed2.RemoveAt(i);
+                        skillCD2.RemoveAt(i);
+                        skillCDstart2.RemoveAt(i);
+                        skillDamge2.RemoveAt(i);
+                        skillHealUseSelfAtk2.RemoveAt(i);
+                        skillHealUseSelfHp2.RemoveAt(i);
+                        skillHealUseAllHp2.RemoveAt(i);
+                        countSkill2.RemoveAt(i);
+                        countATK2.RemoveAt(i);
+                        hp2Max.RemoveAt(i);
                     }
                 }
             }
@@ -512,13 +543,13 @@ namespace NumDesTools
 
         //伤害计算逻辑
         private static void DamageCaculate(dynamic def2Dam, int i, dynamic crit1Dam, dynamic atk1Dam, dynamic critMulti1Dam,
-            dynamic skillDamge1Dam, dynamic hp2Dam, dynamic targetADam, dynamic num1Dam, dynamic hp1Dam, dynamic skillHealUseAllHp1Dam,
+            dynamic skillDamge1Dam, dynamic hp2Dam, dynamic iDam, dynamic num1Dam, dynamic hp1Dam, dynamic skillHealUseAllHp1Dam,
             dynamic hp1MaxDam, dynamic skillHealUseSelfAtk1Dam, dynamic skillHealUseSelfHp1Dam, bool isSkillDam, dynamic name1Dam, dynamic name2Dam, dynamic isAB)
         {
             Random rndCrit = new Random();
             var rSeed = rndCrit.Next(10000);
             double dmg = 0;
-            double redmg = def2Dam[targetADam] / 100000 + 1;
+            double redmg = def2Dam[iDam] / 100000 + 1;
             if (Convert.ToInt32(crit1Dam[i] * 10000) >= rSeed)
             {
                 dmg = atk1Dam[i] * critMulti1Dam[i];
@@ -528,7 +559,7 @@ namespace NumDesTools
                 dmg = atk1Dam[i];
             }
             dmg = dmg / redmg * skillDamge1Dam[i]; //目标血量减少量
-            hp2Dam[targetADam] -= dmg;
+            hp2Dam[iDam] -= dmg;
             var tempRole1 = "";
             var tempRole2 = "";
             if (isAB)
@@ -541,7 +572,7 @@ namespace NumDesTools
                 tempRole1 = "B组";
                 tempRole2 = "A组";
             }
-            battleLog += name1Dam[i] +"[" +tempRole1+"]" + "攻击" + name2Dam[targetADam] +"["+tempRole2 +"]"+ "造成伤害："+Convert.ToInt32(dmg)+"\r\n";
+            battleLog += name1Dam[i] +"[" +tempRole1+"]" + "攻击" + name2Dam[iDam] +"["+tempRole2 +"]"+ "造成伤害："+Convert.ToInt32(dmg)+"\r\n";
             if (isSkillDam)
             {
                 //遍历群体加血;只有使用技能时使用
@@ -558,13 +589,12 @@ namespace NumDesTools
         }
 
         //选择目标：距离最近
-        public static int Target(int item1tar, dynamic posRow1tar, dynamic posRow2tar, dynamic posCol1tar, dynamic posCol2tar,dynamic NNNM)
+        public static int Target(int item1tar, dynamic posRow1tar, dynamic posRow2tar, dynamic posCol1tar, dynamic posCol2tar)
         {
             var countEle = posRow2tar.Count;
             if (countEle > 0)
             {
                 List<double> disAll = new List<double>();
-                var asds = NNNM;
                 for (int item2 = 0; item2 < countEle; item2++)
                 {
                     //计算距离
@@ -612,9 +642,13 @@ namespace NumDesTools
                     {
                         data.Add(Convert.ToDouble(arr.GetValue(i, col)));
                     }
-                    else
+                    else if(mode == 0)
                     {
                         data.Add(0);
+                    }
+                    else
+                    {
+                        data.Add(1);
                     }
                 }
             }
@@ -635,6 +669,318 @@ namespace NumDesTools
                 }
             }
             return data;
+        }
+        //获取所有角色数据：默认和动态
+        public static void getRoleData()
+        {
+            //默认数据
+            //过滤空数据,A数据List化
+            var posRowA = DataList(groupARowNum, posRow, arrA, 1);
+            var nameA = NameList(groupARowNum, name, arrA, 1);
+            var posColA = DataList(groupARowNum, posCol, arrA, 1);
+            var posA = DataList(groupARowNum, pos, arrA, 1);
+            var atkA = DataList(groupARowNum, atk, arrA, 1);
+            var hpA = DataList(groupARowNum, hp, arrA, 1);
+            var hpAMax = DataList(groupARowNum, hp, arrA, 1);
+            var defA = DataList(groupARowNum, def, arrA, 1);
+            var critA = DataList(groupARowNum, crit, arrA, 1);
+            var critMultiA = DataList(groupARowNum, critMulti, arrA, 1);
+            var atkSpeedA = DataList(groupARowNum, atkSpeed, arrA, 1);
+            var skillCDA = DataList(groupARowNum, skillCD, arrA, 1);
+            var skillCDstartA = DataList(groupARowNum, skillCDstart, arrA, 1);
+            var skillDamgeA = DataList(groupARowNum, skillDamge, arrA, 1);
+            var skillHealUseSelfAtkA = DataList(groupARowNum, skillHealUseSelfAtk, arrA, 1);
+            var skillHealUseSelfHpA = DataList(groupARowNum, skillHealUseSelfHp, arrA, 1);
+            var skillHealUseAllHpA = DataList(groupARowNum, skillHealUseAllHp, arrA, 1);
+            var countATKA = DataList(groupARowNum, pos, arrA, 0); //普攻次数
+            var ATKDamageA = DataList(groupARowNum, pos, arrA, 2); //普攻威力
+            var countSkillA = DataList(groupARowNum, pos, arrA, 0);
+            var hpAddA = DataList(groupARowNum, pos, arrA, 0); //增血量
+            var hpSubA = DataList(groupARowNum, pos, arrA, 0); //减血量
+
+            //过滤空数据,B数据List化
+            var posRowB = DataList(groupARowNum, posRow, arrB, 1);
+            var nameB = NameList(groupARowNum, name, arrB, 1);
+            var posColB = DataList(groupARowNum, posCol, arrB, 1);
+            var posB = DataList(groupBRowNum, pos, arrB, 1);
+            var atkB = DataList(groupBRowNum, atk, arrB, 1);
+            var hpB = DataList(groupBRowNum, hp, arrB, 1);
+            var hpBMax = DataList(groupBRowNum, hp, arrB, 1);
+            var defB = DataList(groupBRowNum, def, arrB, 1);
+            var critB = DataList(groupBRowNum, crit, arrB, 1);
+            var critMultiB = DataList(groupBRowNum, critMulti, arrB, 1);
+            var atkSpeedB = DataList(groupBRowNum, atkSpeed, arrB, 1);
+            var skillCDB = DataList(groupBRowNum, skillCD, arrB, 1);
+            var skillCDstartB = DataList(groupBRowNum, skillCDstart, arrB, 1);
+            var skillDamgeB = DataList(groupBRowNum, skillDamge, arrB, 1);
+            var skillHealUseSelfAtkB = DataList(groupBRowNum, skillHealUseSelfAtk, arrB, 1);
+            var skillHealUseSelfHpB = DataList(groupBRowNum, skillHealUseSelfHp, arrB, 1);
+            var skillHealUseAllHpB = DataList(groupBRowNum, skillHealUseAllHp, arrB, 1);
+            var countATKB = DataList(groupARowNum, pos, arrB, 0); //普通次数
+            var ATKDamageB = DataList(groupARowNum, pos, arrA, 2); //普攻威力
+            var countSkillB = DataList(groupARowNum, pos, arrB, 0);
+            var hpAddB = DataList(groupARowNum, pos, arrA, 0); //增血量
+            var hpSubB = DataList(groupARowNum, pos, arrA, 0); //减血量
+            //每一轮数据变化：增量变化；当前数据+-=增量更新数据
+            int numA = hpA.Count;
+            int numB = hpB.Count;
+            int turn=0;
+            turnTime groundA = new turnTime();
+            turnTime groundB = new turnTime();
+            while (numA > 0 && numB > 0 && turn < 9001)
+            {
+                groundA.countSkill1 = countSkillA;
+                groundA.skillCD1 = skillCDA;
+                groundA.skillCDstart1 = skillCDstartA;
+                groundA.countATK1 = countATKA;
+                groundA.atkSpeed1 = atkSpeedA;
+                groundA.posRow1 = posRowA;
+                groundA.posRow2 = posRowB;
+                groundA.posCol1 = posColA;
+                groundA.posCol2=posColB;
+                groundA.def2 = defB;
+                groundA.crit1 = critA;
+                groundA.atk1 = atkA;
+                groundA.critMulti1 = critMultiA;
+                groundA.hpSub=hpSubA;
+                groundA.skillDamge1=skillDamgeA;
+                groundA.hp1 = hpA;
+                groundA.hpAdd=hpAddA;
+                groundA.skillHealUseAllHp1 = skillHealUseAllHpA;
+                groundA.skillHealUseSelfAtk1=skillHealUseSelfAtkA;
+                groundA.skillHealUseSelfHp1 = skillHealUseAllHpA;
+                groundA.ATKDamage1 = ATKDamageA;
+                groundA.num1 = numA;
+                groundA.turn = turn;
+                groundA.isAB = true;
+
+                groundB.countSkill1 = countSkillB;
+                groundB.skillCD1 = skillCDB;
+                groundB.skillCDstart1 = skillCDstartB;
+                groundB.countATK1 = countATKB;
+                groundB.atkSpeed1 = atkSpeedB;
+                groundB.posRow1 = posRowB;
+                groundB.posRow2 = posRowA;
+                groundB.posCol1 = posColB;
+                groundB.posCol2 = posColA;
+                groundB.def2 = defA;
+                groundB.crit1 = critB;
+                groundB.atk1 = atkB;
+                groundB.critMulti1 = critMultiB;
+                groundB.hpSub = hpSubB;
+                groundB.skillDamge1 = skillDamgeB;
+                groundB.hp1 = hpB;
+                groundB.hpAdd = hpAddB;
+                groundB.skillHealUseAllHp1 = skillHealUseAllHpB;
+                groundB.skillHealUseSelfAtk1 = skillHealUseSelfAtkB;
+                groundB.skillHealUseSelfHp1 = skillHealUseAllHpB;
+                groundB.ATKDamage1 = ATKDamageB;
+                groundB.num1 = numB;
+                groundB.turn = turn;
+                groundB.isAB = false;
+
+                numA = hpA.Count;
+                numB = hpB.Count;
+
+                //A、B同步进行战斗A
+                var threadA = new Thread(new ThreadStart(groundA.battleData));
+                threadA.Name = " A攻击 ";
+                threadA.Start();
+                threadA.Join();
+
+                var threadB = new Thread(new ThreadStart(groundB.battleData));;
+                threadB.Name = " B攻击 ";
+                threadB.Start();
+                threadB.Join();
+                //同步数据,血量
+                for (int i = 0; i < numA; i++)
+                {
+                    hpA[i] += hpAddA[i];
+                    hpA[i] = Math.Min(hpA[i], hpAMax[i]);
+                    hpA[i] += hpSubB[i];
+                    hpA[i] = Math.Min(hpA[i], hpAMax[i]);
+                    hpAddA[i] = 0;
+                    hpSubB[i] = 0;
+                    if (hpA[i] <= 0)
+                    {
+                        posRowA.RemoveAt(i);
+                        posColA.RemoveAt(i);
+                        hpA.RemoveAt(i);
+                        defA.RemoveAt(i);
+                        //posA.RemoveAt(i);
+                        atkA.RemoveAt(i);
+                        critA.RemoveAt(i);
+                        critMultiA.RemoveAt(i);
+                        atkSpeedA.RemoveAt(i);
+                        skillCDA.RemoveAt(i);
+                        skillCDstartA.RemoveAt(i);
+                        skillDamgeA.RemoveAt(i);
+                        skillHealUseSelfAtkA.RemoveAt(i);
+                        skillHealUseSelfHpA.RemoveAt(i);
+                        skillHealUseAllHpA.RemoveAt(i);
+                        countSkillA.RemoveAt(i);
+                        countATKA.RemoveAt(i);
+                        hpAMax.RemoveAt(i);
+                    }
+                }
+                for (int i = 0; i < numB; i++)
+                {
+                    hpB[i] += hpAddB[i];
+                    hpB[i] = Math.Min(hpB[i], hpBMax[i]);
+                    hpB[i] += hpSubA[i];
+                    hpB[i] = Math.Min(hpB[i], hpBMax[i]);
+                    hpAddB[i] = 0;
+                    hpSubA[i] = 0;
+                    if (hpB[i] <= 0)
+                    {
+                        posRowB.RemoveAt(i);
+                        posColB.RemoveAt(i);
+                        hpB.RemoveAt(i);
+                        defB.RemoveAt(i);
+                        //posB.RemoveAt(i);
+                        atkB.RemoveAt(i);
+                        critB.RemoveAt(i);
+                        critMultiB.RemoveAt(i);
+                        atkSpeedB.RemoveAt(i);
+                        skillCDB.RemoveAt(i);
+                        skillCDstartB.RemoveAt(i);
+                        skillDamgeB.RemoveAt(i);
+                        skillHealUseSelfAtkB.RemoveAt(i);
+                        skillHealUseSelfHpB.RemoveAt(i);
+                        skillHealUseAllHpB.RemoveAt(i);
+                        countSkillB.RemoveAt(i);
+                        countATKB.RemoveAt(i);
+                        hpBMax.RemoveAt(i);
+                    }
+                }
+                turn++;
+            }
+        }
+        //每一轮的战斗情况：伤害、治疗、BUFF等
+
+        private static void tarHpDiv(int num1, dynamic def2Dam, dynamic iDam, dynamic crit1Dam, dynamic atk1Dam, dynamic critMulti1Dam, dynamic skillDamge1Dam)
+        {
+            List<double> dmg = new List<double>();
+            Parallel.For(0, num1, i =>
+                {
+                    Random rndCrit = new Random();
+                    var rSeed = rndCrit.Next(10000);
+                    double redmg = def2Dam[iDam] / 100000 + 1;
+                    if (Convert.ToInt32(crit1Dam[i] * 10000) >= rSeed)
+                    {
+                        dmg[iDam] = atk1Dam[i] * critMulti1Dam[i];
+                    }
+                    else
+                    {
+                        dmg[iDam] = atk1Dam[i];
+                    }
+                    dmg[iDam] = dmg[iDam] / redmg * skillDamge1Dam[i]; //目标血量减少量
+                }
+            );
+        }
+        private static double hpDmg(int num1,dynamic atk1)
+        {
+            return 0;
+        }
+    }
+
+    class turnTime
+    {
+        public  List<double> countSkill1,
+            skillCD1,
+            skillCDstart1,
+            countATK1,
+            atkSpeed1,
+            posRow1,
+            posRow2,
+            posCol1,
+            posCol2,
+            def2,
+            crit1,
+            atk1,
+            critMulti1,
+            hpSub,
+            skillDamge1,
+            hp1,
+            hpAdd,
+            skillHealUseAllHp1,
+            skillHealUseSelfAtk1,
+            skillHealUseSelfHp1,
+            ATKDamage1;
+        //dynamic countSkill1, dynamic countATK1, dynamic atkSpeed1, dynamic turn, dynamic skillCD1, dynamic skillCDstart1, dynamic num1,
+        //    dynamic posRow1, dynamic posRow2, dynamic posCol1, dynamic posCol2, dynamic def2, dynamic crit1, dynamic atk1, dynamic critMulti1, dynamic skillDamge1
+        //, dynamic hp2, dynamic name1, dynamic name2, dynamic hp1, dynamic skillHealUseAllHp1, dynamic skillHealUseSelfAtk1, dynamic skillHealUseSelfHp1, dynamic isAB
+        //, dynamic hpAdd, dynamic hpSub, dynamic ATKDamage1
+        public int num1;
+        public int turn;
+        public bool isAB;
+        public void battleData()
+        {
+            for (int i = 0; i < num1; i++)
+            {
+                //判断释放技能类型、ID//战斗计算，攻速和CD放大100倍进行判定
+                var aa = countSkill1[i] * Convert.ToInt32(skillCD1[i] * 100);
+                var bb = Convert.ToInt32(skillCDstart1[i] * 100);
+                var cc = countATK1[i] * Convert.ToInt32(1 / atkSpeed1[i] * 100);
+                var isSkill = 0;
+                if (aa + bb == turn) //判断技能CD
+                    isSkill = 1;
+                else if (cc == turn) //判断普攻CD（攻速）
+                    isSkill = 0;
+                else
+                    isSkill = -1; //不攻击
+                //判断目标
+                var target = DotaLegendBattle.Target(i, posRow1, posRow2, posCol1, posCol2);
+                //计算技能伤害、治疗效果、Buff等(汇总增量)
+                Random rndCrit = new Random();
+                var rSeed = rndCrit.Next(10000);
+                double dmg = 0;
+                double redmg = def2[target] / 100000 + 1;
+                if (Convert.ToInt32(crit1[i] * 10000) >= rSeed)
+                {
+                    dmg = atk1[i] * critMulti1[i];
+                }
+                else
+                {
+                    dmg = atk1[i];
+                }
+                var tempRole1 = "";
+                if (tempRole1 == null) throw new ArgumentNullException(nameof(tempRole1));
+                var tempRole2 = "";
+                if (tempRole2 == null) throw new ArgumentNullException(nameof(tempRole2));
+                if (isAB)
+                {
+                    tempRole1 = "A组";
+                    tempRole2 = "B组";
+                }
+                else
+                {
+                    tempRole1 = "B组";
+                    tempRole2 = "A组";
+                }
+                if (isSkill == 1)
+                {
+                    //目标减血
+                    hpSub[target] = dmg / redmg * skillDamge1[i];
+                    //battleLog += name1[i] + "[" + tempRole1 + "]" + "技能攻击" + name2[target] + "[" + tempRole2 + "]" + "造成伤害：" + Convert.ToInt32(hpSub[target]) + "\r\n";
+                    //自身加血
+                    for (int j = 0; j < hp1.Count; j++)
+                    {
+                        hpAdd[j] = skillHealUseAllHp1[i] * hp1[j];
+                        //battleLog += name1[i] + "[" + tempRole1 + "]" + "治疗" + name1[j] + "[" + tempRole1 + "]" + "回复血量：" + Convert.ToInt32(hpAdd[j]) + "\r\n";
+                    }
+                    hpAdd[i] = skillHealUseSelfAtk1[i] * atk1[i] + skillHealUseSelfHp1[i] * hp1[i];
+                    //battleLog += name1[i] + "[" + tempRole1 + "]" + "治疗自己，回复血量：" + Convert.ToInt32(skillHealUseSelfAtk1[i] * atk1[i] + skillHealUseSelfHp1[i] * hpAdd[i]) + "\r\n";
+                    countSkill1[i]++;
+                }
+                else if (isSkill == 0)
+                {
+                    //目标减血
+                    hpSub[target] = dmg / redmg * ATKDamage1[i];
+                    //battleLog += name1[i] + "[" + tempRole1 + "]" + "普通攻击" + name2[target] + "[" + tempRole2 + "]" + "造成伤害：" + Convert.ToInt32(hpSub[target]) + "\r\n";
+                    countATK1[i]++;
+                }
+            }
         }
     }
 }

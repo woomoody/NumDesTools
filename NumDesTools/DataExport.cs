@@ -1237,8 +1237,9 @@ namespace NumDesTools
             sw.Start();
             //DotaLegendBattle.xxx();
             //DotaLegendBattle.batime();
-            DotaLegendBattleTem.batimeTem();
+            //DotaLegendBattleTem.batimeTem();
             //duoxianchengceshi.Main();
+            DotaLegendBattle.getRoleData();
             sw.Stop();
             TimeSpan ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
