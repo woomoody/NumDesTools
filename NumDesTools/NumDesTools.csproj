@@ -83,6 +83,7 @@
     <Compile Include="SVNTools.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="doc\战斗数值.xlsm" />
     <None Include="lib\ExcelDna.dna">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
