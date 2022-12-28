@@ -1235,8 +1235,9 @@ namespace NumDesTools
             
             Stopwatch sw = new Stopwatch();
             sw.Start();
+            DotaLegendBattle2.xxx();
             //DotaLegendBattle.xxx();
-            DotaLegendBattle.batime();
+            //DotaLegendBattle.batime();
             //DotaLegendBattleTem.batimeTem();
             //duoxianchengceshi.Main();
             //DotaLegendBattle.getRoleData();
