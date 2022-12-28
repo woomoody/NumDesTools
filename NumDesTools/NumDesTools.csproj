@@ -65,6 +65,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DotaLegendBattle2.cs" />
     <Compile Include="DotaLegendBattle.cs" />
     <Compile Include="DataExport.cs" />
     <Compile Include="CellSelectChange.cs">
