@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
 
@@ -201,6 +202,11 @@ internal class DotaLegendBattle
 {
     //初始化数据，执行1次，循环验证不用再操作excel了
     private static string battleLog = "";
+    private static int AV = 0;
+    private static int BV = 0;
+    private static double AAHP = 0;
+    private static double BAHP = 0;
+    private static int  totalTurn = 0;
     private static readonly dynamic app = ExcelDnaUtil.Application;
     private static readonly Worksheet ws = app.Worksheets["战斗模拟"];
     private static readonly dynamic groupARowMin = Convert.ToInt32(ws.Range["C9"].Value);
@@ -263,17 +269,18 @@ internal class DotaLegendBattle
         var vicBcountTotal = 0;
         var vicABcountTotal = 0;
         int testBattleMax = Convert.ToInt32(ws.Range["G1"].Value);
-        var sw = new Stopwatch();
-        sw.Start();
-        Parallel.For(0, testBattleMax, () => 0, (testBattle, loop, vicAcount) =>
-            {
-                vicAcount += xxx();
-                return vicAcount;
-            },
-            x => Interlocked.Add(ref vicAcountTotal, x)
-        );
-        sw.Stop();
-        var ts2 = sw.Elapsed;
+
+        //Parallel.For(0, testBattleMax, () => 0, 
+        //    ( testBattle, loop, vicAcount) =>
+        //    {
+        //        vicAcount += xxx();
+        //        return vicAcount;
+        //    },
+        //    //vicAcount => Interlocked.Add(ref vicAcount, vicAcount)
+        //    x => Console.WriteLine("A胜利{0}", x)
+        //);
+
+        Parallel.For(0, testBattleMax, testBattle=> xxx());
 
         //Stopwatch sw2 = new Stopwatch();
         //sw2.Start();
@@ -287,15 +294,28 @@ internal class DotaLegendBattle
         //TimeSpan ts3 = sw2.Elapsed;
         //Debug.Print(ts3.ToString());
 
-        ws.Range["D3"].Value2 = vicAcountTotal;
-        ws.Range["J3"].Value2 = testBattleMax - vicAcountTotal;
+        ws.Range["D3"].Value2 = AV;
+        ws.Range["J3"].Value2 = BV;
+        ws.Range["B9"].Value2 = AAHP;
+        ws.Range["B20"].Value2 = BAHP;
+        ws.Range["F3"].Value2 = totalTurn/(10* testBattleMax);
+        AV = 0;
+        BV = 0;
+        AAHP = 0;
+        BAHP = 0;
+        totalTurn = 0;
+
+        //ws.Range["B9"].Value2 = hpFA;
+        //ws.Range["B20"].Value2 = hpFB;
+        //hpFA = 0;
+        //hpFB = 0;
         //if (testBattleMax == 1)
         //{
         //    ws.Range["Z1"].Value = battleLog;
         //}
     }
 
-    public static int xxx()
+    public static void xxx()
     {
         //for (int testBattle =0; testBattle< testBattleMax;testBattle++)
         //{
@@ -313,24 +333,13 @@ internal class DotaLegendBattle
         var atkSpeedA = DataList(groupARowNum, atkSpeed, arrA, 1);
         var skillCDA = DataList(groupARowNum, skillCD, arrA, 1);
         var skillCDstartA = DataList(groupARowNum, skillCDstart, arrA, 1);
-        var skillDamgeA = DataList(groupARowNum, skillDamge, arrA, 1);
+        var skillDamageA = DataList(groupARowNum, skillDamge, arrA, 1);
         var skillHealUseSelfAtkA = DataList(groupARowNum, skillHealUseSelfAtk, arrA, 1);
         var skillHealUseSelfHpA = DataList(groupARowNum, skillHealUseSelfHp, arrA, 1);
         var skillHealUseAllHpA = DataList(groupARowNum, skillHealUseAllHp, arrA, 1);
         var countATKA = DataList(groupARowNum, pos, arrA, 0); //普攻次数
         var countSkillA = DataList(groupARowNum, pos, arrA, 0);
-        //List<int> posA = new List<int>();
-        //for (int i = 1; i < groupARowNum + 1; i++)
-        //{
-        //    if (arrA.GetValue(i, name) != null)
-        //    {
-        //        posA.Add(i);
-        //    }
-        //    else
-        //    {
-        //        continue;
-        //    }
-        //}
+
         //过滤空数据,B数据List化
         var posRowB = DataList(groupARowNum, posRow, arrB, 1);
         var nameB = NameList(groupARowNum, name, arrB, 1);
@@ -345,12 +354,13 @@ internal class DotaLegendBattle
         var atkSpeedB = DataList(groupBRowNum, atkSpeed, arrB, 1);
         var skillCDB = DataList(groupBRowNum, skillCD, arrB, 1);
         var skillCDstartB = DataList(groupBRowNum, skillCDstart, arrB, 1);
-        var skillDamgeB = DataList(groupBRowNum, skillDamge, arrB, 1);
+        var skillDamageB = DataList(groupBRowNum, skillDamge, arrB, 1);
         var skillHealUseSelfAtkB = DataList(groupBRowNum, skillHealUseSelfAtk, arrB, 1);
         var skillHealUseSelfHpB = DataList(groupBRowNum, skillHealUseSelfHp, arrB, 1);
         var skillHealUseAllHpB = DataList(groupBRowNum, skillHealUseAllHp, arrB, 1);
         var countATKB = DataList(groupARowNum, pos, arrB, 0); //普通次数
         var countSkillB = DataList(groupARowNum, pos, arrB, 0);
+
         var numA = 0;
         var numB = 0;
         var turn = 0;
@@ -359,15 +369,16 @@ internal class DotaLegendBattle
             var firtATK = new Random();
             var firstSeed = firtATK.Next(2);
             if (firstSeed == 0)
+            //if(battleFirst=="A")
             {
                 //A组攻击后，B组的状态
                 numA = posRowA.Count;
                 BattleMethod(numA, posRowA, posRowB, posColA, posColB, countSkillA, skillCDA, skillCDstartA,
                     turn, defB,
-                    critA, atkA, critMultiA, skillDamgeA, hpB, hpA, skillHealUseAllHpA, hpAMax,
+                    critA, atkA, critMultiA, skillDamageA, hpB, hpA, skillHealUseAllHpA, hpAMax,
                     skillHealUseSelfAtkA,
                     skillHealUseSelfHpA, countATKA, atkSpeedA, posB,
-                    atkB, critB, critMultiB, atkSpeedB, skillCDB, skillCDstartB, skillDamgeB,
+                    atkB, critB, critMultiB, atkSpeedB, skillCDB, skillCDstartB, skillDamageB,
                     skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB, nameA, nameB,
                     countSkillB,
                     countATKB, true, hpBMax);
@@ -375,15 +386,14 @@ internal class DotaLegendBattle
                 numB = posRowB.Count;
                 BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCDB, skillCDstartB,
                     turn, defA,
-                    critB, atkB, critMultiB, skillDamgeB, hpA, hpB, skillHealUseAllHpB, hpBMax,
+                    critB, atkB, critMultiB, skillDamageB, hpA, hpB, skillHealUseAllHpB, hpBMax,
                     skillHealUseSelfAtkB,
                     skillHealUseSelfHpB, countATKB, atkSpeedB, posA,
-                    atkA, critA, critMultiA, atkSpeedA, skillCDA, skillCDstartA, skillDamgeA,
+                    atkA, critA, critMultiA, atkSpeedA, skillCDA, skillCDstartA, skillDamageA,
                     skillHealUseSelfAtkA, skillHealUseSelfHpA, skillHealUseAllHpA, nameB, nameA,
                     countSkillA,
                     countATKA, false, hpAMax);
             }
-
             else
             {
                 //B组攻击后，A组的状态
@@ -391,10 +401,10 @@ internal class DotaLegendBattle
                 BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCDB, skillCDstartB,
                     turn,
                     defA,
-                    critB, atkB, critMultiB, skillDamgeB, hpA, hpB, skillHealUseAllHpB, hpBMax,
+                    critB, atkB, critMultiB, skillDamageB, hpA, hpB, skillHealUseAllHpB, hpBMax,
                     skillHealUseSelfAtkB,
                     skillHealUseSelfHpB, countATKB, atkSpeedB, posA,
-                    atkA, critA, critMultiA, atkSpeedA, skillCDA, skillCDstartA, skillDamgeA,
+                    atkA, critA, critMultiA, atkSpeedA, skillCDA, skillCDstartA, skillDamageA,
                     skillHealUseSelfAtkA, skillHealUseSelfHpA, skillHealUseAllHpA, nameB, nameA, countSkillA,
                     countATKA, false, hpAMax);
 
@@ -403,35 +413,53 @@ internal class DotaLegendBattle
                 BattleMethod(numA, posRowA, posRowB, posColA, posColB, countSkillA, skillCDA, skillCDstartA,
                     turn,
                     defB,
-                    critA, atkA, critMultiA, skillDamgeA, hpB, hpA, skillHealUseAllHpA, hpAMax,
+                    critA, atkA, critMultiA, skillDamageA, hpB, hpA, skillHealUseAllHpA, hpAMax,
                     skillHealUseSelfAtkA,
                     skillHealUseSelfHpA, countATKA, atkSpeedA, posB,
-                    atkB, critB, critMultiB, atkSpeedB, skillCDB, skillCDstartB, skillDamgeB,
+                    atkB, critB, critMultiB, atkSpeedB, skillCDB, skillCDstartB, skillDamageB,
                     skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB, nameA, nameB, countSkillB,
                     countATKB, true, hpBMax);
             }
             turn++;
-        } while (numA > 0 && numB > 0 && turn < 9001);
+        } while (numA > 0 && numB > 0 && turn < 901);
 
         //lock (obj)
         //{
-        var ad = numA;
-        var acd = numB;
-        var log = battleLog;
-        var vicAcounttemp = 0;
-        if (numA > numB) vicAcounttemp = 1;
-        return vicAcounttemp;
-    }
+        //var ad = numA;
+        //var bd = numB;
+        //if (ad > 0)
+        //{
+        //    for (int a = 0; a < ad; a++)
+        //    {
+        //        hpFA += hpA[a];
+        //    }
+        //}
+        //if (bd > 0)
+        //{
+        //    for (int b = 0; b < bd; b++)
+        //    {
+        //        hpFB += hpB[b];
+        //    }
+        //}
 
+        var log = battleLog;
+        if (numB == 0 && numA >0) AV += 1;
+        if (numA == 0 && numB >0) BV += 1;
+        var AAHPlist =new List<double>(hpA);
+        var BAHPlist = new List<double>(hpB);
+        AAHP += AAHPlist.Sum();
+        BAHP += BAHPlist.Sum();
+        totalTurn += turn;
+    }
     private static void BattleMethod(dynamic num1, dynamic posRow1, dynamic posRow2, dynamic posCol1, dynamic posCol2,
-        dynamic countSkill1, dynamic skillCD1, dynamic skillCDstart1, int turn, dynamic def2, dynamic crit1,
-        dynamic atk1,
-        dynamic critMulti1, dynamic skillDamge1, dynamic hp2, dynamic hp1, dynamic skillHealUseAllHp1, dynamic hp1Max,
-        dynamic skillHealUseSelfAtk1, dynamic skillHealUseSelfHp1, dynamic countATK1, dynamic atkSpeed1, dynamic pos2,
-        dynamic atk2, dynamic crit2, dynamic critMulti2, dynamic atkSpeed2, dynamic skillCD2,
-        dynamic skillCDstart2, dynamic skillDamge2, dynamic skillHealUseSelfAtk2, dynamic skillHealUseSelfHp2,
-        dynamic skillHealUseAllHp2, dynamic name1, dynamic name2, dynamic countSkill2, dynamic countATK2, bool isAB,
-        dynamic hp2Max)
+            dynamic countSkill1, dynamic skillCD1, dynamic skillCDstart1, int turn, dynamic def2, dynamic crit1,
+            dynamic atk1,
+            dynamic critMulti1, dynamic skillDamge1, dynamic hp2, dynamic hp1, dynamic skillHealUseAllHp1, dynamic hp1Max,
+            dynamic skillHealUseSelfAtk1, dynamic skillHealUseSelfHp1, dynamic countATK1, dynamic atkSpeed1, dynamic pos2,
+            dynamic atk2, dynamic crit2, dynamic critMulti2, dynamic atkSpeed2, dynamic skillCD2,
+            dynamic skillCDstart2, dynamic skillDamge2, dynamic skillHealUseSelfAtk2, dynamic skillHealUseSelfHp2,
+            dynamic skillHealUseAllHp2, dynamic name1, dynamic name2, dynamic countSkill2, dynamic countATK2, bool isAB,
+            dynamic hp2Max)
     {
         //普攻效果比例默认100%
         var atkDamgeA = new List<double>();
@@ -449,9 +477,9 @@ internal class DotaLegendBattle
             if (targetA != 9999)
             {
                 //战斗计算，攻速和CD放大100倍进行判定
-                var aa = countSkill1[i] * Convert.ToInt32(skillCD1[i] * 100);
-                var bb = Convert.ToInt32(skillCDstart1[i] * 100);
-                var cc = countATK1[i] * Convert.ToInt32(1 / atkSpeed1[i] * 100);
+                var aa = countSkill1[i] * Convert.ToInt32(skillCD1[i] * 10);
+                var bb = Convert.ToInt32(skillCDstart1[i] * 10);
+                var cc = countATK1[i] * Convert.ToInt32(1 / atkSpeed1[i] * 10);
                 if (aa + bb == turn) //判断技能CD
                 {
                     //Stopwatch sw2 = new Stopwatch();
