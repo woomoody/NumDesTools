@@ -366,10 +366,10 @@ internal class DotaLegendBattle
         var turn = 0;
         do
         {
-            var firtATK = new Random();
-            var firstSeed = firtATK.Next(2);
-            if (firstSeed == 0)
-            //if(battleFirst=="A")
+            //var firtATK = new Random();
+            //var firstSeed = firtATK.Next(2);
+            //if (firstSeed == 0)
+            if(battleFirst=="A")
             {
                 //A组攻击后，B组的状态
                 numA = posRowA.Count;
@@ -486,6 +486,10 @@ internal class DotaLegendBattle
                         hp1, skillHealUseAllHp1, hp1Max, skillHealUseSelfAtk1, skillHealUseSelfHp1, true, name1, name2,
                         isAB);
                     countSkill1[i]++; //释放技能，技能使用次数增加
+                    if (cc == turn)
+                    {
+                        countATK1[i]++;//不放普攻但是计数
+                    }
                     //TimeSpan ts3 = sw2.Elapsed;
                     //Debug.Print(ts3.ToString());
                 }
