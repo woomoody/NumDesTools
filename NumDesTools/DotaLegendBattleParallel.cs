@@ -11,120 +11,117 @@ internal class excelData
 {
     private static readonly dynamic app = ExcelDnaUtil.Application;
     private static readonly Worksheet ws = app.Worksheets["战斗模拟"];
-    public static dynamic groupARowMin = Convert.ToInt32(ws.Range["C9"].Value);
-    public static dynamic groupAColMin = Convert.ToInt32(ws.Range["C10"].Value);
-    public static dynamic groupARowMax = Convert.ToInt32(ws.Range["C11"].Value);
-    public static dynamic groupAColMax = Convert.ToInt32(ws.Range["C12"].Value);
-    public static dynamic groupARowNum = groupARowMax - groupARowMin + 1;
-    public static dynamic groupBRowMin = Convert.ToInt32(ws.Range["C20"].Value);
-    public static dynamic groupBColMin = Convert.ToInt32(ws.Range["C21"].Value);
-    public static dynamic groupBRowMax = Convert.ToInt32(ws.Range["C22"].Value);
-    public static dynamic groupBColMax = Convert.ToInt32(ws.Range["C23"].Value);
-    public static dynamic battleTimes = Convert.ToInt32(ws.Range["G1"].Value);
-    public static dynamic battleFirst = Convert.ToString(ws.Range["G4"].Value);
+    public static dynamic groupARowMinPVP = Convert.ToInt32(ws.Range["C9"].Value);
+    public static dynamic groupAColMinPVP = Convert.ToInt32(ws.Range["C10"].Value);
+    public static dynamic groupARowMaxPVP = Convert.ToInt32(ws.Range["C11"].Value);
+    public static dynamic groupAColMaxPVP = Convert.ToInt32(ws.Range["C12"].Value);
+    public static dynamic groupBRowMinPVP = Convert.ToInt32(ws.Range["C20"].Value);
+    public static dynamic groupBColMinPVP = Convert.ToInt32(ws.Range["C21"].Value);
+    public static dynamic groupBRowMaxPVP = Convert.ToInt32(ws.Range["C22"].Value);
+    public static dynamic groupBColMaxPVP = Convert.ToInt32(ws.Range["C23"].Value);
+    //初始化A、B两个阵营(PVP)
+    public static Range rangeAPVP = ws.Range[ws.Cells[groupARowMinPVP, groupAColMinPVP], ws.Cells[groupARowMaxPVP, groupAColMaxPVP]];
+    public static Range rangeBPVP = ws.Range[ws.Cells[groupBRowMinPVP, groupBColMinPVP], ws.Cells[groupBRowMaxPVP, groupBColMaxPVP]];
 
-//初始化A、B两个阵营的
-    public static Range rangeA = ws.Range[ws.Cells[groupARowMin, groupAColMin],
-        ws.Cells[groupARowMax, groupAColMax]];
-
-    public static Range rangeB = ws.Range[ws.Cells[groupBRowMin, groupBColMin],
-        ws.Cells[groupBRowMax, groupBColMax]];
+    public static dynamic groupARowMinPVE = Convert.ToInt32(ws.Range["C41"].Value);
+    public static dynamic groupAColMinPVE = Convert.ToInt32(ws.Range["C42"].Value);
+    public static dynamic groupARowMaxPVE = Convert.ToInt32(ws.Range["C43"].Value);
+    public static dynamic groupAColMaxPVE = Convert.ToInt32(ws.Range["C44"].Value);
+    public static dynamic groupBRowMinPVE = Convert.ToInt32(ws.Range["C52"].Value);
+    public static dynamic groupBColMinPVE = Convert.ToInt32(ws.Range["C53"].Value);
+    public static dynamic groupBRowMaxPVE = Convert.ToInt32(ws.Range["C54"].Value);
+    public static dynamic groupBColMaxPVE = Convert.ToInt32(ws.Range["C55"].Value);
+    //初始化A、B两个阵营(PVE)
+    public static Range rangeAPVE = ws.Range[ws.Cells[groupARowMinPVE, groupAColMinPVE], ws.Cells[groupARowMaxPVE, groupAColMaxPVE]];
+    public static Range rangeBPVE = ws.Range[ws.Cells[groupBRowMinPVE, groupBColMinPVE], ws.Cells[groupBRowMaxPVE, groupBColMaxPVE]];
 }
 
 internal class DotaLegendBattleParallel
 {
-    private static readonly string battleLog = "";
-    private static int AV;
-    private static int BV;
-    private static int ABV;
-    private static double AAHP;
-    private static double BAHP;
-    private static int totalTurn;
+    private static readonly string battleLogPVP = "";
+    private static int AVPVP;
+    private static int BVPVP;
+    private static int ABVPVP;
+    private static double AAHPPVP;
+    private static double BAHPPVP;
+    private static int totalTurnPVP;
+    private static readonly string battleLogPVE = "";
+    private static int AVPVE;
+    private static int BVPVE;
+    private static int ABVPVE;
+    private static double AAHPPVE;
+    private static double BAHPPVE;
+    private static int totalTurnPVE;
     private static readonly dynamic app = ExcelDnaUtil.Application;
-
     private static readonly Worksheet ws = app.Worksheets["战斗模拟"];
 
     //初始化数据，执行1次，循环验证不用再操作excel了
-    public static void BattleSimTime()
+    public static void BattleSimTime(bool mode)
     {
-        var vicAcount = 0;
-        var vicBcount = 0;
-        var vicABcount = 0;
-        var vicAcountTotal = 0;
-        var vicBcountTotal = 0;
-        var vicABcountTotal = 0;
-        int testBattleMax = Convert.ToInt32(ws.Range["G1"].Value);
-
-        //Parallel.For(0, testBattleMax, () => 0, 
-        //    ( testBattle, loop, vicAcount) =>
-        //    {
-        //        vicAcount += xxx();
-        //        return vicAcount;
-        //    },
-        //    //vicAcount => Interlocked.Add(ref vicAcount, vicAcount)
-        //    x => Console.WriteLine("A胜利{0}", x)
-        //);
-        var groupARowMin = excelData.groupARowMin;
-        var groupAColMin = excelData.groupAColMin;
-        var groupARowMax = excelData.groupARowMax;
-        var groupAColMax = excelData.groupAColMax;
-        var groupARowNum = excelData.groupARowNum;
-        var groupBRowMin = excelData.groupBRowMin;
-        var groupBColMin = excelData.groupBColMin;
-        var groupBRowMax = excelData.groupBRowMax;
-        var groupBColMax = excelData.groupBColMax;
-        var battleTimes = excelData.battleTimes;
-        var battleFirst = excelData.battleFirst;
-        Array arrA = excelData.rangeA.Value2;
-        Array arrB = excelData.rangeB.Value2;
-
-        Parallel.For(0, testBattleMax, testBattle => BattleCaculate(groupARowMin, groupAColMin, groupARowMax, groupAColMax,
-            groupARowNum, groupBRowMin, groupBColMin, groupBRowMax, groupBColMax, battleTimes,
-            battleFirst, arrA, arrB));
-
-        //Stopwatch sw2 = new Stopwatch();
-        //sw2.Start();
-        //for (int testBattle = 0; testBattle < testBattleMax; testBattle++)
-        //{
-        //    vicAcount += xxx();
-        //}
-
-        //vicAcountTotal = vicAcount;
-        //sw2.Stop();
-        //TimeSpan ts3 = sw2.Elapsed;
-        //Debug.Print(ts3.ToString());
-
-        ws.Range["D3"].Value2 = AV;
-        ws.Range["J3"].Value2 = BV;
-        ws.Range["G3"].Value2 = ABV;
-        ws.Range["B9"].Value2 = AAHP;
-        ws.Range["B20"].Value2 = BAHP;
-        ws.Range["F3"].Value2 = totalTurn / (10 * testBattleMax);
-        AV = 0;
-        BV = 0;
-        ABV = 0;
-        AAHP = 0;
-        BAHP = 0;
-        totalTurn = 0;
-
-        //ws.Range["B9"].Value2 = hpFA;
-        //ws.Range["B20"].Value2 = hpFB;
-        //hpFA = 0;
-        //hpFB = 0;
-        //if (testBattleMax == 1)
-        //{
-        //    ws.Range["Z1"].Value = battleLog;
-        //}
+        if (mode)
+        {
+            var vicAcountPVP = 0;
+            var vicBcountPVP = 0;
+            var vicABcountPVP = 0;
+            var vicAcountTotalPVP = 0;
+            var vicBcountTotalPVP = 0;
+            var vicABcountTotalPVP = 0;
+            int testBattleMaxPVP = Convert.ToInt32(ws.Range["G1"].Value);
+            var groupARowMinPVP = excelData.groupARowMinPVP;
+            var groupARowMaxPVP = excelData.groupARowMaxPVP;
+            var groupBRowMinPVP = excelData.groupBRowMinPVP;
+            var groupBRowMaxPVP = excelData.groupBRowMaxPVP;
+            Array arrAPVP = excelData.rangeAPVP.Value2;
+            Array arrBPVP = excelData.rangeBPVP.Value2;
+            Parallel.For(0, testBattleMaxPVP, testBattle => BattleCaculate(groupARowMinPVP, groupARowMaxPVP, groupBRowMinPVP, groupBRowMaxPVP, arrAPVP, arrBPVP,mode));
+            ws.Range["D3"].Value2 = AVPVP;
+            ws.Range["J3"].Value2 = BVPVP;
+            ws.Range["G3"].Value2 = ABVPVP;
+            ws.Range["B9"].Value2 = AAHPPVP;
+            ws.Range["B20"].Value2 = BAHPPVP;
+            ws.Range["F3"].Value2 = totalTurnPVP / (10 * testBattleMaxPVP);
+            AVPVP = 0;
+            BVPVP = 0;
+            ABVPVP = 0;
+            AAHPPVP = 0;
+            BAHPPVP = 0;
+            totalTurnPVP = 0;
+        }
+        else
+        {
+            var vicAcountPVE = 0;
+            var vicBcountPVE = 0;
+            var vicABcountPVE = 0;
+            var vicAcountTotalPVE = 0;
+            var vicBcountTotalPVE = 0;
+            var vicABcountTotalPVE = 0;
+            int testBattleMaxPVE = Convert.ToInt32(ws.Range["G33"].Value);
+            var groupARowMinPVE = excelData.groupARowMinPVE;
+            var groupARowMaxPVE = excelData.groupARowMaxPVE;
+            var groupBRowMinPVE = excelData.groupBRowMinPVE;
+            var groupBRowMaxPVE = excelData.groupBRowMaxPVE;
+            Array arrAPVE = excelData.rangeAPVE.Value2;
+            Array arrBPVE = excelData.rangeBPVE.Value2;
+            Parallel.For(0, testBattleMaxPVE, testBattle => BattleCaculate(groupARowMinPVE, groupARowMaxPVE, groupBRowMinPVE, groupBRowMaxPVE, arrAPVE, arrBPVE,mode));
+            ws.Range["D35"].Value2 = AVPVE;
+            ws.Range["J35"].Value2 = BVPVE;
+            ws.Range["G35"].Value2 = ABVPVE;
+            ws.Range["B41"].Value2 = AAHPPVE;
+            ws.Range["B52"].Value2 = BAHPPVE;
+            ws.Range["F35"].Value2 = totalTurnPVE / (10 * testBattleMaxPVE);
+            AVPVE = 0;
+            BVPVE = 0;
+            ABVPVE = 0;
+            AAHPPVE = 0;
+            BAHPPVE = 0;
+            totalTurnPVE = 0;
+        }
     }
 
-    public static void BattleCaculate(dynamic groupARowMin, dynamic groupAColMin, dynamic groupARowMax, dynamic groupAColMax,
-        dynamic groupARowNum, dynamic groupBRowMin, dynamic groupBColMin,
-        dynamic groupBRowMax, dynamic groupBColMax, dynamic battleTimes, dynamic battleFirst, dynamic arrA,
-        dynamic arrB)
+    public static void BattleCaculate(dynamic groupARowMin, dynamic groupARowMax, dynamic groupBRowMin, dynamic groupBRowMax, dynamic arrA, dynamic arrB,bool mode)
     {
-        var groupAColNum = groupAColMax - groupAColMin + 1;
+        var groupARowNum = groupARowMax - groupARowMin + 1;
         var groupBRowNum = groupBRowMax - groupBRowMin + 1;
-        var groupBColNum = groupBColMax - groupBColMin + 1;
         //声明角色各属性所在列
         var posRow = 1; //角色所在行
         var posCol = 2; //角色所在列
@@ -171,9 +168,9 @@ internal class DotaLegendBattleParallel
         var countSkillA = DataList(groupARowNum, pos, arrA, 0);
 
         //过滤空数据,B数据List化
-        var posRowB = DataList(groupARowNum, posRow, arrB, 1);
-        var nameB = NameList(groupARowNum, name, arrB, 1);
-        var posColB = DataList(groupARowNum, posCol, arrB, 1);
+        var posRowB = DataList(groupBRowNum, posRow, arrB, 1);
+        var nameB = NameList(groupBRowNum, name, arrB, 1);
+        var posColB = DataList(groupBRowNum, posCol, arrB, 1);
         var posB = DataList(groupBRowNum, pos, arrB, 1);
         var atkB = DataList(groupBRowNum, atk, arrB, 1);
         var hpB = DataList(groupBRowNum, hp, arrB, 1);
@@ -284,15 +281,28 @@ internal class DotaLegendBattleParallel
             turn++;
         } while (numA > 0 && numB > 0 && turn < 901);
 
-        var log = battleLog;
-        if (numB == 0 && numA > 0) AV += 1;
-        if (numA == 0 && numB > 0) BV += 1;
-        if (numA == 0 && numB == 0) ABV += 1;
-        var AAHPlist = new List<double>(hpA);
-        var BAHPlist = new List<double>(hpB);
-        AAHP += AAHPlist.Sum();
-        BAHP += BAHPlist.Sum();
-        totalTurn += turn;
+        if (mode)
+        {
+            if (numB == 0 && numA > 0) AVPVP += 1;
+            if (numA == 0 && numB > 0) BVPVP += 1;
+            if (numA == 0 && numB == 0) ABVPVP += 1;
+            var AAHPlist = new List<double>(hpA);
+            var BAHPlist = new List<double>(hpB);
+            AAHPPVP += AAHPlist.Sum();
+            BAHPPVP += BAHPlist.Sum();
+            totalTurnPVP += turn;
+        }
+        else
+        {
+            if (numB == 0 && numA > 0) AVPVE += 1;
+            if (numA == 0 && numB > 0) BVPVE += 1;
+            if (numA == 0 && numB == 0) ABVPVE += 1;
+            var AAHPlist = new List<double>(hpA);
+            var BAHPlist = new List<double>(hpB);
+            AAHPPVE += AAHPlist.Sum();
+            BAHPPVE += BAHPlist.Sum();
+            totalTurnPVE += turn;
+        }
     }
 
     private static (List<double>, List<double>) DamageCaculate(int num1, int num2, dynamic countSkill1,
