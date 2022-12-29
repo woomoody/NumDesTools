@@ -1235,12 +1235,10 @@ namespace NumDesTools
             
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            DotaLegendBattle2.xxx();
-            //DotaLegendBattle.xxx();
-            //DotaLegendBattle.batime();
-            //DotaLegendBattleTem.batimeTem();
-            //duoxianchengceshi.Main();
-            //DotaLegendBattle.getRoleData();
+            //并行计算，即时战斗（无先后），计算快
+            DotaLegendBattleParallel.BattleSimTime();
+            //串行计算，回合战斗（有先后），计算慢
+            //DotaLegendBattleSerial.BattleSimTime();
             sw.Stop();
             TimeSpan ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
