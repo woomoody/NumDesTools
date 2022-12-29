@@ -106,7 +106,30 @@
     <EmbeddedResource Include="DataExportForm.resx">
       <DependentUpon>DataExportForm.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="image\沙发.png" />
+    <Content Include="bin\Debug\NumDesTools.dll" />
+    <Content Include="bin\Debug\NumDesTools.pdb" />
+    <Content Include="image\american-football-1.png" />
+    <Content Include="image\american-football.png" />
+    <Content Include="image\baseball-2.png" />
+    <Content Include="image\basketball-1.png" />
+    <Content Include="image\cup.png" />
+    <Content Include="image\lacrosse.png" />
+    <Content Include="image\measuring-tape.png" />
+    <Content Include="image\muscle.png" />
+    <Content Include="image\ping-pong-1.png" />
+    <Content Include="image\ping-pong.png" />
+    <Content Include="image\punch.png" />
+    <Content Include="image\racing-helmet.png" />
+    <Content Include="image\rugby.png" />
+    <Content Include="image\soccer-1.png" />
+    <Content Include="image\weight-3.png" />
+    <Content Include="image\yoga-ball.png" />
+    <Content Include="lib\ExcelDna.Integration.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="lib\ExcelDnaPack.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <EmbeddedResource Include="image\angular-resolver.png" />
     <EmbeddedResource Include="image\applescript.png" />
     <EmbeddedResource Include="image\asciidoc.png" />
@@ -148,14 +171,7 @@
     <EmbeddedResource Include="image\yang.png" />
     <EmbeddedResource Include="image\yellowFolder.png" />
     <EmbeddedResource Include="image\zip.png" />
-    <Content Include="bin\Debug\NumDesTools.dll" />
-    <Content Include="bin\Debug\NumDesTools.pdb" />
-    <Content Include="lib\ExcelDna.Integration.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="lib\ExcelDnaPack.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <EmbeddedResource Include="image\沙发.png" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="bin\Release\" />
