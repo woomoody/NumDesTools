@@ -1,266 +1,51 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
 
 namespace NumDesTools;
 
-public class duoxianchengceshi
+internal class excelData
 {
-    private static readonly object m_monitorObject = new();
-    private static int hhc = 100;
-
-    [STAThread]
-    public static void Main()
-    {
-        var thread = new Thread(Do);
-        thread.Name = " Thread1 ";
-        var thread2 = new Thread(Do);
-        thread2.Name = " Thread2 ";
-        thread.Start();
-        thread2.Start();
-        thread.Join();
-        thread2.Join();
-        Console.Read();
-        var adsd = hhc;
-        Debug.Print(adsd.ToString());
-    }
-
-    private static void Do()
-    {
-        if (!Monitor.TryEnter(m_monitorObject))
-        {
-            Console.WriteLine(" Can't visit Object " + Thread.CurrentThread.Name);
-            Debug.Print(" Can't visit Object " + Thread.CurrentThread.Name);
-            return;
-        }
-
-        try
-        {
-            Monitor.Enter(m_monitorObject);
-            Console.WriteLine(" Enter Monitor " + Thread.CurrentThread.Name);
-            Debug.Print(" Enter Monitor " + Thread.CurrentThread.Name);
-            hhc -= 10;
-            return;
-            Thread.Sleep(5000);
-        }
-        finally
-        {
-            Monitor.Exit(m_monitorObject);
-        }
-    }
-}
-
-public class DotaLegendBattleTem
-{
-    private static readonly object m_monitorObject = new();
-    private static int hpB;
-
-    public static void batimeTem()
-    {
-        //    Stopwatch sw = new Stopwatch();
-        //    sw.Start();
-
-        //    //初始化数据，执行1次，循环验证不用再操作excel了
-        //    string battleLog = "";
-        //     dynamic app = ExcelDnaUtil.Application;
-        //     Worksheet ws = app.Worksheets["战斗模拟"];
-        //    dynamic groupARowMin = Convert.ToInt32(ws.Range["C9"].Value);
-        //    dynamic groupAColMin = Convert.ToInt32(ws.Range["C10"].Value); 
-        //    dynamic groupARowMax = Convert.ToInt32(ws.Range["C11"].Value);
-        // dynamic groupAColMax = Convert.ToInt32(ws.Range["C12"].Value);
-        // dynamic groupARowNum = groupARowMax - groupARowMin + 1;
-        //dynamic groupAColNum = groupAColMax - groupAColMin + 1;
-        // dynamic groupBRowMin = Convert.ToInt32(ws.Range["C20"].Value);
-        // dynamic groupBColMin = Convert.ToInt32(ws.Range["C21"].Value);
-        // dynamic groupBRowMax = Convert.ToInt32(ws.Range["C22"].Value);
-        // dynamic groupBColMax = Convert.ToInt32(ws.Range["C23"].Value);
-        // dynamic groupBRowNum = groupBRowMax - groupBRowMin + 1;
-        //dynamic groupBColNum = groupBColMax - groupBColMin + 1;
-        //dynamic battleTimes = Convert.ToInt32(ws.Range["G1"].Value);
-
-        // dynamic battleFirst = Convert.ToString(ws.Range["G4"].Value);
-
-        ////声明角色各属性所在列
-        // int posRow = 1; //角色所在行
-        // int posCol = 2; //角色所在列
-        // int pos = 3; //角色在阵型中的位置
-        // int name = 4; //角色名
-        //int detailType = 5; //扩展类型
-        //int type = 6; //大类型
-        //int lvl = 7; //角色等级
-        //int skillLv = 8; //技能等级
-        // int atk = 9; //攻击力
-        // int hp = 10; //生命值
-        // int def = 11; //防御力
-        // int crit = 12; // 暴击率
-        // int critMulti = 13; //暴击倍率 
-        // int atkSpeed = 14; //攻速
-        //int autoRatio = 15; //普攻占比
-        // int skillCD = 16; //大招CD
-        // int skillCDstart = 17; //大招CD初始
-        // int skillDamge = 18; //伤害倍率
-        // int skillHealUseSelfAtk = 19; //治疗倍率/D
-        // int skillHealUseSelfHp = 20; //治疗被驴/H
-
-        // int skillHealUseAllHp = 21; //治疗倍率/A
-
-        ////初始化A、B两个阵营的
-        // Range rangeA = ws.Range[ws.Cells[groupARowMin, groupAColMin], ws.Cells[groupARowMax, groupAColMax]];
-        // Array arrA = rangeA.Value2;
-        // Range rangeB = ws.Range[ws.Cells[groupBRowMin, groupBColMin], ws.Cells[groupBRowMax, groupBColMax]];
-        // Array arrB = rangeB.Value2;
-
-        //Thread.CurrentThread.Name = "Main";
-        hpB = 100;
-        //Thread readThread = new(new ThreadStart(test134));
-        //readThread.Name = "ReadThread1";
-        //Thread readThread2 = new (new ThreadStart(test134));
-        //readThread2.Name = "ReadThread2";
-        //readThread.Start();
-        //readThread2.Start();
-
-        //同步血量,尝试计算
-        var a = 0;
-        var sw = new Stopwatch();
-        sw.Start();
-
-        var taskA = Task.Run(() =>
-            {
-                hpB -= test134(a);
-                hpB = Math.Min(hpB, 1000);
-                Debug.Print(hpB + "taskA");
-            }
-        );
-        taskA.Wait();
-        var taskB = Task.Run(() =>
-            {
-                hpB += test134(a);
-                hpB += 1000;
-                hpB = Math.Min(hpB, 1000);
-                Debug.Print(hpB + "taskB");
-            }
-        );
-        taskB.Wait();
-
-        sw.Stop();
-        var ts2 = sw.Elapsed;
-        Debug.Print(ts2.ToString());
-
-        var sw2 = new Stopwatch();
-        sw2.Start();
-
-        hpB -= test134(a);
-        hpB = Math.Min(hpB, 1000);
-        Debug.Print(hpB + "11");
-        hpB += test134(a);
-        hpB += 1000;
-        hpB = Math.Min(hpB, 1000);
-        Debug.Print(hpB + "22");
-
-        sw.Stop();
-        var ts3 = sw2.Elapsed;
-        Debug.Print(ts3.ToString());
-
-
-        var asd = hpB;
-    }
-
-    public static int test134(int a)
-    {
-        var cad = 0;
-        for (var i = 0; i < 10; i++) cad++;
-        return cad;
-    }
-
-    public static void test234()
-    {
-        if (!Monitor.TryEnter(m_monitorObject))
-        {
-            hpB += 15;
-            return;
-        }
-
-        try
-        {
-            Monitor.Enter(m_monitorObject);
-            Thread.Sleep(5000);
-        }
-        finally
-        {
-            Monitor.Exit(m_monitorObject);
-        }
-    }
-}
-
-internal class DotaLegendBattle
-{
-    //初始化数据，执行1次，循环验证不用再操作excel了
-    private static string battleLog = "";
-    private static int AV = 0;
-    private static int BV = 0;
-    private static double AAHP = 0;
-    private static double BAHP = 0;
-    private static int  totalTurn = 0;
     private static readonly dynamic app = ExcelDnaUtil.Application;
     private static readonly Worksheet ws = app.Worksheets["战斗模拟"];
-    private static readonly dynamic groupARowMin = Convert.ToInt32(ws.Range["C9"].Value);
-    private static readonly dynamic groupAColMin = Convert.ToInt32(ws.Range["C10"].Value);
-    private static readonly dynamic groupARowMax = Convert.ToInt32(ws.Range["C11"].Value);
-    private static readonly dynamic groupAColMax = Convert.ToInt32(ws.Range["C12"].Value);
-    private static readonly dynamic groupARowNum = groupARowMax - groupARowMin + 1;
-    private dynamic groupAColNum = groupAColMax - groupAColMin + 1;
-    private static readonly dynamic groupBRowMin = Convert.ToInt32(ws.Range["C20"].Value);
-    private static readonly dynamic groupBColMin = Convert.ToInt32(ws.Range["C21"].Value);
-    private static readonly dynamic groupBRowMax = Convert.ToInt32(ws.Range["C22"].Value);
-    private static readonly dynamic groupBColMax = Convert.ToInt32(ws.Range["C23"].Value);
-    private static readonly dynamic groupBRowNum = groupBRowMax - groupBRowMin + 1;
-    private dynamic groupBColNum = groupBColMax - groupBColMin + 1;
-    private dynamic battleTimes = Convert.ToInt32(ws.Range["G1"].Value);
+    public static dynamic groupARowMin = Convert.ToInt32(ws.Range["C9"].Value);
+    public static dynamic groupAColMin = Convert.ToInt32(ws.Range["C10"].Value);
+    public static dynamic groupARowMax = Convert.ToInt32(ws.Range["C11"].Value);
+    public static dynamic groupAColMax = Convert.ToInt32(ws.Range["C12"].Value);
+    public static dynamic groupARowNum = groupARowMax - groupARowMin + 1;
+    public static dynamic groupBRowMin = Convert.ToInt32(ws.Range["C20"].Value);
+    public static dynamic groupBColMin = Convert.ToInt32(ws.Range["C21"].Value);
+    public static dynamic groupBRowMax = Convert.ToInt32(ws.Range["C22"].Value);
+    public static dynamic groupBColMax = Convert.ToInt32(ws.Range["C23"].Value);
+    public static dynamic battleTimes = Convert.ToInt32(ws.Range["G1"].Value);
+    public static dynamic battleFirst = Convert.ToString(ws.Range["G4"].Value);
 
-    private static dynamic battleFirst = Convert.ToString(ws.Range["G4"].Value);
-
-    //声明角色各属性所在列
-    private static readonly int posRow = 1; //角色所在行
-    private static readonly int posCol = 2; //角色所在列
-    private static readonly int pos = 3; //角色在阵型中的位置
-    private static readonly int name = 4; //角色名
-    private int detailType = 5; //扩展类型
-    private int type = 6; //大类型
-    private int lvl = 7; //角色等级
-    private int skillLv = 8; //技能等级
-    private static readonly int atk = 9; //攻击力
-    private static readonly int hp = 10; //生命值
-    private static readonly int def = 11; //防御力
-    private static readonly int crit = 12; // 暴击率
-    private static readonly int critMulti = 13; //暴击倍率 
-    private static readonly int atkSpeed = 14; //攻速
-    private int autoRatio = 15; //普攻占比
-    private static readonly int skillCD = 16; //大招CD
-    private static readonly int skillCDstart = 17; //大招CD初始
-    private static readonly int skillDamge = 18; //伤害倍率
-    private static readonly int skillHealUseSelfAtk = 19; //治疗倍率/D
-    private static readonly int skillHealUseSelfHp = 20; //治疗被驴/H
-
-    private static readonly int skillHealUseAllHp = 21; //治疗倍率/A
-
-    //初始化A、B两个阵营的
-    private static readonly Range rangeA = ws.Range[ws.Cells[groupARowMin, groupAColMin],
+//初始化A、B两个阵营的
+    public static Range rangeA = ws.Range[ws.Cells[groupARowMin, groupAColMin],
         ws.Cells[groupARowMax, groupAColMax]];
 
-    private static readonly Array arrA = rangeA.Value2;
-
-    private static readonly Range rangeB = ws.Range[ws.Cells[groupBRowMin, groupBColMin],
+    public static Range rangeB = ws.Range[ws.Cells[groupBRowMin, groupBColMin],
         ws.Cells[groupBRowMax, groupBColMax]];
+}
 
-    private static readonly Array arrB = rangeB.Value2;
+internal class DotaLegendBattleParallel
+{
+    private static readonly string battleLog = "";
+    private static int AV;
+    private static int BV;
+    private static int ABV;
+    private static double AAHP;
+    private static double BAHP;
+    private static int totalTurn;
+    private static readonly dynamic app = ExcelDnaUtil.Application;
 
-    public static void batime()
+    private static readonly Worksheet ws = app.Worksheets["战斗模拟"];
+
+    //初始化数据，执行1次，循环验证不用再操作excel了
+    public static void BattleSimTime()
     {
         var vicAcount = 0;
         var vicBcount = 0;
@@ -279,8 +64,23 @@ internal class DotaLegendBattle
         //    //vicAcount => Interlocked.Add(ref vicAcount, vicAcount)
         //    x => Console.WriteLine("A胜利{0}", x)
         //);
+        var groupARowMin = excelData.groupARowMin;
+        var groupAColMin = excelData.groupAColMin;
+        var groupARowMax = excelData.groupARowMax;
+        var groupAColMax = excelData.groupAColMax;
+        var groupARowNum = excelData.groupARowNum;
+        var groupBRowMin = excelData.groupBRowMin;
+        var groupBColMin = excelData.groupBColMin;
+        var groupBRowMax = excelData.groupBRowMax;
+        var groupBColMax = excelData.groupBColMax;
+        var battleTimes = excelData.battleTimes;
+        var battleFirst = excelData.battleFirst;
+        Array arrA = excelData.rangeA.Value2;
+        Array arrB = excelData.rangeB.Value2;
 
-        Parallel.For(0, testBattleMax, testBattle=> xxx());
+        Parallel.For(0, testBattleMax, testBattle => BattleCaculate(groupARowMin, groupAColMin, groupARowMax, groupAColMax,
+            groupARowNum, groupBRowMin, groupBColMin, groupBRowMax, groupBColMax, battleTimes,
+            battleFirst, arrA, arrB));
 
         //Stopwatch sw2 = new Stopwatch();
         //sw2.Start();
@@ -296,11 +96,13 @@ internal class DotaLegendBattle
 
         ws.Range["D3"].Value2 = AV;
         ws.Range["J3"].Value2 = BV;
+        ws.Range["G3"].Value2 = ABV;
         ws.Range["B9"].Value2 = AAHP;
         ws.Range["B20"].Value2 = BAHP;
-        ws.Range["F3"].Value2 = totalTurn/(10* testBattleMax);
+        ws.Range["F3"].Value2 = totalTurn / (10 * testBattleMax);
         AV = 0;
         BV = 0;
+        ABV = 0;
         AAHP = 0;
         BAHP = 0;
         totalTurn = 0;
@@ -315,10 +117,38 @@ internal class DotaLegendBattle
         //}
     }
 
-    public static void xxx()
+    public static void BattleCaculate(dynamic groupARowMin, dynamic groupAColMin, dynamic groupARowMax, dynamic groupAColMax,
+        dynamic groupARowNum, dynamic groupBRowMin, dynamic groupBColMin,
+        dynamic groupBRowMax, dynamic groupBColMax, dynamic battleTimes, dynamic battleFirst, dynamic arrA,
+        dynamic arrB)
     {
-        //for (int testBattle =0; testBattle< testBattleMax;testBattle++)
-        //{
+        var groupAColNum = groupAColMax - groupAColMin + 1;
+        var groupBRowNum = groupBRowMax - groupBRowMin + 1;
+        var groupBColNum = groupBColMax - groupBColMin + 1;
+        //声明角色各属性所在列
+        var posRow = 1; //角色所在行
+        var posCol = 2; //角色所在列
+        var pos = 3; //角色在阵型中的位置
+        var name = 4; //角色名
+        var detailType = 5; //扩展类型
+        var type = 6; //大类型
+        var lvl = 7; //角色等级
+        var skillLv = 8; //技能等级
+        var atk = 9; //攻击力
+        var hp = 10; //生命值
+        var def = 11; //防御力
+        var crit = 12; // 暴击率
+        var critMulti = 13; //暴击倍率 
+        var atkSpeed = 14; //攻速
+        var autoRatio = 15; //普攻占比
+        var skillCD = 16; //大招CD
+        var skillCDstart = 17; //大招CD初始
+        var skillDamge = 18; //伤害倍率
+        var skillHealUseSelfAtk = 19; //治疗倍率/D
+        var skillHealUseSelfHp = 20; //治疗被驴/H
+
+        var skillHealUseAllHp = 21; //治疗倍率/A
+
         //过滤空数据,A数据List化
         var posRowA = DataList(groupARowNum, posRow, arrA, 1);
         var nameA = NameList(groupARowNum, name, arrA, 1);
@@ -361,241 +191,194 @@ internal class DotaLegendBattle
         var countATKB = DataList(groupARowNum, pos, arrB, 0); //普通次数
         var countSkillB = DataList(groupARowNum, pos, arrB, 0);
 
-        var numA = 0;
-        var numB = 0;
+        var numA = posRowA.Count;
+        ;
+        var numB = posRowB.Count;
+        ;
         var turn = 0;
         do
         {
-            //var firtATK = new Random();
-            //var firstSeed = firtATK.Next(2);
-            //if (firstSeed == 0)
-            if(battleFirst=="A")
+            //A攻击B
+            //获取A的攻击目标
+            var aTar = Target(numA, numB, posRowA, posRowB, posColA, posColB);
+            //伤害计算
+            var bTakeDam = DamageCaculate(numA, numB, countSkillA, skillCDA, skillCDstartA, turn, defB, critA, atkA,
+                critMultiA, skillDamageA, aTar, countATKA, atkSpeedA, skillHealUseAllHpA, hpA, skillHealUseSelfAtkA,
+                skillHealUseSelfHpA);
+            ////治疗计算
+            //var aTakeHeal = HealCaculate(numA,atkA,hpA,skillHealUseAllHpA,skillHealUseSelfAtkA,skillHealUseSelfHpA, bTakeDam.Item2); 
+            //B攻击A
+            //获取B的攻击目标
+            var bTar = Target(numB, numA, posRowB, posRowA, posColB, posColA);
+            //伤害计算
+            var aTakeDam = DamageCaculate(numB, numA, countSkillB, skillCDB, skillCDstartB, turn, defA, critB, atkB,
+                critMultiB, skillDamageB, bTar, countATKB, atkSpeedB, skillHealUseAllHpB, hpB, skillHealUseSelfAtkB,
+                skillHealUseSelfHpB);
+            ////治疗计算
+            //var bTakeHeal = HealCaculate(numB, atkB, hpB, skillHealUseAllHpB, skillHealUseSelfAtkB, skillHealUseSelfHpB, aTakeDam.Item2);
+            //汇总同步数据
+            //同步A
+            for (var i = 0; i < numA; i++)
             {
-                //A组攻击后，B组的状态
-                numA = posRowA.Count;
-                BattleMethod(numA, posRowA, posRowB, posColA, posColB, countSkillA, skillCDA, skillCDstartA,
-                    turn, defB,
-                    critA, atkA, critMultiA, skillDamageA, hpB, hpA, skillHealUseAllHpA, hpAMax,
-                    skillHealUseSelfAtkA,
-                    skillHealUseSelfHpA, countATKA, atkSpeedA, posB,
-                    atkB, critB, critMultiB, atkSpeedB, skillCDB, skillCDstartB, skillDamageB,
-                    skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB, nameA, nameB,
-                    countSkillB,
-                    countATKB, true, hpBMax);
-                //B组攻击后，A组的状态
-                numB = posRowB.Count;
-                BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCDB, skillCDstartB,
-                    turn, defA,
-                    critB, atkB, critMultiB, skillDamageB, hpA, hpB, skillHealUseAllHpB, hpBMax,
-                    skillHealUseSelfAtkB,
-                    skillHealUseSelfHpB, countATKB, atkSpeedB, posA,
-                    atkA, critA, critMultiA, atkSpeedA, skillCDA, skillCDstartA, skillDamageA,
-                    skillHealUseSelfAtkA, skillHealUseSelfHpA, skillHealUseAllHpA, nameB, nameA,
-                    countSkillA,
-                    countATKA, false, hpAMax);
+                hpA[i] -= aTakeDam.Item1[i];
+                if (hpA[i] <= 0)
+                {
+                    posRowA.RemoveAt(i);
+                    posColA.RemoveAt(i);
+                    hpA.RemoveAt(i);
+                    defA.RemoveAt(i);
+                    atkA.RemoveAt(i);
+                    critA.RemoveAt(i);
+                    critMultiA.RemoveAt(i);
+                    atkSpeedA.RemoveAt(i);
+                    skillCDA.RemoveAt(i);
+                    skillCDstartA.RemoveAt(i);
+                    skillDamageA.RemoveAt(i);
+                    skillHealUseSelfAtkA.RemoveAt(i);
+                    skillHealUseSelfHpA.RemoveAt(i);
+                    skillHealUseAllHpA.RemoveAt(i);
+                    countSkillA.RemoveAt(i);
+                    countATKA.RemoveAt(i);
+                    hpAMax.RemoveAt(i);
+                    numA--;
+                }
+                else
+                {
+                    hpA[i] += bTakeDam.Item2[i];
+                    hpA[i] = Math.Min(hpA[i], hpAMax[i]);
+                }
             }
-            else
-            {
-                //B组攻击后，A组的状态
-                numB = posRowB.Count;
-                BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCDB, skillCDstartB,
-                    turn,
-                    defA,
-                    critB, atkB, critMultiB, skillDamageB, hpA, hpB, skillHealUseAllHpB, hpBMax,
-                    skillHealUseSelfAtkB,
-                    skillHealUseSelfHpB, countATKB, atkSpeedB, posA,
-                    atkA, critA, critMultiA, atkSpeedA, skillCDA, skillCDstartA, skillDamageA,
-                    skillHealUseSelfAtkA, skillHealUseSelfHpA, skillHealUseAllHpA, nameB, nameA, countSkillA,
-                    countATKA, false, hpAMax);
 
-                //A组攻击后，B组的状态
-                numA = posRowA.Count;
-                BattleMethod(numA, posRowA, posRowB, posColA, posColB, countSkillA, skillCDA, skillCDstartA,
-                    turn,
-                    defB,
-                    critA, atkA, critMultiA, skillDamageA, hpB, hpA, skillHealUseAllHpA, hpAMax,
-                    skillHealUseSelfAtkA,
-                    skillHealUseSelfHpA, countATKA, atkSpeedA, posB,
-                    atkB, critB, critMultiB, atkSpeedB, skillCDB, skillCDstartB, skillDamageB,
-                    skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB, nameA, nameB, countSkillB,
-                    countATKB, true, hpBMax);
+            //同步B
+            for (var i = 0; i < numB; i++)
+            {
+                hpB[i] -= bTakeDam.Item1[i];
+                if (hpB[i] <= 0)
+                {
+                    posRowB.RemoveAt(i);
+                    posColB.RemoveAt(i);
+                    hpB.RemoveAt(i);
+                    defB.RemoveAt(i);
+                    atkB.RemoveAt(i);
+                    critB.RemoveAt(i);
+                    critMultiB.RemoveAt(i);
+                    atkSpeedB.RemoveAt(i);
+                    skillCDB.RemoveAt(i);
+                    skillCDstartB.RemoveAt(i);
+                    skillDamageB.RemoveAt(i);
+                    skillHealUseSelfAtkB.RemoveAt(i);
+                    skillHealUseSelfHpB.RemoveAt(i);
+                    skillHealUseAllHpB.RemoveAt(i);
+                    countSkillB.RemoveAt(i);
+                    countATKB.RemoveAt(i);
+                    hpBMax.RemoveAt(i);
+                    numB--;
+                }
+                else
+                {
+                    hpB[i] += aTakeDam.Item2[i];
+                    hpB[i] = Math.Min(hpB[i], hpBMax[i]);
+                }
             }
+
             turn++;
         } while (numA > 0 && numB > 0 && turn < 901);
 
-        //lock (obj)
-        //{
-        //var ad = numA;
-        //var bd = numB;
-        //if (ad > 0)
-        //{
-        //    for (int a = 0; a < ad; a++)
-        //    {
-        //        hpFA += hpA[a];
-        //    }
-        //}
-        //if (bd > 0)
-        //{
-        //    for (int b = 0; b < bd; b++)
-        //    {
-        //        hpFB += hpB[b];
-        //    }
-        //}
-
         var log = battleLog;
-        if (numB == 0 && numA >0) AV += 1;
-        if (numA == 0 && numB >0) BV += 1;
-        var AAHPlist =new List<double>(hpA);
+        if (numB == 0 && numA > 0) AV += 1;
+        if (numA == 0 && numB > 0) BV += 1;
+        if (numA == 0 && numB == 0) ABV += 1;
+        var AAHPlist = new List<double>(hpA);
         var BAHPlist = new List<double>(hpB);
         AAHP += AAHPlist.Sum();
         BAHP += BAHPlist.Sum();
         totalTurn += turn;
     }
-    private static void BattleMethod(dynamic num1, dynamic posRow1, dynamic posRow2, dynamic posCol1, dynamic posCol2,
-            dynamic countSkill1, dynamic skillCD1, dynamic skillCDstart1, int turn, dynamic def2, dynamic crit1,
-            dynamic atk1,
-            dynamic critMulti1, dynamic skillDamge1, dynamic hp2, dynamic hp1, dynamic skillHealUseAllHp1, dynamic hp1Max,
-            dynamic skillHealUseSelfAtk1, dynamic skillHealUseSelfHp1, dynamic countATK1, dynamic atkSpeed1, dynamic pos2,
-            dynamic atk2, dynamic crit2, dynamic critMulti2, dynamic atkSpeed2, dynamic skillCD2,
-            dynamic skillCDstart2, dynamic skillDamge2, dynamic skillHealUseSelfAtk2, dynamic skillHealUseSelfHp2,
-            dynamic skillHealUseAllHp2, dynamic name1, dynamic name2, dynamic countSkill2, dynamic countATK2, bool isAB,
-            dynamic hp2Max)
+
+    private static (List<double>, List<double>) DamageCaculate(int num1, int num2, dynamic countSkill1,
+        dynamic skillCD1, dynamic skillCDstart1, int turn, dynamic def2, dynamic crit1, dynamic atk1,
+        dynamic critMulti1,
+        dynamic skillDamge1, dynamic target1, dynamic countATK1, dynamic atkSpeed1, dynamic skillHealUseAllHp1,
+        dynamic hp1, dynamic skillHealUseSelfAtk1, dynamic skillHealUseSelfHp1)
     {
-        //普攻效果比例默认100%
-        var atkDamgeA = new List<double>();
+        double Dmg(int i)
+        {
+            var rndCrit = new Random();
+            var rSeed = rndCrit.Next(10000);
+            double dmg;
+            if (Convert.ToInt32(crit1[i] * 10000) >= rSeed)
+                dmg = atk1[i] * critMulti1[i];
+            else
+                dmg = atk1[i];
+            return dmg;
+        }
+
+        //创建受伤组list
+        var takeDmg2 = new List<double>();
+        for (var i = 0; i < num2; i++) takeDmg2.Add(0);
+        //创建治疗组list
+        var heal1 = new List<double>();
+        for (var i = 0; i < num1; i++) heal1.Add(0);
         for (var i = 0; i < num1; i++)
         {
-            atkDamgeA.Add(1);
-            //即时选择目标
-            // Stopwatch sw = new Stopwatch();
-            //sw.Start();
-            var targetA = Target(i, posRow1, posRow2, posCol1, posCol2, num1);
-            //TimeSpan ts4 = sw.Elapsed;
-            //Debug.Print(ts4.ToString());
-            if (targetA != 9999)
+            double redmg = def2[target1[i]] / 100000 + 1;
+            //战斗计算，攻速和CD放大10倍进行判定
+            var aa = countSkill1[i] * Convert.ToInt32(skillCD1[i] * 10);
+            var bb = Convert.ToInt32(skillCDstart1[i] * 10);
+            var cc = countATK1[i] * Convert.ToInt32(1 / atkSpeed1[i] * 10);
+            if (aa + bb == turn) //判断技能CD
             {
-                //战斗计算，攻速和CD放大100倍进行判定
-                var aa = countSkill1[i] * Convert.ToInt32(skillCD1[i] * 10);
-                var bb = Convert.ToInt32(skillCDstart1[i] * 10);
-                var cc = countATK1[i] * Convert.ToInt32(1 / atkSpeed1[i] * 10);
-                if (aa + bb == turn) //判断技能CD
-                {
-                    //Stopwatch sw2 = new Stopwatch();
-                    //sw2.Start();
-                    DamageCaculate(def2, i, crit1, atk1, critMulti1, skillDamge1, hp2, targetA, num1,
-                        hp1, skillHealUseAllHp1, hp1Max, skillHealUseSelfAtk1, skillHealUseSelfHp1, true, name1, name2,
-                        isAB);
-                    countSkill1[i]++; //释放技能，技能使用次数增加
-                    if (cc == turn)
-                    {
-                        countATK1[i]++;//不放普攻但是计数
-                    }
-                    //TimeSpan ts3 = sw2.Elapsed;
-                    //Debug.Print(ts3.ToString());
-                }
-                else if (cc == turn) //判断普攻CD（攻速）
-                {
-                    //Stopwatch sw2 = new Stopwatch();
-                    //sw2.Start();
-                    DamageCaculate(def2, i, crit1, atk1, critMulti1, atkDamgeA, hp2, targetA, num1,
-                        hp1, skillHealUseAllHp1, hp1Max, skillHealUseSelfAtk1, skillHealUseSelfHp1, false, name1, name2,
-                        isAB);
-                    countATK1[i]++; //释放普攻，普攻使用次数增加
-                    //TimeSpan ts5 = sw2.Elapsed;
-                    //Debug.Print(ts5.ToString());
-                }
-
-                //剔除已经死亡目标的所有数据
-                if (hp2[targetA] <= 0)
-                {
-                    posRow2.RemoveAt(targetA);
-                    posCol2.RemoveAt(targetA);
-                    hp2.RemoveAt(targetA);
-                    def2.RemoveAt(targetA);
-                    //pos2.RemoveAt(targetA);
-                    atk2.RemoveAt(targetA);
-                    crit2.RemoveAt(targetA);
-                    critMulti2.RemoveAt(targetA);
-                    atkSpeed2.RemoveAt(targetA);
-                    skillCD2.RemoveAt(targetA);
-                    skillCDstart2.RemoveAt(targetA);
-                    skillDamge2.RemoveAt(targetA);
-                    skillHealUseSelfAtk2.RemoveAt(targetA);
-                    skillHealUseSelfHp2.RemoveAt(targetA);
-                    skillHealUseAllHp2.RemoveAt(targetA);
-                    countSkill2.RemoveAt(targetA);
-                    countATK2.RemoveAt(targetA);
-                    hp2Max.RemoveAt(targetA);
-                }
+                takeDmg2[target1[i]] += Dmg(i) / redmg * skillDamge1[i]; //目标血量减少量
+                countSkill1[i]++; //释放技能，技能使用次数增加
+                //遍历所有人的治疗
+                for (var j = 0; j < num1; j++) heal1[i] += skillHealUseAllHp1[j] * hp1[i];
+                heal1[i] += skillHealUseSelfAtk1[i] * atk1[i] + skillHealUseSelfHp1[i] * hp1[i];
+                if (cc == turn) countATK1[i]++;
+            }
+            else if (cc == turn) //判断普攻CD（攻速）
+            {
+                takeDmg2[target1[i]] += Dmg(i) / redmg; //目标血量减少量
+                countATK1[i]++; //释放普攻，普攻使用次数增加
             }
         }
+
+        return (takeDmg2, heal1);
     }
 
-    //伤害计算逻辑
-    private static void DamageCaculate(dynamic def2Dam, int i, dynamic crit1Dam, dynamic atk1Dam, dynamic critMulti1Dam,
-        dynamic skillDamge1Dam, dynamic hp2Dam, dynamic targetADam, dynamic num1Dam, dynamic hp1Dam,
-        dynamic skillHealUseAllHp1Dam,
-        dynamic hp1MaxDam, dynamic skillHealUseSelfAtk1Dam, dynamic skillHealUseSelfHp1Dam, bool isSkillDam,
-        dynamic name1Dam, dynamic name2Dam, dynamic isAB)
+    private static List<double> HealCaculate(int num1, dynamic atk1, dynamic hp1, dynamic skillHealUseAllHp1,
+        dynamic skillHealUseSelfAtk1, dynamic skillHealUseSelfHp1, dynamic isSkill1)
     {
-        var rndCrit = new Random();
-        var rSeed = rndCrit.Next(10000);
-        double dmg = 0;
-        double redmg = def2Dam[targetADam] / 100000 + 1;
-        if (Convert.ToInt32(crit1Dam[i] * 10000) >= rSeed)
-            dmg = atk1Dam[i] * critMulti1Dam[i];
-        else
-            dmg = atk1Dam[i];
-        dmg = dmg / redmg * skillDamge1Dam[i]; //目标血量减少量
-        hp2Dam[targetADam] -= dmg;
-        var tempRole1 = "";
-        var tempRole2 = "";
-        if (isAB)
+        //遍历所有受到治疗数据
+        var heal1 = new List<double>();
+        var healTemp = 0;
+        for (var i = 0; i < num1; i++)
         {
-            tempRole1 = "A组";
-            tempRole2 = "B组";
-        }
-        else
-        {
-            tempRole1 = "B组";
-            tempRole2 = "A组";
-        }
-
-        battleLog += name1Dam[i] + "[" + tempRole1 + "]" + "攻击" + name2Dam[targetADam] + "[" + tempRole2 + "]" +
-                     "造成伤害：" + Convert.ToInt32(dmg) + "\r\n";
-        if (isSkillDam)
-        {
-            //遍历群体加血;只有使用技能时使用
-            for (var j = 0; j < hp1Dam.Count; j++)
+            if (isSkill1[i])
             {
-                hp1Dam[j] += skillHealUseAllHp1Dam[i] * hp1Dam[j];
-                hp1Dam[j] = Math.Min(hp1Dam[j], hp1MaxDam[j]);
-                battleLog += name1Dam[i] + "[" + tempRole1 + "]" + "治疗" + name1Dam[j] + "[" + tempRole1 + "]" +
-                             "回复血量：" + Convert.ToInt32(hp1Dam[j]) + "\r\n";
+                for (var j = 0; j < num1; j++) healTemp += skillHealUseAllHp1[j] * hp1[i];
+
+                healTemp += skillHealUseSelfAtk1[i] * atk1[i] + skillHealUseSelfHp1[i] * hp1[i];
             }
 
-            hp1Dam[i] += skillHealUseSelfAtk1Dam[i] * atk1Dam[i] + skillHealUseSelfHp1Dam[i] * hp1Dam[i];
-            hp1Dam[i] = Math.Min(hp1Dam[i], hp1MaxDam[i]);
-            battleLog += name1Dam[i] + "[" + tempRole1 + "]" + "治疗自己，回复血量：" +
-                         Convert.ToInt32(
-                             skillHealUseSelfAtk1Dam[i] * atk1Dam[i] + skillHealUseSelfHp1Dam[i] * hp1Dam[i]) + "\r\n";
+            heal1.Add(healTemp);
         }
+
+        return heal1;
     }
 
     //选择目标：距离最近
-    public static int Target(int item1tar, dynamic posRow1tar, dynamic posRow2tar, dynamic posCol1tar,
-        dynamic posCol2tar, dynamic NNNM)
+    public static List<int> Target(int num1, int num2, dynamic posRow1, dynamic posRow2, dynamic posCol1,
+        dynamic posCol2)
     {
-        var countEle = posRow2tar.Count;
-        if (countEle > 0)
+        var tarAll = new List<int>();
+        for (var item1 = 0; item1 < num1; item1++)
         {
             var disAll = new List<double>();
-            var asds = NNNM;
-            for (var item2 = 0; item2 < countEle; item2++)
+            for (var item2 = 0; item2 < num2; item2++)
             {
                 //计算距离
-                var disRow = Math.Pow(Convert.ToInt32(posRow1tar[item1tar] - posRow2tar[item2]), 2);
-                var disCol = Math.Pow(Convert.ToInt32(posCol1tar[item1tar] - posCol2tar[item2]), 2);
+                var disRow = Math.Pow(Convert.ToInt32(posRow1[item1] - posRow2[item2]), 2);
+                var disCol = Math.Pow(Convert.ToInt32(posCol1[item1] - posCol2[item2]), 2);
                 var dis = disRow + disCol;
                 disAll.Add(dis);
             }
@@ -612,12 +395,11 @@ internal class DotaLegendBattle
             var lc = minIN.Count();
             var rndTar = new Random();
             var rndSeed = rndTar.Next(lc);
-            var targetIndex1 = minIN[rndSeed];
-            return targetIndex1;
+            var targetIndex = minIN[rndSeed];
+            tarAll.Add(targetIndex);
         }
 
-        var targetIndex2 = 9999;
-        return targetIndex2;
+        return tarAll;
     }
 
     //过滤arr数据，并且List化
