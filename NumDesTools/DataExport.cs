@@ -776,11 +776,10 @@ namespace NumDesTools
                                                 <button id='Button9' size='large' label='更新Excel表' getImage='GetImage' onAction='SvnCommitExcel_Click' screentip='点击更新当前目录所有Excel表格' />
                                                 <button id='Button10' size='large' label='更新Txt表' getImage='GetImage' onAction='SvnCommitTxt_Click' screentip='点击更新当前目录所有Txt表格' />
                                             </group>
-                                            <group id='Group4' label='占位1'>
+                                            <group id='Group4' label='战斗仿真'>
+                                                <button id='Button11' size='large' label='PVP回合(不推荐)' getImage='GetImage' onAction='TestBar1_Click' />
                                             </group>
-                                            <group id='Group5' label='占位1'>
-                                            </group>
-                                            <group id='Group6' label='测试功能区'>
+                                            <group id='Group9999' label='测试功能区'>
                                                 <button id='Button6' size='large' label='不要点击红色按钮' getImage='GetImage' onAction='TestBar1_Click' />
                                                 <button id='Button7' size='large' label='测试' getImage='GetImage'  onAction='TestBar2_Click'/>
                                                 <checkBox id='checkbox1' label='是否后台'  />
@@ -1098,7 +1097,7 @@ namespace NumDesTools
                 string pathexcel = _app.ActiveWorkbook.Path + @"\" + _app.ActiveWorkbook.Name;
                 if (errorLog == "")
                 {
-                    var endTips = path + "~@~导出完成!用时:" + Math.Round(milliseconds / 1000, 2) +"秒";
+                    var endTips = path + "~@~导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + "秒";
                     _app.StatusBar = endTips;
                     //MessageBox.Show(sheetName + "\n" + "导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + "秒");
                     //var f = new DataExportForm
@@ -1232,11 +1231,11 @@ namespace NumDesTools
 
         public void TestBar2_Click(IRibbonControl control)
         {
-            
+
             Stopwatch sw = new Stopwatch();
             sw.Start();
             //并行计算，即时战斗（无先后），计算快
-            DotaLegendBattleParallel.BattleSimTime();
+            DotaLegendBattleParallel.BattleSimTime(true);
             //串行计算，回合战斗（有先后），计算慢
             //DotaLegendBattleSerial.BattleSimTime();
             sw.Stop();
