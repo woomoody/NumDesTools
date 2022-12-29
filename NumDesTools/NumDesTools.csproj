@@ -108,22 +108,9 @@
     </EmbeddedResource>
     <Content Include="bin\Debug\NumDesTools.dll" />
     <Content Include="bin\Debug\NumDesTools.pdb" />
-    <Content Include="image\american-football-1.png" />
-    <Content Include="image\american-football.png" />
-    <Content Include="image\baseball-2.png" />
-    <Content Include="image\basketball-1.png" />
-    <Content Include="image\cup.png" />
+    <Content Include="image\dart.png" />
     <Content Include="image\lacrosse.png" />
-    <Content Include="image\measuring-tape.png" />
-    <Content Include="image\muscle.png" />
-    <Content Include="image\ping-pong-1.png" />
-    <Content Include="image\ping-pong.png" />
-    <Content Include="image\punch.png" />
-    <Content Include="image\racing-helmet.png" />
-    <Content Include="image\rugby.png" />
-    <Content Include="image\soccer-1.png" />
-    <Content Include="image\weight-3.png" />
-    <Content Include="image\yoga-ball.png" />
+    <Content Include="image\sofa.png" />
     <Content Include="lib\ExcelDna.Integration.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -141,7 +128,6 @@
     <EmbeddedResource Include="image\console.png" />
     <EmbeddedResource Include="image\cpp.png" />
     <EmbeddedResource Include="image\csharp.png" />
-    <EmbeddedResource Include="image\dart.png" />
     <EmbeddedResource Include="image\database.png" />
     <EmbeddedResource Include="image\diff.png" />
     <EmbeddedResource Include="image\document.png" />
@@ -171,7 +157,6 @@
     <EmbeddedResource Include="image\yang.png" />
     <EmbeddedResource Include="image\yellowFolder.png" />
     <EmbeddedResource Include="image\zip.png" />
-    <EmbeddedResource Include="image\沙发.png" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="bin\Release\" />

@@ -777,7 +777,9 @@ namespace NumDesTools
                                                 <button id='Button10' size='large' label='更新Txt表' getImage='GetImage' onAction='SvnCommitTxt_Click' screentip='点击更新当前目录所有Txt表格' />
                                             </group>
                                             <group id='Group4' label='战斗仿真'>
-                                                <button id='Button11' size='large' label='PVP回合(不推荐)' getImage='GetImage' onAction='TestBar1_Click' />
+                                                <button id='Button11' size='large' label='PVP回合(不推荐)' getImage='GetImage' onAction='PVP_H_Click' screentip='顺次执行的回合模式，计算量大，慢，不推荐' />
+                                                <button id='Button12' size='large' label='PVP即时' getImage='GetImage' onAction='PVP_J_Click' screentip='并行的即时模式，各打各的，每ms进行判定谁该出手，计算快'/>
+                                                <button id='Button13' size='large' label='PVE即时' getImage='GetImage' onAction='PVE_Click' screentip='PVE默认是并行，没有做顺次串行的模式' />
                                             </group>
                                             <group id='Group9999' label='测试功能区'>
                                                 <button id='Button6' size='large' label='不要点击红色按钮' getImage='GetImage' onAction='TestBar1_Click' />
@@ -828,9 +830,17 @@ namespace NumDesTools
                 case "Button10":
                     pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("log.png"));
                     break;
-
+                case "Button11":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("reason.png"));
+                    break;
+                case "Button12":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("scheme.png"));
+                    break;
+                case "Button13":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("bower.png"));
+                    break;
                 default:
-                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("沙发.png"));
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("authors.png"));
                     break;
             }
             return pictureDips;
@@ -1224,6 +1234,41 @@ namespace NumDesTools
             SVNTools.UpdateFiles(path);
         }
 
+        public void PVP_H_Click(IRibbonControl control)
+        {
+
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            //并行计算，回合战斗（有先后），计算慢
+            DotaLegendBattleSerial.BattleSimTime();
+            sw.Stop();
+            TimeSpan ts2 = sw.Elapsed;
+            double milliseconds = ts2.TotalMilliseconds;//换算成毫秒
+            _app.StatusBar = "PVP(回合)战斗模拟完成，用时"+ Math.Round(milliseconds / 1000, 2) + "秒";
+        }
+        public void PVP_J_Click(IRibbonControl control)
+        {
+
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            //并行计算，即时战斗（无先后），计算快
+            DotaLegendBattleParallel.BattleSimTime(true);
+            sw.Stop();
+            TimeSpan ts2 = sw.Elapsed;
+            double milliseconds = ts2.TotalMilliseconds;//换算成毫秒
+            _app.StatusBar = "PVP(即时)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
+        }
+        public void PVE_Click(IRibbonControl control)
+        {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            //并行计算，即时战斗（无先后），计算快
+            DotaLegendBattleParallel.BattleSimTime(false);
+            sw.Stop();
+            TimeSpan ts2 = sw.Elapsed;
+            double milliseconds = ts2.TotalMilliseconds;//换算成毫秒
+            _app.StatusBar = "PVE(即时)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
+        }
         public void TestBar1_Click(IRibbonControl control)
         {
             //SVNTools.RevertAndUpFile();
