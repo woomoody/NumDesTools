@@ -719,6 +719,7 @@ namespace NumDesTools
             //File.Delete(file);
             //Console.ReadKey();
             //Module1.DisposeCTP();
+            //XlCall.Excel(XlCall.xlcAlert, "AutoClose");//采用CAPI接口
         }
 
         void IExcelAddIn.AutoOpen()
@@ -726,6 +727,7 @@ namespace NumDesTools
             //提前加载，解决只触发1次的问题
             //此处如果多选单元格会有BUG，再看看怎么处理
             //_app.SheetSelectionChange += new Excel.WorkbookEvents_SheetSelectionChangeEventHandler(App_SheetSelectionChange); ;
+            //XlCall.Excel(XlCall.xlcAlert, "AutoOpen");
         }
 
         public void CleanCellFormat_Click(IRibbonControl control)
@@ -758,10 +760,11 @@ namespace NumDesTools
 
         public override string GetCustomUI(string ribbonId)
         {
+            //< ribbon startFromScratch = 'false' >//表示加载时excel原有的选项卡隐藏否
             string xml = @"<customUI xmlns='http://schemas.microsoft.com/office/2009/07/customui' onLoad='OnLoad'>
                                 <ribbon startFromScratch='false'>
                                     <tabs>
-                                        <tab id='Tab1' label='NumDesTools'>
+                                        <tab id='Tab1' label='NumDesTools' insertBeforeMso='TabHome' >
                                             <group id='Group1' label='导表(By:SC)'>
                                                 <button id='Button1' size='large' label='导出本表' getImage='GetImage' onAction='OneSheetOutPut_Click' screentip='点击导出当前sheet' />
                                                 <button id='Button2' size='large' label='导出本簿' getImage='GetImage' onAction='MutiSheetOutPut_Click' screentip='点击导出当前book所有的sheet，可自选sheet' />
@@ -776,10 +779,14 @@ namespace NumDesTools
                                                 <button id='Button9' size='large' label='更新Excel表' getImage='GetImage' onAction='SvnCommitExcel_Click' screentip='点击更新当前目录所有Excel表格' />
                                                 <button id='Button10' size='large' label='更新Txt表' getImage='GetImage' onAction='SvnCommitTxt_Click' screentip='点击更新当前目录所有Txt表格' />
                                             </group>
-                                            <group id='Group4' label='战斗仿真'>
-                                                <button id='Button11' size='large' label='PVP回合(不推荐)' getImage='GetImage' onAction='PVP_H_Click' screentip='顺次执行的回合模式，计算量大，慢，不推荐' />
-                                                <button id='Button12' size='large' label='PVP即时' getImage='GetImage' onAction='PVP_J_Click' screentip='并行的即时模式，各打各的，每ms进行判定谁该出手，计算快'/>
-                                                <button id='Button13' size='large' label='PVE即时' getImage='GetImage' onAction='PVE_Click' screentip='PVE默认是并行，没有做顺次串行的模式' />
+                                            <group id = 'Group4' label='战斗仿真'>
+                                                <menu id='RootMenu' label='战斗'  size='large' imageMso='ReviewCompareMenu'>
+                                                        <button id='Button11' label='PVP回合(不推荐)'   getImage='GetImage' onAction='PVP_H_Click' screentip='顺次执行的回合模式，计算量大，慢，不推荐'/>
+                                                        <button id='MB2' label='PVP即时'  getImage='GetImage' onAction='PVP_J_Click' screentip='并行的即时模式，各打各的，每ms进行判定谁该出手，计算快'/>
+                                                        <button id='MB3' label='PVE即时'  getImage='GetImage' onAction='PVE_Click' screentip='PVE默认是并行，没有做顺次串行的模式'/>
+                                                </menu>
+                                                <button id='Button12' size='large' label='PVP即时'  getImage='GetImage' onAction='PVP_J_Click' screentip='并行的即时模式，各打各的，每ms进行判定谁该出手，计算快'/>
+                                                <button id='Button13' size='large' label='PVE即时'  getImage='GetImage' onAction='PVE_Click' screentip='PVE默认是并行，没有做顺次串行的模式'/>
                                             </group>
                                             <group id='Group9999' label='测试功能区'>
                                                 <button id='Button6' size='large' label='不要点击红色按钮' getImage='GetImage' onAction='TestBar1_Click' />
@@ -792,8 +799,8 @@ namespace NumDesTools
                             </customUI>";
             return xml;
         }
+        //控件id 不能重复
 
-        //ribbon按钮自定义图标获取
         public stdole.IPictureDisp GetImage(IRibbonControl control)
         {
             stdole.IPictureDisp pictureDips;
