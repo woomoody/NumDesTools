@@ -729,7 +729,6 @@ namespace NumDesTools
             //_app.SheetSelectionChange += new Excel.WorkbookEvents_SheetSelectionChangeEventHandler(App_SheetSelectionChange); ;
             //XlCall.Excel(XlCall.xlcAlert, "AutoOpen");
         }
-
         public void CleanCellFormat_Click(IRibbonControl control)
         {
             if (control == null) throw new ArgumentNullException(nameof(control));
