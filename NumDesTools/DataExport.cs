@@ -510,6 +510,7 @@ namespace NumDesTools
     public class CreatRibbon : ExcelRibbon, IExcelAddIn
     {
         public static string LabelText = "放大镜：关闭";
+        public static string LabelTextRoleDataPreview = "角色数据预览：关闭";
         public static string TempPath = @"\Client\Assets\Resources\Table";
         public IRibbonUI R;
         private static CommandBarButton btn;
@@ -787,6 +788,9 @@ namespace NumDesTools
                                                 <button id='Button12' size='large' label='PVP即时'  getImage='GetImage' onAction='PVP_J_Click' screentip='并行的即时模式，各打各的，每ms进行判定谁该出手，计算快'/>
                                                 <button id='Button13' size='large' label='PVE即时'  getImage='GetImage' onAction='PVE_Click' screentip='PVE默认是并行，没有做顺次串行的模式'/>
                                             </group>
+                                            <group id = 'Group5' label='表格功能定制'>
+                                                <button id='Button14' size='large' getLabel='GetLableText'  getImage='GetImage' onAction='RoleDataPreview_Click' screentip='点击启用角色数据实时预览'/>
+                                            </group>
                                             <group id='Group9999' label='测试功能区'>
                                                 <button id='Button6' size='large' label='不要点击红色按钮' getImage='GetImage' onAction='TestBar1_Click' />
                                                 <button id='Button7' size='large' label='测试' getImage='GetImage'  onAction='TestBar2_Click'/>
@@ -845,6 +849,9 @@ namespace NumDesTools
                 case "Button13":
                     pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("bower.png"));
                     break;
+                case "Button14":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("edge.png"));
+                    break;
                 default:
                     pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("folder-audio.png"));
                     break;
@@ -855,7 +862,17 @@ namespace NumDesTools
         //ribbon按钮的label提出来编辑的方式
         public string GetLableText(IRibbonControl control)
         {
-            return LabelText;
+            var latext="";
+            switch (control.Id)
+            {
+                case "Button5":
+                    latext =LabelText;
+                    break;
+                case "Button14":
+                    latext= LabelTextRoleDataPreview; 
+                    break;
+            }
+            return latext;
         }
 
         public void IndexSheetOpen_Click(Microsoft.Office.Core.CommandBarButton Ctrl, ref bool CancelDefault)
@@ -1274,6 +1291,23 @@ namespace NumDesTools
             TimeSpan ts2 = sw.Elapsed;
             double milliseconds = ts2.TotalMilliseconds;//换算成毫秒
             _app.StatusBar = "PVE(即时)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
+        }
+        public void RoleDataPreview_Click(IRibbonControl control)
+        {
+            Worksheet ws = _app.ActiveSheet;
+            if (ws.Name == "角色基础")
+            {
+                var temptext = "";
+                if (control == null) throw new ArgumentNullException(nameof(control));
+                LabelTextRoleDataPreview = LabelTextRoleDataPreview == "角色数据预览：开启" ? "角色数据预览：关闭" : "角色数据预览：开启";
+                R.InvalidateControl("Button14");
+                _ = new CellSelectChangePro();
+                _app.StatusBar= false;
+            }
+            else
+            {
+                MessageBox.Show("非【角色基础】表格，不能使用此功能");
+            }
         }
         public void TestBar1_Click(IRibbonControl control)
         {
