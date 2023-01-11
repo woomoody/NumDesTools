@@ -512,7 +512,7 @@ namespace NumDesTools
         public static string LabelText = "放大镜：关闭";
         public static string LabelTextRoleDataPreview = "角色数据预览：关闭";
         public static string TempPath = @"\Client\Assets\Resources\Table";
-        public IRibbonUI R;
+        public static IRibbonUI R;
         private static CommandBarButton btn;
         private dynamic _app = ExcelDnaUtil.Application;
         public void AllWorkbookOutPut_Click(IRibbonControl control)
@@ -772,7 +772,7 @@ namespace NumDesTools
                                             </group>
                                             <group id='Group2' label='格式整理'>
                                                 <button id='Button4' size='large' label='标准格式' getImage='GetImage' onAction='CleanCellFormat_Click' screentip='点击整理当前sheet格式，标准化文本和单元格大小' />
-                                                <button id='Button5' size='large' getLabel='GetLableText' getImage='GetImage' onAction='ZoomInOut_Click' screentip='点击开启单元格内容放大功能，再次点击关闭放大功能！' />
+                                                <button id='Button5' size='large' getLabel='GetLableText' getImage='GetImage' onAction='ZoomInOut_Click' screentip='点击开启单元格内容放大功能，再次点击关闭放大功能(由图表的表格不建议开启，会删掉)！' />
                                                 <button id='Button8' size='large' label='公式检查' getImage='GetImage' onAction='FormularCheck_Click' screentip='点击检查当前工作簿所有sheet中的公式，看是否有错误的连接，推荐合完表后进行检查' />
                                             </group>
                                             <group id='Group3' label='SVN功能'>
@@ -1297,7 +1297,6 @@ namespace NumDesTools
             Worksheet ws = _app.ActiveSheet;
             if (ws.Name == "角色基础")
             {
-                var temptext = "";
                 if (control == null) throw new ArgumentNullException(nameof(control));
                 LabelTextRoleDataPreview = LabelTextRoleDataPreview == "角色数据预览：开启" ? "角色数据预览：关闭" : "角色数据预览：开启";
                 R.InvalidateControl("Button14");
