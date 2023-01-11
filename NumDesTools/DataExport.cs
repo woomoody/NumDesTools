@@ -760,16 +760,16 @@ namespace NumDesTools
 
         public override string GetCustomUI(string ribbonId)
         {
+            //< group id = 'Group1' label = '导表(By:SC)' >
+            //    < button id = 'Button1' size = 'large' label = '导出本表' getImage = 'GetImage' onAction = 'OneSheetOutPut_Click' screentip = '点击导出当前sheet' />
+            //    < button id = 'Button2' size = 'large' label = '导出本簿' getImage = 'GetImage' onAction = 'MutiSheetOutPut_Click' screentip = '点击导出当前book所有的sheet，可自选sheet' />
+            //    < button id = 'Button3' size = 'large' label = '导出目录' getImage = 'GetImage' onAction = 'AllWorkbookOutPut_Click' screentip = '点击导出当前目录所有文件，可自选book' />
+            // </ group >
             //< ribbon startFromScratch = 'false' >//表示加载时excel原有的选项卡隐藏否
             string xml = @"<customUI xmlns='http://schemas.microsoft.com/office/2009/07/customui' onLoad='OnLoad'>
                                 <ribbon startFromScratch='false'>
                                     <tabs>
                                         <tab id='Tab1' label='NumDesTools' insertBeforeMso='TabHome' >
-                                            <group id='Group1' label='导表(By:SC)'>
-                                                <button id='Button1' size='large' label='导出本表' getImage='GetImage' onAction='OneSheetOutPut_Click' screentip='点击导出当前sheet' />
-                                                <button id='Button2' size='large' label='导出本簿' getImage='GetImage' onAction='MutiSheetOutPut_Click' screentip='点击导出当前book所有的sheet，可自选sheet' />
-                                                <button id='Button3' size='large' label='导出目录' getImage='GetImage' onAction='AllWorkbookOutPut_Click' screentip='点击导出当前目录所有文件，可自选book' />
-                                            </group>
                                             <group id='Group2' label='格式整理'>
                                                 <button id='Button4' size='large' label='标准格式' getImage='GetImage' onAction='CleanCellFormat_Click' screentip='点击整理当前sheet格式，标准化文本和单元格大小' />
                                                 <button id='Button5' size='large' getLabel='GetLableText' getImage='GetImage' onAction='ZoomInOut_Click' screentip='点击开启单元格内容放大功能，再次点击关闭放大功能(由图表的表格不建议开启，会删掉)！' />
