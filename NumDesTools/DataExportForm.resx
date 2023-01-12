@@ -129,4 +129,8 @@
   <data name="CreatRibbon_AllWorkbookOutPut_Click_反选" xml:space="preserve">
     <value>反选</value>
   </data>
+  <data name="CellSelectChange_GetCellValue_" xml:space="preserve">
+    <value>选的格子太多了，重选
+最大99行，9列！</value>
+  </data>
 </root>

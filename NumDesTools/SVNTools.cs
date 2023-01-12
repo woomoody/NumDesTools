@@ -1,4 +1,5 @@
-﻿using SharpSvn;
+﻿using System.Diagnostics;
+using SharpSvn;
 
 namespace NumDesTools
 {
@@ -12,10 +13,9 @@ namespace NumDesTools
             SvnCommitArgs comArg = new SvnCommitArgs();
             comArg.Depth = SvnDepth.Empty;
             comArg.LogMessage = logs;
-            SvnCommitResult comRes = null;
             //client.Revert(path);
             //client.Update(path);
-            client.Commit(path,comArg,out comRes);
+            client.Commit(path,comArg,out _);
         }
 
         //Update文件夹：前台
@@ -23,7 +23,7 @@ namespace NumDesTools
         {
             //SvnClient client = new SvnClient();
             //client.Update(path);
-            System.Diagnostics.Process.Start("TortoiseProc.exe", @"/command:update /path:" + path);
+            Process.Start("TortoiseProc.exe", @"/command:update /path:" + path);
         }
 
         //获取文件Log
@@ -53,20 +53,20 @@ namespace NumDesTools
         //提交文件:前台
         public static void CommitFile(string path)
         {
-            System.Diagnostics.Process.Start("TortoiseProc.exe", @"/command:commit /path:" + path);
-            System.Diagnostics.Process.Start("TortoiseProc.exe", @"/command:status /path:" + path);
+            Process.Start("TortoiseProc.exe", @"/command:commit /path:" + path);
+            Process.Start("TortoiseProc.exe", @"/command:status /path:" + path);
         }
 
         //展示Log：前台
         public static void FileLogs(string path)
         {
-            System.Diagnostics.Process.Start("TortoiseProc.exe", @"/command:log /path:" + path);
+            Process.Start("TortoiseProc.exe", @"/command:log /path:" + path);
         }
 
         //与最近文件对比：前台
         public static void DiffFile(string path)
         {
-            System.Diagnostics.Process.Start("TortoiseProc.exe", @"/command:diff /path:" + path);
+            Process.Start("TortoiseProc.exe", @"/command:diff /path:" + path);
         }
     }
 }

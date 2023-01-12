@@ -13,17 +13,14 @@ namespace NumDesTools
     public class CellSelectChange : Form
     {
         private readonly dynamic _app = ExcelDnaUtil.Application;
-        private int _sCount;
-        private bool _oneTri;
 
         public CellSelectChange()
         {
             Worksheet ws = _app.ActiveSheet;
-            _sCount = ws.Shapes.Count;
-            if (_sCount > 0)
+            var sCount = ws.Shapes.Count;
+            if (sCount > 0)
             {
-                ws.Shapes.Item(_sCount).Delete();
-                _sCount--;
+                ws.Shapes.Item(sCount).Delete();
             }
             //单表选择单元格触发
             //ws.SelectionChange += new Excel.DocEvents_SelectionChangeEventHandler(GetCellValueMulti);
@@ -117,7 +114,7 @@ namespace NumDesTools
             }
             else
             {
-                MessageBox.Show("选的格子太多了，重选" + "\n" + "最大99行，9列！");
+                MessageBox.Show(@"选的格子太多了，重选" + @"\n" + @"最大99行，9列！");
             }
             //oneTri = true;
             //}
