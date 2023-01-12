@@ -1,4 +1,6 @@
 ﻿
+using System.ComponentModel;
+
 namespace NumDesTools
 {
     partial class DataExportForm
@@ -6,7 +8,7 @@ namespace NumDesTools
         /// <summary>
         /// Required designer variable.
         /// </summary>
-        private System.ComponentModel.IContainer components = null;
+        private IContainer components = null;
 
         /// <summary>
         /// Clean up any resources being used.

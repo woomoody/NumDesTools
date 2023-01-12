@@ -1311,7 +1311,7 @@ namespace NumDesTools
         public void TestBar1_Click(IRibbonControl control)
         {
             //SVNTools.RevertAndUpFile();
-            _ = new CellSelectChangePro();;
+            RoleDataExport.RoleData();
         }
 
         public void TestBar2_Click(IRibbonControl control)

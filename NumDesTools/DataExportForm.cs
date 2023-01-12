@@ -1,4 +1,5 @@
-﻿using System.Windows.Forms;
+﻿using System;
+using System.Windows.Forms;
 
 namespace NumDesTools
 {
@@ -9,7 +10,7 @@ namespace NumDesTools
             InitializeComponent();
         }
 
-        private void DataExportForm_Load(object sender, System.EventArgs e)
+        private void DataExportForm_Load(object sender, EventArgs e)
         {
         }
     }

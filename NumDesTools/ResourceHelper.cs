@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.IO;
 using System.Reflection;
 
@@ -10,9 +11,9 @@ namespace NumDesTools
         //http://social.msdn.microsoft.com/forums/zh-cn/vsto/thread/7074781a-54dc-4d6a-884d-6de5df0be7e7?persist=true
 
         //获取资源图片，文件要在属性-生成操作-嵌入资源
-        internal static System.Drawing.Bitmap GetResourceBitmap(string resourceName)
+        internal static Bitmap GetResourceBitmap(string resourceName)
         {
-            System.Drawing.Bitmap image = null;
+            Bitmap image = null;
 
             //String projectName = Assembly.GetExecutingAssembly().GetName().Name.ToString();获取项目名
             string[] resources = Assembly.GetExecutingAssembly().GetManifestResourceNames();    //获取全部资源
@@ -31,13 +32,13 @@ namespace NumDesTools
                     {
                         //http://blogs.msdn.com/b/jensenh/archive/2006/11/27/ribbonx-image-faq.aspx
                         case ".ico":
-                            image = new System.Drawing.Icon(streamImg ?? throw new InvalidOperationException()).ToBitmap();
+                            image = new Icon(streamImg ?? throw new InvalidOperationException()).ToBitmap();
                             break;
                         //case ".png":
                         //case ".jpg":
                         //case ".bmp":
                         default:
-                            image = new System.Drawing.Bitmap(streamImg ?? throw new InvalidOperationException());
+                            image = new Bitmap(streamImg ?? throw new InvalidOperationException());
                             image.MakeTransparent();
                             break;
                     }

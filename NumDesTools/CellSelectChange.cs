@@ -1,33 +1,37 @@
-﻿using ExcelDna.Integration;
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using Excel = Microsoft.Office.Interop.Excel;
+using ExcelDna.Integration;
+using Microsoft.Office.Core;
+using Microsoft.Office.Interop.Excel;
+using Font = System.Drawing.Font;
+using XlHAlign = Microsoft.Office.Interop.Excel.XlHAlign;
+using XlVAlign = Microsoft.Office.Interop.Excel.XlVAlign;
 
 namespace NumDesTools
 {
     public class CellSelectChange : Form
     {
         private readonly dynamic _app = ExcelDnaUtil.Application;
-        private int sCount;
-        private bool oneTri;
+        private int _sCount;
+        private bool _oneTri;
 
         public CellSelectChange()
         {
-            Excel.Worksheet ws = _app.ActiveSheet;
-            sCount = ws.Shapes.Count;
-            if (sCount > 0)
+            Worksheet ws = _app.ActiveSheet;
+            _sCount = ws.Shapes.Count;
+            if (_sCount > 0)
             {
-                ws.Shapes.Item(sCount).Delete();
-                sCount--;
+                ws.Shapes.Item(_sCount).Delete();
+                _sCount--;
             }
             //单表选择单元格触发
-            //ws.SelectionChange += new Excel.DocEvents_SelectionChangeEventHandler(getCellValue);
+            //ws.SelectionChange += new Excel.DocEvents_SelectionChangeEventHandler(GetCellValueMulti);
             //全（多）工作簿选择单元格触发
-            _app.SheetSelectionChange += new Excel.WorkbookEvents_SheetSelectionChangeEventHandler(GetCellValue);
+            _app.SheetSelectionChange += new WorkbookEvents_SheetSelectionChangeEventHandler(GetCellValue);
         }
 
-        public void GetCellValue(object sh, Excel.Range target)
+        public void GetCellValue(object sh, Range target)
         {
             string onOffKey = CreatRibbon.LabelText;
             if (onOffKey != "放大镜：开启") return;
@@ -86,7 +90,7 @@ namespace NumDesTools
                 //aaa.Show();
 
                 //创建shape用做提示？？会删掉表里的第一个shape
-                Excel.Worksheet ws = _app.ActiveSheet;
+                Worksheet ws = _app.ActiveSheet;
                 var sCount = ws.Shapes.Count;
                 if (sCount != 0)
                 {
@@ -94,18 +98,18 @@ namespace NumDesTools
                     sCount--;
                 }
                 sCount++;
-                ws.Shapes.AddTextbox(Microsoft.Office.Core.MsoTextOrientation.msoTextOrientationHorizontal, target.Left + target.Width + 20, target.Top, sF.Width, sF.Height + 20);
+                ws.Shapes.AddTextbox(MsoTextOrientation.msoTextOrientationHorizontal, target.Left + target.Width + 20, target.Top, sF.Width, sF.Height + 20);
                 ws.Shapes.Item(sCount).Fill.ForeColor.TintAndShade = 0;
                 ws.Shapes.Item(sCount).Fill.ForeColor.Brightness = 0;
                 ws.Shapes.Item(sCount).Fill.Transparency = 0;
                 ws.Shapes.Item(sCount).Line.Visible = 0;
-                ws.Shapes.Item(sCount).BackgroundStyle = (Microsoft.Office.Core.MsoBackgroundStyleIndex)10;//MsoBackgroundStyleIndex 9  10
+                ws.Shapes.Item(sCount).BackgroundStyle = (MsoBackgroundStyleIndex)10;//MsoBackgroundStyleIndex 9  10
                 ws.Shapes.Item(sCount).TextEffect.FontSize = 20;
                 ws.Shapes.Item(sCount).TextEffect.FontName = "微软雅黑";
                 //水平
-                ws.Shapes.Item(sCount).TextFrame.HorizontalAlignment = Excel.XlHAlign.xlHAlignLeft;
+                ws.Shapes.Item(sCount).TextFrame.HorizontalAlignment = XlHAlign.xlHAlignLeft;
                 //垂直
-                ws.Shapes.Item(sCount).TextFrame.VerticalAlignment = Excel.XlVAlign.xlVAlignCenter;
+                ws.Shapes.Item(sCount).TextFrame.VerticalAlignment = XlVAlign.xlVAlignCenter;
                 //导入数据显示在shape中
                 ws.Shapes.Item(sCount).TextEffect.Text = cellStr;
                 //释放
