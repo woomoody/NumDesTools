@@ -1,7 +1,4 @@
-﻿using ExcelDna.Integration;
-using ExcelDna.Integration.CustomUI;
-using Microsoft.Office.Interop.Excel;
-using System;
+﻿using System;
 using System.Data;
 using System.Data.OleDb;
 using System.Diagnostics;
@@ -10,15 +7,27 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using ExcelDna.Integration;
+using ExcelDna.Integration.CustomUI;
+using Microsoft.Office.Interop.Excel;
+using stdole;
+using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
-
-using Excel = Microsoft.Office.Interop.Excel;
+using CommandBar = Microsoft.Office.Core.CommandBar;
+using CommandBarControl = Microsoft.Office.Core.CommandBarControl;
+using CommandBarControls = Microsoft.Office.Core.CommandBarControls;
+using DataTable = System.Data.DataTable;
+using Image = System.Drawing.Image;
+using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
+using MsoControlType = Microsoft.Office.Core.MsoControlType;
+using Point = System.Drawing.Point;
 
 namespace NumDesTools
 {
-    public static class ErrorLogCTP
+    public static class ErrorLogCtp
     {
         public static CustomTaskPane Ctp;
         public static UserControl LinkControl;
@@ -40,7 +49,7 @@ namespace NumDesTools
                             Text = errorLine,
                             Height = 20,
                             Width = 350,
-                            Location = new System.Drawing.Point(10, 40 + (i - 1) * 20)
+                            Location = new Point(10, 40 + (i - 1) * 20)
                         };
                         LinkControl.Controls.Add(errorLinkLable);
                         errorLinkLable.LinkClicked += LinkLableClick;
@@ -208,7 +217,7 @@ namespace NumDesTools
                 string filepath = filePath + @"\errorLog.txt";
                 using (var fs = new FileStream(filepath, FileMode.Append, FileAccess.Write))
                 {
-                    var sw = new StreamWriter(fs, new System.Text.UTF8Encoding(true));
+                    var sw = new StreamWriter(fs, new UTF8Encoding(true));
                     sw.WriteLine(isErrors);
                     sw.Close();
                 }
@@ -351,18 +360,17 @@ namespace NumDesTools
 
     public static class ExcelToDataGridView
     {
-        public static System.Data.DataTable SheetDataToDataGridView(string filePath, string sheetName)
+        public static DataTable SheetDataToDataGridView(string filePath, string sheetName)
         {
             //根据路径打开一个Excel文件并将数据填充到DataSet中
             string strConn = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source = " + filePath + ";Extended Properties ='Excel 8.0;HDR=NO;IMEX=1'";//导入时包含Excel中的第一行数据，并且将数字和字符混合的单元格视为文本进行导入
             OleDbConnection conn = new OleDbConnection(strConn);
             conn.Open();
-            string strExcel = "";
-            OleDbDataAdapter myCommand = null;
-            DataSet ds = null;
+            string strExcel;
+            OleDbDataAdapter myCommand;
             strExcel = "select  * from   [" + sheetName + "$]";
             myCommand = new OleDbDataAdapter(strExcel, strConn);
-            ds = new DataSet();
+            var ds = new DataSet();
             myCommand.Fill(ds, "table1");
             Console.WriteLine(ds.Tables[0].Rows[0][0].ToString());
 
@@ -480,14 +488,14 @@ namespace NumDesTools
         }
     }
 
-    public static class PreviewTableCTP
+    public static class PreviewTableCtp
     {
         public static CustomTaskPane Ctp;
-        public static UserControl uc;
+        public static UserControl Uc;
         public static void CreateCtp(string filePath, string sheetName)
         {
-            uc = new UserControl();
-            Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(userControl: uc, title: filePath + @"\" + sheetName);
+            Uc = new UserControl();
+            Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(userControl: Uc, title: filePath + @"\" + sheetName);
             Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
             Ctp.Width = 700;
             Ctp.Visible = true;
@@ -495,7 +503,7 @@ namespace NumDesTools
             dgv.DataSource = ExcelToDataGridView.SheetDataToDataGridView(filePath, sheetName);
             dgv.Width = 680;
             dgv.Height = 900;
-            uc.Controls.Add(dgv);
+            Uc.Controls.Add(dgv);
         }
 
         public static void DisposeCtp()
@@ -513,7 +521,7 @@ namespace NumDesTools
         public static string LabelTextRoleDataPreview = "角色数据预览：关闭";
         public static string TempPath = @"\Client\Assets\Resources\Table";
         public static IRibbonUI R;
-        private static CommandBarButton btn;
+        private static CommandBarButton _btn;
         private dynamic _app = ExcelDnaUtil.Application;
         public void AllWorkbookOutPut_Click(IRibbonControl control)
         {
@@ -532,22 +540,22 @@ namespace NumDesTools
                     Size = new Size(500, 800),
                     MaximizeBox = false,
                     MinimizeBox = false,
-                    Text = "表格汇总"
+                    Text = @"表格汇总"
                 };
                 var gb = new Panel
                 {
                     BackColor = Color.FromArgb(255, 225, 225, 225),
                     AutoScroll = true,
-                    Location = new System.Drawing.Point(f.Left + 20, f.Top + 20),
+                    Location = new Point(f.Left + 20, f.Top + 20),
                     Size = new Size(f.Width - 55, f.Height - 200)
                 };
                 //gb.Dock = DockStyle.Fill;
                 f.Controls.Add(gb);
-                System.Windows.Forms.Button bt3 = new System.Windows.Forms.Button
+                Button bt3 = new Button
                 {
                     Name = "button3",
-                    Text = "导出",
-                    Location = new System.Drawing.Point(f.Left + 360, f.Top + 680)
+                    Text = @"导出",
+                    Location = new Point(f.Left + 360, f.Top + 680)
                 };
                 f.Controls.Add(bt3);
 
@@ -576,10 +584,10 @@ namespace NumDesTools
                     {
                         Text = fileName,
                         AutoSize = true,
-                        Tag = "cb_file" + fileCount.ToString(),
-                        Name = "*CB_file*" + fileCount.ToString(),
+                        Tag = "cb_file" + fileCount,
+                        Name = "*CB_file*" + fileCount,
                         Checked = true,
-                        Location = new System.Drawing.Point(25, 10 + (fileCount - 1) * 30)
+                        Location = new Point(25, 10 + (fileCount - 1) * 30)
                     };
                     gb.Controls.Add(cb);
                     fileCount++;
@@ -591,8 +599,8 @@ namespace NumDesTools
 
                 var checkBox1 = new CheckBox
                 {
-                    Location = new System.Drawing.Point(f.Left + 20, f.Top + 680),
-                    Text = "全选"
+                    Location = new Point(f.Left + 20, f.Top + 680),
+                    Text = @"全选"
                 };
                 f.Controls.Add(checkBox1);
                 checkBox1.Click += CheckBox1Click;
@@ -606,13 +614,13 @@ namespace NumDesTools
                     {
                         foreach (CheckBox ck in gb.Controls)
                             ck.Checked = true;
-                        checkBox1.Text = "反选";
+                        checkBox1.Text = @"反选";
                     }
                     else
                     {
                         foreach (CheckBox ck in gb.Controls)
                             ck.Checked = false;
-                        checkBox1.Text = "全选";
+                        checkBox1.Text = @"全选";
                     }
                 }
 
@@ -626,12 +634,12 @@ namespace NumDesTools
                                 return;
                         }
                         checkBox1.Checked = true;
-                        checkBox1.Text = "反选";
+                        checkBox1.Text = @"反选";
                     }
                     else
                     {
                         checkBox1.Checked = false;
-                        checkBox1.Text = "全选";
+                        checkBox1.Text = @"全选";
                     }
                 }
 
@@ -690,13 +698,13 @@ namespace NumDesTools
                     f.Close();
                     if (File.Exists(logFile))
                     {
-                        MessageBox.Show("文件有错误,请查看");
+                        MessageBox.Show(@"文件有错误,请查看");
                         //运行后自动打开LOG文件
                         Process.Start("explorer.exe", logFile);
                     }
                     else
                     {
-                        MessageBox.Show(filesName + "导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + "秒" + "\n" + "转完建议重启Excel！");
+                        MessageBox.Show(filesName + @"导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + @"秒" + @"\n" + @"转完建议重启Excel！");
                         //app = null;
                     }
                     _app.ScreenUpdating = true;
@@ -709,7 +717,7 @@ namespace NumDesTools
             }
             else
             {
-                MessageBox.Show("错误：先打开个表");
+                MessageBox.Show(@"错误：先打开个表");
             }
         }
 
@@ -755,7 +763,7 @@ namespace NumDesTools
             var timespan = stopwatch.Elapsed;//获取总时间
             var milliseconds = timespan.TotalMilliseconds;//换算成毫秒
 
-            MessageBox.Show("检查公式完毕！" + Math.Round(milliseconds / 1000, 2) + "秒");
+            MessageBox.Show(@"检查公式完毕！" + Math.Round(milliseconds / 1000, 2) + @"秒");
         }
 
         public override string GetCustomUI(string ribbonId)
@@ -804,9 +812,9 @@ namespace NumDesTools
         }
         //控件id 不能重复
 
-        public stdole.IPictureDisp GetImage(IRibbonControl control)
+        public IPictureDisp GetImage(IRibbonControl control)
         {
-            stdole.IPictureDisp pictureDips;
+            IPictureDisp pictureDips;
             switch (control.Id)
             {
                 case "Button1":
@@ -875,9 +883,8 @@ namespace NumDesTools
             return latext;
         }
 
-        public void IndexSheetOpen_Click(Microsoft.Office.Core.CommandBarButton Ctrl, ref bool CancelDefault)
+        public void IndexSheetOpen_Click(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
         {
-            string filePath = _app.ActiveWorkbook.Path;
             var ws = _app.ActiveSheet;
             var cellCol = _app.Selection.Column;
             var fileTemp = Convert.ToString(ws.Cells[7, cellCol].Value);
@@ -887,26 +894,19 @@ namespace NumDesTools
             {
                 if (fileTemp.Contains("@"))
                 {
-                    var fileName = fileTemp.Substring(0, fileTemp.IndexOf("@"));
-                    var sheetName = fileTemp.Substring(fileTemp.LastIndexOf("@") + 1);
-                    filePath = filePath + @"\" + fileName;
-                    object missing = Type.Missing;
-                    Workbook book = _app.Workbooks.Open(filePath, missing,
-                           missing, missing, missing, missing, missing, missing, missing,
-                           missing, missing, missing, missing, missing, missing);
                 }
                 else
                 {
-                    MessageBox.Show("没有找到关联表格" + cellAdress + "是[" + fileTemp + "]格式不对：xxx@xxx");
+                    MessageBox.Show(@"没有找到关联表格" + cellAdress + @"是[" + fileTemp + @"]格式不对：xxx@xxx");
                 }
             }
             else
             {
-                MessageBox.Show("没有找到关联表格" + cellAdress + "为空");
+                MessageBox.Show(@"没有找到关联表格" + cellAdress + @"为空");
             }
         }
 
-        public void IndexSheetUnOpen_Click(Microsoft.Office.Core.CommandBarButton Ctrl, ref bool CancelDefault)
+        public void IndexSheetUnOpen_Click(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
         {
             string filePath = _app.ActiveWorkbook.Path;
             var ws = _app.ActiveSheet;
@@ -921,16 +921,16 @@ namespace NumDesTools
                     var fileName = fileTemp.Substring(0, fileTemp.IndexOf("@"));
                     var sheetName = fileTemp.Substring(fileTemp.LastIndexOf("@") + 1);
                     filePath = filePath + @"\" + fileName;
-                    PreviewTableCTP.CreateCtp(filePath, sheetName);
+                    PreviewTableCtp.CreateCtp(filePath, sheetName);
                 }
                 else
                 {
-                    MessageBox.Show("没有找到关联表格" + cellAdress + "是[" + fileTemp + "]格式不对：xxx@xxx");
+                    MessageBox.Show(@"没有找到关联表格" + cellAdress + @"是[" + fileTemp + @"]格式不对：xxx@xxx");
                 }
             }
             else
             {
-                MessageBox.Show("没有找到关联表格" + cellAdress + "为空");
+                MessageBox.Show(@"没有找到关联表格" + cellAdress + @"为空");
             }
         }
 
@@ -949,22 +949,22 @@ namespace NumDesTools
                     Size = new Size(500, 800),
                     MaximizeBox = false,
                     MinimizeBox = false,
-                    Text = "表格汇总"
+                    Text = @"表格汇总"
                 };
                 var gb = new Panel
                 {
                     BackColor = Color.FromArgb(255, 225, 225, 225),
                     AutoScroll = true,
-                    Location = new System.Drawing.Point(f.Left + 20, f.Top + 20),
+                    Location = new Point(f.Left + 20, f.Top + 20),
                     Size = new Size(f.Width - 55, f.Height - 200)
                 };
                 //gb.Dock = DockStyle.Fill;
                 f.Controls.Add(gb);
-                var bt3 = new System.Windows.Forms.Button
+                var bt3 = new Button
                 {
                     Name = "button3",
-                    Text = "导出",
-                    Location = new System.Drawing.Point(f.Left + 360, f.Top + 680)
+                    Text = @"导出",
+                    Location = new Point(f.Left + 360, f.Top + 680)
                 };
                 f.Controls.Add(bt3);
 
@@ -977,7 +977,6 @@ namespace NumDesTools
 
                 #region 动态加载复选框
 
-                int sheetCount = _app.Worksheets.Count;
                 var i = 1;
                 foreach (var sheet in _app.Worksheets)
                 {
@@ -990,10 +989,10 @@ namespace NumDesTools
                     {
                         Text = sheetName,
                         AutoSize = true,
-                        Tag = "cb" + i.ToString(),
-                        Name = "*CB*" + i.ToString(),
+                        Tag = "cb" + i,
+                        Name = "*CB*" + i,
                         Checked = true,
-                        Location = new System.Drawing.Point(25, 10 + (i - 1) * 30)
+                        Location = new Point(25, 10 + (i - 1) * 30)
                     };
                     gb.Controls.Add(cb);
                 }
@@ -1004,8 +1003,8 @@ namespace NumDesTools
 
                 var checkBox1 = new CheckBox
                 {
-                    Location = new System.Drawing.Point(f.Left + 20, f.Top + 680),
-                    Text = "全选"
+                    Location = new Point(f.Left + 20, f.Top + 680),
+                    Text = @"全选"
                 };
                 f.Controls.Add(checkBox1);
                 checkBox1.Click += CheckBox1Click;
@@ -1019,13 +1018,13 @@ namespace NumDesTools
                     {
                         foreach (CheckBox ck in gb.Controls)
                             ck.Checked = true;
-                        checkBox1.Text = "反选";
+                        checkBox1.Text = @"反选";
                     }
                     else
                     {
                         foreach (CheckBox ck in gb.Controls)
                             ck.Checked = false;
-                        checkBox1.Text = "全选";
+                        checkBox1.Text = @"全选";
                     }
                 }
 
@@ -1039,12 +1038,12 @@ namespace NumDesTools
                                 return;
                         }
                         checkBox1.Checked = true;
-                        checkBox1.Text = "反选";
+                        checkBox1.Text = @"反选";
                     }
                     else
                     {
                         checkBox1.Checked = false;
-                        checkBox1.Text = "全选";
+                        checkBox1.Text = @"全选";
                     }
                 }
 
@@ -1053,7 +1052,7 @@ namespace NumDesTools
                 #region 导出Sheet
 
                 //初始化清除老的CTP
-                ErrorLogCTP.DisposeCtp();
+                ErrorLogCtp.DisposeCtp();
                 var errorLog = "";
                 var sheetsName = "";
                 bt3.Click += Btn3Click;
@@ -1079,12 +1078,12 @@ namespace NumDesTools
                     f.Close();
                     if (errorLog == "" && sheetsName != "")
                     {
-                        MessageBox.Show(sheetsName + "导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + "秒");
+                        MessageBox.Show(sheetsName + @"导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + @"秒");
                     }
                     else
                     {
-                        ErrorLogCTP.CreateCtp(errorLog);
-                        MessageBox.Show("文件有错误,请查看");
+                        ErrorLogCtp.CreateCtp(errorLog);
+                        MessageBox.Show(@"文件有错误,请查看");
                     }
                 }
 
@@ -1095,7 +1094,7 @@ namespace NumDesTools
             }
             else
             {
-                MessageBox.Show("错误：先打开个表");
+                MessageBox.Show(@"错误：先打开个表");
             }
         }
 
@@ -1105,7 +1104,7 @@ namespace NumDesTools
             if (_app.ActiveSheet != null)
             {
                 //初始化清除老的CTP
-                ErrorLogCTP.DisposeCtp();
+                ErrorLogCtp.DisposeCtp();
                 //检查代码运行时间
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
@@ -1124,10 +1123,6 @@ namespace NumDesTools
                 TimeSpan timespan = stopwatch.Elapsed;//获取总时间
                 double milliseconds = timespan.TotalMilliseconds;//换算成毫秒
                 string path = outFilePath + @"\" + sheetName.Substring(0, sheetName.Length - 4) + ".txt";
-                string pathZH_CH = outFilePath + @"\zh_ch\" + sheetName.Substring(0, sheetName.Length - 4) + "_s.txt";
-                string pathZH_TW = outFilePath + @"\zh_tw\" + sheetName.Substring(0, sheetName.Length - 4) + "_s.txt";
-                string pathJA_JP = outFilePath + @"\ja_jp\" + sheetName.Substring(0, sheetName.Length - 4) + "_s.txt";
-                string pathexcel = _app.ActiveWorkbook.Path + @"\" + _app.ActiveWorkbook.Name;
                 if (errorLog == "")
                 {
                     var endTips = path + "~@~导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + "秒";
@@ -1227,13 +1222,13 @@ namespace NumDesTools
                 }
                 else
                 {
-                    ErrorLogCTP.CreateCtp(errorLog);
-                    MessageBox.Show("文件有错误,请查看");
+                    ErrorLogCtp.CreateCtp(errorLog);
+                    MessageBox.Show(@"文件有错误,请查看");
                 }
             }
             else
             {
-                MessageBox.Show("错误：先打开个表");
+                MessageBox.Show(@"错误：先打开个表");
             }
         }
 
@@ -1246,15 +1241,15 @@ namespace NumDesTools
         public void SvnCommitExcel_Click(IRibbonControl control)
         {
             string path = _app.ActiveWorkbook.Path;
-            SVNTools.UpdateFiles(path);
+            SvnTools.UpdateFiles(path);
         }
 
         public void SvnCommitTxt_Click(IRibbonControl control)
         {
             string path = _app.ActiveWorkbook.Path;
-            Directory.SetCurrentDirectory(Directory.GetParent(path).FullName);
+            Directory.SetCurrentDirectory(Directory.GetParent(path)?.FullName ?? throw new InvalidOperationException());
             path = Directory.GetCurrentDirectory() + TempPath;
-            SVNTools.UpdateFiles(path);
+            SvnTools.UpdateFiles(path);
         }
 
         public void PVP_H_Click(IRibbonControl control)
@@ -1305,7 +1300,7 @@ namespace NumDesTools
             }
             else
             {
-                MessageBox.Show("非【角色基础】表格，不能使用此功能");
+                MessageBox.Show(@"非【角色基础】表格，不能使用此功能");
             }
         }
         public void TestBar1_Click(IRibbonControl control)
@@ -1340,24 +1335,27 @@ namespace NumDesTools
             _ = new CellSelectChange();
         }
 
-        private void App_SheetSelectionChange(object Sh, Excel.Range Target)
+        private void App_SheetSelectionChange(object sh, Range target)
         {
             //excel文档已有的右键菜单cell
-            Microsoft.Office.Core.CommandBar mzBar = _app.CommandBars["cell"];
+            CommandBar mzBar = _app.CommandBars["cell"];
             mzBar.Reset();
-            Microsoft.Office.Core.CommandBarControls bars = mzBar.Controls;
-            foreach (Microsoft.Office.Core.CommandBarControl temp_contrl in bars)
+            CommandBarControls bars = mzBar.Controls;
+            foreach (CommandBarControl tempContrl in bars)
             {
-                string t = temp_contrl.Tag;
+                string t = tempContrl.Tag;
                 //如果已经存在就删除
                 //此处如果多选单元格会有BUG，再看看怎么处理
                 if (t == "Test" || t == "Test1")
                 {
                     try
                     {
-                        temp_contrl.Delete();
+                        tempContrl.Delete();
                     }
-                    catch { }
+                    catch
+                    {
+                        // ignored
+                    }
                 }
             }
             //解决事件连续触发
@@ -1365,41 +1363,47 @@ namespace NumDesTools
             GC.WaitForPendingFinalizers();
             //生成自己的菜单
             object missing = Type.Missing;
-            Microsoft.Office.Core.CommandBarControl comControl = bars.Add(Microsoft.Office.Core.MsoControlType.msoControlButton,
+            CommandBarControl comControl = bars.Add(MsoControlType.msoControlButton,
                 missing, missing, 1, true);
             Microsoft.Office.Core.CommandBarButton comButton = comControl as Microsoft.Office.Core.CommandBarButton;
             if (comControl != null)
             {
-                comButton.Tag = "Test";
-                comButton.Caption = "索表：右侧预览";
-                comButton.Style = Microsoft.Office.Core.MsoButtonStyle.msoButtonIconAndCaption;
-                comButton.Click += IndexSheetUnOpen_Click;
+                if (comButton != null)
+                {
+                    comButton.Tag = "Test";
+                    comButton.Caption = "索表：右侧预览";
+                    comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    comButton.Click += IndexSheetUnOpen_Click;
+                }
             }
             //添加第二个菜单
-            Microsoft.Office.Core.CommandBarControl comControl1 = bars.Add(Microsoft.Office.Core.MsoControlType.msoControlButton,
+            CommandBarControl comControl1 = bars.Add(MsoControlType.msoControlButton,
                     missing, missing, 2, true);   //添加自己的菜单项
             Microsoft.Office.Core.CommandBarButton comButton1 = comControl1 as Microsoft.Office.Core.CommandBarButton;
             if (comControl1 != null)
             {
-                comButton1.Tag = "Test1";
-                comButton1.Caption = "索表：打开表格";
-                comButton1.Style = Microsoft.Office.Core.MsoButtonStyle.msoButtonIconAndCaption;
-                comButton1.Click += IndexSheetOpen_Click;
+                if (comButton1 != null)
+                {
+                    comButton1.Tag = "Test1";
+                    comButton1.Caption = "索表：打开表格";
+                    comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    comButton1.Click += IndexSheetOpen_Click;
+                }
             }
         }
-        private void App_SheetSelectionChange1(object Sh, Excel.Range Target)
+        private void App_SheetSelectionChange1(object sh, Range target)
         {
             //右键重置避免按钮重复
-            Microsoft.Office.Core.CommandBar currentMenuBar = _app.CommandBars["cell"];
+            CommandBar currentMenuBar = _app.CommandBars["cell"];
             //currentMenuBar.Reset();
-            Microsoft.Office.Core.CommandBarControls bars = currentMenuBar.Controls;
+            CommandBarControls bars = currentMenuBar.Controls;
             //删除右键
-            foreach (Microsoft.Office.Core.CommandBarControl temp_contrl in bars)
+            foreach (CommandBarControl tempContrl in bars)
             {
-                string t = temp_contrl.Tag;
+                string t = tempContrl.Tag;
                 if (t == "Test" || t == "Test1")
                 {
-                    temp_contrl.Delete();
+                    tempContrl.Delete();
                     GC.Collect();
                     GC.WaitForPendingFinalizers();
                 }
@@ -1407,14 +1411,17 @@ namespace NumDesTools
                 {
                     try
                     {
-                        temp_contrl.Delete();
+                        tempContrl.Delete();
                     }
-                    catch { }
+                    catch
+                    {
+                        // ignored
+                    }
                 }
             }
 
             //解决事件连续触发
-            btn = null;
+            _btn = null;
             GC.Collect();
             GC.WaitForPendingFinalizers();
 
@@ -1447,9 +1454,9 @@ namespace NumDesTools
             //}
         }
 
-        private void NewControl_Click(Microsoft.Office.Core.CommandBarButton Ctrl, ref bool CancelDefault)
+        private void NewControl_Click(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
         {
-            System.Windows.Forms.MessageBox.Show("Test");
+            MessageBox.Show(@"Test");
         }
     }
     //public static class SvnLogCTP
@@ -1495,7 +1502,7 @@ namespace NumDesTools
             app.ActiveSheet.Cells.ShrinkToFit = true;
             app.ActiveSheet.Cells.Borders.LineStyle = XlLineStyle.xlDash;
             app.ActiveSheet.Cells.Borders.Weight = XlBorderWeight.xlHairline;
-            MessageBox.Show("格式整理完毕");
+            MessageBox.Show(@"格式整理完毕");
         }
 
         public static void GetDataToTxt(string sheetName, string outFilePath)
@@ -1591,7 +1598,7 @@ namespace NumDesTools
                     string filepath = outFilePath + @"\" + outFileSheetName + ".txt";
                     using (var fs = new FileStream(filepath, FileMode.Create, FileAccess.Write))
                     {
-                        var sw = new StreamWriter(fs, new System.Text.UTF8Encoding(false));
+                        var sw = new StreamWriter(fs, new UTF8Encoding(false));
                         sw.WriteLine(dataValueStrFull);
                         sw.Close();
                     }
@@ -1602,7 +1609,7 @@ namespace NumDesTools
                     string filepath = outFilePath + dataPath + @"\" + outFileSheetName + "_s.txt";
                     using (var fs = new FileStream(filepath, FileMode.Create, FileAccess.Write))
                     {
-                        StreamWriter sw = new StreamWriter(fs, new System.Text.UTF8Encoding(true));
+                        StreamWriter sw = new StreamWriter(fs, new UTF8Encoding(true));
                         sw.WriteLine(dataValueStrFull);
                         sw.Close();
                     }
@@ -1618,9 +1625,9 @@ namespace NumDesTools
         // ReSharper disable once AssignNullToNotNullAttribute
         private GetImageByStdole() : base(null) { }
 
-        public static stdole.IPictureDisp ImageToPictureDisp(System.Drawing.Image image)
+        public static IPictureDisp ImageToPictureDisp(Image image)
         {
-            return (stdole.IPictureDisp)GetIPictureDispFromPicture(image: image);
+            return (IPictureDisp)GetIPictureDispFromPicture(image: image);
         }
 
         //public static System.Drawing.Image PictureDispToImage(stdole.IPictureDisp pictureDisp)
