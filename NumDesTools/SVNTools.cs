@@ -2,7 +2,7 @@
 
 namespace NumDesTools
 {
-    internal class SVNTools
+    internal class SvnTools
     {
         //static string path = @"C:\ProWork\trunk\Client\Assets\Resources\Table\Skill.txt";
         //Revert并Update文件：后台

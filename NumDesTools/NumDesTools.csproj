@@ -65,7 +65,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CellSelectChangePro.cs" />
+    <Compile Include="RoleAndMonsterDataCreat.cs" />
     <Compile Include="DotaLegendBattleParallel.cs" />
     <Compile Include="DotaLegendBattleSerial.cs" />
     <Compile Include="DataExport.cs" />

@@ -117,4 +117,16 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="CreatRibbon_AllWorkbookOutPut_Click_表格汇总" xml:space="preserve">
+    <value>表格汇总</value>
+  </data>
+  <data name="CreatRibbon_AllWorkbookOutPut_Click_导出" xml:space="preserve">
+    <value>导出</value>
+  </data>
+  <data name="CreatRibbon_AllWorkbookOutPut_Click_全选" xml:space="preserve">
+    <value>全选</value>
+  </data>
+  <data name="CreatRibbon_AllWorkbookOutPut_Click_反选" xml:space="preserve">
+    <value>反选</value>
+  </data>
 </root>
