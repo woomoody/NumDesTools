@@ -1,9 +1,9 @@
-﻿using System;
+﻿using ExcelDna.Integration;
+using Microsoft.Office.Interop.Excel;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using ExcelDna.Integration;
-using Microsoft.Office.Interop.Excel;
 
 namespace NumDesTools;
 
@@ -18,10 +18,15 @@ internal class ExcelData
     public static dynamic GroupBRowMinPvp = Convert.ToInt32(Ws.Range["C20"].Value);
     public static dynamic GroupBColMinPvp = Convert.ToInt32(Ws.Range["C21"].Value);
     public static dynamic GroupBRowMaxPvp = Convert.ToInt32(Ws.Range["C22"].Value);
+
     public static dynamic GroupBColMaxPvp = Convert.ToInt32(Ws.Range["C23"].Value);
+
     //初始化A、B两个阵营(PVP)
-    public static Range RangeApvp = Ws.Range[Ws.Cells[GroupARowMinPvp, GroupAColMinPvp], Ws.Cells[GroupARowMaxPvp, GroupAColMaxPvp]];
-    public static Range RangeBpvp = Ws.Range[Ws.Cells[GroupBRowMinPvp, GroupBColMinPvp], Ws.Cells[GroupBRowMaxPvp, GroupBColMaxPvp]];
+    public static Range RangeApvp = Ws.Range[Ws.Cells[GroupARowMinPvp, GroupAColMinPvp],
+        Ws.Cells[GroupARowMaxPvp, GroupAColMaxPvp]];
+
+    public static Range RangeBpvp = Ws.Range[Ws.Cells[GroupBRowMinPvp, GroupBColMinPvp],
+        Ws.Cells[GroupBRowMaxPvp, GroupBColMaxPvp]];
 
     public static dynamic GroupARowMinPve = Convert.ToInt32(Ws.Range["C41"].Value);
     public static dynamic GroupAColMinPve = Convert.ToInt32(Ws.Range["C42"].Value);
@@ -30,10 +35,15 @@ internal class ExcelData
     public static dynamic GroupBRowMinPve = Convert.ToInt32(Ws.Range["C52"].Value);
     public static dynamic GroupBColMinPve = Convert.ToInt32(Ws.Range["C53"].Value);
     public static dynamic GroupBRowMaxPve = Convert.ToInt32(Ws.Range["C54"].Value);
+
     public static dynamic GroupBColMaxPve = Convert.ToInt32(Ws.Range["C55"].Value);
+
     //初始化A、B两个阵营(PVE)
-    public static Range RangeApve = Ws.Range[Ws.Cells[GroupARowMinPve, GroupAColMinPve], Ws.Cells[GroupARowMaxPve, GroupAColMaxPve]];
-    public static Range RangeBpve = Ws.Range[Ws.Cells[GroupBRowMinPve, GroupBColMinPve], Ws.Cells[GroupBRowMaxPve, GroupBColMaxPve]];
+    public static Range RangeApve = Ws.Range[Ws.Cells[GroupARowMinPve, GroupAColMinPve],
+        Ws.Cells[GroupARowMaxPve, GroupAColMaxPve]];
+
+    public static Range RangeBpve = Ws.Range[Ws.Cells[GroupBRowMinPve, GroupBColMinPve],
+        Ws.Cells[GroupBRowMaxPve, GroupBColMaxPve]];
 }
 
 internal class DotaLegendBattleParallel
@@ -67,7 +77,9 @@ internal class DotaLegendBattleParallel
             var groupBRowMaxPvp = ExcelData.GroupBRowMaxPvp;
             Array arrApvp = ExcelData.RangeApvp.Value2;
             Array arrBpvp = ExcelData.RangeBpvp.Value2;
-            Parallel.For(0, testBattleMaxPvp, _ => BattleCaculate(groupARowMinPvp, groupARowMaxPvp, groupBRowMinPvp, groupBRowMaxPvp, arrApvp, arrBpvp,true));
+            Parallel.For(0, testBattleMaxPvp,
+                _ => BattleCaculate(groupARowMinPvp, groupARowMaxPvp, groupBRowMinPvp, groupBRowMaxPvp, arrApvp,
+                    arrBpvp, true));
             Ws.Range["D3"].Value2 = _avpvp;
             Ws.Range["J3"].Value2 = _bvpvp;
             Ws.Range["G3"].Value2 = _abvpvp;
@@ -90,7 +102,9 @@ internal class DotaLegendBattleParallel
             var groupBRowMaxPve = ExcelData.GroupBRowMaxPve;
             Array arrApve = ExcelData.RangeApve.Value2;
             Array arrBpve = ExcelData.RangeBpve.Value2;
-            Parallel.For(0, testBattleMaxPve, _ => BattleCaculate(groupARowMinPve, groupARowMaxPve, groupBRowMinPve, groupBRowMaxPve, arrApve, arrBpve,false));
+            Parallel.For(0, testBattleMaxPve,
+                _ => BattleCaculate(groupARowMinPve, groupARowMaxPve, groupBRowMinPve, groupBRowMaxPve, arrApve,
+                    arrBpve, false));
             Ws.Range["D35"].Value2 = _avpve;
             Ws.Range["J35"].Value2 = _bvpve;
             Ws.Range["G35"].Value2 = _abvpve;
@@ -106,7 +120,8 @@ internal class DotaLegendBattleParallel
         }
     }
 
-    public static void BattleCaculate(dynamic groupARowMin, dynamic groupARowMax, dynamic groupBRowMin, dynamic groupBRowMax, dynamic arrA, dynamic arrB,bool mode)
+    public static void BattleCaculate(dynamic groupARowMin, dynamic groupARowMax, dynamic groupBRowMin,
+        dynamic groupBRowMax, dynamic arrA, dynamic arrB, bool mode)
     {
         var groupARowNum = groupARowMax - groupARowMin + 1;
         var groupBRowNum = groupBRowMax - groupBRowMin + 1;
@@ -336,28 +351,28 @@ internal class DotaLegendBattleParallel
         return (takeDmg2, heal1);
     }
 
-/*
-    private static List<double> HealCaculate(int num1, dynamic atk1, dynamic hp1, dynamic skillHealUseAllHp1,
-        dynamic skillHealUseSelfAtk1, dynamic skillHealUseSelfHp1, dynamic isSkill1)
-    {
-        //遍历所有受到治疗数据
-        var heal1 = new List<double>();
-        var healTemp = 0;
-        for (var i = 0; i < num1; i++)
+    /*
+        private static List<double> HealCaculate(int num1, dynamic atk1, dynamic hp1, dynamic skillHealUseAllHp1,
+            dynamic skillHealUseSelfAtk1, dynamic skillHealUseSelfHp1, dynamic isSkill1)
         {
-            if (isSkill1[i])
+            //遍历所有受到治疗数据
+            var heal1 = new List<double>();
+            var healTemp = 0;
+            for (var i = 0; i < num1; i++)
             {
-                for (var j = 0; j < num1; j++) healTemp += skillHealUseAllHp1[j] * hp1[i];
+                if (isSkill1[i])
+                {
+                    for (var j = 0; j < num1; j++) healTemp += skillHealUseAllHp1[j] * hp1[i];
 
-                healTemp += skillHealUseSelfAtk1[i] * atk1[i] + skillHealUseSelfHp1[i] * hp1[i];
+                    healTemp += skillHealUseSelfAtk1[i] * atk1[i] + skillHealUseSelfHp1[i] * hp1[i];
+                }
+
+                heal1.Add(healTemp);
             }
 
-            heal1.Add(healTemp);
+            return heal1;
         }
-
-        return heal1;
-    }
-*/
+    */
 
     //选择目标：距离最近
     public static List<int> Target(int num1, int num2, dynamic posRow1, dynamic posRow2, dynamic posCol1,
