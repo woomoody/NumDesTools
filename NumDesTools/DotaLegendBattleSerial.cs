@@ -1,11 +1,11 @@
-﻿using System;
+﻿using ExcelDna.Integration;
+using Microsoft.Office.Interop.Excel;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using ExcelDna.Integration;
-using Microsoft.Office.Interop.Excel;
 
 namespace NumDesTools;
 
@@ -194,12 +194,19 @@ public class DotaLegendBattleTem
 
 internal class DotaLegendBattleSerial
 {
+    private const int Atk = 9; //攻击力
+    private const int Hp = 10; //生命值
+    private const int Def = 11; //防御力
+    private const int Crit = 12; // 暴击率
+
+    private const int CritMulti = 13; //暴击倍率 
+
     //初始化数据，执行1次，循环验证不用再操作excel了
     private static int _av;
     private static int _bv;
     private static double _aahp;
     private static double _bahp;
-    private static int  _totalTurn;
+    private static int _totalTurn;
     private static readonly dynamic App = ExcelDnaUtil.Application;
     private static readonly Worksheet Ws = App.Worksheets["战斗模拟"];
     private static readonly dynamic GroupARowMin = Convert.ToInt32(Ws.Range["C9"].Value);
@@ -220,17 +227,7 @@ internal class DotaLegendBattleSerial
     private static readonly int PosCol = 2; //角色所在列
     private static readonly int Pos = 3; //角色在阵型中的位置
     private static readonly int Name = 4; //角色名
-    public int DetailType; //扩展类型
-    public int Type = 6; //大类型
-    public int Lvl = 7; //角色等级
-    public int SkillLv = 8; //技能等级
-    private const int Atk = 9; //攻击力
-    private const int Hp = 10; //生命值
-    private const int Def = 11; //防御力
-    private const int Crit = 12; // 暴击率
-    private const int CritMulti = 13; //暴击倍率 
     private static readonly int AtkSpeed = 14; //攻速
-    public int AutoRatio = 15; //普攻占比
     private static readonly int SkillCd = 16; //大招CD
     private static readonly int SkillCDstart = 17; //大招CD初始
     private static readonly int SkillDamge = 18; //伤害倍率
@@ -249,6 +246,11 @@ internal class DotaLegendBattleSerial
         Ws.Cells[GroupBRowMax, GroupBColMax]];
 
     private static readonly Array ArrB = RangeB.Value2;
+    public int AutoRatio = 15; //普攻占比
+    public int DetailType; //扩展类型
+    public int Lvl = 7; //角色等级
+    public int SkillLv = 8; //技能等级
+    public int Type = 6; //大类型
 
     public DotaLegendBattleSerial(int detailType)
     {
@@ -269,7 +271,7 @@ internal class DotaLegendBattleSerial
         //    x => Console.WriteLine("A胜利{0}", x)
         //);
 
-        Parallel.For(0, testBattleMax, _=> BattleCaculate());
+        Parallel.For(0, testBattleMax, _ => BattleCaculate());
 
         //Stopwatch sw2 = new Stopwatch();
         //sw2.Start();
@@ -287,7 +289,7 @@ internal class DotaLegendBattleSerial
         Ws.Range["J3"].Value2 = _bv;
         Ws.Range["B9"].Value2 = _aahp;
         Ws.Range["B20"].Value2 = _bahp;
-        Ws.Range["F3"].Value2 = _totalTurn/(10* testBattleMax);
+        Ws.Range["F3"].Value2 = _totalTurn / (10 * testBattleMax);
         _av = 0;
         _bv = 0;
         _aahp = 0;
@@ -358,7 +360,7 @@ internal class DotaLegendBattleSerial
             //var firtATK = new Random();
             //var firstSeed = firtATK.Next(2);
             //if (firstSeed == 0)
-            if(BattleFirst=="A")
+            if (BattleFirst == "A")
             {
                 //A组攻击后，B组的状态
                 numA = posRowA.Count;
@@ -409,6 +411,7 @@ internal class DotaLegendBattleSerial
                     skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB, countSkillB,
                     countAtkb, true, hpBMax);
             }
+
             turn++;
         } while (numA > 0 && numB > 0 && turn < 901);
 
@@ -431,23 +434,24 @@ internal class DotaLegendBattleSerial
         //    }
         //}
 
-        if (numB == 0 && numA >0) _av += 1;
-        if (numA == 0 && numB >0) _bv += 1;
-        var aahPlist =new List<double>(hpA);
+        if (numB == 0 && numA > 0) _av += 1;
+        if (numA == 0 && numB > 0) _bv += 1;
+        var aahPlist = new List<double>(hpA);
         var bahPlist = new List<double>(hpB);
         _aahp += aahPlist.Sum();
         _bahp += bahPlist.Sum();
         _totalTurn += turn;
     }
+
     private static void BattleMethod(dynamic num1, dynamic posRow1, dynamic posRow2, dynamic posCol1, dynamic posCol2,
-            dynamic countSkill1, dynamic skillCd1, dynamic skillCDstart1, int turn, dynamic def2, dynamic crit1,
-            dynamic atk1,
-            dynamic critMulti1, dynamic skillDamge1, dynamic hp2, dynamic hp1, dynamic skillHealUseAllHp1, dynamic hp1Max,
-            dynamic skillHealUseSelfAtk1, dynamic skillHealUseSelfHp1, dynamic countAtk1, dynamic atkSpeed1,
-            dynamic atk2, dynamic crit2, dynamic critMulti2, dynamic atkSpeed2, dynamic skillCd2,
-            dynamic skillCDstart2, dynamic skillDamge2, dynamic skillHealUseSelfAtk2, dynamic skillHealUseSelfHp2,
-            dynamic skillHealUseAllHp2, dynamic countSkill2, dynamic countAtk2, bool isAb,
-            dynamic hp2Max)
+        dynamic countSkill1, dynamic skillCd1, dynamic skillCDstart1, int turn, dynamic def2, dynamic crit1,
+        dynamic atk1,
+        dynamic critMulti1, dynamic skillDamge1, dynamic hp2, dynamic hp1, dynamic skillHealUseAllHp1, dynamic hp1Max,
+        dynamic skillHealUseSelfAtk1, dynamic skillHealUseSelfHp1, dynamic countAtk1, dynamic atkSpeed1,
+        dynamic atk2, dynamic crit2, dynamic critMulti2, dynamic atkSpeed2, dynamic skillCd2,
+        dynamic skillCDstart2, dynamic skillDamge2, dynamic skillHealUseSelfAtk2, dynamic skillHealUseSelfHp2,
+        dynamic skillHealUseAllHp2, dynamic countSkill2, dynamic countAtk2, bool isAb,
+        dynamic hp2Max)
     {
         //普攻效果比例默认100%
         var atkDamgeA = new List<double>();
@@ -474,10 +478,7 @@ internal class DotaLegendBattleSerial
                         hp1, skillHealUseAllHp1, hp1Max, skillHealUseSelfAtk1, skillHealUseSelfHp1, true,
                         isAb);
                     countSkill1[i]++; //释放技能，技能使用次数增加
-                    if (cc == turn)
-                    {
-                        countAtk1[i]++;//不放普攻但是计数
-                    }
+                    if (cc == turn) countAtk1[i]++; //不放普攻但是计数
                     //TimeSpan ts3 = sw2.Elapsed;
                     //Debug.Print(ts3.ToString());
                 }
@@ -523,7 +524,8 @@ internal class DotaLegendBattleSerial
     private static void DamageCaculate(dynamic def2Dam, int i, dynamic crit1Dam, dynamic atk1Dam, dynamic critMulti1Dam,
         dynamic skillDamge1Dam, dynamic hp2Dam, dynamic targetADam, dynamic hp1Dam,
         dynamic skillHealUseAllHp1Dam,
-        dynamic hp1MaxDam, dynamic skillHealUseSelfAtk1Dam, dynamic skillHealUseSelfHp1Dam, bool isSkillDam, dynamic isAb)
+        dynamic hp1MaxDam, dynamic skillHealUseSelfAtk1Dam, dynamic skillHealUseSelfHp1Dam, bool isSkillDam,
+        dynamic isAb)
     {
         var rndCrit = new Random();
         var rSeed = rndCrit.Next(10000);
@@ -536,9 +538,6 @@ internal class DotaLegendBattleSerial
         dmg = dmg / redmg * skillDamge1Dam[i]; //目标血量减少量
         hp2Dam[targetADam] -= dmg;
         if (isAb)
-        {
-        }
-        else
         {
         }
 
