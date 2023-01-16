@@ -2,6 +2,7 @@
 using Microsoft.Office.Interop.Excel;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace NumDesTools;
 
@@ -61,7 +62,7 @@ public class CellSelectChangePro
                 var roleName = ws2.Cells[range.Row, 5].Value2;
                 if (roleName != null)
                 {
-                    ws2.Range["U1"].Value2 = roleName;
+                    ws2.Range["V1"].Value2 = roleName;
                     App.StatusBar = "角色：【" + roleName + "】数据已经更新，右侧查看~！~→→→→→→→→→→→→→→→~！~";
                 }
                 else
@@ -84,25 +85,68 @@ public class CellSelectChangePro
 public class RoleDataExport
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;
-    private static readonly Worksheet Ws = App.ActiveSheet["角色基础"];
-    private static readonly dynamic StartRow = Convert.ToInt32(Ws.Range["T3"].Row);
-    private static readonly dynamic StartCol = Convert.ToInt32(Ws.Range["T3"].Column);
-    private static readonly dynamic EndRow = Convert.ToInt32(Ws.Range["Z102"].Row);
-    private static readonly dynamic EndCol = Convert.ToInt32(Ws.Range["Z102"].Column);
+    private static readonly Worksheet Ws = App.ActiveSheet;
+    private static readonly dynamic StartRow = Convert.ToInt32(Ws.Range["U3"].Row);
+    private static readonly dynamic StartCol = Convert.ToInt32(Ws.Range["U3"].Column);
+    private static readonly dynamic EndRow = Convert.ToInt32(Ws.Range["AA102"].Row);
+    private static readonly dynamic EndCol = Convert.ToInt32(Ws.Range["AA102"].Column);
 
     public static void RoleData()
     {
         //获取角色数据
         var roleData = Ws.Range[Ws.Cells[StartRow, StartCol], Ws.Cells[EndRow, EndCol]];
-        Array roleDataArr = roleData.Value2;
-        var roDa = new List<double>();
-        for (var i = 1; i < EndRow - StartRow + 2; i++)
-            for (var j = 1; j < EndCol - StartCol + 2; j++)
-                roDa.Add(Convert.ToDouble(roleDataArr.GetValue(i, j)));
-
-        var unused = roDa;
-        //object missing = Type.Missing;
-        //Workbook book = app.Workbooks.Open(path + "\\" + fileName, missing, missing, missing, missing, missing, missing, missing, missing, missing, missing, missing, missing, missing, missing);
-        //app.Visible = false;
+        //获取数据粘贴文件名
+        var file = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
+        object missing = Type.Missing;
+        var newsheetname = "角色1";
+        //已存在文件则打开，否则新建文件打开
+        if (File.Exists(file))
+        {
+            Workbook book = App.Workbooks.Open(file, missing, missing, missing, missing, missing, missing, missing,
+                missing, missing, missing, missing, missing, missing, missing);
+            App.Visible = false;
+            var sheetCount = book.Worksheets.Count;
+            var allSheetName = new List<string>();
+            for (int i = 1; i <= sheetCount; i++)
+            {
+                var sheetName = book.Worksheets[i].Name;
+                allSheetName.Add(sheetName);
+            }
+            if (allSheetName.Contains(newsheetname))
+            {
+                //已经存在，不用创建
+            }
+            else
+            {
+                //创建所需表格
+                var nbb =book.Worksheets.Add(missing, missing, 1, missing);
+                nbb.Name = newsheetname;
+            }
+            //写入内容
+            var shettem = book.Worksheets[newsheetname];
+            shettem.Range["A3:G102"].Value = roleData.Value;
+            //保存文件
+            book.Save();
+            book.Close(false);
+            App.DisplayAlerts = false;
+        }
+        else
+        {
+            Workbook book = App.Workbooks.Add();
+            var nbb =book.Worksheets.Add(missing, missing, 1, missing);
+            nbb.Name = newsheetname;
+            book.Sheets["Sheet1"].Delete();
+            book.SaveAs(file);
+            //写入内容
+            var shettem = book.Worksheets[newsheetname];
+            shettem.Range["A3:G102"].Value = roleData.Value;
+            //保存文件
+            book.Save();
+            book.Close(false);
+            App.DisplayAlerts = false;
+        }
+        App.Visible = true;
+        App.DisplayAlerts = true;
     }
 }
+
