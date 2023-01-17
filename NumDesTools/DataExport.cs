@@ -1291,7 +1291,7 @@ public class CreatRibbon : ExcelRibbon, IExcelAddIn
     public void TestBar1_Click(IRibbonControl control)
     {
         //SVNTools.RevertAndUpFile();
-        RoleDataExport.RoleData();
+        RoleDataPro.StateCalculate();
     }
 
     public void TestBar2_Click(IRibbonControl control)

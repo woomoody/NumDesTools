@@ -1,8 +1,10 @@
 ﻿using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
+using stdole;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Web.Routing;
 
 namespace NumDesTools;
 
@@ -82,7 +84,7 @@ public class CellSelectChangePro
     }
 }
 
-public class RoleDataExport
+public class RoleDataPro
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;
     private static readonly Worksheet Ws = App.ActiveSheet;
@@ -91,7 +93,10 @@ public class RoleDataExport
     private static readonly dynamic EndRow = Convert.ToInt32(Ws.Range["AA102"].Row);
     private static readonly dynamic EndCol = Convert.ToInt32(Ws.Range["AA102"].Column);
 
-    public static void RoleData()
+    private static readonly dynamic CacRowStart = 16;//角色参数配置行数起点
+    private static readonly string CacColStart = "E";//角色参数配置列数起点
+    private static readonly string CacColEnd = "S";//角色参数配置列数终点
+    public static void Export()
     {
         //获取角色数据
         var roleData = Ws.Range[Ws.Cells[StartRow, StartCol], Ws.Cells[EndRow, EndCol]];
@@ -147,6 +152,91 @@ public class RoleDataExport
         }
         App.Visible = true;
         App.DisplayAlerts = true;
+    }
+
+    public static void StateCalculate()
+    {
+        var roleHead = Ws.Range[CacColStart + "65535"];
+        var CacRowEnd = roleHead.End[XlDirection.xlUp].Row;
+        //角色数据组
+        var roleDataRng = Ws.Range[CacColStart+ CacRowStart+":"+ CacColEnd+ CacRowEnd];
+        Array roleDataArr = roleDataRng.Value2;
+        //角色调整参数List,文本和数字分开
+        var totalRow = roleDataRng.Rows.Count;
+        var totalCol = roleDataRng.Columns.Count;
+        var allRoleDataStringList = new List<List<string>>();
+        var allRoleDataDoubleList = new List<List<Double>>();
+        for (var i = 1; i < totalRow + 1; i++)
+        {
+            var oneRoleDataStringList = new List<string>();
+            var oneRoleDataDoubleList = new List<double>();
+            for (var j = 1; j < totalCol + 1; j++)
+            {
+                var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
+                try
+                {
+                    double temp = Convert.ToDouble(tempData);
+                    oneRoleDataDoubleList.Add(temp);
+                }
+                catch
+                {
+                    oneRoleDataStringList.Add(tempData);
+                }
+            }
+            allRoleDataStringList.Add(oneRoleDataStringList);
+            allRoleDataDoubleList.Add(oneRoleDataDoubleList);
+        }
+        //公共数据组
+        var PubDataRng = Ws.Range["C5:C16"];
+        Array PubDataArr = PubDataRng.Value2;
+        //公共固定参数List
+        var PubData = new List<double>();
+        for (var i = 1; i < PubDataRng.Count+1; i++)
+        {
+            var tempData = Convert.ToDouble(PubDataArr.GetValue(i, 1));
+            PubData.Add(tempData);
+        }
+        //根据数据进行数据计算-多线程
+        var AttrZoom = PubData[0];
+        var AttrLvRatio = PubData[1];
+        var BaseArmour = PubData[2];
+        var ArmourExchange = PubData[3];
+        var RRatio = PubData[4];
+        var SRRatio= PubData[5];
+        var SSRRatio= PubData[6];
+        var URRatio= PubData[7];
+        var LevelRatio= PubData[8];
+        int Name = 0;
+        int Type = 1;
+        int Qua = 2;
+        int DataTable = 3;
+        int Atk = 6;
+        int Def = 8;
+        int Hp = 10;
+        //计算例子--之后用多线程的for循环进行
+        var role1string = allRoleDataStringList[0];
+        var role1double = allRoleDataDoubleList[0];
+        var roleQua = role1string[Qua];
+        double realQua;
+        switch (roleQua)
+        {
+            case "R":
+                realQua =RRatio;
+                break;
+            case "SR":
+                realQua =SRRatio;
+                break;
+            case "SSR":
+                realQua = SSRRatio;
+                break;
+            case "UR":
+                realQua = URRatio;
+                break;
+            default:
+                realQua = 1;
+                break;
+        }
+        var role1Atk = Math.Round( role1double[Atk] * Math.Pow(AttrLvRatio, 1 - 1) * LevelRatio*realQua, 0);
     }
 }
 
