@@ -4,7 +4,9 @@ using stdole;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using System.Web.Routing;
+using static System.Windows.Forms.AxHost;
 
 namespace NumDesTools;
 
@@ -95,7 +97,7 @@ public class RoleDataPro
 
     private static readonly dynamic CacRowStart = 16;//角色参数配置行数起点
     private static readonly string CacColStart = "E";//角色参数配置列数起点
-    private static readonly string CacColEnd = "S";//角色参数配置列数终点
+    private static readonly string CacColEnd = "U";//角色参数配置列数终点
     public static void Export()
     {
         //获取角色数据
@@ -213,30 +215,86 @@ public class RoleDataPro
         int Atk = 6;
         int Def = 8;
         int Hp = 10;
+        int AtkSpeed = 2;
+        int HpOffset = 9;
+        int Dmg = 11;
+        int TakenDmg = 12;
+        int DefOffset = 7;
         //计算例子--之后用多线程的for循环进行
-        var role1string = allRoleDataStringList[0];
-        var role1double = allRoleDataDoubleList[0];
-        var roleQua = role1string[Qua];
-        double realQua;
-        switch (roleQua)
+        var allRoleDataLevel = new List< List<List<double>>>();
+        for (int i = 0; i < totalRow; i++)
         {
-            case "R":
-                realQua =RRatio;
-                break;
-            case "SR":
-                realQua =SRRatio;
-                break;
-            case "SSR":
-                realQua = SSRRatio;
-                break;
-            case "UR":
-                realQua = URRatio;
-                break;
-            default:
-                realQua = 1;
-                break;
+            var temp =RoleDataCac(i);
+            allRoleDataLevel.Add(temp);
         }
-        var role1Atk = Math.Round( role1double[Atk] * Math.Pow(AttrLvRatio, 1 - 1) * LevelRatio*realQua, 0);
+        //测试数据写入方案--List转Array+转置set到Range中
+        var a = allRoleDataLevel[0];
+        var b = a.ToArray();
+        double[,] c = new double[100,6];
+        //Ws.Range["AE3:AS102"].Value2
+        for (int i = 0; i < 6; i++)
+        {
+            for (int j = 0; j < 100; j++)
+            {
+                //var asd = a[j];
+                //Ws.Cells[i+2,j+32] = asd[i];
+                c[j,i] = a[i][j];
+            }
+        }
+        Ws.Range["AE3:AJ102"].Value2 = c;
+
+        List<List<double>> RoleDataCac(int i)
+        {
+            var roleString = allRoleDataStringList[i];
+            var roleDouble = allRoleDataDoubleList[i];
+            var roleQua = roleString[Qua];
+            double realQua;
+            switch (roleQua)
+            {
+                case "R":
+                    realQua = RRatio;
+                    break;
+                case "SR":
+                    realQua = SRRatio;
+                    break;
+                case "SSR":
+                    realQua = SSRRatio;
+                    break;
+                case "UR":
+                    realQua = URRatio;
+                    break;
+                default:
+                    realQua = 1;
+                    break;
+            }
+            var roleAtkLevel = new List<Double>();
+            var roleHpLevel = new List<Double>();
+            var roleDefLevel = new List<Double>();
+            var roleCritLevel = new List<Double>();
+            var roleCritMultiLevel = new List<Double>();
+            var roleAtkSpeedLevel = new List<Double>();
+            var roleDataLevel = new List<List<double>>();
+            for (int j = 1; j < 101; j++)
+            {
+                var roleAtk = Math.Round(roleDouble[Atk] * Math.Pow(AttrLvRatio, j - 1) * LevelRatio * realQua, 0);
+                roleAtkLevel.Add(roleAtk);
+                var roleDef = Math.Round(roleDouble[Def] * Math.Pow(AttrLvRatio, j - 1) *LevelRatio * realQua, 0);
+                roleDefLevel.Add(roleDef);
+                var tempDef = BaseArmour * Math.Pow(AttrLvRatio, j - 1) * roleDouble[DefOffset]* AttrZoom;
+                var roleHp = Math.Round(roleDouble[TakenDmg]*Math.Pow(AttrLvRatio, j - 1)* AttrZoom*roleDouble[HpOffset]/(1+tempDef/ ArmourExchange)*LevelRatio* realQua,0);
+                roleHpLevel.Add(roleHp);
+                roleCritLevel.Add(0.05);
+                roleCritMultiLevel.Add(1.5);
+                roleAtkSpeedLevel.Add(roleDouble[AtkSpeed]);
+            }
+            roleDataLevel.Add(roleAtkLevel);
+            roleDataLevel.Add(roleHpLevel);
+            roleDataLevel.Add(roleDefLevel);
+            roleDataLevel.Add(roleCritLevel);
+            roleDataLevel.Add(roleCritMultiLevel);
+            roleDataLevel.Add(roleAtkSpeedLevel);
+            return roleDataLevel;
+        }
     }
 }
 
