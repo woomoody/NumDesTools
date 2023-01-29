@@ -22,32 +22,31 @@ public class CellSelectChangePro
         //多表选择单元格触发
         App.SheetSelectionChange += new WorkbookEvents_SheetSelectionChangeEventHandler(GetCellValueMulti);
     }
-
-    public void GetCellValue(Range range)
-    {
-        if (CreatRibbon.LabelTextRoleDataPreview == "角色数据预览：开启")
-        {
-            if (range.Row < 16 || range.Column < 5 || range.Column > 18)
-            {
-                App.StatusBar = "当前行不是角色数据行，另选一行";
-                //MessageBox.Show("单元格越界");
-            }
-            else
-            {
-                var roleName = _ws.Cells[range.Row, 5].Value2;
-                if (roleName != null)
-                {
-                    _ws.Range["U1"].Value2 = roleName;
-                    App.StatusBar = "角色：【" + roleName + "】数据已经更新，右侧查看~！~→→→→→→→→→→→→→→→~！~";
-                }
-                else
-                {
-                    App.StatusBar = "当前行没有角色数据，另选一行";
-                    //MessageBox.Show("没有找到角色数据");
-                }
-            }
-        }
-    }
+    //public void GetCellValue(Range range)
+    //{
+    //    if (CreatRibbon.LabelTextRoleDataPreview == "角色数据预览：开启")
+    //    {
+    //        if (range.Row < 16 || range.Column < 5 || range.Column > 21)
+    //        {
+    //            App.StatusBar = "当前行不是角色数据行，另选一行";
+    //            //MessageBox.Show("单元格越界");
+    //        }
+    //        else
+    //        {
+    //            var roleName = _ws.Cells[range.Row, 5].Value2;
+    //            if (roleName != null)
+    //            {
+    //                _ws.Range["U1"].Value2 = roleName;
+    //                App.StatusBar = "角色：【" + roleName + "】数据已经更新，右侧查看~！~→→→→→→→→→→→→→→→~！~";
+    //            }
+    //            else
+    //            {
+    //                App.StatusBar = "当前行没有角色数据，另选一行";
+    //                //MessageBox.Show("没有找到角色数据");
+    //            }
+    //        }
+    //    }
+    //}
 
     private static void GetCellValueMulti(object sh, Range range)
     {
@@ -56,7 +55,7 @@ public class CellSelectChangePro
         if (name == "角色基础")
         {
             if (CreatRibbon.LabelTextRoleDataPreview != "角色数据预览：开启") return;
-            if (range.Row < 16 || range.Column < 5 || range.Column > 18)
+            if (range.Row < 16 || range.Column < 5 || range.Column > 21)
             {
                 App.StatusBar = "当前行不是角色数据行，另选一行";
                 //MessageBox.Show("单元格越界");
@@ -85,7 +84,6 @@ public class CellSelectChangePro
         }
     }
 }
-
 public class RoleDataPro
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;
@@ -98,14 +96,32 @@ public class RoleDataPro
     private static readonly dynamic CacRowStart = 16;//角色参数配置行数起点
     private static readonly string CacColStart = "E";//角色参数配置列数起点
     private static readonly string CacColEnd = "U";//角色参数配置列数终点
-    public static void Export()
+    public static void Export(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
     {
         //获取角色数据
         var roleData = Ws.Range[Ws.Cells[StartRow, StartCol], Ws.Cells[EndRow, EndCol]];
         //获取数据粘贴文件名
         var file = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
         object missing = Type.Missing;
-        var newsheetname = "角色1";
+        var abc = StateCalculate();
+        var cde = abc[0][0][3];//string数据；角色编号；sheet表名
+        //var bbb = abc[1][1][1];//角色编号；属性；等级
+        //测试数据写入方案--List转Array+转置set到Range中
+        var a = abc[1];
+        var b = a.ToArray();
+        double[,] c = new double[100, 6];
+        //Ws.Range["AE3:AS102"].Value2
+        for (int i = 0; i < 6; i++)
+        {
+            for (int j = 0; j < 100; j++)
+            {
+                //var asd = a[j];
+                //Ws.Cells[i+2,j+32] = asd[i];
+                c[j, i] = Convert.ToDouble(a[i][j]);
+            }
+        }
+        //Ws.Range["AE3:AJ102"].Value2 = c;
+        var newsheetname = cde;
         //已存在文件则打开，否则新建文件打开
         if (File.Exists(file))
         {
@@ -131,7 +147,7 @@ public class RoleDataPro
             }
             //写入内容
             var shettem = book.Worksheets[newsheetname];
-            shettem.Range["A3:G102"].Value = roleData.Value;
+            shettem.Range["A3:F102"].Value = c;
             //保存文件
             book.Save();
             book.Close(false);
@@ -146,7 +162,7 @@ public class RoleDataPro
             book.SaveAs(file);
             //写入内容
             var shettem = book.Worksheets[newsheetname];
-            shettem.Range["A3:G102"].Value = roleData.Value;
+            shettem.Range["A3:F102"].Value = c;
             //保存文件
             book.Save();
             book.Close(false);
@@ -156,7 +172,7 @@ public class RoleDataPro
         App.DisplayAlerts = true;
     }
 
-    public static void StateCalculate()
+    public static List<List<List<string>>> StateCalculate()
     {
         var roleHead = Ws.Range[CacColStart + "65535"];
         var CacRowEnd = roleHead.End[XlDirection.xlUp].Row;
@@ -221,29 +237,15 @@ public class RoleDataPro
         int TakenDmg = 12;
         int DefOffset = 7;
         //计算例子--之后用多线程的for循环进行
-        var allRoleDataLevel = new List< List<List<double>>>();
+        var allRoleDataLevel = new List< List<List<string>>>();
+        allRoleDataLevel.Add(allRoleDataStringList);
         for (int i = 0; i < totalRow; i++)
         {
             var temp =RoleDataCac(i);
             allRoleDataLevel.Add(temp);
         }
-        //测试数据写入方案--List转Array+转置set到Range中
-        var a = allRoleDataLevel[0];
-        var b = a.ToArray();
-        double[,] c = new double[100,6];
-        //Ws.Range["AE3:AS102"].Value2
-        for (int i = 0; i < 6; i++)
-        {
-            for (int j = 0; j < 100; j++)
-            {
-                //var asd = a[j];
-                //Ws.Cells[i+2,j+32] = asd[i];
-                c[j,i] = a[i][j];
-            }
-        }
-        Ws.Range["AE3:AJ102"].Value2 = c;
 
-        List<List<double>> RoleDataCac(int i)
+        List<List<string>> RoleDataCac(int i)
         {
             var roleString = allRoleDataStringList[i];
             var roleDouble = allRoleDataDoubleList[i];
@@ -267,25 +269,25 @@ public class RoleDataPro
                     realQua = 1;
                     break;
             }
-            var roleAtkLevel = new List<Double>();
-            var roleHpLevel = new List<Double>();
-            var roleDefLevel = new List<Double>();
-            var roleCritLevel = new List<Double>();
-            var roleCritMultiLevel = new List<Double>();
-            var roleAtkSpeedLevel = new List<Double>();
-            var roleDataLevel = new List<List<double>>();
+            var roleAtkLevel = new List<string>();
+            var roleHpLevel = new List<string>();
+            var roleDefLevel = new List<string>();
+            var roleCritLevel = new List<string>();
+            var roleCritMultiLevel = new List<string>();
+            var roleAtkSpeedLevel = new List<string>();
+            var roleDataLevel = new List<List<string>>();
             for (int j = 1; j < 101; j++)
             {
-                var roleAtk = Math.Round(roleDouble[Atk] * Math.Pow(AttrLvRatio, j - 1) * LevelRatio * realQua, 0);
+                var roleAtk = Convert.ToString(Math.Round(roleDouble[Atk] * Math.Pow(AttrLvRatio, j - 1) * LevelRatio * realQua, 0));
                 roleAtkLevel.Add(roleAtk);
-                var roleDef = Math.Round(roleDouble[Def] * Math.Pow(AttrLvRatio, j - 1) *LevelRatio * realQua, 0);
+                var roleDef = Convert.ToString(Math.Round(roleDouble[Def] * Math.Pow(AttrLvRatio, j - 1) *LevelRatio * realQua, 0));
                 roleDefLevel.Add(roleDef);
                 var tempDef = BaseArmour * Math.Pow(AttrLvRatio, j - 1) * roleDouble[DefOffset]* AttrZoom;
-                var roleHp = Math.Round(roleDouble[TakenDmg]*Math.Pow(AttrLvRatio, j - 1)* AttrZoom*roleDouble[HpOffset]/(1+tempDef/ ArmourExchange)*LevelRatio* realQua,0);
+                var roleHp = Convert.ToString(Math.Round(roleDouble[TakenDmg]*Math.Pow(AttrLvRatio, j - 1)* AttrZoom*roleDouble[HpOffset]/(1+tempDef/ ArmourExchange)*LevelRatio* realQua,0));
                 roleHpLevel.Add(roleHp);
-                roleCritLevel.Add(0.05);
-                roleCritMultiLevel.Add(1.5);
-                roleAtkSpeedLevel.Add(roleDouble[AtkSpeed]);
+                roleCritLevel.Add(Convert.ToString(0.05));
+                roleCritMultiLevel.Add(Convert.ToString(1.5));
+                roleAtkSpeedLevel.Add(Convert.ToString(roleDouble[AtkSpeed]));
             }
             roleDataLevel.Add(roleAtkLevel);
             roleDataLevel.Add(roleHpLevel);
@@ -295,6 +297,7 @@ public class RoleDataPro
             roleDataLevel.Add(roleAtkSpeedLevel);
             return roleDataLevel;
         }
+        return allRoleDataLevel;
     }
 }
 
