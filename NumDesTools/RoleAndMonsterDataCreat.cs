@@ -1,19 +1,16 @@
-﻿using ExcelDna.Integration;
-using Microsoft.Office.Interop.Excel;
-using stdole;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
-using System.Threading.Tasks;
-using System.Web.Routing;
-using static System.Windows.Forms.AxHost;
+using ExcelDna.Integration;
+using Microsoft.Office.Core;
+using Microsoft.Office.Interop.Excel;
 
 namespace NumDesTools;
 
 public class CellSelectChangePro
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;
-    private readonly Worksheet _ws = App.ActiveSheet;
 
     public CellSelectChangePro()
     {
@@ -65,7 +62,7 @@ public class CellSelectChangePro
                 var roleName = ws2.Cells[range.Row, 5].Value2;
                 if (roleName != null)
                 {
-                    ws2.Range["V1"].Value2 = roleName;
+                    ws2.Range["X1"].Value2 = roleName;
                     App.StatusBar = "角色：【" + roleName + "】数据已经更新，右侧查看~！~→→→→→→→→→→→→→→→~！~";
                 }
                 else
@@ -84,106 +81,115 @@ public class CellSelectChangePro
         }
     }
 }
+
 public class RoleDataPro
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;
     private static readonly Worksheet Ws = App.ActiveSheet;
-    private static readonly dynamic StartRow = Convert.ToInt32(Ws.Range["U3"].Row);
-    private static readonly dynamic StartCol = Convert.ToInt32(Ws.Range["U3"].Column);
-    private static readonly dynamic EndRow = Convert.ToInt32(Ws.Range["AA102"].Row);
-    private static readonly dynamic EndCol = Convert.ToInt32(Ws.Range["AA102"].Column);
 
-    private static readonly dynamic CacRowStart = 16;//角色参数配置行数起点
-    private static readonly string CacColStart = "E";//角色参数配置列数起点
-    private static readonly string CacColEnd = "U";//角色参数配置列数终点
-    public static void Export(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
+    private const string FilePath = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
+
+    private static readonly object Missing = Type.Missing;
+
+    private static readonly dynamic CacRowStart = 16; //角色参数配置行数起点
+    private const string CacColStart = "E"; //角色参数配置列数起点
+    private const string CacColEnd = "U"; //角色参数配置列数终点
+
+    public static void ExportSig(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        //获取角色数据
-        var roleData = Ws.Range[Ws.Cells[StartRow, StartCol], Ws.Cells[EndRow, EndCol]];
-        //获取数据粘贴文件名
-        var file = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
-        object missing = Type.Missing;
-        var abc = StateCalculate();
-        var cde = abc[0][0][3];//string数据；角色编号；sheet表名
-        //var bbb = abc[1][1][1];//角色编号；属性；等级
-        //测试数据写入方案--List转Array+转置set到Range中
-        var a = abc[1];
-        var b = a.ToArray();
-        double[,] c = new double[100, 6];
-        //Ws.Range["AE3:AS102"].Value2
-        for (int i = 0; i < 6; i++)
+        var asd = App.ActiveCell.Row - 16;
+        ExpData(asd, FilePath, Missing);
+    }
+    public static void ExportMulti(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var abc = StateCalculate().Count;
+        for (int i = 0; i < abc-1; i++)
         {
-            for (int j = 0; j < 100; j++)
-            {
-                //var asd = a[j];
-                //Ws.Cells[i+2,j+32] = asd[i];
-                c[j, i] = Convert.ToDouble(a[i][j]);
-            }
+            ExpData(i, FilePath, Missing);
         }
-        //Ws.Range["AE3:AJ102"].Value2 = c;
-        var newsheetname = cde;
+    }
+
+    private static void ExpData(dynamic roleId, string filePath, object missing)
+    {
+        var abc = StateCalculate();
+        var cde = abc[0][roleId][3]; //string数据；角色编号；sheet表名
+        //测试数据写入方案--List转Array+转置set到Range中
+        var a = abc[roleId + 1];
+        var c = new double[100, 6];
+        //Ws.Range["AE3:AS102"].Value2
+        for (var i = 0; i < 6; i++)
+        for (var j = 0; j < 100; j++)
+            //var asd = a[j];
+            //Ws.Cells[i+2,j+32] = asd[i];
+            c[j, i] = Convert.ToDouble(a[i][j]);
+
         //已存在文件则打开，否则新建文件打开
-        if (File.Exists(file))
+        if (File.Exists(filePath))
         {
-            Workbook book = App.Workbooks.Open(file, missing, missing, missing, missing, missing, missing, missing,
+            App.DisplayAlerts = false;
+            App.ScreenUpdating = false;
+            Workbook book = App.Workbooks.Open(filePath, missing, missing, missing, missing, missing, missing, missing,
                 missing, missing, missing, missing, missing, missing, missing);
-            App.Visible = false;
             var sheetCount = book.Worksheets.Count;
             var allSheetName = new List<string>();
-            for (int i = 1; i <= sheetCount; i++)
+            for (var i = 1; i <= sheetCount; i++)
             {
                 var sheetName = book.Worksheets[i].Name;
                 allSheetName.Add(sheetName);
             }
-            if (allSheetName.Contains(newsheetname))
+
+            if (allSheetName.Contains(cde))
             {
                 //已经存在，不用创建
             }
             else
             {
                 //创建所需表格
-                var nbb =book.Worksheets.Add(missing, missing, 1, missing);
-                nbb.Name = newsheetname;
+                var nbb = book.Worksheets.Add(missing, book.Worksheets[book.Worksheets.Count], 1, missing);
+                nbb.Name = cde;
             }
+
             //写入内容
-            var shettem = book.Worksheets[newsheetname];
-            shettem.Range["A3:F102"].Value = c;
+            var usherette = book.Worksheets[cde];
+            usherette.Range["A3:F102"].Value = c;
             //保存文件
             book.Save();
-            book.Close(false);
-            App.DisplayAlerts = false;
+            book.Close(true);
         }
         else
         {
+            App.DisplayAlerts = false;
+            App.ScreenUpdating = false;
             Workbook book = App.Workbooks.Add();
-            var nbb =book.Worksheets.Add(missing, missing, 1, missing);
-            nbb.Name = newsheetname;
+            var nbb = book.Worksheets.Add(missing, book.Worksheets[book.Worksheets.Count], 1, missing);
+            nbb.Name = cde;
             book.Sheets["Sheet1"].Delete();
-            book.SaveAs(file);
+            book.SaveAs(filePath);
             //写入内容
-            var shettem = book.Worksheets[newsheetname];
-            shettem.Range["A3:F102"].Value = c;
+            var usherette = book.Worksheets[cde];
+            usherette.Range["A3:F102"].Value = c;
             //保存文件
             book.Save();
-            book.Close(false);
-            App.DisplayAlerts = false;
+            book.Close(true);
         }
+
         App.Visible = true;
         App.DisplayAlerts = true;
+        App.ScreenUpdating = true;
     }
 
     public static List<List<List<string>>> StateCalculate()
     {
         var roleHead = Ws.Range[CacColStart + "65535"];
-        var CacRowEnd = roleHead.End[XlDirection.xlUp].Row;
+        var cacRowEnd = roleHead.End[XlDirection.xlUp].Row;
         //角色数据组
-        var roleDataRng = Ws.Range[CacColStart+ CacRowStart+":"+ CacColEnd+ CacRowEnd];
+        var roleDataRng = Ws.Range[CacColStart + CacRowStart + ":" + CacColEnd + cacRowEnd];
         Array roleDataArr = roleDataRng.Value2;
         //角色调整参数List,文本和数字分开
         var totalRow = roleDataRng.Rows.Count;
         var totalCol = roleDataRng.Columns.Count;
         var allRoleDataStringList = new List<List<string>>();
-        var allRoleDataDoubleList = new List<List<Double>>();
+        var allRoleDataDoubleList = new List<List<double>>();
         for (var i = 1; i < totalRow + 1; i++)
         {
             var oneRoleDataStringList = new List<string>();
@@ -193,7 +199,7 @@ public class RoleDataPro
                 var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
                 try
                 {
-                    double temp = Convert.ToDouble(tempData);
+                    var temp = Convert.ToDouble(tempData);
                     oneRoleDataDoubleList.Add(temp);
                 }
                 catch
@@ -201,47 +207,44 @@ public class RoleDataPro
                     oneRoleDataStringList.Add(tempData);
                 }
             }
+
             allRoleDataStringList.Add(oneRoleDataStringList);
             allRoleDataDoubleList.Add(oneRoleDataDoubleList);
         }
+
         //公共数据组
-        var PubDataRng = Ws.Range["C5:C16"];
-        Array PubDataArr = PubDataRng.Value2;
+        var pubDataRng = Ws.Range["C5:C16"];
+        Array pubDataArr = pubDataRng.Value2;
         //公共固定参数List
-        var PubData = new List<double>();
-        for (var i = 1; i < PubDataRng.Count+1; i++)
+        var pubData = new List<double>();
+        for (var i = 1; i < pubDataRng.Count + 1; i++)
         {
-            var tempData = Convert.ToDouble(PubDataArr.GetValue(i, 1));
-            PubData.Add(tempData);
+            var tempData = Convert.ToDouble(pubDataArr.GetValue(i, 1));
+            pubData.Add(tempData);
         }
+
         //根据数据进行数据计算-多线程
-        var AttrZoom = PubData[0];
-        var AttrLvRatio = PubData[1];
-        var BaseArmour = PubData[2];
-        var ArmourExchange = PubData[3];
-        var RRatio = PubData[4];
-        var SRRatio= PubData[5];
-        var SSRRatio= PubData[6];
-        var URRatio= PubData[7];
-        var LevelRatio= PubData[8];
-        int Name = 0;
-        int Type = 1;
-        int Qua = 2;
-        int DataTable = 3;
-        int Atk = 6;
-        int Def = 8;
-        int Hp = 10;
-        int AtkSpeed = 2;
-        int HpOffset = 9;
-        int Dmg = 11;
-        int TakenDmg = 12;
-        int DefOffset = 7;
+        var attrZoom = pubData[0];
+        var attrLvRatio = pubData[1];
+        var baseArmour = pubData[2];
+        var armourExchange = pubData[3];
+        var rRatio = pubData[4];
+        var srRatio = pubData[5];
+        var ssrRatio = pubData[6];
+        var urRatio = pubData[7];
+        var levelRatio = pubData[8];
+        const int qua = 2;
+        const int atk = 6;
+        const int def = 8;
+        const int atkSpeed = 2;
+        const int hpOffset = 9;
+        const int takenDmg = 12;
+        const int defOffset = 7;
         //计算例子--之后用多线程的for循环进行
-        var allRoleDataLevel = new List< List<List<string>>>();
-        allRoleDataLevel.Add(allRoleDataStringList);
-        for (int i = 0; i < totalRow; i++)
+        var allRoleDataLevel = new List<List<List<string>>> { allRoleDataStringList };
+        for (var i = 0; i < totalRow; i++)
         {
-            var temp =RoleDataCac(i);
+            var temp = RoleDataCac(i);
             allRoleDataLevel.Add(temp);
         }
 
@@ -249,55 +252,63 @@ public class RoleDataPro
         {
             var roleString = allRoleDataStringList[i];
             var roleDouble = allRoleDataDoubleList[i];
-            var roleQua = roleString[Qua];
+            var roleQua = roleString[qua];
             double realQua;
             switch (roleQua)
             {
                 case "R":
-                    realQua = RRatio;
+                    realQua = rRatio;
                     break;
                 case "SR":
-                    realQua = SRRatio;
+                    realQua = srRatio;
                     break;
                 case "SSR":
-                    realQua = SSRRatio;
+                    realQua = ssrRatio;
                     break;
                 case "UR":
-                    realQua = URRatio;
+                    realQua = urRatio;
                     break;
                 default:
                     realQua = 1;
                     break;
             }
+
             var roleAtkLevel = new List<string>();
             var roleHpLevel = new List<string>();
             var roleDefLevel = new List<string>();
-            var roleCritLevel = new List<string>();
-            var roleCritMultiLevel = new List<string>();
+            var roleCriticLevel = new List<string>();
+            var roleCriticMultiLevel = new List<string>();
             var roleAtkSpeedLevel = new List<string>();
             var roleDataLevel = new List<List<string>>();
-            for (int j = 1; j < 101; j++)
+            for (var j = 1; j < 101; j++)
             {
-                var roleAtk = Convert.ToString(Math.Round(roleDouble[Atk] * Math.Pow(AttrLvRatio, j - 1) * LevelRatio * realQua, 0));
+                var roleAtk =
+                    Convert.ToString(Math.Round(roleDouble[atk] * Math.Pow(attrLvRatio, j - 1) * levelRatio * realQua,
+                        0), CultureInfo.InvariantCulture);
                 roleAtkLevel.Add(roleAtk);
-                var roleDef = Convert.ToString(Math.Round(roleDouble[Def] * Math.Pow(AttrLvRatio, j - 1) *LevelRatio * realQua, 0));
+                var roleDef =
+                    Convert.ToString(Math.Round(roleDouble[def] * Math.Pow(attrLvRatio, j - 1) * levelRatio * realQua,
+                        0), CultureInfo.InvariantCulture);
                 roleDefLevel.Add(roleDef);
-                var tempDef = BaseArmour * Math.Pow(AttrLvRatio, j - 1) * roleDouble[DefOffset]* AttrZoom;
-                var roleHp = Convert.ToString(Math.Round(roleDouble[TakenDmg]*Math.Pow(AttrLvRatio, j - 1)* AttrZoom*roleDouble[HpOffset]/(1+tempDef/ ArmourExchange)*LevelRatio* realQua,0));
+                var tempDef = baseArmour * Math.Pow(attrLvRatio, j - 1) * roleDouble[defOffset] * attrZoom;
+                var roleHp = Convert.ToString(Math.Round(
+                    roleDouble[takenDmg] * Math.Pow(attrLvRatio, j - 1) * attrZoom * roleDouble[hpOffset] /
+                    (1 + tempDef / armourExchange) * levelRatio * realQua, 0), CultureInfo.InvariantCulture);
                 roleHpLevel.Add(roleHp);
-                roleCritLevel.Add(Convert.ToString(0.05));
-                roleCritMultiLevel.Add(Convert.ToString(1.5));
-                roleAtkSpeedLevel.Add(Convert.ToString(roleDouble[AtkSpeed]));
+                roleCriticLevel.Add(Convert.ToString(0.05, CultureInfo.InvariantCulture));
+                roleCriticMultiLevel.Add(Convert.ToString(1.5, CultureInfo.InvariantCulture));
+                roleAtkSpeedLevel.Add(Convert.ToString(roleDouble[atkSpeed], CultureInfo.InvariantCulture));
             }
+
             roleDataLevel.Add(roleAtkLevel);
             roleDataLevel.Add(roleHpLevel);
             roleDataLevel.Add(roleDefLevel);
-            roleDataLevel.Add(roleCritLevel);
-            roleDataLevel.Add(roleCritMultiLevel);
+            roleDataLevel.Add(roleCriticLevel);
+            roleDataLevel.Add(roleCriticMultiLevel);
             roleDataLevel.Add(roleAtkSpeedLevel);
             return roleDataLevel;
         }
+
         return allRoleDataLevel;
     }
 }
-

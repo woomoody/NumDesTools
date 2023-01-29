@@ -577,7 +577,7 @@ public class CreatRibbon : ExcelRibbon, IExcelAddIn
                     comButton1.Tag = "单独导出";
                     comButton1.Caption = "导出：单个卡牌";
                     comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                    comButton1.Click += RoleDataPro.Export; ;
+                    comButton1.Click += RoleDataPro.ExportSig; ;
                 }
 
                 if (comButton2 != null)
@@ -585,7 +585,7 @@ public class CreatRibbon : ExcelRibbon, IExcelAddIn
                     comButton2.Tag = "批量导出";
                     comButton2.Caption = "导出：多个卡牌";
                     comButton2.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                    comButton2.Click += IndexSheetUnOpen_Click;
+                    comButton2.Click += RoleDataPro.ExportMulti;
                 }
             }
         }
