@@ -84,29 +84,24 @@ public class CellSelectChangePro
 
 public class RoleDataPro
 {
+    private const string FilePath = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
+    private const string CacColStart = "E"; //角色参数配置列数起点
+    private const string CacColEnd = "U"; //角色参数配置列数终点c
     private static readonly dynamic App = ExcelDnaUtil.Application;
     private static readonly Worksheet Ws = App.ActiveSheet;
-
-    private const string FilePath = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
-
     private static readonly object Missing = Type.Missing;
-
     private static readonly dynamic CacRowStart = 16; //角色参数配置行数起点
-    private const string CacColStart = "E"; //角色参数配置列数起点
-    private const string CacColEnd = "U"; //角色参数配置列数终点
 
     public static void ExportSig(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var asd = App.ActiveCell.Row - 16;
         ExpData(asd, FilePath, Missing);
     }
+
     public static void ExportMulti(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var abc = StateCalculate().Count;
-        for (int i = 0; i < abc-1; i++)
-        {
-            ExpData(i, FilePath, Missing);
-        }
+        for (var i = 0; i < abc - 1; i++) ExpData(i, FilePath, Missing);
     }
 
     private static void ExpData(dynamic roleId, string filePath, object missing)
