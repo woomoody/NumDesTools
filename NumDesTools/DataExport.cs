@@ -1,4 +1,8 @@
-﻿using System;
+﻿using ExcelDna.Integration;
+using ExcelDna.Integration.CustomUI;
+using Microsoft.Office.Interop.Excel;
+using stdole;
+using System;
 using System.Data;
 using System.Data.OleDb;
 using System.Diagnostics;
@@ -10,10 +14,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using ExcelDna.Integration;
-using ExcelDna.Integration.CustomUI;
-using Microsoft.Office.Interop.Excel;
-using stdole;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
 using CommandBar = Microsoft.Office.Core.CommandBar;
@@ -191,8 +191,8 @@ public static class ExcelSheetDataIsError
                             errorTag = "#NULL!";
                             isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
                             break;
-                        //default:
-                        //    break;
+                            //default:
+                            //    break;
                     }
 
                     if (fileStr == "" || i <= 8) continue;
@@ -318,8 +318,8 @@ public static class ExcelSheetDataIsError2
                                 errorTag = "#NULL!";
                                 isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
                                 break;
-                            //default:
-                            //    break;
+                                //default:
+                                //    break;
                         }
 
                         if (fileStr == "" || i <= 8) continue;
@@ -423,54 +423,54 @@ public static class FormularCheck
         var fileFullName = "";
         var fileRealName = "";
         for (var i = 1; i < rowCnt + 1; i++)
-        for (var j = 1; j < colCnt + 1; j++)
-        {
-            var errorFormula = Convert.ToString(arrOld.GetValue(i, j));
-            var errorFormulaStrArr = errorFormula.Split(',');
-            var currentFormulaStr = errorFormula;
-            if (errorFormula != "")
-                foreach (var errorFormulaStr in errorFormulaStrArr)
-                {
-                    var errorFormulaStrKey = errorFormulaStr.Substring(0, 1);
-                    if (errorFormulaStrKey == "'" || errorFormulaStrKey == "=")
+            for (var j = 1; j < colCnt + 1; j++)
+            {
+                var errorFormula = Convert.ToString(arrOld.GetValue(i, j));
+                var errorFormulaStrArr = errorFormula.Split(',');
+                var currentFormulaStr = errorFormula;
+                if (errorFormula != "")
+                    foreach (var errorFormulaStr in errorFormulaStrArr)
                     {
-                        //获取文件名
-                        var indexA = errorFormulaStr.IndexOf(strStar, StringComparison.Ordinal);
-                        var indexB = errorFormulaStr.IndexOf(strEnd, StringComparison.Ordinal);
-                        if (indexA >= 0 && indexB >= 0)
-                            fileName = errorFormulaStr.Substring(indexA + strStar.Length,
-                                indexB - indexA - strEnd.Length);
-                        //获取正确的文件名
-                        var indexRealA = fileName.IndexOf(strRealStar, StringComparison.Ordinal);
-                        var indexRealB = fileName.IndexOf(strRealEnd, StringComparison.Ordinal);
-                        if ((indexA >= 0 && indexB >= 0) || fileName != "")
+                        var errorFormulaStrKey = errorFormulaStr.Substring(0, 1);
+                        if (errorFormulaStrKey == "'" || errorFormulaStrKey == "=")
                         {
-                            var errorStr = fileName.Substring(indexRealA + strRealStar.Length,
-                                indexRealB - indexRealA - strRealEnd.Length - 2);
-                            if (errorStr != "") fileRealName = fileName.Replace(errorStr, "");
+                            //获取文件名
+                            var indexA = errorFormulaStr.IndexOf(strStar, StringComparison.Ordinal);
+                            var indexB = errorFormulaStr.IndexOf(strEnd, StringComparison.Ordinal);
+                            if (indexA >= 0 && indexB >= 0)
+                                fileName = errorFormulaStr.Substring(indexA + strStar.Length,
+                                    indexB - indexA - strEnd.Length);
+                            //获取正确的文件名
+                            var indexRealA = fileName.IndexOf(strRealStar, StringComparison.Ordinal);
+                            var indexRealB = fileName.IndexOf(strRealEnd, StringComparison.Ordinal);
+                            if ((indexA >= 0 && indexB >= 0) || fileName != "")
+                            {
+                                var errorStr = fileName.Substring(indexRealA + strRealStar.Length,
+                                    indexRealB - indexRealA - strRealEnd.Length - 2);
+                                if (errorStr != "") fileRealName = fileName.Replace(errorStr, "");
+                            }
+
+                            //获取文件FullName
+                            var indexFullA = errorFormulaStr.IndexOf(strFullStar, StringComparison.Ordinal);
+                            var indexFullB = errorFormulaStr.IndexOf(strFullEnd, StringComparison.Ordinal);
+                            if (indexFullA >= 0 && indexFullB >= 0)
+                                fileFullName = errorFormulaStr.Substring(indexFullA + strFullStar.Length,
+                                    indexFullB - indexFullA - strFullEnd.Length);
+                            //string cellName = aaa.Substring(aaa.IndexOf("!"), aaa.Length - aaa.IndexOf("!"));
+                            if (fileFullName != "" && fileRealName != "")
+                            {
+                                var filePath = actFilePath + "\\[" + fileRealName;
+                                currentFormulaStr = currentFormulaStr.Replace(fileFullName, filePath);
+                            }
+
+                            fileFullName = "";
+                            fileName = "";
+                            fileRealName = "";
                         }
 
-                        //获取文件FullName
-                        var indexFullA = errorFormulaStr.IndexOf(strFullStar, StringComparison.Ordinal);
-                        var indexFullB = errorFormulaStr.IndexOf(strFullEnd, StringComparison.Ordinal);
-                        if (indexFullA >= 0 && indexFullB >= 0)
-                            fileFullName = errorFormulaStr.Substring(indexFullA + strFullStar.Length,
-                                indexFullB - indexFullA - strFullEnd.Length);
-                        //string cellName = aaa.Substring(aaa.IndexOf("!"), aaa.Length - aaa.IndexOf("!"));
-                        if (fileFullName != "" && fileRealName != "")
-                        {
-                            var filePath = actFilePath + "\\[" + fileRealName;
-                            currentFormulaStr = currentFormulaStr.Replace(fileFullName, filePath);
-                        }
-
-                        fileFullName = "";
-                        fileName = "";
-                        fileRealName = "";
+                        arrNew[i - 1, j - 1] = currentFormulaStr;
                     }
-
-                    arrNew[i - 1, j - 1] = currentFormulaStr;
-                }
-        }
+            }
 
         rng.Value[Missing.Value] = arrNew;
     }
@@ -550,9 +550,9 @@ public class CreatRibbon : ExcelRibbon, IExcelAddIn
             else
             {
                 foreach (var tempControl in from CommandBarControl tempControl in bars
-                         let t = tempControl.Tag
-                         where t is "单独导出" or "批量导出"
-                         select tempControl)
+                                            let t = tempControl.Tag
+                                            where t is "单独导出" or "批量导出"
+                                            select tempControl)
                     try
                     {
                         tempControl.Delete();
