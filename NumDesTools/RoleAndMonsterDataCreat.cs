@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Windows.Forms;
 
 namespace NumDesTools;
 
@@ -109,7 +108,7 @@ public class RoleDataPro
         //写入数据
         Workbook book = App.Workbooks.Open(FilePath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
             Missing, Missing, Missing, Missing, Missing, Missing, Missing);
-        ExpData(roleIndex, FilePath, Missing, book);
+        ExpData(roleIndex, book);
         if (erroLog != "")
         {
             erroLog += @":DataTable列为空，无法导出数据";
@@ -156,7 +155,7 @@ public class RoleDataPro
             Missing, Missing, Missing, Missing, Missing, Missing, Missing);
         for (int i = 0; i < roleCount-1; i++)
         {
-            ExpData(i, FilePath, Missing, book);
+            ExpData(i, book);
         }
         if (errorLog != "")
         {
@@ -176,7 +175,7 @@ public class RoleDataPro
         App.DisplayAlerts = true;
         App.ScreenUpdating = true;
     }
-    private static void ExpData(dynamic roleId, string filePath, object missing, dynamic book)
+    private static void ExpData(dynamic roleId, dynamic book)
     {
         var roleData = StateCalculate();
         var roleDataSheetName = roleData[0][roleId][3]; //string数据；角色编号；sheet表名
