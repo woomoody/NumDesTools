@@ -1,10 +1,11 @@
-﻿using System;
+﻿using ExcelDna.Integration;
+using Microsoft.Office.Core;
+using Microsoft.Office.Interop.Excel;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using ExcelDna.Integration;
-using Microsoft.Office.Core;
-using Microsoft.Office.Interop.Excel;
+using System.Windows.Forms;
 
 namespace NumDesTools;
 
@@ -94,35 +95,107 @@ public class RoleDataPro
 
     public static void ExportSig(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        var asd = App.ActiveCell.Row - 16;
-        ExpData(asd, FilePath, Missing);
+        //基础参数
+        var roleIndex = App.ActiveCell.Row - 16;
+        var roleData = StateCalculate();
+        App.DisplayAlerts = false;
+        App.ScreenUpdating = false;
+        //创建文件
+        var roleDataSheetName = new List<string>();
+        var roleDataRoleName = new List<string>();
+        roleDataSheetName.Add(roleData[0][roleIndex][3]);
+        roleDataRoleName.Add(roleData[0][roleIndex][0]);
+        var erroLog=CreatDataTable(FilePath, Missing, roleDataSheetName, roleDataRoleName);
+        //写入数据
+        Workbook book = App.Workbooks.Open(FilePath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
+            Missing, Missing, Missing, Missing, Missing, Missing, Missing);
+        ExpData(roleIndex, FilePath, Missing, book);
+        if (erroLog != "")
+        {
+            erroLog += @":DataTable列为空，无法导出数据";
+            App.StatusBar = erroLog;
+        }
+
+        try
+        {
+            book.Save();
+            App.ActiveWorkbook.Sheets[roleDataSheetName[0]].Select();
+            book.Close(true);
+        }
+        catch
+        {
+            //ignore
+        }
+        App.DisplayAlerts = true;
+        App.ScreenUpdating = true;
     }
 
     public static void ExportMulti(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        var abc = StateCalculate().Count;
-        for (var i = 0; i < abc - 1; i++) ExpData(i, FilePath, Missing);
+        //基础参数
+        var roleCount = StateCalculate().Count;
+        var roleData = StateCalculate();
+        App.DisplayAlerts = false;
+        App.ScreenUpdating = false;
+        //创建文件
+        var roleDataSheetName = new List<string>();
+        var roleDataRoleName = new List<string>();
+        for (int i = 0; i < roleCount - 1; i++)
+        {
+             roleDataSheetName.Add( roleData[0][i][3]);
+             roleDataRoleName.Add(roleData[0][i][0]);
+        }
+
+        var errorLog = CreatDataTable(FilePath, Missing, roleDataSheetName, roleDataRoleName);
+        if (errorLog != "")
+        {
+            errorLog += @"\";
+        }
+        //写入数据
+        Workbook book = App.Workbooks.Open(FilePath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
+            Missing, Missing, Missing, Missing, Missing, Missing, Missing);
+        for (int i = 0; i < roleCount-1; i++)
+        {
+            ExpData(i, FilePath, Missing, book);
+        }
+        if (errorLog != "")
+        {
+            errorLog += @":DataTable列为空，无法导出数据";
+            App.StatusBar = errorLog;
+        }
+        try
+        {
+            book.Save();
+            App.ActiveWorkbook.Sheets[roleDataSheetName[roleCount - 2]].Select();
+            book.Close(true);
+        }
+        catch
+        {
+            //ignore
+        }
+        App.DisplayAlerts = true;
+        App.ScreenUpdating = true;
+    }
+    private static void ExpData(dynamic roleId, string filePath, object missing, dynamic book)
+    {
+        var roleData = StateCalculate();
+        var roleDataSheetName = roleData[0][roleId][3]; //string数据；角色编号；sheet表名
+        if (roleDataSheetName == "") return;
+        //数据List转Array+转置set到Range中
+        var oldArr = roleData[roleId + 1];
+        var newArr = new double[100, 6];
+        for (var i = 0; i < 6; i++) for (var j = 0; j < 100; j++) newArr[j, i] = Convert.ToDouble(oldArr[i][j]);
+        //打开文件写入数据
+        var usherette = book.Worksheets[roleDataSheetName];
+        usherette.Range["A3:F102"].Value = newArr;
     }
 
-    private static void ExpData(dynamic roleId, string filePath, object missing)
+    private static string CreatDataTable(string filePath, object missing, dynamic roleDataSheetName, dynamic roleDataRoleName)
     {
-        var abc = StateCalculate();
-        var cde = abc[0][roleId][3]; //string数据；角色编号；sheet表名
-        //测试数据写入方案--List转Array+转置set到Range中
-        var a = abc[roleId + 1];
-        var c = new double[100, 6];
-        //Ws.Range["AE3:AS102"].Value2
-        for (var i = 0; i < 6; i++)
-        for (var j = 0; j < 100; j++)
-            //var asd = a[j];
-            //Ws.Cells[i+2,j+32] = asd[i];
-            c[j, i] = Convert.ToDouble(a[i][j]);
-
+        var errorLog = "";
         //已存在文件则打开，否则新建文件打开
         if (File.Exists(filePath))
         {
-            App.DisplayAlerts = false;
-            App.ScreenUpdating = false;
             Workbook book = App.Workbooks.Open(filePath, missing, missing, missing, missing, missing, missing, missing,
                 missing, missing, missing, missing, missing, missing, missing);
             var sheetCount = book.Worksheets.Count;
@@ -132,45 +205,54 @@ public class RoleDataPro
                 var sheetName = book.Worksheets[i].Name;
                 allSheetName.Add(sheetName);
             }
-
-            if (allSheetName.Contains(cde))
+            //创建所需表格
+            for (int i = 0; i < roleDataSheetName.Count; i++)
             {
-                //已经存在，不用创建
+                if (allSheetName.Contains(roleDataSheetName[i]))
+                {
+                    //已经存在，不用创建
+                }
+                else
+                {
+                    if (roleDataSheetName[i] != "")
+                    {
+                        var nbb = book.Worksheets.Add(missing, book.Worksheets[book.Worksheets.Count], 1, missing);
+                        nbb.Name = roleDataSheetName[i];
+                    }
+                    else
+                    {
+                        errorLog += roleDataRoleName[i];
+                    }
+                }
             }
-            else
-            {
-                //创建所需表格
-                var nbb = book.Worksheets.Add(missing, book.Worksheets[book.Worksheets.Count], 1, missing);
-                nbb.Name = cde;
-            }
-
-            //写入内容
-            var usherette = book.Worksheets[cde];
-            usherette.Range["A3:F102"].Value = c;
             //保存文件
             book.Save();
             book.Close(true);
         }
         else
         {
-            App.DisplayAlerts = false;
-            App.ScreenUpdating = false;
             Workbook book = App.Workbooks.Add();
-            var nbb = book.Worksheets.Add(missing, book.Worksheets[book.Worksheets.Count], 1, missing);
-            nbb.Name = cde;
+            //创建所需表格
+            for (int i = 0; i < roleDataSheetName.Count; i++)
+            {
+                if (roleDataSheetName[i] != "")
+                {
+                    var nbb = book.Worksheets.Add(missing, book.Worksheets[book.Worksheets.Count], 1, missing);
+                    nbb.Name = roleDataSheetName[i];
+                }
+                else
+                {
+                    errorLog += roleDataRoleName[i];
+                }
+            }
             book.Sheets["Sheet1"].Delete();
             book.SaveAs(filePath);
-            //写入内容
-            var usherette = book.Worksheets[cde];
-            usherette.Range["A3:F102"].Value = c;
             //保存文件
             book.Save();
             book.Close(true);
         }
 
-        App.Visible = true;
-        App.DisplayAlerts = true;
-        App.ScreenUpdating = true;
+        return errorLog;
     }
 
     public static List<List<List<string>>> StateCalculate()
