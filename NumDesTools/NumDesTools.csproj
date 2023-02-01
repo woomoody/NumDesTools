@@ -111,7 +111,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="image\RibbonUI.xml" />
-    <Content Include="NumDesTools.csproj.DotSettings.user" />
     <EmbeddedResource Include="DataExportForm.resx">
       <DependentUpon>DataExportForm.cs</DependentUpon>
     </EmbeddedResource>
