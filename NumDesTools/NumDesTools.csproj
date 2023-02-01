@@ -65,6 +65,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CreatRibbon.cs" />
+    <Compile Include="RibbonResources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>RibbonResources.resx</DependentUpon>
+    </Compile>
     <Compile Include="RoleAndMonsterDataCreat.cs" />
     <Compile Include="DotaLegendBattleParallel.cs" />
     <Compile Include="DotaLegendBattleSerial.cs" />
@@ -104,6 +110,8 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="image\RibbonUI.xml" />
+    <Content Include="NumDesTools.csproj.DotSettings.user" />
     <EmbeddedResource Include="DataExportForm.resx">
       <DependentUpon>DataExportForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -158,6 +166,10 @@
     <EmbeddedResource Include="image\yang.png" />
     <EmbeddedResource Include="image\yellowFolder.png" />
     <EmbeddedResource Include="image\zip.png" />
+    <EmbeddedResource Include="RibbonResources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>RibbonResources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="bin\Release\" />
