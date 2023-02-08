@@ -226,7 +226,7 @@ public class RoleDataPro
             }
             //保存文件
             book.Save();
-            book.Close(true);
+            book.Close(false);
         }
         else
         {
@@ -248,7 +248,7 @@ public class RoleDataPro
             book.SaveAs(filePath);
             //保存文件
             book.Save();
-            book.Close(true);
+            book.Close(false);
         }
 
         return errorLog;
