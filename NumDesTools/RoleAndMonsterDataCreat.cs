@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 
 namespace NumDesTools;
 
@@ -82,6 +83,7 @@ public class CellSelectChangePro
     }
 }
 
+#region 每个角色全量数据的导出
 public class RoleDataPro
 {
     private const string FilePath = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
@@ -388,3 +390,36 @@ public class RoleDataPro
         return allRoleDataLevel;
     }
 }
+#endregion 每个角色全量数据的导出
+#region 角色关键数据导出到一张表
+
+public class RoleDataPri
+{
+    private const string FilePath = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
+    private const string CacColStart = "E"; //角色参数配置列数起点
+    private const string CacColEnd = "U"; //角色参数配置列数终点c
+    private static readonly dynamic App = ExcelDnaUtil.Application;
+    private static readonly Worksheet Ws = App.ActiveSheet;
+    private static readonly object Missing = Type.Missing;
+    private static readonly dynamic CacRowStart = 16; //角色参数配置行数起点
+
+    //获取全部角色的关键数据（要导出的），生成List
+    public static List<string> dataKey()
+    {
+        List<string> role = new List<string>();
+        role.Add("atk");
+        role.Add("hp");
+        role.Add("def");
+        return role; 
+    }
+    //获取目标表格需要填入字段的位置，与List进行匹配
+    public static void wrData()
+    {
+        var statKey = Ws.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
+        var statKeyGroup = Ws.Range[Ws.Cells[2,1],Ws.Cells[2, statKey]];
+        var statKeyIndex = statKeyGroup.Find("atk", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+    }
+    //写入模式？1、愣写（选一个cell，填一个） 2、批量写（range）；行列不连续如何更效率的填写数据
+}
+
+#endregion 每个角色全量数据的导出
