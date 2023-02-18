@@ -3,9 +3,12 @@ using Microsoft.Office.Core;
 using Microsoft.Office.Interop.Excel;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Reflection;
+using static ExcelDna.Integration.ExcelReference;
+using static ExcelDna.Integration.XlCall;
+
 
 namespace NumDesTools;
 
@@ -96,6 +99,8 @@ public class RoleDataPro
 
     public static void ExportSig(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        var sw = new Stopwatch();
+        sw.Start();
         //基础参数
         var roleIndex = App.ActiveCell.Row - 16;
         var roleData = StateCalculate();
@@ -129,6 +134,9 @@ public class RoleDataPro
         }
         App.DisplayAlerts = true;
         App.ScreenUpdating = true;
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
     }
 
     public static void ExportMulti(CommandBarButton ctrl, ref bool cancelDefault)
@@ -419,7 +427,31 @@ public class RoleDataPri
         var statKeyGroup = Ws.Range[Ws.Cells[2,1],Ws.Cells[2, statKey]];
         var statKeyIndex = statKeyGroup.Find("atk", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
     }
-    //写入模式？1、愣写（选一个cell，填一个） 2、批量写（range）；行列不连续如何更效率的填写数据
+    //写入模式？1、愣写（选一个cell，填一个） 2、批量写（range）；行列不连续如何更效率的填写数据：把所有所要填的cell汇集为1个List，这个List的顺序跟数据源的List一一对应，然后for循环写入数据，看情况是否多线程for
+
+    //List<ExcelReference> ranges = new List<ExcelReference>();
+    //    foreach (string rangeAddress in rangeAddresses)
+    //{
+    //    ExcelReference range = (ExcelReference)XlCall.Excel(XlCall.xlfTextref, rangeAddress);
+    //    ranges.Add(range);
+    //}
+
+    //ExcelAsyncUtil.Run("WriteToExcel", () =>
+    //{
+    //    int rowCount = data.Length / ranges.Count;
+    //    object[,] dataValues = new object[rowCount, ranges.Count];
+    //    for (int i = 0; i<data.Length; i++)
+    //    {
+    //        int row = i / ranges.Count;
+    //        int column = i % ranges.Count;
+    //        dataValues[row, column] = data[i];
+    //    }
+
+    //    for (int i = 0; i < ranges.Count; i++)
+    //    {
+    //        ranges[i].Value2 = dataValues;
+    //    }
+    //});
 }
 
 #endregion 每个角色全量数据的导出
