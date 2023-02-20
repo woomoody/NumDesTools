@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Windows.Forms;
 using static ExcelDna.Integration.ExcelReference;
 using static ExcelDna.Integration.XlCall;
 
@@ -403,7 +404,7 @@ public class RoleDataPro
 
 public class RoleDataPri
 {
-    private const string FilePath = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
+    private const string FilePath = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\【角色升级】.xlsx";
     private const string CacColStart = "E"; //角色参数配置列数起点
     private const string CacColEnd = "U"; //角色参数配置列数终点c
     private static readonly dynamic App = ExcelDnaUtil.Application;
@@ -414,18 +415,78 @@ public class RoleDataPri
     //获取全部角色的关键数据（要导出的），生成List
     public static List<string> dataKey()
     {
-        List<string> role = new List<string>();
-        role.Add("atk");
-        role.Add("hp");
-        role.Add("def");
-        return role; 
+        var roleHead = Ws.Range[CacColStart + "65535"];
+        var cacRowEnd = roleHead.End[XlDirection.xlUp].Row;
+        //角色数据组
+        var roleDataRng = Ws.Range[CacColStart + CacRowStart + ":" + CacColEnd + cacRowEnd];
+        Array roleDataArr = roleDataRng.Value2;
+        //角色调整参数List,文本和数字分开
+        var totalRow = roleDataRng.Rows.Count;
+        var totalCol = roleDataRng.Columns.Count;
+        //数值数据
+        var allRoleDataDoubleList = new List<List<double>>();
+        var atkIndex = Ws.Range["E15:U15"].Find("攻击力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column-4;
+        var defIndex = Ws.Range["E15:U15"].Find("防御力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column-4;
+        var hpIndex = Ws.Range["E15:U15"].Find("生命上限", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
+        for (var i = 1; i < totalRow + 1; i++)
+        {
+            var oneRoleDataDoubleList = new List<double>();
+            for (var j = 1; j < totalCol + 1; j++)
+            {
+                if (j == atkIndex || j == defIndex || j == hpIndex)
+                {
+                    var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
+                    try
+                    {
+                        var temp = Convert.ToDouble(tempData);
+                        oneRoleDataDoubleList.Add(temp);
+                    }
+                    catch
+                    {
+                        MessageBox.Show("第"+i+ CacRowStart -1+ "行数据不是数值类型", "数值类型错误", MessageBoxButtons.OKCancel);
+                    }
+                }
+            }
+            allRoleDataDoubleList.Add(oneRoleDataDoubleList);
+        }
+
+        List<string> stateKeys = new List<string>();
+        stateKeys.Add("atk");
+        stateKeys.Add("hp");
+        stateKeys.Add("def");
+        stateKeys.Add("crit");
+        stateKeys.Add("critMulti");
+        stateKeys.Add("atkSpeed");
+        return stateKeys; 
     }
     //获取目标表格需要填入字段的位置，与List进行匹配
     public static void wrData()
     {
-        var statKey = Ws.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
-        var statKeyGroup = Ws.Range[Ws.Cells[2,1],Ws.Cells[2, statKey]];
+        Workbook book = App.Workbooks.Open(FilePath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
+            Missing, Missing, Missing, Missing, Missing, Missing, Missing);
+        var Ws2= book.Worksheets["role1_s"];
+        var statKey = Ws2.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
+        var statRole = Ws2.Range["B65534"].End[XlDirection.xlToLeft].Column;
+        var statKeyGroup = Ws2.Range[Ws2.Cells[2,1],Ws2.Cells[2, statKey]];
+        var statRoleGroup = Ws2.Range[Ws2.Cells[1, 2], Ws2.Cells[statRole, 2]];
         var statKeyIndex = statKeyGroup.Find("atk", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+        var statRoleIndex = statRoleGroup.Find("1001", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByRows, XlSearchDirection.xlNext, false, false, false).Row;
+        var ranges = new List<Range>();
+        for (int i = 1; i < 1000; i++)
+        {
+            for (int j = 1; j < 10; j++)
+            {
+                Ws.Cells[i, j]="abc";
+                //ranges.Add(range3);
+                //ranges[0].Value2 = "abc";
+            }
+        }
+
+        //for (int i = 0; i < ranges.Count; i++)
+        //{
+        //    ranges[i].Value2 = "abc";
+        //}
+        //  range3.Value2 = 1;
     }
     //写入模式？1、愣写（选一个cell，填一个） 2、批量写（range）；行列不连续如何更效率的填写数据：把所有所要填的cell汇集为1个List，这个List的顺序跟数据源的List一一对应，然后for循环写入数据，看情况是否多线程for
 
@@ -435,7 +496,7 @@ public class RoleDataPri
     //    ExcelReference range = (ExcelReference)XlCall.Excel(XlCall.xlfTextref, rangeAddress);
     //    ranges.Add(range);
     //}
-
+    //ExcelReference range3 = new ExcelReference(2, 3);
     //ExcelAsyncUtil.Run("WriteToExcel", () =>
     //{
     //    int rowCount = data.Length / ranges.Count;
@@ -453,5 +514,4 @@ public class RoleDataPri
     //    }
     //});
 }
-
-#endregion 每个角色全量数据的导出
+#endregion 角色关键数据导出到一张表
