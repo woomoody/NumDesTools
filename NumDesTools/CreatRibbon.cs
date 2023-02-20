@@ -827,7 +827,7 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        RoleDataPri.wrData();
+        RoleDataPri.dataKey();
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
