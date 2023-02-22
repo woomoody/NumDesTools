@@ -56,7 +56,6 @@ public static class ErrorLogCtp
         Ctp.Width = 350;
         Ctp.Visible = true;
     }
-
     public static void DisposeCtp()
     {
         if (Ctp == null) return;
@@ -233,7 +232,7 @@ public static class ExcelSheetDataIsError
 //运行表格检查，检查表格字段是否有错误信息2
 public static class ExcelSheetDataIsError2
 {
-    public static string GetData(string sheetName)
+    public static string GetData2(string sheetName)
     {
         dynamic app = ExcelDnaUtil.Application;
         Worksheet ws = app.Worksheets[sheetName];
@@ -473,7 +472,7 @@ public static class PreviewTableCtp
     public static CustomTaskPane Ctp;
     public static UserControl Uc;
 
-    public static void CreateCtp(string filePath, string sheetName)
+    public static void CreateCtpTaable(string filePath, string sheetName)
     {
         Uc = new UserControl();
         Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(Uc, filePath + @"\" + sheetName);
@@ -485,13 +484,6 @@ public static class PreviewTableCtp
         dgv.Width = 680;
         dgv.Height = 900;
         Uc.Controls.Add(dgv);
-    }
-
-    public static void DisposeCtp()
-    {
-        if (Ctp == null) return;
-        Ctp.Delete();
-        Ctp = null;
     }
 }
 
