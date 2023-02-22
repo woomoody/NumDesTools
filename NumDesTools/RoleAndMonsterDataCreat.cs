@@ -481,9 +481,9 @@ public class RoleDataPri
         }
         book.Save();
         book.Close(false);
-        MessageBox.Show("行数据不是数值类型", "数值类型错误", MessageBoxButtons.OKCancel);
+
         //List<ExcelReference> ranges2 = new List<ExcelReference>();
-        //ExcelReference arr = new ExcelReference(1,1);
+        //ExcelReference arr = new ExcelReference(1, 1);
         //ranges2.Add(arr);
         //ranges2[0].SetValue("asdb");
         //for (int i = 0; i < ranges.Count; i++)
