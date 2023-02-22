@@ -391,13 +391,14 @@ namespace NumDesTools {
         }
         
         /// <summary>
-        ///   查找类似 &lt;customUI xmlns=&apos;http://schemas.microsoft.com/office/2009/07/customui&apos; onLoad=&apos;OnLoad&apos;&gt;
+        ///   查找类似 &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+        ///&lt;customUI xmlns=&apos;http://schemas.microsoft.com/office/2009/07/customui&apos; loadImage=&apos;LoadImage&apos; onLoad=&apos;OnLoad&apos;&gt;
         ///  &lt;ribbon startFromScratch=&apos;false&apos;&gt;
         ///      &lt;tabs&gt;
         ///          &lt;tab id=&apos;Tab1&apos; label=&apos;NumDesTools&apos; insertBeforeMso=&apos;TabHome&apos; &gt;
-        ///            &lt;group id=&apos;Group2&apos; label=&apos;格式整理&apos;&gt;
-        ///                  &lt;button id=&apos;Button4&apos; size=&apos;large&apos; label=&apos;标准格式&apos; getImage=&apos;GetImage&apos; onAction=&apos;CleanCellFormat_Click&apos; screentip=&apos;点击整理当前sheet格式，标准化文本和单元格大小&apos; /&gt;
-        ///                  &lt;button id=&apos;Button5&apos; size=&apos;large&apos; getLabel=&apos;GetLableText&apos; getImage=&apos;GetIma [字符串的其余部分被截断]&quot;; 的本地化字符串。
+        ///            &lt;!--//&lt; group id = &apos;Group1&apos; label = &apos;导表(By:SC)&apos; &gt;
+        ///              //    &lt; button id = &apos;Button1&apos; size = &apos;large&apos; label = &apos;导出本表&apos; image = &apos;file&apos; onAction = &apos;OneSheetOutPut_Click&apos; screentip = &apos;点击导出当前sheet&apos; /&gt;
+        ///              //     [字符串的其余部分被截断]&quot;; 的本地化字符串。
         /// </summary>
         public static string RibbonUI {
             get {

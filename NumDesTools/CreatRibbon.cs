@@ -443,7 +443,7 @@ public partial class CreatRibbon
                 var fileName = fileTemp.Substring(0, fileTemp.IndexOf("@"));
                 var sheetName = fileTemp.Substring(fileTemp.LastIndexOf("@") + 1);
                 filePath = filePath + @"\" + fileName;
-                PreviewTableCtp.CreateCtp(filePath, sheetName);
+                PreviewTableCtp.CreateCtpTaable(filePath, sheetName);
             }
             else
             {
@@ -584,7 +584,7 @@ public partial class CreatRibbon
                 {
                     if (!cd.Checked) continue;
                     var sheetName = cd.Text;
-                    errorLog += ExcelSheetDataIsError2.GetData(sheetName);
+                    errorLog += ExcelSheetDataIsError2.GetData2(sheetName);
                     if (errorLog != "") continue;
                     ExcelSheetData.GetDataToTxt(sheetName, outFilePath);
                     sheetsName += sheetName + "\n";
@@ -633,7 +633,7 @@ public partial class CreatRibbon
             string outFilePath = _app.ActiveWorkbook.Path;
             Directory.SetCurrentDirectory(Directory.GetParent(outFilePath)?.FullName ?? string.Empty);
             outFilePath = Directory.GetCurrentDirectory() + TempPath;
-            var errorLog = ExcelSheetDataIsError2.GetData(sheetName);
+            var errorLog = ExcelSheetDataIsError2.GetData2(sheetName);
             if (errorLog == "") ExcelSheetData.GetDataToTxt(sheetName, outFilePath);
             _app.Visible = true;
             stopwatch.Stop();

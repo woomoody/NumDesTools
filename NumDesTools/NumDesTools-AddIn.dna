@@ -1,6 +1,7 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <DnaLibrary Name="NumDesTools Add-In" RuntimeVersion="v4.0" xmlns="http://schemas.excel-dna.net/addin/2020/07/dnalibrary">
   <ExternalLibrary Path="NumDesTools.dll" ExplicitExports="false" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+
   <!--
        The RuntimeVersion attribute above allows only the following setting:
        * RuntimeVersion="v4.0" - for .NET 4.5 or higher
@@ -18,5 +19,4 @@
        Excel-DNA also allows the XML for ribbon UI extensions to be specified in the .dna file.
        See the main Excel-DNA site at https://excel-dna.net for downloads of the full distribution.
   -->
-  <Reference Path="ExcelDna.Documentation.dll" Pack="true" xmlns="" />
 </DnaLibrary>
