@@ -2,6 +2,7 @@
 using Microsoft.Office.Core;
 using Microsoft.Office.Interop.Excel;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -459,7 +460,7 @@ public class RoleDataPri
         var statKey = Ws2.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
         var statRole = Ws2.Range["B65534"].End[XlDirection.xlUp].Row;
         var statKeyGroup = Ws2.Range[Ws2.Cells[2,1],Ws2.Cells[2, statKey]];
-        var statRoleGroup = Ws2.Range[Ws2.Cells[1, 2], Ws2.Cells[statRole, 2]];
+        var statRoleGroup = Ws2.Range[Ws2.Cells[6, 2], Ws2.Cells[statRole, 2]];
         List<string> stateKeys = new List<string>();
         stateKeys.Add("atkSpeed");
         stateKeys.Add("atk");
@@ -467,21 +468,51 @@ public class RoleDataPri
         stateKeys.Add("hp");
         var ranges = new List<Range>();
         var roleDataCol = roleData[0].Count;
-        for (int i = 0; i < Math.Min(statRole - 5, roleData.Count); i++)
+        //应该foreach遍历statRoleGroup，通过roleID查找数据，所以导进来的数据，应该是【roleID，数据1，数据2……】
+        //for (int i = 0; i < Math.Min(statRole - 5, roleData.Count); i++)
+        //{
+        //    var statRoleIndex = statRoleGroup.Find(roleData[i][4], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+        //        XlSearchOrder.xlByRows, XlSearchDirection.xlNext, false, false, false).Row;
+        //    for (int j = 0; j < roleDataCol - 1; j++)
+        //    {
+        //        var statKeyIndex = statKeyGroup.Find(stateKeys[j], Missing, XlFindLookIn.xlValues,
+        //            XlLookAt.xlPart,
+        //            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+        //        Ws2.Cells[statRoleIndex, statKeyIndex] = roleData[i][j];
+        //    }
+        //}
+
+        foreach (var rng in statRoleGroup)
         {
-            var statRoleIndex = statRoleGroup.Find(roleData[i][4], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-                XlSearchOrder.xlByRows, XlSearchDirection.xlNext, false, false, false).Row;
-            for (int j = 0; j < roleDataCol - 1; j++)
+            var asd = rng.Address;
+            var ccd = rng.Row;
+            var cc2d = rng.Column;
+            
+            var atkSpeedndex = statKeyGroup.Find(stateKeys[0], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+            var atkIndex = statKeyGroup.Find(stateKeys[1], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+            var defIndex = statKeyGroup.Find(stateKeys[2], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+            var hpIndex = statKeyGroup.Find(stateKeys[3], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+            var cc3d = rng.Value;
+            if (cc3d != null)
             {
-                var statKeyIndex = statKeyGroup.Find(stateKeys[j], Missing, XlFindLookIn.xlValues,
-                    XlLookAt.xlPart,
-                    XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
-                Ws2.Cells[statRoleIndex, statKeyIndex] = roleData[i][j];
+                var result = roleData.Find(x => x.Contains(cc3d));
+
+                if (result != null)
+                {
+                    int rowIndex = roleData.IndexOf(result);
+                    Ws2.Cells[ccd, atkSpeedndex].Value = roleData[rowIndex][0];
+                    Ws2.Cells[ccd, atkIndex].Value = roleData[rowIndex][1];
+                    Ws2.Cells[ccd, defIndex].Value = roleData[rowIndex][2];
+                    Ws2.Cells[ccd, hpIndex].Value = roleData[rowIndex][3];
+                }
+                else
+                {
+                    //Console.WriteLine("未找到值 {0}", valueToFind);
+                }
             }
         }
         book.Save();
         book.Close(false);
-
         //List<ExcelReference> ranges2 = new List<ExcelReference>();
         //ExcelReference arr = new ExcelReference(1, 1);
         //ranges2.Add(arr);
