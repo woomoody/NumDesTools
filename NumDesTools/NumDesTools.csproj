@@ -144,21 +144,10 @@
     <None Include="app.config" />
     <None Include="doc\战斗数值.xlsm" />
     <None Include="NumDesTools-AddIn.dna" />
-    <None Include="pack\NumDesTools-AddIn.dna" />
-    <None Include="pack\NumDesTools-AddIn.xll" />
-    <None Include="pack\NumDesTools-AddIn64.dna" />
-    <None Include="pack\NumDesTools-AddIn64.xll" />
-    <None Include="pack\NumDesToolsPack.XLL" />
-    <None Include="pack\NumDesToolsPack64.XLL" />
-    <None Include="pack\packtool.bat" />
-    <None Include="pack\Readme.md" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="image\RibbonUI.xml" />
-    <Content Include="pack\ExcelDna.Integration.dll" />
-    <Content Include="pack\ExcelDnaPack.exe" />
-    <Content Include="pack\NumDesTools.dll" />
     <EmbeddedResource Include="DataExportForm.resx">
       <DependentUpon>DataExportForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -214,6 +203,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="bin\Release\" />
+    <Folder Include="pack\" />
   </ItemGroup>
   <ItemGroup>
     <COMReference Include="Microsoft.Office.Core">
