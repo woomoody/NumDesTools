@@ -1,10 +1,13 @@
 ﻿using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
 using Microsoft.Office.Interop.Excel;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 using stdole;
 using System;
 using System.Data;
 using System.Data.OleDb;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -22,7 +25,6 @@ public static class ErrorLogCtp
 {
     public static CustomTaskPane Ctp;
     public static UserControl LinkControl;
-
     public static void CreateCtp(string errorLog)
     {
         LinkControl = new UserControl();
@@ -526,6 +528,59 @@ public partial class CreatRibbon : ExcelRibbon, IExcelAddIn
 
 public static class ExcelSheetData
 {
+    public static void RWExcelDataUseNPOI()
+    {
+        var fpe = @"D:\\work\\Public\\Excels\\Tables\\【关卡-战斗怪物组】 - 副本.xlsx";
+        FileStream file = new FileStream(fpe, FileMode.Open, FileAccess.Read);
+        // 创建工作簿对象
+        XSSFWorkbook workbook = new XSSFWorkbook(file);
+
+        // 获取第一个工作表
+        ISheet sheet = workbook.GetSheet("MonstersGroup");
+        var asd = sheet.LastRowNum;
+        for (int i = 0; i <= asd; i++)
+        {
+            XSSFRow row = (XSSFRow)sheet.GetRow(i);
+            if (row == null)
+            {
+                continue;
+            }
+            XSSFCell cell = (XSSFCell)row.GetCell(1, MissingCellPolicy.CREATE_NULL_AS_BLANK);
+            // 如果单元格为空，跳过该单元格
+            if (cell.CellType == CellType.Blank)
+            {
+                continue;
+            }
+
+            var asd123 = cell.ToString();
+            Debug.Print(asd123);
+        }
+
+        for (int i = 10; i < 1000; i++)
+        {
+            //第几行
+            IRow row = sheet.GetRow(i);
+            if (row == null)
+            {
+                row = sheet.CreateRow(i);
+            }
+            for (int j = 1; j < 20; j++)
+            {
+                //第几列
+                ICell cell = row.GetCell(j);
+                if (cell == null)
+                {
+                    cell = row.CreateCell(j);
+                }
+                cell.SetCellValue("ccd");
+            }
+        }
+        FileStream fileStream = new FileStream(fpe, FileMode.Create, FileAccess.Write);
+        workbook.Write(fileStream);
+        file.Close();
+        fileStream.Close();
+        workbook.Close();
+    }
     //整理单元格格式
     public static void CellFormat()
     {
