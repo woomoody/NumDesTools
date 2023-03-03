@@ -90,14 +90,11 @@ public static class ExcelIndexDataIsWrong
     public static string FileToStr(string filepath)
     {
         var fileStr = "";
-        using (var sr = new StreamReader(filepath))
+        using var sr = new StreamReader(filepath);
+        while (sr.ReadLine() is { } lineStr)
         {
-            string lineStr;
-            while ((lineStr = sr.ReadLine()) != null)
-            {
-                lineStr = lineStr.Substring(0, lineStr.IndexOf('\t'));
-                fileStr += lineStr + ",";
-            }
+            lineStr = lineStr.Substring(0, lineStr.IndexOf('\t'));
+            fileStr += lineStr + ",";
         }
 
         return fileStr;
@@ -353,10 +350,8 @@ public static class ExcelToDataGridView
                       ";Extended Properties ='Excel 8.0;HDR=NO;IMEX=1'"; //导入时包含Excel中的第一行数据，并且将数字和字符混合的单元格视为文本进行导入
         var conn = new OleDbConnection(strConn);
         conn.Open();
-        string strExcel;
-        OleDbDataAdapter myCommand;
-        strExcel = "select  * from   [" + sheetName + "$]";
-        myCommand = new OleDbDataAdapter(strExcel, strConn);
+        string strExcel = "select  * from   [" + sheetName + "$]";
+        OleDbDataAdapter myCommand = new OleDbDataAdapter(strExcel, strConn);
         var ds = new DataSet();
         myCommand.Fill(ds, "table1");
         Console.WriteLine(ds.Tables[0].Rows[0][0].ToString());
@@ -530,7 +525,7 @@ public partial class CreatRibbon : ExcelRibbon, IExcelAddIn
 
 public static class ExcelSheetData
 {
-    public static void RWExcelDataUseNPOI()
+    public static void RwExcelDataUseNpoi()
     {
         var fpe = @"D:\\work\\Public\\Excels\\Tables\\【关卡-战斗怪物组】 - 副本.xlsx";
         var file = new FileStream(fpe, FileMode.Open, FileAccess.Read);
@@ -555,13 +550,11 @@ public static class ExcelSheetData
         for (var i = 10; i < 1000; i++)
         {
             //第几行
-            var row = sheet.GetRow(i);
-            if (row == null) row = sheet.CreateRow(i);
+            var row = sheet.GetRow(i) ?? sheet.CreateRow(i);
             for (var j = 1; j < 20; j++)
             {
                 //第几列
-                var cell = row.GetCell(j);
-                if (cell == null) cell = row.CreateCell(j);
+                var cell = row.GetCell(j) ?? row.CreateCell(j);
                 cell.SetCellValue("ccd");
             }
         }

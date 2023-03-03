@@ -34,7 +34,7 @@ public partial class CreatRibbon
         //File.Delete(file);
         //Console.ReadKey();
         //Module1.DisposeCTP();
-        //XlCall.Excel(XlCall.xlcAlert, "AutoClose");//采用CAPI接口
+        //XlCall.Excel(XlCall.xlcAlert, "AutoClose");//采用C API接口
     }
 
     void IExcelAddIn.AutoOpen()
@@ -204,11 +204,12 @@ public partial class CreatRibbon
 
             void CkCheckedChanged(object sender, EventArgs e)
             {
-                if (sender is CheckBox c && c.Checked)
+                if (sender is CheckBox { Checked: true })
                 {
-                    foreach (CheckBox ch in gb.Controls)
-                        if (ch.Checked == false)
-                            return;
+                    if (gb.Controls.Cast<CheckBox>().Any(ch => ch.Checked == false))
+                    {
+                        return;
+                    }
                     checkBox1.Checked = true;
                     checkBox1.Text = @"反选";
                 }
@@ -391,16 +392,12 @@ public partial class CreatRibbon
 
     public string GetLableText(IRibbonControl control)
     {
-        var latext = "";
-        switch (control.Id)
+        var latext = control.Id switch
         {
-            case "Button5":
-                latext = LabelText;
-                break;
-            case "Button14":
-                latext = LabelTextRoleDataPreview;
-                break;
-        }
+            "Button5" => LabelText,
+            "Button14" => LabelTextRoleDataPreview,
+            _ => ""
+        };
 
         return latext;
     }
@@ -550,7 +547,7 @@ public partial class CreatRibbon
 
             void CkCheckedChanged(object sender, EventArgs e)
             {
-                if (sender is CheckBox c && c.Checked)
+                if (sender is CheckBox { Checked: true })
                 {
                     foreach (CheckBox ch in gb.Controls)
                         if (ch.Checked == false)
@@ -827,7 +824,7 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        ExcelSheetData.RWExcelDataUseNPOI();
+        ExcelSheetData.RwExcelDataUseNpoi();
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());

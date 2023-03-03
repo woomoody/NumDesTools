@@ -10,9 +10,11 @@ internal class SvnTools
     public static void UpFiles(string path, string logs)
     {
         var client = new SvnClient();
-        var comArg = new SvnCommitArgs();
-        comArg.Depth = SvnDepth.Empty;
-        comArg.LogMessage = logs;
+        var comArg = new SvnCommitArgs
+        {
+            Depth = SvnDepth.Empty,
+            LogMessage = logs
+        };
         //client.Revert(path);
         //client.Update(path);
         client.Commit(path, comArg, out _);

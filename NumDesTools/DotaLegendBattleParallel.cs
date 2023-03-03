@@ -126,23 +126,23 @@ internal class DotaLegendBattleParallel
         var groupARowNum = groupARowMax - groupARowMin + 1;
         var groupBRowNum = groupBRowMax - groupBRowMin + 1;
         //声明角色各属性所在列
-        var posRow = 1; //角色所在行
-        var posCol = 2; //角色所在列
-        var pos = 3; //角色在阵型中的位置
-        var name = 4; //角色名
-        var atk = 9; //攻击力
-        var hp = 10; //生命值
-        var def = 11; //防御力
-        var crit = 12; // 暴击率
-        var critMulti = 13; //暴击倍率 
-        var atkSpeed = 14; //攻速
-        var skillCd = 16; //大招CD
-        var skillCDstart = 17; //大招CD初始
-        var skillDamge = 18; //伤害倍率
-        var skillHealUseSelfAtk = 19; //治疗倍率/D
-        var skillHealUseSelfHp = 20; //治疗被驴/H
+        const int posRow = 1; //角色所在行
+        const int posCol = 2; //角色所在列
+        const int pos = 3; //角色在阵型中的位置
+        const int name = 4; //角色名
+        const int atk = 9; //攻击力
+        const int hp = 10; //生命值
+        const int def = 11; //防御力
+        const int crit = 12; // 暴击率
+        const int critMulti = 13; //暴击倍率 
+        const int atkSpeed = 14; //攻速
+        const int skillCd = 16; //大招CD
+        const int skillCDstart = 17; //大招CD初始
+        const int skillDamge = 18; //伤害倍率
+        const int skillHealUseSelfAtk = 19; //治疗倍率/D
+        const int skillHealUseSelfHp = 20; //治疗被驴/H
 
-        var skillHealUseAllHp = 21; //治疗倍率/A
+        const int skillHealUseAllHp = 21; //治疗倍率/A
 
         //过滤空数据,A数据List化
         var posRowA = DataList(groupARowNum, posRow, arrA, 1);
@@ -394,14 +394,18 @@ internal class DotaLegendBattleParallel
             //筛选出最小值，多个最小随机选取一个
             var mintemp = int.MaxValue;
             var minIn = new List<int>();
-            foreach (int i in disAll)
+            for (var index = disAll.Count - 1; index >= 0; index--)
+            {
+                var i = (int)disAll[index];
                 if (i < mintemp)
                     mintemp = i;
+            }
+
             for (var i = 0; i < disAll.Count; i++)
                 // ReSharper disable once CompareOfFloatsByEqualityOperator
                 if (disAll[i] == mintemp)
                     minIn.Add(i);
-            var lc = minIn.Count();
+            var lc = minIn.Count;
             var rndTar = new Random();
             var rndSeed = rndTar.Next(lc);
             var targetIndex = minIn[rndSeed];
@@ -418,13 +422,11 @@ internal class DotaLegendBattleParallel
         for (var i = 1; i < row + 1; i++)
         {
             var sss = string.IsNullOrWhiteSpace(Convert.ToString(arr.GetValue(i, col)));
-            if (sss == false)
-            {
-                if (mode == 1)
-                    data.Add(Convert.ToDouble(arr.GetValue(i, col)));
-                else
-                    data.Add(0);
-            }
+            if (sss) continue;
+            if (mode == 1)
+                data.Add(Convert.ToDouble(arr.GetValue(i, col)));
+            else
+                data.Add(0);
         }
 
         return data;
@@ -436,9 +438,9 @@ internal class DotaLegendBattleParallel
         for (var i = 1; i < row + 1; i++)
         {
             var sss = string.IsNullOrWhiteSpace(Convert.ToString(arr.GetValue(i, col)));
-            if (sss == false)
-                if (mode == 1)
-                    data.Add(Convert.ToString(arr.GetValue(i, col)));
+            if (sss) continue;
+            if (mode == 1)
+                data.Add(Convert.ToString(arr.GetValue(i, col)));
         }
 
         return data;
