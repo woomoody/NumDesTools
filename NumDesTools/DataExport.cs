@@ -1,10 +1,4 @@
-﻿using ExcelDna.Integration;
-using ExcelDna.Integration.CustomUI;
-using Microsoft.Office.Interop.Excel;
-using NPOI.SS.UserModel;
-using NPOI.XSSF.UserModel;
-using stdole;
-using System;
+﻿using System;
 using System.Data;
 using System.Data.OleDb;
 using System.Diagnostics;
@@ -15,6 +9,12 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using ExcelDna.Integration;
+using ExcelDna.Integration.CustomUI;
+using Microsoft.Office.Interop.Excel;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
+using stdole;
 using DataTable = System.Data.DataTable;
 using Image = System.Drawing.Image;
 using Point = System.Drawing.Point;
@@ -25,6 +25,7 @@ public static class ErrorLogCtp
 {
     public static CustomTaskPane Ctp;
     public static UserControl LinkControl;
+
     public static void CreateCtp(string errorLog)
     {
         LinkControl = new UserControl();
@@ -58,6 +59,7 @@ public static class ErrorLogCtp
         Ctp.Width = 350;
         Ctp.Visible = true;
     }
+
     public static void DisposeCtp()
     {
         if (Ctp == null) return;
@@ -184,8 +186,8 @@ public static class ExcelSheetDataIsError
                             errorTag = "#NULL!";
                             isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
                             break;
-                            //default:
-                            //    break;
+                        //default:
+                        //    break;
                     }
 
                     if (fileStr == "" || i <= 8) continue;
@@ -311,8 +313,8 @@ public static class ExcelSheetDataIsError2
                                 errorTag = "#NULL!";
                                 isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
                                 break;
-                                //default:
-                                //    break;
+                            //default:
+                            //    break;
                         }
 
                         if (fileStr == "" || i <= 8) continue;
@@ -416,54 +418,54 @@ public static class FormularCheck
         var fileFullName = "";
         var fileRealName = "";
         for (var i = 1; i < rowCnt + 1; i++)
-            for (var j = 1; j < colCnt + 1; j++)
-            {
-                var errorFormula = Convert.ToString(arrOld.GetValue(i, j));
-                var errorFormulaStrArr = errorFormula.Split(',');
-                var currentFormulaStr = errorFormula;
-                if (errorFormula != "")
-                    foreach (var errorFormulaStr in errorFormulaStrArr)
+        for (var j = 1; j < colCnt + 1; j++)
+        {
+            var errorFormula = Convert.ToString(arrOld.GetValue(i, j));
+            var errorFormulaStrArr = errorFormula.Split(',');
+            var currentFormulaStr = errorFormula;
+            if (errorFormula != "")
+                foreach (var errorFormulaStr in errorFormulaStrArr)
+                {
+                    var errorFormulaStrKey = errorFormulaStr.Substring(0, 1);
+                    if (errorFormulaStrKey == "'" || errorFormulaStrKey == "=")
                     {
-                        var errorFormulaStrKey = errorFormulaStr.Substring(0, 1);
-                        if (errorFormulaStrKey == "'" || errorFormulaStrKey == "=")
+                        //获取文件名
+                        var indexA = errorFormulaStr.IndexOf(strStar, StringComparison.Ordinal);
+                        var indexB = errorFormulaStr.IndexOf(strEnd, StringComparison.Ordinal);
+                        if (indexA >= 0 && indexB >= 0)
+                            fileName = errorFormulaStr.Substring(indexA + strStar.Length,
+                                indexB - indexA - strEnd.Length);
+                        //获取正确的文件名
+                        var indexRealA = fileName.IndexOf(strRealStar, StringComparison.Ordinal);
+                        var indexRealB = fileName.IndexOf(strRealEnd, StringComparison.Ordinal);
+                        if ((indexA >= 0 && indexB >= 0) || fileName != "")
                         {
-                            //获取文件名
-                            var indexA = errorFormulaStr.IndexOf(strStar, StringComparison.Ordinal);
-                            var indexB = errorFormulaStr.IndexOf(strEnd, StringComparison.Ordinal);
-                            if (indexA >= 0 && indexB >= 0)
-                                fileName = errorFormulaStr.Substring(indexA + strStar.Length,
-                                    indexB - indexA - strEnd.Length);
-                            //获取正确的文件名
-                            var indexRealA = fileName.IndexOf(strRealStar, StringComparison.Ordinal);
-                            var indexRealB = fileName.IndexOf(strRealEnd, StringComparison.Ordinal);
-                            if ((indexA >= 0 && indexB >= 0) || fileName != "")
-                            {
-                                var errorStr = fileName.Substring(indexRealA + strRealStar.Length,
-                                    indexRealB - indexRealA - strRealEnd.Length - 2);
-                                if (errorStr != "") fileRealName = fileName.Replace(errorStr, "");
-                            }
-
-                            //获取文件FullName
-                            var indexFullA = errorFormulaStr.IndexOf(strFullStar, StringComparison.Ordinal);
-                            var indexFullB = errorFormulaStr.IndexOf(strFullEnd, StringComparison.Ordinal);
-                            if (indexFullA >= 0 && indexFullB >= 0)
-                                fileFullName = errorFormulaStr.Substring(indexFullA + strFullStar.Length,
-                                    indexFullB - indexFullA - strFullEnd.Length);
-                            //string cellName = aaa.Substring(aaa.IndexOf("!"), aaa.Length - aaa.IndexOf("!"));
-                            if (fileFullName != "" && fileRealName != "")
-                            {
-                                var filePath = actFilePath + "\\[" + fileRealName;
-                                currentFormulaStr = currentFormulaStr.Replace(fileFullName, filePath);
-                            }
-
-                            fileFullName = "";
-                            fileName = "";
-                            fileRealName = "";
+                            var errorStr = fileName.Substring(indexRealA + strRealStar.Length,
+                                indexRealB - indexRealA - strRealEnd.Length - 2);
+                            if (errorStr != "") fileRealName = fileName.Replace(errorStr, "");
                         }
 
-                        arrNew[i - 1, j - 1] = currentFormulaStr;
+                        //获取文件FullName
+                        var indexFullA = errorFormulaStr.IndexOf(strFullStar, StringComparison.Ordinal);
+                        var indexFullB = errorFormulaStr.IndexOf(strFullEnd, StringComparison.Ordinal);
+                        if (indexFullA >= 0 && indexFullB >= 0)
+                            fileFullName = errorFormulaStr.Substring(indexFullA + strFullStar.Length,
+                                indexFullB - indexFullA - strFullEnd.Length);
+                        //string cellName = aaa.Substring(aaa.IndexOf("!"), aaa.Length - aaa.IndexOf("!"));
+                        if (fileFullName != "" && fileRealName != "")
+                        {
+                            var filePath = actFilePath + "\\[" + fileRealName;
+                            currentFormulaStr = currentFormulaStr.Replace(fileFullName, filePath);
+                        }
+
+                        fileFullName = "";
+                        fileName = "";
+                        fileRealName = "";
                     }
-            }
+
+                    arrNew[i - 1, j - 1] = currentFormulaStr;
+                }
+        }
 
         rng.Value[Missing.Value] = arrNew;
     }
@@ -531,56 +533,46 @@ public static class ExcelSheetData
     public static void RWExcelDataUseNPOI()
     {
         var fpe = @"D:\\work\\Public\\Excels\\Tables\\【关卡-战斗怪物组】 - 副本.xlsx";
-        FileStream file = new FileStream(fpe, FileMode.Open, FileAccess.Read);
+        var file = new FileStream(fpe, FileMode.Open, FileAccess.Read);
         // 创建工作簿对象
-        XSSFWorkbook workbook = new XSSFWorkbook(file);
+        var workbook = new XSSFWorkbook(file);
 
         // 获取第一个工作表
-        ISheet sheet = workbook.GetSheet("MonstersGroup");
+        var sheet = workbook.GetSheet("MonstersGroup");
         var asd = sheet.LastRowNum;
-        for (int i = 0; i <= asd; i++)
+        for (var i = 0; i <= asd; i++)
         {
-            XSSFRow row = (XSSFRow)sheet.GetRow(i);
-            if (row == null)
-            {
-                continue;
-            }
-            XSSFCell cell = (XSSFCell)row.GetCell(1, MissingCellPolicy.CREATE_NULL_AS_BLANK);
+            var row = (XSSFRow)sheet.GetRow(i);
+            if (row == null) continue;
+            var cell = (XSSFCell)row.GetCell(1, MissingCellPolicy.CREATE_NULL_AS_BLANK);
             // 如果单元格为空，跳过该单元格
-            if (cell.CellType == CellType.Blank)
-            {
-                continue;
-            }
+            if (cell.CellType == CellType.Blank) continue;
 
             var asd123 = cell.ToString();
             Debug.Print(asd123);
         }
 
-        for (int i = 10; i < 1000; i++)
+        for (var i = 10; i < 1000; i++)
         {
             //第几行
-            IRow row = sheet.GetRow(i);
-            if (row == null)
-            {
-                row = sheet.CreateRow(i);
-            }
-            for (int j = 1; j < 20; j++)
+            var row = sheet.GetRow(i);
+            if (row == null) row = sheet.CreateRow(i);
+            for (var j = 1; j < 20; j++)
             {
                 //第几列
-                ICell cell = row.GetCell(j);
-                if (cell == null)
-                {
-                    cell = row.CreateCell(j);
-                }
+                var cell = row.GetCell(j);
+                if (cell == null) cell = row.CreateCell(j);
                 cell.SetCellValue("ccd");
             }
         }
-        FileStream fileStream = new FileStream(fpe, FileMode.Create, FileAccess.Write);
+
+        var fileStream = new FileStream(fpe, FileMode.Create, FileAccess.Write);
         workbook.Write(fileStream);
         file.Close();
         fileStream.Close();
         workbook.Close();
     }
+
     //整理单元格格式
     public static void CellFormat()
     {

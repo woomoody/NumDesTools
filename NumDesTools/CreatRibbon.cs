@@ -821,6 +821,7 @@ public partial class CreatRibbon
             MessageBox.Show(@"非【角色基础】表格，不能使用此功能");
         }
     }
+
     public void TestBar1_Click(IRibbonControl control)
     {
         //SVNTools.RevertAndUpFile();

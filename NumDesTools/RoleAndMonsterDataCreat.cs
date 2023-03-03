@@ -1,14 +1,12 @@
-﻿using ExcelDna.Integration;
-using Microsoft.Office.Core;
-using Microsoft.Office.Interop.Excel;
-using System;
-using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Windows.Forms;
-
+using ExcelDna.Integration;
+using Microsoft.Office.Core;
+using Microsoft.Office.Interop.Excel;
 
 namespace NumDesTools;
 
@@ -87,6 +85,7 @@ public class CellSelectChangePro
 }
 
 #region 每个角色全量数据的导出
+
 public class RoleDataPro
 {
     private const string FilePath = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
@@ -111,7 +110,7 @@ public class RoleDataPro
         var roleDataRoleName = new List<string>();
         roleDataSheetName.Add(roleData[0][roleIndex][3]);
         roleDataRoleName.Add(roleData[0][roleIndex][0]);
-        var erroLog=CreatDataTable(FilePath, Missing, roleDataSheetName, roleDataRoleName);
+        var erroLog = CreatDataTable(FilePath, Missing, roleDataSheetName, roleDataRoleName);
         //写入数据
         Workbook book = App.Workbooks.Open(FilePath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
             Missing, Missing, Missing, Missing, Missing, Missing, Missing);
@@ -132,6 +131,7 @@ public class RoleDataPro
         {
             //ignore
         }
+
         App.DisplayAlerts = true;
         App.ScreenUpdating = true;
         sw.Stop();
@@ -149,29 +149,24 @@ public class RoleDataPro
         //创建文件
         var roleDataSheetName = new List<string>();
         var roleDataRoleName = new List<string>();
-        for (int i = 0; i < roleCount - 1; i++)
+        for (var i = 0; i < roleCount - 1; i++)
         {
-             roleDataSheetName.Add( roleData[0][i][3]);
-             roleDataRoleName.Add(roleData[0][i][0]);
+            roleDataSheetName.Add(roleData[0][i][3]);
+            roleDataRoleName.Add(roleData[0][i][0]);
         }
 
         var errorLog = CreatDataTable(FilePath, Missing, roleDataSheetName, roleDataRoleName);
-        if (errorLog != "")
-        {
-            errorLog += @"\";
-        }
+        if (errorLog != "") errorLog += @"\";
         //写入数据
         Workbook book = App.Workbooks.Open(FilePath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
             Missing, Missing, Missing, Missing, Missing, Missing, Missing);
-        for (int i = 0; i < roleCount-1; i++)
-        {
-            ExpData(i, book);
-        }
+        for (var i = 0; i < roleCount - 1; i++) ExpData(i, book);
         if (errorLog != "")
         {
             errorLog += @":DataTable列为空，无法导出数据";
             App.StatusBar = errorLog;
         }
+
         try
         {
             book.Save();
@@ -182,9 +177,11 @@ public class RoleDataPro
         {
             //ignore
         }
+
         App.DisplayAlerts = true;
         App.ScreenUpdating = true;
     }
+
     private static void ExpData(dynamic roleId, dynamic book)
     {
         var roleData = StateCalculate();
@@ -193,13 +190,16 @@ public class RoleDataPro
         //数据List转Array+转置set到Range中
         var oldArr = roleData[roleId + 1];
         var newArr = new double[100, 6];
-        for (var i = 0; i < 6; i++) for (var j = 0; j < 100; j++) newArr[j, i] = Convert.ToDouble(oldArr[i][j]);
+        for (var i = 0; i < 6; i++)
+        for (var j = 0; j < 100; j++)
+            newArr[j, i] = Convert.ToDouble(oldArr[i][j]);
         //打开文件写入数据
         var usherette = book.Worksheets[roleDataSheetName];
         usherette.Range["A3:F102"].Value = newArr;
     }
 
-    private static string CreatDataTable(string filePath, object missing, dynamic roleDataSheetName, dynamic roleDataRoleName)
+    private static string CreatDataTable(string filePath, object missing, dynamic roleDataSheetName,
+        dynamic roleDataRoleName)
     {
         var errorLog = "";
         //已存在文件则打开，否则新建文件打开
@@ -214,9 +214,9 @@ public class RoleDataPro
                 var sheetName = book.Worksheets[i].Name;
                 allSheetName.Add(sheetName);
             }
+
             //创建所需表格
-            for (int i = 0; i < roleDataSheetName.Count; i++)
-            {
+            for (var i = 0; i < roleDataSheetName.Count; i++)
                 if (allSheetName.Contains(roleDataSheetName[i]))
                 {
                     //已经存在，不用创建
@@ -233,7 +233,7 @@ public class RoleDataPro
                         errorLog += roleDataRoleName[i];
                     }
                 }
-            }
+
             //保存文件
             book.Save();
             book.Close(false);
@@ -242,8 +242,7 @@ public class RoleDataPro
         {
             Workbook book = App.Workbooks.Add();
             //创建所需表格
-            for (int i = 0; i < roleDataSheetName.Count; i++)
-            {
+            for (var i = 0; i < roleDataSheetName.Count; i++)
                 if (roleDataSheetName[i] != "")
                 {
                     var nbb = book.Worksheets.Add(missing, book.Worksheets[book.Worksheets.Count], 1, missing);
@@ -253,7 +252,7 @@ public class RoleDataPro
                 {
                     errorLog += roleDataRoleName[i];
                 }
-            }
+
             book.Sheets["Sheet1"].Delete();
             book.SaveAs(filePath);
             //保存文件
@@ -398,7 +397,9 @@ public class RoleDataPro
         return allRoleDataLevel;
     }
 }
+
 #endregion 每个角色全量数据的导出
+
 #region 角色关键数据导出到一张表
 
 public class RoleDataPri
@@ -423,16 +424,20 @@ public class RoleDataPri
         var totalCol = roleDataRng.Columns.Count;
         //数值数据
         var allRoleDataDoubleList = new List<List<double>>();
-        var atkIndex = Ws.Range["E15:U15"].Find("攻击力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column-4;
-        var defIndex = Ws.Range["E15:U15"].Find("防御力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column-4;
-        var hpIndex = Ws.Range["E15:U15"].Find("生命上限", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
-        var atkSpeedIndex = Ws.Range["E15:U15"].Find("攻速", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
-        var roleIDIndex = Ws.Range["E15:U15"].Find("DataTable", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
+        var atkIndex = Ws.Range["E15:U15"].Find("攻击力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
+        var defIndex = Ws.Range["E15:U15"].Find("防御力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
+        var hpIndex = Ws.Range["E15:U15"].Find("生命上限", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
+        var atkSpeedIndex = Ws.Range["E15:U15"].Find("攻速", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
+        var roleIDIndex = Ws.Range["E15:U15"].Find("DataTable", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
         for (var i = 1; i < totalRow + 1; i++)
         {
             var oneRoleDataDoubleList = new List<double>();
             for (var j = 1; j < totalCol + 1; j++)
-            {
                 if (j == atkIndex || j == defIndex || j == hpIndex || j == atkSpeedIndex || j == roleIDIndex)
                 {
                     var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
@@ -443,25 +448,27 @@ public class RoleDataPri
                     }
                     catch
                     {
-                        MessageBox.Show("第"+i+ CacRowStart -1+ "行数据不是数值类型", "数值类型错误", MessageBoxButtons.OKCancel);
+                        MessageBox.Show("第" + i + CacRowStart - 1 + "行数据不是数值类型", "数值类型错误", MessageBoxButtons.OKCancel);
                     }
                 }
-            }
+
             allRoleDataDoubleList.Add(oneRoleDataDoubleList);
         }
+
         wrData(allRoleDataDoubleList);
     }
+
     //获取目标表格需要填入字段的位置，与List进行匹配
     public static void wrData(List<List<double>> roleData)
     {
         Workbook book = App.Workbooks.Open(FilePath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
             Missing, Missing, Missing, Missing, Missing, Missing, Missing);
-        var Ws2= book.Worksheets["role1_s"];
+        var Ws2 = book.Worksheets["role1_s"];
         var statKey = Ws2.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
         var statRole = Ws2.Range["B65534"].End[XlDirection.xlUp].Row;
-        var statKeyGroup = Ws2.Range[Ws2.Cells[2,1],Ws2.Cells[2, statKey]];
+        var statKeyGroup = Ws2.Range[Ws2.Cells[2, 1], Ws2.Cells[2, statKey]];
         var statRoleGroup = Ws2.Range[Ws2.Cells[6, 2], Ws2.Cells[statRole, 2]];
-        List<string> stateKeys = new List<string>();
+        var stateKeys = new List<string>();
         stateKeys.Add("atkSpeed");
         stateKeys.Add("atk");
         stateKeys.Add("def");
@@ -487,11 +494,15 @@ public class RoleDataPri
             var asd = rng.Address;
             var ccd = rng.Row;
             var cc2d = rng.Column;
-            
-            var atkSpeedndex = statKeyGroup.Find(stateKeys[0], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
-            var atkIndex = statKeyGroup.Find(stateKeys[1], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
-            var defIndex = statKeyGroup.Find(stateKeys[2], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
-            var hpIndex = statKeyGroup.Find(stateKeys[3], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart, XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+
+            var atkSpeedndex = statKeyGroup.Find(stateKeys[0], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+                XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+            var atkIndex = statKeyGroup.Find(stateKeys[1], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+                XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+            var defIndex = statKeyGroup.Find(stateKeys[2], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+                XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+            var hpIndex = statKeyGroup.Find(stateKeys[3], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+                XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
             var cc3d = rng.Value;
             if (cc3d != null)
             {
@@ -499,18 +510,16 @@ public class RoleDataPri
 
                 if (result != null)
                 {
-                    int rowIndex = roleData.IndexOf(result);
+                    var rowIndex = roleData.IndexOf(result);
                     Ws2.Cells[ccd, atkSpeedndex].Value = roleData[rowIndex][0];
                     Ws2.Cells[ccd, atkIndex].Value = roleData[rowIndex][1];
                     Ws2.Cells[ccd, defIndex].Value = roleData[rowIndex][2];
                     Ws2.Cells[ccd, hpIndex].Value = roleData[rowIndex][3];
                 }
-                else
-                {
-                    //Console.WriteLine("未找到值 {0}", valueToFind);
-                }
+                //Console.WriteLine("未找到值 {0}", valueToFind);
             }
         }
+
         book.Save();
         book.Close(false);
         //List<ExcelReference> ranges2 = new List<ExcelReference>();
@@ -549,4 +558,5 @@ public class RoleDataPri
     //    }
     //});
 }
+
 #endregion 角色关键数据导出到一张表
