@@ -413,7 +413,7 @@ public class RoleDataPri
     private static readonly dynamic CacRowStart = 16; //角色参数配置行数起点
 
     //获取全部角色的关键数据（要导出的），生成List
-    public static void dataKey()
+    public static void DataKey()
     {
         var roleHead = Ws.Range[CacColStart + "65535"];
         var cacRowEnd = roleHead.End[XlDirection.xlUp].Row;
@@ -432,13 +432,13 @@ public class RoleDataPri
             XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
         var atkSpeedIndex = Ws.Range["E15:U15"].Find("攻速", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
             XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
-        var roleIDIndex = Ws.Range["E15:U15"].Find("DataTable", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+        var roleIdIndex = Ws.Range["E15:U15"].Find("DataTable", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
             XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
         for (var i = 1; i < totalRow + 1; i++)
         {
             var oneRoleDataDoubleList = new List<double>();
             for (var j = 1; j < totalCol + 1; j++)
-                if (j == atkIndex || j == defIndex || j == hpIndex || j == atkSpeedIndex || j == roleIDIndex)
+                if (j == atkIndex || j == defIndex || j == hpIndex || j == atkSpeedIndex || j == roleIdIndex)
                 {
                     var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
                     try
@@ -448,31 +448,33 @@ public class RoleDataPri
                     }
                     catch
                     {
-                        MessageBox.Show("第" + i + CacRowStart - 1 + "行数据不是数值类型", "数值类型错误", MessageBoxButtons.OKCancel);
+                        MessageBox.Show(@"第" + i + CacRowStart - 1 + @"行数据不是数值类型", @"数值类型错误", MessageBoxButtons.OKCancel);
                     }
                 }
 
             allRoleDataDoubleList.Add(oneRoleDataDoubleList);
         }
 
-        wrData(allRoleDataDoubleList);
+        WrData(allRoleDataDoubleList);
     }
 
     //获取目标表格需要填入字段的位置，与List进行匹配
-    public static void wrData(List<List<double>> roleData)
+    public static void WrData(List<List<double>> roleData)
     {
         Workbook book = App.Workbooks.Open(FilePath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
             Missing, Missing, Missing, Missing, Missing, Missing, Missing);
-        var Ws2 = book.Worksheets["role1_s"];
-        var statKey = Ws2.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
-        var statRole = Ws2.Range["B65534"].End[XlDirection.xlUp].Row;
-        var statKeyGroup = Ws2.Range[Ws2.Cells[2, 1], Ws2.Cells[2, statKey]];
-        var statRoleGroup = Ws2.Range[Ws2.Cells[6, 2], Ws2.Cells[statRole, 2]];
-        var stateKeys = new List<string>();
-        stateKeys.Add("atkSpeed");
-        stateKeys.Add("atk");
-        stateKeys.Add("def");
-        stateKeys.Add("hp");
+        var ws2 = book.Worksheets["role1_s"];
+        var statKey = ws2.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
+        var statRole = ws2.Range["B65534"].End[XlDirection.xlUp].Row;
+        var statKeyGroup = ws2.Range[ws2.Cells[2, 1], ws2.Cells[2, statKey]];
+        var statRoleGroup = ws2.Range[ws2.Cells[6, 2], ws2.Cells[statRole, 2]];
+        var stateKeys = new List<string>
+        {
+            "atkSpeed",
+            "atk",
+            "def",
+            "hp"
+        };
         var ranges = new List<Range>();
         var roleDataCol = roleData[0].Count;
         //应该foreach遍历statRoleGroup，通过roleID查找数据，所以导进来的数据，应该是【roleID，数据1，数据2……】
@@ -495,7 +497,7 @@ public class RoleDataPri
             var ccd = rng.Row;
             var cc2d = rng.Column;
 
-            var atkSpeedndex = statKeyGroup.Find(stateKeys[0], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+            var atkSpeedIndex = statKeyGroup.Find(stateKeys[0], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
                 XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
             var atkIndex = statKeyGroup.Find(stateKeys[1], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
                 XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
@@ -511,10 +513,10 @@ public class RoleDataPri
                 if (result != null)
                 {
                     var rowIndex = roleData.IndexOf(result);
-                    Ws2.Cells[ccd, atkSpeedndex].Value = roleData[rowIndex][0];
-                    Ws2.Cells[ccd, atkIndex].Value = roleData[rowIndex][1];
-                    Ws2.Cells[ccd, defIndex].Value = roleData[rowIndex][2];
-                    Ws2.Cells[ccd, hpIndex].Value = roleData[rowIndex][3];
+                    ws2.Cells[ccd, atkSpeedIndex].Value = roleData[rowIndex][0];
+                    ws2.Cells[ccd, atkIndex].Value = roleData[rowIndex][1];
+                    ws2.Cells[ccd, defIndex].Value = roleData[rowIndex][2];
+                    ws2.Cells[ccd, hpIndex].Value = roleData[rowIndex][3];
                 }
                 //Console.WriteLine("未找到值 {0}", valueToFind);
             }

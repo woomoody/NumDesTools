@@ -17,10 +17,14 @@ public class Duoxianchengceshi
     [STAThread]
     public static void Main()
     {
-        var thread = new Thread(Do);
-        thread.Name = " Thread1 ";
-        var thread2 = new Thread(Do);
-        thread2.Name = " Thread2 ";
+        var thread = new Thread(Do)
+        {
+            Name = " Thread1 "
+        };
+        var thread2 = new Thread(Do)
+        {
+            Name = " Thread2 "
+        };
         thread.Start();
         thread2.Start();
         thread.Join();
@@ -581,7 +585,7 @@ internal class DotaLegendBattleSerial
             for (var i = 0; i < disAll.Count; i++)
                 if (disAll[i].Equals(mintemp))
                     minIn.Add(i);
-            var lc = minIn.Count();
+            var lc = minIn.Count;
             var rndTar = new Random();
             var rndSeed = rndTar.Next(lc);
             var targetIndex1 = minIn[rndSeed];
