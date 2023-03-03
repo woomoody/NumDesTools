@@ -1,5 +1,5 @@
-﻿using SharpSvn;
-using System.Diagnostics;
+﻿using System.Diagnostics;
+using SharpSvn;
 
 namespace NumDesTools;
 
