@@ -404,7 +404,6 @@ public class RoleDataPro
 
 public class RoleDataPri
 {
-    private const string FilePath = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\【角色升级】.xlsx";
     private const string CacColStart = "E"; //角色参数配置列数起点
     private const string CacColEnd = "U"; //角色参数配置列数终点c
     private static readonly dynamic App = ExcelDnaUtil.Application;
@@ -413,7 +412,7 @@ public class RoleDataPri
     private static readonly dynamic CacRowStart = 16; //角色参数配置行数起点
 
     //获取全部角色的关键数据（要导出的），生成List
-    public static void DataKey()
+    public static void DataKey(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var roleHead = Ws.Range[CacColStart + "65535"];
         var cacRowEnd = roleHead.End[XlDirection.xlUp].Row;
@@ -461,9 +460,14 @@ public class RoleDataPri
     //获取目标表格需要填入字段的位置，与List进行匹配
     public static void WrData(List<List<double>> roleData)
     {
-        Workbook book = App.Workbooks.Open(FilePath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
-            Missing, Missing, Missing, Missing, Missing, Missing, Missing);
-        var ws2 = book.Worksheets["role1_s"];
+        App.DisplayAlerts = false;
+        App.ScreenUpdating = false;
+        var FilePath = @"\Tables\【角色-战斗】.xlsx"; 
+         string workPath = App.ActiveWorkbook.Path;
+        Directory.SetCurrentDirectory(Directory.GetParent(workPath)?.FullName ?? string.Empty);
+        workPath = Directory.GetCurrentDirectory() + FilePath;
+        Workbook book = App.Workbooks.Open(workPath, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing);
+        var ws2 = book.Worksheets["CharacterBaseAttribute"];
         var statKey = ws2.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
         var statRole = ws2.Range["B65534"].End[XlDirection.xlUp].Row;
         var statKeyGroup = ws2.Range[ws2.Cells[2, 1], ws2.Cells[2, statKey]];
@@ -513,15 +517,16 @@ public class RoleDataPri
                 if (result != null)
                 {
                     var rowIndex = roleData.IndexOf(result);
-                    ws2.Cells[ccd, atkSpeedIndex].Value = roleData[rowIndex][0];
-                    ws2.Cells[ccd, atkIndex].Value = roleData[rowIndex][1];
-                    ws2.Cells[ccd, defIndex].Value = roleData[rowIndex][2];
-                    ws2.Cells[ccd, hpIndex].Value = roleData[rowIndex][3];
+                    ws2.Cells[ccd, atkSpeedIndex].Value = Math.Round(roleData[rowIndex][0]* 100,0);
+                    ws2.Cells[ccd, atkIndex].Value = Math.Round(roleData[rowIndex][1]* 100,0);
+                    ws2.Cells[ccd, defIndex].Value = Math.Round(roleData[rowIndex][2] * 100,0);
+                    ws2.Cells[ccd, hpIndex].Value = Math.Round(roleData[rowIndex][3] *100,0);
                 }
                 //Console.WriteLine("未找到值 {0}", valueToFind);
             }
         }
-
+        App.DisplayAlerts = true;
+        App.ScreenUpdating = true;
         book.Save();
         book.Close(false);
         //List<ExcelReference> ranges2 = new List<ExcelReference>();
