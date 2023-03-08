@@ -89,7 +89,7 @@ public partial class CreatRibbon
                     comButton1.Tag = "单独导出";
                     comButton1.Caption = "导出：单个卡牌";
                     comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                    comButton1.Click += RoleDataPro.ExportSig;
+                    comButton1.Click += RoleDataPri.DataKey;
                 }
 
                 if (comButton2 != null)
@@ -97,7 +97,7 @@ public partial class CreatRibbon
                     comButton2.Tag = "批量导出";
                     comButton2.Caption = "导出：多个卡牌";
                     comButton2.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                    comButton2.Click += RoleDataPro.ExportMulti;
+                    comButton2.Click += RoleDataPri.DataKey;
                 }
             }
         }
@@ -824,6 +824,7 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
+        //RoleDataPri.DataKey;
         ExcelSheetData.RwExcelDataUseNpoi();
         sw.Stop();
         var ts2 = sw.Elapsed;
