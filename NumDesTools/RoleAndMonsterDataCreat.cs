@@ -462,10 +462,10 @@ public class RoleDataPri
     {
         App.DisplayAlerts = false;
         App.ScreenUpdating = false;
-        var FilePath = @"\Tables\【角色-战斗】.xlsx"; 
+        const string filePath = @"\Tables\【角色-战斗】.xlsx"; 
          string workPath = App.ActiveWorkbook.Path;
         Directory.SetCurrentDirectory(Directory.GetParent(workPath)?.FullName ?? string.Empty);
-        workPath = Directory.GetCurrentDirectory() + FilePath;
+        workPath = Directory.GetCurrentDirectory() + filePath;
         Workbook book = App.Workbooks.Open(workPath, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing);
         var ws2 = book.Worksheets["CharacterBaseAttribute"];
         var statKey = ws2.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
@@ -479,8 +479,6 @@ public class RoleDataPri
             "def",
             "hp"
         };
-        var ranges = new List<Range>();
-        var roleDataCol = roleData[0].Count;
         //应该foreach遍历statRoleGroup，通过roleID查找数据，所以导进来的数据，应该是【roleID，数据1，数据2……】
         //for (int i = 0; i < Math.Min(statRole - 5, roleData.Count); i++)
         //{
@@ -497,9 +495,7 @@ public class RoleDataPri
 
         foreach (var rng in statRoleGroup)
         {
-            var asd = rng.Address;
             var ccd = rng.Row;
-            var cc2d = rng.Column;
 
             var atkSpeedIndex = statKeyGroup.Find(stateKeys[0], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
                 XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
