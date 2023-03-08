@@ -7,6 +7,9 @@ using System.Windows.Forms;
 using ExcelDna.Integration;
 using Microsoft.Office.Core;
 using Microsoft.Office.Interop.Excel;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
+using System.Linq;
 
 namespace NumDesTools;
 
@@ -401,7 +404,6 @@ public class RoleDataPro
 #endregion 每个角色全量数据的导出
 
 #region 角色关键数据导出到一张表
-
 public class RoleDataPri
 {
     private const string CacColStart = "E"; //角色参数配置列数起点
@@ -453,7 +455,6 @@ public class RoleDataPri
 
             allRoleDataDoubleList.Add(oneRoleDataDoubleList);
         }
-
         WrData(allRoleDataDoubleList);
     }
 
@@ -561,5 +562,253 @@ public class RoleDataPri
     //    }
     //});
 }
+#endregion
+#region 角色关键数据导出到一张表NPOI
 
-#endregion 角色关键数据导出到一张表
+public class RoleDataPriNPOI
+{
+    private const string CacColStart = "E"; //角色参数配置列数起点
+    private const string CacColEnd = "U"; //角色参数配置列数终点c
+    private static readonly dynamic App = ExcelDnaUtil.Application;
+    private static readonly Worksheet Ws = App.ActiveSheet;
+    private static readonly object Missing = Type.Missing;
+    private static readonly dynamic CacRowStart = 16; //角色参数配置行数起点
+
+    //获取全部角色的关键数据（要导出的），生成List
+    public static void DataKey()
+    {
+        var roleHead = Ws.Range[CacColStart + "65535"];
+        var cacRowEnd = roleHead.End[XlDirection.xlUp].Row;
+        //角色数据组
+        var roleDataRng = Ws.Range[CacColStart + CacRowStart + ":" + CacColEnd + cacRowEnd];
+        Array roleDataArr = roleDataRng.Value2;
+        var totalRow = roleDataRng.Rows.Count;
+        var totalCol = roleDataRng.Columns.Count;
+        //数值数据
+        var allRoleDataDoubleList = new List<List<double>>();
+        var atkIndex = Ws.Range["E15:U15"].Find("攻击力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
+        var defIndex = Ws.Range["E15:U15"].Find("防御力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
+        var hpIndex = Ws.Range["E15:U15"].Find("生命上限", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
+        var atkSpeedIndex = Ws.Range["E15:U15"].Find("攻速", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
+        var roleIdIndex = Ws.Range["E15:U15"].Find("DataTable", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
+        for (var i = 1; i < totalRow + 1; i++)
+        {
+            var oneRoleDataDoubleList = new List<double>();
+            for (var j = 1; j < totalCol + 1; j++)
+                if (j == atkIndex || j == defIndex || j == hpIndex || j == atkSpeedIndex || j == roleIdIndex)
+                {
+                    var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
+                    try
+                    {
+                        var temp = Convert.ToDouble(tempData);
+                        oneRoleDataDoubleList.Add(temp);
+                    }
+                    catch
+                    {
+                        MessageBox.Show(@"第" + i + CacRowStart - 1 + @"行数据不是数值类型", @"数值类型错误", MessageBoxButtons.OKCancel);
+                    }
+                }
+
+            allRoleDataDoubleList.Add(oneRoleDataDoubleList);
+        }
+        WrData(allRoleDataDoubleList);
+    }
+
+    //获取目标表格需要填入字段的位置，与List进行匹配
+    public static void WrData(List<List<double>> roleData)
+    {
+        App.DisplayAlerts = false;
+        App.ScreenUpdating = false;
+        const string filePath = @"\Tables\【角色-战斗】.xlsx";
+        string workPath = App.ActiveWorkbook.Path;
+        Directory.SetCurrentDirectory(Directory.GetParent(workPath)?.FullName ?? string.Empty);
+        workPath = Directory.GetCurrentDirectory() + filePath;
+
+        FileStream file = new FileStream(workPath, FileMode.Open, FileAccess.ReadWrite);
+        IWorkbook workbook = new XSSFWorkbook(file);
+        ISheet ws2 = workbook.GetSheet("CharacterBaseAttribute");
+ 
+        //var statKey = ws2.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
+        //var statRole = ws2.Range["B65534"].End[XlDirection.xlUp].Row;
+        //var statKeyGroup = ws2.Range[ws2.Cells[2, 1], ws2.Cells[2, statKey]];
+        //var statRoleGroup = ws2.Range[ws2.Cells[6, 2], ws2.Cells[statRole, 2]];
+        var rowNum = 1;
+        var colNum= 1;
+        var stateKeys = new List<string>
+        {
+            "atkSpeed",
+            "atk",
+            "def",
+            "hp"
+        };
+        //var atkSpeedIndex =FindColValueNP(ws2, colNum, stateKeys[0]);
+        //var atkIndex = FindColValueNP(ws2, colNum, stateKeys[1]);
+        //var defIndex = FindColValueNP(ws2, colNum, stateKeys[2]);
+        //var hpIndex = FindColValueNP(ws2, colNum, stateKeys[3]);
+        // 遍历列
+        var atkSpeedIndex = FindColValueNP(ws2, rowNum, stateKeys[0]);
+        var atkIndex = FindColValueNP(ws2, rowNum, stateKeys[1]);
+        var defIndex = FindColValueNP(ws2, rowNum, stateKeys[2]);
+        var hpIndex = FindColValueNP(ws2, rowNum, stateKeys[3]);
+        // 遍历行
+        for (int i = 0; i < roleData.Count; i++)
+        {
+            var rowIndex = FindRowValueNP(ws2, colNum, roleData[i][4].ToString());
+            if (rowIndex < 0)
+            {
+
+            }
+            else
+            {
+                var row = ws2.GetRow(rowIndex) ?? ws2.CreateRow(rowIndex);
+                var cellatkSpeed = row.GetCell(atkSpeedIndex) ?? row.CreateCell(atkSpeedIndex);
+                cellatkSpeed.SetCellValue(Math.Round(roleData[i][0]*100, 0));
+                var cellatkIndex = row.GetCell(atkIndex) ?? row.CreateCell(atkIndex);
+                cellatkIndex.SetCellValue(Math.Round(roleData[i][1]*100, 0));
+                var celldefIndex = row.GetCell(defIndex) ?? row.CreateCell(defIndex);
+                celldefIndex.SetCellValue(Math.Round(roleData[i][2] * 100, 0));
+                var cellhpIndex = row.GetCell(hpIndex) ?? row.CreateCell(hpIndex);
+                cellhpIndex.SetCellValue(Math.Round(roleData[i][3] * 100, 0));
+            }
+        }
+        var fileStream = new FileStream(workPath, FileMode.Create, FileAccess.Write);
+        workbook.Write(fileStream, true);
+        file.Close();
+        fileStream.Close();
+        workbook.Close();
+
+        //应该foreach遍历statRoleGroup，通过roleID查找数据，所以导进来的数据，应该是【roleID，数据1，数据2……】
+        //for (int i = 0; i < Math.Min(statRole - 5, roleData.Count); i++)
+        //{
+        //    var statRoleIndex = statRoleGroup.Find(roleData[i][4], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+        //        XlSearchOrder.xlByRows, XlSearchDirection.xlNext, false, false, false).Row;
+        //    for (int j = 0; j < roleDataCol - 1; j++)
+        //    {
+        //        var statKeyIndex = statKeyGroup.Find(stateKeys[j], Missing, XlFindLookIn.xlValues,
+        //            XlLookAt.xlPart,
+        //            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+        //        Ws2.Cells[statRoleIndex, statKeyIndex] = roleData[i][j];
+        //    }
+        //}
+
+        //foreach (var rng in statRoleGroup)
+        //{
+        //    var ccd = rng.Row;
+
+        //    var atkSpeedIndex = statKeyGroup.Find(stateKeys[0], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+        //        XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+        //    var atkIndex = statKeyGroup.Find(stateKeys[1], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+        //        XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+        //    var defIndex = statKeyGroup.Find(stateKeys[2], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+        //        XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+        //    var hpIndex = statKeyGroup.Find(stateKeys[3], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
+        //        XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+        //    var cc3d = rng.Value;
+        //    if (cc3d != null)
+        //    {
+        //        var result = roleData.Find(x => x.Contains(cc3d));
+
+        //        if (result != null)
+        //        {
+        //            var rowIndex = roleData.IndexOf(result);
+        //            ws2.Cells[ccd, atkSpeedIndex].Value = Math.Round(roleData[rowIndex][0] * 100, 0);
+        //            ws2.Cells[ccd, atkIndex].Value = Math.Round(roleData[rowIndex][1] * 100, 0);
+        //            ws2.Cells[ccd, defIndex].Value = Math.Round(roleData[rowIndex][2] * 100, 0);
+        //            ws2.Cells[ccd, hpIndex].Value = Math.Round(roleData[rowIndex][3] * 100, 0);
+        //        }
+        //        //Console.WriteLine("未找到值 {0}", valueToFind);
+        //    }
+        //}
+        //App.DisplayAlerts = true;
+        //App.ScreenUpdating = true;
+        //book.Save();
+        //book.Close(false);
+        //List<ExcelReference> ranges2 = new List<ExcelReference>();
+        //ExcelReference arr = new ExcelReference(1, 1);
+        //ranges2.Add(arr);
+        //ranges2[0].SetValue("asdb");
+        //for (int i = 0; i < ranges.Count; i++)
+        //{
+        //    ranges[i].Value2 = "abc";
+        //}
+        //  range3.Value2 = 1;
+    }
+
+    private static int FindColValueNP(ISheet ws2, int rowNum,string stateKeys)
+    {
+        int ColIndex = -1;
+        IRow targetRow = ws2.GetRow(rowNum);
+        if (targetRow != null)
+        {
+            for (int i = targetRow.FirstCellNum; i <= targetRow.LastCellNum; i++)
+            {
+                ICell cell = targetRow.GetCell(i);
+                if (cell != null)
+                {
+                    string cellValue = cell.ToString();
+                    if (cellValue == stateKeys)
+                    {
+                        ColIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+        return ColIndex;
+    }
+
+    public static int FindRowValueNP(ISheet ws2, int colNum,  string stateKeys)
+    {
+        int RowIndex=-1;
+        for (int i = ws2.FirstRowNum; i <= ws2.LastRowNum; i++)
+        {
+            IRow row = ws2.GetRow(i);
+            if (row != null)
+            {
+                ICell cell = row.GetCell(colNum);
+                if (cell != null)
+                {
+                    string cellValue = cell.ToString();
+                    if (cellValue == stateKeys)
+                    {
+                        RowIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+        return RowIndex;
+    }
+    //写入模式？1、愣写（选一个cell，填一个） 2、批量写（range）；行列不连续如何更效率的填写数据：把所有所要填的cell汇集为1个List，这个List的顺序跟数据源的List一一对应，然后for循环写入数据，看情况是否多线程for
+
+    //List<ExcelReference> ranges = new List<ExcelReference>();
+    //    foreach (string rangeAddress in rangeAddresses)
+    //{
+    //    ExcelReference range = (ExcelReference)XlCall.Excel(XlCall.xlfTextref, rangeAddress);
+    //    ranges.Add(range);
+    //}
+    //ExcelReference range3 = new ExcelReference(2, 3);
+    //ExcelAsyncUtil.Run("WriteToExcel", () =>
+    //{
+    //    int rowCount = data.Length / ranges.Count;
+    //    object[,] dataValues = new object[rowCount, ranges.Count];
+    //    for (int i = 0; i<data.Length; i++)
+    //    {
+    //        int row = i / ranges.Count;
+    //        int column = i % ranges.Count;
+    //        dataValues[row, column] = data[i];
+    //    }
+
+    //    for (int i = 0; i < ranges.Count; i++)
+    //    {
+    //        ranges[i].Value2 = dataValues;
+    //    }
+    //});
+}
+
+#endregion

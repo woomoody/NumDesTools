@@ -89,7 +89,12 @@ public partial class CreatRibbon
                     comButton1.Tag = "单独导出";
                     comButton1.Caption = "导出：单个卡牌";
                     comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    var sw = new Stopwatch();
+                    sw.Start();
                     comButton1.Click += RoleDataPri.DataKey;
+                    sw.Stop();
+                    var ts2 = sw.Elapsed;
+                    _app.StatusBar = "导出完成，用时："+ ts2.ToString();
                 }
 
                 if (comButton2 != null)
@@ -824,11 +829,13 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        //RoleDataPri.DataKey;
-        ExcelSheetData.RwExcelDataUseNpoi();
+        //NPOI效率暂时体现不出优势
+        //RoleDataPriNPOI.DataKey();
+        //ExcelSheetData.RwExcelDataUseNpoi();
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
+        _app.StatusBar = "导出完成，用时：" + ts2.ToString();
     }
 
     public void TestBar2_Click(IRibbonControl control)
