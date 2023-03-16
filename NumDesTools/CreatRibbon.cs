@@ -16,6 +16,7 @@ using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
 using MsoControlType = Microsoft.Office.Core.MsoControlType;
 using Point = System.Drawing.Point;
 
+
 namespace NumDesTools;
 
 public partial class CreatRibbon
@@ -25,7 +26,7 @@ public partial class CreatRibbon
     public static string TempPath = @"\Client\Assets\Resources\Table";
     public static IRibbonUI R;
     private static CommandBarButton _btn;
-    private dynamic _app = ExcelDnaUtil.Application;
+    private static dynamic _app = ExcelDnaUtil.Application;
 
     void IExcelAddIn.AutoClose()
     {
@@ -823,12 +824,27 @@ public partial class CreatRibbon
             MessageBox.Show(@"非【角色基础】表格，不能使用此功能");
         }
     }
+   //所有动态改的东西一定要在Xml使用“get类进行命名，并且在这里进行方法实现，才能动态的将数据传输，执行后续功能
+    private string _seachStr = "";
 
+    public void OnEditBoxTextChanged(IRibbonControl control, string text)
+    {
+        _seachStr = text;
+    }
+    public void GoogleSearch_Click(IRibbonControl control)
+    {
+        SearchEngine.GoogleSearch(_seachStr);
+    }
+    public void BingSearch_Click(IRibbonControl control)
+    {
+        SearchEngine.BingSearch(_seachStr);
+    }
     public void TestBar1_Click(IRibbonControl control)
     {
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
+        SearchEngine.PingWebsite("https://www.google.com");
         //NPOI效率暂时体现不出优势
         //RoleDataPriNPOI.DataKey();
         //ExcelSheetData.RwExcelDataUseNpoi();

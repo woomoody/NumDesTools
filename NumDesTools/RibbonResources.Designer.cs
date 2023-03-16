@@ -123,6 +123,16 @@ namespace NumDesTools {
         /// <summary>
         ///   查找 System.Drawing.Bitmap 类型的本地化资源。
         /// </summary>
+        public static System.Drawing.Bitmap bing {
+            get {
+                object obj = ResourceManager.GetObject("bing", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   查找 System.Drawing.Bitmap 类型的本地化资源。
+        /// </summary>
         public static System.Drawing.Bitmap bower {
             get {
                 object obj = ResourceManager.GetObject("bower", resourceCulture);
@@ -392,13 +402,14 @@ namespace NumDesTools {
         
         /// <summary>
         ///   查找类似 &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+        ///
         ///&lt;customUI xmlns=&apos;http://schemas.microsoft.com/office/2009/07/customui&apos; loadImage=&apos;LoadImage&apos; onLoad=&apos;OnLoad&apos;&gt;
         ///  &lt;ribbon startFromScratch=&apos;false&apos;&gt;
-        ///      &lt;tabs&gt;
-        ///          &lt;tab id=&apos;Tab1&apos; label=&apos;NumDesTools&apos; insertBeforeMso=&apos;TabHome&apos; &gt;
-        ///            &lt;!--//&lt; group id = &apos;Group1&apos; label = &apos;导表(By:SC)&apos; &gt;
+        ///    &lt;tabs&gt;
+        ///      &lt;tab id=&apos;Tab1&apos; label=&apos;NumDesTools&apos; insertBeforeMso=&apos;TabHome&apos;&gt;
+        ///        &lt;!--//&lt; group id = &apos;Group1&apos; label = &apos;导表(By:SC)&apos; &gt;
         ///              //    &lt; button id = &apos;Button1&apos; size = &apos;large&apos; label = &apos;导出本表&apos; image = &apos;file&apos; onAction = &apos;OneSheetOutPut_Click&apos; screentip = &apos;点击导出当前sheet&apos; /&gt;
-        ///              //     [字符串的其余部分被截断]&quot;; 的本地化字符串。
+        ///              //    &lt; button  [字符串的其余部分被截断]&quot;; 的本地化字符串。
         /// </summary>
         public static string RibbonUI {
             get {
@@ -502,6 +513,16 @@ namespace NumDesTools {
         public static System.Drawing.Bitmap zip {
             get {
                 object obj = ResourceManager.GetObject("zip", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   查找 System.Drawing.Bitmap 类型的本地化资源。
+        /// </summary>
+        public static System.Drawing.Bitmap 谷歌 {
+            get {
+                object obj = ResourceManager.GetObject("谷歌", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

@@ -255,6 +255,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Https.cs" />
     <Compile Include="CreatRibbon.cs" />
     <Compile Include="RibbonResources.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -287,6 +288,8 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="image\谷歌.png" />
+    <None Include="image\bing.png" />
     <Content Include="image\RibbonUI.xml" />
     <EmbeddedResource Include="DataExportForm.resx">
       <DependentUpon>DataExportForm.cs</DependentUpon>
