@@ -136,6 +136,9 @@
   <data name="autohotkey" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>image\autohotkey.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="bing" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\bing.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="bower" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>image\bower.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
@@ -249,5 +252,8 @@
   </data>
   <data name="zip" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>image\zip.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="谷歌" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\谷歌.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>
