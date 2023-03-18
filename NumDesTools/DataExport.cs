@@ -539,8 +539,8 @@ public static class ExcelSheetData
         {
             var row = (XSSFRow)sheet.GetRow(i);
             if (row == null) continue;
-            var cell = (XSSFCell)row.GetCell(1, MissingCellPolicy.CREATE_NULL_AS_BLANK);
             // 如果单元格为空，跳过该单元格
+            var cell = (XSSFCell)row.GetCell(1, MissingCellPolicy.CREATE_NULL_AS_BLANK);
             if (cell.CellType == CellType.Blank) continue;
 
             var asd123 = cell.ToString();
