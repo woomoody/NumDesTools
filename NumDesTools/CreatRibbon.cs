@@ -844,7 +844,7 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        AutoInsertData.ExcelIndexGroup();
+        AutoInsertData.ExcelIndexCircle();
         //NPOI效率暂时体现不出优势
         //RoleDataPriNPOI.DataKey();
         //ExcelSheetData.RwExcelDataUseNpoi();
