@@ -7,7 +7,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
+using static System.IO.Path;
 
 namespace NumDesTools;
 
@@ -183,6 +185,12 @@ public class AutoInsertData
         }
         return colList;
     }
+    public static void GetExcelTitleNPOI2()
+    {
+        var asd =ExcelLinkExcel(@"D:\M1Work\public\Excels\Tables\");
+        var fpe = @"D:\M1Work\public\Excels\Tables\#自动填表.xlsm";
+        ExcelLinkGroup(asd, fpe);
+    }
     public static void GetExcelTitleNPOI()
     {
 
@@ -328,6 +336,137 @@ public class AutoInsertData
 
     }
 
+    private static List<List<(int, string, string,string, string)>> ExcelLinkExcel(string folderPath)
+    {
+        var excelTitleList = new List<List<(int, string, string, string, string)>>();
+        // 读取的工作簿
+        var files = Directory.GetFiles(folderPath, "*.xlsx");
+        var fcount = 0;
+        var fileNamesToCheck = new List<string>();
+        foreach (var file in files) fileNamesToCheck.Add(GetFileName(file));
+        var asdb = 0;
+        // 遍历当前目录下所有文件
+        foreach (var f in files)
+        {
+            var fileName = GetFileName(f);
+            // 判断文件名是否包含#
+            if (!f.Contains("#"))
+            {
+                var titleList = new List<(int, string, string, string, string)>();
+                var fs = new FileStream(f, FileMode.Open, FileAccess.Read);
+                var sworkbook = new XSSFWorkbook(fs);
+                var ssheet = sworkbook.GetSheetAt(0);
+                //第几行
+                var srow = ssheet.GetRow(3) ?? ssheet.CreateRow(3);
+                var row = ssheet.GetRow(0) ?? ssheet.CreateRow(0);
+                for (var j = 0; j < srow.LastCellNum; j++)
+                {
+                    //第几列
+                    var scell = srow.GetCell(j) ?? srow.CreateCell(j);
+                    if (scell.CellComment != null)
+                    {
+                        var cell = row.GetCell(j);
+                        if (cell == null)
+                        {
+                            cell = row.CreateCell(j);
+                            cell.CellStyle = row.GetCell(1).CellStyle;
+                        }
+
+                        var newComment = scell.CellComment;
+                        if (cell.CellType == CellType.Blank || cell.CellType == CellType.Unknown)
+                        {
+                            var linkFile = newComment.String.String;
+                            if (linkFile == null) continue;
+                            //var fileki ="在【ScoreTrigger.xlsx】表中配置对应类型数据";
+                            // 匹配英文字母
+                            var pattern = "[a-zA-Z]+";
+                            // 创建正则表达式对象
+                            var regex = new Regex(pattern);
+                            // 查找匹配项
+                            var matches = regex.Matches(linkFile);
+                            foreach (System.Text.RegularExpressions.Match match in matches)
+                            {
+
+                                // 判断文件名是否包含#
+                                if (!f.Contains("#"))
+                                {
+                                    var isLinkExcel = fileNamesToCheck.Any(s =>
+                                        string.Equals(s, match.Value + ".xlsx", StringComparison.OrdinalIgnoreCase));
+                                    if (isLinkExcel)
+                                    {
+                                        var ad = j + 1;
+                                        //cell.SetCellValue(match.Value);
+                                        //var link = new XSSFHyperlink(HyperlinkType.File);
+                                        //link.Address = sourceFilePath + match.Value + ".xlsx";
+                                        //cell.Hyperlink = link;
+                                        var cellValue = match.Value;
+                                        var excelLink = folderPath + cellValue + ".xlsx";
+                                        var cellLink =fileName+"#"+ssheet.SheetName+"!"+ssheet.GetRow(3).GetCell(j).Address;
+                                        titleList.Add((j + 1, cellValue, excelLink,cellLink, fileName));
+                                        //只取第一个索引
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                excelTitleList.Add(titleList);
+                sworkbook.Close();
+                fs.Close();
+            }
+        }
+        return excelTitleList;
+    }
+    private static void ExcelLinkGroup(List<List<(int, string, string, string,string)>> excelTitleList,string filePath)
+    {
+        var fileCount = 0;
+        var file2 = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        // 创建工作簿对象
+        var workbook = new XSSFWorkbook(file2);
+        // 获取第一个工作表
+        // 如果工作簿中已经存在同名的工作表，则先删除该工作表
+        if (workbook.GetSheet("表头集合") != null)
+        {
+            workbook.RemoveSheetAt(workbook.GetSheetIndex("表头集合"));
+        }
+
+        // 创建新的工作表
+        ISheet sheet = workbook.CreateSheet("表头集合");
+        for (int i = 0; i < excelTitleList.Count; i++)
+        {
+                if (excelTitleList[i].Count == 0)
+                {
+                    fileCount++;
+                }
+                else
+                {
+                    //第几行
+                    var row = sheet.GetRow(+(i-fileCount) * 2) ?? sheet.CreateRow(+(i - fileCount) * 2);
+                    var rowCOL = sheet.GetRow(1 + (i - fileCount) * 2) ?? sheet.CreateRow(1 + (i - fileCount) * 2);
+                    for (int k = 0; k < excelTitleList[i].Count; k++)
+                    {
+                        var cell = row.GetCell(k + 1) ?? row.CreateCell(k + 1);
+                        var cellCOL = rowCOL.GetCell(k + 1) ?? rowCOL.CreateCell(k + 1);
+                        var cellExcelName = row.GetCell(0) ?? row.CreateCell(0);
+                        cellExcelName.SetCellValue(excelTitleList[i][k].Item5);
+                        cell.SetCellValue(excelTitleList[i][k].Item2);
+                        var link = new XSSFHyperlink(HyperlinkType.File);
+                        link.Address = excelTitleList[i][k].Item3;
+                        cell.Hyperlink = link;
+                        cellCOL.SetCellValue(excelTitleList[i][k].Item1);
+                        var link2 = new XSSFHyperlink(HyperlinkType.File);
+                        link2.Address = excelTitleList[i][k].Item4;
+                        cellCOL.Hyperlink = link2;
+                    }
+                }
+        }
+        var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
+        workbook.Write(fileStream);
+        workbook.Close();
+        file2.Close();
+        fileStream.Close();
+    }
     public static void ExcelIndexGroup()
     {
         var path =indexWk.Path;
