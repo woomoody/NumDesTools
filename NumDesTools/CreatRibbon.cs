@@ -7,6 +7,8 @@ using System.Windows.Forms;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
 using Microsoft.Office.Interop.Excel;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 using stdole;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
@@ -844,8 +846,10 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
+        //AutoInsertData.ExcelIndexCircle();"D:\M1Work\public\Excels\Tables\#自动填表.xlsm"
         AutoInsertData.GetExcelTitle();
-        //AutoInsertData.GetExcelTitleNPOI2();
+        //AutoInsertData.GetExcelTitleNpoi2();
+        //关闭激活的工作簿
         //NPOI效率暂时体现不出优势
         //RoleDataPriNPOI.DataKey();
         //ExcelSheetData.RwExcelDataUseNpoi();
