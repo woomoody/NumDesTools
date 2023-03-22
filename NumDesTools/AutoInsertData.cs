@@ -6,7 +6,9 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
+using NPOI.SS.Formula.Functions;
 using NPOI.SS.UserModel;
+using NPOI.XSSF.Streaming.Values;
 using NPOI.XSSF.UserModel;
 using static System.IO.Path;
 
@@ -161,7 +163,7 @@ public class AutoInsertData
                             var regex = new Regex(pattern);
                             // 查找匹配项
                             var matches = regex.Matches(linkFile);
-                            foreach (Match match in matches)
+                            foreach (System.Text.RegularExpressions.Match match in matches)
                             {
                                 // 判断文件名是否包含#
                                 if (!f.Contains("#"))
@@ -314,6 +316,64 @@ public class AutoInsertData
         App.ScreenUpdating = true;
     }
 
+    public static void Factorial()
+    {
+       
+        Worksheet sheet =IndexWk.ActiveSheet;
+        //读取模板表数据
+        Dictionary<string, List<string>> relationships = new Dictionary<string, List<string>>();
+        for (int i = 1; i <= 3; i++)
+        {
+            var baseValue = sheet.Cells[i, 1].Value.ToString();
+            relationships[baseValue] = new List<string>();
+            for (int j = 2; j <= 3; j++)
+            {
+                var linkValue = sheet.Cells[i,j].Value;
+                relationships[baseValue].Add(linkValue);
+            }
+        }
+        //整理文件关联字典
+        Dictionary<string, List<string>> relationships2 = new Dictionary<string, List<string>>();
+        relationships2=relationships;
+        var keys =relationships.Keys;
+        foreach (var item in keys)
+        {
+            for (int i = 0; i < relationships[item].Count; i++)
+            {
+                var values = relationships[item][i];
+                if (values == null) continue;
+                if (relationships.ContainsKey(values))
+                {
+                    int asdb = 0;
+                    foreach (var sdsa in relationships[values])
+                    {
+                        relationships2[item].Add(relationships[values][asdb]);
+                        asdb++;
+                    }
+                }
+            }
+        }
+        //根据key[0]的文件流（包含所有文件，并且有既定的顺序）进行内容写入
+        var rootPath = IndexWk.Path;
+        var fileDic = relationships2["索引1.xlsx"];
+        for (int i = 0; i < fileDic.Count; i++)
+        {
+            if (fileDic[i] == null) continue;//空的只是更改值，不会再索引表了
+            var filePath = rootPath + @"\" + fileDic[i];
+            var file = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            var workbook = new XSSFWorkbook(file);
+            var sheet1 = workbook.GetSheetAt(0);
+            var row = sheet1.GetRow(0) ?? sheet1.CreateRow(0);
+            var cell = row.GetCell(0) ?? row.CreateCell(0);
+            cell.SetCellValue("abc");
+            var file2 = new FileStream(filePath, FileMode.Create, FileAccess.Write);
+            workbook.Write(file2);
+            workbook.Close();
+            file.Close();
+            file2.Close();
+        }
+    }
+
     public static void ActiveWorkbookWRDataByNPOI()
     {
         App.ActiveWorkbook.Close();
@@ -335,7 +395,8 @@ public class AutoInsertData
         workbook.Write(file3);
         file2.Close();
         file3.Close();
-        Workbook book = App.Workbooks.Open(@"D:\M1Work\public\Excels\Tables\#自动填表.xlsm", Missing, Missing, Missing, Missing, Missing, Missing, Missing,
+        Workbook book = App.Workbooks.Open(@"D:\M1Work\public\Excels\Tables\#自动填表.xlsm", Missing, Missing, Missing,
+            Missing, Missing, Missing, Missing,
             Missing, Missing, Missing, Missing, Missing, Missing, Missing);
     }
 
@@ -384,7 +445,7 @@ public class AutoInsertData
         var pattern = "\\d+";
         // 使用正则表达式匹配数字
         var matches = Regex.Matches(text, pattern);
-        foreach (Match match in matches)
+        foreach (System.Text.RegularExpressions.Match match in matches)
         {
             var numStr = match.Value;
             var num = int.Parse(numStr);

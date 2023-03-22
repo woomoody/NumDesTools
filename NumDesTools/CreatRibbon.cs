@@ -846,8 +846,9 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
+        AutoInsertData.Factorial();
         //AutoInsertData.ExcelIndexCircle();"D:\M1Work\public\Excels\Tables\#自动填表.xlsm"
-        AutoInsertData.GetExcelTitle();
+        //AutoInsertData.GetExcelTitle();
         //AutoInsertData.GetExcelTitleNpoi2();
         //关闭激活的工作簿
         //NPOI效率暂时体现不出优势
