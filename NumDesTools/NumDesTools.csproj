@@ -255,6 +255,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AutoInsertData - 复制.cs" />
     <Compile Include="AutoInsertData.cs" />
     <Compile Include="Https.cs" />
     <Compile Include="CreatRibbon.cs" />
