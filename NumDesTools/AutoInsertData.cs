@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -11,6 +12,7 @@ using NPOI.SS.Formula.Functions;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.Streaming.Values;
 using NPOI.XSSF.UserModel;
+using NPOI.XWPF.UserModel;
 using static System.IO.Path;
 
 namespace NumDesTools;
@@ -320,16 +322,53 @@ public class AutoInsertData
 
     public static void Factorial()
     {
+        int ModeIDrow(int rowCount, ISheet sheet1, dynamic modeId)
+        {
+            int modeIDrow=-1;
+            for (int k = 0; k < rowCount; k++)
+            {
+                var row = sheet1.GetRow(k) ?? sheet1.CreateRow(k);
+                var cell = row.GetCell(1) ?? row.CreateCell(1);
+                string cellValueAsString = string.Empty;
+                switch (cell.CellType)
+                {
+                    case CellType.Numeric:
+                        cellValueAsString = cell.NumericCellValue.ToString();
+                        break;
+                    case CellType.String:
+                        cellValueAsString = cell.StringCellValue;
+                        break;
+                    case CellType.Boolean:
+                        cellValueAsString = cell.BooleanCellValue.ToString();
+                        break;
+                    case CellType.Error:
+                        cellValueAsString = cell.ErrorCellValue.ToString();
+                        break;
+                    default:
+                        cellValueAsString = string.Empty;
+                        break;
+                }
+                if (cellValueAsString == modeId)
+                {
+                    modeIDrow = k;
+                }
+            }
+
+            return modeIDrow;
+        }
+
         Worksheet sheet =IndexWk.ActiveSheet;
         //读取模板表数据
         Dictionary<string, List<string>> relationships = new Dictionary<string, List<string>>();
-        for (int i = 1; i <= 3; i++)
+        var rowsCount = (sheet.Cells[sheet.Rows.Count,"A"].End[XlDirection.xlUp].Row-15)/3;
+        for (int i = 1; i <= rowsCount; i++)
         {
-            var baseValue = sheet.Cells[i, 1].Value.ToString();
+            //var baseValue = sheet.Cells[i, 1].Value.ToString();
+            var baseValue = sheet.Cells[1,1].Offset[15 + (i - 1) * 4, 0].Value.ToString();
             relationships[baseValue] = new List<string>();
-            for (int j = 2; j <= 3; j++)
+            for (int j = 1; j <= 2 ;j++)
             {
-                var linkValue = sheet.Cells[i,j].Value;
+                var linkValue = sheet.Cells[1,1].Offset[16+(i-1)*4,j+1].Value;
                 relationships[baseValue].Add(linkValue);
             }
         }
@@ -368,29 +407,61 @@ public class AutoInsertData
             }
         }
 
-        //根据key[0]的文件流（包含所有文件，并且有既定的顺序）进行内容写入
-        //var rootPath = IndexWk.Path;
-        //var fileDic = relationships2["索引1.xlsx"];
-        //for (int i = 0; i < fileDic.Count; i++)
-        //{
-        //    if (fileDic[i] == null) continue;//空的只是更改值，不会再索引表了
-        //    var filePath = rootPath + @"\" + fileDic[i];
-        //    var file = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-        //    var workbook = new XSSFWorkbook(file);
-        //    var sheet1 = workbook.GetSheetAt(0);
-        //    var row = sheet1.GetRow(0) ?? sheet1.CreateRow(0);
-        //    var cell = row.GetCell(0) ?? row.CreateCell(0);
-        //    cell.SetCellValue("abc");
-        //    var file2 = new FileStream(filePath, FileMode.Create, FileAccess.Write);
-        //    workbook.Write(file2);
-        //    workbook.Close();
-        //    file.Close();
-        //    file2.Close();
-        //}
-        bool areEqual = relationshipsBF.OrderBy(x => x.Key)
-            .SequenceEqual(relationships2.OrderBy(x => x.Key));
-        Debug.Print(areEqual.ToString());
-
+        //根据key[0]的文件流（包含所有文件，并且有既定的顺序）进行内容写入::想办法给下一次文件写入传输：哪些字段要按照自定义模式修改（模板ID-上表字段值，修改方式、、、、上表关联下表）
+        var rootPath = IndexWk.Path;
+        var fileDic = relationships2["索引1.xlsx"];
+        var modeID = sheet.Range["B14"].Value2.ToString();
+        var dataNum = sheet.Range["C14"].Value2;
+        for (int i = 0; i < fileDic.Count; i++)
+        {
+            if (fileDic[i] == null) continue;//空的只是更改值，不会再索引表了
+            //var filePath = rootPath + @"\" + fileDic[i];
+            var filePath = rootPath + @"\" + "索引1.xlsx";
+            var file = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+            var workbook = new XSSFWorkbook(file);
+            var sheet1 = workbook.GetSheetAt(0);
+            var rowCount = sheet1.LastRowNum;
+            //查找模板ID,获取模板行
+            int modeIDrow = ModeIDrow(rowCount+1, sheet1, modeID);
+            var modeRow = sheet1.GetRow(modeIDrow) ?? sheet1.CreateRow(modeIDrow);
+            //复制模板数据
+            for (int j = 0; j < dataNum; j++)
+            {
+                var insRow = sheet1.GetRow(modeIDrow+j+1) ?? sheet1.CreateRow(modeIDrow+j+1);
+                for (int m = 0; m < modeRow.LastCellNum; m++)
+                {
+                    var modeCell = modeRow.GetCell(m) ?? modeRow.CreateCell(m);
+                    var insCell = insRow.GetCell(m) ?? insRow.CreateCell(m);
+                    switch (modeCell.CellType)
+                    {
+                        case CellType.Numeric:
+                            insCell.SetCellValue(modeCell.NumericCellValue);
+                            break;
+                        case CellType.String:
+                            insCell.SetCellValue(modeCell.StringCellValue);
+                            break;
+                        case CellType.Boolean:
+                            insCell.SetCellValue(modeCell.BooleanCellValue);
+                            break;
+                        case CellType.Error:
+                            insCell.SetCellValue(modeCell.ErrorCellValue);
+                            break;
+                        default:
+                            insCell.SetCellValue(String.Empty);
+                            break;
+                    }
+                    insCell.CellStyle =modeCell.CellStyle;
+                }
+            }
+            //var row = sheet1.GetRow(0) ?? sheet1.CreateRow(0);
+            //var cell = row.GetCell(0) ?? row.CreateCell(0);
+            //cell.SetCellValue("abc");
+            var file2 = new FileStream(filePath, FileMode.Create, FileAccess.Write);
+            workbook.Write(file2);
+            workbook.Close();
+            file.Close();
+            file2.Close();
+        }
     }
 
     public static void ActiveWorkbookWRDataByNPOI()
