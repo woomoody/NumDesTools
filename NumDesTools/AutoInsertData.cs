@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -83,6 +84,7 @@ public class AutoInsertData
             abc = RegNumReplaceNew(abc, 2);
             Debug.Print(abc);
             //写入ws2
+
 
             //汇总引用表格List，汇总表格需要添加IDList，循环直到没有索引
         }
@@ -318,7 +320,6 @@ public class AutoInsertData
 
     public static void Factorial()
     {
-       
         Worksheet sheet =IndexWk.ActiveSheet;
         //读取模板表数据
         Dictionary<string, List<string>> relationships = new Dictionary<string, List<string>>();
@@ -332,12 +333,24 @@ public class AutoInsertData
                 relationships[baseValue].Add(linkValue);
             }
         }
+        //备份字典
+        Dictionary<string, List<string>> relationshipsBF = new Dictionary<string, List<string>>();
+        foreach (var key in relationships.Keys)
+        {
+            relationshipsBF[key] = new List<string>(relationships[key]);
+        }
         //整理文件关联字典
-        Dictionary<string, List<string>> relationships2 = new Dictionary<string, List<string>>();
-        relationships2=relationships;
-        var keys =relationships.Keys;
+        Dictionary<string, List<string>> relationships2 = new Dictionary<string, List<string>>(relationships);
+        Dictionary<string, List<string>> relationships3 = new Dictionary<string, List<string>>();
+        var keys = relationships.Keys;
         foreach (var item in keys)
         {
+            relationships3[item] = new List<string>();
+            //初始表格映射
+            foreach (var item2 in relationships["索引1.xlsx"])
+            {
+                relationships3[item].Add(item);
+            }
             for (int i = 0; i < relationships[item].Count; i++)
             {
                 var values = relationships[item][i];
@@ -349,29 +362,35 @@ public class AutoInsertData
                     {
                         relationships2[item].Add(relationships[values][asdb]);
                         asdb++;
+                        relationships3[item].Add(values);
                     }
                 }
             }
         }
+
         //根据key[0]的文件流（包含所有文件，并且有既定的顺序）进行内容写入
-        var rootPath = IndexWk.Path;
-        var fileDic = relationships2["索引1.xlsx"];
-        for (int i = 0; i < fileDic.Count; i++)
-        {
-            if (fileDic[i] == null) continue;//空的只是更改值，不会再索引表了
-            var filePath = rootPath + @"\" + fileDic[i];
-            var file = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            var workbook = new XSSFWorkbook(file);
-            var sheet1 = workbook.GetSheetAt(0);
-            var row = sheet1.GetRow(0) ?? sheet1.CreateRow(0);
-            var cell = row.GetCell(0) ?? row.CreateCell(0);
-            cell.SetCellValue("abc");
-            var file2 = new FileStream(filePath, FileMode.Create, FileAccess.Write);
-            workbook.Write(file2);
-            workbook.Close();
-            file.Close();
-            file2.Close();
-        }
+        //var rootPath = IndexWk.Path;
+        //var fileDic = relationships2["索引1.xlsx"];
+        //for (int i = 0; i < fileDic.Count; i++)
+        //{
+        //    if (fileDic[i] == null) continue;//空的只是更改值，不会再索引表了
+        //    var filePath = rootPath + @"\" + fileDic[i];
+        //    var file = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+        //    var workbook = new XSSFWorkbook(file);
+        //    var sheet1 = workbook.GetSheetAt(0);
+        //    var row = sheet1.GetRow(0) ?? sheet1.CreateRow(0);
+        //    var cell = row.GetCell(0) ?? row.CreateCell(0);
+        //    cell.SetCellValue("abc");
+        //    var file2 = new FileStream(filePath, FileMode.Create, FileAccess.Write);
+        //    workbook.Write(file2);
+        //    workbook.Close();
+        //    file.Close();
+        //    file2.Close();
+        //}
+        bool areEqual = relationshipsBF.OrderBy(x => x.Key)
+            .SequenceEqual(relationships2.OrderBy(x => x.Key));
+        Debug.Print(areEqual.ToString());
+
     }
 
     public static void ActiveWorkbookWRDataByNPOI()
