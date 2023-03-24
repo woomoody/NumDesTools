@@ -14,6 +14,7 @@ using NPOI.XSSF.Streaming.Values;
 using NPOI.XSSF.UserModel;
 using NPOI.XWPF.UserModel;
 using static System.IO.Path;
+using ICell = NPOI.SS.UserModel.ICell;
 
 namespace NumDesTools;
 
@@ -50,69 +51,163 @@ class ExcelRellationShip
 
     public static void test()
     {
-         ExcelDic();
-         List<int> modeIDRow = new List<int>();
-         modeIDRow.Add(5);
-         List<string> fileName = new List<string>();
-          fileName.Add("索引1.xlsx"); 
-         CreateRellationShip(fileName, modeIDRow);
+        ExcelDic();
+        List<string> modeIDRow = new List<string>();
+        modeIDRow.Add("10");
+        List<string> fileName = new List<string>();
+        fileName.Add("索引1.xlsx");
+        CreateRellationShip(fileName, modeIDRow);
+        //test2(fileName);
+        //var excel = new FileStream(excelPath + @"\索引1.xlsx" , FileMode.Open, FileAccess.Read);
+        //var workbook = new XSSFWorkbook(excel);
+        //var sheet = workbook.GetSheetAt(0);
+        //var asd =FindSourceRow(sheet, 1, "10");
     }
-    public static void CreateRellationShip(List<string> fileName, List<int> modeIDRow)
+
+    public static string ValueTypeToStringInNPOI(ICell cell)
     {
-        List<int> modelDrow2 = new List<int>();
-        List<string> fileName2 = new List<string>();
-        int excount = 0;
-        foreach (var item in modeIDRow)
+        string cellValueAsString = string.Empty;
+        if (cell != null)
         {
-            var excel = new FileStream(excelPath + @"\" + fileName[excount], FileMode.Open, FileAccess.Read);
+            switch (cell.CellType)
+            {
+                case CellType.Numeric:
+                    cellValueAsString = cell.NumericCellValue.ToString();
+                    break;
+                case CellType.String:
+                    cellValueAsString = cell.StringCellValue;
+                    break;
+                case CellType.Boolean:
+                    cellValueAsString = cell.BooleanCellValue.ToString();
+                    break;
+                case CellType.Error:
+                    cellValueAsString = cell.ErrorCellValue.ToString();
+                    break;
+                default:
+                    cellValueAsString = "";
+                    break;
+            }
+        }
+
+        return cellValueAsString;
+    }
+
+    public static int FindSourceRow(ISheet sheet,int col,string searchValue)
+    {
+        for (int i = sheet.FirstRowNum; i <= sheet.LastRowNum; i++)
+        {
+            IRow row = sheet.GetRow(i);
+            if (row != null)
+            {
+                var cell = row.GetCell(col);
+                var cellValue = ValueTypeToStringInNPOI(cell);
+                if (cellValue == searchValue)
+                {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    public static void test2(List<string> oldstr)
+    {
+        List<string> newstr = new List<string>();
+        foreach (var str in oldstr)
+        {
+            if(str ==null) continue;
+            if (excelLinkDictionary.ContainsKey(str))
+            {
+                foreach (var indestr in excelLinkDictionary[str])
+                {
+                    newstr.Add(indestr);
+                }
+            }
+            
+            if (newstr.Count > 0)
+            {
+                test2(newstr);
+            }
+            Debug.Print(str + "\n" + "\t");
+        }
+    }
+    public static void CreateRellationShip(List<string> oldFileName, List<string> oldmodelID)
+    {
+        List<string> newmodelID = new List<string>();
+        List<string> newFileName = new List<string>();
+        int excount = 0;
+        foreach (var excelFile in oldFileName)
+        {
+            var excel = new FileStream(excelPath + @"\" + excelFile, FileMode.Open, FileAccess.Read);
             var workbook = new XSSFWorkbook(excel);
             var sheet = workbook.GetSheetAt(0);
-            var rowSource = sheet.GetRow(item);
+            var rowReSourceRow = FindSourceRow(sheet, 1, oldmodelID[excount]);
+            if(rowReSourceRow==-1) continue;
+            var rowSource = sheet.GetRow(rowReSourceRow);
             var colTotal = sheet.GetRow(1).LastCellNum + 1;
             
-            //数据复制
             for (int i = 0; i < dataCount; i++)
             {
-                var rowTarget = sheet.GetRow(item + i);
+                //数据复制
+                var rowTarget = sheet.GetRow(rowReSourceRow + i+1)?? sheet.CreateRow(rowReSourceRow + i + 1);
                 for (int j = 0; j < colTotal; j++)
                 {
                     var cellSource = rowSource.GetCell(j);
-                    var cellTarget = rowTarget.CreateCell(j);
-                    cellTarget.SetCellValue("cellSource.StringCellValue");
+                    var cellSourceValue = "";
+                    if (cellSource != null)
+                    {
+                        cellSourceValue = ValueTypeToStringInNPOI(cellSource);
+                        var cellTarget = rowTarget.GetCell(j)??rowTarget.CreateCell(j);
+                        cellTarget.SetCellValue(cellSourceValue);
+                        cellTarget.CellStyle = cellSource.CellStyle;
+                    }
                 }
             }
             //数据修改
-            if (!excelLinkDictionary.ContainsKey(fileName[excount]))
+            if(excelFile==null) continue;
+            if (excelLinkDictionary.ContainsKey(excelFile))
             {
-                var excel2 = new FileStream(excelPath + @"\" + fileName[excount], FileMode.Create, FileAccess.Write);
-                workbook.Write(excel2);
-                workbook.Close();
-                excel2.Close();
-                excel.Close();
-                continue;
-            }
-            else
-            {
-                foreach (var indexExcel in excelLinkDictionary[fileName[excount]])
+                var indexExcelCount = 0;
+                foreach (var indexExcel in excelLinkDictionary[excelFile])
                 {
                     if (indexExcel == null) continue;
                     //if (excelLinkDictionary.ContainsKey(indexExcel))
                     //{
-                    fileName2.Add(indexExcel);
-                    modelDrow2.Add(4);
+
+                    newFileName.Add(indexExcel);
+                    var abc = excelFixKeyDictionary[excelFile][indexExcelCount];
+                    var cellTarget = sheet.GetRow(rowReSourceRow).GetCell(abc);
+                    //if (cellTarget != null)
+                    //{
+                        var cellTargetValue = ValueTypeToStringInNPOI(cellTarget);
+                        //需要加入reg进行ID分析
+                        newmodelID.Add(cellTargetValue);
                     //}
+
+                    indexExcelCount++;
                 }
-                var excel2 = new FileStream(excelPath + @"\" + fileName[excount], FileMode.Create, FileAccess.Write);
-                workbook.Write(excel2);
-                workbook.Close();
-                excel2.Close();
-                excel.Close();
-                excount++;
-                if (modelDrow2.Count > 0)
-                {
-                    CreateRellationShip(fileName2, modelDrow2);
-                }
+                //foreach (var newModelIndex in excelFixKeyDictionary[oldFileName[excount]])
+                //{
+                //    var cellTarget = sheet.GetRow(rowReSourceRow).GetCell(newModelIndex);
+                //    if (cellTarget != null)
+                //    {
+                //        var cellTargetValue = ValueTypeToStringInNPOI(cellTarget);
+                //        //需要加入reg进行ID分析
+                //        newmodelID.Add(cellTargetValue);
+                //    }
+                //}
+
             }
+            var excel2 = new FileStream(excelPath + @"\" + oldFileName[excount], FileMode.Create, FileAccess.Write);
+            workbook.Write(excel2);
+            workbook.Close();
+            excel2.Close();
+            excel.Close();
+            if (newFileName.Count > 0)
+            {
+                CreateRellationShip(newFileName, newmodelID);
+            }
+            excount++;
         }
     }
 }
