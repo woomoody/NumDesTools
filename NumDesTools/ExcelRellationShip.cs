@@ -57,10 +57,20 @@ class ExcelRellationShip
         List<string> fileName = new List<string>();
         fileName.Add("索引1.xlsx");
         CreateRellationShip(fileName, modeIDRow);
+
         //test2(fileName);
-        //var excel = new FileStream(excelPath + @"\索引1.xlsx" , FileMode.Open, FileAccess.Read);
+        //var excel = new FileStream(excelPath + @"\索引1.xlsx", FileMode.Open, FileAccess.Read);
         //var workbook = new XSSFWorkbook(excel);
         //var sheet = workbook.GetSheetAt(0);
+        //sheet.ShiftRows(1, sheet.LastRowNum, 1, true, false);
+        //IRow row = sheet.CreateRow(1);
+        //ICell cell1 = row.CreateCell(0);
+        //cell1.SetCellValue("New Cell 1");
+        //var excel2 = new FileStream(excelPath + @"\索引1.xlsx", FileMode.Create, FileAccess.Write);
+        //workbook.Write(excel2);
+        //workbook.Close();
+        //excel2.Close();
+        //excel.Close();
         //var asd =FindSourceRow(sheet, 1, "10");
     }
 
@@ -123,13 +133,14 @@ class ExcelRellationShip
                     newstr.Add(indestr);
                 }
             }
-            
-            if (newstr.Count > 0)
-            {
-                test2(newstr);
-            }
             Debug.Print(str + "\n" + "\t");
+        
         }
+        if (newstr.Count > 0)
+        {
+            test2(newstr);
+        }
+
     }
     public static void CreateRellationShip(List<string> oldFileName, List<string> oldmodelID)
     {
@@ -145,11 +156,18 @@ class ExcelRellationShip
             if(rowReSourceRow==-1) continue;
             var rowSource = sheet.GetRow(rowReSourceRow);
             var colTotal = sheet.GetRow(1).LastCellNum + 1;
-            
+            if (sheet.LastRowNum != rowReSourceRow)
+            {
+                sheet.ShiftRows(rowReSourceRow + 1, sheet.LastRowNum, dataCount, true, false);
+            }
+            //数据复制
             for (int i = 0; i < dataCount; i++)
             {
-                //数据复制
-                var rowTarget = sheet.GetRow(rowReSourceRow + i+1)?? sheet.CreateRow(rowReSourceRow + i + 1);
+                //if (sheet.LastRowNum != rowReSourceRow + i )
+                //{
+                //    sheet.ShiftRows(rowReSourceRow + i + 1, sheet.LastRowNum, 1, true, false);
+                //}
+                var rowTarget= sheet.GetRow(rowReSourceRow + i + 1)?? sheet.CreateRow(rowReSourceRow + i + 1);
                 for (int j = 0; j < colTotal; j++)
                 {
                     var cellSource = rowSource.GetCell(j);
@@ -158,12 +176,20 @@ class ExcelRellationShip
                     {
                         cellSourceValue = ValueTypeToStringInNPOI(cellSource);
                         var cellTarget = rowTarget.GetCell(j)??rowTarget.CreateCell(j);
-                        cellTarget.SetCellValue(cellSourceValue);
+           
+                        if (j==1)
+                        {
+                            cellTarget.SetCellValue(cellSourceValue+"@@@");
+                        }
+                        else
+                        {
+                            cellTarget.SetCellValue(cellSourceValue);
+                        }
                         cellTarget.CellStyle = cellSource.CellStyle;
                     }
                 }
             }
-            //数据修改
+            //表格关联
             if(excelFile==null) continue;
             if (excelLinkDictionary.ContainsKey(excelFile))
             {
@@ -183,6 +209,16 @@ class ExcelRellationShip
                         //需要加入reg进行ID分析
                         newmodelID.Add(cellTargetValue);
                     //}
+                    //数据修改
+                    //数据复制
+                    for (int i = 0; i < dataCount; i++)
+                    {
+                        var rowFix = sheet.GetRow(rowReSourceRow + i + 1) ?? sheet.CreateRow(rowReSourceRow + i + 1);
+                        var cellFix = rowFix.GetCell(abc)??rowFix.CreateCell(abc);
+                        var cellFixValue = ValueTypeToStringInNPOI(cellFix);
+                        cellFix.SetCellValue(cellFixValue+"@@@");
+                        cellFix.CellStyle = cellFix.CellStyle;
+                    }
 
                     indexExcelCount++;
                 }
@@ -203,11 +239,11 @@ class ExcelRellationShip
             workbook.Close();
             excel2.Close();
             excel.Close();
-            if (newFileName.Count > 0)
-            {
-                CreateRellationShip(newFileName, newmodelID);
-            }
             excount++;
+        }
+        if (newFileName.Count > 0)
+        {
+            CreateRellationShip(newFileName, newmodelID);
         }
     }
 }
