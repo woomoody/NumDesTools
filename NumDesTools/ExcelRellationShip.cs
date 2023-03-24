@@ -56,7 +56,10 @@ class ExcelRellationShip
         modeIDRow.Add("10");
         List<string> fileName = new List<string>();
         fileName.Add("索引1.xlsx");
-        CreateRellationShip(fileName, modeIDRow);
+        var sheet = IndexWk.ActiveSheet;
+        string WriteMode = sheet.Range["B11"].value.ToString();
+        string testKey =sheet.Range["C11"].value.ToString();
+        CreateRellationShip(fileName, modeIDRow, WriteMode,testKey);
 
         //test2(fileName);
         //var excel = new FileStream(excelPath + @"\索引1.xlsx", FileMode.Open, FileAccess.Read);
@@ -142,8 +145,9 @@ class ExcelRellationShip
         }
 
     }
-    public static void CreateRellationShip(List<string> oldFileName, List<string> oldmodelID)
+    public static void CreateRellationShip(List<string> oldFileName, List<string> oldmodelID,string WriteMode,string testKey)
     {
+        string testKey2 = "@@@";
         List<string> newmodelID = new List<string>();
         List<string> newFileName = new List<string>();
         int excount = 0;
@@ -156,9 +160,16 @@ class ExcelRellationShip
             if(rowReSourceRow==-1) continue;
             var rowSource = sheet.GetRow(rowReSourceRow);
             var colTotal = sheet.GetRow(1).LastCellNum + 1;
-            if (sheet.LastRowNum != rowReSourceRow)
+            if (WriteMode == "新增")
             {
-                sheet.ShiftRows(rowReSourceRow + 1, sheet.LastRowNum, dataCount, true, false);
+                if (sheet.LastRowNum != rowReSourceRow)
+                {
+                    sheet.ShiftRows(rowReSourceRow + 1, sheet.LastRowNum, dataCount, true, false);
+                }
+            }
+            else
+            {
+                testKey2 =testKey;
             }
             //数据复制
             for (int i = 0; i < dataCount; i++)
@@ -176,10 +187,11 @@ class ExcelRellationShip
                     {
                         cellSourceValue = ValueTypeToStringInNPOI(cellSource);
                         var cellTarget = rowTarget.GetCell(j)??rowTarget.CreateCell(j);
-           
+                        //if(WriteMode=="修改") continue;
+                        //表格的ID字段的修改--后续要添加其他字段的更改方式
                         if (j==1)
                         {
-                            cellTarget.SetCellValue(cellSourceValue+"@@@");
+                            cellTarget.SetCellValue(cellSourceValue+ testKey2);
                         }
                         else
                         {
@@ -210,13 +222,12 @@ class ExcelRellationShip
                         newmodelID.Add(cellTargetValue);
                     //}
                     //数据修改
-                    //数据复制
                     for (int i = 0; i < dataCount; i++)
                     {
                         var rowFix = sheet.GetRow(rowReSourceRow + i + 1) ?? sheet.CreateRow(rowReSourceRow + i + 1);
                         var cellFix = rowFix.GetCell(abc)??rowFix.CreateCell(abc);
                         var cellFixValue = ValueTypeToStringInNPOI(cellFix);
-                        cellFix.SetCellValue(cellFixValue+"@@@");
+                        cellFix.SetCellValue(cellFixValue+ testKey2);
                         cellFix.CellStyle = cellFix.CellStyle;
                     }
 
@@ -243,7 +254,7 @@ class ExcelRellationShip
         }
         if (newFileName.Count > 0)
         {
-            CreateRellationShip(newFileName, newmodelID);
+            CreateRellationShip(newFileName, newmodelID, WriteMode, testKey);
         }
     }
 }
