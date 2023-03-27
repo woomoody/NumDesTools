@@ -5,15 +5,19 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
 using NPOI.SS.Formula.Functions;
 using NPOI.SS.UserModel;
+using NPOI.Util;
 using NPOI.XSSF.Streaming.Values;
 using NPOI.XSSF.UserModel;
 using NPOI.XWPF.UserModel;
 using static System.IO.Path;
+using static NPOI.HSSF.Util.HSSFColor;
 using ICell = NPOI.SS.UserModel.ICell;
 
 namespace NumDesTools;
@@ -26,11 +30,13 @@ class ExcelRellationShip
     private static readonly dynamic excelPath = IndexWk.Path;
     public static Dictionary<string, List<string>> excelLinkDictionary;
     public static Dictionary<string, List<int>> excelFixKeyDictionary;
+    public static Dictionary<string, List<string>> excelFixKeyMethodDictionary;
     static int dataCount = 1;
     public static void ExcelDic()
     {
         excelLinkDictionary = new Dictionary<string, List<string>>();
         excelFixKeyDictionary = new Dictionary<string, List<int>>();
+        excelFixKeyMethodDictionary =new Dictionary<string, List<string>>();
         Worksheet sheet = IndexWk.ActiveSheet;
         //读取模板表数据
         var rowsCount = (sheet.Cells[sheet.Rows.Count, "A"].End[XlDirection.xlUp].Row - 15) / 3;
@@ -39,31 +45,35 @@ class ExcelRellationShip
             var baseExcel = sheet.Cells[1, 1].Offset[15 + (i - 1) * 4, 0].Value.ToString();
             excelLinkDictionary[baseExcel] = new List<string>();
             excelFixKeyDictionary[baseExcel] = new List<int>();
+            excelFixKeyMethodDictionary[baseExcel] =new List<string>();
             for (int j = 1; j <= 2; j++)
             {
                 var linkExcel = sheet.Cells[1, 1].Offset[16 + (i - 1) * 4, j + 1].Value;
                 var baseExcelFixKey = sheet.Cells[1, 1].Offset[17 + (i - 1) * 4, j + 1].Value;
+                var baseExcelFixKeyMethod = sheet.Cells[1, 1].Offset[18 + (i - 1) * 4, j + 1].Value;
                 excelLinkDictionary[baseExcel].Add(linkExcel);
                 excelFixKeyDictionary[baseExcel].Add(Convert.ToInt32(baseExcelFixKey));
+                excelFixKeyMethodDictionary[baseExcel].Add(baseExcelFixKeyMethod);
             }
         }
     }
 
     public static void test()
     {
-        ExcelDic();
-        List<string> modeIDRow = new List<string>();
-        modeIDRow.Add("10");
-        List<string> fileName = new List<string>();
-        fileName.Add("索引1.xlsx");
-        List<List<string>> modeIDGroup = new List<List<string>>();
-        List<string> modeID = new List<string>();
-        modeID.Add("####");
-        modeIDGroup.Add(modeID);
-        var sheet = IndexWk.ActiveSheet;
-        string WriteMode = sheet.Range["B11"].value.ToString();
-        string testKey = sheet.Range["C11"].value.ToString();
-        CreateRellationShip(fileName, modeIDRow, WriteMode, testKey, modeIDGroup);
+        FixValueType();
+        //ExcelDic();
+        //List<string> modeIDRow = new List<string>();
+        //modeIDRow.Add("10");
+        //List<string> fileName = new List<string>();
+        //fileName.Add("索引1.xlsx");
+        //List<List<string>> modeIDGroup = new List<List<string>>();
+        //List<string> modeID = new List<string>();
+        //modeID.Add("####");
+        //modeIDGroup.Add(modeID);
+        //var sheet = IndexWk.ActiveSheet;
+        //string WriteMode = sheet.Range["B11"].value.ToString();
+        //string testKey = sheet.Range["C11"].value.ToString();
+        //CreateRellationShip(fileName, modeIDRow, WriteMode, testKey, modeIDGroup);
 
         //test2(fileName);
         //var excel = new FileStream(excelPath + @"\索引1.xlsx", FileMode.Open, FileAccess.Read);
@@ -138,29 +148,81 @@ class ExcelRellationShip
         }
         return -1;
     }
-
-    public static void test2(List<string> oldstr)
+    public static string RegNumReplaceNew(string text, List<(int,int)> digit,bool isCarry,int baseNum)
     {
-        List<string> newstr = new List<string>();
-        foreach (var str in oldstr)
+        var numCount=1;
+        var ditCount = 0;
+        var pattern = "\\d+";
+        // 使用正则表达式匹配数字
+        var matches = Regex.Matches(text, pattern);
+        foreach (System.Text.RegularExpressions.Match match in matches)
         {
-            if (str == null) continue;
-            if (excelLinkDictionary.ContainsKey(str))
+            var numStr = match.Value;
+            var num = int.Parse(numStr);
+            
+            if (digit.Any(item => item.Item1 == numCount))
             {
-                foreach (var indestr in excelLinkDictionary[str])
+                var newNum = num + (int)Math.Pow(10, digit[ditCount].Item2 - 1);
+                if (isCarry == false)
                 {
-                    newstr.Add(indestr);
+                    int digitCount = (int)Math.Log10(newNum + 1) + 1 - baseNum; //数字位数-----需要更改i和原始数字相关，不能简单的只取一位了；；需要取得原来数字长度
+                    int digitValue = num / (int)Math.Pow(10, digit[ditCount].Item2 - 1) % (int)Math.Pow(10, digitCount + 1); // 获取要增加的数字位的值
+                    if (digitValue + 1 >= (int)Math.Pow(10, digitCount + 1))
+                    {
+                        var newnumber = num / (int)Math.Pow(10, digit[ditCount].Item2 + digitCount);
+                        var mumberMOd = num % (int)Math.Pow(10, digit[ditCount].Item2 - 1);
+                        var newdigitValue = (digitValue + 1) * (int)Math.Pow(10, digit[ditCount].Item2 - 1);
+                        newnumber = newnumber * (int)Math.Pow(10, digit[ditCount].Item2 + digitCount + 1) + newdigitValue + mumberMOd;
+                        text = text.Replace(numStr, newnumber.ToString());
+                    }
+                    else
+                    {
+                        text = text.Replace(numStr, newNum.ToString());
+                    }
                 }
+                else
+                {
+                    text = text.Replace(numStr, newNum.ToString());
+
+                }
+                ditCount++;
             }
-            Debug.Print(str + "\n" + "\t");
-
+            else if(digit.Count == 1 && digit[0].Item1 == 0)
+            {
+                var newNum = num + (int)Math.Pow(10, digit[0].Item2 - 1);
+                text = text.Replace(numStr, newNum.ToString());
+            }
+            numCount++;
         }
-        if (newstr.Count > 0)
-        {
-            test2(newstr);
-        }
-
+        return text;
     }
+    public static string RegNumReplaceNew2(string text, int digit)
+    {
+
+        return text;
+    }
+    //public static void test2(List<string> oldstr)
+    //{
+    //    List<string> newstr = new List<string>();
+    //    foreach (var str in oldstr)
+    //    {
+    //        if (str == null) continue;
+    //        if (excelLinkDictionary.ContainsKey(str))
+    //        {
+    //            foreach (var indestr in excelLinkDictionary[str])
+    //            {
+    //                newstr.Add(indestr);
+    //            }
+    //        }
+    //        Debug.Print(str + "\n" + "\t");
+
+    //    }
+    //    if (newstr.Count > 0)
+    //    {
+    //        test2(newstr);
+    //    }
+
+    //}
     public static void CreateRellationShip(List<string> oldFileName, List<string> oldmodelID, string WriteMode, string testKey, List<List<string>> oldExcelIDGroup)
     {
         List<string> newmodelID = new List<string>();
@@ -225,12 +287,18 @@ class ExcelRellationShip
                     var cellTarget = sheet.GetRow(rowReSourceRow).GetCell(excelFileFixKey);
                     var cellTargetValue = ValueTypeToStringInNPOI(cellTarget);
                     //修改字段字典中的字段值，各自方法不一
+                    var cellFixValueIdList = new List<int>();
                     for (int i = 0; i < dataCount; i++)
                     {
                         var rowFix = sheet.GetRow(rowReSourceRow + i + 1) ?? sheet.CreateRow(rowReSourceRow + i + 1);
                         var cellFix = rowFix.GetCell(excelFileFixKey) ?? rowFix.CreateCell(excelFileFixKey);
                         var cellFixValue = ValueTypeToStringInNPOI(cellFix);
-                        //每个字段的Value修改方式不一，需要调用方法
+                        //每个字段的Value修改方式不一，需要调用方法:检测string是否有[，如果有则需要正则把所有的数值提取出来并替换
+                        
+                        if (cellFixValue.Contains('['))
+                        {
+                            //var str1 = RegNumReplaceNew(cellFixValue, list2NumDig, false, digitCount, list1NumKey);
+                        }
                         var cellFixValue2 = cellFixValue + testKey;
                         cellFix.SetCellValue(cellFixValue2);
                         cellFix.CellStyle = cellFix.CellStyle;
@@ -262,6 +330,85 @@ class ExcelRellationShip
         {
             CreateRellationShip(newFileName, newmodelID, WriteMode, testKey, newExcelIDGroup);
         }
+    }
+
+    public static void FixValueType()
+    {
+
+        //string str = "1#2,3#2,2"; // 要处理的字符串
+        string str = "1#2,3#2,4"; // 要处理的字符串
+        var tempList = CellFixValueKeyList(str);
+
+        var str1 = "[1001,1002,1003,1004]";
+
+        Regex regex = new Regex(@"\d+");
+        var matches = regex.Matches(str1);
+        var keyBitCount = new List<int>();
+        foreach (var matche in matches)
+        {
+            var asd =matche.ToString();
+            int digitCount = (int)Math.Log10(Convert.ToInt32(asd)+1) + 1;
+            keyBitCount.Add(digitCount);
+        }
+
+        for (int i = 0; i < 20; i++)
+        {
+            str1 = RegNumReplaceNew(str1, tempList, false, keyBitCount);
+            Debug.Print(str1);
+
+        }
+
+
+    }
+
+    private static List<(int,int)> CellFixValueKeyList(string str)
+    {
+        var numkeyList = new List<(int,int)>();
+
+        string[] pairs;
+        if (str.Contains(','))
+        {
+            pairs = str.Split(','); // 将字符串按逗号分隔成多个键值对
+            foreach (string pair in pairs)
+            {
+                string[] parts;
+                if (pair.Contains('#'))
+                {
+                    parts = pair.Split('#'); // 将键值对按井号分隔成键和值
+                    int key;
+                    if (!int.TryParse(parts[0], out key)) // 尝试将值解析为整数，如果解析失败就将值设为 0
+                    {
+                        MessageBox.Show(str + "#前必须有数值");
+                        Environment.Exit(0);
+                    }
+
+                    int value;
+                    if (!int.TryParse(parts[1], out value)) // 尝试将值解析为整数，如果解析失败就将值设为 0
+                    {
+                        value = 1;
+                    }
+                    numkeyList.Add((key,value));
+                }
+                else
+                {
+                    numkeyList.Add((int.Parse(pair), 1));
+                }
+            }
+        }
+        else
+        {
+            int strtemp;
+            if (str == "")
+            {
+                strtemp = 0;
+            }
+            else
+            {
+                strtemp=int.Parse(str);
+            }
+            numkeyList.Add((strtemp, 1));
+        }
+        return numkeyList;
     }
 }
 
