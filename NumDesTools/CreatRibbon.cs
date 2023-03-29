@@ -865,7 +865,8 @@ public partial class CreatRibbon
         var sw = new Stopwatch();
         sw.Start();
         //并行计算，即时战斗（无先后），计算快
-        DotaLegendBattleParallel.BattleSimTime(true);
+        //DotaLegendBattleParallel.BattleSimTime(true);
+        ExcelRellationShip.ExcelHyperLinks();
         //串行计算，回合战斗（有先后），计算慢
         //DotaLegendBattleSerial.BattleSimTime();
         sw.Stop();

@@ -1,18 +1,13 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
-using NPOI.SS.Formula.Functions;
 using NPOI.SS.UserModel;
-using NPOI.XSSF.Streaming.Values;
 using NPOI.XSSF.UserModel;
-using NPOI.XWPF.UserModel;
 using static System.IO.Path;
 
 namespace NumDesTools;
@@ -136,7 +131,7 @@ public class AutoInsertData
             // 判断文件名是否包含#
             if (!f.Contains("#"))
             {
-                var titleList = new List<(int, string, string, string, string,string)>();
+                var titleList = new List<(int, string, string, string, string, string)>();
                 var fs = new FileStream(f, FileMode.Open, FileAccess.Read);
                 var workbook = new XSSFWorkbook(fs);
                 var sheets = workbook.GetSheetAt(0);
@@ -156,6 +151,7 @@ public class AutoInsertData
                             cell = row.CreateCell(j);
                             cell.CellStyle = row.GetCell(1).CellStyle;
                         }
+
                         var newComment = cells.CellComment;
                         if (cell.CellType == CellType.Blank || cell.CellType == CellType.Unknown)
                         {
@@ -167,8 +163,7 @@ public class AutoInsertData
                             var regex = new Regex(pattern);
                             // 查找匹配项
                             var matches = regex.Matches(linkFile);
-                            foreach (System.Text.RegularExpressions.Match match in matches)
-                            {
+                            foreach (Match match in matches)
                                 // 判断文件名是否包含#
                                 if (!f.Contains("#"))
                                 {
@@ -186,7 +181,6 @@ public class AutoInsertData
                                         break;
                                     }
                                 }
-                            }
                         }
                     }
                 }
@@ -200,7 +194,7 @@ public class AutoInsertData
         return excelTitleList;
     }
 
-    private static void ExcelLinkGroup(List<List<(int, string, string, string, string,string)>> excelTitleList,
+    private static void ExcelLinkGroup(List<List<(int, string, string, string, string, string)>> excelTitleList,
         string filePath)
     {
         var fileCount = 0;
@@ -228,7 +222,7 @@ public class AutoInsertData
                 {
                     var cell = row.GetCell(k + 1) ?? row.CreateCell(k + 1);
                     var cellCol = rowCol.GetCell(k + 1) ?? rowCol.CreateCell(k + 1);
-                    var cellKey =rowKey.GetCell(k + 1) ?? rowKey.CreateCell(k + 1);
+                    var cellKey = rowKey.GetCell(k + 1) ?? rowKey.CreateCell(k + 1);
                     var cellExcelName = row.GetCell(0) ?? row.CreateCell(0);
                     cellExcelName.SetCellValue(excelTitleList[i][k].Item5);
                     cell.SetCellValue(excelTitleList[i][k].Item2);
@@ -324,12 +318,12 @@ public class AutoInsertData
     {
         int ModeIDrow(int rowCount, ISheet sheet1, dynamic modeId)
         {
-            int modeIDrow=-1;
-            for (int k = 0; k < rowCount; k++)
+            var modeIDrow = -1;
+            for (var k = 0; k < rowCount; k++)
             {
                 var row = sheet1.GetRow(k) ?? sheet1.CreateRow(k);
                 var cell = row.GetCell(1) ?? row.CreateCell(1);
-                string cellValueAsString = string.Empty;
+                var cellValueAsString = string.Empty;
                 switch (cell.CellType)
                 {
                     case CellType.Numeric:
@@ -348,55 +342,48 @@ public class AutoInsertData
                         cellValueAsString = string.Empty;
                         break;
                 }
-                if (cellValueAsString == modeId)
-                {
-                    modeIDrow = k;
-                }
+
+                if (cellValueAsString == modeId) modeIDrow = k;
             }
 
             return modeIDrow;
         }
 
-        Worksheet sheet =IndexWk.ActiveSheet;
+        Worksheet sheet = IndexWk.ActiveSheet;
         //读取模板表数据
-        Dictionary<string, List<string>> relationships = new Dictionary<string, List<string>>();
-        var rowsCount = (sheet.Cells[sheet.Rows.Count,"A"].End[XlDirection.xlUp].Row-15)/3;
-        for (int i = 1; i <= rowsCount; i++)
+        var relationships = new Dictionary<string, List<string>>();
+        var rowsCount = (sheet.Cells[sheet.Rows.Count, "A"].End[XlDirection.xlUp].Row - 15) / 3;
+        for (var i = 1; i <= rowsCount; i++)
         {
             //var baseValue = sheet.Cells[i, 1].Value.ToString();
-            var baseValue = sheet.Cells[1,1].Offset[15 + (i - 1) * 4, 0].Value.ToString();
+            var baseValue = sheet.Cells[1, 1].Offset[15 + (i - 1) * 4, 0].Value.ToString();
             relationships[baseValue] = new List<string>();
-            for (int j = 1; j <= 2 ;j++)
+            for (var j = 1; j <= 2; j++)
             {
-                var linkValue = sheet.Cells[1,1].Offset[16+(i-1)*4,j+1].Value;
+                var linkValue = sheet.Cells[1, 1].Offset[16 + (i - 1) * 4, j + 1].Value;
                 relationships[baseValue].Add(linkValue);
             }
         }
+
         //备份字典
-        Dictionary<string, List<string>> relationshipsBF = new Dictionary<string, List<string>>();
-        foreach (var key in relationships.Keys)
-        {
-            relationshipsBF[key] = new List<string>(relationships[key]);
-        }
+        var relationshipsBF = new Dictionary<string, List<string>>();
+        foreach (var key in relationships.Keys) relationshipsBF[key] = new List<string>(relationships[key]);
         //整理文件关联字典
-        Dictionary<string, List<string>> relationships2 = new Dictionary<string, List<string>>(relationships);
-        Dictionary<string, List<string>> relationships3 = new Dictionary<string, List<string>>();
+        var relationships2 = new Dictionary<string, List<string>>(relationships);
+        var relationships3 = new Dictionary<string, List<string>>();
         var keys = relationships.Keys;
         foreach (var item in keys)
         {
             relationships3[item] = new List<string>();
             //初始表格映射
-            foreach (var item2 in relationships["索引1.xlsx"])
-            {
-                relationships3[item].Add(item);
-            }
-            for (int i = 0; i < relationships[item].Count; i++)
+            foreach (var item2 in relationships["索引1.xlsx"]) relationships3[item].Add(item);
+            for (var i = 0; i < relationships[item].Count; i++)
             {
                 var values = relationships[item][i];
                 if (values == null) continue;
                 if (relationships.ContainsKey(values))
                 {
-                    int asdb = 0;
+                    var asdb = 0;
                     foreach (var sdsa in relationships[values])
                     {
                         relationships2[item].Add(relationships[values][asdb]);
@@ -412,9 +399,9 @@ public class AutoInsertData
         var fileDic = relationships2["索引1.xlsx"];
         var modeID = sheet.Range["B14"].Value2.ToString();
         var dataNum = sheet.Range["C14"].Value2;
-        for (int i = 0; i < fileDic.Count; i++)
+        for (var i = 0; i < fileDic.Count; i++)
         {
-            if (fileDic[i] == null) continue;//空的只是更改值，不会再索引表了
+            if (fileDic[i] == null) continue; //空的只是更改值，不会再索引表了
             //var filePath = rootPath + @"\" + fileDic[i];
             var filePath = rootPath + @"\" + "索引1.xlsx";
             var file = new FileStream(filePath, FileMode.Open, FileAccess.Read);
@@ -422,13 +409,13 @@ public class AutoInsertData
             var sheet1 = workbook.GetSheetAt(0);
             var rowCount = sheet1.LastRowNum;
             //查找模板ID,获取模板行
-            int modeIDrow = ModeIDrow(rowCount+1, sheet1, modeID);
+            int modeIDrow = ModeIDrow(rowCount + 1, sheet1, modeID);
             var modeRow = sheet1.GetRow(modeIDrow) ?? sheet1.CreateRow(modeIDrow);
             //复制模板数据
-            for (int j = 0; j < dataNum; j++)
+            for (var j = 0; j < dataNum; j++)
             {
-                var insRow = sheet1.GetRow(modeIDrow+j+1) ?? sheet1.CreateRow(modeIDrow+j+1);
-                for (int m = 0; m < modeRow.LastCellNum; m++)
+                var insRow = sheet1.GetRow(modeIDrow + j + 1) ?? sheet1.CreateRow(modeIDrow + j + 1);
+                for (var m = 0; m < modeRow.LastCellNum; m++)
                 {
                     var modeCell = modeRow.GetCell(m) ?? modeRow.CreateCell(m);
                     var insCell = insRow.GetCell(m) ?? insRow.CreateCell(m);
@@ -447,12 +434,14 @@ public class AutoInsertData
                             insCell.SetCellValue(modeCell.ErrorCellValue);
                             break;
                         default:
-                            insCell.SetCellValue(String.Empty);
+                            insCell.SetCellValue(string.Empty);
                             break;
                     }
-                    insCell.CellStyle =modeCell.CellStyle;
+
+                    insCell.CellStyle = modeCell.CellStyle;
                 }
             }
+
             //var row = sheet1.GetRow(0) ?? sheet1.CreateRow(0);
             //var cell = row.GetCell(0) ?? row.CreateCell(0);
             //cell.SetCellValue("abc");
@@ -535,7 +524,7 @@ public class AutoInsertData
         var pattern = "\\d+";
         // 使用正则表达式匹配数字
         var matches = Regex.Matches(text, pattern);
-        foreach (System.Text.RegularExpressions.Match match in matches)
+        foreach (Match match in matches)
         {
             var numStr = match.Value;
             var num = int.Parse(numStr);
