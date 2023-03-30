@@ -19,4 +19,31 @@
        Excel-DNA also allows the XML for ribbon UI extensions to be specified in the .dna file.
        See the main Excel-DNA site at https://excel-dna.net for downloads of the full distribution.
   -->
+  
+  <Reference Path="BouncyCastle.Crypto.dll" Pack="true" />
+  <Reference Path="Enums.NET.dll" Pack="true" />
+  <Reference Path="ExcelDna.Integration.dll" Pack="true" />
+  <Reference Path="ExcelDna.Registration.dll" Pack="true" />
+  <Reference Path="ICSharpCode.SharpZipLib.dll" Pack="true" />
+  <Reference Path="MathNet.Numerics.dll" Pack="true" />
+  <Reference Path="Microsoft.IO.RecyclableMemoryStream" Pack="true" />
+  <Reference Path="NPOI.dll" Pack="true" />
+  <Reference Path="NPOI.OOXML.dll" Pack="true" />
+  <Reference Path="NPOI.OpenXml4Net.dll" Pack="true" />
+  <Reference Path="NPOI.OpenXml4Net" Pack="true" />
+  <Reference Path="NPOI.OpenXmlFormats.dll" Pack="true" />
+  <Reference Path="SharpSvn.dll" Pack="true" />
+  <Reference Path="SharpSvn.UI..dll" Pack="true" />
+  <Reference Path="SixLabors.Fonts.dll" Pack="true" />
+  <Reference Path="System.Buffers.dll" Pack="true" />
+  <Reference Path="System.CodeDom.dll" Pack="true" />
+  <Reference Path="System.Collections.Immutable.dll" Pack="true" />
+  <Reference Path="System.Diagnostics.DiagnosticSource.dll" Pack="true" />
+  <Reference Path="System.Diagnostics.DiagnosticSource..dll" Pack="true" />
+  <Reference Path="System.Memory.dll" Pack="true" />
+  <Reference Path="System.Numerics.Vectors.dll" Pack="true" />
+  <Reference Path="System.Runtime.CompilerServices.Unsafe.dll" Pack="true" />
+  <Reference Path="System.Threading.Tasks.Extensions..dll" Pack="true" />
+  <Reference Path="System.ValueTuple.dll" Pack="true" />
+  
 </DnaLibrary>

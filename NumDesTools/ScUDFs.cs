@@ -24,6 +24,12 @@ public class ExcelUdf
     {
         return a + b;
     }
+    [ExcelFunction(Category = "test", IsVolatile = true, IsMacroType = true, Description = "测试自定义函数")]
+    public static double Sum2Num2([ExcelArgument(Description = "选个格子")] double a,
+        [ExcelArgument(Description = "选个格子")] double b)
+    {
+        return a - b;
+    }
     [ExcelFunction(Category = "test2", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在列")]
     public static int FindKeyCol([ExcelArgument(Description = "工作簿")] string targetWorkbook, [ExcelArgument(Description = "目标行")] int row, [ExcelArgument(Description = "匹配值")] string searchValue, [ExcelArgument(Description = "工作表")] string targetSheet ="Sheet1")
     {
