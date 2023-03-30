@@ -32,8 +32,41 @@ class ExcelRellationShip
     public static Dictionary<string, List<string>> excelLinkDictionary;
     public static Dictionary<string, List<int>> excelFixKeyDictionary;
     public static Dictionary<string, List<string>> excelFixKeyMethodDictionary;
-    static int dataCount = 2;
+    static dynamic sheet = IndexWk.ActiveSheet;
+    static int dataCount = Convert.ToInt32(sheet.Range["E3"].value);
+    public static void StartExcelData()
+    {
+        ExcelDic();
+        var startModeId = sheet.Range["D3"].value;
+        var startModeIdFix = sheet.range["F3"].value;
+        List<List<(long, long)>> modeIDRow = new List<List<(long, long)>>();
+        var tempList = new List<(long, long)>();
+        tempList.Add((1, Convert.ToInt64(startModeId)));
+        modeIDRow.Add(tempList);
+        List<List<List<(long, long)>>> excelIDGroupStart = new List<List<List<(long, long)>>>();
+        List<List<(long, long)>> excelIDGroupStartTemp1 = new List<List<(long, long)>>();
+        List<(long, long)> excelIDGroupStartTemp2;
+        for (int i = 0; i < dataCount; i++)
+        {
+            //modeID原始位数
+            var temp2 = KeyBitCount(startModeId.ToString());
+            //字段值改写方法
+            if (startModeIdFix == null) startModeIdFix = "";
+            var temp1 = CellFixValueKeyList(startModeIdFix.ToString());
+            //修改字符串
+            var cellFixValue2 =
+                RegNumReplaceNew(startModeId.ToString(), temp1, false, temp2, 1 + i);
+            excelIDGroupStartTemp2 = KeyBitCount(cellFixValue2);
 
+            excelIDGroupStartTemp1.Add(excelIDGroupStartTemp2);
+        }
+        excelIDGroupStart.Add(excelIDGroupStartTemp1);
+        string WriteMode = sheet.Range["B3"].value.ToString();
+        List<string> fileName = new List<string>();
+        fileName.Add(sheet.Range["C3"].value.ToString());
+
+        CreateRellationShip(fileName, modeIDRow, WriteMode, excelIDGroupStart);
+    }
     public static void ExcelDic()
     {
         excelLinkDictionary = new Dictionary<string, List<string>>();
@@ -73,60 +106,6 @@ class ExcelRellationShip
             }
         }
     }
-
-    public static void test()
-    {
-        //FixValueType();
-        ExcelDic();
-        List<List<(long, long)>> modeIDRow = new List<List<(long, long)>>();
-        var abc = new List<(long, long)>();
-        var abcd = new List<(int, int)>();
-        abc.Add((1, 24001));
-        modeIDRow.Add(abc);
-        List<List<List<(long, long)>>> modeID222 = new List<List<List<(long, long)>>>();
-        List<(long, long)> modeID = new List<(long, long)>();
-        List<(long, long)> modeID5 = new List<(long, long)>();
-        List<List<(long, long)>> modeID2 = new List<List<(long, long)>>();
-        modeID.Add((1, 323));
-        modeID5.Add((1, 343));
-        modeID2.Add(modeID);
-        modeID2.Add(modeID5);
-        modeID222.Add(modeID2);
-        var sheet = IndexWk.ActiveSheet;
-        string WriteMode = sheet.Range["B3"].value.ToString();
-        List<string> fileName = new List<string>();
-        fileName.Add(sheet.Range["C3"].value.ToString());
-
-        CreateRellationShip(fileName, modeIDRow, WriteMode, modeID222);
-
-        //test2(fileName);
-        //var excel = new FileStream(excelPath + @"\索引1.xlsx", FileMode.Open, FileAccess.Read);
-        //var workbook = new XSSFWorkbook(excel);
-        //var sheet = workbook.GetSheetAt(0);
-        //sheet.ShiftRows(1, sheet.LastRowNum, 1, true, false);
-        //IRow row = sheet.CreateRow(1);
-        //ICell cell1 = row.CreateCell(0);
-        //cell1.SetCellValue("New Cell 1");
-        //var excel2 = new FileStream(excelPath + @"\索引1.xlsx", FileMode.Create, FileAccess.Write);
-        //workbook.Write(excel2);
-        //workbook.Close();
-        //excel2.Close();
-        //excel.Close();
-        //var asd =FindSourceRow(sheet, 1, "10");
-
-        //var excel = new FileStream(excelPath + @"\" + "样表起始表.xlsx", FileMode.Open, FileAccess.Read);
-        //var workbook = new XSSFWorkbook(excel);
-        //var sheet = workbook.GetSheetAt(0);
-        //for(int i =0;i<sheet.LastRowNum;i++)
-        //{
-        //    var row = sheet.GetRow(i);
-        //    var cell = row.GetCell(0);
-        //    if(cell == null) continue;
-        //    Debug.Print(cell.ToString());
-        //}
-
-    }
-
     public static string ValueTypeToStringInNPOI(ICell cell, XSSFWorkbook workbook)
     {
         string cellValueAsString = string.Empty;
@@ -226,7 +205,7 @@ class ExcelRellationShip
 
                 ditCount++;
             }
-            else if (digit.Count == 1 &&  digit[0].Item1 == 0)
+            else if (digit.Count == 1 && digit[0].Item1 == 0)
             {
                 var newNum = num + (int)Math.Pow(10, digit[ditCount].Item2 - 1) * addValue;
                 text = text.Replace(numStr, newNum.ToString());
@@ -285,14 +264,11 @@ class ExcelRellationShip
                         sheet.ShiftRows(rowReSourceRow + 1, sheet.LastRowNum, dataCount, true, false);
                     }
                 }
-
                 //数据复制
                 for (int i = 0; i < dataCount; i++)
                 {
                     var rowTarget = sheet.GetRow(rowReSourceRow + i + 1) ??
                                     sheet.CreateRow(rowReSourceRow + i + 1);
-                    var rowTargetTemp = sheet.GetRow(rowReSourceRow + i + 1) ??
-                                        sheet.CreateRow(rowReSourceRow + i + 1);
                     for (int j = 0; j < colTotal; j++)
                     {
                         var cellSource = rowSource.GetCell(j) ?? rowSource.GetCell(j);
@@ -307,7 +283,7 @@ class ExcelRellationShip
                             {
                                 var tempValue = oldExcelIDGroup[excount][i][k].Item2;
                                 cellTarget.SetCellValue(tempValue);
-                                Debug.Print(cellTarget.ToString());
+                                //Debug.Print(cellTarget.ToString());
                             }
                             else
                             {
@@ -350,14 +326,14 @@ class ExcelRellationShip
                             //每个字段的Value修改方式不一，需要调用方法:检测string是否有[，如果有则需要正则把所有的数值提取出来并替换
 
                             //字段每个数字位数统计，原始modeID统计
-                            cellSourceValueList = KeyBitCount(cellFixValue, excelFile);
+                            cellSourceValueList = KeyBitCount(cellFixValue);
                             //字段值改写方法
                             var temp1 = CellFixValueKeyList(excelFixKeyMethodDictionary[excelFile][indexExcelCount]);
                             //修改字符串
                             var cellFixValue2 =
                                 RegNumReplaceNew(cellFixValue, temp1, false, cellSourceValueList, 1 + i);
                             //统计新ID
-                            var temp2 = KeyBitCount(cellFixValue2, excelFile);
+                            var temp2 = KeyBitCount(cellFixValue2);
                             //标记重复项
                             newMode = cellSourceValueList.Except(temp2).ToList();
                             var newFix = temp2.Except(cellSourceValueList).ToList();
@@ -369,7 +345,7 @@ class ExcelRellationShip
 
                         //有关联表的字段的ID传递出去
                         //表格关联字典中寻找下一个递归文件，有关联表的字段ID要生成List递归
-                        if (indexExcel != null && indexExcel!="")
+                        if (indexExcel != null && indexExcel != "")
                         {
                             newFileName.Add(indexExcel);
                             newmodelID.Add(newMode);
@@ -450,12 +426,11 @@ class ExcelRellationShip
 
     }
 
-    private static List<(long, long)> KeyBitCount(string str,string excelFile)
+    private static List<(long, long)> KeyBitCount(string str)
     {
         Regex regex = new Regex(@"\d+");
         var matches = regex.Matches(str);
         var keyBitCount = new List<(long digitCount, long)>();
-        Debug.Print(excelFile);
         foreach (var matche in matches)
         {
             var temp = matche.ToString();
@@ -544,10 +519,10 @@ class ExcelRellationShip
             for (int j = 2; j <= 20; j++)
             {
                 var cell = sheet.Cells[i, j];
-                var cs1 =cell.Style;
+                var cs1 = cell.Style;
                 if (cell.value != null && cell.value.ToString().Contains(".xlsx"))
                 {
-                    cell.Hyperlinks.Add(cell, excelPath+@"\" +cell.value.ToString());
+                    cell.Hyperlinks.Add(cell, excelPath + @"\" + cell.value.ToString());
                     cell.Font.Size = 9;
                     cell.Font.Name = "微软雅黑";
                     //cell.Copy();

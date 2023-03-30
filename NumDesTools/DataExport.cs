@@ -486,7 +486,7 @@ public static class PreviewTableCtp
     }
 }
 
-[ComVisible(true)]
+[ComVisible(false)]
 public partial class CreatRibbon : ExcelRibbon, IExcelAddIn
 {
     //控件id 不能重复
