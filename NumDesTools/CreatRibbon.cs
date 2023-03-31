@@ -7,8 +7,6 @@ using System.Windows.Forms;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
 using Microsoft.Office.Interop.Excel;
-using NPOI.SS.UserModel;
-using NPOI.XSSF.UserModel;
 using stdole;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
@@ -840,12 +838,33 @@ public partial class CreatRibbon
     {
         SearchEngine.BingSearch(_seachStr);
     }
+
+    public void AutoInsertExcelData_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        ExcelRelationShip.StartExcelData();
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        _app.StatusBar = "导出完成，用时：" + ts2.ToString();
+    }
+    public void AutoLinkExcel_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        ExcelRelationShip.ExcelHyperLinks();
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        _app.StatusBar = "导出完成，用时：" + ts2.ToString();
+    }
     public void TestBar1_Click(IRibbonControl control)
     {
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        ExcelRellationShip.StartExcelData();
+        //ExcelRelationShip.StartExcelData();
         //AutoInsertData.ExcelIndexCircle();"D:\M1Work\public\Excels\Tables\#自动填表.xlsm"
         //AutoInsertData.GetExcelTitle();
         //AutoInsertData.GetExcelTitleNpoi2();
@@ -865,7 +884,7 @@ public partial class CreatRibbon
         sw.Start();
         //并行计算，即时战斗（无先后），计算快
         //DotaLegendBattleParallel.BattleSimTime(true);
-        ExcelRellationShip.ExcelHyperLinks();
+        //ExcelRelationShip.ExcelHyperLinks();
         //串行计算，回合战斗（有先后），计算慢
         //DotaLegendBattleSerial.BattleSimTime();
         sw.Stop();

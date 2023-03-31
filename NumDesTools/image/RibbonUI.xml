@@ -4,12 +4,14 @@
   <ribbon startFromScratch='false'>
     <tabs>
       <tab id='Tab1' label='NumDesTools' insertBeforeMso='TabHome'>
-        <!--//< group id = 'Group1' label = '导表(By:SC)' >
-              //    < button id = 'Button1' size = 'large' label = '导出本表' image = 'file' onAction = 'OneSheetOutPut_Click' screentip = '点击导出当前sheet' />
-              //    < button id = 'Button2' size = 'large' label = '导出本簿' image = 'document' onAction = 'MutiSheetOutPut_Click' screentip = '点击导出当前book所有的sheet，可自选sheet' />
-              //    < button id = 'Button3' size = 'large' label = '导出目录' image = 'database' onAction = 'AllWorkbookOutPut_Click' screentip = '点击导出当前目录所有文件，可自选book' />
-              // </ group >
-            //< ribbon startFromScratch = 'false' >//表示加载时excel原有的选项卡隐藏否-->
+        <!--
+        < group id = 'Group1' label = '导表(By:SC)' >
+                  < button id = 'Button1' size = 'large' label = '导出本表' image = 'file' onAction = 'OneSheetOutPut_Click' screentip = '点击导出当前sheet' />
+                  < button id = 'Button2' size = 'large' label = '导出本簿' image = 'document' onAction = 'MutiSheetOutPut_Click' screentip = '点击导出当前book所有的sheet，可自选sheet' />
+                  < button id = 'Button3' size = 'large' label = '导出目录' image = 'database' onAction = 'AllWorkbookOutPut_Click' screentip = '点击导出当前目录所有文件，可自选book' />
+                  </ group >
+            < ribbon startFromScratch = 'false' >//表示加载时excel原有的选项卡隐藏否
+            -->
         <group id='Group2' label='格式整理'>
           <button id='Button4' size='large' label='标准格式' image='verilog' onAction='CleanCellFormat_Click'
                   screentip='点击整理当前sheet格式，标准化文本和单元格大小' />
@@ -18,12 +20,14 @@
           <button id='Button8' size='large' label='公式检查' image='asciidoc' onAction='FormularCheck_Click'
                   screentip='点击检查当前工作簿所有sheet中的公式，看是否有错误的连接，推荐合完表后进行检查' />
         </group>
+        <!--
         <group id='Group3' label='SVN功能'>
           <button id='Button9' size='large' label='更新Excel表' image='folder-docs' onAction='SvnCommitExcel_Click'
                   screentip='点击更新当前目录所有Excel表格' />
           <button id='Button10' size='large' label='更新Txt表' image='log' onAction='SvnCommitTxt_Click'
                   screentip='点击更新当前目录所有Txt表格' />
-        </group>
+        </group>        
+        -->
         <group id='Group4' label='战斗仿真'>
           <menu id='RootMenu' label='战斗' size='large' imageMso='ReviewCompareMenu'>
             <button id='Button11' label='PVP回合(不推荐)' image='reason' onAction='PVP_H_Click'
@@ -40,18 +44,22 @@
           <button id='Button14' size='large' getLabel='GetLableText' image='edge' onAction='RoleDataPreview_Click'
                   screentip='点击启用角色数据实时预览' />
         </group>
-
+        <group id="Group6" label="搜索" insertAfterMso="Group9999" >
+          <editBox id="SearchBoxEdit"  onChange="OnEditBoxTextChanged"  sizeString="…………………………………………" />
+          <button id="SearchBoxButton1" label="谷歌" onAction="GoogleSearch_Click" image="谷歌"  />
+          <button id="SearchBoxButton2" label="必应" onAction="BingSearch_Click" image="bing" />
+        </group>
+        <group id='Group7' label='自动填表'>
+          <button id='AutoInsertExcelData' size='large' label='自动数据' image='database' onAction='AutoInsertExcelData_Click' screentip='点击按钮，根据模板数据覆写N个类似数据到所有关联表'/>
+          <button id='AutoLinkExcel' size='large' label='Excel超链接' image='edge' onAction='AutoLinkExcel_Click' screentip='当前表格内的.xlsx加入超链接，必须是打开表格同目录的.xlsx'/>
+        </group>
 
         <group id='Group9999' label='测试功能区'>
           <button id='Button6' size='large' label='不要点击红色按钮' image='sofa' onAction='TestBar1_Click' />
           <button id='Button7' size='large' label='测试' image='sofa' onAction='TestBar2_Click' />
           <checkBox id='checkbox1' label='是否后台' />
         </group>
-        <group id="Group6" label="搜索" insertAfterMso="Group9999" >
-          <editBox id="SearchBoxEdit"  onChange="OnEditBoxTextChanged"  sizeString="…………………………………………" />
-          <button id="SearchBoxButton1" label="谷歌" onAction="GoogleSearch_Click" image="谷歌"  />
-          <button id="SearchBoxButton2" label="必应" onAction="BingSearch_Click" image="bing" />
-        </group>
+
       </tab>
     </tabs>
   </ribbon>

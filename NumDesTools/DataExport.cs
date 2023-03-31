@@ -355,6 +355,7 @@ public static class ExcelToDataGridView
         var ds = new DataSet();
         myCommand.Fill(ds, "table1");
         Console.WriteLine(ds.Tables[0].Rows[0][0].ToString());
+        conn.Close();
 
         ////直接把table变为字符串效率很低,把table先写入为1个2维数组
         //var aaa = ds.Tables[0];
@@ -558,10 +559,9 @@ public static class ExcelSheetData
                 cell.SetCellValue("ccd");
             }
         }
-
+        file.Close();
         var fileStream = new FileStream(fpe, FileMode.Create, FileAccess.Write);
         workbook.Write(fileStream);
-        file.Close();
         fileStream.Close();
         workbook.Close();
     }
