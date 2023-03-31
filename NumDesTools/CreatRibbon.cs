@@ -36,6 +36,7 @@ public partial class CreatRibbon
         //Console.ReadKey();
         //Module1.DisposeCTP();
         //XlCall.Excel(XlCall.xlcAlert, "AutoClose");//采用C API接口
+        ExcelIntegration.UnregisterXLL(@"D:\work\Public\Excels\ExcelTools\NumDesToolsPack64.XLL");
     }
 
     void IExcelAddIn.AutoOpen()
