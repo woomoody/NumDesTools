@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<DnaLibrary Name="NumDesTools-AddIn" RuntimeVersion="v4.0" xmlns="http://schemas.excel-dna.net/addin/2020/07/dnalibrary">
+<DnaLibrary Name="NumDesTools" RuntimeVersion="v4.0" xmlns="http://schemas.excel-dna.net/addin/2020/07/dnalibrary">
   <ExternalLibrary Path="NumDesTools.dll" ExplicitExports="false" LoadFromBytes="true" Pack="true" IncludePdb="false" />
 
   <!--
@@ -19,5 +19,5 @@
        Excel-DNA also allows the XML for ribbon UI extensions to be specified in the .dna file.
        See the main Excel-DNA site at https://excel-dna.net for downloads of the full distribution.
   -->
-  	<Reference Path="libs\*.dll" Pack="true" />
+  	<Reference Path="D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\pack\libs\*.dll" Pack="true" />
 </DnaLibrary>
