@@ -212,7 +212,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ExcelRellationShip.cs" />
+    <Compile Include="ExcelRelationShip.cs" />
     <Compile Include="AutoInsertData.cs" />
     <Compile Include="Https.cs" />
     <Compile Include="CreatRibbon.cs" />

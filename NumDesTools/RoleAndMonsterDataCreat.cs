@@ -9,7 +9,6 @@ using Microsoft.Office.Core;
 using Microsoft.Office.Interop.Excel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
-using System.Linq;
 
 namespace NumDesTools;
 
@@ -404,6 +403,7 @@ public class RoleDataPro
 #endregion 每个角色全量数据的导出
 
 #region 角色关键数据导出到一张表
+
 public class RoleDataPri
 {
     private const string CacColStart = "E"; //角色参数配置列数起点
@@ -449,12 +449,14 @@ public class RoleDataPri
                     }
                     catch
                     {
-                        MessageBox.Show(@"第" + i + CacRowStart - 1 + @"行数据不是数值类型", @"数值类型错误", MessageBoxButtons.OKCancel);
+                        MessageBox.Show(@"第" + i + CacRowStart - 1 + @"行数据不是数值类型", @"数值类型错误",
+                            MessageBoxButtons.OKCancel);
                     }
                 }
 
             allRoleDataDoubleList.Add(oneRoleDataDoubleList);
         }
+
         WrData(allRoleDataDoubleList);
     }
 
@@ -463,11 +465,12 @@ public class RoleDataPri
     {
         App.DisplayAlerts = false;
         App.ScreenUpdating = false;
-        const string filePath = @"\Tables\【角色-战斗】.xlsx"; 
-         string workPath = App.ActiveWorkbook.Path;
+        const string filePath = @"\Tables\【角色-战斗】.xlsx";
+        string workPath = App.ActiveWorkbook.Path;
         Directory.SetCurrentDirectory(Directory.GetParent(workPath)?.FullName ?? string.Empty);
         workPath = Directory.GetCurrentDirectory() + filePath;
-        Workbook book = App.Workbooks.Open(workPath, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing, Missing);
+        Workbook book = App.Workbooks.Open(workPath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
+            Missing, Missing, Missing, Missing, Missing, Missing, Missing);
         var ws2 = book.Worksheets["CharacterBaseAttribute"];
         var statKey = ws2.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
         var statRole = ws2.Range["B65534"].End[XlDirection.xlUp].Row;
@@ -514,14 +517,15 @@ public class RoleDataPri
                 if (result != null)
                 {
                     var rowIndex = roleData.IndexOf(result);
-                    ws2.Cells[ccd, atkSpeedIndex].Value = Math.Round(roleData[rowIndex][0]* 100,0);
-                    ws2.Cells[ccd, atkIndex].Value = Math.Round(roleData[rowIndex][1]* 100,0);
-                    ws2.Cells[ccd, defIndex].Value = Math.Round(roleData[rowIndex][2] * 100,0);
-                    ws2.Cells[ccd, hpIndex].Value = Math.Round(roleData[rowIndex][3] *100,0);
+                    ws2.Cells[ccd, atkSpeedIndex].Value = Math.Round(roleData[rowIndex][0] * 100, 0);
+                    ws2.Cells[ccd, atkIndex].Value = Math.Round(roleData[rowIndex][1] * 100, 0);
+                    ws2.Cells[ccd, defIndex].Value = Math.Round(roleData[rowIndex][2] * 100, 0);
+                    ws2.Cells[ccd, hpIndex].Value = Math.Round(roleData[rowIndex][3] * 100, 0);
                 }
                 //Console.WriteLine("未找到值 {0}", valueToFind);
             }
         }
+
         App.DisplayAlerts = true;
         App.ScreenUpdating = true;
         book.Save();
@@ -562,10 +566,12 @@ public class RoleDataPri
     //    }
     //});
 }
+
 #endregion
+
 #region 角色关键数据导出到一张表NPOI
 
-public class RoleDataPriNPOI
+public class RoleDataPriNpoi
 {
     private const string CacColStart = "E"; //角色参数配置列数起点
     private const string CacColEnd = "U"; //角色参数配置列数终点c
@@ -610,12 +616,14 @@ public class RoleDataPriNPOI
                     }
                     catch
                     {
-                        MessageBox.Show(@"第" + i + CacRowStart - 1 + @"行数据不是数值类型", @"数值类型错误", MessageBoxButtons.OKCancel);
+                        MessageBox.Show(@"第" + i + CacRowStart - 1 + @"行数据不是数值类型", @"数值类型错误",
+                            MessageBoxButtons.OKCancel);
                     }
                 }
 
             allRoleDataDoubleList.Add(oneRoleDataDoubleList);
         }
+
         WrData(allRoleDataDoubleList);
     }
 
@@ -629,16 +637,16 @@ public class RoleDataPriNPOI
         Directory.SetCurrentDirectory(Directory.GetParent(workPath)?.FullName ?? string.Empty);
         workPath = Directory.GetCurrentDirectory() + filePath;
 
-        FileStream file = new FileStream(workPath, FileMode.Open, FileAccess.ReadWrite);
+        var file = new FileStream(workPath, FileMode.Open, FileAccess.ReadWrite);
         IWorkbook workbook = new XSSFWorkbook(file);
-        ISheet ws2 = workbook.GetSheet("CharacterBaseAttribute");
- 
+        var ws2 = workbook.GetSheet("CharacterBaseAttribute");
+
         //var statKey = ws2.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
         //var statRole = ws2.Range["B65534"].End[XlDirection.xlUp].Row;
         //var statKeyGroup = ws2.Range[ws2.Cells[2, 1], ws2.Cells[2, statKey]];
         //var statRoleGroup = ws2.Range[ws2.Cells[6, 2], ws2.Cells[statRole, 2]];
         var rowNum = 1;
-        var colNum= 1;
+        var colNum = 1;
         var stateKeys = new List<string>
         {
             "atkSpeed",
@@ -651,31 +659,31 @@ public class RoleDataPriNPOI
         //var defIndex = FindColValueNP(ws2, colNum, stateKeys[2]);
         //var hpIndex = FindColValueNP(ws2, colNum, stateKeys[3]);
         // 遍历列
-        var atkSpeedIndex = FindColValueNP(ws2, rowNum, stateKeys[0]);
-        var atkIndex = FindColValueNP(ws2, rowNum, stateKeys[1]);
-        var defIndex = FindColValueNP(ws2, rowNum, stateKeys[2]);
-        var hpIndex = FindColValueNP(ws2, rowNum, stateKeys[3]);
+        var atkSpeedIndex = FindColValueNp(ws2, rowNum, stateKeys[0]);
+        var atkIndex = FindColValueNp(ws2, rowNum, stateKeys[1]);
+        var defIndex = FindColValueNp(ws2, rowNum, stateKeys[2]);
+        var hpIndex = FindColValueNp(ws2, rowNum, stateKeys[3]);
         // 遍历行
-        for (int i = 0; i < roleData.Count; i++)
+        foreach (var t in roleData)
         {
-            var rowIndex = FindRowValueNP(ws2, colNum, roleData[i][4].ToString());
+            var rowIndex = FindRowValueNp(ws2, colNum, t[4].ToString(CultureInfo.InvariantCulture));
             if (rowIndex < 0)
             {
-
             }
             else
             {
                 var row = ws2.GetRow(rowIndex) ?? ws2.CreateRow(rowIndex);
-                var cellatkSpeed = row.GetCell(atkSpeedIndex) ?? row.CreateCell(atkSpeedIndex);
-                cellatkSpeed.SetCellValue(Math.Round(roleData[i][0]*100, 0));
-                var cellatkIndex = row.GetCell(atkIndex) ?? row.CreateCell(atkIndex);
-                cellatkIndex.SetCellValue(Math.Round(roleData[i][1]*100, 0));
-                var celldefIndex = row.GetCell(defIndex) ?? row.CreateCell(defIndex);
-                celldefIndex.SetCellValue(Math.Round(roleData[i][2] * 100, 0));
-                var cellhpIndex = row.GetCell(hpIndex) ?? row.CreateCell(hpIndex);
-                cellhpIndex.SetCellValue(Math.Round(roleData[i][3] * 100, 0));
+                var cellAtkSpeed = row.GetCell(atkSpeedIndex) ?? row.CreateCell(atkSpeedIndex);
+                cellAtkSpeed.SetCellValue(Math.Round(t[0] * 100, 0));
+                var cellAtkIndex = row.GetCell(atkIndex) ?? row.CreateCell(atkIndex);
+                cellAtkIndex.SetCellValue(Math.Round(t[1] * 100, 0));
+                var cellDefIndex = row.GetCell(defIndex) ?? row.CreateCell(defIndex);
+                cellDefIndex.SetCellValue(Math.Round(t[2] * 100, 0));
+                var cellHpIndex = row.GetCell(hpIndex) ?? row.CreateCell(hpIndex);
+                cellHpIndex.SetCellValue(Math.Round(t[3] * 100, 0));
             }
         }
+
         var fileStream = new FileStream(workPath, FileMode.Create, FileAccess.Write);
         workbook.Write(fileStream, true);
         file.Close();
@@ -739,50 +747,50 @@ public class RoleDataPriNPOI
         //  range3.Value2 = 1;
     }
 
-    private static int FindColValueNP(ISheet ws2, int rowNum,string stateKeys)
+    private static int FindColValueNp(ISheet ws2, int rowNum, string stateKeys)
     {
-        int ColIndex = -1;
-        IRow targetRow = ws2.GetRow(rowNum);
+        var colIndex = -1;
+        var targetRow = ws2.GetRow(rowNum);
         if (targetRow != null)
-        {
             for (int i = targetRow.FirstCellNum; i <= targetRow.LastCellNum; i++)
             {
-                ICell cell = targetRow.GetCell(i);
+                var cell = targetRow.GetCell(i);
                 if (cell != null)
                 {
-                    string cellValue = cell.ToString();
+                    var cellValue = cell.ToString();
                     if (cellValue == stateKeys)
                     {
-                        ColIndex = i;
+                        colIndex = i;
                         break;
                     }
                 }
             }
-        }
-        return ColIndex;
+
+        return colIndex;
     }
 
-    public static int FindRowValueNP(ISheet ws2, int colNum,  string stateKeys)
+    public static int FindRowValueNp(ISheet ws2, int colNum, string stateKeys)
     {
-        int RowIndex=-1;
-        for (int i = ws2.FirstRowNum; i <= ws2.LastRowNum; i++)
+        var rowIndex = -1;
+        for (var i = ws2.FirstRowNum; i <= ws2.LastRowNum; i++)
         {
-            IRow row = ws2.GetRow(i);
+            var row = ws2.GetRow(i);
             if (row != null)
             {
-                ICell cell = row.GetCell(colNum);
+                var cell = row.GetCell(colNum);
                 if (cell != null)
                 {
-                    string cellValue = cell.ToString();
+                    var cellValue = cell.ToString();
                     if (cellValue == stateKeys)
                     {
-                        RowIndex = i;
+                        rowIndex = i;
                         break;
                     }
                 }
             }
         }
-        return RowIndex;
+
+        return rowIndex;
     }
     //写入模式？1、愣写（选一个cell，填一个） 2、批量写（range）；行列不连续如何更效率的填写数据：把所有所要填的cell汇集为1个List，这个List的顺序跟数据源的List一一对应，然后for循环写入数据，看情况是否多线程for
 

@@ -100,7 +100,7 @@ public class AutoInsertData
 
         //// 保存并关闭工作簿
         //book.Save();
-        //book.Close();
+        book.Close();
 
         //// 释放资源
         //Marshal.ReleaseComObject(range2);
@@ -477,6 +477,7 @@ public class AutoInsertData
         Workbook book = App.Workbooks.Open(@"D:\M1Work\public\Excels\Tables\#自动填表.xlsm", Missing, Missing, Missing,
             Missing, Missing, Missing, Missing,
             Missing, Missing, Missing, Missing, Missing, Missing, Missing);
+        book.Close();
     }
 
     //不知道多少行多少列就填0，会自动获取表格最大行列,true包含空值
