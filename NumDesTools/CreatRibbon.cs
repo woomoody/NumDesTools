@@ -48,7 +48,6 @@ public partial class CreatRibbon
         //XlCall.Excel(XlCall.xlcAlert, "AutoOpen");
         _app.SheetBeforeRightClick += new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
     }
-
     private void UD_RightClickButton(object sh, Range target, ref bool cancel)
     {
         //excel文档已有的右键菜单cell
