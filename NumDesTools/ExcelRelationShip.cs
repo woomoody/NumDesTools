@@ -381,12 +381,10 @@ internal class ExcelRelationShip
                 //        }
                 //    }
                 //}
+                excel.Close();
                 var excel2 = new FileStream(ExcelPath + @"\" + oldFileName[count], FileMode.Create, FileAccess.Write);
-                // 将文件指针重置到起始位置，避免写入操作导致的移动
-                excel2.Seek(0, SeekOrigin.Begin);
                 workbook.Write(excel2);
                 workbook.Close();
-                excel.Close();
                 excel2.Close();
                 count++;
             }
