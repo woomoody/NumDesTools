@@ -216,7 +216,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ExcelRelationShip.cs" />
-    <Compile Include="AutoInsertData.cs" />
     <Compile Include="Https.cs" />
     <Compile Include="CreatRibbon.cs" />
     <Compile Include="RibbonResources.Designer.cs">

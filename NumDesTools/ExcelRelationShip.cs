@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -8,24 +9,53 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
+using NPOI.SS.Formula.Functions;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
+using Match = System.Text.RegularExpressions.Match;
 
 namespace NumDesTools;
-
+public static class Extensions
+{
+    //string[][]转换为string[,]
+    public static T[,] ToRectangularArray<T>(this T[][] source)
+    {
+        int rowCount = source.Length;
+        int colCount = source.Max(x => x.Length);
+        T[,] result = new T[rowCount, colCount];
+        for (int r = 0; r < rowCount; r++)
+        {
+            T[] row = source[r];
+            for (int c = 0; c < colCount; c++)
+            {
+                if (c < row.Length)
+                    result[r, c] = row[c];
+                else
+                    result[r, c] = default(T);
+            }
+        }
+        return result;
+    }
+}
 internal class ExcelRelationShip
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;
-    private static readonly dynamic IndexWk = App.ActiveWorkbook;
-    private static readonly dynamic ExcelPath = IndexWk.Path;
     public static Dictionary<string, List<string>> ExcelLinkDictionary;
     public static Dictionary<string, List<int>> ExcelFixKeyDictionary;
     public static Dictionary<string, List<string>> ExcelFixKeyMethodDictionary;
-    private static readonly dynamic Sheet = IndexWk.ActiveSheet;
-    private static readonly int DataCount = Convert.ToInt32(Sheet.Range["E3"].value);
 
     public static void StartExcelData()
     {
+        var IndexWk = App.ActiveWorkbook;
+        var Sheet = IndexWk.ActiveSheet;
+        var name = Sheet.Name;
+        var DataCount = Convert.ToInt32(Sheet.Range["E3"].value);
+        var isLink = Sheet.Range["C1"].value;
+        if (!name.Contains("【模板】"))
+        {
+            MessageBox.Show("当前表格不是正确【模板】，不能导出数据");
+            return;
+        }
         ExcelDic();
         var startModeId = Sheet.Range["D3"].value;
         var startModeIdFix = Sheet.range["F3"].value;
@@ -48,16 +78,24 @@ internal class ExcelRelationShip
 
             excelIdGroupStartTemp1.Add(excelIdGroupStartTemp2);
         }
-
         excelIdGroupStart.Add(excelIdGroupStartTemp1);
         string writeMode = Sheet.Range["B3"].value.ToString();
         var fileName = new List<string> { Sheet.Range["C3"].value.ToString() };
-
-        CreateRelationShip(fileName, modeIdRow, writeMode, excelIdGroupStart);
+        var linksExcel = CreateRelationShip(fileName, modeIdRow, writeMode, excelIdGroupStart);
+        //把模板连接数据备份到excel
+        var sheetLink = IndexWk.Sheets["索引关键词"];
+        string[,] array = linksExcel.Select(t => new string[] { t.Item1, "A"+t.Item2 }).ToArray().ToRectangularArray();
+        sheetLink.Range["C2:D" + (linksExcel.Count + 1)].Value = array;
+        if (isLink == true)
+        {
+            ExcelHyperLinks();
+        }
     }
 
     public static void ExcelDic()
     {
+        var IndexWk = App.ActiveWorkbook;
+        var Sheet = IndexWk.ActiveSheet;
         ExcelLinkDictionary = new Dictionary<string, List<string>>();
         ExcelFixKeyDictionary = new Dictionary<string, List<int>>();
         ExcelFixKeyMethodDictionary = new Dictionary<string, List<string>>();
@@ -193,8 +231,14 @@ internal class ExcelRelationShip
         return text;
     }
 
-    public static void CreateRelationShip(List<string> oldFileName, List<List<(long, long)>> oldModelId, string writeMode, List<List<List<(long, long)>>> oldExcelIdGroup)
+    public static List<(string, int)> CreateRelationShip(List<string> oldFileName, List<List<(long, long)>> oldModelId, string writeMode, List<List<List<(long, long)>>> oldExcelIdGroup)
     {
+        var IndexWk = App.ActiveWorkbook;
+        var ExcelPath = IndexWk.Path;
+        var Sheet = IndexWk.ActiveSheet;
+        var name = Sheet.Name;
+        var DataCount = Convert.ToInt32(Sheet.Range["E3"].value);
+        var modeIFirstIDList = new List<(string, int)>();
         while (true)
         {
             var newModelId = new List<List<(long, long)>>();
@@ -211,6 +255,11 @@ internal class ExcelRelationShip
                     var seachValue = oldModelId[count][k].Item2;
                     var rowReSourceRow = FindSourceRow(sheet, 1, seachValue.ToString(), workbook);
                     if (rowReSourceRow == -1) continue;
+                    //模板ID记录，方便做Link
+                    if (k == 0)
+                    {
+                        modeIFirstIDList.Add((excelFile, rowReSourceRow+1));
+                    }
                     var rowSource = sheet.GetRow(rowReSourceRow) ?? sheet.CreateRow(rowReSourceRow);
                     var colTotal = sheet.GetRow(1).LastCellNum + 1;
                     if (writeMode == "新增")
@@ -332,10 +381,12 @@ internal class ExcelRelationShip
                 //        }
                 //    }
                 //}
-                excel.Close();
                 var excel2 = new FileStream(ExcelPath + @"\" + oldFileName[count], FileMode.Create, FileAccess.Write);
+                // 将文件指针重置到起始位置，避免写入操作导致的移动
+                excel2.Seek(0, SeekOrigin.Begin);
                 workbook.Write(excel2);
                 workbook.Close();
+                excel.Close();
                 excel2.Close();
                 count++;
             }
@@ -350,6 +401,7 @@ internal class ExcelRelationShip
 
             break;
         }
+        return modeIFirstIDList;
     }
 
     public static void FixValueType()
@@ -446,19 +498,54 @@ internal class ExcelRelationShip
 
     public static void ExcelHyperLinks()
     {
+        var IndexWk = App.ActiveWorkbook;
+        var ExcelPath = IndexWk.Path;
         var sheet = IndexWk.ActiveSheet;
-        for (var i = 3; i <= 101; i++)
-        for (var j = 2; j <= 20; j++)
+        //获取linkList
+        var sheet2 = IndexWk.Sheets["索引关键词"];
+        var linksExcel = new List<(string, string)>();
+        for (int i =2;i<=100;i++)
         {
-            var cell = sheet.Cells[i, j];
-            if (cell.value != null && cell.value.ToString().Contains(".xlsx"))
+            var temp = sheet2.Cells[i, 3].value;
+            var temp2 = sheet2.Cells[i, 4].value;
+            linksExcel.Add((temp,temp2));
+        }
+        for (var i = 3; i <= 101; i++)
+        {
+            for (var j = 2; j <= 20; j++)
             {
-                cell.Hyperlinks.Add(cell, ExcelPath + @"\" + cell.value.ToString());
-                cell.Font.Size = 9;
-                cell.Font.Name = "微软雅黑";
-                //cell.Copy();
-                //cell.PasteSpecial(XlPasteType.xlPasteFormats);
-                //cell.Style = cs1;
+                var cell = sheet.Cells[i, j];
+                if (cell.value != null && cell.value.ToString().Contains(".xlsx"))
+                {
+                    int m = 0;
+                    string rows = "-1";
+                    foreach (var ex in linksExcel)
+                    {
+                        if (cell.value.ToString() == linksExcel[m].Item1)
+                        {
+                            rows = linksExcel[m].Item2;
+                        }
+
+                        m++;
+                    }
+                    var path = ExcelPath + @"\" + cell.value.ToString();
+                    if (rows != "-1")
+                    {
+                        var excel = new FileStream(ExcelPath + @"\" + cell.value.ToString(), FileMode.Open,
+                        FileAccess.Read);
+                        var workbook = new XSSFWorkbook(excel);
+                        var sheetName = workbook.GetSheetAt(0).SheetName;
+                        path = ExcelPath + @"\" + cell.value.ToString() + "#" + sheetName + "!" + rows;
+                        workbook.Close();
+                        excel.Close();
+                    }
+                    cell.Hyperlinks.Add(cell, path);
+                    cell.Font.Size = 9;
+                    cell.Font.Name = "微软雅黑";
+                    //cell.Copy();
+                    //cell.PasteSpecial(XlPasteType.xlPasteFormats);
+                    //cell.Style = cs1;
+                }
             }
         }
     }
