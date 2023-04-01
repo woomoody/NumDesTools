@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -27,6 +28,7 @@ public partial class CreatRibbon
     public static IRibbonUI R;
     private static CommandBarButton _btn;
     private static dynamic _app = ExcelDnaUtil.Application;
+    public static dynamic XllPathList = new List<string>();
 
     void IExcelAddIn.AutoClose()
     {
@@ -36,7 +38,11 @@ public partial class CreatRibbon
         //Console.ReadKey();
         //Module1.DisposeCTP();
         //XlCall.Excel(XlCall.xlcAlert, "AutoClose");//采用C API接口
-        ExcelIntegration.UnregisterXLL(@"D:\work\Public\Excels\ExcelTools\NumDesToolsPack64.XLL");
+        //以便插件关闭时，注销掉相关插件，在XLL更新是不会出错
+        foreach (var path in XllPathList)
+        {
+            ExcelIntegration.UnregisterXLL(path);
+        }
     }
 
     void IExcelAddIn.AutoOpen()
@@ -45,8 +51,25 @@ public partial class CreatRibbon
         //此处如果多选单元格会有BUG，再看看怎么处理
         //_app.SheetSelectionChange += new Excel.WorkbookEvents_SheetSelectionChangeEventHandler(App_SheetSelectionChange); ;
         //XlCall.Excel(XlCall.xlcAlert, "AutoOpen");
+        //打开插件时会自动检索指定名字的XLL文件
+        XllPathList = GetAllXllPath();
         _app.SheetBeforeRightClick += new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
     }
+
+    private static List<string> GetAllXllPath()
+    {
+        var pathList =new List<string>();
+        foreach (var addIn in _app.AddIns)
+        {
+            var fullName = addIn.FullName;
+            if (fullName.EndsWith("NumDesToolsPack64.XLL", StringComparison.OrdinalIgnoreCase))
+            {
+                pathList.Add(addIn.FullName);
+            }
+        }
+        return pathList;
+    }
+
     private void UD_RightClickButton(object sh, Range target, ref bool cancel)
     {
         //excel文档已有的右键菜单cell
@@ -865,6 +888,7 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
+        GetAllXllPath();
         //ExcelRelationShip.StartExcelData();
         //AutoInsertData.ExcelIndexCircle();"D:\M1Work\public\Excels\Tables\#自动填表.xlsm"
         //AutoInsertData.GetExcelTitle();
