@@ -1,27 +1,39 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
-using NPOI.SS.Formula.Functions;
-using NPOI.SS.UserModel;
+using NPOI.Util;
 using NPOI.XSSF.UserModel;
+using OfficeOpenXml;
 using Match = System.Text.RegularExpressions.Match;
 
 namespace NumDesTools;
-internal class ExcelRelationShip
+
+internal class ExcelRelationShipEPPlus
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;
     public static Dictionary<string, List<string>> ExcelLinkDictionary;
     public static Dictionary<string, List<int>> ExcelFixKeyDictionary;
     public static Dictionary<string, List<string>> ExcelFixKeyMethodDictionary;
 
+    public static void test()
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        var excel = new ExcelPackage(new FileInfo(@"D:\work\Public\Excels\ExcelTools\索引1.xlsx"));
+        var worksheet = excel.Workbook;
+        var sheet = worksheet.Worksheets[0];
+        var source = sheet.Rows[5];
+        sheet.InsertRow(6, 10);
+
+        var target = sheet.Rows[6];
+        source.Range.Copy(target.Range);
+        excel.Save();
+
+    }
     public static void StartExcelData()
     {
         var IndexWk = App.ActiveWorkbook;
@@ -62,6 +74,7 @@ internal class ExcelRelationShip
         var linksExcel = CreateRelationShip(fileName, modeIdRow, writeMode, excelIdGroupStart);
         //把模板连接数据备份到excel
         var sheetLink = IndexWk.Sheets["索引关键词"];
+        sheetLink.Range["C2:D100"].ClearContents();
         string[,] array = linksExcel.Select(t => new string[] { t.Item1, "A"+t.Item2 }).ToArray().ToRectangularArray();
         sheetLink.Range["C2:D" + (linksExcel.Count + 1)].Value = array;
         if (isLink == true)
@@ -103,53 +116,22 @@ internal class ExcelRelationShip
             }
         }
     }
-
-    public static string ValueTypeToStringInNpoi(ICell cell, XSSFWorkbook workbook)
+    public static int FindSourceRow(ExcelWorksheet sheet, int col, string searchValue)
     {
-        var cellValueAsString = string.Empty;
-        if (cell != null)
-            switch (cell.CellType)
-            {
-                case CellType.Numeric:
-                    cellValueAsString = cell.NumericCellValue.ToString(CultureInfo.InvariantCulture);
-                    break;
-                case CellType.String:
-                    cellValueAsString = cell.StringCellValue;
-                    break;
-                case CellType.Boolean:
-                    cellValueAsString = cell.BooleanCellValue.ToString();
-                    break;
-                case CellType.Error:
-                    cellValueAsString = cell.ErrorCellValue.ToString();
-                    break;
-                case CellType.Formula:
-                    // Create a formula evaluator
-                    var evaluator = workbook.GetCreationHelper().CreateFormulaEvaluator();
-                    // Evaluate the formula and get the resulting value
-                    var value = evaluator.Evaluate(cell).NumberValue;
-                    cellValueAsString = value.ToString(CultureInfo.CurrentCulture);
-                    break;
-                default:
-                    cellValueAsString = "";
-                    break;
-            }
-
-        return cellValueAsString;
-    }
-
-    public static int FindSourceRow(ISheet sheet, int col, string searchValue, XSSFWorkbook workbook)
-    {
-        for (var i = sheet.FirstRowNum; i <= sheet.LastRowNum; i++)
+        for (int row = 2; row <= sheet.Dimension.End.Row; row++)
         {
-            var row = sheet.GetRow(i);
-            if (row != null)
+            // 获取当前行的单元格数据
+            var cellValue = sheet.Cells[row, col].Value;
+
+            // 如果找到了匹配的值
+            if (cellValue != null && cellValue.ToString() == searchValue)
             {
-                var cell = row.GetCell(col);
-                var cellValue = ValueTypeToStringInNpoi(cell, workbook);
-                if (cellValue == searchValue) return i;
+                // 返回该单元格的行地址
+                var cellAddress = new ExcelCellAddress(row, col);
+                var rowAddress = cellAddress.Row;
+                return rowAddress;
             }
         }
-
         return -1;
     }
 
@@ -211,6 +193,7 @@ internal class ExcelRelationShip
 
     public static List<(string, int)> CreateRelationShip(List<string> oldFileName, List<List<(long, long)>> oldModelId, string writeMode, List<List<List<(long, long)>>> oldExcelIdGroup)
     {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var IndexWk = App.ActiveWorkbook;
         var ExcelPath = IndexWk.Path;
         var Sheet = IndexWk.ActiveSheet;
@@ -225,53 +208,47 @@ internal class ExcelRelationShip
             var count = 0;
             foreach (var excelFile in oldFileName)
             {
-                var excel = new FileStream(ExcelPath + @"\" + excelFile, FileMode.Open, FileAccess.Read);
-                var workbook = new XSSFWorkbook(excel);
-                var sheet = workbook.GetSheetAt(0);
+                var excel = new ExcelPackage(new FileInfo(ExcelPath + @"\" + excelFile));
+                var worksheet = excel.Workbook;
+                var sheet = worksheet.Worksheets[0];
+
                 for (var k = 0; k < oldModelId[count].Count; k++)
                 {
                     var seachValue = oldModelId[count][k].Item2;
-                    var rowReSourceRow = FindSourceRow(sheet, 1, seachValue.ToString(), workbook);
+                    var rowReSourceRow = FindSourceRow(sheet, 2, seachValue.ToString());
                     if (rowReSourceRow == -1) continue;
                     //模板ID记录，方便做Link
                     if (k == 0)
                     {
                         modeIFirstIDList.Add((excelFile, rowReSourceRow+1));
                     }
-                    var rowSource = sheet.GetRow(rowReSourceRow) ?? sheet.CreateRow(rowReSourceRow);
-                    var colTotal = sheet.GetRow(1).LastCellNum + 1;
+                    var colCount = sheet.Dimension.Columns;
                     if (writeMode == "新增")
-                        if (sheet.LastRowNum != rowReSourceRow)
-                            sheet.ShiftRows(rowReSourceRow + 1, sheet.LastRowNum, DataCount, true, false);
-                    //数据复制
-                    for (var i = 0; i < DataCount; i++)
                     {
-                        var rowTarget = sheet.GetRow(rowReSourceRow + i + 1) ?? sheet.CreateRow(rowReSourceRow + i + 1);
-                        for (var j = 0; j < colTotal; j++)
+                        sheet.InsertRow(rowReSourceRow + 1, DataCount);
+                    }
+                    //数据复制
+                    for (var i =0; i < DataCount; i++)
+                    {
+                        for (int j = 0; j < colCount; j++)
                         {
-                            var cellSource = rowSource.GetCell(j) ?? rowSource.GetCell(j);
-                            if (cellSource != null)
+                            var cellSource = sheet.Cells[rowReSourceRow, j+1];
+                            var cellTarget = sheet.Cells[rowReSourceRow+i+1,j+1];
+                            if (j == 1)
                             {
-                                var cellSourceValue = ValueTypeToStringInNpoi(cellSource, workbook);
-                                var cellTarget = rowTarget.GetCell(j) ?? rowTarget.CreateCell(j);
-                                //if(WriteMode=="修改") continue;
-                                //表格的ID字段的修改--后续要添加其他字段的更改方式
-                                if (j == 1)
-                                {
-                                    var tempValue = oldExcelIdGroup[count][i][k].Item2;
-                                    cellTarget.SetCellValue(tempValue);
-                                    //Debug.Print(cellTarget.ToString());
-                                }
-                                else
-                                {
-                                    cellTarget.SetCellValue(cellSourceValue);
-                                }
-
-                                cellTarget.CellStyle = cellSource.CellStyle;
+                                //索引编号列数据单独更改
+                                var tempValue = oldExcelIdGroup[count][i][k].Item2;
+                                cellTarget.Value = tempValue;
+                                //单元格样式更改
+                                cellSource.CopyStyles(cellTarget);
+                            }
+                            else
+                            {
+                                cellSource.Copy(cellTarget);
                             }
                         }
+                        //Debug.Print(cellTarget.ToString());
                     }
-
                     if (excelFile == null) continue;
                     if (ExcelLinkDictionary.ContainsKey(excelFile))
                     {
@@ -291,16 +268,30 @@ internal class ExcelRelationShip
                             var newMode = new List<(long, long)>();
                             for (var i = 0; i < DataCount; i++)
                             {
-                                var rowFix = sheet.GetRow(rowReSourceRow + i + 1) ?? sheet.CreateRow(rowReSourceRow + i + 1);
-                                var cellFix = rowFix.GetCell(excelFileFixKey) ?? rowFix.CreateCell(excelFileFixKey);
-                                var cellFixValue = ValueTypeToStringInNpoi(cellFix, workbook);
+                                var cellFix = sheet.Cells[rowReSourceRow + i + 1, excelFileFixKey + 1];
+                                var cellFixValue="";
+                                if (cellFix.Value != null)
+                                {
+                                    //Debug.Print(excelFile + "::" + cellFix.Value);
+                                    cellFixValue = cellFix.Value.ToString();
+                                }
+                                //特殊表格例外处理
+                                if (excelFile == "PictorialBookTagData.xlsx" && excelFileFixKey ==4)
+                                {
+                                    var tempSc1 = sheet.Cells[rowReSourceRow + i + 1, 2].Value.ToString();
+                                    var tempSc2 = tempSc1[tempSc1.Length - 1].ToString();
+                                    if (tempSc2=="2")
+                                    {
+                                            continue;
+                                    }
+                                }
                                 //每个字段的Value修改方式不一，需要调用方法:检测string是否有[，如果有则需要正则把所有的数值提取出来并替换
                                 //字段每个数字位数统计，原始modeID统计
                                 var cellSourceValueList = KeyBitCount(cellFixValue);
                                 //字段值改写方法
                                 var temp1 = CellFixValueKeyList(ExcelFixKeyMethodDictionary[excelFile][indexExcelCount]);
                                 //修改字符串
-                                var cellFixValue2 = RegNumReplaceNew(cellFixValue, temp1, false, cellSourceValueList, 1 + i);
+                                var cellFixValue2 = RegNumReplaceNew(cellFixValue, temp1, true, cellSourceValueList, 1 + i);
                                 //统计新ID
                                 var temp2 = KeyBitCount(cellFixValue2);
                                 //标记重复项
@@ -308,10 +299,8 @@ internal class ExcelRelationShip
                                 var newFix = temp2.Except(cellSourceValueList).ToList();
 
                                 cellFixValueIdList.Add(newFix);
-                                cellFix.SetCellValue(cellFixValue2);
-                                //cellFix.CellStyle = cellFix.CellStyle;
+                                cellFix.Value =cellFixValue2;
                             }
-
                             //有关联表的字段的ID传递出去
                             //表格关联字典中寻找下一个递归文件，有关联表的字段ID要生成List递归
                             if (!string.IsNullOrEmpty(indexExcel))
@@ -325,48 +314,10 @@ internal class ExcelRelationShip
                         }
                     }
                 }
-
-                //if (WriteMode == "新增")
-                //{
-                //    //去重
-                //    // 假设要筛选的列为第一列（从0开始编号）
-                //    var columnToFilter = 1;
-                //    var rowIndexToStart = 4; // 第一行是表头，从第二行开始筛选
-
-                //    var existingValues = new HashSet<string>(); // 用于记录已经出现的值
-
-                //    for (int i = rowIndexToStart; i <= sheet.LastRowNum; i++)
-                //    {
-                //        var row = sheet.GetRow(i);
-                //        if (row == null) continue;
-
-                //        var cell = row.GetCell(columnToFilter);
-                //        if (cell == null) continue;
-
-                //        var cellValue = cell.ToString();
-                //        if (existingValues.Contains(cellValue))
-                //        {
-                //            // 如果值已经出现过，则删除当前行
-
-                //            sheet.ShiftRows(i + 1, sheet.LastRowNum, -1);
-
-                //            i--; // 因为删除了一行，需要将计数器 i 减1
-                //        }
-                //        else
-                //        {
-                //            // 否则，将值加入集合
-                //            existingValues.Add(cellValue);
-                //        }
-                //    }
-                //}
-                excel.Close();
-                var excel2 = new FileStream(ExcelPath + @"\" + oldFileName[count], FileMode.Create, FileAccess.Write);
-                workbook.Write(excel2);
-                workbook.Close();
-                excel2.Close();
+                excel.Save();
+                excel.Dispose();
                 count++;
             }
-
             if (newFileName.Count > 0)
             {
                 oldFileName = newFileName;
@@ -378,24 +329,6 @@ internal class ExcelRelationShip
             break;
         }
         return modeIFirstIDList;
-    }
-
-    public static void FixValueType()
-    {
-        //string str = "1#2,3#2,2"; // 要处理的字符串
-        var str = "1#2,3#2,4"; // 要处理的字符串
-        var tempList = CellFixValueKeyList(str);
-
-        var str1 = "[11001,11002,10003,10004]";
-
-        var keyBitCount = KeyBitCount(str1);
-
-        for (int i = 0; i < 20; i++)
-        {
-            str1 = RegNumReplaceNew(str1, tempList, false, keyBitCount, 2);
-            Debug.Print(str1);
-
-        }
     }
 
     private static List<(long, long)> KeyBitCount(string str)

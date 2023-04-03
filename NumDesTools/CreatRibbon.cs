@@ -907,6 +907,7 @@ public partial class CreatRibbon
     {
         var sw = new Stopwatch();
         sw.Start();
+        ExcelRelationShipEPPlus.StartExcelData();
         //并行计算，即时战斗（无先后），计算快
         //DotaLegendBattleParallel.BattleSimTime(true);
         //ExcelRelationShip.ExcelHyperLinks();
@@ -915,6 +916,7 @@ public partial class CreatRibbon
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
+        _app.StatusBar = "导出完成，用时：" + ts2.ToString();
         //DotaLegendBattle.LocalRC(8,3,3);
         //SVNTools.FileLogs();
         //SVNTools.CommitFile();
