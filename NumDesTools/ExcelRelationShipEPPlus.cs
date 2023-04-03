@@ -71,6 +71,8 @@ internal class ExcelRelationShipEpPlus
         string[,] array = linksExcel.Select(t => new[] { t.Item1, "A"+t.Item2 }).ToArray().ToRectangularArray();
         sheetLink.Range["C2:D" + (linksExcel.Count + 1)].Value = array;
         ExcelHyperLinks();
+        //一般新增只进行1次
+        sheet.range["B3"].value = "修复";
     }
 
     public static void ExcelDic()
