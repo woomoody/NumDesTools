@@ -6,8 +6,6 @@
 //using IExcel = Microsoft.Office.Interop.Excel;
 
 using ExcelDna.Integration;
-using NPOI.SS.Formula.Functions;
-using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using System.IO;
 

@@ -44,10 +44,7 @@ public class SearchEngine
     public static string BingSearch(string query)
     {
         const string seachIndex1 = "/search?q=";
-        const string seachIndex2 = "/s?wd=";
-        const string bingChina = "https://cn.bing.com";
         const string bingInternational = "https://www.bing.com";
-        const string baidu = "https://www.baidu.com";
         var url = bingInternational + seachIndex1 + query;
         var result = new StringBuilder();
         try

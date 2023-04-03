@@ -867,6 +867,21 @@ public partial class CreatRibbon
     {
         var sw = new Stopwatch();
         sw.Start();
+        var indexWk = _app.ActiveWorkbook;
+        var sheet = indexWk.ActiveSheet;
+        var name = sheet.Name;
+        if (!name.Contains("【模板】"))
+        {
+            MessageBox.Show(@"当前表格不是正确【模板】，不能导出数据");
+            return;
+        }
+        string writeMode = sheet.Range["B3"].value.ToString();
+        if (writeMode == "新增")
+        {
+            //NPOI插入行会破坏Excel表格，所有用EPPlus进行新增
+            ExcelRelationShipEpPlus.StartExcelData();
+        }
+        //EPPlus效率比NPOI慢很多，修改时使用此方法
         ExcelRelationShip.StartExcelData();
         sw.Stop();
         var ts2 = sw.Elapsed;
@@ -888,7 +903,7 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        GetAllXllPath();
+        //GetAllXllPath();
         //ExcelRelationShip.StartExcelData();
         //AutoInsertData.ExcelIndexCircle();"D:\M1Work\public\Excels\Tables\#自动填表.xlsm"
         //AutoInsertData.GetExcelTitle();
@@ -907,7 +922,7 @@ public partial class CreatRibbon
     {
         var sw = new Stopwatch();
         sw.Start();
-        ExcelRelationShipEPPlus.StartExcelData();
+        //ExcelRelationShipEpPlus.StartExcelData();
         //并行计算，即时战斗（无先后），计算快
         //DotaLegendBattleParallel.BattleSimTime(true);
         //ExcelRelationShip.ExcelHyperLinks();

@@ -228,7 +228,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ExcelRelationShipEPPlus.cs" />
+    <Compile Include="ExcelRelationShipEpPlus.cs" />
     <Compile Include="ExcelRelationShip.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Https.cs" />
