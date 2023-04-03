@@ -50,7 +50,7 @@
           <button id="SearchBoxButton2" label="必应" onAction="BingSearch_Click" image="bing" />
         </group>
         <group id='Group7' label='自动填表'>
-          <button id='AutoInsertExcelData' size='large' label='自动数据' image='database' onAction='AutoInsertExcelData_Click' screentip='点击按钮，根据模板数据覆写N个类似数据到所有关联表'/>
+          <button id='AutoInsertExcelData' size='large' label='自动数据' image='database' onAction='AutoInsertExcelData_Click' screentip='点击按钮，根据模板数据覆写N个类似数据到所有关联表,新建使用EPPlus，修改使用NPOI'/>
           <button id='AutoLinkExcel' size='large' label='Excel超链接' image='edge' onAction='AutoLinkExcel_Click' screentip='当前表格内的.xlsx加入超链接，必须是打开表格同目录的.xlsx'/>
         </group>
 

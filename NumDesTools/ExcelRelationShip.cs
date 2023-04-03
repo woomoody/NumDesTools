@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -9,7 +8,6 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
-using NPOI.SS.Formula.Functions;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using Match = System.Text.RegularExpressions.Match;
@@ -24,25 +22,24 @@ internal class ExcelRelationShip
 
     public static void StartExcelData()
     {
-        var IndexWk = App.ActiveWorkbook;
-        var Sheet = IndexWk.ActiveSheet;
-        var name = Sheet.Name;
-        var DataCount = Convert.ToInt32(Sheet.Range["E3"].value);
-        var isLink = Sheet.Range["C1"].value;
+        var indexWk = App.ActiveWorkbook;
+        var sheet = indexWk.ActiveSheet;
+        var name = sheet.Name;
+        var dataCount = Convert.ToInt32(sheet.Range["E3"].value);
         if (!name.Contains("【模板】"))
         {
-            MessageBox.Show("当前表格不是正确【模板】，不能导出数据");
+            MessageBox.Show(@"当前表格不是正确【模板】，不能导出数据");
             return;
         }
         ExcelDic();
-        var startModeId = Sheet.Range["D3"].value;
-        var startModeIdFix = Sheet.range["F3"].value;
+        var startModeId = sheet.Range["D3"].value;
+        var startModeIdFix = sheet.range["F3"].value;
         var modeIdRow = new List<List<(long, long)>>();
         var tempList = new List<(long, long)> { (1, Convert.ToInt64(startModeId)) };
         modeIdRow.Add(tempList);
         var excelIdGroupStart = new List<List<List<(long, long)>>>();
         var excelIdGroupStartTemp1 = new List<List<(long, long)>>();
-        for (var i = 0; i < DataCount; i++)
+        for (var i = 0; i < dataCount; i++)
         {
             //modeID原始位数
             var temp2 = KeyBitCount(startModeId.ToString());
@@ -57,27 +54,23 @@ internal class ExcelRelationShip
             excelIdGroupStartTemp1.Add(excelIdGroupStartTemp2);
         }
         excelIdGroupStart.Add(excelIdGroupStartTemp1);
-        string writeMode = Sheet.Range["B3"].value.ToString();
-        var fileName = new List<string> { Sheet.Range["C3"].value.ToString() };
+        string writeMode = "修改";
+        var fileName = new List<string> { sheet.Range["C3"].value.ToString() };
         var linksExcel = CreateRelationShip(fileName, modeIdRow, writeMode, excelIdGroupStart);
         //把模板连接数据备份到excel
-        var sheetLink = IndexWk.Sheets["索引关键词"];
-        string[,] array = linksExcel.Select(t => new string[] { t.Item1, "A"+t.Item2 }).ToArray().ToRectangularArray();
+        var sheetLink = indexWk.Sheets["索引关键词"];
+        sheetLink.Range["C2:D100"].ClearContents();
+        string[,] array = linksExcel.Select(t => new[] { t.Item1, "A"+t.Item2 }).ToArray().ToRectangularArray();
         sheetLink.Range["C2:D" + (linksExcel.Count + 1)].Value = array;
-        if (isLink == true)
-        {
-            ExcelHyperLinks();
-        }
     }
 
     public static void ExcelDic()
     {
-        var IndexWk = App.ActiveWorkbook;
-        var Sheet = IndexWk.ActiveSheet;
+        var indexWk = App.ActiveWorkbook;
+        var sheet = indexWk.ActiveSheet;
         ExcelLinkDictionary = new Dictionary<string, List<string>>();
         ExcelFixKeyDictionary = new Dictionary<string, List<int>>();
         ExcelFixKeyMethodDictionary = new Dictionary<string, List<string>>();
-        Worksheet sheet = IndexWk.ActiveSheet;
         //读取模板表数据
         var rowsCount = (sheet.Cells[sheet.Rows.Count, "B"].End[XlDirection.xlUp].Row - 4) / 4 + 1;
         for (var i = 1; i <= rowsCount; i++)
@@ -211,12 +204,11 @@ internal class ExcelRelationShip
 
     public static List<(string, int)> CreateRelationShip(List<string> oldFileName, List<List<(long, long)>> oldModelId, string writeMode, List<List<List<(long, long)>>> oldExcelIdGroup)
     {
-        var IndexWk = App.ActiveWorkbook;
-        var ExcelPath = IndexWk.Path;
-        var Sheet = IndexWk.ActiveSheet;
-        var name = Sheet.Name;
-        var DataCount = Convert.ToInt32(Sheet.Range["E3"].value);
-        var modeIFirstIDList = new List<(string, int)>();
+        var indexWk = App.ActiveWorkbook;
+        var excelPath = indexWk.Path;
+        var sSheet = indexWk.ActiveSheet;
+        var dataCount = Convert.ToInt32(sSheet.Range["E3"].value);
+        var modeIFirstIdList = new List<(string, int)>();
         while (true)
         {
             var newModelId = new List<List<(long, long)>>();
@@ -225,7 +217,7 @@ internal class ExcelRelationShip
             var count = 0;
             foreach (var excelFile in oldFileName)
             {
-                var excel = new FileStream(ExcelPath + @"\" + excelFile, FileMode.Open, FileAccess.Read);
+                var excel = new FileStream(excelPath + @"\" + excelFile, FileMode.Open, FileAccess.Read);
                 var workbook = new XSSFWorkbook(excel);
                 var sheet = workbook.GetSheetAt(0);
                 for (var k = 0; k < oldModelId[count].Count; k++)
@@ -236,15 +228,15 @@ internal class ExcelRelationShip
                     //模板ID记录，方便做Link
                     if (k == 0)
                     {
-                        modeIFirstIDList.Add((excelFile, rowReSourceRow+1));
+                        modeIFirstIdList.Add((excelFile, rowReSourceRow+1));
                     }
                     var rowSource = sheet.GetRow(rowReSourceRow) ?? sheet.CreateRow(rowReSourceRow);
                     var colTotal = sheet.GetRow(1).LastCellNum + 1;
                     if (writeMode == "新增")
                         if (sheet.LastRowNum != rowReSourceRow)
-                            sheet.ShiftRows(rowReSourceRow + 1, sheet.LastRowNum, DataCount, true, false);
+                            sheet.ShiftRows(rowReSourceRow + 1, sheet.LastRowNum, dataCount, true, false);
                     //数据复制
-                    for (var i = 0; i < DataCount; i++)
+                    for (var i = 0; i < dataCount; i++)
                     {
                         var rowTarget = sheet.GetRow(rowReSourceRow + i + 1) ?? sheet.CreateRow(rowReSourceRow + i + 1);
                         for (var j = 0; j < colTotal; j++)
@@ -289,7 +281,7 @@ internal class ExcelRelationShip
                             //修改字段字典中的字段值，各自方法不一
                             var cellFixValueIdList = new List<List<(long, long)>>();
                             var newMode = new List<(long, long)>();
-                            for (var i = 0; i < DataCount; i++)
+                            for (var i = 0; i < dataCount; i++)
                             {
                                 var rowFix = sheet.GetRow(rowReSourceRow + i + 1) ?? sheet.CreateRow(rowReSourceRow + i + 1);
                                 var cellFix = rowFix.GetCell(excelFileFixKey) ?? rowFix.CreateCell(excelFileFixKey);
@@ -300,7 +292,7 @@ internal class ExcelRelationShip
                                 //字段值改写方法
                                 var temp1 = CellFixValueKeyList(ExcelFixKeyMethodDictionary[excelFile][indexExcelCount]);
                                 //修改字符串
-                                var cellFixValue2 = RegNumReplaceNew(cellFixValue, temp1, false, cellSourceValueList, 1 + i);
+                                var cellFixValue2 = RegNumReplaceNew(cellFixValue, temp1, true, cellSourceValueList, 1 + i);
                                 //统计新ID
                                 var temp2 = KeyBitCount(cellFixValue2);
                                 //标记重复项
@@ -311,7 +303,6 @@ internal class ExcelRelationShip
                                 cellFix.SetCellValue(cellFixValue2);
                                 //cellFix.CellStyle = cellFix.CellStyle;
                             }
-
                             //有关联表的字段的ID传递出去
                             //表格关联字典中寻找下一个递归文件，有关联表的字段ID要生成List递归
                             if (!string.IsNullOrEmpty(indexExcel))
@@ -325,42 +316,8 @@ internal class ExcelRelationShip
                         }
                     }
                 }
-
-                //if (WriteMode == "新增")
-                //{
-                //    //去重
-                //    // 假设要筛选的列为第一列（从0开始编号）
-                //    var columnToFilter = 1;
-                //    var rowIndexToStart = 4; // 第一行是表头，从第二行开始筛选
-
-                //    var existingValues = new HashSet<string>(); // 用于记录已经出现的值
-
-                //    for (int i = rowIndexToStart; i <= sheet.LastRowNum; i++)
-                //    {
-                //        var row = sheet.GetRow(i);
-                //        if (row == null) continue;
-
-                //        var cell = row.GetCell(columnToFilter);
-                //        if (cell == null) continue;
-
-                //        var cellValue = cell.ToString();
-                //        if (existingValues.Contains(cellValue))
-                //        {
-                //            // 如果值已经出现过，则删除当前行
-
-                //            sheet.ShiftRows(i + 1, sheet.LastRowNum, -1);
-
-                //            i--; // 因为删除了一行，需要将计数器 i 减1
-                //        }
-                //        else
-                //        {
-                //            // 否则，将值加入集合
-                //            existingValues.Add(cellValue);
-                //        }
-                //    }
-                //}
                 excel.Close();
-                var excel2 = new FileStream(ExcelPath + @"\" + oldFileName[count], FileMode.Create, FileAccess.Write);
+                var excel2 = new FileStream(excelPath + @"\" + oldFileName[count], FileMode.Create, FileAccess.Write);
                 workbook.Write(excel2);
                 workbook.Close();
                 excel2.Close();
@@ -377,7 +334,7 @@ internal class ExcelRelationShip
 
             break;
         }
-        return modeIFirstIDList;
+        return modeIFirstIdList;
     }
 
     public static void FixValueType()
@@ -474,11 +431,11 @@ internal class ExcelRelationShip
 
     public static void ExcelHyperLinks()
     {
-        var IndexWk = App.ActiveWorkbook;
-        var ExcelPath = IndexWk.Path;
-        var sheet = IndexWk.ActiveSheet;
+        var indexWk = App.ActiveWorkbook;
+        var excelPath = indexWk.Path;
+        var sheet = indexWk.ActiveSheet;
         //获取linkList
-        var sheet2 = IndexWk.Sheets["索引关键词"];
+        var sheet2 = indexWk.Sheets["索引关键词"];
         var linksExcel = new List<(string, string)>();
         for (int i =2;i<=100;i++)
         {
@@ -495,7 +452,7 @@ internal class ExcelRelationShip
                 {
                     int m = 0;
                     string rows = "-1";
-                    foreach (var ex in linksExcel)
+                    foreach (var unused in linksExcel)
                     {
                         if (cell.value.ToString() == linksExcel[m].Item1)
                         {
@@ -504,14 +461,14 @@ internal class ExcelRelationShip
 
                         m++;
                     }
-                    var path = ExcelPath + @"\" + cell.value.ToString();
+                    var path = excelPath + @"\" + cell.value.ToString();
                     if (rows != "-1")
                     {
-                        var excel = new FileStream(ExcelPath + @"\" + cell.value.ToString(), FileMode.Open,
+                        var excel = new FileStream(excelPath + @"\" + cell.value.ToString(), FileMode.Open,
                         FileAccess.Read);
                         var workbook = new XSSFWorkbook(excel);
                         var sheetName = workbook.GetSheetAt(0).SheetName;
-                        path = ExcelPath + @"\" + cell.value.ToString() + "#" + sheetName + "!" + rows;
+                        path = excelPath + @"\" + cell.value.ToString() + "#" + sheetName + "!" + rows;
                         workbook.Close();
                         excel.Close();
                     }
