@@ -38,10 +38,16 @@ public partial class CreatRibbon
         //Console.ReadKey();
         //Module1.DisposeCTP();
         //XlCall.Excel(XlCall.xlcAlert, "AutoClose");//采用C API接口
+
         //以便插件关闭时，注销掉相关插件，在XLL更新是不会出错
         foreach (var path in XllPathList)
         {
             ExcelIntegration.UnregisterXLL(path);
+        }
+        //防止打开最后一个工作簿，excel.exe进程不关闭
+        if (_app.Workbooks.Count == 0)
+        {
+            _app.Quit();
         }
     }
 
