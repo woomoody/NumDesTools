@@ -228,6 +228,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AutoInsertData.cs" />
     <Compile Include="ExcelRelationShipEpPlus.cs" />
     <Compile Include="ExcelRelationShip.cs" />
     <Compile Include="Extensions.cs" />
