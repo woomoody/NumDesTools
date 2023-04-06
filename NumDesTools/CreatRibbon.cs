@@ -909,6 +909,7 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
+        ExcelRelationShipEpPlus.CellFormat();
         //GetAllXllPath();
         //ExcelRelationShip.StartExcelData();
         //AutoInsertData.ExcelIndexCircle();"D:\M1Work\public\Excels\Tables\#自动填表.xlsm"
