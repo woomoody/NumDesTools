@@ -32,6 +32,7 @@ internal class ExcelRelationShip
             return;
         }
         ExcelDic();
+        CellFormat();
         var startModeId = sheet.Range["D3"].value;
         var startModeIdFix = sheet.range["F3"].value;
         var modeIdRow = new List<List<(long, long)>>();
@@ -63,7 +64,29 @@ internal class ExcelRelationShip
         string[,] array = linksExcel.Select(t => new[] { t.Item1, "A"+t.Item2 }).ToArray().ToRectangularArray();
         sheetLink.Range["C2:D" + (linksExcel.Count + 1)].Value = array;
     }
-
+    public static void CellFormat()
+    {
+        var indexWk = App.ActiveWorkbook;
+        var sheet = indexWk.ActiveSheet;
+        var rowsCount = (sheet.Cells[sheet.Rows.Count, "B"].End[XlDirection.xlUp].Row - 4) / 4 + 1;
+        for (var i = 1; i <= rowsCount; i++)
+        {
+            for (var j = 0; j <= 14; j++)
+            {
+                var cell = sheet.Cells[1, 1].Offset[7 + (i - 1) * 4, j + 1];
+                if (cell.Value != null )
+                {
+                    cell.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlDashDotDot;
+                    cell.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThin;
+                }
+                else
+                {
+                    cell.Borders.LineStyle = XlLineStyle.xlDash;
+                    cell.Borders.Weight = XlBorderWeight.xlHairline;
+                }
+            }
+        }
+    }
     public static void ExcelDic()
     {
         var indexWk = App.ActiveWorkbook;
@@ -81,9 +104,9 @@ internal class ExcelRelationShip
             ExcelFixKeyMethodDictionary[baseExcel] = new List<string>();
             for (var j = 2; j <= 14; j++)
             {
-                var linkExcel = sheet.Cells[1, 1].Offset[5 + (i - 1) * 4, j + 1].Value;
-                var baseExcelFixKey = sheet.Cells[1, 1].Offset[6 + (i - 1) * 4, j + 1].Value;
-                var baseExcelFixKeyMethod = sheet.Cells[1, 1].Offset[7 + (i - 1) * 4, j + 1].Value;
+                var linkExcel = sheet.Cells[1, 1].Offset[6 + (i - 1) * 4, j + 1].Value;
+                var baseExcelFixKey = sheet.Cells[1, 1].Offset[7 + (i - 1) * 4, j + 1].Value;
+                var baseExcelFixKeyMethod = sheet.Cells[1, 1].Offset[5 + (i - 1) * 4, j + 1].Value;
                 ExcelLinkDictionary[baseExcel].Add(linkExcel);
                 if (baseExcelFixKey == null)
                     baseExcelFixKey = 0;
