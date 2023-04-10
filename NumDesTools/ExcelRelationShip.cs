@@ -32,14 +32,13 @@ internal class ExcelRelationShip
             return;
         }
         ExcelDic();
-        CellFormat();
-        var startModeId = sheet.Range["D3"].value;
+        var startModeId = sheet.Range["D3"].value.ToString();
         var startModeIdFix = sheet.range["F3"].value;
-        var modeIdRow = new List<List<(long, long)>>();
-        var tempList = new List<(long, long)> { (1, Convert.ToInt64(startModeId)) };
+        var modeIdRow = new List<List<(int digitCount, string temp)>>();
+        var tempList = new List<(int digitCount, string temp)> { (1, startModeId) };
         modeIdRow.Add(tempList);
-        var excelIdGroupStart = new List<List<List<(long, long)>>>();
-        var excelIdGroupStartTemp1 = new List<List<(long, long)>>();
+        var excelIdGroupStart = new List<List<List<(int digitCount, string temp)>>>();
+        var excelIdGroupStartTemp1 = new List<List<(int digitCount, string temp)>>();
         for (var i = 0; i < dataCount; i++)
         {
             //modeID原始位数
@@ -50,7 +49,7 @@ internal class ExcelRelationShip
             //修改字符串
             var cellFixValue2 =
                 RegNumReplaceNew(startModeId.ToString(), temp1, false, temp2, 1 + i);
-            List<(long, long)> excelIdGroupStartTemp2 = KeyBitCount(cellFixValue2);
+            List<(int digitCount, string temp)> excelIdGroupStartTemp2 = KeyBitCount(cellFixValue2);
 
             excelIdGroupStartTemp1.Add(excelIdGroupStartTemp2);
         }
@@ -60,32 +59,9 @@ internal class ExcelRelationShip
         var linksExcel = CreateRelationShip(fileName, modeIdRow, writeMode, excelIdGroupStart);
         //把模板连接数据备份到excel
         var sheetLink = indexWk.Sheets["索引关键词"];
-        sheetLink.Range["C2:D100"].ClearContents();
+        sheetLink.Range["C2:D200"].ClearContents();
         string[,] array = linksExcel.Select(t => new[] { t.Item1, "A"+t.Item2 }).ToArray().ToRectangularArray();
         sheetLink.Range["C2:D" + (linksExcel.Count + 1)].Value = array;
-    }
-    public static void CellFormat()
-    {
-        var indexWk = App.ActiveWorkbook;
-        var sheet = indexWk.ActiveSheet;
-        var rowsCount = (sheet.Cells[sheet.Rows.Count, "B"].End[XlDirection.xlUp].Row - 4) / 4 + 1;
-        for (var i = 1; i <= rowsCount; i++)
-        {
-            for (var j = 0; j <= 14; j++)
-            {
-                var cell = sheet.Cells[1, 1].Offset[7 + (i - 1) * 4, j + 1];
-                if (cell.Value != null )
-                {
-                    cell.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlDashDotDot;
-                    cell.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThin;
-                }
-                else
-                {
-                    cell.Borders.LineStyle = XlLineStyle.xlDash;
-                    cell.Borders.Weight = XlBorderWeight.xlHairline;
-                }
-            }
-        }
     }
     public static void ExcelDic()
     {
@@ -170,7 +146,7 @@ internal class ExcelRelationShip
     }
 
     public static string RegNumReplaceNew(string text, List<(int, int)> digit, bool isCarry,
-        List<(long, long)> keyBitCount, int addValue)
+        List<(int digitCount, string temp)> keyBitCount, int addValue)
     {
         var numCount = 1;
         var ditCount = 0;
@@ -180,7 +156,7 @@ internal class ExcelRelationShip
         foreach (Match match in matches)
         {
             var numStr = match.Value;
-            var num = int.Parse(numStr);
+            var num = long.Parse(numStr);
 
             if (digit.Any(item => item.Item1 == numCount))
             {
@@ -225,7 +201,7 @@ internal class ExcelRelationShip
         return text;
     }
 
-    public static List<(string, int)> CreateRelationShip(List<string> oldFileName, List<List<(long, long)>> oldModelId, string writeMode, List<List<List<(long, long)>>> oldExcelIdGroup)
+    public static List<(string, int)> CreateRelationShip(List<string> oldFileName, List<List<(int digitCount, string temp)>> oldModelId, string writeMode, List<List<List<(int digitCount, string temp)>>> oldExcelIdGroup)
     {
         var indexWk = App.ActiveWorkbook;
         var excelPath = indexWk.Path;
@@ -234,19 +210,29 @@ internal class ExcelRelationShip
         var modeIFirstIdList = new List<(string, int)>();
         while (true)
         {
-            var newModelId = new List<List<(long, long)>>();
+            var newModelId = new List<List<(int digitCount, string temp)>>();
             var newFileName = new List<string>();
-            var newExcelId = new List<List<List<(long, long)>>>();
+            var newExcelId = new List<List<List<(int digitCount, string temp)>>>();
             var count = 0;
             foreach (var excelFile in oldFileName)
             {
-                var excel = new FileStream(excelPath + @"\" + excelFile, FileMode.Open, FileAccess.Read);
+                var path = excelPath + @"\" + excelFile;
+                if (excelFile == "多语言")
+                {
+                    var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
+                    path = newPath + @"\Excels\Localizations\Localizations.xlsx";
+                }
+                if (excelFile == "icon.xlsx")
+                {
+                    continue;
+                }
+                var excel = new FileStream(path, FileMode.Open, FileAccess.Read);
                 var workbook = new XSSFWorkbook(excel);
                 var sheet = workbook.GetSheetAt(0);
                 for (var k = 0; k < oldModelId[count].Count; k++)
                 {
                     var seachValue = oldModelId[count][k].Item2;
-                    var rowReSourceRow = FindSourceRow(sheet, 1, seachValue.ToString(), workbook);
+                    var rowReSourceRow = FindSourceRow(sheet, 1, seachValue, workbook);
                     if (rowReSourceRow == -1) continue;
                     //模板ID记录，方便做Link
                     if (k == 0)
@@ -262,7 +248,7 @@ internal class ExcelRelationShip
                     for (var i = 0; i < dataCount; i++)
                     {
                         var rowTarget = sheet.GetRow(rowReSourceRow + i + 1) ?? sheet.CreateRow(rowReSourceRow + i + 1);
-                        for (var j = 0; j < colTotal; j++)
+                        for (var j = 1; j < colTotal; j++)
                         {
                             var cellSource = rowSource.GetCell(j) ?? rowSource.GetCell(j);
                             if (cellSource != null)
@@ -302,13 +288,32 @@ internal class ExcelRelationShip
                             }
 
                             //修改字段字典中的字段值，各自方法不一
-                            var cellFixValueIdList = new List<List<(long, long)>>();
-                            var newMode = new List<(long, long)>();
+                            var cellFixValueIdList = new List<List<(int digitCount, string temp)>>();
+                            var newMode = new List<(int digitCount, string temp)>();
                             for (var i = 0; i < dataCount; i++)
                             {
                                 var rowFix = sheet.GetRow(rowReSourceRow + i + 1) ?? sheet.CreateRow(rowReSourceRow + i + 1);
                                 var cellFix = rowFix.GetCell(excelFileFixKey) ?? rowFix.CreateCell(excelFileFixKey);
                                 var cellFixValue = ValueTypeToStringInNpoi(cellFix, workbook);
+                                if(cellFixValue == null) continue;
+                                //特殊表格例外处理
+                                if (excelFile == "PictorialBookTagData.xlsx" && excelFileFixKey == 4)
+                                {
+                                    var tempSc1 = sheet.GetRow(rowReSourceRow + i + 1).GetCell(excelFileFixKey-1).ToString();
+                                    if (tempSc1 == "1")
+                                    {
+                                        continue;
+                                    }
+                                }
+                                else if (excelFile == "ShopMarketGood.xlsx" && excelFileFixKey == 4)
+                                {
+                                    var tempSc1 = sheet.GetRow(rowReSourceRow + i + 1).GetCell(excelFileFixKey).ToString();
+                                    var tempSc2 = tempSc1.Contains("110");
+                                    if (tempSc2)
+                                    {
+                                        continue;
+                                    }
+                                }
                                 //每个字段的Value修改方式不一，需要调用方法:检测string是否有[，如果有则需要正则把所有的数值提取出来并替换
                                 //字段每个数字位数统计，原始modeID统计
                                 var cellSourceValueList = KeyBitCount(cellFixValue);
@@ -340,11 +345,12 @@ internal class ExcelRelationShip
                     }
                 }
                 excel.Close();
-                var excel2 = new FileStream(excelPath + @"\" + oldFileName[count], FileMode.Create, FileAccess.Write);
+                var excel2 = new FileStream(path, FileMode.Create, FileAccess.Write);
                 workbook.Write(excel2);
                 workbook.Close();
                 excel2.Close();
                 count++;
+                App.StatusBar = "正在处理:" + excelFile + "文件";
             }
 
             if (newFileName.Count > 0)
@@ -378,16 +384,16 @@ internal class ExcelRelationShip
         }
     }
 
-    private static List<(long, long)> KeyBitCount(string str)
+    private static List<(int digitCount, string temp)> KeyBitCount(string str)
     {
         var regex = new Regex(@"\d+");
         var matches = regex.Matches(str);
-        var keyBitCount = new List<(long digitCount, long)>();
+        var keyBitCount = new List<(int digitCount, string temp)>();
         foreach (var match in matches)
         {
             var temp = match.ToString();
-            var digitCount = (long)Math.Log10(Convert.ToInt64(temp) + 1) + 1;
-            keyBitCount.Add((digitCount, Convert.ToInt64(temp)));
+            var digitCount =temp.Length;
+            keyBitCount.Add((digitCount, temp));
         }
 
         return keyBitCount;

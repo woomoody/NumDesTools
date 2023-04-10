@@ -878,27 +878,19 @@ public partial class CreatRibbon
         var name = sheet.Name;
         if (!name.Contains("【模板】"))
         {
-            MessageBox.Show(@"当前表格不是正确【模板】，不能导出数据");
+            MessageBox.Show(@"当前表格不是正确【模板】，不能写入数据");
             return;
         }
-        string writeMode = sheet.Range["B3"].value.ToString();
-        if (writeMode == "新增")
-        {
-            //NPOI插入行会破坏Excel表格，所有用EPPlus进行新增
-            ExcelRelationShipEpPlus.StartExcelData();
-        }
-        //EPPlus效率比NPOI慢很多，修改时使用此方法
-        ExcelRelationShip.StartExcelData();
+        var str =ExcelDataAutoInsert.AutoInsertDat();
         sw.Stop();
-        var ts2 = sw.Elapsed;
-        Debug.Print(ts2.ToString());
-        _app.StatusBar = "导出完成，用时：" + ts2.ToString();
+        var ts2 = Math.Round(sw.Elapsed.TotalSeconds,2);
+        _app.StatusBar = "导出完成，用时：" + ts2+"细则："+str;
     }
     public void AutoLinkExcel_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
-        ExcelRelationShip.ExcelHyperLinks();
+        ExcelDataAutoInsert.ExcelHyperLinks();
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
@@ -909,7 +901,7 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        ExcelRelationShipEpPlus.CellFormat();
+        ExcelDataAutoInsert.AutoInsertDat();
         //GetAllXllPath();
         //ExcelRelationShip.StartExcelData();
         //AutoInsertData.ExcelIndexCircle();"D:\M1Work\public\Excels\Tables\#自动填表.xlsm"
@@ -929,6 +921,7 @@ public partial class CreatRibbon
     {
         var sw = new Stopwatch();
         sw.Start();
+        ExcelRelationShipEpPlus.FixValueType();
         //ExcelRelationShipEpPlus.StartExcelData();
         //并行计算，即时战斗（无先后），计算快
         //DotaLegendBattleParallel.BattleSimTime(true);

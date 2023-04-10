@@ -116,4 +116,22 @@ public class CellSelectChange : Form
         //oneTri = true;
         //}
     }
+
+    private void InitializeComponent()
+    {
+            this.SuspendLayout();
+            // 
+            // CellSelectChange
+            // 
+            this.ClientSize = new System.Drawing.Size(284, 261);
+            this.Name = "CellSelectChange";
+            this.Load += new System.EventHandler(this.CellSelectChange_Load);
+            this.ResumeLayout(false);
+
+    }
+
+    private void CellSelectChange_Load(object sender, EventArgs e)
+    {
+
+    }
 }
