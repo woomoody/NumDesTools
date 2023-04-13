@@ -2,6 +2,7 @@
 using System.Data;
 using System.Data.OleDb;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -16,8 +17,10 @@ using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using stdole;
 using DataTable = System.Data.DataTable;
+using Font = System.Drawing.Font;
 using Image = System.Drawing.Image;
 using Point = System.Drawing.Point;
+using ScrollBars = System.Windows.Forms.ScrollBars;
 
 namespace NumDesTools;
 
@@ -25,6 +28,7 @@ public static class ErrorLogCtp
 {
     public static CustomTaskPane Ctp;
     public static UserControl LinkControl;
+    public static UserControl LabelControl;
 
     public static void CreateCtp(string errorLog)
     {
@@ -59,7 +63,25 @@ public static class ErrorLogCtp
         Ctp.Width = 350;
         Ctp.Visible = true;
     }
-
+    public static void CreateCtpNormal(string errorLog)
+    {
+        LabelControl = new UserControl();
+        var errorLinkLable = new RichTextBox()
+        {
+            Text = errorLog,
+            Location = new Point(10, 40 ),
+            ScrollBars = (RichTextBoxScrollBars)ScrollBars.Vertical,
+            Font = new Font("微软雅黑", 9, FontStyle.Bold),
+            Dock = DockStyle.Fill,
+            BackColor = Color.Gray,
+            ForeColor = Color.GhostWhite
+    };
+        LabelControl.Controls.Add(errorLinkLable);
+        Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(LabelControl, "写入错误日志");
+        Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
+        Ctp.Width = 450;
+        Ctp.Visible = true;
+    }
     public static void DisposeCtp()
     {
         if (Ctp == null) return;
