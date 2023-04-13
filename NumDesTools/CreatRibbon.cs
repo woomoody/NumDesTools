@@ -84,8 +84,9 @@ public partial class CreatRibbon
         var bars = mzBar.Controls;
         var bookName = _app.ActiveWorkbook.Name;
         var sheetName = _app.ActiveSheet.Name;
+        var sheet = _app.ActiveSheet;
         var missing = Type.Missing;
-        if (bookName == "角色怪物数据生成" || sheetName == "角色基础")
+        if (bookName == "角色怪物数据生成" || sheetName == "角色基础" )
         {
             if (target.Row < 16 || target.Column < 5 || target.Column > 21)
             {
@@ -107,11 +108,9 @@ public partial class CreatRibbon
                     }
 
                 //生成自己的菜单
-                var comControl = bars.Add(MsoControlType.msoControlButton,
-                    missing, missing, 1, true);
+                var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
                 var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
-                var comControl1 = bars.Add(MsoControlType.msoControlButton,
-                    missing, missing, 1, true);
+                var comControl1 = bars.Add(MsoControlType.msoControlButton,missing, missing, 1, true);
                 var comButton2 = comControl1 as Microsoft.Office.Core.CommandBarButton;
                 if (comControl == null) return;
                 if (comButton1 != null)
@@ -126,7 +125,6 @@ public partial class CreatRibbon
                     var ts2 = sw.Elapsed;
                     _app.StatusBar = "导出完成，用时："+ ts2.ToString();
                 }
-
                 if (comButton2 != null)
                 {
                     comButton2.Tag = "批量导出";
@@ -136,8 +134,50 @@ public partial class CreatRibbon
                 }
             }
         }
-    }
+        else if (sheetName.Contains("【模板】"))
+        {
+            //var errorCell = sheet.Cells[target.Row, 1];
+            //if (errorCell.Value != null)
+            //{
+            //    if (errorCell.Value.ToString() == "^错误^")
+            //    {
 
+                    foreach (var tempControl in from CommandBarControl tempControl in bars
+                             let t = tempControl.Tag
+                             where t is "单独写入"
+                             select tempControl)
+                        try
+                        {
+                            tempControl.Delete();
+                        }
+                        catch
+                        {
+                            // ignored
+                        }
+                    //生成自己的菜单
+                    var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
+                    var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
+                    var comControl1 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
+                    var comButton2 = comControl1 as Microsoft.Office.Core.CommandBarButton;
+                    if (comControl == null) return;
+                    if (comButton1 != null)
+                    {
+                        comButton1.Tag = "单独写入";
+                        comButton1.Caption = "单线程：单表写入";
+                        comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                        comButton1.Click += ExcelDataAutoInsert.RightClickWriteExcel;
+                    }
+                    if (comButton2 != null)
+                    {
+                        comButton2.Tag = "单独写入";
+                        comButton2.Caption = "多线程：单表写入";
+                        comButton2.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                        comButton2.Click += ExcelDataAutoInsert.RightClickWriteExcelThread;
+                    }
+            //    }
+            //}
+        }
+    }
     public void AllWorkbookOutPut_Click(IRibbonControl control)
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
@@ -881,27 +921,63 @@ public partial class CreatRibbon
             MessageBox.Show(@"当前表格不是正确【模板】，不能写入数据");
             return;
         }
-        var str =ExcelDataAutoInsert.AutoInsertDat();
+        bool threadMode = false;
+        var str =ExcelDataAutoInsert.AutoInsertDat(threadMode);
         sw.Stop();
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds,2);
-        _app.StatusBar = "导出完成，用时：" + ts2+"细则："+str;
+        _app.StatusBar = "完成，用时：" + ts2+"细则："+str;
+    }
+    public void AutoInsertExcelDataThread_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var indexWk = _app.ActiveWorkbook;
+        var sheet = indexWk.ActiveSheet;
+        var name = sheet.Name;
+        if (!name.Contains("【模板】"))
+        {
+            MessageBox.Show(@"当前表格不是正确【模板】，不能写入数据");
+            return;
+        }
+        bool threadMode = true;
+        var str = ExcelDataAutoInsert.AutoInsertDat(threadMode);
+        sw.Stop();
+        var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
+        _app.StatusBar = "完成，用时：" + ts2 + "细则：" + str;
     }
     public void AutoLinkExcel_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
-        ExcelDataAutoInsert.ExcelHyperLinks();
+        dynamic indexWk = _app.ActiveWorkbook;
+        dynamic sheet = indexWk.ActiveSheet;
+        var excelPath = indexWk.Path;
+        ExcelDataAutoInsert.ExcelHyperLinks(excelPath,sheet);
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
-        _app.StatusBar = "导出完成，用时：" + ts2.ToString();
+        _app.StatusBar = "完成，用时：" + ts2.ToString();
+    }
+    public void AutoCellFormatEPPlus_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        dynamic indexWk = _app.ActiveWorkbook;
+        dynamic sheet = indexWk.ActiveSheet;
+        var excelPath = indexWk.Path;
+        ExcelDataAutoInsert.ExcelHyperLinks(excelPath, sheet);
+        //ExcelDataAutoInsert.CellFormatAuto();
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        _app.StatusBar = "完成，用时：" + ts2.ToString();
     }
     public void TestBar1_Click(IRibbonControl control)
     {
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        ExcelDataAutoInsert.AutoInsertDat();
+        //ExcelDataAutoInsert.AutoInsertDat();
         //GetAllXllPath();
         //ExcelRelationShip.StartExcelData();
         //AutoInsertData.ExcelIndexCircle();"D:\M1Work\public\Excels\Tables\#自动填表.xlsm"
@@ -921,7 +997,6 @@ public partial class CreatRibbon
     {
         var sw = new Stopwatch();
         sw.Start();
-        ExcelRelationShipEpPlus.FixValueType();
         //ExcelRelationShipEpPlus.StartExcelData();
         //并行计算，即时战斗（无先后），计算快
         //DotaLegendBattleParallel.BattleSimTime(true);
