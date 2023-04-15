@@ -945,6 +945,23 @@ public partial class CreatRibbon
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
         _app.StatusBar = "完成，用时：" + ts2 + "细则：" + str;
     }
+    public void AutoInsertExcelDataDialog_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var indexWk = _app.ActiveWorkbook;
+        var sheet = indexWk.ActiveSheet;
+        var name = sheet.Name;
+        //if (!name.Contains("【模板】"))
+        //{
+        //    MessageBox.Show(@"当前表格不是正确【模板】，不能写入数据");
+        //    return;
+        //}
+        ExcelDataInsertLanguage.AutoInsertData();
+        sw.Stop();
+        var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
+        _app.StatusBar = "完成，用时：" + ts2;
+    }
     public void AutoLinkExcel_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -977,6 +994,7 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
+        //ExcelDataInsertLanguage.AutoInsertData();
         //ExcelDataAutoInsert.AutoInsertDat();
         //GetAllXllPath();
         //ExcelRelationShip.StartExcelData();
