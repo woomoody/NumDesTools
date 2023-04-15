@@ -27,7 +27,7 @@ public partial class CreatRibbon
     public static string TempPath = @"\Client\Assets\Resources\Table";
     public static IRibbonUI R;
     private static CommandBarButton _btn;
-    private static dynamic _app = ExcelDnaUtil.Application;
+    private static readonly dynamic  _app = ExcelDnaUtil.Application;
     public static dynamic XllPathList = new List<string>();
 
     void IExcelAddIn.AutoClose()
@@ -830,7 +830,7 @@ public partial class CreatRibbon
     public void SvnCommitExcel_Click(IRibbonControl control)
     {
         string path = _app.ActiveWorkbook.Path;
-        SvnTools.UpdateFiles(path);
+        //SvnTools.UpdateFiles(path);
     }
 
     public void SvnCommitTxt_Click(IRibbonControl control)
@@ -838,7 +838,7 @@ public partial class CreatRibbon
         string path = _app.ActiveWorkbook.Path;
         Directory.SetCurrentDirectory(Directory.GetParent(path)?.FullName ?? throw new InvalidOperationException());
         path = Directory.GetCurrentDirectory() + TempPath;
-        SvnTools.UpdateFiles(path);
+        //SvnTools.UpdateFiles(path);
     }
 
     public void PVP_H_Click(IRibbonControl control)
@@ -994,7 +994,7 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        //ExcelDataInsertLanguage.AutoInsertData();
+        ExcelDataInsertLanguage.ExcelDataToDic();
         //ExcelDataAutoInsert.AutoInsertDat();
         //GetAllXllPath();
         //ExcelRelationShip.StartExcelData();

@@ -10,18 +10,9 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows.Forms;
-using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
+ using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
 using Color = System.Drawing.Color;
-using OfficeOpenXml.DataValidation;
-using DocumentFormat.OpenXml.Presentation;
-using Microsoft.Win32;
-using DocumentFormat.OpenXml.Spreadsheet;
-using System.Windows;
  using MessageBox = System.Windows.Forms.MessageBox;
-using OfficeOpenXml.Style;
-using NPOI.SS.Formula.Functions;
- using Org.BouncyCastle.Asn1.Nist;
  using LicenseContext = OfficeOpenXml.LicenseContext;
  using Match = System.Text.RegularExpressions.Match;
 
@@ -1193,4 +1184,36 @@ public class ExcelDataAutoInsert
         }
         return errorList;
     }
+
+     public static void ExcelDataToDic()
+     {
+         dynamic App = ExcelDnaUtil.Application;
+         var workBook = App.ActiveWorkbook;
+         var sheet =App.ActiveSheet;
+
+         var rowsCount = sheet.UsedRange.Rows.Count;
+         var colsCount = sheet.UsedRange.Columns.Count;
+
+         var dic = new Dictionary<string, List<string>>();
+
+         for (var i = 2; i <= rowsCount; i++)
+         {
+             var value = sheet.Cells[i,5].Value?.ToString();
+
+             var datav1 = sheet.Cells[i, 7].Value?.ToString();
+             var datav2 = sheet.Cells[i+1, 7].Value?.ToString();
+             if (value == null) continue;
+                 if (dic.ContainsKey(value))
+             {
+                 dic[value].Add(datav1);
+                 dic[value].Add(datav2);
+             }
+             else
+             {
+                 dic.Add(value, new List<string>());
+                 dic[value].Add(datav2);
+                 dic[value].Add(datav2);
+             }
+         }
+     }
 }
