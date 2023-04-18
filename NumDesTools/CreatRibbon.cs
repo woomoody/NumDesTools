@@ -1,4 +1,4 @@
-﻿using System;
+﻿  using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -144,8 +144,8 @@ public partial class CreatRibbon
 
                     foreach (var tempControl in from CommandBarControl tempControl in bars
                              let t = tempControl.Tag
-                             where t is "单独写入"
-                             select tempControl)
+                             where t is "自选写入"
+                                                select tempControl)
                         try
                         {
                             tempControl.Delete();
@@ -157,24 +157,15 @@ public partial class CreatRibbon
                     //生成自己的菜单
                     var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
                     var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
-                    var comControl1 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-                    var comButton2 = comControl1 as Microsoft.Office.Core.CommandBarButton;
                     if (comControl == null) return;
                     if (comButton1 != null)
                     {
-                        comButton1.Tag = "单独写入";
-                        comButton1.Caption = "单线程：单表写入";
+                        comButton1.Tag = "自选写入";
+                        comButton1.Caption = "自选表格写入";
                         comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                        comButton1.Click += ExcelDataAutoInsert.RightClickWriteExcel;
+                        comButton1.Click += ExcelDataAutoInsertMulti.RightClickInsertData;
                     }
-                    if (comButton2 != null)
-                    {
-                        comButton2.Tag = "单独写入";
-                        comButton2.Caption = "多线程：单表写入";
-                        comButton2.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                        comButton2.Click += ExcelDataAutoInsert.RightClickWriteExcelThread;
-                    }
-            //    }
+                    //    }
             //}
         }
     }
@@ -921,11 +912,11 @@ public partial class CreatRibbon
             MessageBox.Show(@"当前表格不是正确【模板】，不能写入数据");
             return;
         }
-        bool threadMode = false;
-        var str =ExcelDataAutoInsert.AutoInsertDat(threadMode);
+        bool threadMode = false; 
+        ExcelDataAutoInsertMulti.InsertData(threadMode);
         sw.Stop();
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds,2);
-        _app.StatusBar = "完成，用时：" + ts2+"细则："+str;
+        _app.StatusBar = "完成，用时：" + ts2;
     }
     public void AutoInsertExcelDataThread_Click(IRibbonControl control)
     {
@@ -940,10 +931,10 @@ public partial class CreatRibbon
             return;
         }
         bool threadMode = true;
-        var str = ExcelDataAutoInsert.AutoInsertDat(threadMode);
+        ExcelDataAutoInsertMulti.InsertData(threadMode);
         sw.Stop();
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-        _app.StatusBar = "完成，用时：" + ts2 + "细则：" + str;
+        _app.StatusBar = "完成，用时：" + ts2;
     }
     public void AutoInsertExcelDataDialog_Click(IRibbonControl control)
     {
@@ -994,7 +985,7 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        ExcelDataInsertLanguage.ExcelDataToDic();
+        //ExcelDataAutoInsertMulti.InsertData(true);
         //ExcelDataAutoInsert.AutoInsertDat();
         //GetAllXllPath();
         //ExcelRelationShip.StartExcelData();
