@@ -1,4 +1,5 @@
 ﻿using Microsoft.Office.Interop.Excel;
+using System;
 using System.Collections.Generic;
 
 namespace NumDesTools;
@@ -42,5 +43,38 @@ public class PubMetToExcel
         }
         (List<object> sheetHeaderCol, List<List<object>> sheetData) excelData = (sheetHeaderCol, sheetData);
         return excelData;
+    }
+    public static Dictionary<string, List<Tuple<object[,]>>> ExcelDataToDictionary(dynamic data, dynamic dicKeyCol, dynamic dicValueCol,int valueRowCount, int valueColCount=1)
+    {
+        var dic = new Dictionary<string, List<Tuple<object[,]>>>();
+
+        for (var i = 0; i < data.Count; i++)
+        {
+            var value = data[i][dicKeyCol];
+
+            if (value == null) continue;
+
+            object[,] values = new object[valueRowCount, valueColCount];
+            for (int k = 0; k < valueRowCount; k++)
+            {
+                for (int j = 0; j < valueColCount; j++)
+                {
+                    var valueTemp = data[i + k][dicValueCol + j];
+                    values[k, j] = valueTemp;
+                }
+            }
+            var tuple = new Tuple<object[,]>(values);
+            if (dic.ContainsKey(value))
+            {
+                dic[value].Add(tuple);
+            }
+            else
+            {
+                var list = new List<Tuple<object[,]>>();
+                list.Add(tuple);
+                dic.Add(value, list);
+            }
+        }
+        return dic;
     }
 }
