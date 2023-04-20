@@ -8,7 +8,7 @@ using System.Windows.Forms;
 using System.Xml.Serialization;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
-  using Microsoft.Office.Interop.Excel;
+using Microsoft.Office.Interop.Excel;
 using stdole;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;

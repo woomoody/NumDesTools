@@ -1,4 +1,6 @@
-﻿using System;
+﻿using DocumentFormat.OpenXml.Wordprocessing;
+using ExcelDna.Integration;
+using System;
 using System.Diagnostics;
 using System.Net;
 using System.Text;
@@ -8,6 +10,7 @@ namespace NumDesTools;
 public class SearchEngine
 {
     //excel中实现搜索功能，会按照google、bing、baidu的顺序检测是否能ping，否则检查下一个网站
+    [ExcelFunction(IsHidden = true)]
     public static string GoogleSearch(string query)
     {
         const string seachIndex1 = "/search?q=";
@@ -41,6 +44,7 @@ public class SearchEngine
         }
         return result.ToString();
     }
+    [ExcelFunction(IsHidden = true)]
     public static string BingSearch(string query)
     {
         const string seachIndex1 = "/search?q=";
@@ -58,6 +62,7 @@ public class SearchEngine
         }
         return result.ToString();
     }
+    [ExcelFunction(IsHidden = true)]
     public static bool PingWebsite(string url)
     {
         bool isPass;
