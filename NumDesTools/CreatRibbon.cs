@@ -8,8 +8,7 @@ using System.Windows.Forms;
 using System.Xml.Serialization;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
-  using ExcelDna.Registration;
-using Microsoft.Office.Interop.Excel;
+  using Microsoft.Office.Interop.Excel;
 using stdole;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
@@ -29,7 +28,7 @@ public partial class CreatRibbon
     public static string TempPath = @"\Client\Assets\Resources\Table";
     public static IRibbonUI R;
     private static CommandBarButton _btn;
-    private static readonly dynamic  _app = ExcelDnaUtil.Application;
+    private static readonly dynamic  App = ExcelDnaUtil.Application;
     public static dynamic XllPathList = new List<string>();
 
     AddInWatcher _watcher;
@@ -51,9 +50,9 @@ public partial class CreatRibbon
         _watcher.Dispose();
 
         //防止打开最后一个工作簿，excel.exe进程不关闭
-        if (_app.Workbooks.Count == 0)
+        if (App.Workbooks.Count == 0)
         {
-            _app.Quit();
+            App.Quit();
         }
     }
 
@@ -68,33 +67,35 @@ public partial class CreatRibbon
 
         var configFileName = "XllConfig.xml";
         var xllDirectory = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
-        var configPath = Path.Combine(xllDirectory, configFileName);
-
-        try
+        if (xllDirectory != null)
         {
-            // Load config
-            XmlSerializer configLoader = new XmlSerializer(typeof(AddInReloaderConfiguration));
-            AddInReloaderConfiguration config = (AddInReloaderConfiguration)configLoader.Deserialize(File.OpenRead(configPath));
-            _watcher = new AddInWatcher(config);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(@"Xll文件加载失败: " + ex);
+            var configPath = Path.Combine(xllDirectory, configFileName);
+
+            try
+            {
+                // Load config
+                var configLoader = new XmlSerializer(typeof(AddInReload));
+                var config = (AddInReload)configLoader.Deserialize(File.OpenRead(configPath));
+                _watcher = new AddInWatcher(config);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(@"Xll文件加载失败: " + ex);
+            }
         }
 
 
-        _app.SheetBeforeRightClick += new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
+        App.SheetBeforeRightClick += new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
     }
 
     private void UD_RightClickButton(object sh, Range target, ref bool cancel)
     {
         //excel文档已有的右键菜单cell
-        CommandBar mzBar = _app.CommandBars["cell"];
+        CommandBar mzBar = App.CommandBars["cell"];
         mzBar.Reset();
         var bars = mzBar.Controls;
-        var bookName = _app.ActiveWorkbook.Name;
-        var sheetName = _app.ActiveSheet.Name;
-        var sheet = _app.ActiveSheet;
+        var bookName = App.ActiveWorkbook.Name;
+        var sheetName = App.ActiveSheet.Name;
         var missing = Type.Missing;
         if (bookName == "角色怪物数据生成" || sheetName == "角色基础" )
         {
@@ -133,7 +134,7 @@ public partial class CreatRibbon
                     comButton1.Click += RoleDataPri.DataKey;
                     sw.Stop();
                     var ts2 = sw.Elapsed;
-                    _app.StatusBar = "导出完成，用时："+ ts2.ToString();
+                    App.StatusBar = "导出完成，用时："+ ts2.ToString();
                 }
                 if (comButton2 != null)
                 {
@@ -183,10 +184,10 @@ public partial class CreatRibbon
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
         var filesName = "";
-        if (_app.ActiveSheet != null)
+        if (App.ActiveSheet != null)
         {
-            _app.ScreenUpdating = false;
-            _app.DisplayAlerts = false;
+            App.ScreenUpdating = false;
+            App.DisplayAlerts = false;
 
             #region 生成窗口和基础控件
 
@@ -218,14 +219,14 @@ public partial class CreatRibbon
             #endregion 生成窗口和基础控件
 
             //获取公共目录
-            string outFilePath = _app.ActiveWorkbook.Path;
+            string outFilePath = App.ActiveWorkbook.Path;
             Directory.SetCurrentDirectory(Directory.GetParent(outFilePath)?.FullName ?? string.Empty);
             outFilePath = Directory.GetCurrentDirectory() + TempPath;
 
             #region 动态加载复选框
 
-            string filePath = _app.ActiveWorkbook.Path;
-            string fileName = _app.ActiveWorkbook.Name;
+            string filePath = App.ActiveWorkbook.Path;
+            string fileName = App.ActiveWorkbook.Name;
             var fileFolder = new DirectoryInfo(filePath);
             var fileCount = 1;
             foreach (var file in fileFolder.GetFiles())
@@ -316,14 +317,14 @@ public partial class CreatRibbon
                     {
                         var file2Name = cd.Text;
                         var missing = Type.Missing;
-                        Workbook book = _app.Workbooks.Open(filePath + "\\" + file2Name, missing,
+                        Workbook book = App.Workbooks.Open(filePath + "\\" + file2Name, missing,
                             missing, missing, missing, missing, missing, missing, missing,
                             missing, missing, missing, missing, missing, missing);
-                        _app.Visible = false;
-                        int sheetCount = _app.Worksheets.Count;
+                        App.Visible = false;
+                        int sheetCount = App.Worksheets.Count;
                         for (var i = 1; i <= sheetCount; i++)
                         {
-                            string sheetName = _app.Worksheets[i].Name;
+                            string sheetName = App.Worksheets[i].Name;
                             var key = "_cfg";
                             var isRealSheet = sheetName.ToLower().Contains(key.ToLower());
                             if (isRealSheet)
@@ -339,7 +340,7 @@ public partial class CreatRibbon
                         filesName += file2Name + "\n";
                     }
 
-                _app.Visible = true;
+                App.Visible = true;
                 stopwatch.Stop();
                 var timespan = stopwatch.Elapsed; //获取总时间
                 var milliseconds = timespan.TotalMilliseconds;
@@ -357,8 +358,8 @@ public partial class CreatRibbon
                     //app = null;
                 }
 
-                _app.ScreenUpdating = true;
-                _app.DisplayAlerts = true;
+                App.ScreenUpdating = true;
+                App.DisplayAlerts = true;
             }
 
             #endregion 导出文件
@@ -385,10 +386,10 @@ public partial class CreatRibbon
         var stopwatch = new Stopwatch();
         stopwatch.Start();
 
-        int sheetCount = _app.Worksheets.Count;
+        int sheetCount = App.Worksheets.Count;
         for (var i = 1; i <= sheetCount; i++)
         {
-            var sheetName = _app.Worksheets[i].Name;
+            var sheetName = App.Worksheets[i].Name;
             FormularCheck.GetFormularToCurrent(sheetName);
         }
 
@@ -480,10 +481,10 @@ public partial class CreatRibbon
 
     public void IndexSheetOpen_Click(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
     {
-        var ws = _app.ActiveSheet;
-        var cellCol = _app.Selection.Column;
+        var ws = App.ActiveSheet;
+        var cellCol = App.Selection.Column;
         var fileTemp = Convert.ToString(ws.Cells[7, cellCol].Value);
-        var cellAdress = _app.Selection.Address;
+        var cellAdress = App.Selection.Address;
         cellAdress = cellAdress.Substring(0, cellAdress.LastIndexOf("$") + 1) + "7";
         if (fileTemp != null)
         {
@@ -503,11 +504,11 @@ public partial class CreatRibbon
 
     public void IndexSheetUnOpen_Click(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
     {
-        string filePath = _app.ActiveWorkbook.Path;
-        var ws = _app.ActiveSheet;
-        var cellCol = _app.Selection.Column;
+        string filePath = App.ActiveWorkbook.Path;
+        var ws = App.ActiveSheet;
+        var cellCol = App.Selection.Column;
         var fileTemp = Convert.ToString(ws.Cells[7, cellCol].Value);
-        var cellAdress = _app.Selection.Address;
+        var cellAdress = App.Selection.Address;
         cellAdress = cellAdress.Substring(0, cellAdress.LastIndexOf("$") + 1) + "7";
         if (fileTemp != null)
         {
@@ -534,7 +535,7 @@ public partial class CreatRibbon
         //string filePath = app.ActiveWorkbook.FullName;
         //string filePath = @"C:\Users\user\Desktop\test.xlsx";
         //string sheetName = app.ActiveSheet.Name;
-        if (_app.ActiveSheet != null)
+        if (App.ActiveSheet != null)
         {
             #region 生成窗口和基础控件
 
@@ -566,14 +567,14 @@ public partial class CreatRibbon
             #endregion 生成窗口和基础控件
 
             //获取公共目录
-            string outFilePath = _app.ActiveWorkbook.Path;
+            string outFilePath = App.ActiveWorkbook.Path;
             Directory.SetCurrentDirectory(Directory.GetParent(outFilePath)?.FullName ?? string.Empty);
             outFilePath = Directory.GetCurrentDirectory() + TempPath;
 
             #region 动态加载复选框
 
             var i = 1;
-            foreach (var sheet in _app.Worksheets)
+            foreach (var sheet in App.Worksheets)
             {
                 string sheetName = sheet.Name;
                 const string key = "_cfg";
@@ -664,7 +665,7 @@ public partial class CreatRibbon
                     //errorLogs = errorLogs + errorLog;
                 }
 
-                _app.Visible = true;
+                App.Visible = true;
                 stopwatch.Stop();
                 var timespan = stopwatch.Elapsed; //获取总时间
                 var milliseconds = timespan.TotalMilliseconds;
@@ -694,21 +695,21 @@ public partial class CreatRibbon
     public void OneSheetOutPut_Click(IRibbonControl control)
     {
         //string filePath = app.ActiveWorkbook.FullName;
-        if (_app.ActiveSheet != null)
+        if (App.ActiveSheet != null)
         {
             //初始化清除老的CTP
             ErrorLogCtp.DisposeCtp();
             //检查代码运行时间
             var stopwatch = new Stopwatch();
             stopwatch.Start();
-            string sheetName = _app.ActiveSheet.Name;
+            string sheetName = App.ActiveSheet.Name;
             //获取公共目录
-            string outFilePath = _app.ActiveWorkbook.Path;
+            string outFilePath = App.ActiveWorkbook.Path;
             Directory.SetCurrentDirectory(Directory.GetParent(outFilePath)?.FullName ?? string.Empty);
             outFilePath = Directory.GetCurrentDirectory() + TempPath;
             var errorLog = ExcelSheetDataIsError2.GetData2(sheetName);
             if (errorLog == "") ExcelSheetData.GetDataToTxt(sheetName, outFilePath);
-            _app.Visible = true;
+            App.Visible = true;
             stopwatch.Stop();
             var timespan = stopwatch.Elapsed; //获取总时间
             var milliseconds = timespan.TotalMilliseconds; //换算成毫秒
@@ -716,7 +717,7 @@ public partial class CreatRibbon
             if (errorLog == "")
             {
                 var endTips = path + "~@~导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + "秒";
-                _app.StatusBar = endTips;
+                App.StatusBar = endTips;
                 //MessageBox.Show(sheetName + "\n" + "导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + "秒");
                 //var f = new DataExportForm
                 //{
@@ -830,15 +831,16 @@ public partial class CreatRibbon
 
     public void SvnCommitExcel_Click(IRibbonControl control)
     {
-        string path = _app.ActiveWorkbook.Path;
         //SvnTools.UpdateFiles(path);
     }
 
     public void SvnCommitTxt_Click(IRibbonControl control)
     {
-        string path = _app.ActiveWorkbook.Path;
+        string path = App.ActiveWorkbook.Path;
         Directory.SetCurrentDirectory(Directory.GetParent(path)?.FullName ?? throw new InvalidOperationException());
+/*
         path = Directory.GetCurrentDirectory() + TempPath;
+*/
         //SvnTools.UpdateFiles(path);
     }
 
@@ -851,7 +853,7 @@ public partial class CreatRibbon
         sw.Stop();
         var ts2 = sw.Elapsed;
         var milliseconds = ts2.TotalMilliseconds; //换算成毫秒
-        _app.StatusBar = "PVP(回合)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
+        App.StatusBar = "PVP(回合)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
     }
 
     public void PVP_J_Click(IRibbonControl control)
@@ -863,7 +865,7 @@ public partial class CreatRibbon
         sw.Stop();
         var ts2 = sw.Elapsed;
         var milliseconds = ts2.TotalMilliseconds; //换算成毫秒
-        _app.StatusBar = "PVP(即时)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
+        App.StatusBar = "PVP(即时)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
     }
 
     public void PVE_Click(IRibbonControl control)
@@ -875,19 +877,19 @@ public partial class CreatRibbon
         sw.Stop();
         var ts2 = sw.Elapsed;
         var milliseconds = ts2.TotalMilliseconds; //换算成毫秒
-        _app.StatusBar = "PVE(即时)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
+        App.StatusBar = "PVE(即时)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
     }
 
     public void RoleDataPreview_Click(IRibbonControl control)
     {
-        Worksheet ws = _app.ActiveSheet;
+        Worksheet ws = App.ActiveSheet;
         if (ws.Name == "角色基础")
         {
             if (control == null) throw new ArgumentNullException(nameof(control));
             LabelTextRoleDataPreview = LabelTextRoleDataPreview == "角色数据预览：开启" ? "角色数据预览：关闭" : "角色数据预览：开启";
             R.InvalidateControl("Button14");
             _ = new CellSelectChangePro();
-            _app.StatusBar = false;
+            App.StatusBar = false;
         }
         else
         {
@@ -914,7 +916,7 @@ public partial class CreatRibbon
     {
         var sw = new Stopwatch();
         sw.Start();
-        var indexWk = _app.ActiveWorkbook;
+        var indexWk = App.ActiveWorkbook;
         var sheet = indexWk.ActiveSheet;
         var name = sheet.Name;
         if (!name.Contains("【模板】"))
@@ -922,17 +924,17 @@ public partial class CreatRibbon
             MessageBox.Show(@"当前表格不是正确【模板】，不能写入数据");
             return;
         }
-        bool threadMode = false; 
-        ExcelDataAutoInsertMulti.InsertData(threadMode);
+
+        ExcelDataAutoInsertMulti.InsertData(false);
         sw.Stop();
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds,2);
-        _app.StatusBar = "完成，用时：" + ts2;
+        App.StatusBar = "完成，用时：" + ts2;
     }
     public void AutoInsertExcelDataThread_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
-        var indexWk = _app.ActiveWorkbook;
+        var indexWk = App.ActiveWorkbook;
         var sheet = indexWk.ActiveSheet;
         var name = sheet.Name;
         if (!name.Contains("【模板】"))
@@ -940,19 +942,16 @@ public partial class CreatRibbon
             MessageBox.Show(@"当前表格不是正确【模板】，不能写入数据");
             return;
         }
-        bool threadMode = true;
-        ExcelDataAutoInsertMulti.InsertData(threadMode);
+
+        ExcelDataAutoInsertMulti.InsertData(true);
         sw.Stop();
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-        _app.StatusBar = "完成，用时：" + ts2;
+        App.StatusBar = "完成，用时：" + ts2;
     }
     public void AutoInsertExcelDataDialog_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
-        var indexWk = _app.ActiveWorkbook;
-        var sheet = indexWk.ActiveSheet;
-        var name = sheet.Name;
         //if (!name.Contains("【模板】"))
         //{
         //    MessageBox.Show(@"当前表格不是正确【模板】，不能写入数据");
@@ -961,34 +960,34 @@ public partial class CreatRibbon
         ExcelDataInsertLanguage.AutoInsertData();
         sw.Stop();
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-        _app.StatusBar = "完成，用时：" + ts2;
+        App.StatusBar = "完成，用时：" + ts2;
     }
     public void AutoLinkExcel_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
-        dynamic indexWk = _app.ActiveWorkbook;
-        dynamic sheet = indexWk.ActiveSheet;
+        var indexWk = App.ActiveWorkbook;
+        var sheet = indexWk.ActiveSheet;
         var excelPath = indexWk.Path;
         ExcelDataAutoInsert.ExcelHyperLinks(excelPath,sheet);
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
-        _app.StatusBar = "完成，用时：" + ts2.ToString();
+        App.StatusBar = "完成，用时：" + ts2.ToString();
     }
     public void AutoCellFormatEPPlus_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
-        dynamic indexWk = _app.ActiveWorkbook;
-        dynamic sheet = indexWk.ActiveSheet;
+        var indexWk = App.ActiveWorkbook;
+        var sheet = indexWk.ActiveSheet;
         var excelPath = indexWk.Path;
         ExcelDataAutoInsert.ExcelHyperLinks(excelPath, sheet);
         //ExcelDataAutoInsert.CellFormatAuto();
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
-        _app.StatusBar = "完成，用时：" + ts2.ToString();
+        App.StatusBar = "完成，用时：" + ts2.ToString();
     }
     public void TestBar1_Click(IRibbonControl control)
     {
@@ -1009,7 +1008,7 @@ public partial class CreatRibbon
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
-        _app.StatusBar = "导出完成，用时：" + ts2.ToString();
+        App.StatusBar = "导出完成，用时：" + ts2.ToString();
     }
 
     public void TestBar2_Click(IRibbonControl control)
@@ -1025,7 +1024,7 @@ public partial class CreatRibbon
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
-        _app.StatusBar = "导出完成，用时：" + ts2.ToString();
+        App.StatusBar = "导出完成，用时：" + ts2.ToString();
         //DotaLegendBattle.LocalRC(8,3,3);
         //SVNTools.FileLogs();
         //SVNTools.CommitFile();
@@ -1043,7 +1042,7 @@ public partial class CreatRibbon
     private void App_SheetSelectionChange(object sh, Range target)
     {
         //excel文档已有的右键菜单cell
-        CommandBar mzBar = _app.CommandBars["cell"];
+        CommandBar mzBar = App.CommandBars["cell"];
         mzBar.Reset();
         var bars = mzBar.Controls;
         foreach (CommandBarControl tempContrl in bars)
@@ -1096,7 +1095,7 @@ public partial class CreatRibbon
     private void App_SheetSelectionChange1(object sh, Range target)
     {
         //右键重置避免按钮重复
-        CommandBar currentMenuBar = _app.CommandBars["cell"];
+        CommandBar currentMenuBar = App.CommandBars["cell"];
         //currentMenuBar.Reset();
         var bars = currentMenuBar.Controls;
         //删除右键

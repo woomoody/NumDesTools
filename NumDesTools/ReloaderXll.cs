@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System;
-using System.Data.SqlTypes;
 using System.Xml.Serialization;
 
 namespace NumDesTools;
@@ -11,19 +10,18 @@ namespace NumDesTools;
 class AddInWatcher : IDisposable
 {
     // For every directory we watch, keep track of all the add-ins that have files in that directory
-    Dictionary<string, WatchedDirectory> _watchedDirectories = new Dictionary<string, WatchedDirectory>();
-    HashSet<WatchedAddIn> _dirtyAddIns = new HashSet<WatchedAddIn>();
-    object _dirtyLock = new object();
+    public readonly Dictionary<string, WatchedDirectory> WatchedDirectories = new();
+    HashSet<WatchedAddIn> _dirtyAddIns = new();
+    readonly object _dirtyLock = new();
 
-    public AddInWatcher(AddInReloaderConfiguration config)
+    public AddInWatcher(AddInReload config)
     {
         foreach (var addIn in config.WatchedAddIns)
         {
             foreach (var file in addIn.WatchedFiles)
             {
                 var directory = Path.GetDirectoryName(file.Path);
-                WatchedDirectory wd;
-                if (!_watchedDirectories.TryGetValue(directory, out wd))
+                if (!WatchedDirectories.TryGetValue(directory ?? throw new InvalidOperationException(), out var wd))
                 {
                     wd = new WatchedDirectory(directory, InvalidateAddIn);
                 }
@@ -68,22 +66,20 @@ class AddInWatcher : IDisposable
 
     public void Dispose()
     {
-        foreach (var wd in _watchedDirectories.Values)
+        foreach (var wd in WatchedDirectories.Values)
         {
             wd.Dispose();
         }
     }
 
-    class WatchedDirectory : IDisposable
+    internal class WatchedDirectory : IDisposable
     {
-        string _path;
-        FileSystemWatcher _directoryWatcher;
-        Dictionary<string, WatchedAddIn> _watchedFiles;
-        Action<WatchedAddIn> _invalidateAddIn;
+        readonly FileSystemWatcher _directoryWatcher;
+        readonly Dictionary<string, WatchedAddIn> _watchedFiles;
+        readonly Action<WatchedAddIn> _invalidateAddIn;
 
         public WatchedDirectory(string path, Action<WatchedAddIn> invalidateAddIn)
         {
-            _path = path;
             _directoryWatcher = new FileSystemWatcher(path);
             _directoryWatcher.NotifyFilter = NotifyFilters.LastWrite;
             _directoryWatcher.Changed += DirectoryWatcher_Changed;
@@ -97,7 +93,7 @@ class AddInWatcher : IDisposable
         {
             foreach (var file in addIn.WatchedFiles)
             {
-                var fullPath = System.IO.Path.GetFullPath(file.Path);
+                var fullPath = Path.GetFullPath(file.Path);
                 _watchedFiles[fullPath] = addIn; // This only allows one add-in to watch a particular file.
             }
         }
@@ -109,10 +105,9 @@ class AddInWatcher : IDisposable
 
         void DirectoryWatcher_Changed(object sender, FileSystemEventArgs e)
         {
-            Debug.Assert(string.Equals(System.IO.Path.GetFullPath(e.FullPath), e.FullPath, StringComparison.OrdinalIgnoreCase));
+            Debug.Assert(string.Equals(Path.GetFullPath(e.FullPath), e.FullPath, StringComparison.OrdinalIgnoreCase));
 
-            WatchedAddIn addIn;
-            if (_watchedFiles.TryGetValue(e.FullPath, out addIn))
+            if (_watchedFiles.TryGetValue(e.FullPath, out var addIn))
             {
                 _invalidateAddIn(addIn);
             }
@@ -122,7 +117,7 @@ class AddInWatcher : IDisposable
 [Serializable]
 [XmlType(AnonymousType = true)]
 [XmlRoot(Namespace = "", IsNullable = false)]
-public class AddInReloaderConfiguration
+public class AddInReload
 {
     [XmlElement("WatchedAddIn", typeof(WatchedAddIn))]
     public List<WatchedAddIn> WatchedAddIns { get; set; }

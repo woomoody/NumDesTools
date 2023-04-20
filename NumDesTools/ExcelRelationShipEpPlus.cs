@@ -1,5 +1,6 @@
 ﻿namespace NumDesTools;
-internal class ExcelRelationShip
+
+internal class ExcelRelationShipEpPlus
 {
     //private static readonly dynamic App = ExcelDnaUtil.Application;
     //public static Dictionary<string, List<string>> ExcelLinkDictionary;
@@ -40,15 +41,27 @@ internal class ExcelRelationShip
     //        excelIdGroupStartTemp1.Add(excelIdGroupStartTemp2);
     //    }
     //    excelIdGroupStart.Add(excelIdGroupStartTemp1);
-    //    string writeMode = "修改";
+    //    string writeMode = "新增";
     //    var fileName = new List<string> { sheet.Range["C3"].value.ToString() };
+
+    //    var sw = new Stopwatch();
+    //    sw.Start();
     //    var linksExcel = CreateRelationShip(fileName, modeIdRow, writeMode, excelIdGroupStart);
+
+    //    sw.Stop();
+    //    var ts2 = sw.Elapsed;
+    //    Debug.Print("写入用时："+ts2.ToString());
+
     //    //把模板连接数据备份到excel
     //    var sheetLink = indexWk.Sheets["索引关键词"];
     //    sheetLink.Range["C2:D200"].ClearContents();
     //    string[,] array = linksExcel.Select(t => new[] { t.Item1, "A"+t.Item2 }).ToArray().ToRectangularArray();
     //    sheetLink.Range["C2:D" + (linksExcel.Count + 1)].Value = array;
+    //    ExcelHyperLinks();
+    //    //一般新增只进行1次
+    //    sheet.range["B3"].value = "修复";
     //}
+
     //public static void ExcelDic()
     //{
     //    var indexWk = App.ActiveWorkbook;
@@ -81,53 +94,22 @@ internal class ExcelRelationShip
     //        }
     //    }
     //}
-
-    //public static string ValueTypeToStringInNpoi(ICell cell, XSSFWorkbook workbook)
+    //public static int FindSourceRow(ExcelWorksheet sheet, int col, string searchValue)
     //{
-    //    var cellValueAsString = string.Empty;
-    //    if (cell != null)
-    //        switch (cell.CellType)
-    //        {
-    //            case CellType.Numeric:
-    //                cellValueAsString = cell.NumericCellValue.ToString(CultureInfo.InvariantCulture);
-    //                break;
-    //            case CellType.String:
-    //                cellValueAsString = cell.StringCellValue;
-    //                break;
-    //            case CellType.Boolean:
-    //                cellValueAsString = cell.BooleanCellValue.ToString();
-    //                break;
-    //            case CellType.Error:
-    //                cellValueAsString = cell.ErrorCellValue.ToString();
-    //                break;
-    //            case CellType.Formula:
-    //                // Create a formula evaluator
-    //                var evaluator = workbook.GetCreationHelper().CreateFormulaEvaluator();
-    //                // Evaluate the formula and get the resulting value
-    //                var value = evaluator.Evaluate(cell).NumberValue;
-    //                cellValueAsString = value.ToString(CultureInfo.CurrentCulture);
-    //                break;
-    //            default:
-    //                cellValueAsString = "";
-    //                break;
-    //        }
-
-    //    return cellValueAsString;
-    //}
-
-    //public static int FindSourceRow(ISheet sheet, int col, string searchValue, XSSFWorkbook workbook)
-    //{
-    //    for (var i = sheet.FirstRowNum; i <= sheet.LastRowNum; i++)
+    //    for (int row = 2; row <= sheet.Dimension.End.Row; row++)
     //    {
-    //        var row = sheet.GetRow(i);
-    //        if (row != null)
+    //        // 获取当前行的单元格数据
+    //        var cellValue = sheet.Cells[row, col].Value;
+
+    //        // 如果找到了匹配的值
+    //        if (cellValue != null && cellValue.ToString() == searchValue)
     //        {
-    //            var cell = row.GetCell(col);
-    //            var cellValue = ValueTypeToStringInNpoi(cell, workbook);
-    //            if (cellValue == searchValue) return i;
+    //            // 返回该单元格的行地址
+    //            var cellAddress = new ExcelCellAddress(row, col);
+    //            var rowAddress = cellAddress.Row;
+    //            return rowAddress;
     //        }
     //    }
-
     //    return -1;
     //}
 
@@ -189,10 +171,11 @@ internal class ExcelRelationShip
 
     //public static List<(string, int)> CreateRelationShip(List<string> oldFileName, List<List<(int digitCount, string temp)>> oldModelId, string writeMode, List<List<List<(int digitCount, string temp)>>> oldExcelIdGroup)
     //{
+    //    ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
     //    var indexWk = App.ActiveWorkbook;
     //    var excelPath = indexWk.Path;
-    //    var sSheet = indexWk.ActiveSheet;
-    //    var dataCount = Convert.ToInt32(sSheet.Range["E3"].value);
+    //    var sheet = indexWk.ActiveSheet;
+    //    var dataCount = Convert.ToInt32(sheet.Range["E3"].value);
     //    var modeIFirstIdList = new List<(string, int)>();
     //    while (true)
     //    {
@@ -206,63 +189,59 @@ internal class ExcelRelationShip
     //            if (excelFile == "多语言")
     //            {
     //                var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
-    //                path = newPath + @"\Excels\Localizations\Localizations.xlsx";
+    //                path = newPath+ @"\Excels\Localizations\Localizations.xlsx";
     //            }
-    //            if (excelFile == "icon.xlsx")
+    //            //个别表需要单独批量处理
+    //            if (excelFile is "icon.xlsx" or "item.xlsx" or "PictorialBookItemData.xlsx" or "ObjectLevel.xlsx" or null)
     //            {
     //                continue;
     //            }
-    //            var excel = new FileStream(path, FileMode.Open, FileAccess.Read);
-    //            var workbook = new XSSFWorkbook(excel);
-    //            var sheet = workbook.GetSheetAt(0);
+    //            var excel = new ExcelPackage(new FileInfo(path));
+    //            var workBook = excel.Workbook;
+    //            sheet = workBook.Worksheets[0];
+
     //            for (var k = 0; k < oldModelId[count].Count; k++)
     //            {
     //                var seachValue = oldModelId[count][k].Item2;
-    //                var rowReSourceRow = FindSourceRow(sheet, 1, seachValue, workbook);
+    //                var rowReSourceRow = FindSourceRow(sheet, 2, seachValue);
     //                if (rowReSourceRow == -1) continue;
     //                //模板ID记录，方便做Link
     //                if (k == 0)
     //                {
     //                    modeIFirstIdList.Add((excelFile, rowReSourceRow+1));
     //                }
-    //                var rowSource = sheet.GetRow(rowReSourceRow) ?? sheet.CreateRow(rowReSourceRow);
-    //                var colTotal = sheet.GetRow(1).LastCellNum + 1;
+    //                var colCount = sheet.Dimension.Columns;
     //                if (writeMode == "新增")
-    //                    if (sheet.LastRowNum != rowReSourceRow)
-    //                        sheet.ShiftRows(rowReSourceRow + 1, sheet.LastRowNum, dataCount, true, false);
-    //                //数据复制
-    //                for (var i = 0; i < dataCount; i++)
     //                {
-    //                    var rowTarget = sheet.GetRow(rowReSourceRow + i + 1) ?? sheet.CreateRow(rowReSourceRow + i + 1);
-    //                    for (var j = 1; j < colTotal; j++)
+    //                    sheet.InsertRow(rowReSourceRow + 1, dataCount);
+    //                }
+    //                //数据复制
+    //                for (var i =0; i < dataCount; i++)
+    //                {
+    //                    for (int j = 2; j < colCount+1; j++)
     //                    {
-    //                        var cellSource = rowSource.GetCell(j) ?? rowSource.GetCell(j);
-    //                        if (cellSource != null)
+    //                        var cellSource = sheet.Cells[rowReSourceRow, j];
+    //                        var cellTarget = sheet.Cells[rowReSourceRow+i+1,j];
+    //                        if (j == 2)
     //                        {
-    //                            var cellSourceValue = ValueTypeToStringInNpoi(cellSource, workbook);
-    //                            var cellTarget = rowTarget.GetCell(j) ?? rowTarget.CreateCell(j);
-    //                            //if(WriteMode=="修改") continue;
-    //                            //表格的ID字段的修改--后续要添加其他字段的更改方式
-    //                            if (j == 1)
-    //                            {
-    //                                var tempValue = oldExcelIdGroup[count][i][k].Item2;
-    //                                cellTarget.SetCellValue(tempValue);
-    //                                //Debug.Print(cellTarget.ToString());
-    //                            }
-    //                            else
-    //                            {
-    //                                cellTarget.SetCellValue(cellSourceValue);
-    //                            }
-
-    //                            cellTarget.CellStyle = cellSource.CellStyle;
+    //                            //索引编号列数据单独更改
+    //                            var tempValue = oldExcelIdGroup[count][i][k].Item2;
+    //                            cellTarget.Value = tempValue;
+    //                            //单元格样式更改
+    //                            cellSource.CopyStyles(cellTarget);
+    //                        }
+    //                        else
+    //                        {
+    //                            cellSource.Copy(cellTarget);
     //                        }
     //                    }
+    //                    //Debug.Print(cellTarget.ToString());
     //                }
-
     //                if (excelFile == null) continue;
     //                if (ExcelLinkDictionary.ContainsKey(excelFile))
     //                {
     //                    var indexExcelCount = 0;
+    //                    var mutilExcelInOneKey = new List<string>();
     //                    foreach (var indexExcel in ExcelLinkDictionary[excelFile])
     //                    {
     //                        var excelFileFixKey = ExcelFixKeyDictionary[excelFile][indexExcelCount];
@@ -278,26 +257,42 @@ internal class ExcelRelationShip
     //                        var newMode = new List<(int digitCount, string temp)>();
     //                        for (var i = 0; i < dataCount; i++)
     //                        {
-    //                            var rowFix = sheet.GetRow(rowReSourceRow + i + 1) ?? sheet.CreateRow(rowReSourceRow + i + 1);
-    //                            var cellFix = rowFix.GetCell(excelFileFixKey) ?? rowFix.CreateCell(excelFileFixKey);
-    //                            var cellFixValue = ValueTypeToStringInNpoi(cellFix, workbook);
-    //                            if(cellFixValue == null) continue;
-    //                            //特殊表格例外处理
-    //                            if (excelFile == "PictorialBookTagData.xlsx" && excelFileFixKey == 4)
+    //                            var cellFix = sheet.Cells[rowReSourceRow + i + 1, excelFileFixKey + 1];
+    //                            var cellFixValue="";
+    //                            if (cellFix.Value != null)
     //                            {
-    //                                var tempSc1 = sheet.GetRow(rowReSourceRow + i + 1).GetCell(excelFileFixKey-1).ToString();
-    //                                if (tempSc1 == "1")
+    //                                //Debug.Print(excelFile + "::" + cellFix.Value);
+    //                                cellFixValue = cellFix.Value.ToString();
+    //                            }
+    //                            //特殊表格例外处理
+    //                            if (excelFile == "PictorialBookTagData.xlsx" && excelFileFixKey ==4)
+    //                            {
+    //                                var tempSc1 = sheet.Cells[rowReSourceRow + i + 1, 2].Value.ToString();
+    //                                var tempSc2 = tempSc1[tempSc1.Length - 1].ToString();
+    //                                if (tempSc2=="2")
     //                                {
     //                                    continue;
     //                                }
     //                            }
     //                            else if (excelFile == "ShopMarketGood.xlsx" && excelFileFixKey == 4)
     //                            {
-    //                                var tempSc1 = sheet.GetRow(rowReSourceRow + i + 1).GetCell(excelFileFixKey).ToString();
+    //                                var tempSc1 = sheet.Cells[rowReSourceRow + i + 1, excelFileFixKey+1].Value.ToString();
     //                                var tempSc2 = tempSc1.Contains("110");
     //                                if (tempSc2)
     //                                {
     //                                    continue;
+    //                                }
+    //                            }
+    //                            else if (excelFile == "Mission.xlsx" && excelFileFixKey == 13)
+    //                            {
+    //                                var tempSc1 = sheet.Cells[rowReSourceRow + i + 1, excelFileFixKey].Value.ToString();
+    //                                if (tempSc1 == "30")
+    //                                {
+    //                                    mutilExcelInOneKey.Add("abc");
+    //                                }
+    //                                else if (tempSc1 == "PictorialBookItemData")
+    //                                {
+    //                                    mutilExcelInOneKey.Add("object.xlsx");
     //                                }
     //                            }
     //                            //每个字段的Value修改方式不一，需要调用方法:检测string是否有[，如果有则需要正则把所有的数值提取出来并替换
@@ -314,13 +309,16 @@ internal class ExcelRelationShip
     //                            var newFix = temp2.Except(cellSourceValueList).ToList();
 
     //                            cellFixValueIdList.Add(newFix);
-    //                            cellFix.SetCellValue(cellFixValue2);
-    //                            //cellFix.CellStyle = cellFix.CellStyle;
+    //                            cellFix.Value =cellFixValue2;
     //                        }
     //                        //有关联表的字段的ID传递出去
     //                        //表格关联字典中寻找下一个递归文件，有关联表的字段ID要生成List递归
     //                        if (!string.IsNullOrEmpty(indexExcel))
     //                        {
+    //                            if (mutilExcelInOneKey.Count != 0)
+    //                            {
+    //                                newFileName = mutilExcelInOneKey;
+    //                            }
     //                            newFileName.Add(indexExcel);
     //                            newModelId.Add(newMode);
     //                            newExcelId.Add(cellFixValueIdList);
@@ -330,15 +328,11 @@ internal class ExcelRelationShip
     //                    }
     //                }
     //            }
-    //            excel.Close();
-    //            var excel2 = new FileStream(path, FileMode.Create, FileAccess.Write);
-    //            workbook.Write(excel2);
-    //            workbook.Close();
-    //            excel2.Close();
+    //            excel.Save();
+    //            excel.Dispose();
     //            count++;
     //            App.StatusBar = "正在处理:" + excelFile + "文件";
     //        }
-
     //        if (newFileName.Count > 0)
     //        {
     //            oldFileName = newFileName;
@@ -352,25 +346,7 @@ internal class ExcelRelationShip
     //    return modeIFirstIdList;
     //}
 
-    //public static void FixValueType()
-    //{
-    //    //string str = "1#2,3#2,2"; // 要处理的字符串
-    //    var str = "1#2,3#2,4"; // 要处理的字符串
-    //    var tempList = CellFixValueKeyList(str);
-
-    //    var str1 = "[11001,11002,10003,10004]";
-
-    //    var keyBitCount = KeyBitCount(str1);
-
-    //    for (int i = 0; i < 20; i++)
-    //    {
-    //        str1 = RegNumReplaceNew(str1, tempList, false, keyBitCount, 2);
-    //        Debug.Print(str1);
-
-    //    }
-    //}
-
-    //private static List<(int digitCount, string temp)> KeyBitCount(string str)
+    //public static List<(int digitCount, string temp)> KeyBitCount(string str)
     //{
     //    var regex = new Regex(@"\d+");
     //    var matches = regex.Matches(str);
@@ -385,7 +361,7 @@ internal class ExcelRelationShip
     //    return keyBitCount;
     //}
 
-    //private static List<(int, int)> CellFixValueKeyList(string str)
+    //public static List<(int, int)> CellFixValueKeyList(string str)
     //{
     //    var monkeyList = new List<(int, int)>();
 
@@ -444,6 +420,18 @@ internal class ExcelRelationShip
     //    return monkeyList;
     //}
 
+
+    //public static void FixValueType()
+    //{
+    //    string str = "abc1001cde1001efg1001";
+    //    string pattern = @"(\D*\d+)\D+(\d+)(\D*\d+)*";
+    //    string result = Regex.Replace(str, pattern, m => {
+    //        int num = int.Parse(m.Groups[2].Value);
+    //        num++;
+    //        return m.Groups[1].Value + num.ToString() + m.Groups[3].Value;
+    //    });
+    //    Debug.Print(result);
+    //}
     //public static void ExcelHyperLinks()
     //{
     //    var indexWk = App.ActiveWorkbook;
@@ -458,7 +446,7 @@ internal class ExcelRelationShip
     //        var temp2 = sheet2.Cells[i, 4].value;
     //        linksExcel.Add((temp,temp2));
     //    }
-    //    for (var i = 3; i <= 101; i++)
+    //    for (var i = 3; i <= 201; i++)
     //    {
     //        for (var j = 2; j <= 20; j++)
     //        {

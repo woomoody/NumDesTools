@@ -15,7 +15,7 @@ public class ExcelUdf
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;
     private static readonly dynamic IndexWk = App.ActiveWorkbook;
-    private static readonly dynamic excelPath = IndexWk.Path;
+    private static readonly dynamic ExcelPath = IndexWk.Path;
     [ExcelFunction(Category = "test", IsVolatile = true, IsMacroType = true, Description = "测试自定义函数")]
     public static double Sum2Num([ExcelArgument(Description = "选个格子")] double a,
         [ExcelArgument(Description = "选个格子")] double b)
@@ -25,7 +25,7 @@ public class ExcelUdf
     [ExcelFunction(Category = "test2", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在列")]
     public static int FindKeyCol([ExcelArgument(Description = "工作簿")] string targetWorkbook, [ExcelArgument(Description = "目标行")] int row, [ExcelArgument(Description = "匹配值")] string searchValue, [ExcelArgument(Description = "工作表")] string targetSheet ="Sheet1")
     {
-        var path = excelPath + @"\" + targetWorkbook;
+        var path = ExcelPath + @"\" + targetWorkbook;
         var fs = new FileStream(path, FileMode.Open, FileAccess.Read,FileShare.ReadWrite);
         var workbook = new XSSFWorkbook(fs);
         var sheet = workbook.GetSheet(targetSheet);
@@ -55,7 +55,7 @@ public class ExcelUdf
     [ExcelFunction(Category = "test2", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在列")]
     public static int FindKeyRow([ExcelArgument(Description = "工作簿")] string targetWorkbook, [ExcelArgument(Description = "目标列")] int col, [ExcelArgument(Description = "匹配值")] string searchValue, [ExcelArgument(Description = "工作表")] string targetSheet="Sheet1")
     {
-        var path = excelPath + @"\" + targetWorkbook;
+        var path = ExcelPath + @"\" + targetWorkbook;
         var fs = new FileStream(path, FileMode.Open, FileAccess.Read,FileShare.ReadWrite);
         var workbook = new XSSFWorkbook(fs);
         var sheet = workbook.GetSheet(targetSheet);
@@ -63,7 +63,7 @@ public class ExcelUdf
         {
             sheet = workbook.GetSheetAt(0);
         }
-        for (int i = sheet.FirstRowNum; i <= sheet.LastRowNum; i++)
+        for (var i = sheet.FirstRowNum; i <= sheet.LastRowNum; i++)
         {
             var rowSource = sheet.GetRow(i);
             if (rowSource != null)

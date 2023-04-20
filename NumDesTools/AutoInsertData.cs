@@ -366,8 +366,8 @@ public class AutoInsertData
         }
 
         //备份字典
-        var relationshipsBF = new Dictionary<string, List<string>>();
-        foreach (var key in relationships.Keys) relationshipsBF[key] = new List<string>(relationships[key]);
+        var relationshipsBf = new Dictionary<string, List<string>>();
+        foreach (var key in relationships.Keys) relationshipsBf[key] = new List<string>(relationships[key]);
         //整理文件关联字典
         var relationships2 = new Dictionary<string, List<string>>(relationships);
         var relationships3 = new Dictionary<string, List<string>>();
@@ -397,7 +397,7 @@ public class AutoInsertData
         //根据key[0]的文件流（包含所有文件，并且有既定的顺序）进行内容写入::想办法给下一次文件写入传输：哪些字段要按照自定义模式修改（模板ID-上表字段值，修改方式、、、、上表关联下表）
         var rootPath = IndexWk.Path;
         var fileDic = relationships2["索引1.xlsx"];
-        var modeID = sheet.Range["B14"].Value2.ToString();
+        var modeId = sheet.Range["B14"].Value2.ToString();
         var dataNum = sheet.Range["C14"].Value2;
         for (var i = 0; i < fileDic.Count; i++)
         {
@@ -409,7 +409,7 @@ public class AutoInsertData
             var sheet1 = workbook.GetSheetAt(0);
             var rowCount = sheet1.LastRowNum;
             //查找模板ID,获取模板行
-            int modeIDrow = ModeIDrow(rowCount + 1, sheet1, modeID);
+            int modeIDrow = ModeIDrow(rowCount + 1, sheet1, modeId);
             var modeRow = sheet1.GetRow(modeIDrow) ?? sheet1.CreateRow(modeIDrow);
             //复制模板数据
             for (var j = 0; j < dataNum; j++)
@@ -453,10 +453,10 @@ public class AutoInsertData
         }
     }
 
-    public static void ActiveWorkbookWRDataByNPOI()
+    public static void ActiveWorkbookWrDataByNpoi()
     {
         App.ActiveWorkbook.Close();
-        var Missing = Type.Missing;
+        var missing = Type.Missing;
 
         var file2 = new FileStream(@"D:\M1Work\public\Excels\Tables\#自动填表.xlsm", FileMode.Open, FileAccess.Read);
         // 创建工作簿对象
@@ -474,9 +474,9 @@ public class AutoInsertData
         workbook.Write(file3);
         file2.Close();
         file3.Close();
-        Workbook book = App.Workbooks.Open(@"D:\M1Work\public\Excels\Tables\#自动填表.xlsm", Missing, Missing, Missing,
-            Missing, Missing, Missing, Missing,
-            Missing, Missing, Missing, Missing, Missing, Missing, Missing);
+        Workbook book = App.Workbooks.Open(@"D:\M1Work\public\Excels\Tables\#自动填表.xlsm", missing, missing, missing,
+            missing, missing, missing, missing,
+            missing, missing, missing, missing, missing, missing, missing);
         book.Close();
     }
 
