@@ -372,8 +372,8 @@ public static class ExcelToDataGridView
                       ";Extended Properties ='Excel 8.0;HDR=NO;IMEX=1'"; //导入时包含Excel中的第一行数据，并且将数字和字符混合的单元格视为文本进行导入
         var conn = new OleDbConnection(strConn);
         conn.Open();
-        string strExcel = "select  * from   [" + sheetName + "$]";
-        OleDbDataAdapter myCommand = new OleDbDataAdapter(strExcel, strConn);
+        var strExcel = "select  * from   [" + sheetName + "$]";
+        var myCommand = new OleDbDataAdapter(strExcel, strConn);
         var ds = new DataSet();
         myCommand.Fill(ds, "table1");
         Console.WriteLine(ds.Tables[0].Rows[0][0].ToString());

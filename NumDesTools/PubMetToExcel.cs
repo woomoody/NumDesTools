@@ -12,20 +12,20 @@ public class PubMetToExcel
         // 读取数据到一个二维数组中
         object[,] rangeValue = dataRange.Value;
         // 获取行数和列数
-        int rows = rangeValue.GetLength(0);
-        int columns = rangeValue.GetLength(1);
+        var rows = rangeValue.GetLength(0);
+        var columns = rangeValue.GetLength(1);
         // 定义工作表数据数组和表头数组
         var sheetData = new List<List<object>>();
         var sheetHeaderCol = new List<object>();
-        var sheetHeaderRow = new List<object>();
+        new List<object>();
         // 读取数据和表头
         //单线程
-        for (int row = 1; row <= rows; row++)
+        for (var row = 1; row <= rows; row++)
         {
             var rowList = new List<object>();
-            for (int column = 1; column <= columns; column++)
+            for (var column = 1; column <= columns; column++)
             {
-                object value = rangeValue[row, column];
+                var value = rangeValue[row, column];
                 if (row == 1)
                 {
                     sheetHeaderCol.Add(value);
@@ -41,7 +41,7 @@ public class PubMetToExcel
                 sheetData.Add(rowList);
             }
         }
-        (List<object> sheetHeaderCol, List<List<object>> sheetData) excelData = (sheetHeaderCol, sheetData);
+        var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
     public static Dictionary<string, List<Tuple<object[,]>>> ExcelDataToDictionary(dynamic data, dynamic dicKeyCol, dynamic dicValueCol,int valueRowCount, int valueColCount=1)
@@ -54,10 +54,10 @@ public class PubMetToExcel
 
             if (value == null) continue;
 
-            object[,] values = new object[valueRowCount, valueColCount];
-            for (int k = 0; k < valueRowCount; k++)
+            var values = new object[valueRowCount, valueColCount];
+            for (var k = 0; k < valueRowCount; k++)
             {
-                for (int j = 0; j < valueColCount; j++)
+                for (var j = 0; j < valueColCount; j++)
                 {
                     var valueTemp = data[i + k][dicValueCol + j];
                     values[k, j] = valueTemp;
@@ -70,8 +70,7 @@ public class PubMetToExcel
             }
             else
             {
-                var list = new List<Tuple<object[,]>>();
-                list.Add(tuple);
+                var list = new List<Tuple<object[,]>> { tuple };
                 dic.Add(value, list);
             }
         }
