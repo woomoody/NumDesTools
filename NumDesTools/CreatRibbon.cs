@@ -5,8 +5,10 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using System.Xml.Serialization;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
+  using ExcelDna.Registration;
 using Microsoft.Office.Interop.Excel;
 using stdole;
 using Button = System.Windows.Forms.Button;
@@ -30,6 +32,7 @@ public partial class CreatRibbon
     private static readonly dynamic  _app = ExcelDnaUtil.Application;
     public static dynamic XllPathList = new List<string>();
 
+    AddInWatcher _watcher;
     void IExcelAddIn.AutoClose()
     {
         //string filePath = app.ActiveWorkbook.Path;
@@ -40,10 +43,13 @@ public partial class CreatRibbon
         //XlCall.Excel(XlCall.xlcAlert, "AutoClose");//采用C API接口
 
         //以便插件关闭时，注销掉相关插件，在XLL更新是不会出错
-        foreach (var path in XllPathList)
-        {
-            ExcelIntegration.UnregisterXLL(path);
-        }
+        //foreach (var path in XllPathList)
+        //{
+        //    ExcelIntegration.UnregisterXLL(path);
+        //}
+
+        _watcher.Dispose();
+
         //防止打开最后一个工作簿，excel.exe进程不关闭
         if (_app.Workbooks.Count == 0)
         {
@@ -58,22 +64,26 @@ public partial class CreatRibbon
         //_app.SheetSelectionChange += new Excel.WorkbookEvents_SheetSelectionChangeEventHandler(App_SheetSelectionChange); ;
         //XlCall.Excel(XlCall.xlcAlert, "AutoOpen");
         //打开插件时会自动检索指定名字的XLL文件
-        XllPathList = GetAllXllPath();
-        _app.SheetBeforeRightClick += new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
-    }
+        //XllPathList = GetAllXllPath();
 
-    private static List<string> GetAllXllPath()
-    {
-        var pathList =new List<string>();
-        foreach (var addIn in _app.AddIns)
+        var configFileName = "XllConfig.xml";
+        var xllDirectory = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
+        var configPath = Path.Combine(xllDirectory, configFileName);
+
+        try
         {
-            var fullName = addIn.FullName;
-            if (fullName.EndsWith("NumDesToolsPack64.XLL", StringComparison.OrdinalIgnoreCase))
-            {
-                pathList.Add(addIn.FullName);
-            }
+            // Load config
+            XmlSerializer configLoader = new XmlSerializer(typeof(AddInReloaderConfiguration));
+            AddInReloaderConfiguration config = (AddInReloaderConfiguration)configLoader.Deserialize(File.OpenRead(configPath));
+            _watcher = new AddInWatcher(config);
         }
-        return pathList;
+        catch (Exception ex)
+        {
+            MessageBox.Show(@"Xll文件加载失败: " + ex);
+        }
+
+
+        _app.SheetBeforeRightClick += new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
     }
 
     private void UD_RightClickButton(object sh, Range target, ref bool cancel)
