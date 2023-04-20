@@ -17,6 +17,7 @@ using Color = System.Drawing.Color;
  namespace NumDesTools;
 public class ExcelDataAutoInsert
 {
+    [ExcelFunction(IsHidden = true)]
     public static int FindTitle(dynamic sheet,int rows,string findValue)
     {
         var maxColumn = sheet.UsedRange.Columns.Count;
@@ -65,100 +66,100 @@ public class ExcelDataAutoInsert
         }
         return -1;
     }
-/*
-    public static int FindKeyColNpoi(string excelPath, string targetWorkbook, int rows, string findValue, string targetSheet = "Sheet1")
-    {
-        string path;
-        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
-        switch (targetWorkbook)
+    /*
+        public static int FindKeyColNpoi(string excelPath, string targetWorkbook, int rows, string findValue, string targetSheet = "Sheet1")
         {
-            case "Localizations.xlsx":
-                path = newPath + @"\Excels\Localizations\Localizations.xlsx";
-                break;
-            case "UIConfigs.xlsx":
-                path = newPath + @"\Excels\UIs\UIConfigs.xlsx";
-                break;
-            case "UIItemConfigs.xlsx":
-                path = newPath + @"\Excels\UIs\UIItemConfigs.xlsx";
-                break;
-            default:
-                path = excelPath + @"\" + targetWorkbook;
-                break;
-        }
-        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        var workbook = new XSSFWorkbook(fs);
-        var sheet = workbook.GetSheet(targetSheet);
-        if (sheet == null)
-        {
-            sheet = workbook.GetSheetAt(0);
-        }
-        var rowSource = sheet.GetRow(rows);
-        for (int j = rowSource.FirstCellNum; j <= rowSource.LastCellNum; j++)
-        {
-            var cell = rowSource.GetCell(j);
-            if (cell != null)
+            string path;
+            var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
+            switch (targetWorkbook)
             {
-                var cellValue = cell.ToString();
-                if (cellValue == findValue)
+                case "Localizations.xlsx":
+                    path = newPath + @"\Excels\Localizations\Localizations.xlsx";
+                    break;
+                case "UIConfigs.xlsx":
+                    path = newPath + @"\Excels\UIs\UIConfigs.xlsx";
+                    break;
+                case "UIItemConfigs.xlsx":
+                    path = newPath + @"\Excels\UIs\UIItemConfigs.xlsx";
+                    break;
+                default:
+                    path = excelPath + @"\" + targetWorkbook;
+                    break;
+            }
+            var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            var workbook = new XSSFWorkbook(fs);
+            var sheet = workbook.GetSheet(targetSheet);
+            if (sheet == null)
+            {
+                sheet = workbook.GetSheetAt(0);
+            }
+            var rowSource = sheet.GetRow(rows);
+            for (int j = rowSource.FirstCellNum; j <= rowSource.LastCellNum; j++)
+            {
+                var cell = rowSource.GetCell(j);
+                if (cell != null)
                 {
-                    workbook.Close();
-                    fs.Close();
-                    return j;
+                    var cellValue = cell.ToString();
+                    if (cellValue == findValue)
+                    {
+                        workbook.Close();
+                        fs.Close();
+                        return j;
+                    }
                 }
             }
+            workbook.Close();
+            fs.Close();
+            return 0;
         }
-        workbook.Close();
-        fs.Close();
-        return 0;
-    }
-*/
-/*
-    public static int FindKeyRowNpoi(string excelPath, string targetWorkbook, int cols, string findValue, string targetSheet = "Sheet1")
-    {
-        string path;
-        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
-        switch (targetWorkbook)
+    */
+    /*
+        public static int FindKeyRowNpoi(string excelPath, string targetWorkbook, int cols, string findValue, string targetSheet = "Sheet1")
         {
-            case "Localizations.xlsx":
-                path = newPath + @"\Excels\Localizations\Localizations.xlsx";
-                break;
-            case "UIConfigs.xlsx":
-                path = newPath + @"\Excels\UIs\UIConfigs.xlsx";
-                break;
-            case "UIItemConfigs.xlsx":
-                path = newPath + @"\Excels\UIs\UIItemConfigs.xlsx";
-                break;
-            default:
-                path = excelPath + @"\" + targetWorkbook;
-                break;
-        }
-        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        var workbook = new XSSFWorkbook(fs);
-        var sheet = workbook.GetSheet(targetSheet);
-        if (sheet == null)
-        {
-            sheet = workbook.GetSheetAt(0);
-        }
-        for (int i = sheet.FirstRowNum; i <= sheet.LastRowNum; i++)
-        {
-            var rowSource = sheet.GetRow(i);
-            if (rowSource != null)
+            string path;
+            var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
+            switch (targetWorkbook)
             {
-                var cell = rowSource.GetCell(cols);
-                var cellValue = cell.ToString();
-                if (cellValue == findValue)
+                case "Localizations.xlsx":
+                    path = newPath + @"\Excels\Localizations\Localizations.xlsx";
+                    break;
+                case "UIConfigs.xlsx":
+                    path = newPath + @"\Excels\UIs\UIConfigs.xlsx";
+                    break;
+                case "UIItemConfigs.xlsx":
+                    path = newPath + @"\Excels\UIs\UIItemConfigs.xlsx";
+                    break;
+                default:
+                    path = excelPath + @"\" + targetWorkbook;
+                    break;
+            }
+            var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            var workbook = new XSSFWorkbook(fs);
+            var sheet = workbook.GetSheet(targetSheet);
+            if (sheet == null)
+            {
+                sheet = workbook.GetSheetAt(0);
+            }
+            for (int i = sheet.FirstRowNum; i <= sheet.LastRowNum; i++)
+            {
+                var rowSource = sheet.GetRow(i);
+                if (rowSource != null)
                 {
-                    workbook.Close();
-                    fs.Close();
-                    return i;
+                    var cell = rowSource.GetCell(cols);
+                    var cellValue = cell.ToString();
+                    if (cellValue == findValue)
+                    {
+                        workbook.Close();
+                        fs.Close();
+                        return i;
+                    }
                 }
             }
+            workbook.Close();
+            fs.Close();
+            return -1;
         }
-        workbook.Close();
-        fs.Close();
-        return -1;
-    }
-*/
+    */
     /*
         private static List<(int, int)> ExcelDic(dynamic excelModeIdDictionary, dynamic excelModeIdNewDictionary, dynamic excelFixKeyDictionary, dynamic excelFixKeyMethodDictionary, dynamic excelFixGroup,dynamic sheet)
         {
@@ -424,7 +425,7 @@ public class ExcelDataAutoInsert
             return str;
         }
     */
-
+    [ExcelFunction(IsHidden = true)]
     public static string ErrorExcelMark(dynamic errorExcelList,dynamic sheet )
     {
         var strBuild = new StringBuilder();
@@ -752,164 +753,164 @@ public class ExcelDataAutoInsert
 
         return monkeyList;
     }
-/*
-    private static List<(int, string, string)> MultiExcelDataWrite(int excelCount, int addValue, dynamic excelFixGroup, dynamic excelModeIdDictionary, dynamic excelModeIdDNewictionary, dynamic excelFixKeyDictionary, dynamic excelFixKeyMethodDictionary, dynamic excelPath)
-    {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        var excelName = excelFixGroup[excelCount];
-        var startValue = excelModeIdDictionary[excelCount][0].Item1;
-        var endValue = excelModeIdDictionary[excelCount][0].Item2;
-        var isInertRowValue = excelModeIdDNewictionary[excelCount][0].Item1;
-        var errorExcel =0;
-        var errorExcelLog="";
-        var errorList = new List<(int, string,string)>();
-        string path = ExcelPathIgnore(excelPath, excelName);
-        var excel = new ExcelPackage(new FileInfo(path));
-        ExcelWorkbook workBook;
-        try
+    /*
+        private static List<(int, string, string)> MultiExcelDataWrite(int excelCount, int addValue, dynamic excelFixGroup, dynamic excelModeIdDictionary, dynamic excelModeIdDNewictionary, dynamic excelFixKeyDictionary, dynamic excelFixKeyMethodDictionary, dynamic excelPath)
         {
-            workBook = excel.Workbook;
-        }
-        catch (Exception ex)
-        {
-            errorExcel = excelCount * 2 + 2;
-            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
-            errorList.Add((errorExcel, errorExcelLog, excelName));
-            return errorList;
-        }
-
-        ExcelWorksheet sheet;
-        try
-        {
-            sheet = workBook.Worksheets["Sheet1"];
-        }
-        catch (Exception ex)
-        {
-            errorExcel = excelCount * 2 + 2;
-            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
-            errorList.Add((errorExcel, errorExcelLog, excelName));
-            return errorList;
-        }
-        if (sheet == null)
-        {
-            sheet = workBook.Worksheets[0];
-        }
-        var startRowSource = FindSourceRow(sheet, 2, startValue);
-        if (startRowSource == -1)
-        {
-            errorExcel = excelCount * 2 + 2;
-            errorExcelLog = excelName + "#【初始模板】#[" + startValue + "]未找到(序号出错)";
-            errorList.Add((errorExcel, errorExcelLog, excelName));
-            return errorList;
-        }
-        var endRowSource = FindSourceRow(sheet, 2, endValue);
-        if (endRowSource == -1)
-        {
-            errorExcel = excelCount * 2 + 2;
-            errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]未找到(序号出错)";
-            errorList.Add((errorExcel, errorExcelLog, excelName));
-            return errorList;
-        }
-        var colCount = sheet.Dimension.Columns;
-        var count = endRowSource - startRowSource + 1;
-        //数据复制
-        var isInertRowTarget = FindSourceRow(sheet, 2, isInertRowValue);
-        if (isInertRowValue != "")
-        {
-            if (isInertRowTarget == -1)
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            var excelName = excelFixGroup[excelCount];
+            var startValue = excelModeIdDictionary[excelCount][0].Item1;
+            var endValue = excelModeIdDictionary[excelCount][0].Item2;
+            var isInertRowValue = excelModeIdDNewictionary[excelCount][0].Item1;
+            var errorExcel =0;
+            var errorExcelLog="";
+            var errorList = new List<(int, string,string)>();
+            string path = ExcelPathIgnore(excelPath, excelName);
+            var excel = new ExcelPackage(new FileInfo(path));
+            ExcelWorkbook workBook;
+            try
             {
-                sheet.InsertRow(endRowSource + 1, count);
-                var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
-                var cellTarget = sheet.Cells[endRowSource + 1, 1, endRowSource + count, colCount];
-                cellSource.Copy(cellTarget, ExcelRangeCopyOptionFlags.ExcludeConditionalFormatting | ExcelRangeCopyOptionFlags.ExcludeMergedCells);
-                cellSource.CopyStyles(cellTarget);
+                workBook = excel.Workbook;
             }
-        }
-        else
-        {
-            errorExcel = excelCount * 2 + 2;
-            errorExcelLog = excelName + "#【实际模板（上一期）】#[" + isInertRowValue + "]未找到(序号出错)";
-            errorList.Add((errorExcel, errorExcelLog, excelName));
-            return errorList;
-        }
-        //数据修改
-        var colCounMult = excelFixKeyDictionary[excelCount].Count;
-        var colThreadCount = 8; // 线程数
-        int colBatchSize = colCounMult / colThreadCount; // 每个线程处理的数据量
-        Parallel.For(0, colThreadCount, e =>
-        {
-            var startRow = e * colBatchSize;
-            var endRow = (e + 1) * colBatchSize;
-            if (e == colThreadCount - 1) endRow = colCounMult; // 最后一个线程处理剩余的数据
-            for (var k = startRow; k < endRow; k++)
+            catch (Exception ex)
             {
-                //查找字段所在列
-                string excelKey = excelFixKeyDictionary[excelCount][k];
-                var excelFileFixKey = FindSourceCol(sheet, 2, excelKey);
-                //修改字段字典中的字段值，各自方法不一
-                var rowThreadCount = 4; // 线程数
-                int rowBatchSize = count / rowThreadCount; // 每个线程处理的数据量
-                // 并发执行任务
-                var k1 = k;
-                Parallel.For(0, rowThreadCount, i =>
+                errorExcel = excelCount * 2 + 2;
+                errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
+                errorList.Add((errorExcel, errorExcelLog, excelName));
+                return errorList;
+            }
+
+            ExcelWorksheet sheet;
+            try
+            {
+                sheet = workBook.Worksheets["Sheet1"];
+            }
+            catch (Exception ex)
+            {
+                errorExcel = excelCount * 2 + 2;
+                errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
+                errorList.Add((errorExcel, errorExcelLog, excelName));
+                return errorList;
+            }
+            if (sheet == null)
+            {
+                sheet = workBook.Worksheets[0];
+            }
+            var startRowSource = FindSourceRow(sheet, 2, startValue);
+            if (startRowSource == -1)
+            {
+                errorExcel = excelCount * 2 + 2;
+                errorExcelLog = excelName + "#【初始模板】#[" + startValue + "]未找到(序号出错)";
+                errorList.Add((errorExcel, errorExcelLog, excelName));
+                return errorList;
+            }
+            var endRowSource = FindSourceRow(sheet, 2, endValue);
+            if (endRowSource == -1)
+            {
+                errorExcel = excelCount * 2 + 2;
+                errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]未找到(序号出错)";
+                errorList.Add((errorExcel, errorExcelLog, excelName));
+                return errorList;
+            }
+            var colCount = sheet.Dimension.Columns;
+            var count = endRowSource - startRowSource + 1;
+            //数据复制
+            var isInertRowTarget = FindSourceRow(sheet, 2, isInertRowValue);
+            if (isInertRowValue != "")
+            {
+                if (isInertRowTarget == -1)
                 {
-                    var startCol = i * rowBatchSize;
-                    var endCol= (i + 1) * rowBatchSize;
-                    if (i == rowThreadCount - 1) endCol = count; // 最后一个线程处理剩余的数据
-
-                    for (var j = startCol; j < endCol; j++)
+                    sheet.InsertRow(endRowSource + 1, count);
+                    var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
+                    var cellTarget = sheet.Cells[endRowSource + 1, 1, endRowSource + count, colCount];
+                    cellSource.Copy(cellTarget, ExcelRangeCopyOptionFlags.ExcludeConditionalFormatting | ExcelRangeCopyOptionFlags.ExcludeMergedCells);
+                    cellSource.CopyStyles(cellTarget);
+                }
+            }
+            else
+            {
+                errorExcel = excelCount * 2 + 2;
+                errorExcelLog = excelName + "#【实际模板（上一期）】#[" + isInertRowValue + "]未找到(序号出错)";
+                errorList.Add((errorExcel, errorExcelLog, excelName));
+                return errorList;
+            }
+            //数据修改
+            var colCounMult = excelFixKeyDictionary[excelCount].Count;
+            var colThreadCount = 8; // 线程数
+            int colBatchSize = colCounMult / colThreadCount; // 每个线程处理的数据量
+            Parallel.For(0, colThreadCount, e =>
+            {
+                var startRow = e * colBatchSize;
+                var endRow = (e + 1) * colBatchSize;
+                if (e == colThreadCount - 1) endRow = colCounMult; // 最后一个线程处理剩余的数据
+                for (var k = startRow; k < endRow; k++)
+                {
+                    //查找字段所在列
+                    string excelKey = excelFixKeyDictionary[excelCount][k];
+                    var excelFileFixKey = FindSourceCol(sheet, 2, excelKey);
+                    //修改字段字典中的字段值，各自方法不一
+                    var rowThreadCount = 4; // 线程数
+                    int rowBatchSize = count / rowThreadCount; // 每个线程处理的数据量
+                    // 并发执行任务
+                    var k1 = k;
+                    Parallel.For(0, rowThreadCount, i =>
                     {
-                        //字典会把空值当0用
-                        if (excelFileFixKey != -1)
+                        var startCol = i * rowBatchSize;
+                        var endCol= (i + 1) * rowBatchSize;
+                        if (i == rowThreadCount - 1) endCol = count; // 最后一个线程处理剩余的数据
+
+                        for (var j = startCol; j < endCol; j++)
                         {
-                            var cellSource = sheet.Cells[endRowSource , excelFileFixKey];
-                            var cellFix = sheet.Cells[endRowSource + j + 1, excelFileFixKey];
-                            if (cellSource.Value == null)
+                            //字典会把空值当0用
+                            if (excelFileFixKey != -1)
                             {
-                                continue;
-                            }
+                                var cellSource = sheet.Cells[endRowSource , excelFileFixKey];
+                                var cellFix = sheet.Cells[endRowSource + j + 1, excelFileFixKey];
+                                if (cellSource.Value == null)
+                                {
+                                    continue;
+                                }
 
-                            if (cellSource.Value.ToString() == "")
-                            {
-                                continue;
-                            }
+                                if (cellSource.Value.ToString() == "")
+                                {
+                                    continue;
+                                }
 
-                            // 字段每个数字位数统计，原始modeID统计
-                            //KeyBitCount(cellFix.Value.ToString());
-                            // 字段值改写方法
-                            var temp1 = CellFixValueKeyList(excelFixKeyMethodDictionary[excelCount][k1]);
-                            // 修改字符串
-                            var cellFixValue = StringRegPlace(cellSource.Value.ToString(), temp1, addValue);
-                            if (cellFixValue == "^error^")
-                            {
-                                errorExcel = excelCount * 2 + 2;
-                                errorExcel = excelCount * 2 + 2;
-                                errorExcelLog = excelName + "#【修改模式】#[" + excelKey + "]字段方法写错";
-                                errorList.Add((errorExcel, errorExcelLog, excelName));
-                                return; // 终止当前线程
-                            }
+                                // 字段每个数字位数统计，原始modeID统计
+                                //KeyBitCount(cellFix.Value.ToString());
+                                // 字段值改写方法
+                                var temp1 = CellFixValueKeyList(excelFixKeyMethodDictionary[excelCount][k1]);
+                                // 修改字符串
+                                var cellFixValue = StringRegPlace(cellSource.Value.ToString(), temp1, addValue);
+                                if (cellFixValue == "^error^")
+                                {
+                                    errorExcel = excelCount * 2 + 2;
+                                    errorExcel = excelCount * 2 + 2;
+                                    errorExcelLog = excelName + "#【修改模式】#[" + excelKey + "]字段方法写错";
+                                    errorList.Add((errorExcel, errorExcelLog, excelName));
+                                    return; // 终止当前线程
+                                }
 
-                            if (double.TryParse(cellFixValue, out double number))
-                            {
-                                cellFix.Value = number;
-                            }
-                            else
-                            {
-                                cellFix.Value = cellFixValue;
+                                if (double.TryParse(cellFixValue, out double number))
+                                {
+                                    cellFix.Value = number;
+                                }
+                                else
+                                {
+                                    cellFix.Value = cellFixValue;
+                                }
                             }
                         }
-                    }
-                });
-            }
+                    });
+                }
 
-        });
-        excel.Save();
-        excel.Dispose();
-        errorList.Add((errorExcel, errorExcelLog, excelName));
-        return errorList;
-    }
-*/
-
+            });
+            excel.Save();
+            excel.Dispose();
+            errorList.Add((errorExcel, errorExcelLog, excelName));
+            return errorList;
+        }
+    */
+    [ExcelFunction(IsHidden = true)]
     public static string ExcelPathIgnore(dynamic excelPath, dynamic excelName)
     {
         string path;
@@ -1539,7 +1540,7 @@ public class ExcelDataAutoInsert
         return errorList;
     }
 
-
+    [ExcelFunction(IsHidden = true)]
     public static string ErrorLogAnalysis(dynamic errorList, dynamic sheet)
     {
         var errorLog = "";

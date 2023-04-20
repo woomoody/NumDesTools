@@ -241,7 +241,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AutoInsertData.cs" />
     <Compile Include="ExcelDataAutoInsert.cs" />
     <Compile Include="ExcelRelationShipEpPlus.cs" />
     <Compile Include="ExcelRelationShip.cs" />

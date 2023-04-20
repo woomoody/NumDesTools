@@ -109,6 +109,7 @@ public static class ErrorLogCtp
 //运行表格检查，检查表格索引字段是否在关联表中存在
 public static class ExcelIndexDataIsWrong
 {
+    [ExcelFunction(IsHidden = true)]
     public static string FileToStr(string filepath)
     {
         var fileStr = "";
@@ -126,6 +127,7 @@ public static class ExcelIndexDataIsWrong
 //运行表格检查，检查表格字段是否有错误信息
 public static class ExcelSheetDataIsError
 {
+    [ExcelFunction(IsHidden = true)]
     public static string GetData(string sheetName, string fileName, string filePath)
     {
         if (sheetName == null) throw new ArgumentNullException(nameof(sheetName));
@@ -255,6 +257,7 @@ public static class ExcelSheetDataIsError
 //运行表格检查，检查表格字段是否有错误信息2
 public static class ExcelSheetDataIsError2
 {
+    [ExcelFunction(IsHidden = true)]
     public static string GetData2(string sheetName)
     {
         dynamic app = ExcelDnaUtil.Application;
