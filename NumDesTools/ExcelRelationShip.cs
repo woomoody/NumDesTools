@@ -1,4 +1,5 @@
 ﻿namespace NumDesTools;
+
 internal class ExcelRelationShip
 {
     //private static readonly dynamic App = ExcelDnaUtil.Application;
@@ -498,4 +499,3 @@ internal class ExcelRelationShip
     //    }
     //}
 }
-

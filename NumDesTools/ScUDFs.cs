@@ -16,23 +16,24 @@ public class ExcelUdf
     private static readonly dynamic App = ExcelDnaUtil.Application;
     private static readonly dynamic IndexWk = App.ActiveWorkbook;
     private static readonly dynamic ExcelPath = IndexWk.Path;
+
     [ExcelFunction(Category = "test", IsVolatile = true, IsMacroType = true, Description = "测试自定义函数")]
     public static double Sum2Num([ExcelArgument(Description = "选个格子")] double a,
         [ExcelArgument(Description = "选个格子")] double b)
     {
         return a + b;
     }
+
     [ExcelFunction(Category = "test2", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在列")]
-    public static int FindKeyCol([ExcelArgument(Description = "工作簿")] string targetWorkbook, [ExcelArgument(Description = "目标行")] int row, [ExcelArgument(Description = "匹配值")] string searchValue, [ExcelArgument(Description = "工作表")] string targetSheet ="Sheet1")
+    public static int FindKeyCol([ExcelArgument(Description = "工作簿")] string targetWorkbook,
+        [ExcelArgument(Description = "目标行")] int row, [ExcelArgument(Description = "匹配值")] string searchValue,
+        [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1")
     {
         var path = ExcelPath + @"\" + targetWorkbook;
-        var fs = new FileStream(path, FileMode.Open, FileAccess.Read,FileShare.ReadWrite);
+        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         var workbook = new XSSFWorkbook(fs);
         var sheet = workbook.GetSheet(targetSheet);
-        if (sheet == null)
-        {
-            sheet= workbook.GetSheetAt(0);
-        }
+        if (sheet == null) sheet = workbook.GetSheetAt(0);
         var rowSource = sheet.GetRow(row);
         for (int j = rowSource.FirstCellNum; j <= rowSource.LastCellNum; j++)
         {
@@ -48,21 +49,22 @@ public class ExcelUdf
                 }
             }
         }
+
         workbook.Close();
         fs.Close();
         return -1;
     }
+
     [ExcelFunction(Category = "test2", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在列")]
-    public static int FindKeyRow([ExcelArgument(Description = "工作簿")] string targetWorkbook, [ExcelArgument(Description = "目标列")] int col, [ExcelArgument(Description = "匹配值")] string searchValue, [ExcelArgument(Description = "工作表")] string targetSheet="Sheet1")
+    public static int FindKeyRow([ExcelArgument(Description = "工作簿")] string targetWorkbook,
+        [ExcelArgument(Description = "目标列")] int col, [ExcelArgument(Description = "匹配值")] string searchValue,
+        [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1")
     {
         var path = ExcelPath + @"\" + targetWorkbook;
-        var fs = new FileStream(path, FileMode.Open, FileAccess.Read,FileShare.ReadWrite);
+        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         var workbook = new XSSFWorkbook(fs);
         var sheet = workbook.GetSheet(targetSheet);
-        if (sheet == null)
-        {
-            sheet = workbook.GetSheetAt(0);
-        }
+        if (sheet == null) sheet = workbook.GetSheetAt(0);
         for (var i = sheet.FirstRowNum; i <= sheet.LastRowNum; i++)
         {
             var rowSource = sheet.GetRow(i);
@@ -78,6 +80,7 @@ public class ExcelUdf
                 }
             }
         }
+
         workbook.Close();
         fs.Close();
         return -1;

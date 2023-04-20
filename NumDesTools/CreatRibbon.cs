@@ -28,10 +28,11 @@ public partial class CreatRibbon
     public static string TempPath = @"\Client\Assets\Resources\Table";
     public static IRibbonUI R;
     private static CommandBarButton _btn;
-    private static readonly dynamic  App = ExcelDnaUtil.Application;
+    private static readonly dynamic App = ExcelDnaUtil.Application;
     public static dynamic XllPathList = new List<string>();
 
-    AddInWatcher _watcher;
+    private AddInWatcher _watcher;
+
     void IExcelAddIn.AutoClose()
     {
         //string filePath = app.ActiveWorkbook.Path;
@@ -50,10 +51,7 @@ public partial class CreatRibbon
         _watcher.Dispose();
 
         //防止打开最后一个工作簿，excel.exe进程不关闭
-        if (App.Workbooks.Count == 0)
-        {
-            App.Quit();
-        }
+        if (App.Workbooks.Count == 0) App.Quit();
     }
 
     void IExcelAddIn.AutoOpen()
@@ -97,7 +95,7 @@ public partial class CreatRibbon
         var bookName = App.ActiveWorkbook.Name;
         var sheetName = App.ActiveSheet.Name;
         var missing = Type.Missing;
-        if (bookName == "角色怪物数据生成" || sheetName == "角色基础" )
+        if (bookName == "角色怪物数据生成" || sheetName == "角色基础")
         {
             if (target.Row < 16 || target.Column < 5 || target.Column > 21)
             {
@@ -121,7 +119,7 @@ public partial class CreatRibbon
                 //生成自己的菜单
                 var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
                 var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
-                var comControl1 = bars.Add(MsoControlType.msoControlButton,missing, missing, 1, true);
+                var comControl1 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
                 var comButton2 = comControl1 as Microsoft.Office.Core.CommandBarButton;
                 if (comControl == null) return;
                 if (comButton1 != null)
@@ -134,8 +132,9 @@ public partial class CreatRibbon
                     comButton1.Click += RoleDataPri.DataKey;
                     sw.Stop();
                     var ts2 = sw.Elapsed;
-                    App.StatusBar = "导出完成，用时："+ ts2.ToString();
+                    App.StatusBar = "导出完成，用时：" + ts2.ToString();
                 }
+
                 if (comButton2 != null)
                 {
                     comButton2.Tag = "批量导出";
@@ -153,33 +152,35 @@ public partial class CreatRibbon
             //    if (errorCell.Value.ToString() == "^错误^")
             //    {
 
-                    foreach (var tempControl in from CommandBarControl tempControl in bars
-                             let t = tempControl.Tag
-                             where t is "自选写入"
-                                                select tempControl)
-                        try
-                        {
-                            tempControl.Delete();
-                        }
-                        catch
-                        {
-                            // ignored
-                        }
-                    //生成自己的菜单
-                    var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-                    var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
-                    if (comControl == null) return;
-                    if (comButton1 != null)
-                    {
-                        comButton1.Tag = "自选写入";
-                        comButton1.Caption = "自选表格写入";
-                        comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                        comButton1.Click += ExcelDataAutoInsertMulti.RightClickInsertData;
-                    }
-                    //    }
+            foreach (var tempControl in from CommandBarControl tempControl in bars
+                     let t = tempControl.Tag
+                     where t is "自选写入"
+                     select tempControl)
+                try
+                {
+                    tempControl.Delete();
+                }
+                catch
+                {
+                    // ignored
+                }
+
+            //生成自己的菜单
+            var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
+            var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
+            if (comControl == null) return;
+            if (comButton1 != null)
+            {
+                comButton1.Tag = "自选写入";
+                comButton1.Caption = "自选表格写入";
+                comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                comButton1.Click += ExcelDataAutoInsertMulti.RightClickInsertData;
+            }
+            //    }
             //}
         }
     }
+
     public void AllWorkbookOutPut_Click(IRibbonControl control)
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
@@ -283,10 +284,7 @@ public partial class CreatRibbon
             {
                 if (sender is CheckBox { Checked: true })
                 {
-                    if (gb.Controls.Cast<CheckBox>().Any(ch => ch.Checked == false))
-                    {
-                        return;
-                    }
+                    if (gb.Controls.Cast<CheckBox>().Any(ch => ch.Checked == false)) return;
                     checkBox1.Checked = true;
                     checkBox1.Text = @"反选";
                 }
@@ -896,17 +894,20 @@ public partial class CreatRibbon
             MessageBox.Show(@"非【角色基础】表格，不能使用此功能");
         }
     }
-   //所有动态改的东西一定要在Xml使用“get类进行命名，并且在这里进行方法实现，才能动态的将数据传输，执行后续功能
+
+    //所有动态改的东西一定要在Xml使用“get类进行命名，并且在这里进行方法实现，才能动态的将数据传输，执行后续功能
     private string _seachStr = "";
 
     public void OnEditBoxTextChanged(IRibbonControl control, string text)
     {
         _seachStr = text;
     }
+
     public void GoogleSearch_Click(IRibbonControl control)
     {
         SearchEngine.GoogleSearch(_seachStr);
     }
+
     public void BingSearch_Click(IRibbonControl control)
     {
         SearchEngine.BingSearch(_seachStr);
@@ -927,9 +928,10 @@ public partial class CreatRibbon
 
         ExcelDataAutoInsertMulti.InsertData(false);
         sw.Stop();
-        var ts2 = Math.Round(sw.Elapsed.TotalSeconds,2);
+        var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
         App.StatusBar = "完成，用时：" + ts2;
     }
+
     public void AutoInsertExcelDataThread_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -948,6 +950,7 @@ public partial class CreatRibbon
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
         App.StatusBar = "完成，用时：" + ts2;
     }
+
     public void AutoInsertExcelDataDialog_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -962,6 +965,7 @@ public partial class CreatRibbon
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
         App.StatusBar = "完成，用时：" + ts2;
     }
+
     public void AutoLinkExcel_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -969,12 +973,13 @@ public partial class CreatRibbon
         var indexWk = App.ActiveWorkbook;
         var sheet = indexWk.ActiveSheet;
         var excelPath = indexWk.Path;
-        ExcelDataAutoInsert.ExcelHyperLinks(excelPath,sheet);
+        ExcelDataAutoInsert.ExcelHyperLinks(excelPath, sheet);
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
         App.StatusBar = "完成，用时：" + ts2.ToString();
     }
+
     public void AutoCellFormatEPPlus_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -989,6 +994,7 @@ public partial class CreatRibbon
         Debug.Print(ts2.ToString());
         App.StatusBar = "完成，用时：" + ts2.ToString();
     }
+
     public void TestBar1_Click(IRibbonControl control)
     {
         //SVNTools.RevertAndUpFile();

@@ -63,25 +63,27 @@ public static class ErrorLogCtp
         Ctp.Width = 350;
         Ctp.Visible = true;
     }
+
     public static void CreateCtpNormal(string errorLog)
     {
         LabelControl = new UserControl();
         var errorLinkLable = new RichTextBox()
         {
             Text = errorLog,
-            Location = new Point(10, 40 ),
+            Location = new Point(10, 40),
             ScrollBars = (RichTextBoxScrollBars)ScrollBars.Vertical,
             Font = new Font("微软雅黑", 9, FontStyle.Bold),
             Dock = DockStyle.Fill,
             BackColor = Color.Gray,
             ForeColor = Color.GhostWhite
-    };
+        };
         LabelControl.Controls.Add(errorLinkLable);
         Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(LabelControl, "写入错误日志");
         Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
         Ctp.Width = 450;
         Ctp.Visible = true;
     }
+
     public static void DisposeCtp()
     {
         if (Ctp == null) return;
@@ -584,6 +586,7 @@ public static class ExcelSheetData
                 cell.SetCellValue("ccd");
             }
         }
+
         file.Close();
         var fileStream = new FileStream(fpe, FileMode.Create, FileAccess.Write);
         workbook.Write(fileStream);
