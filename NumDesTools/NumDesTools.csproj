@@ -249,6 +249,7 @@
     <Compile Include="Https.cs" />
     <Compile Include="CreatRibbon.cs" />
     <Compile Include="PubMetToExcel.cs" />
+    <Compile Include="ReloaderXll.cs" />
     <Compile Include="RibbonResources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

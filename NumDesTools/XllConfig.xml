@@ -1,0 +1,6 @@
+﻿<AddInReloaderConfiguration>
+  <WatchedAddIn Path="NumDesToolsPack64.XLL"></WatchedAddIn>
+  <!--<WatchedAddIn Path="OtherAddIn.xll" >
+    <WatchedFile Path="zzz" />
+  </WatchedAddIn>-->
+</AddInReloaderConfiguration>
