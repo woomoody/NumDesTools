@@ -14,13 +14,12 @@ public static class Extensions
         {
             var row = source[r];
             for (var c = 0; c < colCount; c++)
-            {
                 if (c < row.Length)
                     result[r, c] = row[c];
                 else
-                    result[r, c] = default(T);
-            }
+                    result[r, c] = default;
         }
+
         return result;
     }
 }

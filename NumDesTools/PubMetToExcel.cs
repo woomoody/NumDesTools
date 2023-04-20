@@ -27,24 +27,20 @@ public class PubMetToExcel
             {
                 var value = rangeValue[row, column];
                 if (row == 1)
-                {
                     sheetHeaderCol.Add(value);
-                }
                 else
-                {
                     rowList.Add(value);
-                }
             }
 
-            if (row > 1)
-            {
-                sheetData.Add(rowList);
-            }
+            if (row > 1) sheetData.Add(rowList);
         }
+
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
-    public static Dictionary<string, List<Tuple<object[,]>>> ExcelDataToDictionary(dynamic data, dynamic dicKeyCol, dynamic dicValueCol,int valueRowCount, int valueColCount=1)
+
+    public static Dictionary<string, List<Tuple<object[,]>>> ExcelDataToDictionary(dynamic data, dynamic dicKeyCol,
+        dynamic dicValueCol, int valueRowCount, int valueColCount = 1)
     {
         var dic = new Dictionary<string, List<Tuple<object[,]>>>();
 
@@ -56,13 +52,12 @@ public class PubMetToExcel
 
             var values = new object[valueRowCount, valueColCount];
             for (var k = 0; k < valueRowCount; k++)
+            for (var j = 0; j < valueColCount; j++)
             {
-                for (var j = 0; j < valueColCount; j++)
-                {
-                    var valueTemp = data[i + k][dicValueCol + j];
-                    values[k, j] = valueTemp;
-                }
+                var valueTemp = data[i + k][dicValueCol + j];
+                values[k, j] = valueTemp;
             }
+
             var tuple = new Tuple<object[,]>(values);
             if (dic.ContainsKey(value))
             {
@@ -74,6 +69,7 @@ public class PubMetToExcel
                 dic.Add(value, list);
             }
         }
+
         return dic;
     }
 }

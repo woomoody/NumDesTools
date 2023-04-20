@@ -42,8 +42,10 @@ public class SearchEngine
         {
             result.Append("Search failed: " + ex.Message);
         }
+
         return result.ToString();
     }
+
     [ExcelFunction(IsHidden = true)]
     public static string BingSearch(string query)
     {
@@ -60,8 +62,10 @@ public class SearchEngine
         {
             result.Append("Search failed: " + ex.Message);
         }
+
         return result.ToString();
     }
+
     [ExcelFunction(IsHidden = true)]
     public static bool PingWebsite(string url)
     {
@@ -80,4 +84,3 @@ public class SearchEngine
         return isPass;
     }
 }
-
