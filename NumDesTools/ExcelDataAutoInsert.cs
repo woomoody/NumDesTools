@@ -1178,6 +1178,54 @@ public class ExcelDataInsertLanguage
                         if (newId != "") sourceStr = sourceStr.Replace(oldId, newId);
                         cellTarget.Value = sourceStr;
                     }
+                    else if (source =="角色换装1")
+                    {
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf("说话角色")];
+                        var sourceValue2 = sourceDataList[m][sourceTitle.IndexOf("角色换装")]?.ToString();
+                        var scCol = classTitle.IndexOf("枚举1");
+                        var newValue = "";
+                        for (var k = 0; k < classDataList.Count; k++)
+                        {
+                            var targetValueKey = classDataList[k][scCol];
+                            if (targetValueKey == sourceValue)
+                            {
+                                if (sourceValue2 == "1")
+                                {
+                                    newValue = classDataList[k][scCol + 2].ToString();
+                                }
+                                else
+                                {
+                                    newValue = "[]";
+                                }
+                                break;
+                            }
+                        }
+                        cellTarget.Value = newValue;
+                    }
+                    else if (source == "角色换装2")
+                    {
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf("说话角色")];
+                        var sourceValue2 = sourceDataList[m][sourceTitle.IndexOf("角色换装")]?.ToString();
+                        var scCol = classTitle.IndexOf("枚举1");
+                        var newValue = "";
+                        for (var k = 0; k < classDataList.Count; k++)
+                        {
+                            var targetValueKey = classDataList[k][scCol];
+                            if (targetValueKey == sourceValue)
+                            {
+                                if (sourceValue2 != "1")
+                                {
+                                    newValue = classDataList[k][scCol + 3].ToString();
+                                }
+                                else
+                                {
+                                    newValue = "";
+                                }
+                                break;
+                            }
+                        }
+                        cellTarget.Value = newValue;
+                    }
                     else
                     {
                         //GroupID不连续
