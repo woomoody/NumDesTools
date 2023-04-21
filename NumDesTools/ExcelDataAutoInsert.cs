@@ -1167,7 +1167,7 @@ public class ExcelDataInsertLanguage
                         if (newId != "") sourceStr = sourceStr.Replace(oldId, newId);
                         cellTarget.Value = sourceStr;
                     }
-                    else if (source =="角色换装1")
+                    else if (source == "角色换装1")
                     {
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf("说话角色")];
                         var sourceValue2 = sourceDataList[m][sourceTitle.IndexOf("角色换装")]?.ToString();
