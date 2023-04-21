@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using System.Xml.Serialization;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
+using ExcelDna.Logging;
 using Microsoft.Office.Interop.Excel;
 using stdole;
 using Button = System.Windows.Forms.Button;
@@ -31,7 +32,7 @@ public partial class CreatRibbon
     private static readonly dynamic App = ExcelDnaUtil.Application;
     public static dynamic XllPathList = new List<string>();
 
-    private AddInWatcher _watcher;
+    AddInWatcher _watcher;
 
     void IExcelAddIn.AutoClose()
     {
@@ -62,7 +63,10 @@ public partial class CreatRibbon
         //XlCall.Excel(XlCall.xlcAlert, "AutoOpen");
         //打开插件时会自动检索指定名字的XLL文件
         //XllPathList = GetAllXllPath();
-
+        //foreach (var path in XllPathList)
+        //{
+        //    ExcelIntegration.RegisterXLL(path);
+        //}
         var configFileName = "XllConfig.xml";
         var xllDirectory = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
         if (xllDirectory != null)
@@ -72,20 +76,32 @@ public partial class CreatRibbon
             try
             {
                 // Load config
-                var configLoader = new XmlSerializer(typeof(AddInReload));
-                var config = (AddInReload)configLoader.Deserialize(File.OpenRead(configPath));
+                XmlSerializer configLoader = new XmlSerializer(typeof(AddInReloaderConfiguration));
+                AddInReloaderConfiguration config = (AddInReloaderConfiguration)configLoader.Deserialize(File.OpenRead(configPath));
                 _watcher = new AddInWatcher(config);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(@"Xll文件加载失败: " + ex);
+                LogDisplay.WriteLine("Error loading the configuration file: " + ex);
             }
         }
 
 
         App.SheetBeforeRightClick += new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
     }
-
+    private static List<string> GetAllXllPath()
+    {
+        var pathList = new List<string>();
+        foreach (var addIn in App.AddIns)
+        {
+            var fullName = addIn.FullName;
+            if (fullName.EndsWith("NumDesToolsPack64.XLL", StringComparison.OrdinalIgnoreCase))
+            {
+                pathList.Add(addIn.FullName);
+            }
+        }
+        return pathList;
+    }
     private void UD_RightClickButton(object sh, Range target, ref bool cancel)
     {
         //excel文档已有的右键菜单cell
