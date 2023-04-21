@@ -513,41 +513,30 @@ public class ExcelDataAutoInsert
             var excelName = FindTitle(sheet, 1, "表名");
             string findValue = sheet.Cells[i, modeCol].Value?.ToString();
             var cell = sheet.Cells[i, excelName];
-            if (cell.value != null && cell.value.ToString().Contains(".xlsx"))
+            if (cell.value == null || !cell.value.ToString().Contains(".xlsx")) continue;
+            var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
+            string path = cell.value switch
             {
-                var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
-                string path;
-                switch (cell.value)
-                {
-                    case "Localizations.xlsx":
-                        path = newPath + @"\Excels\Localizations\Localizations.xlsx";
-                        break;
-                    case "UIConfigs.xlsx":
-                        path = newPath + @"\Excels\UIs\UIConfigs.xlsx";
-                        break;
-                    case "UIItemConfigs.xlsx":
-                        path = newPath + @"\Excels\UIs\UIItemConfigs.xlsx";
-                        break;
-                    default:
-                        path = excelPath + @"\" + cell.value;
-                        break;
-                }
+                "Localizations.xlsx" => newPath + @"\Excels\Localizations\Localizations.xlsx",
+                "UIConfigs.xlsx" => newPath + @"\Excels\UIs\UIConfigs.xlsx",
+                "UIItemConfigs.xlsx" => newPath + @"\Excels\UIs\UIItemConfigs.xlsx",
+                _ => excelPath + @"\" + cell.value
+            };
 
-                var excel = new ExcelPackage(new FileInfo(path));
-                var workbook = excel.Workbook;
-                var sheetTemp = workbook.Worksheets["Sheet1"] ?? workbook.Worksheets[0];
-                var row = FindSourceRow(sheetTemp, 2, findValue);
-                if (row != 0)
-                {
-                    var newRow = "A" + row;
+            var excel = new ExcelPackage(new FileInfo(path));
+            var workbook = excel.Workbook;
+            var sheetTemp = workbook.Worksheets["Sheet1"] ?? workbook.Worksheets[0];
+            var row = FindSourceRow(sheetTemp, 2, findValue);
+            if (row != 0)
+            {
+                var newRow = "A" + row;
 
-                    var sheetName = sheetTemp.Name;
-                    var links = path + "#" + sheetName + "!" + newRow;
-                    excel.Dispose();
-                    cell.Hyperlinks.Add(cell, links);
-                    cell.Font.Size = 9;
-                    cell.Font.Name = "微软雅黑";
-                }
+                var sheetName = sheetTemp.Name;
+                var links = path + "#" + sheetName + "!" + newRow;
+                excel.Dispose();
+                cell.Hyperlinks.Add(cell, links);
+                cell.Font.Size = 9;
+                cell.Font.Name = "微软雅黑";
             }
         }
     }
