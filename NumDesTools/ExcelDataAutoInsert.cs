@@ -3,6 +3,7 @@ using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
 using OfficeOpenXml;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -13,6 +14,7 @@ using Color = System.Drawing.Color;
 using MessageBox = System.Windows.Forms.MessageBox;
 using LicenseContext = OfficeOpenXml.LicenseContext;
 using Match = System.Text.RegularExpressions.Match;
+using OfficeOpenXml.Style;
 
 namespace NumDesTools;
 
@@ -540,157 +542,186 @@ public class ExcelDataAutoInsert
             }
         }
     }
-/*
-    public static void CellFormatAuto(dynamic excelModeIdDictionary, dynamic excelModeIdNewDictionary, dynamic excelFixKeyDictionary, dynamic excelFixKeyMethodDictionary, dynamic excelFixGroup, dynamic sheet)
+    public static void ExcelHyperLinksNormal(dynamic excelPath, dynamic sheet)
     {
-        var defaultData = ExcelDic(excelModeIdDictionary, excelModeIdNewDictionary, excelFixKeyDictionary, excelFixKeyMethodDictionary, excelFixGroup, sheet);
-        var excelCol = defaultData[0].Item1;
-        var rowsCount = (sheet.Cells[sheet.Rows.Count, "B"].End[XlDirection.xlUp].Row - 1) / 2 + 1;
-        for (var i = 1; i <= rowsCount; i++)
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        for (var i = 2; i <= 500; i++)
         {
-            for (var j = 0; j <= 20; j++)
+            var cell = sheet.Cells[i, 5];
+            if (cell.value == null || !cell.value.ToString().Contains(".xlsx")) continue;
+            var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
+            string path = cell.value switch
             {
-                var cell = sheet.Cells[1, 1].Offset [(i - 1) * 2+1, j];
-                var cell2 = sheet.Cells[1, 1].Offset[(i - 1) * 2+2, j];
-                if (cell.Value != null)
+                "Localizations.xlsx" => newPath + @"\Excels\Localizations\Localizations.xlsx",
+                "UIConfigs.xlsx" => newPath + @"\Excels\UIs\UIConfigs.xlsx",
+                "UIItemConfigs.xlsx" => newPath + @"\Excels\UIs\UIItemConfigs.xlsx",
+                _ => excelPath + @"\" + cell.value
+            };
+
+            //var excel = new ExcelPackage(new FileInfo(path));
+            //var workbook = excel.Workbook;
+            //var sheetTemp = workbook.Worksheets["Sheet1"] ?? workbook.Worksheets[0];
+
+            //var sheetName = sheetTemp.Name;
+                var links = path + "#" + "Sheet1!A1";
+                //excel.Dispose();
+                cell.Hyperlinks.Add(cell, links);
+                cell.Font.Size = 9;
+                cell.Font.Name = "微软雅黑";
+            
+        }
+    }
+    /*
+        public static void CellFormatAuto(dynamic excelModeIdDictionary, dynamic excelModeIdNewDictionary, dynamic excelFixKeyDictionary, dynamic excelFixKeyMethodDictionary, dynamic excelFixGroup, dynamic sheet)
+        {
+            var defaultData = ExcelDic(excelModeIdDictionary, excelModeIdNewDictionary, excelFixKeyDictionary, excelFixKeyMethodDictionary, excelFixGroup, sheet);
+            var excelCol = defaultData[0].Item1;
+            var rowsCount = (sheet.Cells[sheet.Rows.Count, "B"].End[XlDirection.xlUp].Row - 1) / 2 + 1;
+            for (var i = 1; i <= rowsCount; i++)
+            {
+                for (var j = 0; j <= 20; j++)
                 {
-                    cell2.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlDashDotDot;
-                    cell2.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThin;
+                    var cell = sheet.Cells[1, 1].Offset [(i - 1) * 2+1, j];
+                    var cell2 = sheet.Cells[1, 1].Offset[(i - 1) * 2+2, j];
+                    if (cell.Value != null)
+                    {
+                        cell2.Borders[XlBordersIndex.xlEdgeBottom].LineStyle = XlLineStyle.xlDashDotDot;
+                        cell2.Borders[XlBordersIndex.xlEdgeBottom].Weight = XlBorderWeight.xlThin;
+                    }
+                    else
+                    {
+                        cell2.Borders.LineStyle = XlLineStyle.xlDash;
+                        cell2.Borders.Weight = XlBorderWeight.xlHairline;
+                    }
                 }
-                else
+                var c1 = sheet.Cells[1, 1].Offset[(i - 1) * 2 + 1, excelCol-1];
+                var c2 = sheet.Cells[1, 1].Offset[(i - 1) * 2 + 2, excelCol-1];
+                var rng = sheet.Range[c1, c2];
+                rng.Merge();
+            }
+        }
+    */
+    /*
+        public static void RightClickWriteExcel(CommandBarButton ctrl, ref bool cancelDefault)
+        {
+            dynamic app = ExcelDnaUtil.Application;
+            var excelModeIdDictionary = new Dictionary<int, List<(string, string)>>();
+            var excelModeIdNewDictionary = new Dictionary<int, List<(string, string)>>();
+            var excelFixKeyDictionary = new Dictionary<int, List<string>>();
+            var excelFixKeyMethodDictionary = new Dictionary<int, List<string>>();
+            var excelFixGroup = new List<string>();
+            var indexWk = app.ActiveWorkbook;
+            var sheet = indexWk.ActiveSheet;
+            var excelPath = indexWk.Path;
+
+            ErrorLogCtp.DisposeCtp();
+
+            var sw = new Stopwatch();
+            sw.Start();
+            var defaultData = ExcelDic(excelModeIdDictionary, excelModeIdNewDictionary, excelFixKeyDictionary, excelFixKeyMethodDictionary, excelFixGroup, sheet);
+            var errorExcelList = new List<List<(int, string,string)>>();
+
+            var cell = app.Selection;
+            var rowStart = cell.Row;
+            var rowCount =cell.Rows.Count;
+            var rowEnd = rowStart + rowCount - 1;
+            for (int i = rowStart; i <= rowEnd; i++)
+            {
+                var realExcel =(i-2) % 2;
+                if (realExcel == 0)
                 {
-                    cell2.Borders.LineStyle = XlLineStyle.xlDash;
-                    cell2.Borders.Weight = XlBorderWeight.xlHairline;
+                    var excelCount = (i - 2) / 2;
+                    var error = SingleExcelDataWrite(excelCount, defaultData[0].Item2, excelFixGroup, excelModeIdDictionary,
+                        excelModeIdNewDictionary, excelFixKeyDictionary, excelFixKeyMethodDictionary, excelPath);
+                    errorExcelList.Add(error);
+                    app.StatusBar = "写入数据" + "<" + excelCount + "/" + excelFixGroup.Count + ">" + excelFixGroup[excelCount];
                 }
             }
-            var c1 = sheet.Cells[1, 1].Offset[(i - 1) * 2 + 1, excelCol-1];
-            var c2 = sheet.Cells[1, 1].Offset[(i - 1) * 2 + 2, excelCol-1];
-            var rng = sheet.Range[c1, c2];
-            rng.Merge();
-        }
-    }
-*/
-/*
-    public static void RightClickWriteExcel(CommandBarButton ctrl, ref bool cancelDefault)
-    {
-        dynamic app = ExcelDnaUtil.Application;
-        var excelModeIdDictionary = new Dictionary<int, List<(string, string)>>();
-        var excelModeIdNewDictionary = new Dictionary<int, List<(string, string)>>();
-        var excelFixKeyDictionary = new Dictionary<int, List<string>>();
-        var excelFixKeyMethodDictionary = new Dictionary<int, List<string>>();
-        var excelFixGroup = new List<string>();
-        var indexWk = app.ActiveWorkbook;
-        var sheet = indexWk.ActiveSheet;
-        var excelPath = indexWk.Path;
-
-        ErrorLogCtp.DisposeCtp();
-
-        var sw = new Stopwatch();
-        sw.Start();
-        var defaultData = ExcelDic(excelModeIdDictionary, excelModeIdNewDictionary, excelFixKeyDictionary, excelFixKeyMethodDictionary, excelFixGroup, sheet);
-        var errorExcelList = new List<List<(int, string,string)>>();
-
-        var cell = app.Selection;
-        var rowStart = cell.Row;
-        var rowCount =cell.Rows.Count;
-        var rowEnd = rowStart + rowCount - 1;
-        for (int i = rowStart; i <= rowEnd; i++)
-        {
-            var realExcel =(i-2) % 2;
-            if (realExcel == 0)
+            //出错表格处理
+            string errorLog = ErrorExcelMark(errorExcelList, sheet);
+            if (errorLog != "")
             {
-                var excelCount = (i - 2) / 2;
-                var error = SingleExcelDataWrite(excelCount, defaultData[0].Item2, excelFixGroup, excelModeIdDictionary,
-                    excelModeIdNewDictionary, excelFixKeyDictionary, excelFixKeyMethodDictionary, excelPath);
-                errorExcelList.Add(error);
-                app.StatusBar = "写入数据" + "<" + excelCount + "/" + excelFixGroup.Count + ">" + excelFixGroup[excelCount];
+                ErrorLogCtp.DisposeCtp();
+                ErrorLogCtp.CreateCtpNormal(errorLog);
             }
-        }
-        //出错表格处理
-        string errorLog = ErrorExcelMark(errorExcelList, sheet);
-        if (errorLog != "")
-        {
-            ErrorLogCtp.DisposeCtp();
-            ErrorLogCtp.CreateCtpNormal(errorLog);
-        }
-        else
-        {
-            sheet.Range["A3: A1000"].Value = "";
-        }
-        var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-        var str2 = "写入数据用时:" + ts2;
-        app.StatusBar = str2;
-    }
-*/
-/*
-    public static void RightClickWriteExcelThread(CommandBarButton ctrl, ref bool cancelDefault)
-    {
-        dynamic app = ExcelDnaUtil.Application;
-        var excelModeIdDictionary = new Dictionary<int, List<(string, string)>>();
-        var excelModeIdNewDictionary = new Dictionary<int, List<(string, string)>>();
-        var excelFixKeyDictionary = new Dictionary<int, List<string>>();
-        var excelFixKeyMethodDictionary = new Dictionary<int, List<string>>();
-        var excelFixGroup = new List<string>();
-        var indexWk = app.ActiveWorkbook;
-        var sheet = indexWk.ActiveSheet;
-        var excelPath = indexWk.Path;
-
-        ErrorLogCtp.DisposeCtp();
-
-        var sw = new Stopwatch();
-        sw.Start();
-        var defaultData = ExcelDic(excelModeIdDictionary, excelModeIdNewDictionary, excelFixKeyDictionary, excelFixKeyMethodDictionary, excelFixGroup, sheet);
-        var errorExcelList = new List<List<(int, string,string)>>();
-
-        var cell = app.Selection;
-        var rowStart = cell.Row;
-        var rowCount = cell.Rows.Count;
-        var rowEnd = rowStart + rowCount - 1;
-        for (int i = rowStart; i <= rowEnd; i++)
-        {
-            var realExcel = (i - 2) % 2;
-            if (realExcel == 0)
+            else
             {
-                var excelCount = (i - 2) / 2;
-                var error = MultiExcelDataWrite(excelCount, defaultData[0].Item2, excelFixGroup, excelModeIdDictionary,
-                    excelModeIdNewDictionary, excelFixKeyDictionary, excelFixKeyMethodDictionary, excelPath);
-
-                errorExcelList.Add(error);
-                app.StatusBar = "写入数据" + "<" + excelCount + "/" + excelFixGroup.Count + ">" + excelFixGroup[excelCount];
+                sheet.Range["A3: A1000"].Value = "";
             }
+            var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
+            var str2 = "写入数据用时:" + ts2;
+            app.StatusBar = str2;
         }
-        //出错表格处理
-        string errorLog = ErrorExcelMark(errorExcelList, sheet);
-        if (errorLog != "")
+    */
+    /*
+        public static void RightClickWriteExcelThread(CommandBarButton ctrl, ref bool cancelDefault)
         {
-            ErrorLogCtp.DisposeCtp();
-            ErrorLogCtp.CreateCtpNormal(errorLog);
-        }
-        else
-        {
-            sheet.Range["A3: A1000"].Value = "";
-        }
-        var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-        var str2 = "写入数据用时:" + ts2;
-        app.StatusBar = str2;
-    }
-*/
-/*
-    private static List<(int digitCount, string temp)> KeyBitCount(string str)
-    {
-        var regex = new Regex(@"\d+");
-        var matches = regex.Matches(str);
-        var keyBitCount = new List<(int digitCount, string temp)>();
-        foreach (var match in matches)
-        {
-            var temp = match.ToString();
-            var digitCount = temp.Length;
-            keyBitCount.Add((digitCount, temp));
-        }
+            dynamic app = ExcelDnaUtil.Application;
+            var excelModeIdDictionary = new Dictionary<int, List<(string, string)>>();
+            var excelModeIdNewDictionary = new Dictionary<int, List<(string, string)>>();
+            var excelFixKeyDictionary = new Dictionary<int, List<string>>();
+            var excelFixKeyMethodDictionary = new Dictionary<int, List<string>>();
+            var excelFixGroup = new List<string>();
+            var indexWk = app.ActiveWorkbook;
+            var sheet = indexWk.ActiveSheet;
+            var excelPath = indexWk.Path;
 
-        return keyBitCount;
-    }
-*/
+            ErrorLogCtp.DisposeCtp();
+
+            var sw = new Stopwatch();
+            sw.Start();
+            var defaultData = ExcelDic(excelModeIdDictionary, excelModeIdNewDictionary, excelFixKeyDictionary, excelFixKeyMethodDictionary, excelFixGroup, sheet);
+            var errorExcelList = new List<List<(int, string,string)>>();
+
+            var cell = app.Selection;
+            var rowStart = cell.Row;
+            var rowCount = cell.Rows.Count;
+            var rowEnd = rowStart + rowCount - 1;
+            for (int i = rowStart; i <= rowEnd; i++)
+            {
+                var realExcel = (i - 2) % 2;
+                if (realExcel == 0)
+                {
+                    var excelCount = (i - 2) / 2;
+                    var error = MultiExcelDataWrite(excelCount, defaultData[0].Item2, excelFixGroup, excelModeIdDictionary,
+                        excelModeIdNewDictionary, excelFixKeyDictionary, excelFixKeyMethodDictionary, excelPath);
+
+                    errorExcelList.Add(error);
+                    app.StatusBar = "写入数据" + "<" + excelCount + "/" + excelFixGroup.Count + ">" + excelFixGroup[excelCount];
+                }
+            }
+            //出错表格处理
+            string errorLog = ErrorExcelMark(errorExcelList, sheet);
+            if (errorLog != "")
+            {
+                ErrorLogCtp.DisposeCtp();
+                ErrorLogCtp.CreateCtpNormal(errorLog);
+            }
+            else
+            {
+                sheet.Range["A3: A1000"].Value = "";
+            }
+            var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
+            var str2 = "写入数据用时:" + ts2;
+            app.StatusBar = str2;
+        }
+    */
+    /*
+        private static List<(int digitCount, string temp)> KeyBitCount(string str)
+        {
+            var regex = new Regex(@"\d+");
+            var matches = regex.Matches(str);
+            var keyBitCount = new List<(int digitCount, string temp)>();
+            foreach (var match in matches)
+            {
+                var temp = match.ToString();
+                var digitCount = temp.Length;
+                keyBitCount.Add((digitCount, temp));
+            }
+
+            return keyBitCount;
+        }
+    */
 
     public static List<(int, int)> CellFixValueKeyList(string str)
     {
@@ -1286,6 +1317,8 @@ public class ExcelDataAutoInsertMulti
         var fixKeyCol = title.IndexOf("修改字段");
         var baseIdCol = title.IndexOf("模板期号");
         var creatIdCol = title.IndexOf("创建期号");
+        var commentValue = data[2][baseIdCol];
+        var cellBackColor = data[4][baseIdCol];
         ErrorLogCtp.DisposeCtp();
         //ID自增跨度
         var addValue = Convert.ToInt32(data[0][baseIdCol] - data[0][creatIdCol]);
@@ -1304,7 +1337,7 @@ public class ExcelDataAutoInsertMulti
             //写入算法
             var excelName = key.Key;
             List<(string, string, string)> error =
-                ExcelDataWrite(modelId, modelIdNew, fixKey, excelPath, excelName, addValue, isMulti);
+                ExcelDataWrite(modelId, modelIdNew, fixKey, excelPath, excelName, addValue, isMulti, commentValue, cellBackColor);
             app.StatusBar = "写入数据" + "<" + excelCount + "/" + modelId.Count + ">" + excelName;
             errorExcelList.Add(error);
             excelCount++;
@@ -1333,9 +1366,11 @@ public class ExcelDataAutoInsertMulti
         var fixKeyCol = title.IndexOf("修改字段");
         var baseIdCol = title.IndexOf("模板期号");
         var creatIdCol = title.IndexOf("创建期号");
+        var commentValue = data[2][baseIdCol];
+        var cellBackColor = data[4][baseIdCol];
         ErrorLogCtp.DisposeCtp();
         //ID自增跨度
-        var addValue = Convert.ToInt32(data[0][creatIdCol] - data[0][baseIdCol]);
+        var addValue = (int)data[0][creatIdCol] - (int)data[0][baseIdCol];
         //字典Value跨度（行）
         var rowCount = 2;
         //获取字典
@@ -1365,21 +1400,25 @@ public class ExcelDataAutoInsertMulti
             var excelName = newExcelList[i];
             if (excelName == null) continue;
             List<(string, string, string)> error =
-                ExcelDataWrite(modelId, modelIdNew, fixKey, excelPath, excelName, addValue, false);
+                ExcelDataWrite(modelId, modelIdNew, fixKey, excelPath, excelName, addValue, false,  commentValue, cellBackColor);
             app.StatusBar = "写入数据" + "<" + i + "/" + newExcelList.Count + ">" + excelName;
             errorExcelList.Add(error);
         }
 
         //错误日志处理
         var errorLog = ErrorLogAnalysis(errorExcelList, sheet);
-        if (errorLog == "") return;
+        if (errorLog == "")
+        {
+            app.StatusBar = "完成写入";
+            return;
+        }
         ErrorLogCtp.DisposeCtp();
         ErrorLogCtp.CreateCtpNormal(errorLog);
-        app.StatusBar = "完成！！！！";
+        app.StatusBar = "完成写入：有错误";
     }
 
     public static List<(string, string, string)> ExcelDataWrite(dynamic modelId, dynamic modelIdNew, dynamic fixKey,
-        dynamic excelPath, dynamic excelName, dynamic addValue, dynamic modeThread)
+        dynamic excelPath, dynamic excelName, dynamic addValue, dynamic modeThread,dynamic commentValue,dynamic cellBackColor)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var errorExcelLog = "";
@@ -1448,11 +1487,17 @@ public class ExcelDataAutoInsertMulti
                 errorList.Add((endValue, errorExcelLog, excelName));
                 return errorList;
             }
-
+            if (endRowSource - startRowSource < 0)
+            {
+                errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]起始、终结ID顺序反了";
+                errorList.Add((endValue, errorExcelLog, excelName));
+                return errorList;
+            }
             var colCount = sheet.Dimension.Columns;
             var count = endRowSource - startRowSource + 1;
             //数据复制
             var isInertRowTarget = ExcelDataAutoInsert.FindSourceRow(sheet, 2, isInertRowValue);
+            var asdb = ExcelDataAutoInsert.FindSourceRow(sheet, 2, @"UIPopsGiftBagView_LTE_Timelimit_shop_5010");
             if (isInertRowValue != "")
             {
                 if (isInertRowTarget == -1)
@@ -1460,10 +1505,27 @@ public class ExcelDataAutoInsertMulti
                     sheet.InsertRow(endRowSource + 1, count);
                     var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
                     var cellTarget = sheet.Cells[endRowSource + 1, 1, endRowSource + count, colCount];
-                    cellSource.Copy(cellTarget,
-                        ExcelRangeCopyOptionFlags.ExcludeConditionalFormatting |
-                        ExcelRangeCopyOptionFlags.ExcludeMergedCells);
-                    cellSource.CopyStyles(cellTarget);
+                    try
+                    {
+                        cellSource.Copy(cellTarget,
+                            ExcelRangeCopyOptionFlags.ExcludeConditionalFormatting | ExcelRangeCopyOptionFlags.ExcludeMergedCells);
+                        cellSource.CopyStyles(cellTarget);
+                    }
+                    catch
+                    {
+                        cellSource =sheet.Cells[startRowSource, 2, endRowSource, colCount];
+                        cellTarget = sheet.Cells[endRowSource + 1, 2, endRowSource + count, colCount];
+                        cellSource.Copy(cellTarget,
+                            ExcelRangeCopyOptionFlags.ExcludeConditionalFormatting | ExcelRangeCopyOptionFlags.ExcludeMergedCells | ExcelRangeCopyOptionFlags.ExcludeStyles);
+                        cellSource.CopyStyles(cellTarget);
+                    }
+
+                    //填充颜色
+                    string[] colorValues = cellBackColor.Split('#');
+                    Color color = Color.FromArgb(int.Parse(colorValues[0]), int.Parse(colorValues[1]), int.Parse(colorValues[2]));
+                    cellTarget.Style.Fill.PatternType = ExcelFillStyle.None;
+                    cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    cellTarget.Style.Fill.BackgroundColor.SetColor(color);
                 }
             }
             else
@@ -1477,9 +1539,9 @@ public class ExcelDataAutoInsertMulti
             var fixItem = fixKey[excelName][excelMulti].Item1;
             errorList = modeThread
                 ? (List<(string, string, string)>)MultiWrite(excelName, addValue, fixItem, sheet, count, startRowSource,
-                    endRowSource, errorList)
+                    endRowSource, errorList,  commentValue)
                 : (List<(string, string, string)>)SingleWrite(excelName, addValue, fixItem, sheet, count,
-                    startRowSource, endRowSource, errorList);
+                    startRowSource, endRowSource, errorList,  commentValue);
         }
 
         excel.Save();
@@ -1490,7 +1552,7 @@ public class ExcelDataAutoInsertMulti
 
     private static List<(string, string, string)> SingleWrite(dynamic excelName, dynamic addValue, dynamic fixItem,
         ExcelWorksheet sheet,
-        dynamic count, dynamic startRowSource, dynamic endRowSource, List<(string, string, string)> errorList)
+        dynamic count, dynamic startRowSource, dynamic endRowSource, List<(string, string, string)> errorList, dynamic commentValue)
     {
         for (var colMulti = 0; colMulti < fixItem.GetLength(1); colMulti++)
         {
@@ -1503,22 +1565,29 @@ public class ExcelDataAutoInsertMulti
             for (var i = 0; i < count; i++)
             {
                 var cellSource = sheet.Cells[startRowSource + i, excelFileFixKey];
+                var cellCol = sheet.Cells[2,excelFileFixKey].Value?.ToString();
                 var cellFix = sheet.Cells[endRowSource + i + 1, excelFileFixKey];
                 if (cellSource.Value == null) continue;
 
-                if (cellSource.Value.ToString() == "") continue;
+                if (cellSource.Value.ToString() == ""|| cellSource.Value.ToString()== "0") continue;
 
-                //字段值改写方法
-                var temp1 = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
-                //修改字符串
-                var cellFixValue = ExcelDataAutoInsert.StringRegPlace(cellSource.Value.ToString(), temp1, addValue);
-                if (cellFixValue == "^error^")
+                if (cellCol != null && cellCol.Contains("#"))
                 {
-                    string errorExcelLog = excelName + "#【修改模式】#[" + excelKey + "]字段方法写错";
-                    errorList.Add((excelKey, errorExcelLog, excelName));
+                    cellFix.Value = commentValue;
                 }
-
-                cellFix.Value = double.TryParse(cellFixValue, out double number) ? number : cellFixValue;
+                else
+                {
+                    //字段值改写方法
+                    var temp1 = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
+                    //修改字符串
+                    var cellFixValue = ExcelDataAutoInsert.StringRegPlace(cellSource.Value.ToString(), temp1, addValue);
+                    if (cellFixValue == "^error^")
+                    {
+                        string errorExcelLog = excelName + "#【修改模式】#[" + excelKey + "]字段方法写错";
+                        errorList.Add((excelKey, errorExcelLog, excelName));
+                    }
+                    cellFix.Value = double.TryParse(cellFixValue, out double number) ? number : cellFixValue;
+                }
             }
         }
 
@@ -1527,7 +1596,7 @@ public class ExcelDataAutoInsertMulti
 
     private static List<(string, string, string)> MultiWrite(dynamic excelName, dynamic addValue, dynamic fixItem,
         ExcelWorksheet sheet,
-        dynamic count, dynamic startRowSource, dynamic endRowSource, List<(string, string, string)> errorList)
+        dynamic count, dynamic startRowSource, dynamic endRowSource, List<(string, string, string)> errorList, dynamic commentValue)
     {
         string errorExcelLog;
 
@@ -1559,24 +1628,32 @@ public class ExcelDataAutoInsertMulti
                     for (var j = startCol; j < endCol; j++)
                     {
                         var cellSource = sheet.Cells[startRowSource + j, excelFileFixKey];
+                        var cellCol = sheet.Cells[2, excelFileFixKey].Value?.ToString();
                         var cellFix = sheet.Cells[endRowSource + j + 1, excelFileFixKey];
                         if (cellSource.Value == null) continue;
 
-                        if (cellSource.Value.ToString() == "") continue;
+                        if (cellSource.Value.ToString() == "" || cellSource.Value.ToString() == "0") continue;
 
-                        //字段值改写方法
-                        var temp1 = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
-                        //修改字符串
-                        var cellFixValue =
-                            ExcelDataAutoInsert.StringRegPlace(cellSource.Value.ToString(), temp1, addValue);
-                        if (cellFixValue == "^error^")
+                        if (cellCol != null && cellCol.Contains("#"))
                         {
-                            errorExcelLog = excelName + "#【修改模式】#[" + excelKey + "]字段方法写错";
-                            errorList.Add((excelKey, errorExcelLog, excelName));
-                            return;
+                            cellFix.Value = commentValue;
                         }
+                        else
+                        {
+                            //字段值改写方法
+                            var temp1 = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
+                            //修改字符串
+                            var cellFixValue =
+                                ExcelDataAutoInsert.StringRegPlace(cellSource.Value.ToString(), temp1, addValue);
+                            if (cellFixValue == "^error^")
+                            {
+                                errorExcelLog = excelName + "#【修改模式】#[" + excelKey + "]字段方法写错";
+                                errorList.Add((excelKey, errorExcelLog, excelName));
+                                return;
+                            }
 
-                        cellFix.Value = double.TryParse(cellFixValue, out double number) ? number : cellFixValue;
+                            cellFix.Value = double.TryParse(cellFixValue, out double number) ? number : cellFixValue;
+                        }
                     }
                 });
             }

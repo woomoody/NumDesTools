@@ -50,7 +50,7 @@ public partial class CreatRibbon
         //}
 
         _watcher.Dispose();
-
+        App.SheetBeforeRightClick -= new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
         //防止打开最后一个工作簿，excel.exe进程不关闭
         if (App.Workbooks.Count == 0) App.Quit();
     }
@@ -85,8 +85,6 @@ public partial class CreatRibbon
                 LogDisplay.WriteLine("Error loading the configuration file: " + ex);
             }
         }
-
-
         App.SheetBeforeRightClick += new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
     }
     private static List<string> GetAllXllPath()
@@ -910,7 +908,6 @@ public partial class CreatRibbon
             MessageBox.Show(@"非【角色基础】表格，不能使用此功能");
         }
     }
-
     //所有动态改的东西一定要在Xml使用“get类进行命名，并且在这里进行方法实现，才能动态的将数据传输，执行后续功能
     private string _seachStr = "";
 
@@ -1003,7 +1000,7 @@ public partial class CreatRibbon
         var indexWk = App.ActiveWorkbook;
         var sheet = indexWk.ActiveSheet;
         var excelPath = indexWk.Path;
-        ExcelDataAutoInsert.ExcelHyperLinks(excelPath, sheet);
+        ExcelDataAutoInsert.ExcelHyperLinksNormal(excelPath, sheet);
         //ExcelDataAutoInsert.CellFormatAuto();
         sw.Stop();
         var ts2 = sw.Elapsed;
