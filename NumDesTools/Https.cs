@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Wordprocessing;
-using ExcelDna.Integration;
+﻿using ExcelDna.Integration;
 using System;
 using System.Diagnostics;
 using System.Net;
