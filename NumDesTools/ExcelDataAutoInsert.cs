@@ -3,7 +3,6 @@ using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
 using OfficeOpenXml;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -1319,9 +1318,10 @@ public class ExcelDataAutoInsertMulti
         var creatIdCol = title.IndexOf("创建期号");
         var commentValue = data[2][baseIdCol];
         var cellBackColor = data[4][baseIdCol];
+        var writeMode = data[2][creatIdCol];
         ErrorLogCtp.DisposeCtp();
         //ID自增跨度
-        var addValue = Convert.ToInt32(data[0][baseIdCol] - data[0][creatIdCol]);
+        var addValue = (int)data[0][creatIdCol] - (int)data[0][baseIdCol];
         //字典Value跨度（行）
         var rowCount = 2;
         //获取字典
@@ -1337,7 +1337,7 @@ public class ExcelDataAutoInsertMulti
             //写入算法
             var excelName = key.Key;
             List<(string, string, string)> error =
-                ExcelDataWrite(modelId, modelIdNew, fixKey, excelPath, excelName, addValue, isMulti, commentValue, cellBackColor);
+                ExcelDataWrite(modelId, modelIdNew, fixKey, excelPath, excelName, addValue, isMulti, commentValue, cellBackColor, writeMode);
             app.StatusBar = "写入数据" + "<" + excelCount + "/" + modelId.Count + ">" + excelName;
             errorExcelList.Add(error);
             excelCount++;
@@ -1345,7 +1345,12 @@ public class ExcelDataAutoInsertMulti
 
         //错误日志处理
         var errorLog = ErrorLogAnalysis(errorExcelList, sheet);
-        if (errorLog == "") return;
+        if (errorLog == "")
+        {
+            sheet.Range["B4"].Value = "否";
+            app.StatusBar = "完成写入";
+            return;
+        }
         ErrorLogCtp.DisposeCtp();
         ErrorLogCtp.CreateCtpNormal(errorLog);
     }
@@ -1368,6 +1373,7 @@ public class ExcelDataAutoInsertMulti
         var creatIdCol = title.IndexOf("创建期号");
         var commentValue = data[2][baseIdCol];
         var cellBackColor = data[4][baseIdCol];
+        var writeMode = data[2][creatIdCol];
         ErrorLogCtp.DisposeCtp();
         //ID自增跨度
         var addValue = (int)data[0][creatIdCol] - (int)data[0][baseIdCol];
@@ -1400,7 +1406,7 @@ public class ExcelDataAutoInsertMulti
             var excelName = newExcelList[i];
             if (excelName == null) continue;
             List<(string, string, string)> error =
-                ExcelDataWrite(modelId, modelIdNew, fixKey, excelPath, excelName, addValue, false,  commentValue, cellBackColor);
+                ExcelDataWrite(modelId, modelIdNew, fixKey, excelPath, excelName, addValue, true,  commentValue, cellBackColor,writeMode);
             app.StatusBar = "写入数据" + "<" + i + "/" + newExcelList.Count + ">" + excelName;
             errorExcelList.Add(error);
         }
@@ -1409,6 +1415,7 @@ public class ExcelDataAutoInsertMulti
         var errorLog = ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
+            sheet.Range["B4"].Value = "否";
             app.StatusBar = "完成写入";
             return;
         }
@@ -1418,7 +1425,7 @@ public class ExcelDataAutoInsertMulti
     }
 
     public static List<(string, string, string)> ExcelDataWrite(dynamic modelId, dynamic modelIdNew, dynamic fixKey,
-        dynamic excelPath, dynamic excelName, dynamic addValue, dynamic modeThread,dynamic commentValue,dynamic cellBackColor)
+        dynamic excelPath, dynamic excelName, dynamic addValue, dynamic modeThread,dynamic commentValue,dynamic cellBackColor,dynamic writeMode)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var errorExcelLog = "";
@@ -1472,6 +1479,7 @@ public class ExcelDataAutoInsertMulti
             var startValue = modelId[excelName][excelMulti].Item1[0, 0].ToString();
             var endValue = modelId[excelName][excelMulti].Item1[1, 0].ToString();
             var isInertRowValue = modelIdNew[excelName][excelMulti].Item1[0, 0].ToString();
+
             var startRowSource = ExcelDataAutoInsert.FindSourceRow(sheet, 2, startValue);
             if (startRowSource == -1)
             {
@@ -1497,10 +1505,9 @@ public class ExcelDataAutoInsertMulti
             var count = endRowSource - startRowSource + 1;
             //数据复制
             var isInertRowTarget = ExcelDataAutoInsert.FindSourceRow(sheet, 2, isInertRowValue);
-            var asdb = ExcelDataAutoInsert.FindSourceRow(sheet, 2, @"UIPopsGiftBagView_LTE_Timelimit_shop_5010");
             if (isInertRowValue != "")
             {
-                if (isInertRowTarget == -1)
+                if (writeMode == "是" || isInertRowTarget == -1)
                 {
                     sheet.InsertRow(endRowSource + 1, count);
                     var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
@@ -1519,7 +1526,6 @@ public class ExcelDataAutoInsertMulti
                             ExcelRangeCopyOptionFlags.ExcludeConditionalFormatting | ExcelRangeCopyOptionFlags.ExcludeMergedCells | ExcelRangeCopyOptionFlags.ExcludeStyles);
                         cellSource.CopyStyles(cellTarget);
                     }
-
                     //填充颜色
                     string[] colorValues = cellBackColor.Split('#');
                     Color color = Color.FromArgb(int.Parse(colorValues[0]), int.Parse(colorValues[1]), int.Parse(colorValues[2]));
@@ -1539,9 +1545,9 @@ public class ExcelDataAutoInsertMulti
             var fixItem = fixKey[excelName][excelMulti].Item1;
             errorList = modeThread
                 ? (List<(string, string, string)>)MultiWrite(excelName, addValue, fixItem, sheet, count, startRowSource,
-                    endRowSource, errorList,  commentValue)
+                    endRowSource, errorList,  commentValue, writeMode)
                 : (List<(string, string, string)>)SingleWrite(excelName, addValue, fixItem, sheet, count,
-                    startRowSource, endRowSource, errorList,  commentValue);
+                    startRowSource, endRowSource, errorList,  commentValue,writeMode);
         }
 
         excel.Save();
@@ -1552,7 +1558,7 @@ public class ExcelDataAutoInsertMulti
 
     private static List<(string, string, string)> SingleWrite(dynamic excelName, dynamic addValue, dynamic fixItem,
         ExcelWorksheet sheet,
-        dynamic count, dynamic startRowSource, dynamic endRowSource, List<(string, string, string)> errorList, dynamic commentValue)
+        dynamic count, dynamic startRowSource, dynamic endRowSource, List<(string, string, string)> errorList, dynamic commentValue,dynamic writeMode)
     {
         for (var colMulti = 0; colMulti < fixItem.GetLength(1); colMulti++)
         {
@@ -1588,6 +1594,14 @@ public class ExcelDataAutoInsertMulti
                     }
                     cellFix.Value = double.TryParse(cellFixValue, out double number) ? number : cellFixValue;
                 }
+
+                if (writeMode == "否") continue;
+                //去重
+                if (excelFileFixKey == 2)
+                {
+                    var repeatValue = cellFix.Value?.ToString();
+                    PubMetToExcel.RepeatValue(sheet,4,2,repeatValue);
+                }
             }
         }
 
@@ -1596,7 +1610,7 @@ public class ExcelDataAutoInsertMulti
 
     private static List<(string, string, string)> MultiWrite(dynamic excelName, dynamic addValue, dynamic fixItem,
         ExcelWorksheet sheet,
-        dynamic count, dynamic startRowSource, dynamic endRowSource, List<(string, string, string)> errorList, dynamic commentValue)
+        dynamic count, dynamic startRowSource, dynamic endRowSource, List<(string, string, string)> errorList, dynamic commentValue,dynamic writeMode)
     {
         string errorExcelLog;
 
@@ -1653,6 +1667,13 @@ public class ExcelDataAutoInsertMulti
                             }
 
                             cellFix.Value = double.TryParse(cellFixValue, out double number) ? number : cellFixValue;
+                        }
+                        if (writeMode == "否") continue;
+                        //去重
+                        if (excelFileFixKey == 2)
+                        {
+                            var repeatValue = cellFix.Value?.ToString();
+                            PubMetToExcel.RepeatValue(sheet, 4, 2, repeatValue);
                         }
                     }
                 });
