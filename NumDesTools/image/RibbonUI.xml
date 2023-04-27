@@ -44,7 +44,7 @@
           <button id='Button14' size='large' getLabel='GetLableText' image='edge' onAction='RoleDataPreview_Click'
                   screentip='点击启用角色数据实时预览' />
         </group>
-        <group id="Group6" label="搜索" insertAfterMso="Group9999">
+        <group id="Group6" label="网页搜索" >
           <editBox id="SearchBoxEdit" onChange="OnEditBoxTextChanged" sizeString="…………………………………………" />
           <button id="SearchBoxButton1" label="谷歌" onAction="GoogleSearch_Click" image="谷歌" />
           <button id="SearchBoxButton2" label="必应" onAction="BingSearch_Click" image="bing" />
@@ -61,7 +61,11 @@
           <button id='AutoCellFormat' size='large' label='模板表格式整理' image='diff' onAction='AutoCellFormatEPPlus_Click'
                   screentip='整理表格样式' />
         </group>
-
+        <group id="Group8" label="Excel搜索" >
+          <editBox id="ExcelSearchBoxEdit" onChange="ExcelOnEditBoxTextChanged" sizeString="…………………………………………" />
+          <button id="ExcelSearchBoxButton1" label="超级搜索(全部)" screentip='全列，按照A-Z的顺序遍历文件' onAction="ExcelSearchAll_Click" image="key" />
+          <button id="ExcelSearchBoxButton2" label="超级搜索(编号)" screentip='二列，按照A-Z的顺序遍历文件' onAction="ExcelSearchID_Click" image="log" />
+        </group>
         <group id='Group9999' label='测试功能区'>
           <button id='Button6' size='large' label='不要点击红色按钮' image='sofa' onAction='TestBar1_Click' />
           <button id='Button7' size='large' label='测试' image='sofa' onAction='TestBar2_Click' />

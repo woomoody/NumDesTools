@@ -915,7 +915,6 @@ public partial class CreatRibbon
     {
         _seachStr = text;
     }
-
     public void GoogleSearch_Click(IRibbonControl control)
     {
         SearchEngine.GoogleSearch(_seachStr);
@@ -925,7 +924,67 @@ public partial class CreatRibbon
     {
         SearchEngine.BingSearch(_seachStr);
     }
+    private string _excelSeachStr = "";
+    public void ExcelOnEditBoxTextChanged(IRibbonControl control, string text)
+    {
+        _excelSeachStr = text;
+    }
+    public void ExcelSearchAll_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
 
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+
+        var tuple =PubMetToExcel.ErrorKeyFromExcelAll(path, _excelSeachStr);
+        if (tuple.Item1 == "")
+        {
+            sw.Stop();
+            MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
+        }
+        else
+        {
+            //打开表格
+            var targetWk = App.Workbooks.Open(tuple.Item1);
+            var targetSh = targetWk.Worksheets[tuple.Item2];
+            targetSh.Activate();
+            var cell = targetSh.Cells[tuple.Item3, tuple.Item4];
+            cell.Select();
+            sw.Stop();
+        }
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "搜索完成，用时：" + ts2;
+    }
+    public void ExcelSearchID_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+
+        var tuple = PubMetToExcel.ErrorKeyFromExcelId(path, _excelSeachStr);
+        if (tuple.Item1 == "")
+        {
+            sw.Stop();
+            MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
+        }
+        else
+        {
+            //打开表格
+            var targetWk = App.Workbooks.Open(tuple.Item1);
+            var targetSh = targetWk.Worksheets[tuple.Item2];
+            targetSh.Activate();
+            var cell = targetSh.Cells[tuple.Item3, tuple.Item4];
+            cell.Select();
+            sw.Stop();
+        }
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "搜索完成，用时：" + ts2;
+    }
     public void AutoInsertExcelData_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1013,6 +1072,9 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+        //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");
         //ExcelDataAutoInsertMulti.InsertData(true);
         //ExcelDataAutoInsert.AutoInsertDat();
         //GetAllXllPath();
