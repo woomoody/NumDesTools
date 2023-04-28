@@ -243,6 +243,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ExcelDataAutoInsert.cs" />
+    <Compile Include="ExcelLinksGraphic.cs" />
     <Compile Include="ExcelRelationShipEpPlus.cs" />
     <Compile Include="ExcelRelationShip.cs" />
     <Compile Include="Extensions.cs" />
