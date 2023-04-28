@@ -1074,6 +1074,7 @@ public partial class CreatRibbon
         sw.Start();
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
+        ExcelLinksGraphic.Graph();
         //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");
         //ExcelDataAutoInsertMulti.InsertData(true);
         //ExcelDataAutoInsert.AutoInsertDat();
