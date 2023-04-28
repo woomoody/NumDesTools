@@ -1104,6 +1104,8 @@ public class ExcelDataInsertLanguage
                     var cellCol = ExcelDataAutoInsert.FindSourceCol(targetSheet, 2, fixKeyList[sourceCount]);
                     if (cellCol == -1)
                     {
+                        if (fixKeyList[sourceCount] == "bgType") continue;
+                        
                         errorExcel = i * 2 + 2;
                         errorExcelLog = fixFileName + "#表格字段#[" + fixKeyList[sourceCount] + "]未找到";
                         errorList.Add((errorExcel, errorExcelLog, fixFileName));
@@ -1244,6 +1246,22 @@ public class ExcelDataInsertLanguage
                             }
                         }
                         cellTarget.Value = newValue;
+                    }
+                    else if (source == "UI对话框")
+                    {
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf("角色换装")];
+                        if (sourceValue == null)
+                        {
+                            sourceValue = "1";
+                        }
+                        else
+                        {
+                            sourceValue = sourceValue.ToString();
+                        }
+                        if (fixKeyList[sourceCount].ToString() == "bgType")
+                        {
+                            cellTarget.Value = sourceValue;
+                        }
                     }
                     else
                     {
