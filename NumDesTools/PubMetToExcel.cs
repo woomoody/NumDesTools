@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Windows;
 using ExcelDna.Integration;
 
 namespace NumDesTools;
@@ -95,7 +96,14 @@ public class PubMetToExcel
             // 删除重复值所在的行
             foreach (var duplicateCell in duplicateCells)
             {
-                sheet.DeleteRow(duplicateCell.Start.Row);
+                try
+                {
+                    sheet.DeleteRow(duplicateCell.Start.Row);
+                }
+                catch
+                {
+                    MessageBox.Show("删除重复行失败");
+                }
             }
         }
     }

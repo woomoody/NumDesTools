@@ -971,12 +971,13 @@ public class ExcelDataInsertLanguage
         var sourceSheet = workBook.Worksheets["多语言对话【模板】"];
         var fixSheet = workBook.Worksheets["数据修改"];
         var classSheet = workBook.Worksheets["枚举数据"];
+        var emoSheet = workBook.Worksheets["表情枚举"];
 
         ErrorLogCtp.DisposeCtp();
 
         var errorExcelList = new List<List<(int, string, string)>>();
 
-        List<(int, string, string)> error = LanguageDialogData(sourceSheet, fixSheet, classSheet, excelPath, app);
+        List<(int, string, string)> error = LanguageDialogData(sourceSheet, fixSheet, classSheet,emoSheet, excelPath, app);
 
         if (error.Count != 0) errorExcelList.Add(error);
 
@@ -995,7 +996,7 @@ public class ExcelDataInsertLanguage
     }
 
     public static List<(int, string, string)> LanguageDialogData(dynamic sourceSheet, dynamic fixSheet,
-        dynamic classSheet, string excelPath, dynamic app)
+        dynamic classSheet, dynamic emoSheet,string excelPath, dynamic app)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
@@ -1010,6 +1011,10 @@ public class ExcelDataInsertLanguage
         var classData = PubMetToExcel.ExcelDataToList(classSheet);
         var classTitle = classData.Item1;
         var classDataList = classData.Item2;
+
+        var emoData = PubMetToExcel.ExcelDataToList(emoSheet);
+        var emoTitle = emoData.Item1;
+        var emoDataList = emoData.Item2;
 
         var fileIndex = fixTitle.IndexOf("表名");
         var keyIndex = fixTitle.IndexOf("字段");
@@ -1079,6 +1084,11 @@ public class ExcelDataInsertLanguage
             var isInertRowTarget = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, fixFileNewId);
             //根据模板插入对应数据行，并复制
             var endRowSource = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, fixFileModeId);
+            if (endRowSource == -1)
+            {
+                MessageBox.Show(fixFileModeId+@"目标表中不存在");
+                continue;
+            }
             var hasCopy = 1;
             if (fixFileNewId != "")
                 if (isInertRowTarget != -1)
@@ -1104,11 +1114,16 @@ public class ExcelDataInsertLanguage
                     var cellCol = ExcelDataAutoInsert.FindSourceCol(targetSheet, 2, fixKeyList[sourceCount]);
                     if (cellCol == -1)
                     {
-                        if (fixKeyList[sourceCount] == "bgType") continue;
+                        if (fixKeyList[sourceCount] == "bgType")
+                        {
+                            sourceCount++;
+                            continue;
+                        }
                         
                         errorExcel = i * 2 + 2;
                         errorExcelLog = fixFileName + "#表格字段#[" + fixKeyList[sourceCount] + "]未找到";
                         errorList.Add((errorExcel, errorExcelLog, fixFileName));
+                        sourceCount++;
                         continue;
                     }
 
@@ -1163,6 +1178,20 @@ public class ExcelDataInsertLanguage
                         var oldId = matches[0].Value.ToString();
                         if (newId != "") sourceStr = sourceStr.Replace(oldId, newId);
                         cellTarget.Value = sourceStr;
+                    }
+                    else if (source =="角色表情")
+                    {
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)];
+                        for (var k = 0; k < emoDataList.Count; k++)
+                        {
+                            var targetValue = emoDataList[k][0];
+                            if (targetValue == sourceValue)
+                            {
+                                var emoId = emoDataList[k][2];
+                                cellTarget.Value = emoId;
+                                break;
+                            }
+                        }
                     }
                     else if (source == "触发分支")
                     {
@@ -1347,13 +1376,27 @@ public class ExcelDataAutoInsertMulti
         var modelId = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modelIdCol, rowCount);
         var modelIdNew = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modelIdNewCol, rowCount);
         var fixKey = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, fixKeyCol, rowCount, colFixKeyCount);
+        var ignoreExcel = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, creatIdCol, rowCount);
         //遍历文件写入
         var errorExcelList = new List<List<(string, string, string)>>();
         var excelCount = 1;
         foreach (var key in modelId)
         {
+
             //写入算法
             var excelName = key.Key;
+            //过滤不导出的表格
+            var ignore = ignoreExcel[excelName][0].Item1[0,0];
+            if (ignore != null)
+            {
+                var ignoreStr = ignore.ToString();
+                if (ignoreStr == "跳过")
+                {
+                    app.StatusBar = "跳过" + "<" + excelName;
+                    excelCount++;
+                    continue;
+                }
+            }
             List<(string, string, string)> error =
                 ExcelDataWrite(modelId, modelIdNew, fixKey, excelPath, excelName, addValue, isMulti, commentValue, cellBackColor, writeMode);
             app.StatusBar = "写入数据" + "<" + excelCount + "/" + modelId.Count + ">" + excelName;
@@ -1521,12 +1564,12 @@ public class ExcelDataAutoInsertMulti
             }
             var colCount = sheet.Dimension.Columns;
             var count = endRowSource - startRowSource + 1;
-            //数据复制
-            var isInertRowTarget = ExcelDataAutoInsert.FindSourceRow(sheet, 2, isInertRowValue);
-            if (isInertRowValue != "")
-            {
-                if (writeMode == "是" || isInertRowTarget == -1)
-                {
+            //数据复制，取消掉覆写的功能
+            //var isInertRowTarget = ExcelDataAutoInsert.FindSourceRow(sheet, 2, isInertRowValue);
+            //if (isInertRowValue != "")
+            //{
+                //if (writeMode == "是" || isInertRowTarget == -1)
+                //{
                     sheet.InsertRow(endRowSource + 1, count);
                     var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
                     var cellTarget = sheet.Cells[endRowSource + 1, 1, endRowSource + count, colCount];
@@ -1550,14 +1593,14 @@ public class ExcelDataAutoInsertMulti
                     cellTarget.Style.Fill.PatternType = ExcelFillStyle.None;
                     cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
                     cellTarget.Style.Fill.BackgroundColor.SetColor(color);
-                }
-            }
-            else
-            {
-                errorExcelLog = excelName + "#【实际模板（上一期）】#[" + isInertRowValue + "]未找到(序号出错)";
-                errorList.Add((isInertRowValue, errorExcelLog, excelName));
-                return errorList;
-            }
+                //}
+            //}
+            //else
+            //{
+            //    errorExcelLog = excelName + "#【实际模板（上一期）】#[" + isInertRowValue + "]未找到(序号出错)";
+            //    errorList.Add((isInertRowValue, errorExcelLog, excelName));
+            //    return errorList;
+            //}
 
             //数据修改
             var fixItem = fixKey[excelName][excelMulti].Item1;

@@ -1,13 +1,7 @@
-﻿//using System;
-//using System.Collections.Generic;
-//using System.Linq;
-//using System.Text;
-//using System.Threading.Tasks;
-//using IExcel = Microsoft.Office.Interop.Excel;
-
-using ExcelDna.Integration;
+﻿using ExcelDna.Integration;
 using NPOI.XSSF.UserModel;
 using System.IO;
+
 
 namespace NumDesTools;
 
@@ -18,8 +12,8 @@ public class ExcelUdf
     private static readonly dynamic ExcelPath = IndexWk.Path;
 
     [ExcelFunction(Category = "test", IsVolatile = true, IsMacroType = true, Description = "测试自定义函数")]
-    public static double Sum2Num([ExcelArgument(Description = "选个格子")] double a,
-        [ExcelArgument(Description = "选个格子")] double b)
+    public static double Sum2Num([ExcelArgument(AllowReference = true, Description = "选个格子")] double a,
+        [ExcelArgument(AllowReference = true,Description = "选个格子")] double b)
     {
         return a + b;
     }
@@ -85,4 +79,17 @@ public class ExcelUdf
         fs.Close();
         return -1;
     }
+    [ExcelFunction(Category = "test3", IsVolatile = true, IsMacroType = true, Description = "获取单元格背景色")]
+    public static string GetCellColor([ExcelArgument(AllowReference =true,Description = "目标列")] string address)
+    {
+        var range = App.ActiveSheet.Range[address];
+        var color = range.Interior.Color;
+        // 将Excel VBA颜色值转换为RGB格式
+        int red = (int)(color % 256);
+        int green = (int)(color / 256 % 256);
+        int blue = (int)(color / 65536 % 256);
+        // 返回RGB格式的颜色值
+        return $"{red}#{green}#{blue}";
+    }
+
 }
