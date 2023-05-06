@@ -14,6 +14,8 @@ using MessageBox = System.Windows.Forms.MessageBox;
 using LicenseContext = OfficeOpenXml.LicenseContext;
 using Match = System.Text.RegularExpressions.Match;
 using OfficeOpenXml.Style;
+using OfficeOpenXml.Table;
+using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace NumDesTools;
 
@@ -1079,9 +1081,66 @@ public class ExcelDataInsertLanguage
                 errorList.Add((errorExcel, errorExcelLog, fixFileName));
                 continue;
             }
+            //数据查重
+            var c = 0;
+            if (fixFileName == "GuideDialogDetail.xlsx")
+            {
+                c = 1;
+            }
+            else if (fixFileName == "Localizations.xlsx")
+            {
+                c = 2;
+            }
+            else if (fixFileName == "GuideDialogBranch.xlsx")
+            {
+                c = 3;
+            }
+            var idList = new List<string>();
+            for (int r = 0; r < sourceDataList.Count; r++)
+            {
+                var value = sourceDataList[r][c]?.ToString() ?? "";
+                idList.Add(value);
+            }
+            var newIDList = idList.Distinct().ToList();
 
-            //数据复制
-            var isInertRowTarget = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, fixFileNewId);
+            // 定义要删除的行的列表
+            List<int> rowsToDelete = new List<int>();
+            foreach (var id in newIDList)
+            {
+                var reDD = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, id);
+                if (reDD != -1)
+                {
+                    rowsToDelete.Add(reDD);
+                }
+            }
+
+
+            //int endRow = targetSheet.Dimension.End.Row;
+            //// 遍历行并找到具有相同第一列值的行
+            //for (var row = 4; row <= endRow; row++)
+            //{
+            //    var cellValue = targetSheet.Cells[row, 2].Value?.ToString() ?? "";
+            //    if (idSet.Contains(cellValue))
+            //    {
+            //        // 如果发现第一列值相同的行，则删除该行
+            //        targetSheet.DeleteRow(row);
+            //        // 调整删除后的行号
+            //        row--;
+            //        endRow--;
+            //    }
+            //}
+            rowsToDelete.Sort();
+            rowsToDelete.Reverse();
+            // 逐行删除
+            foreach (var rowToDelete in rowsToDelete)
+            {
+                targetSheet.DeleteRow(rowToDelete, 1);
+            }
+
+
+
+            targetExcel.Save();
+
             //根据模板插入对应数据行，并复制
             var endRowSource = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, fixFileModeId);
             if (endRowSource == -1)
@@ -1089,10 +1148,6 @@ public class ExcelDataInsertLanguage
                 MessageBox.Show(fixFileModeId+@"目标表中不存在");
                 continue;
             }
-            var hasCopy = 1;
-            if (fixFileNewId != "")
-                if (isInertRowTarget != -1)
-                    hasCopy = 2;
             targetSheet.InsertRow(endRowSource + 1, sourceDataList.Count);
             var colCount = targetSheet.Dimension.Columns;
             var cellSource = targetSheet.Cells[endRowSource, 1, endRowSource, colCount];
@@ -1196,7 +1251,11 @@ public class ExcelDataInsertLanguage
                     else if (source == "触发分支")
                     {
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)]?.ToString();
-                        if (sourceValue == null || sourceValue == "" || sourceValue == "0") continue;
+                        if (sourceValue == null || sourceValue == "" || sourceValue == "0")
+                        {
+                            sourceCount++;
+                            continue;
+                        }
                         var uniqueValues1 = new HashSet<string>();
                         var strBranch = "";
                         for (var k = 0; k < sourceDataList.Count; k++)
@@ -1278,7 +1337,7 @@ public class ExcelDataInsertLanguage
                     }
                     else if (source == "UI对话框")
                     {
-                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf("角色换装")];
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf("UI对话框")];
                         if (sourceValue == null)
                         {
                             sourceValue = "1";
@@ -1303,38 +1362,39 @@ public class ExcelDataInsertLanguage
                 }
             }
 
-            //数据去重
+            //数据合并
             if (errorExcel != 0) continue;
-
             int startRow = endRowSource + 1;
-            int endRow = startRow + sourceDataList.Count - 1;
-            if (hasCopy == 2)
+            int endRow2 = startRow + sourceDataList.Count - 1;
+            //int endRow2 = targetSheet.Dimension.End.Row;
+            //if (hasCopy == 2)
+            //{
+            //    var dataCount = int.Parse(fixDataList[i][dataRows]);
+            //    var start = endRow2 + 1;
+            //    targetSheet.DeleteRow(start, dataCount);
+            //}
+            if (fixFileName == "GuideDialogBranch.xlsx" || fixFileName == "GuideDialogGroup.xlsx")
             {
-                var dataCount = int.Parse(fixDataList[i][dataRows]);
-                var start = endRow + 1;
-                targetSheet.DeleteRow(start, dataCount);
-            }
-
-            var uniqueValues = new HashSet<string>();
-            // 遍历行并找到具有相同第一列值的行
-            for (var row = startRow; row <= endRow; row++)
-            {
-                var cellValue = targetSheet.Cells[row, 2].Value?.ToString() ?? "";
-
-                if (uniqueValues.Contains(cellValue) || cellValue == "")
+                var uniqueValues = new HashSet<string>();
+                // 遍历行并找到具有相同第一列值的行
+                for (var row = 4; row <= endRow2; row++)
                 {
-                    // 如果发现第一列值相同的行，则删除该行
-                    targetSheet.DeleteRow(row);
-                    // 调整删除后的行号
-                    row--;
-                    endRow--;
-                }
-                else
-                {
-                    uniqueValues.Add(cellValue);
+                    var cellValue = targetSheet.Cells[row, 2].Value?.ToString() ?? "";
+
+                    if (uniqueValues.Contains(cellValue) || cellValue == "")
+                    {
+                        // 如果发现第一列值相同的行，则删除该行
+                        targetSheet.DeleteRow(row);
+                        // 调整删除后的行号
+                        row--;
+                        endRow2--;
+                    }
+                    else
+                    {
+                        uniqueValues.Add(cellValue);
+                    }
                 }
             }
-
             targetExcel.Save();
             targetExcel.Dispose();
             var excelCount = i + 1;
@@ -1626,8 +1686,13 @@ public class ExcelDataAutoInsertMulti
             string excelKey = fixItem[0, colMulti];
             if (excelKey == null) continue;
             var excelFileFixKey = ExcelDataAutoInsert.FindSourceCol(sheet, 2, excelKey);
+            if (excelFileFixKey == -1)
+            {
+                var errorExcelLog = excelName + "#【初始模板】#[" + excelKey + "]未找到(字段出错)";
+                errorList.Add((excelKey, errorExcelLog, excelName));
+                continue;
+            }
             string excelKeyMethod = fixItem[1, colMulti]?.ToString();
-
             //修改字段字典中的字段值，各自方法不一
             for (var i = 0; i < count; i++)
             {
@@ -1689,6 +1754,12 @@ public class ExcelDataAutoInsertMulti
                 string excelKey = fixItem[0, k];
                 if (excelKey == null) continue;
                 var excelFileFixKey = ExcelDataAutoInsert.FindSourceCol(sheet, 2, excelKey);
+                if (excelFileFixKey == -1)
+                {
+                    var errorExcelLog = excelName + "#【初始模板】#[" + excelKey + "]未找到(字段出错)";
+                    errorList.Add((excelKey, errorExcelLog, excelName));
+                    continue;
+                }
                 string excelKeyMethod = fixItem[1, k]?.ToString();
 
                 var rowThreadCount = 4; // 线程数
