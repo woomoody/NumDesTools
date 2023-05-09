@@ -488,7 +488,7 @@ public class ExcelDataAutoInsert
             {
                 //数字累加
                 var addDigit = Math.Abs((long)Math.Pow(10, digit[0].Item2 - 1) * addValue);
-                if (addDigit > num*100)
+                if (addDigit > (num+1)*100)
                 {
                     str = "^error^";
                     return str;
@@ -1648,7 +1648,11 @@ public class ExcelDataAutoInsertMulti
             //设置背景色
             cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
             cellTarget.Style.Fill.BackgroundColor.SetColor(cellBackColor);
-
+            //尽量和源数据格式一致，宋体的格式会歪？不知道为什么
+            if (cellTarget.Style.Font.Name == "宋体")
+            {
+                cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
             //数据修改
             var fixItem = fixKey[excelName][excelMulti].Item1;
             errorList = modeThread
