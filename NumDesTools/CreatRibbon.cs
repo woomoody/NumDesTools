@@ -102,6 +102,7 @@ public partial class CreatRibbon
     }
     private void UD_RightClickButton(object sh, Range target, ref bool cancel)
     {
+
         //excel文档已有的右键菜单cell
         CommandBar mzBar = App.CommandBars["cell"];
         mzBar.Reset();
@@ -1072,9 +1073,6 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        var wk = App.ActiveWorkbook;
-        var path = wk.Path;
-        ExcelLinksGraphic.Graph();
         //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");
         //ExcelDataAutoInsertMulti.InsertData(true);
         //ExcelDataAutoInsert.AutoInsertDat();
