@@ -4,8 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Windows;
 using ExcelDna.Integration;
+using Color = System.Drawing.Color;
 
 namespace NumDesTools;
 
@@ -78,120 +78,162 @@ public class PubMetToExcel
         return dic;
     }
 
-    public static void RepeatValue(ExcelWorksheet sheet,int row, int col,string repeatValue)
+    public static string RepeatValue(ExcelWorksheet sheet,int row, int col,string repeatValue)
     {
-        // 获取指定列的单元格数据
-        var colA = sheet.Cells[row, col, sheet.Dimension.End.Row, col];
-
-        // 通过LINQ查询获取重复值
-        var duplicates = colA
-            .Where(cell => cell.Value.ToString().Equals(repeatValue))
-            .GroupBy(cell => cell.Value.ToString())
-            .Where(group => group.Count() > 1)
-            .SelectMany(group => group.Skip(1));
-        // 判断是否存在指定的重复值
-        var duplicateCells = duplicates.ToList();
-        if (duplicateCells.Any())
+        string errorLog ="";
+        for (int r = sheet.Dimension.End.Row; r >= row; r--)
         {
-            // 删除重复值所在的行
-            foreach (var duplicateCell in duplicateCells)
+            var colA = sheet.Cells[r, col].Value?.ToString();
+            if (colA == repeatValue)
             {
                 try
                 {
-                    sheet.DeleteRow(duplicateCell.Start.Row);
+                    sheet.DeleteRow(r);
                 }
-                catch
+                catch(Exception ex)
                 {
-                    MessageBox.Show("删除重复行失败");
+                    // 记录错误日志
+                    errorLog += $"Error {repeatValue}: {ex.Message}\n";
                 }
             }
         }
+        return errorLog;
     }
-
-/*
-    public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelMulti(string rootPath, string errorValue)
+    public static string RepeatValue2(ExcelWorksheet sheet, int row, int col, List<string> repeatValue)
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        string errorLog = "";
+        // 获取指定列的单元格数据
+        var sourceValues = sheet.Cells[row, col, sheet.Dimension.End.Row, col].Select(c => c.Value.ToString()).ToList(); 
 
-        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
-        var mainPath = newPath + @"\Excels\Tables\";
-        string[] files1 = Directory.EnumerateFiles(mainPath, "*.xlsx")
-            .Where(file => !Path.GetFileName(file).Contains("#"))
-            .ToArray();
-        var langPath = newPath + @"\Excels\Localizations\";
-        string[] files2 = Directory.EnumerateFiles(mainPath, "*.xlsx")
-            .Where(file => !Path.GetFileName(file).Contains("#"))
-            .ToArray();
-        var uiPath = newPath + @"\Excels\UIs\";
-        string[] files3 = Directory.EnumerateFiles(mainPath, "*.xlsx")
-            .Where(file => !Path.GetFileName(file).Contains("#"))
-            .ToArray();
-        var files = files1.Concat(files2).Concat(files3).ToArray();
-
-        int currentCount = 0;
-        var count = files.Length;
-
-        // 定义一个共享变量用于存储匹配结果
-        (string, string, int, int) result = ("", "", 0, 0);
-
-        // 创建一个 object 类型的对象用于锁定
-        object locker = new object();
-
-        Parallel.For(0, files.Length, (i) =>
+        // 生成索引List
+        var indexList = new List<int>();
+        foreach (var repeat in repeatValue)
         {
-            //过滤非配置表
-            var fileName = Path.GetFileName(files[i]);
-            if (fileName.Contains("#")) return;
-            // 使用 EPPlus 打开 Excel 文件进行操作
-            using (ExcelPackage package = new ExcelPackage(new FileInfo(files[i])))
+            // 查找存在的值所在的行
+            int rowIndex = sourceValues.FindIndex(c => c == repeat) ;
+            if (rowIndex == -1) continue;
+            rowIndex += row;
+            indexList.Add(rowIndex);
+        }
+        indexList.Sort();
+        if (indexList.Count != 0)
+        {
+            //合并List
+            List<List<int>> outputList = new List<List<int>>();
+            int start = indexList[0];
+
+            for (int i = 1; i < indexList.Count; i++)
             {
-                var wk = package.Workbook;
-                var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
-                for (var col = 2; col <= sheet.Dimension.End.Column; col++)
+                if (indexList[i] != indexList[i - 1] + 1)
                 {
-                    for (var row = 4; row <= sheet.Dimension.End.Row; row++)
+                    outputList.Add(new List<int>() { start, indexList[i - 1] });
+                    start = indexList[i];
+                }
+            }
+            outputList.Add(new List<int>() { start, indexList[indexList.Count - 1] });
+            // 翻转输出列表
+            outputList.Reverse();
+            // 删除要删除的行
+            foreach (var rowToDelete in outputList)
+            {
+                try
+                {
+                    sheet.DeleteRow(rowToDelete[0], rowToDelete[1] - rowToDelete[0] + 1);
+                }
+                catch (Exception)
+                {
+                    //可能因为之前的填充格式问题导致异常
+                    // 记录错误日志
+                    errorLog += $"Error {sheet.Name}:#行号{rowToDelete}背景格式问题，更改背景色重试\n";
+                }
+            }
+        }
+        return errorLog;
+    }
+    /*
+        public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelMulti(string rootPath, string errorValue)
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
+            var mainPath = newPath + @"\Excels\Tables\";
+            string[] files1 = Directory.EnumerateFiles(mainPath, "*.xlsx")
+                .Where(file => !Path.GetFileName(file).Contains("#"))
+                .ToArray();
+            var langPath = newPath + @"\Excels\Localizations\";
+            string[] files2 = Directory.EnumerateFiles(mainPath, "*.xlsx")
+                .Where(file => !Path.GetFileName(file).Contains("#"))
+                .ToArray();
+            var uiPath = newPath + @"\Excels\UIs\";
+            string[] files3 = Directory.EnumerateFiles(mainPath, "*.xlsx")
+                .Where(file => !Path.GetFileName(file).Contains("#"))
+                .ToArray();
+            var files = files1.Concat(files2).Concat(files3).ToArray();
+
+            int currentCount = 0;
+            var count = files.Length;
+
+            // 定义一个共享变量用于存储匹配结果
+            (string, string, int, int) result = ("", "", 0, 0);
+
+            // 创建一个 object 类型的对象用于锁定
+            object locker = new object();
+
+            Parallel.For(0, files.Length, (i) =>
+            {
+                //过滤非配置表
+                var fileName = Path.GetFileName(files[i]);
+                if (fileName.Contains("#")) return;
+                // 使用 EPPlus 打开 Excel 文件进行操作
+                using (ExcelPackage package = new ExcelPackage(new FileInfo(files[i])))
+                {
+                    var wk = package.Workbook;
+                    var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
+                    for (var col = 2; col <= sheet.Dimension.End.Column; col++)
                     {
-                        // 获取当前行的单元格数据
-                        var cellValue = sheet.Cells[row, col].Value;
-
-                        // 如果找到了匹配的值
-                        if (cellValue != null && cellValue.ToString() == errorValue)
+                        for (var row = 4; row <= sheet.Dimension.End.Row; row++)
                         {
-                            // 返回该单元格的行地址
-                            var cellAddress = new ExcelCellAddress(row, col);
-                            var cellCol = cellAddress.Column;
-                            var cellRow = cellAddress.Row;
-                            var tuple = (files[i], sheet.Name, cellRow, cellCol);
+                            // 获取当前行的单元格数据
+                            var cellValue = sheet.Cells[row, col].Value;
 
-                            // 在锁定的情况下更新共享变量
-                            lock (locker)
+                            // 如果找到了匹配的值
+                            if (cellValue != null && cellValue.ToString() == errorValue)
                             {
-                                result = tuple;
-                                // 更新计数器
-                                currentCount++;
-                                // 更新状态栏
-                                App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + files[i];
-                            }
+                                // 返回该单元格的行地址
+                                var cellAddress = new ExcelCellAddress(row, col);
+                                var cellCol = cellAddress.Column;
+                                var cellRow = cellAddress.Row;
+                                var tuple = (files[i], sheet.Name, cellRow, cellCol);
 
-                            // 跳出循环并返回结果
-                            return;
+                                // 在锁定的情况下更新共享变量
+                                lock (locker)
+                                {
+                                    result = tuple;
+                                    // 更新计数器
+                                    currentCount++;
+                                    // 更新状态栏
+                                    App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + files[i];
+                                }
+
+                                // 跳出循环并返回结果
+                                return;
+                            }
                         }
                     }
                 }
-            }
 
-            // 更新计数器
-            lock (locker)
-            {
-                currentCount++;
-                // 更新状态栏
-                App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + files[i];
-            }
-        });
+                // 更新计数器
+                lock (locker)
+                {
+                    currentCount++;
+                    // 更新状态栏
+                    App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + files[i];
+                }
+            });
 
-        return result;
-    }
-*/
+            return result;
+        }
+    */
     public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelAll(string rootPath, string errorValue)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -305,4 +347,25 @@ public class PubMetToExcel
         var tupleError = ("", "", 0, 0);
         return tupleError;
     }
+    public static Color GetCellBackgroundColor(Range cell)
+    {
+        Color color = Color.Empty;
+
+        if (cell.Interior.Color != null)
+        {
+            object excelColor = cell.Interior.Color;
+            if (excelColor is double)
+            {
+                double colorValue = (double)excelColor;
+                int intValue = (int)colorValue;
+                int red = intValue & 0xFF;
+                int green = (intValue & 0xFF00) >> 8;
+                int blue = (intValue & 0xFF0000) >> 16;
+                color = Color.FromArgb(red, green, blue);
+            }
+        }
+        return color;
+    }
+
+
 }
