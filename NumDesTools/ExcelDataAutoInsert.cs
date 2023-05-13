@@ -1227,10 +1227,10 @@ public class ExcelDataInsertLanguage
                     }
                     else if (source =="角色表情")
                     {
-                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)];
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)].ToString();
                         for (var k = 0; k < emoDataList.Count; k++)
                         {
-                            var targetValue = emoDataList[k][0];
+                            var targetValue = emoDataList[k][0].ToString();
                             if (targetValue == sourceValue)
                             {
                                 var emoId = emoDataList[k][2];

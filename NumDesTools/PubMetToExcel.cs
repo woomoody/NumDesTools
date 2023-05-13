@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using ExcelDna.Integration;
 using Color = System.Drawing.Color;
+using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace NumDesTools;
 
@@ -15,8 +16,18 @@ public class PubMetToExcel
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToList(dynamic workSheet)
     {
         Range dataRange = workSheet.UsedRange;
+        // 获取第一列有数据的最大行
+        int maxRow= 0;
+        for (int row = 1; row <= dataRange.Rows.Count; row++)
+        {
+            if (workSheet.Cells[row, 1].Value != null && workSheet.Cells[row, 1].Value.ToString().Trim() != "")
+            {
+                maxRow = row;
+            }
+        }
+        Range realDataRange = workSheet.Range[workSheet.Cells[1, 1], workSheet.Cells[maxRow, dataRange.Columns.Count]];
         // 读取数据到一个二维数组中
-        object[,] rangeValue = dataRange.Value;
+        object[,] rangeValue = realDataRange.Value;
         // 获取行数和列数
         var rows = rangeValue.GetLength(0);
         var columns = rangeValue.GetLength(1);
