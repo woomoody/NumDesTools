@@ -16,8 +16,49 @@ public class PubMetToExcel
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToList(dynamic workSheet)
     {
         Range dataRange = workSheet.UsedRange;
+        //// 获取第一列有数据的最大行
+        //int maxRow= 0;
+        //for (int row = 1; row <= dataRange.Rows.Count; row++)
+        //{
+        //    if (workSheet.Cells[row, 1].Value != null && workSheet.Cells[row, 1].Value.ToString().Trim() != "")
+        //    {
+        //        maxRow = row;
+        //    }
+        //}
+        //Range realDataRange = workSheet.Range[workSheet.Cells[1, 1], workSheet.Cells[maxRow, dataRange.Columns.Count]];
+        // 读取数据到一个二维数组中
+        object[,] rangeValue = dataRange.Value;
+        // 获取行数和列数
+        var rows = rangeValue.GetLength(0);
+        var columns = rangeValue.GetLength(1);
+        // 定义工作表数据数组和表头数组
+        var sheetData = new List<List<object>>();
+        var sheetHeaderCol = new List<object>();
+        // 读取数据和表头
+        //单线程
+        for (var row = 1; row <= rows; row++)
+        {
+            var rowList = new List<object>();
+            for (var column = 1; column <= columns; column++)
+            {
+                var value = rangeValue[row, column];
+                if (row == 1)
+                    sheetHeaderCol.Add(value);
+                else
+                    rowList.Add(value);
+            }
+
+            if (row > 1) sheetData.Add(rowList);
+        }
+
+        var excelData = (sheetHeaderCol, sheetData);
+        return excelData;
+    }
+    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListFirstRow(dynamic workSheet)
+    {
+        Range dataRange = workSheet.UsedRange;
         // 获取第一列有数据的最大行
-        int maxRow= 0;
+        int maxRow = 0;
         for (int row = 1; row <= dataRange.Rows.Count; row++)
         {
             if (workSheet.Cells[row, 1].Value != null && workSheet.Cells[row, 1].Value.ToString().Trim() != "")
@@ -54,7 +95,6 @@ public class PubMetToExcel
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
-
     public static Dictionary<string, List<Tuple<object[,]>>> ExcelDataToDictionary(dynamic data, dynamic dicKeyCol,
         dynamic dicValueCol, int valueRowCount, int valueColCount = 1)
     {

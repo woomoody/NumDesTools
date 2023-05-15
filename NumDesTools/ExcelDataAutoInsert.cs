@@ -487,6 +487,11 @@ public class ExcelDataAutoInsert
             else if (digit.Count == 1 && digit[0].Item1 == 0)
             {
                 //数字累加
+                if (digit[0].Item2 > 1000)
+                {
+                    str = "^error^";
+                    return str;
+                }
                 var addDigit = Math.Abs((long)Math.Pow(10, digit[0].Item2 - 1) * addValue);
                 if (addDigit > (num+1)*100)
                 {
@@ -1002,19 +1007,19 @@ public class ExcelDataInsertLanguage
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-        var sourceData = PubMetToExcel.ExcelDataToList(sourceSheet);
+        var sourceData = PubMetToExcel.ExcelDataToListFirstRow(sourceSheet);
         var sourceTitle = sourceData.Item1;
         var sourceDataList = sourceData.Item2;
 
-        var fixData = PubMetToExcel.ExcelDataToList(fixSheet);
+        var fixData = PubMetToExcel.ExcelDataToListFirstRow(fixSheet);
         var fixTitle = fixData.Item1;
         var fixDataList = fixData.Item2;
 
-        var classData = PubMetToExcel.ExcelDataToList(classSheet);
+        var classData = PubMetToExcel.ExcelDataToListFirstRow(classSheet);
         var classTitle = classData.Item1;
         var classDataList = classData.Item2;
 
-        var emoData = PubMetToExcel.ExcelDataToList(emoSheet);
+        var emoData = PubMetToExcel.ExcelDataToListFirstRow(emoSheet);
         var emoDataList = emoData.Item2;
 
         var fileIndex = fixTitle.IndexOf("表名");
@@ -1609,6 +1614,12 @@ public class ExcelDataAutoInsertMulti
         //第一次写入插入行的位置，因为可能删除导致行数变化，需要重新获取一次
         writeIdList = ExcelDataWriteIdGroup(excelName, addValue, sheet, fixKey, modelId);
         var writeRow = writeIdList.Item2;
+        if (writeRow == -1)
+        {
+            errorExcelLog = excelName + "#找不到"+ writeIdList.Item1[0];
+            errorList.Add((excelName, errorExcelLog, excelName));
+            return errorList;
+        }
         //执行写入操作
         for (var excelMulti = 0; excelMulti < modelId[excelName].Count; excelMulti++)
         {
@@ -1820,6 +1831,13 @@ public class ExcelDataAutoInsertMulti
             var endValue = modelId[excelName][excelMulti].Item1[1, 0].ToString();
             var startRowSource = ExcelDataAutoInsert.FindSourceRow(sheet, 2, startValue);
             var endRowSource = ExcelDataAutoInsert.FindSourceRow(sheet, 2, endValue);
+            //查错
+            if (startRowSource == -1 || endRowSource == -1)
+            {
+                var writeIdList2 = new List<string>();
+                writeIdList2.Add(startValue+"#" + endValue);
+                return (writeIdList2, -1);
+            }
             string excelKeyMethod = fixKey[excelName][excelMulti].Item1[1, 0]?.ToString();
             //获取要写入的ID
             var count = endRowSource - startRowSource + 1;
