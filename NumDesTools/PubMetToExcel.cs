@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using ExcelDna.Integration;
 using Color = System.Drawing.Color;
-using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace NumDesTools;
 

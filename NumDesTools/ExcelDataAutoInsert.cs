@@ -983,23 +983,24 @@ public class ExcelDataInsertLanguage
         ErrorLogCtp.DisposeCtp();
 
         var errorExcelList = new List<List<(int, string, string)>>();
+        if (errorExcelList == null) throw new ArgumentNullException(nameof(errorExcelList));
 
         List<(int, string, string)> error = LanguageDialogData(sourceSheet, fixSheet, classSheet,emoSheet, excelPath, app);
 
         if (error.Count != 0) errorExcelList.Add(error);
 
         //出错表格处理
-        string errorLog = ExcelDataAutoInsert.ErrorExcelMark(errorExcelList, fixSheet);
-        if (errorLog != "")
-        {
-            ErrorLogCtp.DisposeCtp();
-            ErrorLogCtp.CreateCtpNormal(errorLog);
-        }
+        //string errorLog = ExcelDataAutoInsert.ErrorExcelMark(errorExcelList, fixSheet);
+        //if (errorLog != "")
+        //{
+        //    ErrorLogCtp.DisposeCtp();
+        //    ErrorLogCtp.CreateCtpNormal(errorLog);
+        //}
 
-        else
-        {
-            fixSheet.Range["A2:A1000"].Value = "";
-        }
+        //else
+        //{
+        //    fixSheet.Range["A2:A1000"].Value = "";
+        //}
     }
 
     public static List<(int, string, string)> LanguageDialogData(dynamic sourceSheet, dynamic fixSheet,
@@ -1007,19 +1008,19 @@ public class ExcelDataInsertLanguage
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-        var sourceData = PubMetToExcel.ExcelDataToListFirstRow(sourceSheet);
+        var sourceData = PubMetToExcel.ExcelDataToList(sourceSheet);
         var sourceTitle = sourceData.Item1;
         var sourceDataList = sourceData.Item2;
 
-        var fixData = PubMetToExcel.ExcelDataToListFirstRow(fixSheet);
+        var fixData = PubMetToExcel.ExcelDataToList(fixSheet);
         var fixTitle = fixData.Item1;
         var fixDataList = fixData.Item2;
 
-        var classData = PubMetToExcel.ExcelDataToListFirstRow(classSheet);
+        var classData = PubMetToExcel.ExcelDataToList(classSheet);
         var classTitle = classData.Item1;
         var classDataList = classData.Item2;
 
-        var emoData = PubMetToExcel.ExcelDataToListFirstRow(emoSheet);
+        var emoData = PubMetToExcel.ExcelDataToList(emoSheet);
         var emoDataList = emoData.Item2;
 
         var fileIndex = fixTitle.IndexOf("表名");
@@ -1159,6 +1160,13 @@ public class ExcelDataInsertLanguage
             //修改数据
             for (var m = 0; m < sourceDataList.Count; m++)
             {
+                var errorCell = sourceDataList[m][0];
+                if (errorCell == null)
+                {
+                    errorExcelLog = sourceSheet.Name+ "#表格尾行有，多余格式，清除";
+                    MessageBox.Show(errorExcelLog);
+                    return errorList;
+                }
                 var sourceCount = 0;
                 foreach (var source in sourceKeyList)
                 {
