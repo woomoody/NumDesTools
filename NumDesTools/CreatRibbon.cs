@@ -938,22 +938,41 @@ public partial class CreatRibbon
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var tuple =PubMetToExcel.ErrorKeyFromExcelAll(path, _excelSeachStr);
-        if (tuple.Item1 == "")
+        //var tuple =PubMetToExcel.ErrorKeyFromExcelAll(path, _excelSeachStr);
+        //if (tuple.Item1 == "")
+        //{
+        //    sw.Stop();
+        //    MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
+        //}
+        //else
+        //{
+        //    //打开表格
+        //    var targetWk = App.Workbooks.Open(tuple.Item1);
+        //    var targetSh = targetWk.Worksheets[tuple.Item2];
+        //    targetSh.Activate();
+        //    var cell = targetSh.Cells[tuple.Item3, tuple.Item4];
+        //    cell.Select();
+        //    sw.Stop();
+        //}
+
+        var targetList = PubMetToExcel.ErrorKeyFromExcelAll(path, _excelSeachStr);
+        if (targetList.Count == 0)
         {
             sw.Stop();
             MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
         }
         else
         {
-            //打开表格
-            var targetWk = App.Workbooks.Open(tuple.Item1);
-            var targetSh = targetWk.Worksheets[tuple.Item2];
-            targetSh.Activate();
-            var cell = targetSh.Cells[tuple.Item3, tuple.Item4];
-            cell.Select();
+            ErrorLogCtp.DisposeCtp();
+            var log="";
+            for (int i = 0; i < targetList.Count; i++)
+            {
+                log += targetList[i].Item1+"#"+targetList[i].Item2+"#"+targetList[i].Item3+"::"+targetList[i].Item4+"\n";
+            }
+            ErrorLogCtp.CreateCtpNormal(log);
             sw.Stop();
         }
+        
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
         App.StatusBar = "搜索完成，用时：" + ts2;

@@ -284,7 +284,7 @@ public class PubMetToExcel
             return result;
         }
     */
-    public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelAll(string rootPath, string errorValue)
+    public static List<(string,string,int,int)>  ErrorKeyFromExcelAll(string rootPath, string errorValue)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
@@ -303,6 +303,7 @@ public class PubMetToExcel
             .ToArray();
         var files = files1.Concat(files2).Concat(files3).ToArray();
 
+        var targetList = new List<(string, string, int, int)>();
         int currentCount = 0;
         var count = files.Length;
         foreach (var file in files)
@@ -326,8 +327,7 @@ public class PubMetToExcel
                             var cellAddress = new ExcelCellAddress(row, col);
                             var cellCol = cellAddress.Column;
                             var cellRow = cellAddress.Row;
-                            var tuple = (file, sheet.Name, cellRow, cellCol);
-                            return tuple;
+                            targetList.Add((file, sheet.Name, cellRow, cellCol));
                         }
                     }
                 }
@@ -336,8 +336,7 @@ public class PubMetToExcel
             //wk.Properties.Company = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
             App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
         }
-        var tupleError = ("", "", 0, 0);
-        return tupleError;
+        return targetList;
     }
     public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelId(string rootPath, string errorValue)
     {
