@@ -312,24 +312,31 @@ public class PubMetToExcel
             using (ExcelPackage package = new ExcelPackage(new FileInfo(file)))
             {
                 var wk = package.Workbook;
-                var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
-                for (var col = 2; col <= sheet.Dimension.End.Column; col++)
+                try
                 {
-                    for (var row = 4; row <= sheet.Dimension.End.Row; row++)
+                    var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
+                    for (var col = 2; col <= sheet.Dimension.End.Column; col++)
                     {
-                        // 获取当前行的单元格数据
-                        var cellValue = sheet.Cells[row, col].Value;
-
-                        // 如果找到了匹配的值
-                        if (cellValue != null && cellValue.ToString() == errorValue)
+                        for (var row = 4; row <= sheet.Dimension.End.Row; row++)
                         {
-                            // 返回该单元格的行地址
-                            var cellAddress = new ExcelCellAddress(row, col);
-                            var cellCol = cellAddress.Column;
-                            var cellRow = cellAddress.Row;
-                            targetList.Add((file, sheet.Name, cellRow, cellCol));
+                            // 获取当前行的单元格数据
+                            var cellValue = sheet.Cells[row, col].Value;
+
+                            // 如果找到了匹配的值
+                            if (cellValue != null && cellValue.ToString() == errorValue)
+                            {
+                                // 返回该单元格的行地址
+                                var cellAddress = new ExcelCellAddress(row, col);
+                                var cellCol = cellAddress.Column;
+                                var cellRow = cellAddress.Row;
+                                targetList.Add((file, sheet.Name, cellRow, cellCol));
+                            }
                         }
                     }
+                }
+                catch
+                {
+                    continue;
                 }
             }
             currentCount++;
