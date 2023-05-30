@@ -19,6 +19,7 @@ using System.Globalization;
 using DocumentFormat.OpenXml.Spreadsheet;
 using DocumentFormat.OpenXml.Bibliography;
 using NPOI.SS.Formula.Functions;
+using DocumentFormat.OpenXml;
 
 namespace NumDesTools;
 
@@ -1705,7 +1706,6 @@ public class ExcelDataAutoInsertMulti
                 errorList.Add((excelKey, errorExcelLog, excelName));
                 continue;
             }
-
             string excelKeyMethod = fixItem[1, colMulti]?.ToString();
             //修改字段字典中的字段值，各自方法不一
             for (var i = 0; i < count; i++)
@@ -1722,6 +1722,7 @@ public class ExcelDataAutoInsertMulti
                 {
                     cellFix.Value = commentValue;
                 }
+                //特殊字段需要CopyAlice
                 else
                 {
                     //字段值改写方法
@@ -1888,12 +1889,14 @@ public class ExcelDataAutoCopyMulti
         var data = sheetData.Item2;
         var sheetNameCol = title.IndexOf("表名");
         var modeIdCol =title.IndexOf("克隆模板");
+        var modeIdColInsert = title.IndexOf("初始模板");
         ErrorLogCtp.DisposeCtp();
 
         //字典Value跨度（行）
         var rowCount = 2;
         //获取字典
         var modelId = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modeIdCol, rowCount);
+        var modelIdInsert = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modeIdColInsert, rowCount);
 
         //遍历文件写入
         var errorExcelList = new List<List<(string, string, string)>>();
@@ -1926,7 +1929,7 @@ public class ExcelDataAutoCopyMulti
                     break;
             }
             //拷贝-写入数据
-            ExcelDataWriteForCopy(path, pathSource, modelId, excelName);
+            ExcelDataWriteForCopy(path, pathSource, modelId, modelIdInsert,excelName);
 
             excelCount++;
         }
@@ -1943,7 +1946,7 @@ public class ExcelDataAutoCopyMulti
         ErrorLogCtp.DisposeCtp();
         ErrorLogCtp.CreateCtpNormal(errorLog);
     }
-    public static List<(string, string, string)> ExcelDataWriteForCopy(dynamic path, dynamic pathSource, dynamic modelId, dynamic excelName)
+    public static List<(string, string, string)> ExcelDataWriteForCopy(dynamic path, dynamic pathSource, dynamic modelId, dynamic modelIdInsert,dynamic excelName)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var errorExcelLog = "";
@@ -2002,8 +2005,16 @@ public class ExcelDataAutoCopyMulti
         sheet ??= workBook.Worksheets[0];
         //源数据表数据获取
         var countSource = 0;
-        ExcelRange mergeRange = null;
         var colCount = sheetSource.Dimension.Columns;
+        //获取插入点
+        var endValueMax = modelIdInsert[excelName][modelIdInsert[excelName].Count-1].Item1[1, 0].ToString();
+        var endRowSourceMax = ExcelDataAutoInsert.FindSourceRow(sheet, 2, endValueMax);
+        if (endRowSourceMax == -1)
+        {
+            errorExcelLog = excelName + "#【克隆模板】#[" + endValueMax + "]未找到(序号出错)";
+            errorList.Add((endValueMax, errorExcelLog, excelName));
+            return errorList;
+        }
         for (var excelMulti = 0; excelMulti < modelId[excelName].Count; excelMulti++)
         {
             var startValue = modelId[excelName][excelMulti].Item1[0, 0].ToString();
@@ -2029,14 +2040,14 @@ public class ExcelDataAutoCopyMulti
                 return errorList;
             }
             var count = endRowSource - startRowSource + 1;
-            countSource += count;
             var cellSource = sheetSource.Cells[startRowSource, 1, endRowSource, colCount];
             //去重
 
             //复制
-            sheet.InsertRow(1, count);
-            var cell = sheet.Cells[1, 1, countSource, colCount];
+            sheet.InsertRow(endRowSourceMax+ countSource, count);
+            var cell = sheet.Cells[endRowSourceMax+ countSource, 1, countSource+count, colCount];
             cell.Value =cellSource.Value;
+            countSource += count;
             //cell.Copy(cellSource,ExcelRangeCopyOptionFlags.ExcludeMergedCells);
         }
         //目标表格查重
