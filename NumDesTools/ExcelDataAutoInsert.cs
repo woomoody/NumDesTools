@@ -1741,7 +1741,6 @@ public class ExcelDataAutoInsertMulti
 
         return errorList;
     }
-
     private static List<(string, string, string)> MultiWrite(dynamic excelName, dynamic addValue, dynamic fixItem,
         ExcelWorksheet sheet,
         dynamic count, dynamic startRowSource, List<(string, string, string)> errorList,
@@ -2144,5 +2143,136 @@ public class ExcelDataAutoCopyMulti
         }
 
         return errorLog;
+    }
+}
+public class ExcelDataActivityServer
+{
+    public static void Source()
+    {
+        dynamic app = ExcelDnaUtil.Application;
+        var indexWk = app.ActiveWorkbook;
+
+        var sourceSheet = indexWk.Worksheets["运营排期"];
+        var targetSheet = indexWk.Worksheets["Sheet1"];
+        var fixSheet = indexWk.Worksheets["活动模版"];
+        var backupSheet = indexWk.Worksheets["备份"];
+
+        var fixData = PubMetToExcel.ExcelDataToList(fixSheet);
+        var fixTitle = fixData.Item1;
+        var fixDataList = fixData.Item2;
+        var fixNames = fixTitle.IndexOf("活动名称");
+        var fixIds = fixTitle.IndexOf("活动id");
+        var fixPushs = fixTitle.IndexOf("前端可获取活动时间");
+        var fixPushEnds = fixTitle.IndexOf("停止向前端发送活动时间");
+        var fixPreHeats = fixTitle.IndexOf("预热期开始时间");
+        var fixOpens = fixTitle.IndexOf("活动开启时间");
+        var fixEnds = fixTitle.IndexOf("活动结束时间");
+        var fixCloses = fixTitle.IndexOf("活动关闭时间");
+
+        var sourceMaxCol = sourceSheet.UsedRange.Columns.Count;
+        var sourceMaxRow = sourceSheet.UsedRange.Rows.Count;
+        var sourceRange = sourceSheet.Range[sourceSheet.Cells[5,3],sourceSheet.Cells[sourceMaxRow,sourceMaxCol]];
+        var sourceDateRange = sourceSheet.Range[sourceSheet.Cells[2,1],sourceSheet.Cells[2,sourceMaxCol]];
+        Array sourceDataArr = sourceDateRange.Value2;
+        //获取目标活动的时间数据
+        var sourceData = new List <(string,double,double,int,int,int)>();
+        foreach (var cell in sourceRange)
+        {
+            // 检查单元格是否是合并单元格
+            if (cell.MergeCells)
+            {
+                // 获取合并的行列范围
+                var mergeRange = cell.MergeArea;
+                if( cell.Address == mergeRange.Cells[1, 1].Address)
+                {
+                    var mergeValue = mergeRange.Cells[1,1].Value2;
+                    sourceData.Add((mergeValue, sourceDataArr.GetValue(1,mergeRange.Column), sourceDataArr.GetValue(1,mergeRange.Column + mergeRange.Columns.Count - 1),mergeRange.Row,mergeRange.Column, mergeRange.Column + mergeRange.Columns.Count - 1));
+                    //// 打印合并范围的行列信息
+                    //Debug.Print($"合并范围：{mergedRange.Address}");
+                    //Debug.Print($"合并范围内值：{tempvalue}");
+                    //Debug.Print($"合并范围的起始行列：{mergedRange.Row},{mergedRange.Column}");
+                    //Debug.Print($"合并范围的结束行列：{mergedRange.Row + mergedRange.Rows.Count - 1},{mergedRange.Column + mergedRange.Columns.Count - 1}");
+                }
+            }
+            else if(cell.Value !=null)
+            {
+                sourceData.Add((cell.Value, sourceDataArr.GetValue(1,cell.Column), sourceDataArr.GetValue(1, cell.Column + cell.Columns.Count - 1), cell.Row, cell.Column, cell.Column + cell.Columns.Count - 1));
+            }
+        }
+        //对比活动的索引抓取修正时间数据
+        var targetDataList = new List <List<string>>();
+        var error = new List<(int, int,int)> ();
+        DateTime unixEpoch = new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc);
+        for(int i = 0; i < fixDataList.Count; i++)
+        {
+            var fixName = fixDataList[i][fixNames];
+            for(int j = 0;j<sourceData.Count; j++)
+            {
+                var sourceName = sourceData[j].Item1;
+                if (fixName != sourceName)
+                {
+                    error.Add((sourceData[j].Item4, sourceData[j].Item5, sourceData[j].Item6));
+                    continue;
+                }
+                else
+                {
+                    var targetData = new List<string>();
+                    long sourceStartTimeLong = (long)(DateTime.FromOADate(sourceData[j].Item2).AddHours(8).ToUniversalTime()- unixEpoch).TotalSeconds;
+                    long sourceEndTimeLong = (long)(DateTime.FromOADate(sourceData[j].Item3).AddHours(8).ToUniversalTime() - unixEpoch).TotalSeconds;
+
+                    var targetId = fixDataList[i][fixIds];
+                    var targetName = sourceName;
+                    //时间计算规则
+                    string targetPushTimeString = DateTime.FromOADate(sourceData[j].Item2).AddHours(fixDataList[i][fixPushs] * 24 + 8).ToString();
+                    long targetPushTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixPushs]*24*3600);
+                    string targetPushEndTimeString = DateTime.FromOADate(sourceData[j].Item2).AddHours(fixDataList[i][fixPushEnds] * 24 + 8).ToString();
+                    long targetPushEndTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixPushEnds] * 24 * 3600);
+                    string targetPreHeatTimeString = DateTime.FromOADate(sourceData[j].Item2).AddHours(fixDataList[i][fixPreHeats] * 24 + 8).ToString();
+                    long targetPreHeatTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixPreHeats] * 24 * 3600);
+                    string targetOpenTimeString = DateTime.FromOADate(sourceData[j].Item2).AddHours(fixDataList[i][fixOpens] * 24 + 8).ToString();
+                    long targetOpenTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixOpens] * 24 * 3600);
+                    string targetEndTimeString = DateTime.FromOADate(sourceData[j].Item3).AddHours(fixDataList[i][fixEnds] * 24 + 8).ToString();
+                    long targetEndTimeLong = sourceEndTimeLong + (long)(fixDataList[i][fixEnds] * 24 * 3600);
+                    string targetCloseTimeString = DateTime.FromOADate(sourceData[j].Item3).AddHours(fixDataList[i][fixCloses] * 24 + 8).ToString();
+                    long targetCloseTimeLong = sourceEndTimeLong + (long)(fixDataList[i][fixCloses] * 24 * 3600);
+                    targetData.Add(targetId.ToString());
+                    targetData.Add(targetName.ToString());
+                    targetData.Add(targetPushTimeString);
+                    targetData.Add(targetPushTimeLong.ToString());
+                    targetData.Add(targetPushEndTimeString);
+                    targetData.Add(targetPushEndTimeLong.ToString());
+                    targetData.Add(targetPreHeatTimeString);
+                    targetData.Add(targetPreHeatTimeLong.ToString());
+                    targetData.Add(targetOpenTimeString);
+                    targetData.Add(targetOpenTimeLong.ToString());
+                    targetData.Add(targetEndTimeString);
+                    targetData.Add(targetEndTimeLong.ToString());
+                    targetData.Add(targetCloseTimeString);
+                    targetData.Add(targetCloseTimeLong.ToString());
+                    targetDataList.Add(targetData);
+                }
+            }
+        }
+        //清除老数据
+
+        var targetStartCol = 2;
+        var targetStartRow = 5;
+        var targetRangeOld = targetSheet.Range[targetSheet.Cells[targetStartRow, targetStartCol], targetSheet.Cells[targetSheet.UsedRange.Rows.Count, targetSheet.UsedRange.Columns.Count]];
+        targetRangeOld.Value = null;
+        //写入新数据
+        int rows = targetDataList.Count;
+        int columns = targetDataList[0].Count;
+        string[,] targetDataArr = new string[rows, columns];
+        for( int i = 0; i < rows; i++ )
+        {
+            for(int j =0;j< columns; j++)
+            {
+                targetDataArr[i, j] = targetDataList[i][j];
+            }
+        }
+        var abc = targetStartRow + targetDataArr.GetLength(0) - 1;
+        var dd = targetStartCol + targetDataArr.GetLength(1) - 1;
+        var targetRange = targetSheet.Range[targetSheet.Cells[targetStartRow, targetStartCol], targetSheet.Cells[targetStartRow + targetDataArr.GetLength(0) - 1, targetStartCol + targetDataArr.GetLength(1) - 1]];
+        targetRange.Value = targetDataArr;
     }
 }
