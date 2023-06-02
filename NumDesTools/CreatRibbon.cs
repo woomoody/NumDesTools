@@ -1086,13 +1086,23 @@ public partial class CreatRibbon
         Debug.Print(ts2.ToString());
         App.StatusBar = "完成，用时：" + ts2.ToString();
     }
+    public void ActivityServerData_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        ExcelDataActivityServer.Source();
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "完成，用时：" + ts2.ToString();
+    }
 
     public void TestBar1_Click(IRibbonControl control)
     {
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        ExcelDataActivityServer.Source();
+
         //Program.NodeMain();
         //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");
         //ExcelDataAutoInsertMulti.InsertData(true);
