@@ -2282,8 +2282,10 @@ public class ExcelDataActivityServer
         }
         else
         {
+            ErrorLogCtp.DisposeCtp();
             ErrorLogCtp.CreateCtp(errorLog);
             //写入错误日志并提示
+            MessageBox.Show("有活动找不到，查看错误日志");
         }
     }
 }
