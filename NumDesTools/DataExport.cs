@@ -96,7 +96,7 @@ public static class ErrorLogCtp
     {
         var errorLine = (LinkLabel)sender;
         var errorLineStr = errorLine.Text;
-        var errorLineStrArr = errorLineStr.Split('/', '→');
+        var errorLineStrArr = errorLineStr.Split('/', '→', '@');
         var sheetName = errorLineStrArr[0];
         var cellName = errorLineStrArr[1];
         dynamic app = ExcelDnaUtil.Application;

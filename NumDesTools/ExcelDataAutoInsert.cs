@@ -2258,15 +2258,15 @@ public class ExcelDataActivityServer
                 errorLog += "运营排期/" + PubMetToExcel.ChangeExcelColChar(sourceData[j].Item5-1) + sourceData[j].Item4 + "\r\n"; ;
             }
         }
-        //清除老数据
-
+        //写入新数据
         var targetStartCol = 2;
         var targetStartRow = 5;
-        var targetRangeOld = targetSheet.Range[targetSheet.Cells[targetStartRow, targetStartCol], targetSheet.Cells[targetSheet.UsedRange.Rows.Count, targetSheet.UsedRange.Columns.Count]];
-        targetRangeOld.Value = null;
-        //写入新数据
         if (errorLog == "")
         {
+            //清除老数据
+            var targetRangeOld = targetSheet.Range[targetSheet.Cells[targetStartRow, targetStartCol], targetSheet.Cells[targetSheet.UsedRange.Rows.Count, targetSheet.UsedRange.Columns.Count]];
+            targetRangeOld.Value = null;
+
             int rows = targetDataList.Count;
             int columns = targetDataList[0].Count;
             string[,] targetDataArr = new string[rows, columns];
@@ -2285,7 +2285,7 @@ public class ExcelDataActivityServer
             ErrorLogCtp.DisposeCtp();
             ErrorLogCtp.CreateCtp(errorLog);
             //写入错误日志并提示
-            MessageBox.Show("有活动找不到，查看错误日志");
+            MessageBox.Show(@"有活动找不到，查看错误日志");
         }
     }
 }
