@@ -2196,26 +2196,27 @@ public class ExcelDataActivityServer
             }
             else if(cell.Value !=null)
             {
-                sourceData.Add((cell.Value, sourceDataArr.GetValue(1,cell.Column), sourceDataArr.GetValue(1, cell.Column + cell.Columns.Count - 1), cell.Row, cell.Column, cell.Column + cell.Columns.Count - 1));
+                sourceData.Add((cell.Value.ToString(), sourceDataArr.GetValue(1,cell.Column), sourceDataArr.GetValue(1, cell.Column + cell.Columns.Count - 1), cell.Row, cell.Column, cell.Column + cell.Columns.Count - 1));
             }
         }
         //对比活动的索引抓取修正时间数据
         var targetDataList = new List <List<string>>();
-        var error = new List<(int, int,int)> ();
+        var errorLog = "";
         DateTime unixEpoch = new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc);
-        for(int i = 0; i < fixDataList.Count; i++)
+        for (int j = 0; j < sourceData.Count; j++)
         {
-            var fixName = fixDataList[i][fixNames];
-            for(int j = 0;j<sourceData.Count; j++)
+            bool exit = false;
+            var sourceName = sourceData[j].Item1;
+            for (int i = 0; i < fixDataList.Count; i++)
             {
-                var sourceName = sourceData[j].Item1;
+                var fixName = fixDataList[i][fixNames];
                 if (fixName != sourceName)
                 {
-                    error.Add((sourceData[j].Item4, sourceData[j].Item5, sourceData[j].Item6));
                     continue;
                 }
                 else
                 {
+                    exit = true;
                     var targetData = new List<string>();
                     long sourceStartTimeLong = (long)(DateTime.FromOADate(sourceData[j].Item2).AddHours(8).ToUniversalTime()- unixEpoch).TotalSeconds;
                     long sourceEndTimeLong = (long)(DateTime.FromOADate(sourceData[j].Item3).AddHours(8).ToUniversalTime() - unixEpoch).TotalSeconds;
@@ -2252,6 +2253,10 @@ public class ExcelDataActivityServer
                     targetDataList.Add(targetData);
                 }
             }
+            if(exit==false)
+            {
+                errorLog += "运营排期/" + PubMetToExcel.ChangeExcelColChar(sourceData[j].Item5-1) + sourceData[j].Item4 + "\r\n"; ;
+            }
         }
         //清除老数据
 
@@ -2260,19 +2265,25 @@ public class ExcelDataActivityServer
         var targetRangeOld = targetSheet.Range[targetSheet.Cells[targetStartRow, targetStartCol], targetSheet.Cells[targetSheet.UsedRange.Rows.Count, targetSheet.UsedRange.Columns.Count]];
         targetRangeOld.Value = null;
         //写入新数据
-        int rows = targetDataList.Count;
-        int columns = targetDataList[0].Count;
-        string[,] targetDataArr = new string[rows, columns];
-        for( int i = 0; i < rows; i++ )
+        if (errorLog == "")
         {
-            for(int j =0;j< columns; j++)
+            int rows = targetDataList.Count;
+            int columns = targetDataList[0].Count;
+            string[,] targetDataArr = new string[rows, columns];
+            for (int i = 0; i < rows; i++)
             {
-                targetDataArr[i, j] = targetDataList[i][j];
+                for (int j = 0; j < columns; j++)
+                {
+                    targetDataArr[i, j] = targetDataList[i][j];
+                }
             }
+            var targetRange = targetSheet.Range[targetSheet.Cells[targetStartRow, targetStartCol], targetSheet.Cells[targetStartRow + targetDataArr.GetLength(0) - 1, targetStartCol + targetDataArr.GetLength(1) - 1]];
+            targetRange.Value = targetDataArr;
         }
-        var abc = targetStartRow + targetDataArr.GetLength(0) - 1;
-        var dd = targetStartCol + targetDataArr.GetLength(1) - 1;
-        var targetRange = targetSheet.Range[targetSheet.Cells[targetStartRow, targetStartCol], targetSheet.Cells[targetStartRow + targetDataArr.GetLength(0) - 1, targetStartCol + targetDataArr.GetLength(1) - 1]];
-        targetRange.Value = targetDataArr;
+        else
+        {
+            ErrorLogCtp.CreateCtp(errorLog);
+            //写入错误日志并提示
+        }
     }
 }

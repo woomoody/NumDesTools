@@ -422,6 +422,14 @@ public class PubMetToExcel
         }
         return color;
     }
+    public static string ChangeExcelColChar(int col)
+    {
+        var a = col / 26;
+        var b = col % 26;
 
+        if (a > 0) return ChangeExcelColChar(a - 1) + (char)(b + 65);
+
+        return ((char)(b + 65)).ToString();
+    }
 
 }
