@@ -67,7 +67,7 @@
           <button id="ExcelSearchBoxButton2" label="超级搜索(编号)" screentip='二列，按照A-Z的顺序遍历文件' onAction='ExcelSearchID_Click' image="log" />
         </group>
         <group id="Group9" label="运营工具" >
-          <button id="ActivityServerDataButton1" size='large' label="生成活动" screentip='根据运营排期自动生成活动配置' onAction='ActivityServerData_Click' image="sofa" />
+          <button id="ActivityServerDataButton1" size='large' label="生成活动" screentip='根据运营排期自动生成活动配置' onAction='ActivityServerData_Click' image="csharp" />
         </group>
         <group id='Group9999' label='测试功能区'>
           <button id='Button6' size='large' label='不要点击红色按钮' image='sofa' onAction='TestBar1_Click' />
