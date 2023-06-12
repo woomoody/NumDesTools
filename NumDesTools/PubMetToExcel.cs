@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using ExcelDna.Integration;
 using Color = System.Drawing.Color;
+using System.Diagnostics;
 
 namespace NumDesTools;
 
@@ -306,6 +307,8 @@ public class PubMetToExcel
         var targetList = new List<(string, string, int, int)>();
         int currentCount = 0;
         var count = files.Length;
+        var isAll = errorValue.Contains("*");
+        errorValue = errorValue.Replace("*", "");
         foreach (var file in files)
         {
             // 使用 EPPlus 打开 Excel 文件进行操作
@@ -321,16 +324,31 @@ public class PubMetToExcel
                         {
                             // 获取当前行的单元格数据
                             var cellValue = sheet.Cells[row, col].Value;
-
-                            // 如果找到了匹配的值
-                            if (cellValue != null && cellValue.ToString() == errorValue)
+                            if (!isAll)
                             {
-                                // 返回该单元格的行地址
-                                var cellAddress = new ExcelCellAddress(row, col);
-                                var cellCol = cellAddress.Column;
-                                var cellRow = cellAddress.Row;
-                                targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                // 全词
+                                if (cellValue != null && cellValue.ToString()==errorValue)
+                                {
+                                    // 返回该单元格的行地址
+                                    var cellAddress = new ExcelCellAddress(row, col);
+                                    var cellCol = cellAddress.Column;
+                                    var cellRow = cellAddress.Row;
+                                    targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                }
                             }
+                            else
+                            {
+                                // 模糊
+                                if (cellValue != null && cellValue.ToString().Contains(errorValue))
+                                {
+                                    // 返回该单元格的行地址
+                                    var cellAddress = new ExcelCellAddress(row, col);
+                                    var cellCol = cellAddress.Column;
+                                    var cellRow = cellAddress.Row;
+                                    targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                }
+                            }
+                    
                         }
                     }
                 }
@@ -430,6 +448,27 @@ public class PubMetToExcel
         if (a > 0) return ChangeExcelColChar(a - 1) + (char)(b + 65);
 
         return ((char)(b + 65)).ToString();
+    }
+    public static List<string> ReadWriteTxt(string filePath)
+    {
+        var textLineList = new List<string>();
+        if (!File.Exists(filePath))
+        {
+            // 创建新的文本文件
+            File.Create(filePath);
+            //打开文本文件
+            Process.Start(filePath);
+        }
+        else
+        {
+            // 读取已存在的文本文件
+            using var reader = new StreamReader(filePath);
+            while (reader.ReadLine() is { } line)
+            {
+                textLineList.Add(line);
+            }
+        }
+        return textLineList;
     }
 
 }

@@ -20,6 +20,7 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using DocumentFormat.OpenXml.Bibliography;
 using NPOI.SS.Formula.Functions;
 using DocumentFormat.OpenXml;
+using OfficeOpenXml.DataValidation;
 
 namespace NumDesTools;
 
@@ -1592,7 +1593,13 @@ public class ExcelDataAutoInsertMulti
                 path = excelPath + @"\" + excelName;
                 break;
         }
-
+        bool fileExists = File.Exists(path);
+        if (fileExists == false)
+        {
+            errorExcelLog = excelName + "不存在表格文件";
+            errorList.Add((excelName, errorExcelLog, excelName));
+            return errorList;
+        }
         var excel = new ExcelPackage(new FileInfo(path));
         ExcelWorkbook workBook;
         try
@@ -1618,6 +1625,16 @@ public class ExcelDataAutoInsertMulti
             return errorList;
         }
         sheet ??= workBook.Worksheets[0];
+        //检查公式
+        foreach (var cell in sheet.Cells)
+        {
+            // 检查单元格是否包含公式
+            if (cell.Formula is { Length: > 0 })
+            {
+                errorList.Add((excelName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
+                return errorList;
+            }
+        }
         //获取要查重的ID
         var writeIdList = ExcelDataWriteIdGroup(excelName, addValue, sheet, fixKey, modelId);
         //执行查重删除
@@ -1671,6 +1688,7 @@ public class ExcelDataAutoInsertMulti
             //设置背景色
             cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
             cellTarget.Style.Fill.BackgroundColor.SetColor(cellBackColor);
+
             //尽量和源数据格式一致，宋体的格式会歪？不知道为什么
             if (cellTarget.Style.Font.Name == "宋体")
             {
@@ -1683,7 +1701,6 @@ public class ExcelDataAutoInsertMulti
                 : (List<(string, string, string)>)SingleWrite(excelName, addValue, fixItem, sheet, count, startRowSource, errorList, commentValue, writeRow);
             writeRow+=count;
         }
-
         excel.Save();
         excel.Dispose();
         errorList.Add(("-1", errorExcelLog, excelName));
@@ -1875,274 +1892,103 @@ public class ExcelDataAutoInsertMulti
 
 public class ExcelDataAutoCopyMulti
 {
-    public static void CopyData(dynamic isMulti)
+    public static int RightClickCopyData(dynamic isMulti)
     {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         dynamic app = ExcelDnaUtil.Application;
         var indexWk = app.ActiveWorkbook;
         var sheet = app.ActiveSheet;
         var excelPath = indexWk.Path;
-        var excelSourcePath = sheet.Cells[4, 1].Value.ToString();
-        var colsCount = sheet.UsedRange.Columns.Count;
-        var sheetData = PubMetToExcel.ExcelDataToList(sheet);
-        var title = sheetData.Item1;
-        var data = sheetData.Item2;
-        var sheetNameCol = title.IndexOf("表名");
-        var modeIdCol =title.IndexOf("克隆模板");
-        var modeIdColInsert = title.IndexOf("初始模板");
-        ErrorLogCtp.DisposeCtp();
-
-        //字典Value跨度（行）
-        var rowCount = 2;
-        //获取字典
-        var modelId = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modeIdCol, rowCount);
-        var modelIdInsert = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modeIdColInsert, rowCount);
-
-        //遍历文件写入
-        var errorExcelList = new List<List<(string, string, string)>>();
-        var excelCount = 1;
-        foreach (var key in modelId)
+        var excelName = indexWk.Name;
+        string targetExcelPath ="";
+        //数据源路径txt
+        var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var filePath = Path.Combine(documentsFolder, "mergePath.txt");
+        var mergePathList =PubMetToExcel.ReadWriteTxt(filePath);
+        //第一行Alice，第二行Cove
+        if (mergePathList.Count <= 1 )
         {
-            //获取路径
-            var excelName = key.Key;
-            string path;
-            string pathSource;
-            var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
-            var newSourcePath = Path.GetDirectoryName(Path.GetDirectoryName(excelSourcePath));
-            switch (excelName)
+            MessageBox.Show(@"找不到目标表格路径，填写其他工程根目录，1行Alice，2行Cove");
+            //打开文本文件
+            Process.Start(filePath);
+            return 0;
+        }
+        if (mergePathList[0] =="" || mergePathList[1] == "" || mergePathList[1] == mergePathList[0])
+        {
+            MessageBox.Show(@"找不到目标表格路径，填写其他工程根目录，1行Alice，2行Cove");
+            //打开文本文件
+            Process.Start(filePath);
+        }
+        else
+        {
+            if (excelPath != mergePathList[1])
             {
-                case "Localizations.xlsx":
-                    path = newPath + @"\Excels\Localizations\Localizations.xlsx";
-                    pathSource = newSourcePath + @"\Excels\Localizations\Localizations.xlsx";
-                    break;
-                case "UIConfigs.xlsx":
-                    path = newPath + @"\Excels\UIs\UIConfigs.xlsx";
-                    pathSource = newSourcePath + @"\Excels\UIs\UIConfigs.xlsx";
-                    break;
-                case "UIItemConfigs.xlsx":
-                    path = newPath + @"\Excels\UIs\UIItemConfigs.xlsx";
-                    pathSource = newSourcePath + @"\Excels\UIs\UIItemConfigs.xlsx";
-                    break;
-                default:
-                    path = excelPath + @"\" + excelName;
-                    pathSource = excelSourcePath + @"\" + excelName;
-                    break;
+                targetExcelPath = mergePathList[1];
             }
-            //拷贝-写入数据
-            ExcelDataWriteForCopy(path, pathSource, modelId, modelIdInsert,excelName);
-
-            excelCount++;
+            else
+            {
+                targetExcelPath = mergePathList[0];
+            }
         }
-
-        //错误日志处理
-        var errorLog = ErrorLogAnalysisForCopy(errorExcelList, sheet);
-        if (errorLog == "")
+        //获取目标表格对象
+        if (targetExcelPath == "")
         {
-            //sheet.Range["B4"].Value = "否";
-            app.StatusBar = "完成写入";
-            return;
+            return 0;
         }
-
-        ErrorLogCtp.DisposeCtp();
-        ErrorLogCtp.CreateCtpNormal(errorLog);
-    }
-    public static List<(string, string, string)> ExcelDataWriteForCopy(dynamic path, dynamic pathSource, dynamic modelId, dynamic modelIdInsert,dynamic excelName)
-    {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        var errorExcelLog = "";
-        var errorList = new List<(string, string, string)>();
-        //源表格对象
-        var excelSource = new ExcelPackage(new FileInfo(pathSource));
-        ExcelWorkbook workBookSource;
+        var basePath = Path.GetDirectoryName(Path.GetDirectoryName(targetExcelPath));
+        string path;
+        switch (excelName)
+        {
+            case "Localizations.xlsx":
+                path = basePath + @"\Excels\Localizations\Localizations.xlsx";
+                break;
+            case "UIConfigs.xlsx":
+                path = basePath + @"\Excels\UIs\UIConfigs.xlsx";
+                break;
+            case "UIItemConfigs.xlsx":
+                path = basePath + @"\Excels\UIs\UIItemConfigs.xlsx";
+                break;
+            default:
+                path = targetExcelPath + @"\" + excelName;
+                break;
+        }
+        var targetExcel = new ExcelPackage(new FileInfo(path));
+        ExcelWorkbook targetWorkBook;
         try
         {
-            workBookSource = excelSource.Workbook;
+            targetWorkBook = targetExcel.Workbook;
         }
         catch (Exception ex)
         {
-            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
-            errorList.Add((excelName, errorExcelLog, excelName));
-            return errorList;
+            return 0;
         }
 
-        ExcelWorksheet sheetSource;
+        ExcelWorksheet targetSheet;
         try
         {
-            sheetSource = workBookSource.Worksheets["Sheet1"];
+            targetSheet = targetWorkBook.Worksheets["Sheet1"];
         }
         catch (Exception ex)
         {
-            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
-            errorList.Add((excelName, errorExcelLog, excelName));
-            return errorList;
+
+            return 0;
         }
-        sheetSource ??= workBookSource.Worksheets[0];
-        //目标表格对象
-        var excel = new ExcelPackage(new FileInfo(path));
-        ExcelWorkbook workBook;
-        try
-        {
-            workBook = excel.Workbook;
-        }
-        catch (Exception ex)
-        {
-            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
-            errorList.Add((excelName, errorExcelLog, excelName));
-            return errorList;
-        }
-
-        ExcelWorksheet sheet;
-        try
-        {
-            sheet = workBook.Worksheets["Sheet1"];
-        }
-        catch (Exception ex)
-        {
-            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
-            errorList.Add((excelName, errorExcelLog, excelName));
-            return errorList;
-        }
-        sheet ??= workBook.Worksheets[0];
-        //源数据表数据获取
-        var countSource = 0;
-        var colCount = sheetSource.Dimension.Columns;
-        //获取插入点
-        var endValueMax = modelIdInsert[excelName][modelIdInsert[excelName].Count-1].Item1[1, 0].ToString();
-        var endRowSourceMax = ExcelDataAutoInsert.FindSourceRow(sheet, 2, endValueMax);
-        if (endRowSourceMax == -1)
-        {
-            errorExcelLog = excelName + "#【克隆模板】#[" + endValueMax + "]未找到(序号出错)";
-            errorList.Add((endValueMax, errorExcelLog, excelName));
-            return errorList;
-        }
-        for (var excelMulti = 0; excelMulti < modelId[excelName].Count; excelMulti++)
-        {
-            var startValue = modelId[excelName][excelMulti].Item1[0, 0].ToString();
-            var endValue = modelId[excelName][excelMulti].Item1[1, 0].ToString();
-            var startRowSource = ExcelDataAutoInsert.FindSourceRow(sheetSource, 2, startValue);
-            if (startRowSource == -1)
-            {
-                errorExcelLog = excelName + "#【克隆模板】#[" + startValue + "]未找到(序号出错)";
-                errorList.Add((startValue, errorExcelLog, excelName));
-                return errorList;
-            }
-            var endRowSource = ExcelDataAutoInsert.FindSourceRow(sheetSource, 2, endValue);
-            if (endRowSource == -1)
-            {
-                errorExcelLog = excelName + "#【克隆模板】#[" + endValue + "]未找到(序号出错)";
-                errorList.Add((endValue, errorExcelLog, excelName));
-                return errorList;
-            }
-            if (endRowSource - startRowSource < 0)
-            {
-                errorExcelLog = excelName + "#【克隆模板】#[" + endValue + "]起始、终结ID顺序反了";
-                errorList.Add((endValue, errorExcelLog, excelName));
-                return errorList;
-            }
-            var count = endRowSource - startRowSource + 1;
-            var cellSource = sheetSource.Cells[startRowSource, 1, endRowSource, colCount];
-            //去重
-
-            //复制
-            sheet.InsertRow(endRowSourceMax+ countSource, count);
-            var cell = sheet.Cells[endRowSourceMax+ countSource, 1, countSource+count, colCount];
-            cell.Value =cellSource.Value;
-            countSource += count;
-            //cell.Copy(cellSource,ExcelRangeCopyOptionFlags.ExcludeMergedCells);
-        }
-        //目标表格查重
-
-        //目标表格数据写入
-        //源表格对象
-
-
-
-
-        //获取要查重的ID
-        //var writeIdList = ExcelDataWriteIdGroup(excelName, addValue, sheet, fixKey, modelId);
-        ////执行查重删除
-        //PubMetToExcel.RepeatValue2(sheet, 4, 2, writeIdList.Item1);
-
-        ////第一次写入插入行的位置，因为可能删除导致行数变化，需要重新获取一次
-        ////writeIdList = ExcelDataWriteIdGroup(excelName, addValue, sheet, fixKey, modelId);
-        //var writeRow = writeIdList.Item2;
-        //if (writeRow == -1)
-        //{
-        //    errorExcelLog = excelName + "#找不到" + writeIdList.Item1[0];
-        //    errorList.Add((excelName, errorExcelLog, excelName));
-        //    return errorList;
-        //}
-        ////执行写入操作
-        //for (var excelMulti = 0; excelMulti < modelId[excelName].Count; excelMulti++)
-        //{
-        //    var startValue = modelId[excelName][excelMulti].Item1[0, 0].ToString();
-        //    var endValue = modelId[excelName][excelMulti].Item1[1, 0].ToString();
-        //    //var writeRow = sheet.Dimension.End.Row;
-
-        //    var startRowSource = ExcelDataAutoInsert.FindSourceRow(sheet, 2, startValue);
-        //    if (startRowSource == -1)
-        //    {
-        //        errorExcelLog = excelName + "#【初始模板】#[" + startValue + "]未找到(序号出错)";
-        //        errorList.Add((startValue, errorExcelLog, excelName));
-        //        return errorList;
-        //    }
-
-        //    var endRowSource = ExcelDataAutoInsert.FindSourceRow(sheet, 2, endValue);
-        //    if (endRowSource == -1)
-        //    {
-        //        errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]未找到(序号出错)";
-        //        errorList.Add((endValue, errorExcelLog, excelName));
-        //        return errorList;
-        //    }
-
-        //    if (endRowSource - startRowSource < 0)
-        //    {
-        //        errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]起始、终结ID顺序反了";
-        //        errorList.Add((endValue, errorExcelLog, excelName));
-        //        return errorList;
-        //    }
-
-        //    //数据复制
-        //    var count = endRowSource - startRowSource + 1;
-        //    sheet.InsertRow(writeRow + 1, count);
-        //    var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
-        //    var cellTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, colCount];
-        //    cellTarget.Value = cellSource.Value;
-        //    //设置背景色
-        //    cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        //    cellTarget.Style.Fill.BackgroundColor.SetColor(cellBackColor);
-        //    //尽量和源数据格式一致，宋体的格式会歪？不知道为什么
-        //    if (cellTarget.Style.Font.Name == "宋体")
-        //    {
-        //        cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-        //    }
-        //    //数据修改
-        //    var fixItem = fixKey[excelName][excelMulti].Item1;
-        //    errorList = modeThread
-        //        ? (List<(string, string, string)>)MultiWrite(excelName, addValue, fixItem, sheet, count, startRowSource, errorList, commentValue, writeRow)
-        //        : (List<(string, string, string)>)SingleWrite(excelName, addValue, fixItem, sheet, count, startRowSource, errorList, commentValue, writeRow);
-        //    writeRow += count;
-        //}
-        excelSource.Dispose();
-        excel.Save();
-        excel.Dispose();
-        //errorList.Add(("-1", errorExcelLog, excelName));
-        return errorList;
-    }
-
-    public static string ErrorLogAnalysisForCopy(dynamic errorList, dynamic sheet)
-    {
-        var errorLog = "";
-        for (var i = 0; i < errorList.Count; i++)
-        for (var j = 0; j < errorList[i].Count; j++)
-        {
-            var errorCell = errorList[i][j].Item1;
-            var errorExcelLog = errorList[i][j].Item2;
-            var errorExcelName = errorList[i][j].Item3;
-            if (errorCell == "-1") continue;
-            errorLog = errorLog + "【" + errorCell + "】" + errorExcelName + "#" + errorExcelLog + "\r\n";
-        }
-
-        return errorLog;
+        targetSheet ??= targetWorkBook.Worksheets[0];
+        //复制source表格数据
+        var selectRange = app.Selection;
+        int minRow = selectRange.Row;
+        int maxRow = minRow+ selectRange.Rows.Count -1;
+        int maxCol = sheet.UsedRange.Columns.Count;
+        var sourceRange = sheet.Range[sheet.Cells[minRow, 1],sheet.Cells[maxRow , maxCol]];
+        var sourceRangeTitle = sheet.Range[sheet.Cells[2,1],sheet.Cells[2, sheet.UsedRange.Columns.Count]];
+        var targetRangeTitle = targetSheet.Cells[2,1,2, targetSheet.Dimension.Columns];
+        object[,] rangeValue = sourceRange.Value;
+        object[,] rangeValueTitle = sourceRangeTitle.Value;
+        object[,] targetRangeValueTitle = (object[,])targetRangeTitle.Value;
+        //获取target字段，匹配source的数据进行过滤，并填充数据
+        var abc = rangeValueTitle[1,1];
+        var cde = targetRangeValueTitle[0,0];
+        return 1;
     }
 }
 public class ExcelDataActivityServer
@@ -2210,9 +2056,12 @@ public class ExcelDataActivityServer
             for (int i = 0; i < fixDataList.Count; i++)
             {
                 var fixName = fixDataList[i][fixNames];
-                if (fixName != sourceName)
+                if (fixName != sourceName && !sourceName.Contains("#"))
                 {
-                    continue;
+                }
+                else if (sourceName.Contains("#"))
+                {
+                    exit = true;
                 }
                 else
                 {
@@ -2232,9 +2081,10 @@ public class ExcelDataActivityServer
                     long targetPreHeatTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixPreHeats] * 24 * 3600);
                     string targetOpenTimeString = DateTime.FromOADate(sourceData[j].Item2).AddHours(fixDataList[i][fixOpens] * 24 + 8).ToString();
                     long targetOpenTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixOpens] * 24 * 3600);
-                    string targetEndTimeString = DateTime.FromOADate(sourceData[j].Item3).AddHours(fixDataList[i][fixEnds] * 24 + 8).ToString();
+                    //结束时间开始默认+1，因为表格里记录的是时间点不是段
+                    string targetEndTimeString = DateTime.FromOADate(sourceData[j].Item3).AddHours((fixDataList[i][fixEnds] +1)* 24 + 8).ToString();
                     long targetEndTimeLong = sourceEndTimeLong + (long)(fixDataList[i][fixEnds] * 24 * 3600);
-                    string targetCloseTimeString = DateTime.FromOADate(sourceData[j].Item3).AddHours(fixDataList[i][fixCloses] * 24 + 8).ToString();
+                    string targetCloseTimeString = DateTime.FromOADate(sourceData[j].Item3).AddHours((fixDataList[i][fixCloses] +1)* 24 + 8).ToString();
                     long targetCloseTimeLong = sourceEndTimeLong + (long)(fixDataList[i][fixCloses] * 24 * 3600);
                     targetData.Add(targetId.ToString());
                     targetData.Add(targetName.ToString());
