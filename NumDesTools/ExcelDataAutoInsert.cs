@@ -21,6 +21,9 @@ using DocumentFormat.OpenXml.Bibliography;
 using NPOI.SS.Formula.Functions;
 using DocumentFormat.OpenXml;
 using OfficeOpenXml.DataValidation;
+using NPOI.SS.UserModel;
+using DocumentFormat.OpenXml.Office2016.Excel;
+using NPOI.XWPF.UserModel;
 
 namespace NumDesTools;
 
@@ -1477,7 +1480,7 @@ public class ExcelDataAutoInsertMulti
         }
 
         //错误日志处理
-        var errorLog = ErrorLogAnalysis(errorExcelList, sheet);
+        var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
             //sheet.Range["B4"].Value = "否";
@@ -1553,7 +1556,7 @@ public class ExcelDataAutoInsertMulti
         }
 
         //错误日志处理
-        var errorLog = ErrorLogAnalysis(errorExcelList, sheet);
+        var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
             //sheet.Range["B4"].Value = "否";
@@ -1830,23 +1833,7 @@ public class ExcelDataAutoInsertMulti
         return errorList;
     }
 
-    [ExcelFunction(IsHidden = true)]
-    public static string ErrorLogAnalysis(dynamic errorList, dynamic sheet)
-    {
-        var errorLog = "";
-        for (var i = 0; i < errorList.Count; i++)
-        for (var j = 0; j < errorList[i].Count; j++)
-        {
-            var errorCell = errorList[i][j].Item1;
-            var errorExcelLog = errorList[i][j].Item2;
-            var errorExcelName = errorList[i][j].Item3;
-            if (errorCell == "-1") continue;
-            errorLog = errorLog + "【" + errorCell + "】" + errorExcelName + "#" + errorExcelLog + "\r\n";
-        }
-
-        return errorLog;
-    }
-
+    //[ExcelFunction(IsHidden = true)]
     public static (List<string>,int) ExcelDataWriteIdGroup(dynamic excelName, dynamic addValue, ExcelWorksheet sheet, dynamic fixKey, dynamic modelId)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -1892,28 +1879,204 @@ public class ExcelDataAutoInsertMulti
 
 public class ExcelDataAutoCopyMulti
 {
-    public static int RightClickCopyData(dynamic isMulti)
+    public static void MergeData(dynamic isMulti)
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        dynamic app = ExcelDnaUtil.Application;
+        var indexWk = app.ActiveWorkbook;
+        var sheet = app.ActiveSheet;
+        var excelPath = indexWk.Path;
+        var sheetData = PubMetToExcel.ExcelDataToList(sheet);
+        var title = sheetData.Item1;
+        var data = sheetData.Item2;
+        var sheetNameCol = title.IndexOf("表名");
+        var modelIdNewCol = title.IndexOf("实际模板(上一期)");
+        //获取单元格颜色
+        var colorCell = sheet.Cells[6, 1];
+        var cellColor = PubMetToExcel.GetCellBackgroundColor(colorCell);
+        ErrorLogCtp.DisposeCtp();
+        //字典Value跨度（行）
+        var rowCount = 2;
+        //获取字典
+        var modelIdNew = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modelIdNewCol, rowCount);
+        //遍历文件写入
+        var errorExcelList = new List<List<(string, string, string)>>();
+        var excelCount = 1;
+        foreach (var key in modelIdNew)
+        {
+            //写入算法
+            var excelName = key.Key;
+            List<(string, string, string)> error = AutoCopyData(false,modelIdNew,excelName,excelPath,cellColor);
+                app.StatusBar = "写入数据" + "<" + excelCount + "/" + modelIdNew.Count + ">" + excelName;
+            errorExcelList.Add(error);
+            excelCount++;
+        }
+
+        //错误日志处理
+        var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
+        if (errorLog == "")
+        {
+            //sheet.Range["B4"].Value = "否";
+            app.StatusBar = "完成写入";
+            return;
+        }
+
+        ErrorLogCtp.DisposeCtp();
+        ErrorLogCtp.CreateCtpNormal(errorLog);
+    }
+    public static void RightClickMergeData(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
         dynamic app = ExcelDnaUtil.Application;
         var indexWk = app.ActiveWorkbook;
         var sheet = app.ActiveSheet;
         var excelPath = indexWk.Path;
         var excelName = indexWk.Name;
-        string targetExcelPath ="";
+        ErrorLogCtp.DisposeCtp();
+        var errorExcelList = new List<List<(string, string, string)>>();
+        List<(string, string, string)> error = AutoCopyDataRight( app,excelPath, excelName,sheet);
+        errorExcelList.Add(error);
+        //错误日志处理
+        var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
+        if (errorLog == "")
+        {
+            //sheet.Range["B4"].Value = "否";
+            sw.Stop();
+            var ts1 = sw.Elapsed;
+            app.StatusBar = "完成写入：" + ts1.ToString();
+            return;
+        }
+        ErrorLogCtp.DisposeCtp();
+        ErrorLogCtp.CreateCtpNormal(errorLog);
+
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        app.StatusBar = "完成写入：" + ts2.ToString();
+    }
+    public static List<(string, string, string)> AutoCopyDataRight(dynamic app,dynamic excelPath,dynamic excelName ,dynamic sheet)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        var errorList = new List<(string, string, string)>();
+        string targetExcelPath = "";
         //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
-        var mergePathList =PubMetToExcel.ReadWriteTxt(filePath);
+        var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
         //第一行Alice，第二行Cove
-        if (mergePathList.Count <= 1 )
+
+        if (mergePathList.Count <= 1|| mergePathList[0] == "" || mergePathList[1] == "" || mergePathList[1] == mergePathList[0] || !mergePathList[0].Contains("Tables") || !mergePathList[1].Contains("Tables"))
+        {
+            MessageBox.Show(@"找不到目标表格路径，填写其他工程根目录，1行Alice，2行Cove");
+            Process.Start(filePath);
+            //打开文本文件
+            //try
+            //{
+            //    // 尝试以读写方式打开文件
+            //    using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite))
+            //    {
+
+            //    }
+            //}
+            //catch (IOException)
+            //{
+            //}
+
+            return errorList;
+        }
+
+        if (excelPath != mergePathList[1])
+        {
+            targetExcelPath = mergePathList[1];
+        }
+        else
+        {
+            targetExcelPath = mergePathList[0];
+        }
+        //获取目标表格对象
+        if (targetExcelPath == "")
+        {
+            return errorList;
+        }
+
+        ExcelWorksheet targetSheet;
+        ExcelPackage targetExcel;
+        ExcelWorksheet sourceSheet;
+        ExcelPackage sourceExcel;
+        //创建excel对象
+        errorList=PubMetToExcel.EpplusCreatExcelObj(targetExcelPath, excelName, out targetSheet, out targetExcel);
+        if (errorList.Count != 0)
+        {
+            return errorList;
+        }
+        errorList = PubMetToExcel.EpplusCreatExcelObj(excelPath, excelName, out sourceSheet, out sourceExcel);
+        if (errorList.Count != 0)
+        {
+            return errorList;
+        }
+        //检查公式
+        foreach (var cell in targetSheet.Cells)
+        {
+            // 检查单元格是否包含公式
+            if (cell.Formula is { Length: > 0 })
+            {
+                errorList.Add((excelName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
+                return errorList;
+            }
+        }
+        //复制source表格数据
+        var targetMaxCol = targetSheet.Dimension.Columns;
+        var sourceMaxCol = sourceSheet.Dimension.Columns;
+        var sourceRangeTitle = sourceSheet.Cells[2, 1, 2, sourceMaxCol];
+        var targetRangeTitle = targetSheet.Cells[2, 1, 2, targetMaxCol];
+        var selectRange = app.Selection;
+
+
+        if (selectRange.Cells.Count > 0)
+        {
+            int minRow = selectRange.Row;
+            int maxRow = selectRange.Row+selectRange.Rows.Count -1;
+            var sourceRangeValue = (object[,])sourceSheet.Cells[minRow, 1,maxRow,sourceMaxCol].Value;
+            object[,] sourceRangeValueTitle = (object[,])sourceRangeTitle.Value;
+            object[,] targetRangeValueTitle = (object[,])targetRangeTitle.Value;
+            //获取target字段，匹配source的数据进行过滤，并填充数据
+            var targetRowList = PubMetToExcel.MergeExcel(sourceRangeValue, targetSheet, targetRangeValueTitle, sourceRangeValueTitle);
+            //获取单元格颜色
+            var colorCell = sheet.Cells[minRow, 2];
+            var cellColor = PubMetToExcel.GetCellBackgroundColor(colorCell);
+            for (int i = 0; i < targetRowList.Count; i++)
+            {
+                var cellTarget = targetSheet.Cells[targetRowList[i], 1, targetRowList[i], targetMaxCol];
+                // 清除单元格的颜色
+                cellTarget.Style.Fill.PatternType = ExcelFillStyle.None;
+                //重新上色
+                cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                cellTarget.Style.Fill.BackgroundColor.SetColor(cellColor);
+            }
+        }
+        targetExcel.Save();
+        targetSheet.Dispose();
+        return errorList;
+    }
+    public static List<(string, string, string)> AutoCopyData(dynamic isMulti,dynamic modelIdNew,dynamic excelName ,dynamic excelPath,dynamic cellColor)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        var errorExcelLog ="";
+        var errorList = new List<(string, string, string)>();
+        string targetExcelPath = "";
+        //数据源路径txt
+        var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var filePath = Path.Combine(documentsFolder, "mergePath.txt");
+        var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
+        //第一行Alice，第二行Cove
+        if (mergePathList.Count <= 1)
         {
             MessageBox.Show(@"找不到目标表格路径，填写其他工程根目录，1行Alice，2行Cove");
             //打开文本文件
             Process.Start(filePath);
-            return 0;
+            return errorList;
         }
-        if (mergePathList[0] =="" || mergePathList[1] == "" || mergePathList[1] == mergePathList[0])
+        if (mergePathList[0] == "" || mergePathList[1] == "" || mergePathList[1] == mergePathList[0])
         {
             MessageBox.Show(@"找不到目标表格路径，填写其他工程根目录，1行Alice，2行Cove");
             //打开文本文件
@@ -1930,66 +2093,146 @@ public class ExcelDataAutoCopyMulti
                 targetExcelPath = mergePathList[0];
             }
         }
-        //获取目标表格对象
+        //获取目标、源表格对象
         if (targetExcelPath == "")
         {
-            return 0;
+            return errorList;
         }
-        var basePath = Path.GetDirectoryName(Path.GetDirectoryName(targetExcelPath));
-        string path;
-        switch (excelName)
-        {
-            case "Localizations.xlsx":
-                path = basePath + @"\Excels\Localizations\Localizations.xlsx";
-                break;
-            case "UIConfigs.xlsx":
-                path = basePath + @"\Excels\UIs\UIConfigs.xlsx";
-                break;
-            case "UIItemConfigs.xlsx":
-                path = basePath + @"\Excels\UIs\UIItemConfigs.xlsx";
-                break;
-            default:
-                path = targetExcelPath + @"\" + excelName;
-                break;
-        }
-        var targetExcel = new ExcelPackage(new FileInfo(path));
-        ExcelWorkbook targetWorkBook;
-        try
-        {
-            targetWorkBook = targetExcel.Workbook;
-        }
-        catch (Exception ex)
-        {
-            return 0;
-        }
-
         ExcelWorksheet targetSheet;
-        try
+        ExcelPackage targetExcel;
+        ExcelWorksheet sourceSheet;
+        ExcelPackage sourceExcel;
+        //创建excel对象
+        errorList = PubMetToExcel.EpplusCreatExcelObj(targetExcelPath, excelName, out targetSheet, out targetExcel);
+        if (errorList.Count != 0)
         {
-            targetSheet = targetWorkBook.Worksheets["Sheet1"];
+            return errorList;
         }
-        catch (Exception ex)
+        errorList = PubMetToExcel.EpplusCreatExcelObj(excelPath, excelName, out sourceSheet, out sourceExcel);
+        if (errorList.Count != 0)
         {
+            return errorList;
+        }
+        //检查公式
+        foreach (var cell in targetSheet.Cells)
+        {
+            // 检查单元格是否包含公式
+            if (cell.Formula is { Length: > 0 })
+            {
+                errorList.Add((excelName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
+                return errorList;
+            }
+        }
+        //var baseTargetPath = Path.GetDirectoryName(Path.GetDirectoryName(targetExcelPath));
+        //var baseSourcePath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
+        //string pathTarget;
+        //string pathSource;
+        //switch (excelName)
+        //{
+        //    case "Localizations.xlsx":
+        //        pathTarget = baseTargetPath + @"\Excels\Localizations\Localizations.xlsx";
+        //        pathSource = baseSourcePath + @"\Excels\Localizations\Localizations.xlsx";
+        //        break;
+        //    case "UIConfigs.xlsx":
+        //        pathTarget = baseTargetPath + @"\Excels\UIs\UIConfigs.xlsx";
+        //        pathSource = baseSourcePath + @"\Excels\UIs\UIConfigs.xlsx";
+        //        break;
+        //    case "UIItemConfigs.xlsx":
+        //        pathTarget = baseTargetPath + @"\Excels\UIs\UIItemConfigs.xlsx";
+        //        pathSource = baseSourcePath + @"\Excels\UIs\UIItemConfigs.xlsx";
+        //        break;
+        //    default:
+        //        pathTarget = targetExcelPath + @"\" + excelName;
+        //        pathSource = excelPath + @"\" + excelName;
+        //        break;
+        //}
+        //bool fileExists = File.Exists(pathSource);
+        //bool fileExists2 = File.Exists(pathTarget);
+        //if (fileExists == false || fileExists2 == false)
+        //{
+        //    errorExcelLog = excelName + "不存在表格文件";
+        //    errorList.Add((excelName, errorExcelLog, excelName));
+        //    return errorList;
+        //}
+        //var targetExcel = new ExcelPackage(new FileInfo(pathTarget));
+        //var sourceExcel = new ExcelPackage(new FileInfo(pathSource));
+        //ExcelWorkbook targetWorkBook;
+        //ExcelWorkbook sourceWorkBook;
+        //try
+        //{
+        //    targetWorkBook = targetExcel.Workbook;
+        //    sourceWorkBook = sourceExcel.Workbook;
+        //}
+        //catch (Exception)
+        //{
+        //    errorExcelLog = excelName + "不能创建WorkBook对象";
+        //    errorList.Add((excelName, errorExcelLog, excelName));
+        //    return errorList;
+        //}
+        //ExcelWorksheet targetSheet;
+        //ExcelWorksheet sourceSheet;
+        //try
+        //{
+        //    targetSheet = targetWorkBook.Worksheets["Sheet1"];
+        //    sourceSheet = sourceWorkBook.Worksheets["Sheet1"];
+        //}
+        //catch (Exception)
+        //{
+        //    errorExcelLog = excelName + "#不能创建WorkBook对象";
+        //    errorList.Add((excelName, errorExcelLog, excelName));
+        //    return errorList;
+        //}
+        //targetSheet ??= targetWorkBook.Worksheets[0];
+        //sourceSheet ??= sourceWorkBook.Worksheets[0];
+        //执行写入操作
+        for (var excelMulti = 0; excelMulti < modelIdNew[excelName].Count; excelMulti++)
+        {
+            var startValue = modelIdNew[excelName][excelMulti].Item1[0, 0].ToString();
+            var endValue = modelIdNew[excelName][excelMulti].Item1[1, 0].ToString();
+            var startRowSource = ExcelDataAutoInsert.FindSourceRow(sourceSheet, 2, startValue);
+            if (startRowSource == -1)
+            {
+                errorExcelLog = excelName + "#【初始模板】#[" + startValue + "]未找到(序号出错)";
+                errorList.Add((startValue, errorExcelLog, excelName));
+                return errorList;
+            }
 
-            return 0;
+            var endRowSource = ExcelDataAutoInsert.FindSourceRow(sourceSheet, 2, endValue);
+            if (endRowSource == -1)
+            {
+                errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]未找到(序号出错)";
+                errorList.Add((endValue, errorExcelLog, excelName));
+                return errorList;
+            }
+            if (endRowSource - startRowSource < 0)
+            {
+                errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]起始、终结ID顺序反了";
+                errorList.Add((endValue, errorExcelLog, excelName));
+                return errorList;
+            }
+            //获取目标、源数据表列，以目标表格的行、列为准复制源数据
+            var targetMaxCol = targetSheet.Dimension.Columns;
+            var sourceMaxCol = sourceSheet.Dimension.Columns;
+            object[,] targetRangeTitle = (object[,])targetSheet.Cells[2, 1, 2, targetMaxCol].Value;
+            object[,] sourceRangeTitle = (object[,])sourceSheet.Cells[2, 1, 2, sourceMaxCol].Value;
+            object[,] sourceRangeValue = (object[,])sourceSheet.Cells[startRowSource, 1, endRowSource, sourceMaxCol].Value;
+            //合并数据
+            var targetRowList = PubMetToExcel.MergeExcel(sourceRangeValue, targetSheet, targetRangeTitle, sourceRangeTitle);
+            for (int i = 0; i < targetRowList.Count; i++)
+            {
+                var cellTarget = targetSheet.Cells[targetRowList[i], 1, targetRowList[i], targetMaxCol];
+                // 清除单元格的颜色
+                cellTarget.Style.Fill.PatternType = ExcelFillStyle.None;
+                //重新上色
+                cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                cellTarget.Style.Fill.BackgroundColor.SetColor(cellColor);
+            }
         }
-        targetSheet ??= targetWorkBook.Worksheets[0];
-        //复制source表格数据
-        var selectRange = app.Selection;
-        int minRow = selectRange.Row;
-        int maxRow = minRow+ selectRange.Rows.Count -1;
-        int maxCol = sheet.UsedRange.Columns.Count;
-        var sourceRange = sheet.Range[sheet.Cells[minRow, 1],sheet.Cells[maxRow , maxCol]];
-        var sourceRangeTitle = sheet.Range[sheet.Cells[2,1],sheet.Cells[2, sheet.UsedRange.Columns.Count]];
-        var targetRangeTitle = targetSheet.Cells[2,1,2, targetSheet.Dimension.Columns];
-        object[,] rangeValue = sourceRange.Value;
-        object[,] rangeValueTitle = sourceRangeTitle.Value;
-        object[,] targetRangeValueTitle = (object[,])targetRangeTitle.Value;
-        //获取target字段，匹配source的数据进行过滤，并填充数据
-        var abc = rangeValueTitle[1,1];
-        var cde = targetRangeValueTitle[0,0];
-        return 1;
+        targetExcel.Save();
+        targetSheet.Dispose();
+        return errorList;
     }
+
 }
 public class ExcelDataActivityServer
 {
