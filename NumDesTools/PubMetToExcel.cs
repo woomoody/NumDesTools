@@ -2,12 +2,15 @@
 using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Windows.Forms;
 using ExcelDna.Integration;
+using Button = System.Windows.Forms.Button;
 using Color = System.Drawing.Color;
-using System.Diagnostics;
-
+using Point = Microsoft.Office.Interop.Excel.Point;
 namespace NumDesTools;
 
 public class PubMetToExcel
@@ -455,9 +458,13 @@ public class PubMetToExcel
         if (!File.Exists(filePath))
         {
             // 创建新的文本文件
-            File.Create(filePath);
-            //打开文本文件
-            Process.Start(filePath);
+            using (StreamWriter writer = File.CreateText(filePath))
+            {
+                writer.WriteLine("Alice路径");
+                writer.WriteLine("Cove路径");
+                writer.Close();
+            }
+
         }
         else
         {
@@ -470,5 +477,175 @@ public class PubMetToExcel
         }
         return textLineList;
     }
+    public static string ErrorLogAnalysis(dynamic errorList, dynamic sheet)
+    {
+        var errorLog = "";
+        for (var i = 0; i < errorList.Count; i++)
+        for (var j = 0; j < errorList[i].Count; j++)
+        {
+            var errorCell = errorList[i][j].Item1;
+            var errorExcelLog = errorList[i][j].Item2;
+            var errorExcelName = errorList[i][j].Item3;
+            if (errorCell == "-1") continue;
+            errorLog = errorLog + "【" + errorCell + "】" + errorExcelName + "#" + errorExcelLog + "\r\n";
+        }
 
+        return errorLog;
+    }
+    public static List<int> MergeExcel(object[,] sourceRangeValue, ExcelWorksheet targetSheet, object[,] targetRangeTitle,
+        object[,] sourceRangeTitle)
+    {
+        var targetRowList =new List<int>();
+        int defaultRow;
+        for (int r = 0; r < sourceRangeValue.GetLength(0); r++)
+        {
+            defaultRow = targetSheet.Dimension.End.Row;
+            //target中找行
+            var sourceRow = sourceRangeValue[r, 1];
+            if (sourceRow == null)
+            {
+                sourceRow = "";
+            }
+            var rowValue = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, sourceRow.ToString());
+            if (rowValue == -1)
+            {
+                targetSheet.InsertRow(defaultRow + 1,1);
+            }
+            else
+            {
+                defaultRow = rowValue;
+            }
+            int fixRow = 0;
+            for (int i = 0; i < targetRangeTitle.GetLength(1); i++)
+            {
+                var targetTitle = targetRangeTitle[0, i];
+                if (targetTitle == null)
+                {
+                    targetTitle = "";
+                }
+
+                for (int j = 0; j < sourceRangeTitle.GetLength(1); j++)
+                {
+                    var sourceTitle = sourceRangeTitle[0, j];
+                    if (defaultRow != targetSheet.Dimension.End.Row)
+                    {
+                        fixRow = 0;
+                    }
+                    else
+                    {
+                        fixRow = 1;
+                    }
+                    if (sourceTitle == null)
+                    {
+                        sourceTitle = "";
+                    }
+                    //target中找列
+                    if (targetTitle.ToString() == sourceTitle.ToString())
+                    {
+                        var sourceValue = sourceRangeValue[r, j];
+                        if (sourceValue == null)
+                        {
+                            sourceValue = "";
+                        }
+                        var targetCell = targetSheet.Cells[defaultRow+ fixRow, i + 1];
+                        targetCell.Value = sourceValue;
+                    }
+                }
+            }
+            targetRowList.Add(defaultRow + fixRow);
+        }
+        return targetRowList;
+    }
+
+    public static List<(string, string, string)> EpplusCreatExcelObj(dynamic excelPath,dynamic excelName,out ExcelWorksheet sheet  ,out ExcelPackage excel)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        sheet = null;
+        excel = null;
+        var errorExcelLog = "";
+        var errorList = new List<(string, string, string)>();
+        string path;
+        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
+        switch (excelName)
+        {
+            case "Localizations.xlsx":
+                path = newPath + @"\Excels\Localizations\Localizations.xlsx";
+                break;
+            case "UIConfigs.xlsx":
+                path = newPath + @"\Excels\UIs\UIConfigs.xlsx";
+                break;
+            case "UIItemConfigs.xlsx":
+                path = newPath + @"\Excels\UIs\UIItemConfigs.xlsx";
+                break;
+            default:
+                path = excelPath + @"\" + excelName;
+                break;
+        }
+        bool fileExists = File.Exists(path);
+        if (fileExists == false)
+        {
+            errorExcelLog = excelName + "不存在表格文件";
+            errorList.Add((excelName, errorExcelLog, excelName));
+            return errorList;
+        } 
+        excel = new ExcelPackage(new FileInfo(path));
+        ExcelWorkbook workBook;
+        try
+        {
+            workBook = excel.Workbook;
+        }
+        catch (Exception ex)
+        {
+            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
+            errorList.Add((excelName, errorExcelLog, excelName));
+            return errorList;
+        }
+        try
+        {
+            sheet = workBook.Worksheets["Sheet1"];
+        }
+        catch (Exception ex)
+        {
+            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
+            errorList.Add((excelName, errorExcelLog, excelName));
+            return errorList;
+        }
+        sheet ??= workBook.Worksheets[0];
+        return errorList;
+    }
+
+    public static DialogResult ExMessageBox(string message,string filePath)
+    {
+        var f = new DataExportForm
+        {
+            StartPosition = FormStartPosition.CenterParent,
+            Size = new Size(400, 200),
+            MaximizeBox = false,
+            MinimizeBox = false,
+            Text = @"表格汇总"
+        };
+        var gb = new Panel
+        {
+            BackColor = Color.FromArgb(255, 225, 225, 225),
+            AutoScroll = true,
+            Location = new System.Drawing.Point(f.Left + 20, f.Top + 20),
+            Size = new Size(f.Width - 55, f.Height - 200),
+            Text = message
+        };
+        //gb.Dock = DockStyle.Fill;
+        f.Controls.Add(gb);
+        var bt3 = new Button
+        {
+            Name = "button3",
+            Text = @"导出",
+            Location = new System.Drawing.Point(f.Left + 360, f.Top + 680)
+        };
+        f.Controls.Add(bt3);
+        return f.ShowDialog();
+        bt3.Click += Btn3Click;
+        void Btn3Click(object sender, EventArgs e)
+        {
+            Process.Start(filePath);
+        }
+    }
 }

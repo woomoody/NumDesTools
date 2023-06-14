@@ -161,12 +161,6 @@ public partial class CreatRibbon
         }
         else if (sheetName.Contains("【模板】"))
         {
-            //var errorCell = sheet.Cells[target.Row, 1];
-            //if (errorCell.Value != null)
-            //{
-            //    if (errorCell.Value.ToString() == "^错误^")
-            //    {
-
             foreach (var tempControl in from CommandBarControl tempControl in bars
                      let t = tempControl.Tag
                      where t is "自选写入"
@@ -179,7 +173,6 @@ public partial class CreatRibbon
                 {
                     // ignored
                 }
-
             //生成自己的菜单
             var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
             var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
@@ -191,11 +184,34 @@ public partial class CreatRibbon
                 comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton1.Click += ExcelDataAutoInsertMulti.RightClickInsertData;
             }
-            //    }
-            //}
+        }
+        else 
+        {
+            foreach (var tempControl in from CommandBarControl tempControl in bars
+                     let t = tempControl.Tag
+                     where t is "超级复制"
+                     select tempControl)
+                try
+                {
+                    tempControl.Delete();
+                }
+                catch
+                {
+                    // ignored
+                }
+            //生成自己的菜单
+            var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
+            var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
+            if (comControl == null) return;
+            if (comButton1 != null)
+            {
+                comButton1.Tag = "超级复制";
+                comButton1.Caption = "合并表格";
+                comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                comButton1.Click += ExcelDataAutoCopyMulti.RightClickMergeData;
+            }
         }
     }
-
     public void AllWorkbookOutPut_Click(IRibbonControl control)
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
@@ -1096,13 +1112,23 @@ public partial class CreatRibbon
         Debug.Print(ts2.ToString());
         App.StatusBar = "完成，用时：" + ts2.ToString();
     }
+    public void AutoMergeExcel_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        ExcelDataAutoCopyMulti.MergeData(true);
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "导出完成，用时：" + ts2.ToString();
+    }
 
     public void TestBar1_Click(IRibbonControl control)
     {
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        ExcelDataAutoCopyMulti.RightClickCopyData(true);
+        ExcelDataAutoCopyMulti.MergeData(true);
         //Program.NodeMain();
         //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");
         //ExcelDataAutoInsertMulti.InsertData(true);
@@ -1266,8 +1292,4 @@ public partial class CreatRibbon
         //}
     }
 
-    private void NewControl_Click(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
-    {
-        MessageBox.Show(@"Test");
-    }
 }
