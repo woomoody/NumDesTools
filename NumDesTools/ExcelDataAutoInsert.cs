@@ -1969,19 +1969,6 @@ public class ExcelDataAutoCopyMulti
         {
             MessageBox.Show(@"找不到目标表格路径，填写其他工程根目录，1行Alice，2行Cove");
             Process.Start(filePath);
-            //打开文本文件
-            //try
-            //{
-            //    // 尝试以读写方式打开文件
-            //    using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite))
-            //    {
-
-            //    }
-            //}
-            //catch (IOException)
-            //{
-            //}
-
             return errorList;
         }
 
@@ -2047,11 +2034,14 @@ public class ExcelDataAutoCopyMulti
             for (int i = 0; i < targetRowList.Count; i++)
             {
                 var cellTarget = targetSheet.Cells[targetRowList[i], 1, targetRowList[i], targetMaxCol];
-                // 清除单元格的颜色
-                cellTarget.Style.Fill.PatternType = ExcelFillStyle.None;
-                //重新上色
-                cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                cellTarget.Style.Fill.BackgroundColor.SetColor(cellColor);
+                var isColorCell = targetSheet.Cells[targetRowList[i],2];
+                // 有填充色就不重新上色了
+                if (isColorCell.Style.Fill.BackgroundColor.Rgb == null)
+                {
+                    //上色
+                    cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    cellTarget.Style.Fill.BackgroundColor.SetColor(cellColor);
+                }
             }
         }
         targetExcel.Save();
@@ -2123,67 +2113,6 @@ public class ExcelDataAutoCopyMulti
                 return errorList;
             }
         }
-        //var baseTargetPath = Path.GetDirectoryName(Path.GetDirectoryName(targetExcelPath));
-        //var baseSourcePath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
-        //string pathTarget;
-        //string pathSource;
-        //switch (excelName)
-        //{
-        //    case "Localizations.xlsx":
-        //        pathTarget = baseTargetPath + @"\Excels\Localizations\Localizations.xlsx";
-        //        pathSource = baseSourcePath + @"\Excels\Localizations\Localizations.xlsx";
-        //        break;
-        //    case "UIConfigs.xlsx":
-        //        pathTarget = baseTargetPath + @"\Excels\UIs\UIConfigs.xlsx";
-        //        pathSource = baseSourcePath + @"\Excels\UIs\UIConfigs.xlsx";
-        //        break;
-        //    case "UIItemConfigs.xlsx":
-        //        pathTarget = baseTargetPath + @"\Excels\UIs\UIItemConfigs.xlsx";
-        //        pathSource = baseSourcePath + @"\Excels\UIs\UIItemConfigs.xlsx";
-        //        break;
-        //    default:
-        //        pathTarget = targetExcelPath + @"\" + excelName;
-        //        pathSource = excelPath + @"\" + excelName;
-        //        break;
-        //}
-        //bool fileExists = File.Exists(pathSource);
-        //bool fileExists2 = File.Exists(pathTarget);
-        //if (fileExists == false || fileExists2 == false)
-        //{
-        //    errorExcelLog = excelName + "不存在表格文件";
-        //    errorList.Add((excelName, errorExcelLog, excelName));
-        //    return errorList;
-        //}
-        //var targetExcel = new ExcelPackage(new FileInfo(pathTarget));
-        //var sourceExcel = new ExcelPackage(new FileInfo(pathSource));
-        //ExcelWorkbook targetWorkBook;
-        //ExcelWorkbook sourceWorkBook;
-        //try
-        //{
-        //    targetWorkBook = targetExcel.Workbook;
-        //    sourceWorkBook = sourceExcel.Workbook;
-        //}
-        //catch (Exception)
-        //{
-        //    errorExcelLog = excelName + "不能创建WorkBook对象";
-        //    errorList.Add((excelName, errorExcelLog, excelName));
-        //    return errorList;
-        //}
-        //ExcelWorksheet targetSheet;
-        //ExcelWorksheet sourceSheet;
-        //try
-        //{
-        //    targetSheet = targetWorkBook.Worksheets["Sheet1"];
-        //    sourceSheet = sourceWorkBook.Worksheets["Sheet1"];
-        //}
-        //catch (Exception)
-        //{
-        //    errorExcelLog = excelName + "#不能创建WorkBook对象";
-        //    errorList.Add((excelName, errorExcelLog, excelName));
-        //    return errorList;
-        //}
-        //targetSheet ??= targetWorkBook.Worksheets[0];
-        //sourceSheet ??= sourceWorkBook.Worksheets[0];
         //执行写入操作
         for (var excelMulti = 0; excelMulti < modelIdNew[excelName].Count; excelMulti++)
         {
@@ -2221,11 +2150,14 @@ public class ExcelDataAutoCopyMulti
             for (int i = 0; i < targetRowList.Count; i++)
             {
                 var cellTarget = targetSheet.Cells[targetRowList[i], 1, targetRowList[i], targetMaxCol];
-                // 清除单元格的颜色
-                cellTarget.Style.Fill.PatternType = ExcelFillStyle.None;
-                //重新上色
-                cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                cellTarget.Style.Fill.BackgroundColor.SetColor(cellColor);
+                var isColorCell = targetSheet.Cells[targetRowList[i], 2];
+                // 有填充色就不重新上色了
+                if (isColorCell.Style.Fill.BackgroundColor.Rgb == null)
+                {
+                    //上色
+                    cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    cellTarget.Style.Fill.BackgroundColor.SetColor(cellColor);
+                }
             }
         }
         targetExcel.Save();

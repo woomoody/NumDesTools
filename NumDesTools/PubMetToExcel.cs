@@ -496,26 +496,27 @@ public class PubMetToExcel
         object[,] sourceRangeTitle)
     {
         var targetRowList =new List<int>();
-        int defaultRow;
+        int defaultRow = targetSheet.Dimension.End.Row; ;
+        int beforTargetRow= defaultRow;
         for (int r = 0; r < sourceRangeValue.GetLength(0); r++)
         {
-            defaultRow = targetSheet.Dimension.End.Row;
             //target中找行
             var sourceRow = sourceRangeValue[r, 1];
             if (sourceRow == null)
             {
                 sourceRow = "";
             }
-            var rowValue = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, sourceRow.ToString());
-            if (rowValue == -1)
+            //获取目标单元格填写数值的位置，默认位置未最后一行
+            var taregtRow = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, sourceRow.ToString());
+            if (taregtRow == -1)
             {
-                targetSheet.InsertRow(defaultRow + 1,1);
+                targetSheet.InsertRow(beforTargetRow + 1,1);
+                taregtRow = beforTargetRow + 1;
             }
             else
             {
-                defaultRow = rowValue;
+                beforTargetRow = taregtRow;
             }
-            int fixRow = 0;
             for (int i = 0; i < targetRangeTitle.GetLength(1); i++)
             {
                 var targetTitle = targetRangeTitle[0, i];
@@ -523,18 +524,9 @@ public class PubMetToExcel
                 {
                     targetTitle = "";
                 }
-
                 for (int j = 0; j < sourceRangeTitle.GetLength(1); j++)
                 {
                     var sourceTitle = sourceRangeTitle[0, j];
-                    if (defaultRow != targetSheet.Dimension.End.Row)
-                    {
-                        fixRow = 0;
-                    }
-                    else
-                    {
-                        fixRow = 1;
-                    }
                     if (sourceTitle == null)
                     {
                         sourceTitle = "";
@@ -547,12 +539,12 @@ public class PubMetToExcel
                         {
                             sourceValue = "";
                         }
-                        var targetCell = targetSheet.Cells[defaultRow+ fixRow, i + 1];
+                        var targetCell = targetSheet.Cells[taregtRow, i + 1];
                         targetCell.Value = sourceValue;
                     }
                 }
             }
-            targetRowList.Add(defaultRow + fixRow);
+            targetRowList.Add(taregtRow);
         }
         return targetRowList;
     }
