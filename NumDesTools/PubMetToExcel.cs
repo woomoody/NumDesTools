@@ -11,6 +11,8 @@ using ExcelDna.Integration;
 using Button = System.Windows.Forms.Button;
 using Color = System.Drawing.Color;
 using Point = Microsoft.Office.Interop.Excel.Point;
+using System.Threading.Tasks;
+
 namespace NumDesTools;
 
 public class PubMetToExcel
@@ -364,6 +366,60 @@ public class PubMetToExcel
             //wk.Properties.Company = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
             App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
         }
+        return targetList;
+    }
+    public static List<(string, string, int, int)> ErrorKeyFromExcelAllMultiThread(string rootPath, string errorValue)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
+        var mainPath = newPath + @"\Excels\Tables\";
+        string[] files1 = Directory.EnumerateFiles(mainPath, "*.xlsx")
+            .Where(file => !Path.GetFileName(file).Contains("#"))
+            .ToArray();
+        var langPath = newPath + @"\Excels\Localizations\";
+        string[] files2 = Directory.EnumerateFiles(langPath, "*.xlsx")
+            .Where(file => !Path.GetFileName(file).Contains("#"))
+            .ToArray();
+        var uiPath = newPath + @"\Excels\UIs\";
+        string[] files3 = Directory.EnumerateFiles(uiPath, "*.xlsx")
+            .Where(file => !Path.GetFileName(file).Contains("#"))
+            .ToArray();
+        var files = files1.Concat(files2).Concat(files3).ToArray();
+
+        var targetList = new List<(string, string, int, int)>();
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }; // 设置并行处理的最大线程数为处理器核心数
+
+        Parallel.ForEach(files, options, file =>
+        {
+            using (ExcelPackage package = new ExcelPackage(new FileInfo(file)))
+            {
+                var wk = package.Workbook;
+                try
+                {
+                    var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
+                    for (var col = 2; col <= sheet.Dimension.End.Column; col++)
+                    {
+                        for (var row = 4; row <= sheet.Dimension.End.Row; row++)
+                        {
+                            var cellValue = sheet.Cells[row, col].Value;
+                            if (cellValue != null && cellValue.ToString().Contains(errorValue))
+                            {
+                                var cellAddress = new ExcelCellAddress(row, col);
+                                var cellCol = cellAddress.Column;
+                                var cellRow = cellAddress.Row;
+                                targetList.Add((file, sheet.Name, cellRow, cellCol));
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // 处理异常
+                }
+            }
+        });
+
         return targetList;
     }
     public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelId(string rootPath, string errorValue)
