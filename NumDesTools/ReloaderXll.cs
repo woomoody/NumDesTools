@@ -33,12 +33,13 @@ namespace NumDesTools;
         [XmlAttribute]
         public string Path { get; set; }
     }
-  class AddInWatcher : IDisposable
+
+internal class AddInWatcher : IDisposable
     {
         // For every directory we watch, keep track of all the add-ins that have files in that directory
-        Dictionary<string, WatchedDirectory> _watchedDirectories = new Dictionary<string, WatchedDirectory>();
-        HashSet<WatchedAddIn> _dirtyAddIns = new HashSet<WatchedAddIn>();
-        object _dirtyLock = new object();
+        public readonly Dictionary<string, WatchedDirectory> WatchedDirectories = new Dictionary<string, WatchedDirectory>();
+        private HashSet<WatchedAddIn> _dirtyAddIns = new HashSet<WatchedAddIn>();
+        private readonly object _dirtyLock = new object();
 
         public AddInWatcher(AddInReloaderConfiguration config)
         {
@@ -48,7 +49,7 @@ namespace NumDesTools;
                 {
                     var directory = Path.GetDirectoryName(file.Path);
                     WatchedDirectory wd;
-                    if (!_watchedDirectories.TryGetValue(directory, out wd))
+                    if (!WatchedDirectories.TryGetValue(directory ?? throw new InvalidOperationException(), out wd))
                     {
                         wd = new WatchedDirectory(directory, InvalidateAddIn);
                     }
@@ -58,7 +59,7 @@ namespace NumDesTools;
         }
 
         // Called in the event handler - don't do slow work here.
-        void InvalidateAddIn(WatchedAddIn watchedAddIn)
+        private void InvalidateAddIn(WatchedAddIn watchedAddIn)
         {
             lock (_dirtyLock)
             {
@@ -68,7 +69,7 @@ namespace NumDesTools;
         }
 
         // Running in macro context.
-        void ReloadDirtyAddIns()
+        private void ReloadDirtyAddIns()
         {
             HashSet<WatchedAddIn> dirtyCopy;
             lock (_dirtyLock)
@@ -86,29 +87,27 @@ namespace NumDesTools;
         }
 
         // Running in macro context.
-        static void ReloadAddIn(string xllPath)
+        private static void ReloadAddIn(string xllPath)
         {
             ExcelIntegration.RegisterXLL(xllPath);
         }
 
         public void Dispose()
         {
-            foreach (var wd in _watchedDirectories.Values)
+            foreach (var wd in WatchedDirectories.Values)
             {
                 wd.Dispose();
             }
         }
 
-        class WatchedDirectory : IDisposable
+        internal class WatchedDirectory : IDisposable
         {
-            string _path;
-            FileSystemWatcher _directoryWatcher;
-            Dictionary<string, WatchedAddIn> _watchedFiles;
-            Action<WatchedAddIn> _invalidateAddIn;
+            private readonly FileSystemWatcher _directoryWatcher;
+            private readonly Dictionary<string, WatchedAddIn> _watchedFiles;
+            private readonly Action<WatchedAddIn> _invalidateAddIn;
 
             public WatchedDirectory(string path, Action<WatchedAddIn> invalidateAddIn)
             {
-                _path = path;
                 _directoryWatcher = new FileSystemWatcher(path);
                 _directoryWatcher.NotifyFilter = NotifyFilters.LastWrite;
                 _directoryWatcher.Changed += DirectoryWatcher_Changed;
@@ -122,7 +121,7 @@ namespace NumDesTools;
             {
                 foreach (var file in addIn.WatchedFiles)
                 {
-                    var fullPath = System.IO.Path.GetFullPath(file.Path);
+                    var fullPath = Path.GetFullPath(file.Path);
                     _watchedFiles[fullPath] = addIn; // This only allows one add-in to watch a particular file.
                 }
             }
@@ -132,9 +131,9 @@ namespace NumDesTools;
                 _directoryWatcher.Dispose();
             }
 
-            void DirectoryWatcher_Changed(object sender, FileSystemEventArgs e)
+            private void DirectoryWatcher_Changed(object sender, FileSystemEventArgs e)
             {
-                Debug.Assert(string.Equals(System.IO.Path.GetFullPath(e.FullPath), e.FullPath, StringComparison.OrdinalIgnoreCase));
+                Debug.Assert(string.Equals(Path.GetFullPath(e.FullPath), e.FullPath, StringComparison.OrdinalIgnoreCase));
 
                 WatchedAddIn addIn;
                 if (_watchedFiles.TryGetValue(e.FullPath, out addIn))

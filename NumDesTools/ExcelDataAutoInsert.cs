@@ -16,14 +16,6 @@ using Match = System.Text.RegularExpressions.Match;
 using OfficeOpenXml.Style;
 using System.Diagnostics;
 using System.Globalization;
-using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Bibliography;
-using NPOI.SS.Formula.Functions;
-using DocumentFormat.OpenXml;
-using OfficeOpenXml.DataValidation;
-using NPOI.SS.UserModel;
-using DocumentFormat.OpenXml.Office2016.Excel;
-using NPOI.XWPF.UserModel;
 
 namespace NumDesTools;
 
@@ -1944,7 +1936,7 @@ public class ExcelDataAutoCopyMulti
             //sheet.Range["B4"].Value = "否";
             sw.Stop();
             var ts1 = sw.Elapsed;
-            app.StatusBar = "完成写入：" + ts1.ToString();
+            app.StatusBar = "完成写入：" + ts1;
             return;
         }
         ErrorLogCtp.DisposeCtp();
@@ -1952,13 +1944,13 @@ public class ExcelDataAutoCopyMulti
 
         sw.Stop();
         var ts2 = sw.Elapsed;
-        app.StatusBar = "完成写入：" + ts2.ToString();
+        app.StatusBar = "完成写入：" + ts2;
     }
     public static List<(string, string, string)> AutoCopyDataRight(dynamic app,dynamic excelPath,dynamic excelName ,dynamic sheet)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var errorList = new List<(string, string, string)>();
-        string targetExcelPath = "";
+        string targetExcelPath;
         //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
@@ -1989,14 +1981,13 @@ public class ExcelDataAutoCopyMulti
         ExcelWorksheet targetSheet;
         ExcelPackage targetExcel;
         ExcelWorksheet sourceSheet;
-        ExcelPackage sourceExcel;
         //创建excel对象
         errorList=PubMetToExcel.EpplusCreatExcelObj(targetExcelPath, excelName, out targetSheet, out targetExcel);
         if (errorList.Count != 0)
         {
             return errorList;
         }
-        errorList = PubMetToExcel.EpplusCreatExcelObj(excelPath, excelName, out sourceSheet, out sourceExcel);
+        errorList = PubMetToExcel.EpplusCreatExcelObj(excelPath, excelName, out sourceSheet, out ExcelPackage _);
         if (errorList.Count != 0)
         {
             return errorList;
@@ -2051,7 +2042,6 @@ public class ExcelDataAutoCopyMulti
     public static List<(string, string, string)> AutoCopyData(dynamic isMulti,dynamic modelIdNew,dynamic excelName ,dynamic excelPath,dynamic cellColor)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        var errorExcelLog ="";
         var errorList = new List<(string, string, string)>();
         string targetExcelPath = "";
         //数据源路径txt
@@ -2091,14 +2081,13 @@ public class ExcelDataAutoCopyMulti
         ExcelWorksheet targetSheet;
         ExcelPackage targetExcel;
         ExcelWorksheet sourceSheet;
-        ExcelPackage sourceExcel;
         //创建excel对象
         errorList = PubMetToExcel.EpplusCreatExcelObj(targetExcelPath, excelName, out targetSheet, out targetExcel);
         if (errorList.Count != 0)
         {
             return errorList;
         }
-        errorList = PubMetToExcel.EpplusCreatExcelObj(excelPath, excelName, out sourceSheet, out sourceExcel);
+        errorList = PubMetToExcel.EpplusCreatExcelObj(excelPath, excelName, out sourceSheet, out ExcelPackage _);
         if (errorList.Count != 0)
         {
             return errorList;
@@ -2119,6 +2108,7 @@ public class ExcelDataAutoCopyMulti
             var startValue = modelIdNew[excelName][excelMulti].Item1[0, 0].ToString();
             var endValue = modelIdNew[excelName][excelMulti].Item1[1, 0].ToString();
             var startRowSource = ExcelDataAutoInsert.FindSourceRow(sourceSheet, 2, startValue);
+            string errorExcelLog;
             if (startRowSource == -1)
             {
                 errorExcelLog = excelName + "#【初始模板】#[" + startValue + "]未找到(序号出错)";
@@ -2176,7 +2166,6 @@ public class ExcelDataActivityServer
         var sourceSheet = indexWk.Worksheets["运营排期"];
         var targetSheet = indexWk.Worksheets["Sheet1"];
         var fixSheet = indexWk.Worksheets["活动模版"];
-        var backupSheet = indexWk.Worksheets["备份"];
 
         var fixData = PubMetToExcel.ExcelDataToList(fixSheet);
         var fixTitle = fixData.Item1;
@@ -2262,7 +2251,7 @@ public class ExcelDataActivityServer
                     string targetCloseTimeString = DateTime.FromOADate(sourceData[j].Item3).AddHours((fixDataList[i][fixCloses] +1)* 24 + 8).ToString();
                     long targetCloseTimeLong = sourceEndTimeLong + (long)(fixDataList[i][fixCloses] * 24 * 3600);
                     targetData.Add(targetId.ToString());
-                    targetData.Add(targetName.ToString());
+                    targetData.Add(targetName);
                     targetData.Add(targetPushTimeString);
                     targetData.Add(targetPushTimeLong.ToString());
                     targetData.Add(targetPushEndTimeString);
@@ -2280,7 +2269,7 @@ public class ExcelDataActivityServer
             }
             if(exit==false)
             {
-                errorLog += "运营排期/" + PubMetToExcel.ChangeExcelColChar(sourceData[j].Item5-1) + sourceData[j].Item4 + "\r\n"; ;
+                errorLog += "运营排期/" + PubMetToExcel.ChangeExcelColChar(sourceData[j].Item5-1) + sourceData[j].Item4 + "\r\n";
             }
         }
         //写入新数据

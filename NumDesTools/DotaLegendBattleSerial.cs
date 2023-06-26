@@ -214,16 +214,16 @@ internal class DotaLegendBattleSerial
     private static int _totalTurn;
     private static readonly dynamic App = ExcelDnaUtil.Application;
     private static readonly Worksheet Ws = App.Worksheets["战斗模拟"];
-    private static readonly dynamic GroupARowMin = Convert.ToInt32(Ws.Range["C9"].Value);
-    private static readonly dynamic GroupAColMin = Convert.ToInt32(Ws.Range["C10"].Value);
-    private static readonly dynamic GroupARowMax = Convert.ToInt32(Ws.Range["C11"].Value);
-    private static readonly dynamic GroupAColMax = Convert.ToInt32(Ws.Range["C12"].Value);
-    private static readonly dynamic GroupARowNum = GroupARowMax - GroupARowMin + 1;
-    private static readonly dynamic GroupBRowMin = Convert.ToInt32(Ws.Range["C20"].Value);
-    private static readonly dynamic GroupBColMin = Convert.ToInt32(Ws.Range["C21"].Value);
-    private static readonly dynamic GroupBRowMax = Convert.ToInt32(Ws.Range["C22"].Value);
-    private static readonly dynamic GroupBColMax = Convert.ToInt32(Ws.Range["C23"].Value);
-    private static readonly dynamic GroupBRowNum = GroupBRowMax - GroupBRowMin + 1;
+    private static readonly dynamic ARowMin = Convert.ToInt32(Ws.Range["C9"].Value);
+    private static readonly dynamic AColMin = Convert.ToInt32(Ws.Range["C10"].Value);
+    private static readonly dynamic ARowMax = Convert.ToInt32(Ws.Range["C11"].Value);
+    private static readonly dynamic AColMax = Convert.ToInt32(Ws.Range["C12"].Value);
+    private static readonly dynamic ARowNum = ARowMax - ARowMin + 1;
+    private static readonly dynamic BRowMin = Convert.ToInt32(Ws.Range["C20"].Value);
+    private static readonly dynamic BColMin = Convert.ToInt32(Ws.Range["C21"].Value);
+    private static readonly dynamic BRowMax = Convert.ToInt32(Ws.Range["C22"].Value);
+    private static readonly dynamic BColMax = Convert.ToInt32(Ws.Range["C23"].Value);
+    private static readonly dynamic BRowNum = BRowMax - BRowMin + 1;
 
     private static readonly dynamic BattleFirst = Convert.ToString(Ws.Range["G4"].Value);
 
@@ -242,13 +242,13 @@ internal class DotaLegendBattleSerial
     private static readonly int SkillHealUseAllHp = 21; //治疗倍率/A
 
     //初始化A、B两个阵营的
-    private static readonly Range RangeA = Ws.Range[Ws.Cells[GroupARowMin, GroupAColMin],
-        Ws.Cells[GroupARowMax, GroupAColMax]];
+    private static readonly Range RangeA = Ws.Range[Ws.Cells[ARowMin, AColMin],
+        Ws.Cells[ARowMax, AColMax]];
 
     private static readonly Array ArrA = RangeA.Value2;
 
-    private static readonly Range RangeB = Ws.Range[Ws.Cells[GroupBRowMin, GroupBColMin],
-        Ws.Cells[GroupBRowMax, GroupBColMax]];
+    private static readonly Range RangeB = Ws.Range[Ws.Cells[BRowMin, BColMin],
+        Ws.Cells[BRowMax, BColMax]];
 
     private static readonly Array ArrB = RangeB.Value2;
     public int AutoRatio = 15; //普攻占比
@@ -316,46 +316,46 @@ internal class DotaLegendBattleSerial
         //for (int testBattle =0; testBattle< testBattleMax;testBattle++)
         //{
         //过滤空数据,A数据List化
-        var posRowA = DataList(GroupARowNum, PosRow, ArrA, 1);
-        NameList(GroupARowNum, Name, ArrA, 1);
-        var posColA = DataList(GroupARowNum, PosCol, ArrA, 1);
-        DataList(GroupARowNum, Pos, ArrA, 1);
-        var atkA = DataList(GroupARowNum, Atk, ArrA, 1);
-        var hpA = DataList(GroupARowNum, Hp, ArrA, 1);
-        var hpAMax = DataList(GroupARowNum, Hp, ArrA, 1);
-        var defA = DataList(GroupARowNum, Def, ArrA, 1);
-        var critA = DataList(GroupARowNum, Crit, ArrA, 1);
-        var critMultiA = DataList(GroupARowNum, CritMulti, ArrA, 1);
-        var atkSpeedA = DataList(GroupARowNum, AtkSpeed, ArrA, 1);
-        var skillCda = DataList(GroupARowNum, SkillCd, ArrA, 1);
-        var skillCDstartA = DataList(GroupARowNum, SkillCDstart, ArrA, 1);
-        var skillDamageA = DataList(GroupARowNum, SkillDamge, ArrA, 1);
-        var skillHealUseSelfAtkA = DataList(GroupARowNum, SkillHealUseSelfAtk, ArrA, 1);
-        var skillHealUseSelfHpA = DataList(GroupARowNum, SkillHealUseSelfHp, ArrA, 1);
-        var skillHealUseAllHpA = DataList(GroupARowNum, SkillHealUseAllHp, ArrA, 1);
-        var countAtka = DataList(GroupARowNum, Pos, ArrA, 0); //普攻次数
-        var countSkillA = DataList(GroupARowNum, Pos, ArrA, 0);
+        var posRowA = DataList(ARowNum, PosRow, ArrA, 1);
+        NameList(ARowNum, Name, ArrA, 1);
+        var posColA = DataList(ARowNum, PosCol, ArrA, 1);
+        DataList(ARowNum, Pos, ArrA, 1);
+        var atkA = DataList(ARowNum, Atk, ArrA, 1);
+        var hpA = DataList(ARowNum, Hp, ArrA, 1);
+        var hpAMax = DataList(ARowNum, Hp, ArrA, 1);
+        var defA = DataList(ARowNum, Def, ArrA, 1);
+        var critA = DataList(ARowNum, Crit, ArrA, 1);
+        var critMultiA = DataList(ARowNum, CritMulti, ArrA, 1);
+        var atkSpeedA = DataList(ARowNum, AtkSpeed, ArrA, 1);
+        var skillCda = DataList(ARowNum, SkillCd, ArrA, 1);
+        var skillCDstartA = DataList(ARowNum, SkillCDstart, ArrA, 1);
+        var skillDamageA = DataList(ARowNum, SkillDamge, ArrA, 1);
+        var skillHealUseSelfAtkA = DataList(ARowNum, SkillHealUseSelfAtk, ArrA, 1);
+        var skillHealUseSelfHpA = DataList(ARowNum, SkillHealUseSelfHp, ArrA, 1);
+        var skillHealUseAllHpA = DataList(ARowNum, SkillHealUseAllHp, ArrA, 1);
+        var countAtka = DataList(ARowNum, Pos, ArrA, 0); //普攻次数
+        var countSkillA = DataList(ARowNum, Pos, ArrA, 0);
 
         //过滤空数据,B数据List化
-        var posRowB = DataList(GroupARowNum, PosRow, ArrB, 1);
-        NameList(GroupARowNum, Name, ArrB, 1);
-        var posColB = DataList(GroupARowNum, PosCol, ArrB, 1);
-        DataList(GroupBRowNum, Pos, ArrB, 1);
-        var atkB = DataList(GroupBRowNum, Atk, ArrB, 1);
-        var hpB = DataList(GroupBRowNum, Hp, ArrB, 1);
-        var hpBMax = DataList(GroupBRowNum, Hp, ArrB, 1);
-        var defB = DataList(GroupBRowNum, Def, ArrB, 1);
-        var critB = DataList(GroupBRowNum, Crit, ArrB, 1);
-        var critMultiB = DataList(GroupBRowNum, CritMulti, ArrB, 1);
-        var atkSpeedB = DataList(GroupBRowNum, AtkSpeed, ArrB, 1);
-        var skillCdb = DataList(GroupBRowNum, SkillCd, ArrB, 1);
-        var skillCDstartB = DataList(GroupBRowNum, SkillCDstart, ArrB, 1);
-        var skillDamageB = DataList(GroupBRowNum, SkillDamge, ArrB, 1);
-        var skillHealUseSelfAtkB = DataList(GroupBRowNum, SkillHealUseSelfAtk, ArrB, 1);
-        var skillHealUseSelfHpB = DataList(GroupBRowNum, SkillHealUseSelfHp, ArrB, 1);
-        var skillHealUseAllHpB = DataList(GroupBRowNum, SkillHealUseAllHp, ArrB, 1);
-        var countAtkb = DataList(GroupARowNum, Pos, ArrB, 0); //普通次数
-        var countSkillB = DataList(GroupARowNum, Pos, ArrB, 0);
+        var posRowB = DataList(ARowNum, PosRow, ArrB, 1);
+        NameList(ARowNum, Name, ArrB, 1);
+        var posColB = DataList(ARowNum, PosCol, ArrB, 1);
+        DataList(BRowNum, Pos, ArrB, 1);
+        var atkB = DataList(BRowNum, Atk, ArrB, 1);
+        var hpB = DataList(BRowNum, Hp, ArrB, 1);
+        var hpBMax = DataList(BRowNum, Hp, ArrB, 1);
+        var defB = DataList(BRowNum, Def, ArrB, 1);
+        var critB = DataList(BRowNum, Crit, ArrB, 1);
+        var critMultiB = DataList(BRowNum, CritMulti, ArrB, 1);
+        var atkSpeedB = DataList(BRowNum, AtkSpeed, ArrB, 1);
+        var skillCdb = DataList(BRowNum, SkillCd, ArrB, 1);
+        var skillCDstartB = DataList(BRowNum, SkillCDstart, ArrB, 1);
+        var skillDamageB = DataList(BRowNum, SkillDamge, ArrB, 1);
+        var skillHealUseSelfAtkB = DataList(BRowNum, SkillHealUseSelfAtk, ArrB, 1);
+        var skillHealUseSelfHpB = DataList(BRowNum, SkillHealUseSelfHp, ArrB, 1);
+        var skillHealUseAllHpB = DataList(BRowNum, SkillHealUseAllHp, ArrB, 1);
+        var countAtkb = DataList(ARowNum, Pos, ArrB, 0); //普通次数
+        var countSkillB = DataList(ARowNum, Pos, ArrB, 0);
 
         int numA;
         int numB;

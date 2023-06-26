@@ -32,7 +32,7 @@ public partial class CreatRibbon
     private static readonly dynamic App = ExcelDnaUtil.Application;
     public static dynamic XllPathList = new List<string>();
 
-    AddInWatcher _watcher;
+    private AddInWatcher _watcher;
 
     void IExcelAddIn.AutoClose()
     {
@@ -147,7 +147,7 @@ public partial class CreatRibbon
                     comButton1.Click += RoleDataPri.DataKey;
                     sw.Stop();
                     var ts2 = sw.Elapsed;
-                    App.StatusBar = "导出完成，用时：" + ts2.ToString();
+                    App.StatusBar = "导出完成，用时：" + ts2;
                 }
 
                 if (comButton2 != null)
@@ -1132,7 +1132,7 @@ public partial class CreatRibbon
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
-        App.StatusBar = "完成，用时：" + ts2.ToString();
+        App.StatusBar = "完成，用时：" + ts2;
     }
 
     public void AutoCellFormatEPPlus_Click(IRibbonControl control)
@@ -1147,7 +1147,7 @@ public partial class CreatRibbon
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
-        App.StatusBar = "完成，用时：" + ts2.ToString();
+        App.StatusBar = "完成，用时：" + ts2;
     }
     public void ActivityServerData_Click(IRibbonControl control)
     {
@@ -1157,7 +1157,7 @@ public partial class CreatRibbon
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
-        App.StatusBar = "完成，用时：" + ts2.ToString();
+        App.StatusBar = "完成，用时：" + ts2;
     }
     public void AutoMergeExcel_Click(IRibbonControl control)
     {
@@ -1167,7 +1167,7 @@ public partial class CreatRibbon
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
-        App.StatusBar = "导出完成，用时：" + ts2.ToString();
+        App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void TestBar1_Click(IRibbonControl control)
@@ -1192,7 +1192,7 @@ public partial class CreatRibbon
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
-        App.StatusBar = "导出完成，用时：" + ts2.ToString();
+        App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void TestBar2_Click(IRibbonControl control)
@@ -1208,7 +1208,7 @@ public partial class CreatRibbon
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
-        App.StatusBar = "导出完成，用时：" + ts2.ToString();
+        App.StatusBar = "导出完成，用时：" + ts2;
         //DotaLegendBattle.LocalRC(8,3,3);
         //SVNTools.FileLogs();
         //SVNTools.CommitFile();
