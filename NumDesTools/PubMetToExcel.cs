@@ -2,7 +2,6 @@
 using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -10,7 +9,6 @@ using System.Windows.Forms;
 using ExcelDna.Integration;
 using Button = System.Windows.Forms.Button;
 using Color = System.Drawing.Color;
-using Point = Microsoft.Office.Interop.Excel.Point;
 using System.Threading.Tasks;
 
 namespace NumDesTools;
@@ -120,9 +118,10 @@ public class PubMetToExcel
             }
 
             var tuple = new Tuple<object[,]>(values);
-            if (dic.ContainsKey(value))
+            List<Tuple<object[,]>> value1;
+            if (dic.TryGetValue(value, out value1))
             {
-                dic[value].Add(tuple);
+                value1.Add(tuple);
             }
             else
             {
@@ -552,7 +551,7 @@ public class PubMetToExcel
         object[,] sourceRangeTitle)
     {
         var targetRowList =new List<int>();
-        int defaultRow = targetSheet.Dimension.End.Row; ;
+        int defaultRow = targetSheet.Dimension.End.Row;
         int beforTargetRow= defaultRow;
         for (int r = 0; r < sourceRangeValue.GetLength(0); r++)
         {
@@ -610,7 +609,7 @@ public class PubMetToExcel
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         sheet = null;
         excel = null;
-        var errorExcelLog = "";
+        string errorExcelLog;
         var errorList = new List<(string, string, string)>();
         string path;
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
@@ -690,10 +689,12 @@ public class PubMetToExcel
         };
         f.Controls.Add(bt3);
         return f.ShowDialog();
-        bt3.Click += Btn3Click;
+
+/*
         void Btn3Click(object sender, EventArgs e)
         {
             Process.Start(filePath);
         }
+*/
     }
 }
