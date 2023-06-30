@@ -19,16 +19,6 @@ public class PubMetToExcel
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToList(dynamic workSheet)
     {
         Range dataRange = workSheet.UsedRange;
-        //// 获取第一列有数据的最大行
-        //int maxRow= 0;
-        //for (int row = 1; row <= dataRange.Rows.Count; row++)
-        //{
-        //    if (workSheet.Cells[row, 1].Value != null && workSheet.Cells[row, 1].Value.ToString().Trim() != "")
-        //    {
-        //        maxRow = row;
-        //    }
-        //}
-        //Range realDataRange = workSheet.Range[workSheet.Cells[1, 1], workSheet.Cells[maxRow, dataRange.Columns.Count]];
         // 读取数据到一个二维数组中
         object[,] rangeValue = dataRange.Value;
         // 获取行数和列数
@@ -53,40 +43,29 @@ public class PubMetToExcel
 
             if (row > 1) sheetData.Add(rowList);
         }
-
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
-    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListFirstRow(dynamic workSheet)
+    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelf(dynamic workSheet,int dataRow,int dataCol,int headerRow,int headerCol)
     {
         Range dataRange = workSheet.UsedRange;
-        // 获取第一列有数据的最大行
-        int maxRow = 0;
-        for (int row = 1; row <= dataRange.Rows.Count; row++)
-        {
-            if (workSheet.Cells[row, 1].Value != null && workSheet.Cells[row, 1].Value.ToString().Trim() != "")
-            {
-                maxRow = row;
-            }
-        }
-        Range realDataRange = workSheet.Range[workSheet.Cells[1, 1], workSheet.Cells[maxRow, dataRange.Columns.Count]];
         // 读取数据到一个二维数组中
-        object[,] rangeValue = realDataRange.Value;
+        object[,] rangeValue = dataRange.Value;
         // 获取行数和列数
         var rows = rangeValue.GetLength(0);
         var columns = rangeValue.GetLength(1);
         // 定义工作表数据数组和表头数组
         var sheetData = new List<List<object>>();
         var sheetHeaderCol = new List<object>();
-        // 读取数据和表头
+        // 读取数据
         //单线程
-        for (var row = 1; row <= rows; row++)
+        for (var row = dataRow; row <= rows; row++)
         {
             var rowList = new List<object>();
-            for (var column = 1; column <= columns; column++)
+            for (var column = dataCol; column <= columns; column++)
             {
                 var value = rangeValue[row, column];
-                if (row == 1)
+                if (row == headerRow)
                     sheetHeaderCol.Add(value);
                 else
                     rowList.Add(value);
@@ -94,10 +73,16 @@ public class PubMetToExcel
 
             if (row > 1) sheetData.Add(rowList);
         }
-
+        //读取表头
+        for (var column = headerCol; column <= columns; column++)
+        {
+            var value = rangeValue[headerRow, column];
+            sheetHeaderCol.Add(value);
+        }
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
+
     public static Dictionary<string, List<Tuple<object[,]>>> ExcelDataToDictionary(dynamic data, dynamic dicKeyCol,
         dynamic dicValueCol, int valueRowCount, int valueColCount = 1)
     {
@@ -400,31 +385,39 @@ public class PubMetToExcel
 
         Parallel.ForEach(files, options, file =>
         {
-            using (ExcelPackage package = new ExcelPackage(new FileInfo(file)))
+            try
             {
-                var wk = package.Workbook;
-                try
+
+                using (ExcelPackage package = new ExcelPackage(new FileInfo(file)))
                 {
-                    var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
-                    for (var col = 2; col <= sheet.Dimension.End.Column; col++)
+                    try
                     {
-                        for (var row = 4; row <= sheet.Dimension.End.Row; row++)
+                        var wk = package.Workbook;
+                        var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
+                        for (var col = 2; col <= sheet.Dimension.End.Column; col++)
                         {
-                            var cellValue = sheet.Cells[row, col].Value;
-                            if (cellValue != null && cellValue.ToString().Contains(errorValue))
+                            for (var row = 4; row <= sheet.Dimension.End.Row; row++)
                             {
-                                var cellAddress = new ExcelCellAddress(row, col);
-                                var cellCol = cellAddress.Column;
-                                var cellRow = cellAddress.Row;
-                                targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                var cellValue = sheet.Cells[row, col].Value;
+                                if (cellValue != null && cellValue.ToString().Contains(errorValue))
+                                {
+                                    var cellAddress = new ExcelCellAddress(row, col);
+                                    var cellCol = cellAddress.Column;
+                                    var cellRow = cellAddress.Row;
+                                    targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                }
                             }
                         }
                     }
+                    catch
+                    {
+                        // 处理异常
+                    }
                 }
-                catch
-                {
-                    // 处理异常
-                }
+            }
+            catch
+            {
+
             }
         });
 
