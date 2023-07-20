@@ -249,15 +249,13 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CollectRatioFunction.cs" />
+    <Compile Include="PubMetToExcelFunc.cs" />
+    <Compile Include="RatioCaculate.cs" />
     <Compile Include="ExcelDataAutoInsert.cs" />
     <Compile Include="ExcelLinksGraphic.cs" />
-    <Compile Include="ExcelRelationShipEpPlus.cs" />
     <Compile Include="ExcelRelationShip.cs" />
-    <Compile Include="Extensions.cs" />
     <Compile Include="Https.cs" />
     <Compile Include="CreatRibbon.cs" />
-    <Compile Include="NodeExcel.cs" />
     <Compile Include="PubMetToExcel.cs" />
     <Compile Include="ReloaderXll.cs" />
     <Compile Include="RibbonResources.Designer.cs">
@@ -268,7 +266,7 @@
     <Compile Include="RoleAndMonsterDataCreat.cs" />
     <Compile Include="DotaLegendBattleParallel.cs" />
     <Compile Include="DotaLegendBattleSerial.cs" />
-    <Compile Include="DataExport.cs" />
+    <Compile Include="OldExcelDataExport.cs" />
     <Compile Include="CellSelectChange.cs">
       <SubType>Form</SubType>
     </Compile>

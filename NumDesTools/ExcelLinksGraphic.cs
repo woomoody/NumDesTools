@@ -2,7 +2,9 @@
 using ExcelDna.Integration;
 
 namespace NumDesTools;
-
+/// <summary>
+/// 输出dot文件表现Excel索引关系图
+/// </summary>
 public class ExcelLinksGraphic
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;

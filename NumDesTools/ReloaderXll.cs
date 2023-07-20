@@ -6,10 +6,13 @@ using System.IO;
 using System.Xml.Serialization;
 
 namespace NumDesTools;
+/// <summary>
+/// 重载XLL插件方法类
+/// </summary>
 // ---------------------------------------------------------------------------------------------------
-    // Configuration types
+// Configuration types
 
-    [Serializable]
+[Serializable]
     [XmlType(AnonymousType = true)]
     [XmlRoot(Namespace = "", IsNullable = false)]
     public class AddInReloaderConfiguration

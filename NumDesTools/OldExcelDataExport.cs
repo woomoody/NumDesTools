@@ -23,7 +23,9 @@ using Point = System.Drawing.Point;
 using ScrollBars = System.Windows.Forms.ScrollBars;
 
 namespace NumDesTools;
-
+/// <summary>
+/// Excel插件基础类CreatRibbon，其他为具体功能类，古早代码，主要完成Excel数据转换为Txt，之后的功能代码基本按文件名归类
+/// </summary>
 public static class ErrorLogCtp
 {
     public static CustomTaskPane Ctp;
@@ -719,7 +721,7 @@ public static class ExcelSheetData
     }
 }
 
-#endregion 获取Excel单表格的数据并导出到txt
+#endregion
 
 internal class GetImageByStdole : AxHost
 {

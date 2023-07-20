@@ -4,7 +4,9 @@ using System.IO;
 
 
 namespace NumDesTools;
-
+/// <summary>
+/// Excel自定义函数类
+/// </summary>
 public class ExcelUdf
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;

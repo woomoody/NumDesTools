@@ -2,7 +2,6 @@
 //using SharpSvn;
 
 //namespace NumDesTools;
-
 //internal class SvnTools
 //{
 //    //static string path = @"C:\ProWork\trunk\Client\Assets\Resources\Table\Skill.txt";

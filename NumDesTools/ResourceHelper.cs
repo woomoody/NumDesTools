@@ -4,7 +4,9 @@ using System.IO;
 using System.Reflection;
 
 namespace NumDesTools;
-
+/// <summary>
+/// Ribbon所需要的自定义图片应用类
+/// </summary>
 internal class ResourceHelper
 {
     //Using Custom Images in your Office Ribbon

@@ -8,55 +8,9 @@ using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
 
 namespace NumDesTools;
-
-public class Duoxianchengceshi
-{
-    private static readonly object MMonitorObject = new();
-    private static int _hhc = 100;
-
-    [STAThread]
-    public static void Main()
-    {
-        var thread = new Thread(Do)
-        {
-            Name = " Thread1 "
-        };
-        var thread2 = new Thread(Do)
-        {
-            Name = " Thread2 "
-        };
-        thread.Start();
-        thread2.Start();
-        thread.Join();
-        thread2.Join();
-        Console.Read();
-        var adsd = _hhc;
-        Debug.Print(adsd.ToString());
-    }
-
-    private static void Do()
-    {
-        if (!Monitor.TryEnter(MMonitorObject))
-        {
-            Console.WriteLine(@" Can't visit Object " + Thread.CurrentThread.Name);
-            Debug.Print(" Can't visit Object " + Thread.CurrentThread.Name);
-            return;
-        }
-
-        try
-        {
-            Monitor.Enter(MMonitorObject);
-            Console.WriteLine(@" Enter Monitor " + Thread.CurrentThread.Name);
-            Debug.Print(" Enter Monitor " + Thread.CurrentThread.Name);
-            _hhc -= 10;
-        }
-        finally
-        {
-            Monitor.Exit(MMonitorObject);
-        }
-    }
-}
-
+/// <summary>
+/// 卡牌战斗模拟-回合
+/// </summary>
 public class DotaLegendBattleTem
 {
     private static readonly object MMonitorObject = new();
