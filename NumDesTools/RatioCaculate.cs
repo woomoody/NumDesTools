@@ -5,10 +5,13 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace NumDesTools;
-
-public class CollectRatioFunction
+/// <summary>
+/// 概率计算类
+/// </summary>
+public class RatioCaculate
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;
+    //卡牌收集概率计算
     public static void CacCardCollect()
     {
         //获取表格源数据
@@ -381,4 +384,5 @@ public class CollectRatioFunction
         var resultValue  = new Tuple<double, double,List<double>>((double)maxRankCountTotal / simTimes, (double)scoreGetTimes / simTimes, otherRankCountTotal);
        return resultValue;
     }
+    //其他概率计算
 }

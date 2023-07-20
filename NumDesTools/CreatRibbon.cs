@@ -21,7 +21,9 @@ using Point = System.Drawing.Point;
 
 
 namespace NumDesTools;
-
+/// <summary>
+/// 插件界面类，各类点击事件方法集合
+/// </summary>
 public partial class CreatRibbon
 {
     public static string LabelText = "放大镜：关闭";
@@ -208,7 +210,7 @@ public partial class CreatRibbon
                 comButton1.Tag = "超级复制";
                 comButton1.Caption = "合并表格";
                 comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton1.Click += ExcelDataAutoCopyMulti.RightClickMergeData;
+                comButton1.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeData;
             }
         }
     }
@@ -1115,7 +1117,7 @@ public partial class CreatRibbon
         //    MessageBox.Show(@"当前表格不是正确【模板】，不能写入数据");
         //    return;
         //}
-        ExcelDataInsertLanguage.AutoInsertData();
+        ExcelDataAutoInsertLanguage.AutoInsertData();
         sw.Stop();
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
         App.StatusBar = "完成，用时：" + ts2;
@@ -1153,7 +1155,7 @@ public partial class CreatRibbon
     {
         var sw = new Stopwatch();
         sw.Start();
-        ExcelDataActivityServer.Source();
+        ExcelDataAutoInsertActivityServer.Source();
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
@@ -1163,7 +1165,7 @@ public partial class CreatRibbon
     {
         var sw = new Stopwatch();
         sw.Start();
-        ExcelDataAutoCopyMulti.MergeData(true);
+        ExcelDataAutoInsertCopyMulti.MergeData(true);
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
@@ -1175,7 +1177,7 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        CollectRatioFunction.CacCardCollect();
+        RatioCaculate.CacCardCollect();
         //Program.NodeMain();
         //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");
         //ExcelDataAutoInsertMulti.InsertData(true);

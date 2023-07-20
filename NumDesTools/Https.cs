@@ -5,7 +5,9 @@ using System.Net;
 using System.Text;
 
 namespace NumDesTools;
-
+/// <summary>
+/// Excel网页搜索引擎
+/// </summary>
 public class SearchEngine
 {
     //excel中实现搜索功能，会按照google、bing、baidu的顺序检测是否能ping，否则检查下一个网站

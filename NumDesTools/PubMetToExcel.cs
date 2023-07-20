@@ -2,7 +2,6 @@
 using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -13,10 +12,13 @@ using Color = System.Drawing.Color;
 using System.Threading.Tasks;
 
 namespace NumDesTools;
-
+/// <summary>
+/// 公共的Excel功能类
+/// </summary>
 public class PubMetToExcel
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;
+
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToList(dynamic workSheet)
     {
         Range dataRange = workSheet.UsedRange;
@@ -47,6 +49,7 @@ public class PubMetToExcel
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
+
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelf(dynamic workSheet,int dataRow,int dataCol,int headerRow,int headerCol)
     {
         Range dataRange = workSheet.UsedRange;
@@ -139,6 +142,7 @@ public class PubMetToExcel
         }
         return errorLog;
     }
+
     public static string RepeatValue2(ExcelWorksheet sheet, int row, int col, List<string> repeatValue)
     {
         string errorLog = "";
@@ -190,90 +194,7 @@ public class PubMetToExcel
         }
         return errorLog;
     }
-    /*
-        public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelMulti(string rootPath, string errorValue)
-        {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-            var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
-            var mainPath = newPath + @"\Excels\Tables\";
-            string[] files1 = Directory.EnumerateFiles(mainPath, "*.xlsx")
-                .Where(file => !Path.GetFileName(file).Contains("#"))
-                .ToArray();
-            var langPath = newPath + @"\Excels\Localizations\";
-            string[] files2 = Directory.EnumerateFiles(mainPath, "*.xlsx")
-                .Where(file => !Path.GetFileName(file).Contains("#"))
-                .ToArray();
-            var uiPath = newPath + @"\Excels\UIs\";
-            string[] files3 = Directory.EnumerateFiles(mainPath, "*.xlsx")
-                .Where(file => !Path.GetFileName(file).Contains("#"))
-                .ToArray();
-            var files = files1.Concat(files2).Concat(files3).ToArray();
-
-            int currentCount = 0;
-            var count = files.Length;
-
-            // 定义一个共享变量用于存储匹配结果
-            (string, string, int, int) result = ("", "", 0, 0);
-
-            // 创建一个 object 类型的对象用于锁定
-            object locker = new object();
-
-            Parallel.For(0, files.Length, (i) =>
-            {
-                //过滤非配置表
-                var fileName = Path.GetFileName(files[i]);
-                if (fileName.Contains("#")) return;
-                // 使用 EPPlus 打开 Excel 文件进行操作
-                using (ExcelPackage package = new ExcelPackage(new FileInfo(files[i])))
-                {
-                    var wk = package.Workbook;
-                    var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
-                    for (var col = 2; col <= sheet.Dimension.End.Column; col++)
-                    {
-                        for (var row = 4; row <= sheet.Dimension.End.Row; row++)
-                        {
-                            // 获取当前行的单元格数据
-                            var cellValue = sheet.Cells[row, col].Value;
-
-                            // 如果找到了匹配的值
-                            if (cellValue != null && cellValue.ToString() == errorValue)
-                            {
-                                // 返回该单元格的行地址
-                                var cellAddress = new ExcelCellAddress(row, col);
-                                var cellCol = cellAddress.Column;
-                                var cellRow = cellAddress.Row;
-                                var tuple = (files[i], sheet.Name, cellRow, cellCol);
-
-                                // 在锁定的情况下更新共享变量
-                                lock (locker)
-                                {
-                                    result = tuple;
-                                    // 更新计数器
-                                    currentCount++;
-                                    // 更新状态栏
-                                    App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + files[i];
-                                }
-
-                                // 跳出循环并返回结果
-                                return;
-                            }
-                        }
-                    }
-                }
-
-                // 更新计数器
-                lock (locker)
-                {
-                    currentCount++;
-                    // 更新状态栏
-                    App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + files[i];
-                }
-            });
-
-            return result;
-        }
-    */
     public static List<(string,string,int,int)>  ErrorKeyFromExcelAll(string rootPath, string errorValue)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -361,6 +282,7 @@ public class PubMetToExcel
         }
         return targetList;
     }
+
     public static List<(string, string, int, int)> ErrorKeyFromExcelAllMultiThread(string rootPath, string errorValue)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -417,12 +339,13 @@ public class PubMetToExcel
             }
             catch
             {
-
+                // ignored
             }
         });
 
         return targetList;
     }
+
     public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelId(string rootPath, string errorValue)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -481,6 +404,7 @@ public class PubMetToExcel
         var tupleError = ("", "", 0, 0);
         return tupleError;
     }
+
     public static Color GetCellBackgroundColor(Range cell)
     {
         Color color = Color.Empty;
@@ -500,6 +424,7 @@ public class PubMetToExcel
         }
         return color;
     }
+
     public static string ChangeExcelColChar(int col)
     {
         var a = col / 26;
@@ -509,6 +434,7 @@ public class PubMetToExcel
 
         return ((char)(b + 65)).ToString();
     }
+
     public static List<string> ReadWriteTxt(string filePath)
     {
         var textLineList = new List<string>();
@@ -534,6 +460,7 @@ public class PubMetToExcel
         }
         return textLineList;
     }
+
     public static string ErrorLogAnalysis(dynamic errorList, dynamic sheet)
     {
         var errorLog = "";
@@ -549,6 +476,7 @@ public class PubMetToExcel
 
         return errorLog;
     }
+
     public static List<int> MergeExcel(object[,] sourceRangeValue, ExcelWorksheet targetSheet, object[,] targetRangeTitle,
         object[,] sourceRangeTitle)
     {
@@ -602,6 +530,7 @@ public class PubMetToExcel
         }
         return targetRowList;
     }
+
     public static List<(string, string, string)> EpplusCreatExcelObj(dynamic excelPath,dynamic excelName,out ExcelWorksheet sheet  ,out ExcelPackage excel)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -695,4 +624,5 @@ public class PubMetToExcel
         }
 */
     }
+
 }

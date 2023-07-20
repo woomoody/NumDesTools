@@ -11,7 +11,9 @@ using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
 namespace NumDesTools;
-
+/// <summary>
+/// 卡牌英雄与怪物数据生成类
+/// </summary>
 public class CellSelectChangePro
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;
