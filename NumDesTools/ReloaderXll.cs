@@ -48,8 +48,7 @@ internal class AddInWatcher : IDisposable
                 foreach (var file in addIn.WatchedFiles)
                 {
                     var directory = Path.GetDirectoryName(file.Path);
-                    WatchedDirectory wd;
-                    if (!WatchedDirectories.TryGetValue(directory ?? throw new InvalidOperationException(), out wd))
+                    if (!WatchedDirectories.TryGetValue(directory ?? throw new InvalidOperationException(), out var wd))
                     {
                         wd = new WatchedDirectory(directory, InvalidateAddIn);
                     }
@@ -135,8 +134,7 @@ internal class AddInWatcher : IDisposable
             {
                 Debug.Assert(string.Equals(Path.GetFullPath(e.FullPath), e.FullPath, StringComparison.OrdinalIgnoreCase));
 
-                WatchedAddIn addIn;
-                if (_watchedFiles.TryGetValue(e.FullPath, out addIn))
+                if (_watchedFiles.TryGetValue(e.FullPath, out var addIn))
                 {
                     _invalidateAddIn(addIn);
                 }

@@ -2,6 +2,7 @@
 using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -103,8 +104,7 @@ public class PubMetToExcel
             }
 
             var tuple = new Tuple<object[,]>(values);
-            List<Tuple<object[,]>> value1;
-            if (dic.TryGetValue(value, out value1))
+            if (dic.TryGetValue(value, out List<Tuple<object[,]>> value1))
             {
                 value1.Add(tuple);
             }
@@ -570,10 +570,7 @@ public class PubMetToExcel
                 targetSheet.InsertRow(beforTargetRow + 1,1);
                 taregtRow = beforTargetRow + 1;
             }
-            else
-            {
-                beforTargetRow = taregtRow;
-            }
+            beforTargetRow = taregtRow;
             for (int i = 0; i < targetRangeTitle.GetLength(1); i++)
             {
                 var targetTitle = targetRangeTitle[0, i];
@@ -605,7 +602,6 @@ public class PubMetToExcel
         }
         return targetRowList;
     }
-
     public static List<(string, string, string)> EpplusCreatExcelObj(dynamic excelPath,dynamic excelName,out ExcelWorksheet sheet  ,out ExcelPackage excel)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
