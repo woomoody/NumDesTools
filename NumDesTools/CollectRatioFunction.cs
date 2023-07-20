@@ -93,7 +93,7 @@ public class CollectRatioFunction
         int newRarity1 = 0;
         int newRarity2 = 0;
         int newRarity3 = 0;
-        int simuTimes = 1000000;
+        int simTimes = 100000;
 
         //模拟期望
         for (int i = 0; i < countRarity; i++)
@@ -103,26 +103,31 @@ public class CollectRatioFunction
             newRarity3 += groupRarityCount[i].Item4;
             newGroupRarityCount.Add((groupRarityCount[i].Item1, newRarity1, newRarity2, newRarity3));
 
-            var currentScore = 0;
             if (groupRarityCount[i].Item2 == 0)
             {
                 weight1 = 0;
             }
-            else if (groupRarityCount[i].Item3 == 0)
+            if (groupRarityCount[i].Item3 == 0)
             {
                 weight2 = 0;
-            }
-            else if (groupRarityCount[i].Item4 == 0)
+            } 
+            if (groupRarityCount[i].Item4 == 0)
             {
                 weight3 = 0;
             }
             //各自期望
-            var randCountSelf = RandCount(groupRarityCount[i].Item2, groupRarityCount[i].Item3, groupRarityCount[i].Item4, currentScore, maxScore, score3, score2, score1, weight1, weight2, weight3, simuTimes);
+            //var randCountSelf = RandCount(groupRarityCount,i, newGroupRarityCount, maxScore, score3, score2, score1, weight1, weight2, weight3, simTimes);
             //累积期望
-            var randCountTotal = RandCount(newGroupRarityCount[i].Item2, newGroupRarityCount[i].Item3, newGroupRarityCount[i].Item4, currentScore, maxScore, score3, score2, score1, weight1, weight2, weight3, simuTimes);
-            Debug.Print("各自尝试次数：[" + randCountSelf + "] ## " + "累积尝试次数：[" + randCountTotal + "]");
-            collectCardGroup.Cells[i + 5, cardGroupIndex + 2].Value = randCountSelf;
-            collectCardGroup.Cells[i + 5, cardGroupIndex + 3].Value = randCountTotal;
+            var randCountTotal = RandCount(groupRarityCount, i, newGroupRarityCount, maxScore, score3, score2, score1, weight1, weight2, weight3, simTimes);
+            //Debug.Print("各自尝试次数：[" + randCountSelf.Item1 + "] ## " + "累积尝试次数：[" + randCountTotal.Item1 + "]");
+            //collectCardGroup.Cells[i + 5, cardGroupIndex + 2].Value = randCountSelf.Item1;
+            //collectCardGroup.Cells[i + 5, cardGroupIndex + 3].Value = randCountSelf.Item2;
+            collectCardGroup.Cells[i + 5, cardGroupIndex + 4].Value = randCountTotal.Item1;
+            collectCardGroup.Cells[i + 5, cardGroupIndex + 5].Value = randCountTotal.Item2;
+            for (int a = 0; a < randCountTotal.Item3.Count; a++)
+            {
+                collectCardGroup.Cells[a + 5, cardGroupIndex + 6+i].Value = randCountTotal.Item3[a];
+            }
         }
         //计算各自期望--计算公式有问题
         //for (int i = 0; i < countRarity; i++)
@@ -165,33 +170,66 @@ public class CollectRatioFunction
         //}
     }
 
-    private static double RandCount(dynamic rarityCount1, dynamic rarityCount2, dynamic rarityCount3, int currentScore, int maxScore, int score3, int score2, int score1, int weight1, int weight2, int weight3, int simuTimes)
+    private static Tuple<double, double, List<double>> RandCount(dynamic groupRarityCount,int i, dynamic newGroupRarityCount,  int maxScore, int score3, int score2, int score1, int weight1, int weight2, int weight3, int simTimes)
     {
-        var simuCount = 0;
-        for (int s = 0; s < simuTimes; s++)
+        int scoreGetTimes = 0;
+        var otherRankCountTotal = new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        var maxRankCountTotal = 0;
+
+        var currentLimit1 = new List<(int, int)>();
+        var currentLimit2 = new List<(int, int)>();
+        var currentLimit3= new List<(int, int)>();
+        for (int k = 0; k < i + 1; k++)
+        {
+            var minValue1 = 0;
+            var maxValue1 = newGroupRarityCount[k].Item2;
+            var minValue2 = 0;
+            var maxValue2 = newGroupRarityCount[k].Item3;
+            var minValue3 = 0;
+            var maxValue3 = newGroupRarityCount[k].Item4;
+            if (k - 1 >= 0)
+            {
+                minValue1 = newGroupRarityCount[k - 1].Item2;
+                minValue2 = newGroupRarityCount[k - 1].Item3;
+                minValue3 = newGroupRarityCount[k - 1].Item4;
+            }
+            currentLimit1.Add((minValue1, maxValue1));
+            currentLimit2.Add((minValue2, maxValue2));
+            currentLimit3.Add((minValue3, maxValue3));
+        }
+
+        for (int s = 0; s < simTimes; s++)
         {
             var rarityRandom = new Random();
             var cardRandom = new Random();
             var cardList1 = new List<int>();
             var cardList2 = new List<int>();
             var cardList3 = new List<int>();
-            var randCount = 0;
-            while (cardList1.Count < rarityCount1 || cardList2.Count < rarityCount2 ||
-                   cardList3.Count < rarityCount3)
+            int currentScore = 0;
+            var otherRankCount = new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };;
+            var maxRankCount = 0;
+            var curentGroupList = new List<(int , int , int )>();
+            var currentCount1 = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            var currentCount2 = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            var currentCount3 = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+
+            while (cardList1.Count < newGroupRarityCount[i].Item2 || cardList2.Count < newGroupRarityCount[i].Item3 ||
+                   cardList3.Count < newGroupRarityCount[i].Item4)
             {
                 if (currentScore >= maxScore)
                 {
-                    var randMax = rarityCount3;
+                    var randMax = newGroupRarityCount[i].Item4;
                     var cardList = cardList3;
                     var score = score3;
                     if (randMax == 0)
                     {
-                        randMax = rarityCount2;
+                        randMax = newGroupRarityCount[i].Item3;
                         cardList = cardList2;
                         score = score2;
                         if (randMax == 0)
                         {
-                            randMax = rarityCount1;
+                            randMax = newGroupRarityCount[i].Item2;
                             cardList = cardList1;
                             score = score1;
                         }
@@ -207,20 +245,45 @@ public class CollectRatioFunction
                         if (cardList == cardList1)
                         {
                             cardList1.Add(cardSeed);
+                            //统计达到各个卡池时用的次数
+                            for (int k = 0; k < i + 1; k++)
+                            {
+                                if (cardSeed <= currentLimit1[k].Item2 && cardSeed > currentLimit1[k].Item1)
+                                {
+                                    currentCount1[k]++;
+                                }
+                            }
                             //Debug.Print("品质1：" + cardSeed+"分："+currentScore);
                         }
                         else if (cardList == cardList2)
                         {
                             cardList2.Add(cardSeed);
+                            //统计达到各个卡池时用的次数
+                            for (int k = 0; k < i + 1; k++)
+                            {
+                                 if (cardSeed <= currentLimit2[k].Item2 && cardSeed > currentLimit2[k].Item1)
+                                 {
+                                    currentCount2[k]++;
+                                 }
+                            }
                             //Debug.Print("品质1：" + cardSeed + "分：" + currentScore);
                         }
                         else if (cardList == cardList3)
                         {
                             cardList3.Add(cardSeed);
+                            //统计达到各个卡池时用的次数
+                            for (int k = 0; k < i + 1; k++)
+                            {
+                                if (cardSeed <= currentLimit3[k].Item2 && cardSeed > currentLimit3[k].Item1)
+                                {
+                                    currentCount3[k]++;
+                                }
+                            }
                             //Debug.Print("品质1：" + cardSeed + "分：" + currentScore);
                         }
                     }
                     currentScore -= maxScore;
+                    scoreGetTimes++;
                 }
                 else
                 {
@@ -228,7 +291,7 @@ public class CollectRatioFunction
                     //Debug.Print("品质seed：" +rairtySeed);
                     if (rairtySeed <= weight1 && weight1 != 0)
                     {
-                        int cardSeed = cardRandom.Next(1, rarityCount1 + 1);
+                        int cardSeed = cardRandom.Next(1, newGroupRarityCount[i].Item2 + 1);
                         if (cardList1.Contains(cardSeed))
                         {
                             currentScore += score1;
@@ -236,12 +299,20 @@ public class CollectRatioFunction
                         else
                         {
                             cardList1.Add(cardSeed);
+                            //统计达到各个卡池时用的次数
+                            for (int k = 0; k < i + 1; k++)
+                            {
+                                if (cardSeed <= currentLimit1[k].Item2 && cardSeed > currentLimit1[k].Item1)
+                                {
+                                    currentCount1[k]++;
+                                }
+                            }
                         }
                         //Debug.Print("品质1："+cardSeed);
                     }
                     else if (rairtySeed <= weight1 + weight2 && rairtySeed > weight1 && weight2 != 0)
                     {
-                        int cardSeed = cardRandom.Next(1, rarityCount2 + 1);
+                        int cardSeed = cardRandom.Next(1, newGroupRarityCount[i].Item3 + 1);
                         if (cardList2.Contains(cardSeed))
                         {
                             currentScore += score2;
@@ -249,13 +320,21 @@ public class CollectRatioFunction
                         else
                         {
                             cardList2.Add(cardSeed);
+                            //统计达到各个卡池时用的次数
+                            for (int k = 0; k < i + 1; k++)
+                            {
+                               if (cardSeed <= currentLimit2[k].Item2 && cardSeed > currentLimit2[k].Item1)
+                               {
+                                    currentCount2[k]++;
+                               }
+                            }
                         }
                         //Debug.Print("品质2：" + cardSeed);
                     }
                     else if (rairtySeed <= weight1 + weight2 + weight3 && rairtySeed > weight1 + weight2 &&
                              weight3 != 0)
                     {
-                        int cardSeed = cardRandom.Next(1, rarityCount3 + 1);
+                        int cardSeed = cardRandom.Next(1, newGroupRarityCount[i].Item4 + 1);
                         if (cardList3.Contains(cardSeed))
                         {
                             currentScore += score3;
@@ -263,15 +342,43 @@ public class CollectRatioFunction
                         else
                         {
                             cardList3.Add(cardSeed);
+                            //统计达到各个卡池时用的次数
+                            for (int k = 0; k < i + 1; k++)
+                            {
+                                 if (cardSeed <= currentLimit3[k].Item2 && cardSeed > currentLimit3[k].Item1)
+                                 {
+                                    currentCount3[k]++;
+                                 }
+                            }
                         }
                         //Debug.Print("品质3：" + cardSeed);
                     }
                 }
-                randCount++;
+                maxRankCount++;
+                //统计达到各个卡池时用的次数
+                for (int k = 0; k < i + 1; k++)
+                {
+                    if (currentCount1[k] == groupRarityCount[k].Item2 && currentCount2[k] == groupRarityCount[k].Item3 && currentCount3[k] == groupRarityCount[k].Item4 && otherRankCount[k] ==0)
+                    {
+                        otherRankCount[k] = maxRankCount;
+                    }
+                }
             }
-            simuCount += randCount;
+            //统计达到各个卡池时用的次数的累加
+            maxRankCountTotal += maxRankCount;
+            for (int o = 0; o < otherRankCount.Count ; o++)
+            {
+                otherRankCountTotal[o] += otherRankCount[o];
+            }
+        }
+        //清理list
+        otherRankCountTotal.RemoveAll(x=>x== 0);
+        for (int o = 0; o < otherRankCountTotal.Count; o++)
+        {
+            otherRankCountTotal[o] /= simTimes;
         }
         // ReSharper disable once PossibleLossOfFraction
-        return (double)simuCount / simuTimes;
+        var resultValue  = new Tuple<double, double,List<double>>((double)maxRankCountTotal / simTimes, (double)scoreGetTimes / simTimes, otherRankCountTotal);
+       return resultValue;
     }
 }
