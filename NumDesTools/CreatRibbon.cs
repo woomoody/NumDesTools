@@ -89,6 +89,7 @@ public partial class CreatRibbon
         }
         App.SheetBeforeRightClick += new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
     }
+
     private static List<string> GetAllXllPath()
     {
         var pathList = new List<string>();
@@ -102,6 +103,7 @@ public partial class CreatRibbon
         }
         return pathList;
     }
+
     private void UD_RightClickButton(object sh, Range target, ref bool cancel)
     {
 
@@ -214,6 +216,7 @@ public partial class CreatRibbon
             }
         }
     }
+
     public void AllWorkbookOutPut_Click(IRibbonControl control)
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
@@ -934,6 +937,7 @@ public partial class CreatRibbon
     {
         _seachStr = text;
     }
+
     public void GoogleSearch_Click(IRibbonControl control)
     {
         SearchEngine.GoogleSearch(_seachStr);
@@ -943,11 +947,14 @@ public partial class CreatRibbon
     {
         SearchEngine.BingSearch(_seachStr);
     }
+
     private string _excelSeachStr = "";
+
     public void ExcelOnEditBoxTextChanged(IRibbonControl control, string text)
     {
         _excelSeachStr = text;
     }
+
     public void ExcelSearchAll_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -995,6 +1002,7 @@ public partial class CreatRibbon
         Debug.Print(ts2.ToString());
         App.StatusBar = "搜索完成，用时：" + ts2;
     }
+
     public void ExcelSearchAllMultiThread_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1042,6 +1050,7 @@ public partial class CreatRibbon
         Debug.Print(ts2.ToString());
         App.StatusBar = "搜索完成，用时：" + ts2;
     }
+
     public void ExcelSearchID_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1070,6 +1079,7 @@ public partial class CreatRibbon
         Debug.Print(ts2.ToString());
         App.StatusBar = "搜索完成，用时：" + ts2;
     }
+
     public void AutoInsertExcelData_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1151,6 +1161,7 @@ public partial class CreatRibbon
         Debug.Print(ts2.ToString());
         App.StatusBar = "完成，用时：" + ts2;
     }
+
     public void ActivityServerData_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1161,6 +1172,7 @@ public partial class CreatRibbon
         Debug.Print(ts2.ToString());
         App.StatusBar = "完成，用时：" + ts2;
     }
+
     public void AutoMergeExcel_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1207,6 +1219,7 @@ public partial class CreatRibbon
         //ExcelRelationShip.ExcelHyperLinks();
         //串行计算，回合战斗（有先后），计算慢
         //DotaLegendBattleSerial.BattleSimTime();
+        PubMetToExcelFunc.ExcelDataSearchAndMerge();
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());

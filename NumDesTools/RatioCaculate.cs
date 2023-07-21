@@ -1,7 +1,6 @@
 ﻿using ExcelDna.Integration;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace NumDesTools;
@@ -16,7 +15,6 @@ public class RatioCaculate
     {
         //获取表格源数据
         var workBook = App.ActiveWorkbook;
-        var excelPath = workBook.Path;
         var collectCardGroup = workBook.Worksheets["CollectCardGroup"];
         var collectCardInfo = workBook.Worksheets["CollectCardInfo"];
         var collectCardRarity = workBook.Worksheets["CollectCardRarity"];
@@ -209,9 +207,8 @@ public class RatioCaculate
             var cardList2 = new List<int>();
             var cardList3 = new List<int>();
             int currentScore = 0;
-            var otherRankCount = new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };;
+            var otherRankCount = new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
             var maxRankCount = 0;
-            var curentGroupList = new List<(int , int , int )>();
             var currentCount1 = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
             var currentCount2 = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
             var currentCount3 = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };

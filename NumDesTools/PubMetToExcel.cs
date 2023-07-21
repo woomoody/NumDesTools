@@ -10,6 +10,10 @@ using ExcelDna.Integration;
 using Button = System.Windows.Forms.Button;
 using Color = System.Drawing.Color;
 using System.Threading.Tasks;
+using System.Data;
+using DataTable = System.Data.DataTable;
+using DocumentFormat.OpenXml.Spreadsheet;
+using System.Data.OleDb;
 
 namespace NumDesTools;
 /// <summary>
@@ -18,7 +22,7 @@ namespace NumDesTools;
 public class PubMetToExcel
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;
-
+    //Excel数据输出为List
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToList(dynamic workSheet)
     {
         Range dataRange = workSheet.UsedRange;
@@ -49,7 +53,7 @@ public class PubMetToExcel
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
-
+    //Excel数据输出为List，自定义数据起始行列
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelf(dynamic workSheet,int dataRow,int dataCol,int headerRow,int headerCol)
     {
         Range dataRange = workSheet.UsedRange;
@@ -85,6 +89,151 @@ public class PubMetToExcel
         }
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
+    }
+    //Excel数据输出为DataTable，无表头，EPPlus
+    public static DataTable ExcelDataToDataTable(string filePath)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        FileInfo file = new FileInfo(filePath);
+        using (ExcelPackage package = new ExcelPackage(file))
+        {
+            var dataTable = new DataTable();
+            // 默认导入第一个 Sheet 的数据
+            ExcelWorksheet worksheet = package.Workbook.Worksheets["Sheet1"] ?? package.Workbook.Worksheets[0];
+            dataTable.TableName = worksheet.Name;
+            //创建列，可以添加值作为列名
+            for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
+            {
+                dataTable.Columns.Add();
+            }
+            // 读取数据行
+            for (int row = 1; row <= worksheet.Dimension.End.Row; row++)
+            {
+                DataRow dataRow = dataTable.NewRow();
+                for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
+                {
+                    dataRow[col - 1] = worksheet.Cells[row, col].Value?.ToString();
+                }
+                dataTable.Rows.Add(dataRow);
+            }
+            return dataTable;
+        }
+    }
+    //Excel数据输出为DataTable，无表头，OLeDb，几乎是EPPlus的两倍速度
+    public static DataTable ExcelDataToDataTableOleDb(string filePath)
+    {
+        // Excel 连接字符串，根据 Excel 版本和文件类型进行调整
+        string connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={filePath};Extended Properties='Excel 12.0 Xml;HDR=YES;'";
+        var sheetName = "Sheet1";
+        using (OleDbConnection connection = new OleDbConnection(connectionString))
+        {
+            try
+            {
+                connection.Open();
+                DataTable dataTable = new DataTable();
+
+                // 获取所有可用的工作表名称
+                DataTable schemaTable = connection.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
+                // 检查 Sheet1 是否存在
+                foreach (DataRow row in schemaTable.Rows)
+                {
+                    if (row["TABLE_NAME"].ToString().Equals("Sheet1"))
+                    {
+                        sheetName = "Sheet1";
+                        break;
+                    }
+                    sheetName = schemaTable.Rows[0]["TABLE_NAME"].ToString();
+                }
+                // 读取 Excel 表格数据
+                using (OleDbCommand command = new OleDbCommand($"SELECT * FROM [{sheetName}]", connection))
+                {
+                    using (OleDbDataAdapter adapter = new OleDbDataAdapter(command))
+                    {
+                        adapter.Fill(dataTable);
+                    }
+                }
+                dataTable.TableName = sheetName;
+                return dataTable;
+            }
+            catch (Exception ex)
+            {
+                // 处理异常
+                Console.WriteLine("读取 Excel 表格数据出现异常：" + ex.Message);
+                return null;
+            }
+        }
+    }
+
+    public static List<(string,string,int, int,string,string)> FindDataInDataTable(string fileFullName,dynamic dataTable, string findValue)
+    {
+        var findValueList = new List<(string,string,int, int,string,string)>();
+        var isAll = findValue.Contains("*");
+        findValue = findValue.Replace("*", "");
+        var sheetName = dataTable.TableName.ToString().Replace("$","");
+        foreach (DataRow row in dataTable.Rows)
+        {
+            foreach (DataColumn column in dataTable.Columns)
+            {
+                //模糊查询
+                if (isAll)
+                {
+                    if (row[column].ToString().Contains(findValue))
+                    {
+                        findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, row.Table.Columns.IndexOf(column) + 1, row[1].ToString(),row[2].ToString()));
+                    }
+                }
+                //精确查询
+                else
+                {
+                    if (row[column].ToString() == findValue)
+                    {
+                        findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, row.Table.Columns.IndexOf(column) + 1, row[1].ToString(),row[2].ToString()));
+                    }
+                }
+            }
+        }
+        return findValueList;
+    }
+
+    public static List<(string, string, int, int, string, string)> FindDataInDataTableKey(string fileFullName, dynamic dataTable, string findValue,int key)
+    {
+        var findValueList = new List<(string, string, int, int, string, string)>();
+        var isAll = findValue.Contains("*");
+        findValue = findValue.Replace("*", "");
+        var sheetName = dataTable.TableName.ToString().Replace("$", "");
+        foreach (DataRow row in dataTable.Rows)
+        {
+            //模糊查询
+            if (isAll)
+            {
+                if (row[key-1].ToString().Contains(findValue))
+                {
+                    findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, key, row[1].ToString(), row[2].ToString()));
+                }
+            }
+            //精确查询
+            else
+            {
+                if (row[key-1].ToString() == findValue)
+                {
+                    findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, key, row[1].ToString(), row[2].ToString()));
+                }
+            }
+        }
+        return findValueList;
+    }
+
+    public static string[] PathExcelFileCollect(List<string> pathList, string fileSuffixName,string ignoreFileName)
+    {
+        string[] files = new string[] { };
+        foreach (var path in pathList)
+        {
+            var file = Directory.EnumerateFiles(path, fileSuffixName)
+                .Where(file => !Path.GetFileName(file).Contains(ignoreFileName))
+                .ToArray();
+            files =files.Concat(file).ToArray();
+        }
+        return files;
     }
 
     public static Dictionary<string, List<Tuple<object[,]>>> ExcelDataToDictionary(dynamic data, dynamic dicKeyCol,
@@ -221,10 +370,9 @@ public class PubMetToExcel
         errorValue = errorValue.Replace("*", "");
         foreach (var file in files)
         {
-            // 使用 EPPlus 打开 Excel 文件进行操作
             try
             {
-
+                // 使用 EPPlus 打开 Excel 文件进行操作
                 using (ExcelPackage package = new ExcelPackage(new FileInfo(file)))
                 {
                     var wk = package.Workbook;
@@ -531,7 +679,7 @@ public class PubMetToExcel
         return targetRowList;
     }
 
-    public static List<(string, string, string)> EpplusCreatExcelObj(dynamic excelPath,dynamic excelName,out ExcelWorksheet sheet  ,out ExcelPackage excel)
+    public static List<(string, string, string)> SetExcelObjectEpPlus(dynamic excelPath,dynamic excelName,out ExcelWorksheet sheet  ,out ExcelPackage excel)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         sheet = null;
