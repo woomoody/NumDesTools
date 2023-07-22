@@ -2,7 +2,7 @@
   <!--<WatchedAddIn Path="D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\bin\Debug\NumDesTools-AddIn64.xll" >
     <WatchedFile Path="D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\bin\Debug\NumDesTools.dll" />
   </WatchedAddIn>-->
-  <WatchedAddIn Path="NumDesToolsPack64.XLL" >
+  <WatchedAddIn Path=".\TablesTools\NumDesToolsPack64.XLL" >
     <!--<WatchedFile Path="zzz" />
     <WatchedFile Path="qqq" />-->
   </WatchedAddIn>
