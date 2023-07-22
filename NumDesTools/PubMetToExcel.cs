@@ -772,5 +772,39 @@ public class PubMetToExcel
         }
 */
     }
+    //数字转Excel字母列
+    public static string ConvertToExcelColumn(int columnNumber)
+    {
+        string columnName = "";
+
+        while (columnNumber > 0)
+        {
+            int remainder = (columnNumber - 1) % 26;
+            columnName = (char)('A' + remainder) + columnName;
+            columnNumber = (columnNumber - 1) / 26;
+        }
+        return columnName;
+    }
+    //打开指定Excel文件，并定位到指定sheet的指定单元格
+    public static void OpenExcelAndSelectCell(string filePath, string sheetName, string cellAddress)
+    {
+        try
+        {
+            // 打开指定路径的 Excel 文件
+            var workbook = App.Workbooks.Open(filePath);
+            // 获取指定名称的工作表
+            var worksheet = workbook.Sheets[sheetName];
+            // 选择指定的单元格
+            var cellRange = worksheet.Range[cellAddress];
+            cellRange.Select();
+        }
+        catch (Exception ex)
+        {
+            // 处理异常
+            // ...
+        }
+        // 垃圾回收
+        GC.Collect();
+    }
 
 }

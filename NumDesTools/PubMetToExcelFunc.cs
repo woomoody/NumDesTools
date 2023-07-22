@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 using DataTable = System.Data.DataTable;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Text.RegularExpressions;
+using Microsoft.Office.Core;
 
 namespace NumDesTools;
 /// <summary>
@@ -18,12 +20,13 @@ namespace NumDesTools;
 public class PubMetToExcelFunc
 {
     private static readonly dynamic App = ExcelDnaUtil.Application;
-    private static readonly dynamic wk = App.ActiveWorkbook;
-    private static readonly dynamic path = wk.Path;
+    private static readonly dynamic Wk = App.ActiveWorkbook;
+    private static readonly dynamic Path = Wk.Path;
+    //Excel数据查询并合并表格数据
     public static void ExcelDataSearchAndMerge()
     {
         //获取所有的表格路径
-        var rootPath = Path.GetDirectoryName(Path.GetDirectoryName(path));
+        var rootPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(Path));
         var fileList = new List<string>() { rootPath+ @"\Excels\Tables\", rootPath + @"\Excels\Localizations\", rootPath + @"\Excels\UIs\" };
         var files = PubMetToExcel.PathExcelFileCollect(fileList, "*.xlsx", "#");
         //查找指定关键词，记录行号和表格索引号
@@ -56,14 +59,36 @@ public class PubMetToExcelFunc
         {
             tempDataArray[i, 0] = findValueList[i].Item1;
             tempDataArray[i, 1] = findValueList[i].Item2;
-            tempDataArray[i, 2] = findValueList[i].Item3+@":"+ findValueList[i].Item4;
+            tempDataArray[i, 2] = PubMetToExcel.ConvertToExcelColumn(findValueList[i].Item4)+findValueList[i].Item3;
             tempDataArray[i, 3] = findValueList[i].Item5;
             tempDataArray[i, 4] = findValueList[i].Item6;
+            
         }
         var tempDataRange = tempSheet.Range[tempSheet.Cells[2, 2], tempSheet.Cells[2 + tempDataArray.GetLength(0) - 1, 2 + tempDataArray.GetLength(1) - 1]];
         tempDataRange.Value = tempDataArray;
         tempWorkbook.Save();
         //合并数据
     }
-
+    //Excel右键识别文件路径并打开
+    public static void RightOpenExcelByActiveCell(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var sheet = App.ActiveSheet;
+        var selectCell = App.ActiveCell;
+        string selectCellValue = "";
+        if (selectCell.Value != null)
+        {
+            selectCellValue = selectCell.Value.ToString();
+        }
+        //正则出是Excel路径的单元格
+        var isMatch = Regex.IsMatch(selectCellValue, @"^[A-Za-z]:(\\[\w-]+)+(\.xlsx)$");
+        if (isMatch)
+        {
+            var selectRow = selectCell.Row;
+            var selectCol = selectCell.Column;
+            var sheetName = sheet.Cells[selectRow, selectCol+1].Value;
+            var cellAdress = sheet.Cells[selectRow, selectCol + 2].Value;
+            PubMetToExcel.OpenExcelAndSelectCell(selectCellValue,sheetName,cellAdress);
+        }
+    }
+    
 }
