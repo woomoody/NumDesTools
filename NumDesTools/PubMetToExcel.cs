@@ -625,8 +625,7 @@ public class PubMetToExcel
         return errorLog;
     }
 
-    public static List<int> MergeExcel(object[,] sourceRangeValue, ExcelWorksheet targetSheet, object[,] targetRangeTitle,
-        object[,] sourceRangeTitle)
+    public static List<int> MergeExcel(object[,] sourceRangeValue, ExcelWorksheet targetSheet, object[,] targetRangeTitle, object[,] sourceRangeTitle)
     {
         var targetRowList =new List<int>();
         int defaultRow = targetSheet.Dimension.End.Row;
@@ -736,42 +735,6 @@ public class PubMetToExcel
         return errorList;
     }
 
-    public static DialogResult ExMessageBox(string message,string filePath)
-    {
-        var f = new DataExportForm
-        {
-            StartPosition = FormStartPosition.CenterParent,
-            Size = new Size(400, 200),
-            MaximizeBox = false,
-            MinimizeBox = false,
-            Text = @"表格汇总"
-        };
-        var gb = new Panel
-        {
-            BackColor = Color.FromArgb(255, 225, 225, 225),
-            AutoScroll = true,
-            Location = new System.Drawing.Point(f.Left + 20, f.Top + 20),
-            Size = new Size(f.Width - 55, f.Height - 200),
-            Text = message
-        };
-        //gb.Dock = DockStyle.Fill;
-        f.Controls.Add(gb);
-        var bt3 = new Button
-        {
-            Name = "button3",
-            Text = @"导出",
-            Location = new System.Drawing.Point(f.Left + 360, f.Top + 680)
-        };
-        f.Controls.Add(bt3);
-        return f.ShowDialog();
-
-/*
-        void Btn3Click(object sender, EventArgs e)
-        {
-            Process.Start(filePath);
-        }
-*/
-    }
     //数字转Excel字母列
     public static string ConvertToExcelColumn(int columnNumber)
     {
