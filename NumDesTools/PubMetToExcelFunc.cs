@@ -15,7 +15,7 @@ public class PubMetToExcelFunc
     private static readonly dynamic Wk = App.ActiveWorkbook;
     private static readonly dynamic Path = Wk.Path;
     //Excel数据查询并合并表格数据
-    public static void ExcelDataSearchAndMerge()
+    public static void ExcelDataSearchAndMerge(string searchValue)
     {
         //获取所有的表格路径
         var rootPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(Path));
@@ -26,7 +26,7 @@ public class PubMetToExcelFunc
         Parallel.ForEach(files, file =>
         {
             var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(file);
-            var findValue = PubMetToExcel.FindDataInDataTable(file , dataTable, @"*尼尔斯");
+            var findValue = PubMetToExcel.FindDataInDataTable(file , dataTable, searchValue);
             if (findValue.Count > 0)
             {
                 //findValueList.Add(findValue);

@@ -68,6 +68,7 @@
           <button id="ExcelSearchBoxButton1" size="large" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件' onAction='ExcelSearchAll_Click' image="key" />
           <button id="ExcelSearchBoxButton3" size="large" label="全局搜索(多线程)" screentip='全列，按照A-Z的顺序遍历文件' onAction='ExcelSearchAllMultiThread_Click' image="autohotkey" />
           <button id="ExcelSearchBoxButton2" size="large" label="编号搜索" screentip='二列，按照A-Z的顺序遍历文件' onAction='ExcelSearchID_Click' image="log" />
+          <button id="ExcelSearchBoxButton4" size="large" label="合并数据-关键词" screentip='合并Excel(Alice-Cove)当前关键词' onAction='ExcelSearchAllToExcel_Click' image="redux-reducer" />
         </group>
         <group id="Group9" label="运营工具" >
           <button id="ActivityServerDataButton1" size='large' label="生成活动" screentip='根据运营排期自动生成活动配置' onAction='ActivityServerData_Click' image="csharp" />
