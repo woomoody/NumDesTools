@@ -1094,6 +1094,17 @@ public partial class CreatRibbon
         _app.StatusBar = "搜索完成，用时：" + ts2;
     }
 
+    public void ExcelSearchAllToExcel_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        PubMetToExcelFunc.ExcelDataSearchAndMerge(_excelSeachStr);
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        _app.StatusBar = "搜索完成，用时：" + ts2;
+    }
+
     public void AutoInsertExcelData_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1233,7 +1244,7 @@ public partial class CreatRibbon
         //ExcelRelationShip.ExcelHyperLinks();
         //串行计算，回合战斗（有先后），计算慢
         //DotaLegendBattleSerial.BattleSimTime();
-        PubMetToExcelFunc.ExcelDataSearchAndMerge();
+        //PubMetToExcelFunc.ExcelDataSearchAndMerge(_excelSeachStr);
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
