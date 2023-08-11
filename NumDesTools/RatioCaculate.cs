@@ -382,4 +382,10 @@ public class RatioCaculate
        return resultValue;
     }
     //其他概率计算
+
+
+    ~RatioCaculate()
+    {
+        App.Dispose();
+    }
 }

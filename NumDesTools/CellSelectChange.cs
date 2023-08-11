@@ -13,7 +13,6 @@ namespace NumDesTools;
 public class CellSelectChange : Form
 {
     private readonly dynamic _app = ExcelDnaUtil.Application;
-
     public CellSelectChange()
     {
         Worksheet ws = _app.ActiveSheet;
@@ -131,5 +130,9 @@ public class CellSelectChange : Form
 
     private void CellSelectChange_Load(object sender, EventArgs e)
     {
+    }
+    ~CellSelectChange()
+    {
+        _app.Dispose();
     }
 }

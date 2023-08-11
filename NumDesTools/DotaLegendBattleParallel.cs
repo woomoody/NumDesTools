@@ -46,6 +46,10 @@ internal class ExcelData
 
     public static Range RangeBpve = Ws.Range[Ws.Cells[GroupBRowMinPve, GroupBColMinPve],
         Ws.Cells[GroupBRowMaxPve, GroupBColMaxPve]];
+    ~ExcelData()
+    {
+        App.Dispose();
+    }
 }
 
 internal class DotaLegendBattleParallel
@@ -446,6 +450,11 @@ internal class DotaLegendBattleParallel
         }
 
         return data;
+    }
+
+    ~DotaLegendBattleParallel()
+    {
+        App.Dispose();
     }
 }
 //多线程调用

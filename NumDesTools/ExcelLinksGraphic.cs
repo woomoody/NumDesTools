@@ -60,4 +60,9 @@ public class ExcelLinksGraphic
             file.WriteLine("}");
         }
     }
+
+    ~ExcelLinksGraphic()
+    {
+        App.Dispose();
+    }
 }

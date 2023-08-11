@@ -86,6 +86,12 @@ public class CellSelectChangePro
             App.StatusBar = "当前非【角色基础】表，数据预览功能关闭";
         }
     }
+
+
+    ~CellSelectChangePro()
+    {
+        App.Dispose();
+    }
 }
 
 #region 每个角色全量数据的导出
