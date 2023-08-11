@@ -14,6 +14,8 @@ using System.Data;
 using DataTable = System.Data.DataTable;
 using DocumentFormat.OpenXml.Spreadsheet;
 using System.Data.OleDb;
+using NLua;
+using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace NumDesTools;
 /// <summary>
@@ -639,13 +641,13 @@ public class PubMetToExcel
                 sourceRow = "";
             }
             //获取目标单元格填写数值的位置，默认位置未最后一行
-            var taregtRow = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, sourceRow.ToString());
-            if (taregtRow == -1)
+            var targetRow = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, sourceRow.ToString());
+            if (targetRow == -1)
             {
                 targetSheet.InsertRow(beforTargetRow + 1,1);
-                taregtRow = beforTargetRow + 1;
+                targetRow = beforTargetRow + 1;
             }
-            beforTargetRow = taregtRow;
+            beforTargetRow = targetRow;
             for (int i = 0; i < targetRangeTitle.GetLength(1); i++)
             {
                 var targetTitle = targetRangeTitle[0, i];
@@ -668,14 +670,67 @@ public class PubMetToExcel
                         {
                             sourceValue = "";
                         }
-                        var targetCell = targetSheet.Cells[taregtRow, i + 1];
+                        var targetCell = targetSheet.Cells[targetRow, i + 1];
                         targetCell.Value = sourceValue;
                     }
                 }
             }
-            targetRowList.Add(taregtRow);
+            targetRowList.Add(targetRow);
         }
         return targetRowList;
+    }
+
+    public static List<int> MergeExcelCol(object[,] sourceRangeValue, ExcelWorksheet targetSheet, object[,] targetRangeTitle, object[,] sourceRangeTitle)
+    {
+        var targetColList = new List<int>();
+        int defaultCol = targetSheet.Dimension.End.Column;
+        int beforTargetCol = defaultCol;
+        for (int c = 0; c < sourceRangeValue.GetLength(1); c++)
+        {
+            //target中找列
+            var sourceCol = sourceRangeValue[1, c];
+            if (sourceCol == null)
+            {
+                sourceCol = "";
+            }
+            //获取目标单元格填写数值的位置，默认位置未最后一行
+            var targetCol = ExcelDataAutoInsert.FindSourceCol(targetSheet, 2, sourceCol.ToString());
+            if (targetCol == -1)
+            {
+                targetSheet.InsertColumn(beforTargetCol + 1, 1);
+                targetCol = beforTargetCol + 1;
+            }
+            beforTargetCol = targetCol;
+            for (int i = 0; i < targetRangeTitle.GetLength(0); i++)
+            {
+                var targetTitle = targetRangeTitle[i, 0];
+                if (targetTitle == null)
+                {
+                    targetTitle = "";
+                }
+                for (int j = 0; j < sourceRangeTitle.GetLength(0); j++)
+                {
+                    var sourceTitle = sourceRangeTitle[j, 0];
+                    if (sourceTitle == null)
+                    {
+                        sourceTitle = "";
+                    }
+                    //target中找列
+                    if (targetTitle.ToString() == sourceTitle.ToString())
+                    {
+                        var sourceValue = sourceRangeValue[c, j];
+                        if (sourceValue == null)
+                        {
+                            sourceValue = "";
+                        }
+                        var targetCell = targetSheet.Cells[targetCol, i + 1];
+                        targetCell.Value = sourceValue;
+                    }
+                }
+            }
+            targetColList.Add(targetCol);
+        }
+        return targetColList;
     }
 
     public static List<(string, string, string)> SetExcelObjectEpPlus(dynamic excelPath,dynamic excelName,out ExcelWorksheet sheet  ,out ExcelPackage excel)
@@ -768,6 +823,26 @@ public class PubMetToExcel
         }
         // 垃圾回收
         GC.Collect();
+    }
+    //EPPlus创建新Excel表格或获取已经存在的表格
+    public static List<(string, string, string)> OpenOrCreatExcelByEpPlus(string excelFilePath,string excelName,out ExcelWorksheet sheet, out ExcelPackage excel)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        sheet = null;
+        excel = null;
+        var path = excelFilePath + @"\" + excelName+@".xlsx";
+        if (!File.Exists(excelFilePath))
+        {
+            using (ExcelPackage packageCreat = new ExcelPackage())
+            {
+                var sheetCreat= packageCreat.Workbook.Worksheets.Add("Sheet1");
+                FileInfo excelFile = new FileInfo(path);
+                packageCreat.SaveAs(excelFile);
+                sheetCreat.Dispose();
+            }
+        }
+        var errorList = SetExcelObjectEpPlus(excelFilePath,excelName+@".xlsx",out  sheet, out  excel);
+        return errorList;
     }
 
 }
