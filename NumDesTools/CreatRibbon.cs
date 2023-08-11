@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Serialization;
+using DocumentFormat.OpenXml.Spreadsheet;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
 using ExcelDna.Logging;
@@ -13,11 +14,14 @@ using Microsoft.Office.Interop.Excel;
 using stdole;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
+using Color = System.Drawing.Color;
 using CommandBar = Microsoft.Office.Core.CommandBar;
 using CommandBarControl = Microsoft.Office.Core.CommandBarControl;
 using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
 using MsoControlType = Microsoft.Office.Core.MsoControlType;
 using Point = System.Drawing.Point;
+using Workbook = Microsoft.Office.Interop.Excel.Workbook;
+using Worksheet = Microsoft.Office.Interop.Excel.Worksheet;
 
 
 namespace NumDesTools;
@@ -213,13 +217,22 @@ public partial class CreatRibbon
             var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
             var comControl1 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
             var comButton2 = comControl1 as Microsoft.Office.Core.CommandBarButton;
-            if (comControl == null || comControl1 == null) return;
+            var comControl2 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
+            var comButton3 = comControl2 as Microsoft.Office.Core.CommandBarButton;
+            if (comControl == null || comControl1 == null || comControl2 == null) return;
             if (comButton1 != null )
             {
                 comButton1.Tag = "超级复制";
-                comButton1.Caption = "合并表格";
+                comButton1.Caption = "合并表格Row";
                 comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton1.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeData;
+            }
+            if (comButton3 != null)
+            {
+                comButton3.Tag = "超级复制";
+                comButton3.Caption = "合并表格Col";
+                comButton3.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                comButton3.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol;
             }
             if (comButton2 != null)
             {
@@ -1214,7 +1227,8 @@ public partial class CreatRibbon
         //SVNTools.RevertAndUpFile();
         var sw = new Stopwatch();
         sw.Start();
-        RatioCaculate.CacCardCollect();
+        Lua2Excel.LuaDataGet();
+        //Lua2Excel.LuaDataExportToExcel(@"C:\Users\cent\Desktop\二合数据\TableABTestCountry.lua.txt");
         //Program.NodeMain();
         //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");
         //ExcelDataAutoInsertMulti.InsertData(true);

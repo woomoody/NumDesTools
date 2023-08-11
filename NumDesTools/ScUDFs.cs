@@ -81,6 +81,7 @@ public class ExcelUdf
         fs.Close();
         return -1;
     }
+
     [ExcelFunction(Category = "test3", IsVolatile = true, IsMacroType = true, Description = "获取单元格背景色")]
     public static string GetCellColor([ExcelArgument(AllowReference =true,Description = "目标列")] string address)
     {
