@@ -95,4 +95,9 @@ public class ExcelUdf
         return $"{red}#{green}#{blue}";
     }
 
+
+    ~ExcelUdf()
+    {
+        App.Dispose();
+    }
 }

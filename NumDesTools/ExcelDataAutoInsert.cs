@@ -337,6 +337,7 @@ public class ExcelDataAutoInsertLanguage
         //{
         //    fixSheet.Range["A2:A1000"].Value = "";
         //}
+        app.Dispose();
     }
 
     public static List<(int, string, string)> LanguageDialogData(dynamic sourceSheet, dynamic fixSheet,
@@ -723,6 +724,7 @@ public class ExcelDataAutoInsertLanguage
 
         return errorList;
     }
+
 }
 
 public class ExcelDataAutoInsertMulti
@@ -798,6 +800,7 @@ public class ExcelDataAutoInsertMulti
 
         ErrorLogCtp.DisposeCtp();
         ErrorLogCtp.CreateCtpNormal(errorLog);
+        app.Dispose();
     }
 
     public static void RightClickInsertData(CommandBarButton ctrl, ref bool cancelDefault)
@@ -878,6 +881,7 @@ public class ExcelDataAutoInsertMulti
         sw.Stop();
         var ts3 = Math.Round(sw.Elapsed.TotalSeconds, 2);
         app.StatusBar = "完成写入:有错误，用时：" + ts3.ToString(CultureInfo.InvariantCulture);
+        app.Dispose();
     }
 
     public static List<(string, string, string)> ExcelDataWrite(dynamic modelId, dynamic modelIdNew, dynamic fixKey,
@@ -1230,6 +1234,7 @@ public class ExcelDataAutoInsertCopyMulti
 
         ErrorLogCtp.DisposeCtp();
         ErrorLogCtp.CreateCtpNormal(errorLog);
+        app.Dispose();
     }
 
     private static List<(string, string, string)> AutoCopyData(dynamic isMulti,dynamic modelIdNew,dynamic excelName ,dynamic excelPath,dynamic cellColor)
@@ -1367,6 +1372,7 @@ public class ExcelDataAutoInsertCopyMulti
         sw.Stop();
         var ts2 = sw.Elapsed;
         app.StatusBar = "完成写入：" + ts2;
+        app.Dispose();
     }
 
     private static List<(string, string, string)> AutoCopyDataRight(dynamic app, dynamic excelPath, dynamic excelName, dynamic sheet)
@@ -1483,6 +1489,7 @@ public class ExcelDataAutoInsertCopyMulti
         sw.Stop();
         var ts2 = sw.Elapsed;
         app.StatusBar = "完成写入：" + ts2;
+        app.Dispose();
     }
 
     private static List<(string, string, string)> AutoCopyDataRightCol(dynamic app, dynamic excelPath, dynamic excelName, dynamic sheet)
@@ -1717,6 +1724,7 @@ public class ExcelDataAutoInsertActivityServer
             //写入错误日志并提示
             MessageBox.Show(@"有活动找不到，查看错误日志");
         }
+        app.Dispose();
     }
 
 }

@@ -107,6 +107,7 @@ public static class ErrorLogCtp
         var isSharp = errorLineStr.Contains("@");
         if (isSharp) errorLineStr = errorLineStr.Substring(0, errorLineStr.IndexOf('@'));
         errorLine.Text = errorLineStr + @"@已点过";
+        app.Dispose();
     }
 }
 
@@ -242,7 +243,7 @@ public static class ExcelSheetDataIsError
         {
             errorLog = "";
         }
-
+        app.Dispose();
         return errorLog;
     }
 
@@ -354,7 +355,7 @@ public static class ExcelSheetDataIsError2
             isErrors = isErrors + isError;
             isError = "";
         }
-
+        app.Dispose();
         return isErrors;
     }
 
@@ -491,8 +492,8 @@ public static class FormularCheck
                     arrNew[i - 1, j - 1] = currentFormulaStr;
                 }
         }
-
         rng.Value[Missing.Value] = arrNew;
+        app.Dispose();
     }
 }
 
@@ -610,6 +611,7 @@ public static class ExcelSheetData
         app.ActiveSheet.Cells.Borders.LineStyle = XlLineStyle.xlDash;
         app.ActiveSheet.Cells.Borders.Weight = XlBorderWeight.xlHairline;
         MessageBox.Show(@"格式整理完毕");
+        app.Dispose();
     }
 
     public static void GetDataToTxt(string sheetName, string outFilePath)
@@ -718,6 +720,7 @@ public static class ExcelSheetData
                 dataValueStrFull = "";
             }
         }
+        app.Dispose();
     }
 }
 

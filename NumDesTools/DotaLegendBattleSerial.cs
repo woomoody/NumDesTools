@@ -583,6 +583,10 @@ internal class DotaLegendBattleSerial
 
         return data;
     }
+    ~DotaLegendBattleSerial()
+    {
+        App.Dispose();
+    }
 }
 //多线程调用
 //获取所有角色数据：默认和动态：：尝试多线程提高速度

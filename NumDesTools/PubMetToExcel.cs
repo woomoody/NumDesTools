@@ -845,4 +845,10 @@ public class PubMetToExcel
         return errorList;
     }
 
+
+    ~PubMetToExcel()
+    {
+        App.Dispose();
+    }
+
 }

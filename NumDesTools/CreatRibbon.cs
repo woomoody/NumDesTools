@@ -1392,5 +1392,8 @@ public partial class CreatRibbon
         //    }
         //}
     }
-
+    ~CreatRibbon()
+    {
+        _app.Dispose();
+    }
 }

@@ -82,5 +82,11 @@ public class PubMetToExcelFunc
             PubMetToExcel.OpenExcelAndSelectCell(selectCellValue,sheetName,cellAdress);
         }
     }
-    
+
+
+    ~PubMetToExcelFunc()
+    {
+        App.Dispose();
+    }
+
 }

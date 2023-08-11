@@ -31,7 +31,7 @@ public class Lua2Excel
             var errorList = PubMetToExcel.OpenOrCreatExcelByEpPlus(excelFilePath, excelName, out ExcelWorksheet sheet, out ExcelPackage excel);
             errorLogLua += LuaDataExportToExcel(filePath,sheet);
             excel.Save();
-            sheet.Dispose();
+            excel.Dispose();
         }
         Debug.Print(errorLogLua);
     }
