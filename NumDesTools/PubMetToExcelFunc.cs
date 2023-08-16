@@ -83,7 +83,13 @@ public class PubMetToExcelFunc
         }
     }
 
+    public static void TestCAPI()
+    {
+        Wk.Cells[1,1].Value = "Hello World";
 
+
+
+    }
     ~PubMetToExcelFunc()
     {
         App.Dispose();

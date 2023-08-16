@@ -38,7 +38,7 @@ public partial class CreatRibbon
     private static dynamic _app = ExcelDnaUtil.Application;
     public static dynamic XllPathList = new List<string>();
 
-    private AddInWatcher _watcher;
+    AddInWatcher _watcher;
 
     void IExcelAddIn.AutoClose()
     {
@@ -55,15 +55,14 @@ public partial class CreatRibbon
         //    ExcelIntegration.UnregisterXLL(path);
         //}
 
-        _watcher.Dispose();
         _app.SheetBeforeRightClick -= new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
-        //防止打开最后一个工作簿，excel.exe进程不关闭
-        _app.Quit();
-        System.Runtime.InteropServices.Marshal.ReleaseComObject(_app);
-        _app=null;
-        // 垃圾回收
-        GC.Collect();
-
+        ////防止打开最后一个工作簿，excel.exe进程不关闭
+        //_app.Quit();
+        //System.Runtime.InteropServices.Marshal.ReleaseComObject(_app);
+        //_app=null;
+        //// 垃圾回收
+        //GC.Collect();
+        _watcher.Dispose();
     }
 
     void IExcelAddIn.AutoOpen()
@@ -71,13 +70,15 @@ public partial class CreatRibbon
         //提前加载，解决只触发1次的问题
         //此处如果多选单元格会有BUG，再看看怎么处理
         //_app.SheetSelectionChange += new Excel.WorkbookEvents_SheetSelectionChangeEventHandler(App_SheetSelectionChange); ;
-        //XlCall.Excel(XlCall.xlcAlert, "AutoOpen");
+        XlCall.Excel(XlCall.xlcAlert, "AutoOpen");
         //打开插件时会自动检索指定名字的XLL文件
         //XllPathList = GetAllXllPath();
         //foreach (var path in XllPathList)
         //{
         //    ExcelIntegration.RegisterXLL(path);
         //}
+        _app.SheetBeforeRightClick += new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
+
         var configFileName = "XllConfig.xml";
         var xllDirectory = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
         if (xllDirectory != null)
@@ -96,7 +97,6 @@ public partial class CreatRibbon
                 LogDisplay.WriteLine("Error loading the configuration file: " + ex);
             }
         }
-        _app.SheetBeforeRightClick += new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
     }
 
     private static List<string> GetAllXllPath()
