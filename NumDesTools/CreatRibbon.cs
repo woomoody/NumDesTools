@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Xml.Serialization;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -70,7 +71,7 @@ public partial class CreatRibbon
         //提前加载，解决只触发1次的问题
         //此处如果多选单元格会有BUG，再看看怎么处理
         //_app.SheetSelectionChange += new Excel.WorkbookEvents_SheetSelectionChangeEventHandler(App_SheetSelectionChange); ;
-        XlCall.Excel(XlCall.xlcAlert, "AutoOpen");
+        //XlCall.Excel(XlCall.xlcAlert, "AutoOpen");
         //打开插件时会自动检索指定名字的XLL文件
         //XllPathList = GetAllXllPath();
         //foreach (var path in XllPathList)
@@ -117,11 +118,12 @@ public partial class CreatRibbon
     {
 
         //excel文档已有的右键菜单cell
-        CommandBar mzBar = _app.CommandBars["cell"];
+        dynamic App = ExcelDnaUtil.Application;
+        CommandBar mzBar = App.CommandBars["cell"];
         mzBar.Reset();
         var bars = mzBar.Controls;
-        var bookName = _app.ActiveWorkbook.Name;
-        var sheetName = _app.ActiveSheet.Name;
+        var bookName = App.ActiveWorkbook.Name;
+        var sheetName = App.ActiveSheet.Name;
         var missing = Type.Missing;
 
         if (bookName == "角色怪物数据生成" || sheetName == "角色基础")
@@ -242,6 +244,9 @@ public partial class CreatRibbon
                 comButton2.Click += PubMetToExcelFunc.RightOpenExcelByActiveCell;
             }
         }
+        Marshal.ReleaseComObject(bars);
+        Marshal.ReleaseComObject(mzBar);
+        Marshal.ReleaseComObject(App);
     }
 
     public void AllWorkbookOutPut_Click(IRibbonControl control)
