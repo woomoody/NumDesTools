@@ -9,8 +9,7 @@ namespace NumDesTools;
 /// </summary>
 public class ExcelUdf
 {
-    private static readonly dynamic App = ExcelDnaUtil.Application;
-    private static readonly dynamic IndexWk = App.ActiveWorkbook;
+    private static readonly dynamic IndexWk = CreatRibbon._app.ActiveWorkbook;
     private static readonly dynamic ExcelPath = IndexWk.Path;
 
     [ExcelFunction(Category = "test", IsVolatile = true, IsMacroType = true, Description = "测试自定义函数")]
@@ -85,7 +84,7 @@ public class ExcelUdf
     [ExcelFunction(Category = "test3", IsVolatile = true, IsMacroType = true, Description = "获取单元格背景色")]
     public static string GetCellColor([ExcelArgument(AllowReference =true,Description = "目标列")] string address)
     {
-        var range = App.ActiveSheet.Range[address];
+        var range = CreatRibbon._app.ActiveSheet.Range[address];
         var color = range.Interior.Color;
         // 将Excel VBA颜色值转换为RGB格式
         int red = (int)(color % 256);
@@ -93,11 +92,5 @@ public class ExcelUdf
         int blue = (int)(color / 65536 % 256);
         // 返回RGB格式的颜色值
         return $"{red}#{green}#{blue}";
-    }
-
-
-    ~ExcelUdf()
-    {
-        App.Dispose();
     }
 }

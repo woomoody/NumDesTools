@@ -7,11 +7,10 @@ namespace NumDesTools;
 /// </summary>
 public class ExcelLinksGraphic
 {
-    private static readonly dynamic App = ExcelDnaUtil.Application;
     public static void Graph()
     {
         //打开Excel文件
-        var workbook = App.ActiveWorkbook;
+        var workbook = CreatRibbon._app.ActiveWorkbook;
         var sheet = workbook.ActiveSheet;
         //读取Excel文件统计数据
         Dictionary<string, List<string>> mainExcel = new Dictionary<string, List<string>>();
@@ -61,8 +60,4 @@ public class ExcelLinksGraphic
         }
     }
 
-    ~ExcelLinksGraphic()
-    {
-        App.Dispose();
-    }
 }

@@ -16,6 +16,7 @@ using Match = System.Text.RegularExpressions.Match;
 using OfficeOpenXml.Style;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.InteropServices;
 
 namespace NumDesTools;
 /// <summary>
@@ -1372,7 +1373,9 @@ public class ExcelDataAutoInsertCopyMulti
         sw.Stop();
         var ts2 = sw.Elapsed;
         app.StatusBar = "完成写入：" + ts2;
-        app.Dispose();
+        Marshal.ReleaseComObject(sheet);
+        Marshal.ReleaseComObject(indexWk);
+        Marshal.ReleaseComObject(app);
     }
 
     private static List<(string, string, string)> AutoCopyDataRight(dynamic app, dynamic excelPath, dynamic excelName, dynamic sheet)

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Office.Core;
+using System.Runtime.InteropServices;
 
 namespace NumDesTools;
 /// <summary>
@@ -11,16 +12,16 @@ namespace NumDesTools;
 /// </summary>
 public class PubMetToExcelFunc
 {
-    private static readonly dynamic App = ExcelDnaUtil.Application;
-    private static readonly dynamic Wk = App.ActiveWorkbook;
+    private static readonly dynamic Wk = CreatRibbon._app.ActiveWorkbook;
     private static readonly dynamic Path = Wk.Path;
     //Excel数据查询并合并表格数据
     public static void ExcelDataSearchAndMerge(string searchValue)
     {
         //获取所有的表格路径
+        string[] ignoreFileNames = { "#","副本"};
         var rootPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(Path));
         var fileList = new List<string>() { rootPath+ @"\Excels\Tables\", rootPath + @"\Excels\Localizations\", rootPath + @"\Excels\UIs\" };
-        var files = PubMetToExcel.PathExcelFileCollect(fileList, "*.xlsx", "#");
+        var files = PubMetToExcel.PathExcelFileCollect(fileList, "*.xlsx", ignoreFileNames);
         //查找指定关键词，记录行号和表格索引号
         var findValueList = new List<(string, string, int, int,string,string)>();
         Parallel.ForEach(files, file =>
@@ -38,11 +39,11 @@ public class PubMetToExcelFunc
         dynamic tempWorkbook;
         try
         {
-            tempWorkbook = App.Workbooks.Open(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
+            tempWorkbook = CreatRibbon._app.Workbooks.Open(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
         }
         catch
         {
-            tempWorkbook = App.Workbooks.Add();
+            tempWorkbook = CreatRibbon._app.Workbooks.Add();
             tempWorkbook.SaveAs(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
         }
         dynamic tempSheet = tempWorkbook.Sheets["Sheet1"];
@@ -64,8 +65,8 @@ public class PubMetToExcelFunc
     //Excel右键识别文件路径并打开
     public static void RightOpenExcelByActiveCell(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        var sheet = App.ActiveSheet;
-        var selectCell = App.ActiveCell;
+        var sheet = CreatRibbon._app.ActiveSheet;
+        var selectCell = CreatRibbon._app.ActiveCell;
         string selectCellValue = "";
         if (selectCell.Value != null)
         {
@@ -81,6 +82,8 @@ public class PubMetToExcelFunc
             var cellAdress = sheet.Cells[selectRow, selectCol + 2].Value;
             PubMetToExcel.OpenExcelAndSelectCell(selectCellValue,sheetName,cellAdress);
         }
+
+
     }
 
     public static void TestCAPI()
@@ -89,10 +92,6 @@ public class PubMetToExcelFunc
 
 
 
-    }
-    ~PubMetToExcelFunc()
-    {
-        App.Dispose();
     }
 
 }

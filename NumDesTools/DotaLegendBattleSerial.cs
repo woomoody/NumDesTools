@@ -166,8 +166,7 @@ internal class DotaLegendBattleSerial
     private static double _aahp;
     private static double _bahp;
     private static int _totalTurn;
-    private static readonly dynamic App = ExcelDnaUtil.Application;
-    private static readonly Worksheet Ws = App.Worksheets["战斗模拟"];
+    private static readonly Worksheet Ws = CreatRibbon._app.Worksheets["战斗模拟"];
     private static readonly dynamic ARowMin = Convert.ToInt32(Ws.Range["C9"].Value);
     private static readonly dynamic AColMin = Convert.ToInt32(Ws.Range["C10"].Value);
     private static readonly dynamic ARowMax = Convert.ToInt32(Ws.Range["C11"].Value);
@@ -582,10 +581,6 @@ internal class DotaLegendBattleSerial
         }
 
         return data;
-    }
-    ~DotaLegendBattleSerial()
-    {
-        App.Dispose();
     }
 }
 //多线程调用
