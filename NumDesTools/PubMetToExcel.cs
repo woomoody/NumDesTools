@@ -23,7 +23,6 @@ namespace NumDesTools;
 /// </summary>
 public class PubMetToExcel
 {
-    private static readonly dynamic App = ExcelDnaUtil.Application;
     //Excel数据输出为List
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToList(dynamic workSheet)
     {
@@ -225,14 +224,14 @@ public class PubMetToExcel
         return findValueList;
     }
 
-    public static string[] PathExcelFileCollect(List<string> pathList, string fileSuffixName,string ignoreFileName)
+    public static string[] PathExcelFileCollect(List<string> pathList, string fileSuffixName,string[] ignoreFileNames)
     {
         string[] files = new string[] { };
         foreach (var path in pathList)
         {
             var file = Directory.EnumerateFiles(path, fileSuffixName)
-                .Where(file => !Path.GetFileName(file).Contains(ignoreFileName))
-                .ToArray();
+                    .Where(file => !ignoreFileNames.Any(ignore => Path.GetFileName(file).Contains(ignore)))
+                    .ToArray();
             files =files.Concat(file).ToArray();
         }
         return files;
@@ -428,7 +427,7 @@ public class PubMetToExcel
 
             currentCount++;
             //wk.Properties.Company = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
-            App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
+            CreatRibbon._app.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
         }
         return targetList;
     }
@@ -549,7 +548,7 @@ public class PubMetToExcel
             }
             currentCount++;
             //wk.Properties.Company = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
-            App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
+            CreatRibbon._app.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
         }
         var tupleError = ("", "", 0, 0);
         return tupleError;
@@ -809,7 +808,7 @@ public class PubMetToExcel
         try
         {
             // 打开指定路径的 Excel 文件
-            var workbook = App.Workbooks.Open(filePath);
+            var workbook = CreatRibbon._app.Workbooks.Open(filePath);
             // 获取指定名称的工作表
             var worksheet = workbook.Sheets[sheetName];
             // 选择指定的单元格
@@ -843,12 +842,6 @@ public class PubMetToExcel
         }
         var errorList = SetExcelObjectEpPlus(excelFilePath,excelName+@".xlsx",out  sheet, out  excel);
         return errorList;
-    }
-
-
-    ~PubMetToExcel()
-    {
-        App.Dispose();
     }
 
 }

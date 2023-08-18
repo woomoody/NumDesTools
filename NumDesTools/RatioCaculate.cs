@@ -9,12 +9,11 @@ namespace NumDesTools;
 /// </summary>
 public class RatioCaculate
 {
-    private static readonly dynamic App = ExcelDnaUtil.Application;
     //卡牌收集概率计算
     public static void CacCardCollect()
     {
         //获取表格源数据
-        var workBook = App.ActiveWorkbook;
+        var workBook = CreatRibbon._app.ActiveWorkbook;
         var collectCardGroup = workBook.Worksheets["CollectCardGroup"];
         var collectCardInfo = workBook.Worksheets["CollectCardInfo"];
         var collectCardRarity = workBook.Worksheets["CollectCardRarity"];
@@ -383,9 +382,4 @@ public class RatioCaculate
     }
     //其他概率计算
 
-
-    ~RatioCaculate()
-    {
-        App.Dispose();
-    }
 }

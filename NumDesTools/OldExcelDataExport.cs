@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
+using ExcelDna.Integration.Extensibility;
 using Microsoft.Office.Interop.Excel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -21,6 +22,7 @@ using Font = System.Drawing.Font;
 using Image = System.Drawing.Image;
 using Point = System.Drawing.Point;
 using ScrollBars = System.Windows.Forms.ScrollBars;
+using SWF = System.Windows.Forms;
 
 namespace NumDesTools;
 /// <summary>
@@ -553,7 +555,40 @@ public partial class CreatRibbon : ExcelRibbon, IExcelAddIn
 //}
 
 #region 获取Excel单表格的数据并导出到txt
+[ComVisible(true)]
+public class MyComAddIn : ExcelComAddIn
+{
+    public MyComAddIn()
+    {
+    }
 
+    public override void OnConnection(object Application, ext_ConnectMode ConnectMode, object AddInInst, ref Array custom)
+    {
+        //SWF.MessageBox.Show("OnConnection");
+    }
+
+    public override void OnDisconnection(ext_DisconnectMode RemoveMode, ref Array custom)
+    {
+        Marshal.ReleaseComObject(CreatRibbon._app);
+        //SWF.MessageBox.Show("OnDisconnection");
+    }
+
+    public override void OnAddInsUpdate(ref Array custom)
+    {
+        //SWF.MessageBox.Show("OnAddInsUpdate");
+    }
+
+    public override void OnStartupComplete(ref Array custom)
+    {
+        //SWF.MessageBox.Show("OnStartupComplete");
+    }
+
+    public override void OnBeginShutdown(ref Array custom)
+    {
+        Marshal.ReleaseComObject(CreatRibbon._app);
+        //SWF.MessageBox.Show("OnBeginShutDown");
+    }
+}
 public static class ExcelSheetData
 {
     public static void RwExcelDataUseNpoi()

@@ -11,8 +11,7 @@ namespace NumDesTools;
 /// </summary>
 internal class ExcelData
 {
-    private static readonly dynamic App = ExcelDnaUtil.Application;
-    private static readonly Worksheet Ws = App.Worksheets["战斗模拟"];
+    private static readonly Worksheet Ws = CreatRibbon._app.Worksheets["战斗模拟"];
     public static dynamic GroupARowMinPvp = Convert.ToInt32(Ws.Range["C9"].Value);
     public static dynamic GroupAColMinPvp = Convert.ToInt32(Ws.Range["C10"].Value);
     public static dynamic GroupARowMaxPvp = Convert.ToInt32(Ws.Range["C11"].Value);
@@ -46,10 +45,6 @@ internal class ExcelData
 
     public static Range RangeBpve = Ws.Range[Ws.Cells[GroupBRowMinPve, GroupBColMinPve],
         Ws.Cells[GroupBRowMaxPve, GroupBColMaxPve]];
-    ~ExcelData()
-    {
-        App.Dispose();
-    }
 }
 
 internal class DotaLegendBattleParallel
