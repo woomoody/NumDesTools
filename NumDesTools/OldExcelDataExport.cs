@@ -569,7 +569,10 @@ public class MyComAddIn : ExcelComAddIn
 
     public override void OnDisconnection(ext_DisconnectMode RemoveMode, ref Array custom)
     {
+        CreatRibbon._app.Quit();
         Marshal.ReleaseComObject(CreatRibbon._app);
+        CreatRibbon._app = null;
+        GC.Collect();
         //SWF.MessageBox.Show("OnDisconnection");
     }
 
@@ -585,7 +588,11 @@ public class MyComAddIn : ExcelComAddIn
 
     public override void OnBeginShutdown(ref Array custom)
     {
+        //防止打开最后一个工作簿，excel.exe进程不关闭
+        CreatRibbon._app.Quit();
         Marshal.ReleaseComObject(CreatRibbon._app);
+        CreatRibbon._app = null;
+        GC.Collect();
         //SWF.MessageBox.Show("OnBeginShutDown");
     }
 }
