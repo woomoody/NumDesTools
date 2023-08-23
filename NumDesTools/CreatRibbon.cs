@@ -1257,6 +1257,7 @@ namespace NumDesTools
         {
             var sw = new Stopwatch();
             sw.Start();
+            PubMetToExcel.testEpPlus();
             //ExcelRelationShipEpPlus.StartExcelData();
             //并行计算，即时战斗（无先后），计算快
             //DotaLegendBattleParallel.BattleSimTime(true);
@@ -1397,9 +1398,6 @@ namespace NumDesTools
             //    }
             //}
         }
-        ~CreatRibbon()
-        {
-            _app.Dispose();
-        }
+
     }
 }
