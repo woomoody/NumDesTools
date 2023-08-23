@@ -16,8 +16,13 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using System.Data.OleDb;
 using NLua;
 using DocumentFormat.OpenXml.Wordprocessing;
+using NPOI.XSSF.UserModel;
+using OfficeOpenXml.FormulaParsing;
+using NPOI.SS.UserModel;
+using System.Runtime.InteropServices;
 
 namespace NumDesTools;
+
 /// <summary>
 /// 公共的Excel功能类
 /// </summary>
@@ -51,11 +56,14 @@ public class PubMetToExcel
 
             if (row > 1) sheetData.Add(rowList);
         }
+
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
+
     //Excel数据输出为List，自定义数据起始行列
-    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelf(dynamic workSheet,int dataRow,int dataCol,int headerRow,int headerCol)
+    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelf(dynamic workSheet,
+        int dataRow, int dataCol, int headerRow, int headerCol)
     {
         Range dataRange = workSheet.UsedRange;
         // 读取数据到一个二维数组中
@@ -82,15 +90,18 @@ public class PubMetToExcel
 
             if (row > 1) sheetData.Add(rowList);
         }
+
         //读取表头
         for (var column = headerCol; column <= columns; column++)
         {
             var value = rangeValue[headerRow, column];
             sheetHeaderCol.Add(value);
         }
+
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
+
     //Excel数据输出为DataTable，无表头，EPPlus
     public static DataTable ExcelDataToDataTable(string filePath)
     {
@@ -107,6 +118,7 @@ public class PubMetToExcel
             {
                 dataTable.Columns.Add();
             }
+
             // 读取数据行
             for (int row = 1; row <= worksheet.Dimension.End.Row; row++)
             {
@@ -115,16 +127,20 @@ public class PubMetToExcel
                 {
                     dataRow[col - 1] = worksheet.Cells[row, col].Value?.ToString();
                 }
+
                 dataTable.Rows.Add(dataRow);
             }
+
             return dataTable;
         }
     }
+
     //Excel数据输出为DataTable，无表头，OLeDb，几乎是EPPlus的两倍速度
     public static DataTable ExcelDataToDataTableOleDb(string filePath)
     {
         // Excel 连接字符串，根据 Excel 版本和文件类型进行调整
-        string connectionString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={filePath};Extended Properties='Excel 12.0 Xml;HDR=YES;'";
+        string connectionString =
+            $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={filePath};Extended Properties='Excel 12.0 Xml;HDR=YES;'";
         var sheetName = "Sheet1";
         using (OleDbConnection connection = new OleDbConnection(connectionString))
         {
@@ -143,8 +159,10 @@ public class PubMetToExcel
                         sheetName = "Sheet1";
                         break;
                     }
+
                     sheetName = schemaTable.Rows[0]["TABLE_NAME"].ToString();
                 }
+
                 // 读取 Excel 表格数据
                 using (OleDbCommand command = new OleDbCommand($"SELECT * FROM [{sheetName}]", connection))
                 {
@@ -153,6 +171,7 @@ public class PubMetToExcel
                         adapter.Fill(dataTable);
                     }
                 }
+
                 dataTable.TableName = sheetName;
                 return dataTable;
             }
@@ -165,12 +184,13 @@ public class PubMetToExcel
         }
     }
 
-    public static List<(string,string,int, int,string,string)> FindDataInDataTable(string fileFullName,dynamic dataTable, string findValue)
+    public static List<(string, string, int, int, string, string)> FindDataInDataTable(string fileFullName,
+        dynamic dataTable, string findValue)
     {
-        var findValueList = new List<(string,string,int, int,string,string)>();
+        var findValueList = new List<(string, string, int, int, string, string)>();
         var isAll = findValue.Contains("*");
         findValue = findValue.Replace("*", "");
-        var sheetName = dataTable.TableName.ToString().Replace("$","");
+        var sheetName = dataTable.TableName.ToString().Replace("$", "");
         foreach (DataRow row in dataTable.Rows)
         {
             foreach (DataColumn column in dataTable.Columns)
@@ -180,7 +200,8 @@ public class PubMetToExcel
                 {
                     if (row[column].ToString().Contains(findValue))
                     {
-                        findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, row.Table.Columns.IndexOf(column) + 1, row[1].ToString(),row[2].ToString()));
+                        findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2,
+                            row.Table.Columns.IndexOf(column) + 1, row[1].ToString(), row[2].ToString()));
                     }
                 }
                 //精确查询
@@ -188,15 +209,18 @@ public class PubMetToExcel
                 {
                     if (row[column].ToString() == findValue)
                     {
-                        findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, row.Table.Columns.IndexOf(column) + 1, row[1].ToString(),row[2].ToString()));
+                        findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2,
+                            row.Table.Columns.IndexOf(column) + 1, row[1].ToString(), row[2].ToString()));
                     }
                 }
             }
         }
+
         return findValueList;
     }
 
-    public static List<(string, string, int, int, string, string)> FindDataInDataTableKey(string fileFullName, dynamic dataTable, string findValue,int key)
+    public static List<(string, string, int, int, string, string)> FindDataInDataTableKey(string fileFullName,
+        dynamic dataTable, string findValue, int key)
     {
         var findValueList = new List<(string, string, int, int, string, string)>();
         var isAll = findValue.Contains("*");
@@ -207,33 +231,37 @@ public class PubMetToExcel
             //模糊查询
             if (isAll)
             {
-                if (row[key-1].ToString().Contains(findValue))
+                if (row[key - 1].ToString().Contains(findValue))
                 {
-                    findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, key, row[1].ToString(), row[2].ToString()));
+                    findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, key, row[1].ToString(),
+                        row[2].ToString()));
                 }
             }
             //精确查询
             else
             {
-                if (row[key-1].ToString() == findValue)
+                if (row[key - 1].ToString() == findValue)
                 {
-                    findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, key, row[1].ToString(), row[2].ToString()));
+                    findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, key, row[1].ToString(),
+                        row[2].ToString()));
                 }
             }
         }
+
         return findValueList;
     }
 
-    public static string[] PathExcelFileCollect(List<string> pathList, string fileSuffixName,string[] ignoreFileNames)
+    public static string[] PathExcelFileCollect(List<string> pathList, string fileSuffixName, string[] ignoreFileNames)
     {
         string[] files = new string[] { };
         foreach (var path in pathList)
         {
             var file = Directory.EnumerateFiles(path, fileSuffixName)
-                    .Where(file => !ignoreFileNames.Any(ignore => Path.GetFileName(file).Contains(ignore)))
-                    .ToArray();
-            files =files.Concat(file).ToArray();
+                .Where(file => !ignoreFileNames.Any(ignore => Path.GetFileName(file).Contains(ignore)))
+                .ToArray();
+            files = files.Concat(file).ToArray();
         }
+
         return files;
     }
 
@@ -271,9 +299,9 @@ public class PubMetToExcel
         return dic;
     }
 
-    public static string RepeatValue(ExcelWorksheet sheet,int row, int col,string repeatValue)
+    public static string RepeatValue(ExcelWorksheet sheet, int row, int col, string repeatValue)
     {
-        string errorLog ="";
+        string errorLog = "";
         for (int r = sheet.Dimension.End.Row; r >= row; r--)
         {
             var colA = sheet.Cells[r, col].Value?.ToString();
@@ -283,13 +311,14 @@ public class PubMetToExcel
                 {
                     sheet.DeleteRow(r);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     // 记录错误日志
                     errorLog += $"Error {repeatValue}: {ex.Message}\n";
                 }
             }
         }
+
         return errorLog;
     }
 
@@ -297,18 +326,19 @@ public class PubMetToExcel
     {
         string errorLog = "";
         // 获取指定列的单元格数据
-        var sourceValues = sheet.Cells[row, col, sheet.Dimension.End.Row, col].Select(c => c.Value.ToString()).ToList(); 
+        var sourceValues = sheet.Cells[row, col, sheet.Dimension.End.Row, col].Select(c => c.Value.ToString()).ToList();
 
         // 生成索引List
         var indexList = new List<int>();
         foreach (var repeat in repeatValue)
         {
             // 查找存在的值所在的行
-            int rowIndex = sourceValues.FindIndex(c => c == repeat) ;
+            int rowIndex = sourceValues.FindIndex(c => c == repeat);
             if (rowIndex == -1) continue;
             rowIndex += row;
             indexList.Add(rowIndex);
         }
+
         indexList.Sort();
         if (indexList.Count != 0)
         {
@@ -324,6 +354,7 @@ public class PubMetToExcel
                     start = indexList[i];
                 }
             }
+
             outputList.Add(new List<int>() { start, indexList[indexList.Count - 1] });
             // 翻转输出列表
             outputList.Reverse();
@@ -342,10 +373,11 @@ public class PubMetToExcel
                 }
             }
         }
+
         return errorLog;
     }
 
-    public static List<(string,string,int,int)>  ErrorKeyFromExcelAll(string rootPath, string errorValue)
+    public static List<(string, string, int, int)> ErrorKeyFromExcelAll(string rootPath, string errorValue)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
@@ -429,6 +461,7 @@ public class PubMetToExcel
             //wk.Properties.Company = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
             CreatRibbon._app.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
         }
+
         return targetList;
     }
 
@@ -452,7 +485,8 @@ public class PubMetToExcel
         var files = files1.Concat(files2).Concat(files3).ToArray();
 
         var targetList = new List<(string, string, int, int)>();
-        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }; // 设置并行处理的最大线程数为处理器核心数
+        var options = new ParallelOptions
+            { MaxDegreeOfParallelism = Environment.ProcessorCount }; // 设置并行处理的最大线程数为处理器核心数
 
         Parallel.ForEach(files, options, file =>
         {
@@ -495,7 +529,8 @@ public class PubMetToExcel
         return targetList;
     }
 
-    public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelId(string rootPath, string errorValue)
+    public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelId(string rootPath,
+        string errorValue)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
@@ -524,32 +559,41 @@ public class PubMetToExcel
             // 使用 EPPlus 打开 Excel 文件进行操作
             using (ExcelPackage package = new ExcelPackage(new FileInfo(file)))
             {
-                var wk = package.Workbook;
-                var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
-                for (var col = 2; col <= 2; col++)
+                try
                 {
-                    for (var row = 4; row <= sheet.Dimension.End.Row; row++)
+                    var wk = package.Workbook;
+                    var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
+                    for (var col = 2; col <= 2; col++)
                     {
-                        // 获取当前行的单元格数据
-                        var cellValue = sheet.Cells[row, col].Value;
-
-                        // 如果找到了匹配的值
-                        if (cellValue != null && cellValue.ToString() == errorValue)
+                        for (var row = 4; row <= sheet.Dimension.End.Row; row++)
                         {
-                            // 返回该单元格的行地址
-                            var cellAddress = new ExcelCellAddress(row, col);
-                            var cellCol = cellAddress.Column;
-                            var cellRow = cellAddress.Row;
-                            var tuple = (file, sheet.Name, cellRow, cellCol);
-                            return tuple;
+                            // 获取当前行的单元格数据
+                            var cellValue = sheet.Cells[row, col].Value;
+
+                            // 如果找到了匹配的值
+                            if (cellValue != null && cellValue.ToString() == errorValue)
+                            {
+                                // 返回该单元格的行地址
+                                var cellAddress = new ExcelCellAddress(row, col);
+                                var cellCol = cellAddress.Column;
+                                var cellRow = cellAddress.Row;
+                                var tuple = (file, sheet.Name, cellRow, cellCol);
+                                return tuple;
+                            }
                         }
                     }
                 }
+                catch
+                {
+
+                }
             }
+
             currentCount++;
             //wk.Properties.Company = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
             CreatRibbon._app.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
         }
+
         var tupleError = ("", "", 0, 0);
         return tupleError;
     }
@@ -571,6 +615,7 @@ public class PubMetToExcel
                 color = Color.FromArgb(red, green, blue);
             }
         }
+
         return color;
     }
 
@@ -607,6 +652,7 @@ public class PubMetToExcel
                 textLineList.Add(line);
             }
         }
+
         return textLineList;
     }
 
@@ -626,11 +672,12 @@ public class PubMetToExcel
         return errorLog;
     }
 
-    public static List<int> MergeExcel(object[,] sourceRangeValue, ExcelWorksheet targetSheet, object[,] targetRangeTitle, object[,] sourceRangeTitle)
+    public static List<int> MergeExcel(object[,] sourceRangeValue, ExcelWorksheet targetSheet,
+        object[,] targetRangeTitle, object[,] sourceRangeTitle)
     {
-        var targetRowList =new List<int>();
+        var targetRowList = new List<int>();
         int defaultRow = targetSheet.Dimension.End.Row;
-        int beforTargetRow= defaultRow;
+        int beforTargetRow = defaultRow;
         for (int r = 0; r < sourceRangeValue.GetLength(0); r++)
         {
             //target中找行
@@ -639,13 +686,15 @@ public class PubMetToExcel
             {
                 sourceRow = "";
             }
+
             //获取目标单元格填写数值的位置，默认位置未最后一行
             var targetRow = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, sourceRow.ToString());
             if (targetRow == -1)
             {
-                targetSheet.InsertRow(beforTargetRow + 1,1);
+                targetSheet.InsertRow(beforTargetRow + 1, 1);
                 targetRow = beforTargetRow + 1;
             }
+
             beforTargetRow = targetRow;
             for (int i = 0; i < targetRangeTitle.GetLength(1); i++)
             {
@@ -654,6 +703,7 @@ public class PubMetToExcel
                 {
                     targetTitle = "";
                 }
+
                 for (int j = 0; j < sourceRangeTitle.GetLength(1); j++)
                 {
                     var sourceTitle = sourceRangeTitle[0, j];
@@ -661,6 +711,7 @@ public class PubMetToExcel
                     {
                         sourceTitle = "";
                     }
+
                     //target中找列
                     if (targetTitle.ToString() == sourceTitle.ToString())
                     {
@@ -669,17 +720,21 @@ public class PubMetToExcel
                         {
                             sourceValue = "";
                         }
+
                         var targetCell = targetSheet.Cells[targetRow, i + 1];
                         targetCell.Value = sourceValue;
                     }
                 }
             }
+
             targetRowList.Add(targetRow);
         }
+
         return targetRowList;
     }
 
-    public static List<int> MergeExcelCol(object[,] sourceRangeValue, ExcelWorksheet targetSheet, object[,] targetRangeTitle, object[,] sourceRangeTitle)
+    public static List<int> MergeExcelCol(object[,] sourceRangeValue, ExcelWorksheet targetSheet,
+        object[,] targetRangeTitle, object[,] sourceRangeTitle)
     {
         var targetColList = new List<int>();
         int defaultCol = targetSheet.Dimension.End.Column;
@@ -692,6 +747,7 @@ public class PubMetToExcel
             {
                 sourceCol = "";
             }
+
             //获取目标单元格填写数值的位置，默认位置未最后一行
             var targetCol = ExcelDataAutoInsert.FindSourceCol(targetSheet, 2, sourceCol.ToString());
             if (targetCol == -1)
@@ -699,6 +755,7 @@ public class PubMetToExcel
                 targetSheet.InsertColumn(beforTargetCol + 1, 1);
                 targetCol = beforTargetCol + 1;
             }
+
             beforTargetCol = targetCol;
             for (int i = 0; i < targetRangeTitle.GetLength(0); i++)
             {
@@ -707,6 +764,7 @@ public class PubMetToExcel
                 {
                     targetTitle = "";
                 }
+
                 for (int j = 0; j < sourceRangeTitle.GetLength(0); j++)
                 {
                     var sourceTitle = sourceRangeTitle[j, 0];
@@ -714,6 +772,7 @@ public class PubMetToExcel
                     {
                         sourceTitle = "";
                     }
+
                     //target中找列
                     if (targetTitle.ToString() == sourceTitle.ToString())
                     {
@@ -722,17 +781,21 @@ public class PubMetToExcel
                         {
                             sourceValue = "";
                         }
+
                         var targetCell = targetSheet.Cells[targetCol, i + 1];
                         targetCell.Value = sourceValue;
                     }
                 }
             }
+
             targetColList.Add(targetCol);
         }
+
         return targetColList;
     }
 
-    public static List<(string, string, string)> SetExcelObjectEpPlus(dynamic excelPath,dynamic excelName,out ExcelWorksheet sheet  ,out ExcelPackage excel)
+    public static List<(string, string, string)> SetExcelObjectEpPlus(dynamic excelPath, dynamic excelName,
+        out ExcelWorksheet sheet, out ExcelPackage excel)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         sheet = null;
@@ -756,13 +819,15 @@ public class PubMetToExcel
                 path = excelPath + @"\" + excelName;
                 break;
         }
+
         bool fileExists = File.Exists(path);
         if (fileExists == false)
         {
             errorExcelLog = excelName + "不存在表格文件";
             errorList.Add((excelName, errorExcelLog, excelName));
             return errorList;
-        } 
+        }
+
         excel = new ExcelPackage(new FileInfo(path));
         ExcelWorkbook workBook;
         try
@@ -775,6 +840,7 @@ public class PubMetToExcel
             errorList.Add((excelName, errorExcelLog, excelName));
             return errorList;
         }
+
         try
         {
             sheet = workBook.Worksheets["Sheet1"];
@@ -785,6 +851,7 @@ public class PubMetToExcel
             errorList.Add((excelName, errorExcelLog, excelName));
             return errorList;
         }
+
         sheet ??= workBook.Worksheets[0];
         return errorList;
     }
@@ -800,8 +867,10 @@ public class PubMetToExcel
             columnName = (char)('A' + remainder) + columnName;
             columnNumber = (columnNumber - 1) / 26;
         }
+
         return columnName;
     }
+
     //打开指定Excel文件，并定位到指定sheet的指定单元格
     public static void OpenExcelAndSelectCell(string filePath, string sheetName, string cellAddress)
     {
@@ -820,28 +889,70 @@ public class PubMetToExcel
             // 处理异常
             // ...
         }
+
         // 垃圾回收
         GC.Collect();
     }
+
     //EPPlus创建新Excel表格或获取已经存在的表格
-    public static List<(string, string, string)> OpenOrCreatExcelByEpPlus(string excelFilePath,string excelName,out ExcelWorksheet sheet, out ExcelPackage excel)
+    public static List<(string, string, string)> OpenOrCreatExcelByEpPlus(string excelFilePath, string excelName,
+        out ExcelWorksheet sheet, out ExcelPackage excel)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         sheet = null;
         excel = null;
-        var path = excelFilePath + @"\" + excelName+@".xlsx";
+        var path = excelFilePath + @"\" + excelName + @".xlsx";
         if (!File.Exists(excelFilePath))
         {
             using (ExcelPackage packageCreat = new ExcelPackage())
             {
-                var sheetCreat= packageCreat.Workbook.Worksheets.Add("Sheet1");
+                var sheetCreat = packageCreat.Workbook.Worksheets.Add("Sheet1");
                 FileInfo excelFile = new FileInfo(path);
                 packageCreat.SaveAs(excelFile);
                 sheetCreat.Dispose();
             }
         }
-        var errorList = SetExcelObjectEpPlus(excelFilePath,excelName+@".xlsx",out  sheet, out  excel);
+
+        var errorList = SetExcelObjectEpPlus(excelFilePath, excelName + @".xlsx", out sheet, out excel);
         return errorList;
     }
+    public static void testEpPlus()
+    {
+        //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        //using (ExcelPackage package = new ExcelPackage(@"C:\Users\cent\Desktop\text.xlsx"))
+        //{
+        //    // Get the first worksheet
+        //    ExcelWorksheet worksheet = package.Workbook.Worksheets["Sheet2"];
 
+        //    // Read the data from the worksheet
+        //    var readValue = worksheet.Cells[1, 1].Value;
+
+        //    for (int i = 1; i < 100001; i++)
+        //    {
+        //        var writeValue = readValue + "+New Value" + i;
+        //        worksheet.Cells[i, 2].Value = writeValue;
+        //    }
+        //    package.Save();
+        //}
+
+        //string path = @"C:\Users\cent\Desktop\text.xlsx";
+        //using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read))
+        //{
+        //    var wk = new XSSFWorkbook(stream);
+        //    var sheet = wk.GetSheetAt(1);
+        //    var readValue = sheet.GetRow(0).GetCell(0).ToString();
+        //    for (int i = 0; i < 100001; i++)
+        //    {
+        //        var row = sheet.GetRow(i) ?? sheet.CreateRow(i);
+        //        var cell = row.GetCell(1) ?? row.CreateCell(1);
+        //        cell.SetCellValue(readValue + "+New Value" + i);
+        //    }
+        //    // 保存更改
+        //    using (FileStream stream2 = new FileStream(path, FileMode.Create, FileAccess.Write))
+        //    {
+        //        wk.Write(stream2);
+        //    }
+        //}
+
+    }
 }

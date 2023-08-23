@@ -17,5 +17,5 @@ https://blog.csdn.net/weixin_43650637/article/details/114318408<br>
 步骤2：工具\Nuget包管理器\程序包管理器控制台<br>
 `update-package -reinstall`
 # 打包与使用
-  pack文件夹中点击packtool会生成两个.XLL的Pack，与XllConfig文件一起放入到任意路径中，Excel中引用适合自己电脑位数的.XLL即可
+  pack文件夹中点击packtool会生成两个.XLL的Pack，与XllConfig文件一起放入到任意路径中，Excel中引用适合自己电脑位数的.XLL即可，pack\libs的dll需要手动复制更新，没找到更合适的批处理代码
 
