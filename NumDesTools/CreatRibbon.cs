@@ -60,24 +60,24 @@ namespace NumDesTools
 
             _app.SheetBeforeRightClick += new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
 
-            var configFileName = "XllConfig.xml";
-            var xllDirectory = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
-            if (xllDirectory != null)
-            {
-                var configPath = Path.Combine(xllDirectory, configFileName);
+            //var configFileName = "XllConfig.xml";
+            //var xllDirectory = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
+            //if (xllDirectory != null)
+            //{
+            //    var configPath = Path.Combine(xllDirectory, configFileName);
 
-                try
-                {
-                    // Load config
-                    XmlSerializer configLoader = new XmlSerializer(typeof(AddInReloaderConfiguration));
-                    AddInReloaderConfiguration config = (AddInReloaderConfiguration)configLoader.Deserialize(File.OpenRead(configPath));
-                    _watcher = new AddInWatcher(config);
-                }
-                catch (Exception ex)
-                {
-                    LogDisplay.WriteLine("Error loading the configuration file: " + ex);
-                }
-            }
+            //    try
+            //    {
+            //        // Load config
+            //        XmlSerializer configLoader = new XmlSerializer(typeof(AddInReloaderConfiguration));
+            //        AddInReloaderConfiguration config = (AddInReloaderConfiguration)configLoader.Deserialize(File.OpenRead(configPath));
+            //        _watcher = new AddInWatcher(config);
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        LogDisplay.WriteLine("Error loading the configuration file: " + ex);
+            //    }
+            //}
         }
         void IExcelAddIn.AutoClose()
         {
