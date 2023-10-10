@@ -62,6 +62,8 @@
                   screentip='当前表格内的.xlsx加入超链接.xlsx' />
           <button id='AutoCellFormat' size='large' label='模板表格式整理' image='diff' onAction='AutoCellFormatEPPlus_Click'
                   screentip='整理表格样式' />
+          <button id='AutoSeachExcel' size='large' label='查验模版写入数据' image='document'
+                  onAction='AutoSeachExcel_Click' screentip='查看模版表写入后的数据：EPPlusI' />
         </group>
         <group id="Group8" label="Excel搜索" >
           <editBox id="ExcelSearchBoxEdit"  onChange="ExcelOnEditBoxTextChanged" sizeString="…………………………………………" />

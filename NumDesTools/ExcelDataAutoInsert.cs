@@ -1,23 +1,23 @@
-﻿using System;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
 using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
 using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
 using Color = System.Drawing.Color;
-using MessageBox = System.Windows.Forms.MessageBox;
+using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
 using LicenseContext = OfficeOpenXml.LicenseContext;
 using Match = System.Text.RegularExpressions.Match;
-using OfficeOpenXml.Style;
-using System.Diagnostics;
-using System.Globalization;
-using System.Runtime.InteropServices;
-using DocumentFormat.OpenXml.Spreadsheet;
+using MessageBox = System.Windows.Forms.MessageBox;
 
 namespace NumDesTools;
 /// <summary>
@@ -117,12 +117,11 @@ public class ExcelDataAutoInsert
             {
                 //数字累加
                 var addDigit = (long)Math.Pow(10, digit[digitCount].Item2 - 1) * addValue;
-                if (addDigit >= num)
-                {
-                    str = "^error^";
-                    return str;
-                }
-
+                //if (addDigit >= num)
+                //{
+                //    str = "^error^";
+                //    return str;
+                //}
                 var newNum = num + addDigit;
                 //字符替换
                 var numCount = numStr.Length;
@@ -1197,6 +1196,172 @@ public class ExcelDataAutoInsertMulti
 
 public class ExcelDataAutoInsertCopyMulti
 {
+    public static void SearchData(dynamic isMulti)
+    {
+        //dynamic app = ExcelDnaUtil.Application;
+        var indexWk = CreatRibbon._app.ActiveWorkbook;
+        var sheet = CreatRibbon._app.ActiveSheet;
+        var excelPath = indexWk.Path;
+        var sheetData = PubMetToExcel.ExcelDataToList(sheet);
+        var title = sheetData.Item1;
+        var data = sheetData.Item2;
+        var sheetNameCol = title.IndexOf("表名");
+        var modelIdNewCol = title.IndexOf("实际模板(上一期)");
+        //获取单元格颜色
+        var colorCell = sheet.Cells[6, 1];
+        var cellColor = PubMetToExcel.GetCellBackgroundColor(colorCell);
+        ErrorLogCtp.DisposeCtp();
+        //字典Value跨度（行）
+        var rowCount = 2;
+        //获取字典
+        var modelIdNew = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modelIdNewCol, rowCount);
+        //遍历文件写入
+        var errorExcelList = new List<List<(string, string, string)>>();
+        var excelCount = 1;
+        //统计写入的内容
+        var errorList = new List<(string, string, string)>();
+        var diffList = new List<(string, string, string)>();
+        //数据源路径txt
+        var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var filePath = Path.Combine(documentsFolder, "mergePath.txt");
+        var outFilePath = Path.Combine(documentsFolder, "result.txt");
+        var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
+        foreach (var key in modelIdNew)
+        {
+            //写入算法
+            var excelName = key.Key;
+            var targetExcelPath = excelPath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
+            //创建excel对象
+            errorList = PubMetToExcel.SetExcelObjectEpPlus(targetExcelPath, excelName, out ExcelWorksheet targetSheet, out ExcelPackage _);
+            if (errorList.Count != 0)
+            {
+                //return errorList;
+            }
+            errorList = PubMetToExcel.SetExcelObjectEpPlus(excelPath, excelName, out ExcelWorksheet sourceSheet, out ExcelPackage _);
+            if (errorList.Count != 0)
+            {
+                //return errorList;
+            }
+            //执行写入操作
+            for (var excelMulti = 0; excelMulti < modelIdNew[excelName].Count; excelMulti++)
+            {
+                var startValue = modelIdNew[excelName][excelMulti].Item1[0, 0].ToString();
+                var endValue = modelIdNew[excelName][excelMulti].Item1[1, 0].ToString();
+                var startRowSource = ExcelDataAutoInsert.FindSourceRow(sourceSheet, 2, startValue);
+                var endRowSource = ExcelDataAutoInsert.FindSourceRow(sourceSheet, 2, endValue);
+                var startRowTarget = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, startValue);
+                var endRowTarget = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, endValue);
+                bool isSame=false;
+                if (endRowSource - startRowSource > endRowTarget- startRowTarget)
+                {
+                    for (int i = startRowSource; i <= endRowSource; i++)
+                    {
+                        var cellSourceValue = sourceSheet.Cells[i, 2].Value.ToString();
+                        var resultValue = "";
+                        string resultRow = "";
+                        for (int j = startRowTarget; j <= endRowTarget; j++)
+                        {
+                            var cellTargetValue = targetSheet.Cells[j, 2].Value.ToString();
+                            if (cellSourceValue != cellTargetValue)
+                            {
+                                resultValue = cellTargetValue;
+                                resultRow = j.ToString();
+                            }
+                        }
+                        if (resultValue != "")
+                        {
+                            diffList.Add((excelPath + @"\" + excelName, resultRow, resultValue));
+                        }
+                    }
+                }
+                else
+                {
+                    for (int i = startRowTarget; i <= endRowTarget; i++)
+                    {
+                        var cellTargetValue = targetSheet.Cells[i, 2].Value.ToString();
+                        var resultValue = "";
+                        string resultRow = "";
+                        for (int j = startRowSource; j <= endRowSource; j++)
+                        {
+                            var cellSourceValue = sourceSheet.Cells[j, 2].Value.ToString();
+                            if (cellSourceValue != cellTargetValue)
+                            {
+                                resultValue = cellSourceValue;
+                                resultRow = j.ToString();
+                            }
+                        }
+                        if (resultValue != "")
+                        {
+                            diffList.Add((targetExcelPath + @"\" + excelName, resultRow, resultValue));
+                        }
+                    }
+                }
+            }
+
+            CreatRibbon._app.StatusBar = "遍历表格" + "<" + excelCount + "/" + modelIdNew.Count + ">" + excelName;
+            errorExcelList.Add(errorList);
+            excelCount++;
+        }
+        //List去重
+        diffList = diffList.Distinct().ToList().ToList();
+        //错误日志处理
+        var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
+        if (errorLog == "")
+        {
+            //人工查询所需要的数据，可以打开表格，可以删除和手动增加数据，专用表格进行操作
+            dynamic tempWorkbook;
+            try
+            {
+                tempWorkbook = CreatRibbon._app.Workbooks.Open(excelPath + @"\#合并表格数据缓存.xlsx");
+            }
+            catch
+            {
+                tempWorkbook = CreatRibbon._app.Workbooks.Add();
+                tempWorkbook.SaveAs(excelPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
+            }
+            dynamic tempSheet = tempWorkbook.Sheets["Sheet1"];
+            // 清除数据（将单元格内容设置为空字符串）
+            Range usedRange = tempSheet.UsedRange;
+            usedRange.ClearContents();
+            //数据转数组
+            string[,] tempDataArray = new string[diffList.Count, 4];
+            for (int i = 0; i < diffList.Count; i++)
+            {
+                tempDataArray[i, 0] = diffList[i].Item1;
+                tempDataArray[i, 1] = "Sheet1";
+                tempDataArray[i, 2] = "B" + diffList[i].Item2;
+                tempDataArray[i, 3] = diffList[i].Item3;
+            }
+            var tempDataRange = tempSheet.Range[tempSheet.Cells[2, 2], tempSheet.Cells[2 + tempDataArray.GetLength(0) - 1, 2 + tempDataArray.GetLength(1) - 1]];
+            //数据转range
+            tempDataRange.Value = tempDataArray;
+            tempWorkbook.Save();
+            CreatRibbon._app.Visible = true;
+            //if (!File.Exists(outFilePath))
+            //{
+            //    // 创建新的文本文件
+            //    using (StreamWriter writer = File.CreateText(outFilePath))
+            //    {
+            //        writer.Write(writeRow);
+            //        writer.Close();
+            //    }
+            //}
+            //else
+            //{
+            //    // 覆写已存在的文本文件
+            //    using (StreamWriter reader = new StreamWriter(outFilePath, false))
+            //    {
+            //        reader.Write(writeRow);
+            //        reader.Close();
+            //    }
+            //}
+            //Process.Start(outFilePath);
+            CreatRibbon._app.StatusBar = "完成统计";
+            return;
+        }
+        ErrorLogCtp.DisposeCtp();
+        ErrorLogCtp.CreateCtpNormal(errorLog);
+    }
     public static void MergeData(dynamic isMulti)
     {
         //dynamic app = ExcelDnaUtil.Application;
