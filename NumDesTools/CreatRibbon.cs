@@ -13,6 +13,7 @@ using ExcelDna.Integration.CustomUI;
 using ExcelDna.Logging;
 using Microsoft.Office.Interop.Excel;
 using Microsoft.Vbe.Interop;
+using Org.BouncyCastle.Bcpg.Sig;
 using stdole;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
@@ -1205,6 +1206,17 @@ namespace NumDesTools
             _app.StatusBar = "完成，用时：" + ts2;
         }
 
+        public void AutoSeachExcel_Click(IRibbonControl control)
+        {
+            var sw = new Stopwatch();
+            sw.Start();
+            ExcelDataAutoInsertCopyMulti.SearchData(false);
+            sw.Stop();
+            var ts2 = sw.Elapsed;
+            Debug.Print(ts2.ToString());
+            _app.StatusBar = "导出完成，用时：" + ts2;
+        }
+
         public void ActivityServerData_Click(IRibbonControl control)
         {
             var sw = new Stopwatch();
@@ -1232,7 +1244,11 @@ namespace NumDesTools
             //SVNTools.RevertAndUpFile();
             var sw = new Stopwatch();
             sw.Start();
-            Lua2Excel.LuaDataGet();
+            //ExcelDataAutoInsertCopyMulti.SearchData(false);
+            var testStr = "{2001,3008,4005}";
+            var monkeyList = new List<(int, int)>();
+            monkeyList.Add((2, 1));
+            ExcelDataAutoInsert.StringRegPlace(testStr, monkeyList, 7);
             //Lua2Excel.LuaDataExportToExcel(@"C:\Users\cent\Desktop\二合数据\TableABTestCountry.lua.txt");
             //Program.NodeMain();
             //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");

@@ -571,6 +571,7 @@ public class MyComAddIn : ExcelComAddIn
     {
         if (CreatRibbon._app != null)
         {
+            CreatRibbon._app.SheetBeforeRightClick = null;
             CreatRibbon._app.Quit();
         }
         //Marshal.ReleaseComObject(CreatRibbon._app);
@@ -593,6 +594,7 @@ public class MyComAddIn : ExcelComAddIn
     {
         if (CreatRibbon._app != null)
         {
+            CreatRibbon._app.SheetBeforeRightClick = null;
             CreatRibbon._app.Quit();
         }
         //CreatRibbon._app.Quit();

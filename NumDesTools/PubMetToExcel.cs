@@ -956,3 +956,21 @@ public class PubMetToExcel
 
     }
 }
+//// 自定义比较器来比较元组
+//public class TupleEqualityComparer : IEqualityComparer<(string, string, string)>
+//{
+//    public bool Equals((string, string, string) x, (string, string, string) y)
+//    {
+//        return x.Item1 == y.Item1 && x.Item2 == y.Item2 && x.Item3 == y.Item3;
+//    }
+
+//    public int GetHashCode((string, string, string) obj)
+//    {
+//        return obj.Item1.GetHashCode() ^ obj.Item2.GetHashCode() ^ obj.Item3.GetHashCode();
+//    }
+//}
+
+
+
+
+
