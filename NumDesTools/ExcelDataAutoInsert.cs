@@ -479,7 +479,17 @@ public class ExcelDataAutoInsertLanguage
             // 逐行删除
             foreach (var rowToDelete in rowsToDelete)
             {
-                targetSheet.DeleteRow(rowToDelete, 1);
+                try
+                {
+                    targetSheet.DeleteRow(rowToDelete, 1);
+                }
+                catch(Exception ex)
+                {
+                    errorExcel = i * 2 + 2;
+                    errorExcelLog = fixFileName + "无法删除重复数据，sheet格式问题，复制数据到新表" + ex.Message;
+                    errorList.Add((errorExcel, errorExcelLog, fixFileName));
+                }
+                
             }
 
             //根据模板插入对应数据行，并复制
