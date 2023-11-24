@@ -961,6 +961,29 @@ public class PubMetToExcel
         }
         return sheetData;
     }
+    //随机不重复值列表
+    public static List<int> GenerateUniqueRandomList(int minValue, int maxValue,int baseValue)
+    {
+        List<int> list = new List<int>();
+
+        // 初始化列表
+        for (int i = minValue; i <= maxValue; i++)
+        {
+            list.Add(i+baseValue);
+        }
+
+        // 使用 Fisher-Yates 洗牌算法生成随机不重复列表
+        Random random = new Random();
+        int n = list.Count;
+        for (int i = n - 1; i > 0; i--)
+        {
+            int j = random.Next(0, i + 1);
+            int temp = list[i];
+            list[i] = list[j];
+            list[j] = temp;
+        }
+        return list;
+    }
     public static void testEpPlus()
     {
         //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
