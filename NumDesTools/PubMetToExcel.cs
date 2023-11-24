@@ -916,6 +916,51 @@ public class PubMetToExcel
         var errorList = SetExcelObjectEpPlus(excelFilePath, excelName + @".xlsx", out sheet, out excel);
         return errorList;
     }
+    //List转换数据为Range数据（已开启的表格）
+    public static void ListToArrayToRange(List<List<int>> targetList, dynamic workSheet, int startRow, int startCol)
+    {
+        int rowCount = targetList.Count;
+        int columnCount = 0;
+        foreach (var innerList in targetList)
+        {
+            int currentColumnCount = innerList.Count;
+            columnCount = Math.Max(columnCount, currentColumnCount);
+        }
+
+        int[,] targetDataArr = new int[rowCount, columnCount];
+        for (int i = 0; i < rowCount; i++)
+        {
+            for (int j = 0; j < targetList[i].Count; j++)
+            {
+                targetDataArr[i, j] = targetList[i][j];
+            }
+        }
+        var targetRange = workSheet.Range[workSheet.Cells[startRow, startCol],
+            workSheet.Cells[startRow + rowCount - 1, startCol + columnCount - 1]];
+        targetRange.Value = targetDataArr;
+    }
+    //Range数据转List
+    public static List<List<object>> RangeDataToList(object[,] rangeValue)
+    {
+        // 获取行数和列数
+        var rows = rangeValue.GetLength(0);
+        var columns = rangeValue.GetLength(1);
+        // 定义工作表数据数组和表头数组
+        var sheetData = new List<List<object>>();
+        // 读取数据
+        for (var row = 1; row <= rows; row++)
+        {
+            var rowList = new List<object>();
+            for (var column = 1; column <= columns; column++)
+            {
+                var value = rangeValue[row, column];
+                rowList.Add(value);
+            }
+
+            sheetData.Add(rowList);
+        }
+        return sheetData;
+    }
     public static void testEpPlus()
     {
         //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;

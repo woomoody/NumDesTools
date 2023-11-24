@@ -1,6 +1,10 @@
-﻿using ExcelDna.Integration;
+﻿using System;
+using System.Diagnostics;
+using ExcelDna.Integration;
 using NPOI.XSSF.UserModel;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 
 namespace NumDesTools;
@@ -92,5 +96,60 @@ public class ExcelUdf
         int blue = (int)(color / 65536 % 256);
         // 返回RGB格式的颜色值
         return $"{red}#{green}#{blue}";
+    }
+    //拆分字符串
+    [ExcelFunction(Category = "StrToNum" , IsVolatile = true, IsMacroType = true, Description = "提取字符串中数字")]
+    public static int GetNumFromStr([ExcelArgument(AllowReference = true, Description = "输入字符串")] string inputValue, 
+        [ExcelArgument(AllowReference = true, Description = "分隔符")] string delimiter, 
+        [ExcelArgument(AllowReference = true, Description = "第几个数字")] int numCount)
+    {
+        // 使用正则表达式匹配数字
+        var numbers = Regex.Split(inputValue, delimiter)
+            .SelectMany(s => Regex.Matches(s, @"\d+").Cast<Match>().Select(m => m.Value))
+            .ToArray();
+        return Convert.ToInt32(numbers[numCount - 1]);
+    }
+    //组装字符串
+    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range")]
+    public static string CreatValueToArray([ExcelArgument(AllowReference = true, Description = "单元格范围")] object rangeObj,
+        [ExcelArgument(AllowReference = true, Description = "默认值单元格范围")] object rangeObjDef,
+        [ExcelArgument(AllowReference = true, Description = "分隔符")] string delimiter, 
+        [ExcelArgument(AllowReference = true, Description = "过滤值")] string ignoreValue,
+        [ExcelArgument(AllowReference = true, Description = "返回值类型")] int returnType)
+    {
+        // 将传递的 object 类型参数转换为 Range 对象
+        ExcelReference rangeRef = (ExcelReference)rangeObj;
+        ExcelReference rangeRefDef = (ExcelReference)rangeObjDef;
+        // 使用 ExcelReference.GetValue 获取选定范围的值
+        object[,] values = (object[,])rangeRef.GetValue();
+        object[,] valuesDef = (object[,])rangeRefDef.GetValue();
+        //过滤掉空值并将二维数组中的值按行拼接成字符串
+        string result = string.Empty;
+        int count = 0;
+        foreach (var item in values)
+        {
+            if (item is ExcelEmpty || item.ToString() == ignoreValue)
+            {
+
+            }
+            else
+            {
+                if (returnType != 0)
+                {
+                    var itemDef = valuesDef[0,count];
+                    result += itemDef + delimiter;
+                }
+                else
+                {
+                    result += item + delimiter;
+                }
+            }
+            count++;
+        }
+        if (result != "")
+        {
+            result = result.Substring(0, result.Length - 1);
+        }
+        return result;
     }
 }

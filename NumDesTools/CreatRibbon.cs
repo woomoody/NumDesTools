@@ -13,6 +13,7 @@ using ExcelDna.Integration.CustomUI;
 using ExcelDna.Logging;
 using Microsoft.Office.Interop.Excel;
 using Microsoft.Vbe.Interop;
+using NumDesTools.image;
 using Org.BouncyCastle.Bcpg.Sig;
 using stdole;
 using Button = System.Windows.Forms.Button;
@@ -1245,10 +1246,10 @@ namespace NumDesTools
             var sw = new Stopwatch();
             sw.Start();
             //ExcelDataAutoInsertCopyMulti.SearchData(false);
-            var testStr = "{2001,3008,4005}";
-            var monkeyList = new List<(int, int)>();
-            monkeyList.Add((2, 1));
-            ExcelDataAutoInsert.StringRegPlace(testStr, monkeyList, 7);
+            //var testStr = "{2001,3008,4005}";
+            //var monkeyList = new List<(int, int)>();
+            //monkeyList.Add((2, 1));
+            TmCaculate.CreatTmTargetEle();
             //Lua2Excel.LuaDataExportToExcel(@"C:\Users\cent\Desktop\二合数据\TableABTestCountry.lua.txt");
             //Program.NodeMain();
             //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");
@@ -1273,7 +1274,8 @@ namespace NumDesTools
         {
             var sw = new Stopwatch();
             sw.Start();
-            PubMetToExcel.testEpPlus();
+            //PubMetToExcel.testEpPlus();
+            TmCaculate.CreatTmNormalEle();
             //ExcelRelationShipEpPlus.StartExcelData();
             //并行计算，即时战斗（无先后），计算快
             //DotaLegendBattleParallel.BattleSimTime(true);
