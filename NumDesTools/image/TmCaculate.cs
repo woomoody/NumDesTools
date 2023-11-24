@@ -1,6 +1,8 @@
 ﻿using System;
 using Microsoft.Office.Interop.Excel;
 using System.Collections.Generic;
+using System.Linq;
+using Irony.Parsing;
 using NPOI.SS.Formula.Functions;
 
 namespace NumDesTools.image;
@@ -78,16 +80,30 @@ public class TmCaculate
         var targetEleMaxValueList = PubMetToExcel.RangeDataToList(targetEleMaxValue);
         object[,] targetModelRangeValue = targetModelRange.Value;
         var targetModelRangeValueList = PubMetToExcel.RangeDataToList(targetModelRangeValue);
-        //计数列表
-        Dictionary<string, int> eleCount = new Dictionary<string, int>();
+        //主题随机库字典
+        Dictionary<string, List<int>> eleThemeDic = new Dictionary<string, List<int>>();
         //新eleID列表
         List<List<int>> targetRangeValueList = new List<List<int>>();
         for (var i = 0; i < modelRangeValueList.Count; i++)
         {
             var tempTarget = new List<int>();
+            //创建主题随机库字典List
+            for (var k = 0; k < targetEleMaxValueList.Count; k++)
+            {
+                var eleTheme = targetEleMaxValueList[k][0].ToString();
+                var eleMax = Convert.ToInt32(targetEleMaxValueList[k][4]);
+                var eleBaseId = Convert.ToInt32(targetEleMaxValueList[k][3]);
+                var eleRandIdList = PubMetToExcel.GenerateUniqueRandomList(1, eleMax, eleBaseId);
+                //List去和已生成的目标排重
+                List<int> tempList1 = targetModelRangeValueList[i].ConvertAll(obj => Convert.ToInt32(obj));
+                var tempList2 = eleRandIdList.Except(tempList1).ToList();
+                eleThemeDic[eleTheme] = tempList2;
+            }
+            //计数列表
+            Dictionary<string, int> eleCount = new Dictionary<string, int>();
             for (var j = 0; j < modelRangeValueList[i].Count; j++)
             {
-                if (modelRangeValueList[i][j] != null)
+                if (modelRangeValueList[i][j] != "")
                 {
                     string ele = modelRangeValueList[i][j].ToString();
                     if (eleCount.ContainsKey(ele))
@@ -98,25 +114,9 @@ public class TmCaculate
                     {
                         eleCount[ele] = 1;
                     }
-                    for (var k = 0; k < targetEleMaxValueList.Count; k++)
-                    {
-                        if (ele == targetEleMaxValueList[k][0].ToString())
-                        {
-                            var eleId = Convert.ToInt32(targetEleMaxValueList[k][3]);
-                            //Id去目标重
-                            for (var n = 0; n < modelRangeValueList2[i].Count; n++)
-                            {
-                                string targetEle = modelRangeValueList2[i][n].ToString();
-                                if (targetEle == ele)
-                                {
-                                    eleId = Convert.ToInt32(targetModelRangeValueList[i][n]);
-                                }
-                            }
-                            var eleMax = Convert.ToInt32(targetEleMaxValueList[k][4]);
-                            var targetId = eleId + (eleCount[ele] - 1) % eleMax + 1;
-                            tempTarget.Add(targetId);
-                        }
-                    }
+                    //按照主题模版挨个写入新List存储
+                    var targetId = eleThemeDic[ele][eleCount[ele]-1];
+                    tempTarget.Add(targetId);
                 }
             }
             targetRangeValueList.Add(tempTarget);
