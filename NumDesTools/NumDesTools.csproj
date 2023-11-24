@@ -255,6 +255,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="image\TmCaculate.cs" />
     <Compile Include="Lua2Excel.cs" />
     <Compile Include="PubMetToExcelFunc.cs" />
     <Compile Include="RatioCaculate.cs" />
