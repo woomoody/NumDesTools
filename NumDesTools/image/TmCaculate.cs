@@ -2,8 +2,6 @@
 using Microsoft.Office.Interop.Excel;
 using System.Collections.Generic;
 using System.Linq;
-using Irony.Parsing;
-using NPOI.SS.Formula.Functions;
 
 namespace NumDesTools.image;
 

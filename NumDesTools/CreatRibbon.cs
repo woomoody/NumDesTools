@@ -1249,7 +1249,8 @@ namespace NumDesTools
             //var testStr = "{2001,3008,4005}";
             //var monkeyList = new List<(int, int)>();
             //monkeyList.Add((2, 1));
-            TmCaculate.CreatTmTargetEle();
+            //TmCaculate.CreatTmTargetEle();
+            PubMetToExcelFunc.AliceBigRicherDFS();
             //Lua2Excel.LuaDataExportToExcel(@"C:\Users\cent\Desktop\二合数据\TableABTestCountry.lua.txt");
             //Program.NodeMain();
             //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");
