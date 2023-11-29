@@ -208,7 +208,8 @@ internal class ExcelRelationShip
     //            var path = excelPath + @"\" + excelFile;
     //            if (excelFile == "多语言")
     //            {
-    //                var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
+    //                var newPath =
+    // (Path.GetDirectoryName(excelPath));
     //                path = newPath + @"\Excels\Localizations\Localizations.xlsx";
     //            }
     //            if (excelFile == "icon.xlsx")

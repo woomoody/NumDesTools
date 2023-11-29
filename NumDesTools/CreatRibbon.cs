@@ -222,7 +222,7 @@ namespace NumDesTools
             {
                 foreach (var tempControl in from CommandBarControl tempControl in bars
                          let t = tempControl.Tag
-                         where t is "自选写入"
+                         where t is "自选写入" or "BaseLan表" or "MergeLan表"
                          select tempControl)
                     try
                     {
@@ -232,16 +232,37 @@ namespace NumDesTools
                     {
                         // ignored
                     }
-                //生成自己的菜单
+                //生成自己的菜单---调用不同的Click命令需要不同的Tag
                 var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
                 var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
-                if (comControl == null ) return;
+                var comControl1 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
+                var comButton2 = comControl1 as Microsoft.Office.Core.CommandBarButton;
+                var comControl2 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
+                var comButton3 = comControl2 as Microsoft.Office.Core.CommandBarButton;
+                if (comControl == null || comControl1 == null || comControl2 == null) return;
                 if (comButton1 != null)
                 {
                     comButton1.Tag = "自选写入";
                     comButton1.Caption = "自选表格写入";
                     comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
                     comButton1.Click += ExcelDataAutoInsertMulti.RightClickInsertData;
+                }
+                if (bookName.Contains("#【自动填表】多语言对话"))
+                {
+                    if (comButton2 != null)
+                    {
+                        comButton2.Tag = "BaseLan表";
+                        comButton2.Caption = "当前项目Lan";
+                        comButton2.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                        comButton2.Click += PubMetToExcelFunc.OpenBaseLanExcel;
+                    }
+                    if (comButton3 != null)
+                    {
+                        comButton3.Tag = "MergeLan表";
+                        comButton3.Caption = "合并项目Lan";
+                        comButton3.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                        comButton3.Click += PubMetToExcelFunc.OpenMergeLanExcel;
+                    }
                 }
             }
             else 

@@ -12,6 +12,8 @@ using Microsoft.Office.Interop.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System.IO;
+using NPOI.SS.Util;
+using OfficeOpenXml;
 
 namespace NumDesTools;
 /// <summary>
@@ -20,13 +22,13 @@ namespace NumDesTools;
 public class PubMetToExcelFunc
 {
     private static readonly dynamic Wk = CreatRibbon._app.ActiveWorkbook;
-    private static readonly dynamic Path = Wk.Path;
+    private static readonly dynamic path = Wk.Path;
     //Excel数据查询并合并表格数据
     public static void ExcelDataSearchAndMerge(string searchValue)
     {
         //获取所有的表格路径
         string[] ignoreFileNames = { "#","副本"};
-        var rootPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(Path));
+        var rootPath = Path.GetDirectoryName(Path.GetDirectoryName(path));
         var fileList = new List<string>() { rootPath+ @"\Excels\Tables\", rootPath + @"\Excels\Localizations\", rootPath + @"\Excels\UIs\" };
         var files = PubMetToExcel.PathExcelFileCollect(fileList, "*.xlsx", ignoreFileNames);
         //查找指定关键词，记录行号和表格索引号
@@ -92,7 +94,58 @@ public class PubMetToExcelFunc
 
 
     }
-
+    public static void OpenBaseLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        var selectCell = CreatRibbon._app.ActiveCell;
+        var basePath = CreatRibbon._app.ActiveWorkbook.Path;
+        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(basePath));
+        newPath = newPath + @"\Excels\Localizations\Localizations.xlsx";
+        var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(newPath);
+        var findValue = PubMetToExcel.FindDataInDataTable(newPath, dataTable, selectCell.Value.ToString());
+        var cellAddress = PubMetToExcel.ConvertToExcelColumn(findValue[0].Item4) + findValue[0].Item3;
+        PubMetToExcel.OpenExcelAndSelectCell(newPath, "Sheet1", cellAddress);
+    }
+    public static void OpenMergeLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        var selectCell = CreatRibbon._app.ActiveCell;
+        var basePath = CreatRibbon._app.ActiveWorkbook.Path;
+        string mergePath = "";
+        //数据源路径txt
+        var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var filePath = Path.Combine(documentsFolder, "mergePath.txt");
+        var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
+        //第一行Alice，第二行Cove
+        if (mergePathList.Count <= 1)
+        {
+            //打开文本文件
+            Process.Start(filePath);
+        }
+        if (mergePathList[0] == "" || mergePathList[1] == "" || mergePathList[1] == mergePathList[0])
+        {
+            //打开文本文件
+            Process.Start(filePath);
+        }
+        else
+        {
+            mergePath = basePath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
+        }
+        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(mergePath));
+        newPath = newPath + @"\Excels\Localizations\Localizations.xlsx";
+        var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(newPath);
+        var findValue = PubMetToExcel.FindDataInDataTable(newPath, dataTable, selectCell.Value.ToString());
+        string cellAddress = "";
+        if (findValue.Count == 0)
+        {
+            cellAddress = "A1";
+        }
+        else
+        {
+            cellAddress = PubMetToExcel.ConvertToExcelColumn(findValue[0].Item4) + findValue[0].Item3;
+        }
+        PubMetToExcel.OpenExcelAndSelectCell(newPath, "Sheet1", cellAddress);
+    }
     public static void AliceBigRicherDFS()
     {
         var ws = Wk.ActiveSheet;
