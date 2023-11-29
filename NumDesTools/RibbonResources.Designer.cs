@@ -407,9 +407,10 @@ namespace NumDesTools {
         ///  &lt;ribbon startFromScratch=&apos;false&apos;&gt;
         ///    &lt;tabs&gt;
         ///      &lt;tab id=&apos;Tab1&apos; label=&apos;NumDesTools&apos; insertBeforeMso=&apos;TabHome&apos;&gt;
-        ///        &lt;!--//&lt; group id = &apos;Group1&apos; label = &apos;导表(By:SC)&apos; &gt;
-        ///              //    &lt; button id = &apos;Button1&apos; size = &apos;large&apos; label = &apos;导出本表&apos; image = &apos;file&apos; onAction = &apos;OneSheetOutPut_Click&apos; screentip = &apos;点击导出当前sheet&apos; /&gt;
-        ///              //    &lt; button  [字符串的其余部分被截断]&quot;; 的本地化字符串。
+        ///        &lt;!--
+        ///        &lt; group id = &apos;Group1&apos; label = &apos;导表(By:SC)&apos; &gt;
+        ///                  &lt; button id = &apos;Button1&apos; size = &apos;large&apos; label = &apos;导出本表&apos; image = &apos;file&apos; onAction = &apos;OneSheetOutPut_Click&apos; screentip = &apos;点击导出当前sheet&apos; /&gt;
+        ///                  &lt; but [字符串的其余部分被截断]&quot;; 的本地化字符串。
         /// </summary>
         public static string RibbonUI {
             get {

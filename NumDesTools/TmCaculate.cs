@@ -25,10 +25,10 @@ public class TmCaculate
         //计数列表
         Dictionary<string, int> eleCount = new Dictionary<string, int>();
         //新eleID列表
-        List<List<int>> targetRangeValueList = new List<List<int>>();
+        List<List<object>> targetRangeValueList = new List<List<object>>();
         for (var i = 0; i < modelRangeValueList.Count; i++)
         {
-            var tempTarget = new List<int>();
+            var tempTarget = new List<object>();
             for (var j = 0; j < modelRangeValueList[i].Count; j++)
             {
                 if (modelRangeValueList[i][j] != null)
@@ -78,14 +78,13 @@ public class TmCaculate
         var targetEleMaxValueList = PubMetToExcel.RangeDataToList(targetEleMaxValue);
         object[,] targetModelRangeValue = targetModelRange.Value;
         var targetModelRangeValueList = PubMetToExcel.RangeDataToList(targetModelRangeValue);
-        //主题随机库字典
-        Dictionary<string, List<int>> eleThemeDic = new Dictionary<string, List<int>>();
         //新eleID列表
-        List<List<int>> targetRangeValueList = new List<List<int>>();
+        List<List<object>> targetRangeValueList = new List<List<object>>();
         for (var i = 0; i < modelRangeValueList.Count; i++)
         {
-            var tempTarget = new List<int>();
+            var tempTarget = new List<object>();
             //创建主题随机库字典List
+            Dictionary<string, List<int>> eleThemeDic = new Dictionary<string, List<int>>();
             for (var k = 0; k < targetEleMaxValueList.Count; k++)
             {
                 var eleTheme = targetEleMaxValueList[k][0].ToString();

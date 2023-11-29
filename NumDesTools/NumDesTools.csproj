@@ -255,7 +255,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="image\TmCaculate.cs" />
+    <Compile Include="TmCaculate.cs" />
     <Compile Include="Lua2Excel.cs" />
     <Compile Include="PubMetToExcelFunc.cs" />
     <Compile Include="RatioCaculate.cs" />
@@ -299,7 +299,7 @@
   <ItemGroup>
     <None Include="image\谷歌.png" />
     <None Include="image\bing.png" />
-    <Content Include="image\RibbonUI.xml" />
+    <Content Include="doc\RibbonUI.xml" />
     <EmbeddedResource Include="CellSelectChange.resx">
       <DependentUpon>CellSelectChange.cs</DependentUpon>
       <SubType>Designer</SubType>
