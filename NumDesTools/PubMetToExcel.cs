@@ -917,7 +917,7 @@ public class PubMetToExcel
         return errorList;
     }
     //List转换数据为Range数据（已开启的表格）
-    public static void ListToArrayToRange(List<List<int>> targetList, dynamic workSheet, int startRow, int startCol)
+    public static void ListToArrayToRange(List<List<object>> targetList, dynamic workSheet, int startRow, int startCol)
     {
         int rowCount = targetList.Count;
         int columnCount = 0;
@@ -927,7 +927,7 @@ public class PubMetToExcel
             columnCount = Math.Max(columnCount, currentColumnCount);
         }
 
-        int[,] targetDataArr = new int[rowCount, columnCount];
+        object[,] targetDataArr = new object[rowCount, columnCount];
         for (int i = 0; i < rowCount; i++)
         {
             for (int j = 0; j < targetList[i].Count; j++)
@@ -984,6 +984,7 @@ public class PubMetToExcel
         }
         return list;
     }
+
     public static void testEpPlus()
     {
         //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;

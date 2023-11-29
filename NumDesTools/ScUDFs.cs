@@ -152,4 +152,33 @@ public class ExcelUdf
         }
         return result;
     }
+    //组装字符串(二维)
+    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）")]
+    public static string CreatValueToArray2([ExcelArgument(AllowReference = true, Description = "单元格范围1")] object rangeObj1,
+        [ExcelArgument(AllowReference = true, Description = "单元格范围2")] object rangeObj2,
+        [ExcelArgument(AllowReference = true, Description = "分隔符")] string delimiter)
+    {
+        // 将传递的 object 类型参数转换为 Range 对象
+        ExcelReference rangeRef1 = (ExcelReference)rangeObj1;
+        ExcelReference rangeRef2 = (ExcelReference)rangeObj2;
+        // 使用 ExcelReference.GetValue 获取选定范围的值
+        object[,] values1 = (object[,])rangeRef1.GetValue();
+        object[,] values2 = (object[,])rangeRef2.GetValue();
+        //变为一维数组
+        object[] values1Objects = values1.Cast<object>().ToArray();
+        object[] values2Objects = values2.Cast<object>().ToArray();
+        //获取间隔方案
+        string[] delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
+        //过滤掉空值并将二维数组中的值按行拼接成字符串
+        string result = string.Empty;
+        int count = 0;
+        foreach (var item in values1Objects)
+        {
+            var itemDef = delimiterList[0] + item+ delimiterList[1] + values2Objects[count]+ delimiterList[2];
+            result += itemDef + delimiter[1];
+            count++;
+        }
+        result = delimiterList[0] + result + delimiterList[2];
+        return result;
+    }
 }

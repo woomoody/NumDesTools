@@ -96,56 +96,60 @@ public class PubMetToExcelFunc
     public static void AliceBigRicherDFS()
     {
         var ws = Wk.ActiveSheet;
-        string targetA = ws.Range["A3"].Value.ToString();
-        string targetB = ws.Range["B3"].Value.ToString();
-        string targetC = ws.Range["C3"].Value.ToString();
-        string targetCount =ws.Range["D3"].Value.ToString();
-        var filterDataRange = ws.Range["E14:AE1454"];
-        // 读取数据到一个二维数组中
-        object[,] filterDataRangeValue = filterDataRange.Value;
-        var filterDataRangeValueList = PubMetToExcel.RangeDataToList(filterDataRangeValue);
+        object[,] targetRank  = ws.Range["D11:D34"].Value;
+        var targetRankList = PubMetToExcel.RangeDataToList(targetRank);
+        object[,] seedRangeValue = ws.Range["D2:I2"].Value;
+        var dataSeed = PubMetToExcel.RangeDataToList(seedRangeValue);
+        object[,] targetKey = ws.Range["D4:E8"].Value;
+        var targetKeyList = PubMetToExcel.RangeDataToList(targetKey);
+        int maxRoll = Convert.ToInt32(ws.Range["D9"].Value);
+        //string targetA = ws.Range["A3"].Value.ToString();
+        //string targetB = ws.Range["B3"].Value.ToString();
+        //string targetC = ws.Range["C3"].Value.ToString();
+        //string targetCount =ws.Range["D3"].Value.ToString();
+        //var filterDataRange = ws.Range["E14:AE1454"];
+        //// 读取数据到一个二维数组中
+        //object[,] filterDataRangeValue = filterDataRange.Value;
+        //var filterDataRangeValueList = PubMetToExcel.RangeDataToList(filterDataRangeValue);
 
-        // 使用正则表达式匹配数字
-        var numbersA = Regex.Split(targetA, "#");
-        var numbersB = Regex.Split(targetB, "#");
-        var numbersC = Regex.Split(targetC, "#");
-        var numbersCount = Regex.Split(targetCount, "#");
-        // 使用LINQ进行筛选
-        List<List<object>> filteredRows = filterDataRangeValueList
-            .Where(row => row[Convert.ToInt32(numbersA[0])+8].ToString() == numbersA[1])
-            .ToList();
-        if (numbersB[0] != "")
-        {
-            filteredRows = filteredRows
-                .Where(row => row[Convert.ToInt32(numbersB[0]) + 8].ToString() == numbersB[1])
-                .ToList();
-        }
-        if (numbersC[0] != "0")
-        {
-            filteredRows = filteredRows
-                .Where(row => row[Convert.ToInt32(numbersC[0]) + 8].ToString() == numbersC[1])
-                .ToList();
-        }
-        if (numbersCount[0] != "0")
-        {
-            filteredRows = filteredRows
-                    .Where(row => numbersCount.Any(condition => row[25].ToString() == condition))
-                    .ToList();
-        }
-        int columnIndex = 26; // 第四列（索引从0开始）
-        var errorLog="";
-        // 写入每一行的指定列数据
-        foreach (var row in filteredRows)
-        {
-            errorLog+= row[columnIndex]+"\n";
-        }
-        ErrorLogCtp.DisposeCtp();
-        ErrorLogCtp.CreateCtpNormal(errorLog);
+        //// 使用正则表达式匹配数字
+        //var numbersA = Regex.Split(targetA, "#");
+        //var numbersB = Regex.Split(targetB, "#");
+        //var numbersC = Regex.Split(targetC, "#");
+        //var numbersCount = Regex.Split(targetCount, "#");
+        //// 使用LINQ进行筛选
+        //List<List<object>> filteredRows = filterDataRangeValueList
+        //    .Where(row => row[Convert.ToInt32(numbersA[0])+8].ToString() == numbersA[1])
+        //    .ToList();
+        //if (numbersB[0] != "")
+        //{
+        //    filteredRows = filteredRows
+        //        .Where(row => row[Convert.ToInt32(numbersB[0]) + 8].ToString() == numbersB[1])
+        //        .ToList();
+        //}
+        //if (numbersC[0] != "0")
+        //{
+        //    filteredRows = filteredRows
+        //        .Where(row => row[Convert.ToInt32(numbersC[0]) + 8].ToString() == numbersC[1])
+        //        .ToList();
+        //}
+        //if (numbersCount[0] != "0")
+        //{
+        //    filteredRows = filteredRows
+        //            .Where(row => numbersCount.Any(condition => row[25].ToString() == condition))
+        //            .ToList();
+        //}
+        //int columnIndex = 26; // 第四列（索引从0开始）
+        //var errorLog="";
+        //// 写入每一行的指定列数据
+        //foreach (var row in filteredRows)
+        //{
+        //    errorLog+= row[columnIndex]+"\n";
+        //}
+        //ErrorLogCtp.DisposeCtp();
+        //ErrorLogCtp.CreateCtpNormal(errorLog);
 
-        // 释放 COM 对象
-        Marshal.ReleaseComObject(ws);
-        Marshal.ReleaseComObject(Wk);
-        Marshal.ReleaseComObject(CreatRibbon._app);
+
 
         //int targetSum = (int)a;
         //int numberOfNumbers = (int)b;
@@ -159,55 +163,156 @@ public class PubMetToExcelFunc
         //        Debug.Print(string.Join(", ", combination));
         //    }
         //}
+        List<int> data = new List<int>();
+        for (int i = 0; i < dataSeed[0].Count; i++)
+        {
+            for (int j = 0; j < Convert.ToInt32(dataSeed[0][i]); j++)
+            {
+                data.Add(i+1);
+            }
+        }
+        List<List<int>> permutations = GeneratePermutations(data);
 
+        var targetProcess = new Dictionary<int , List<int>>();
+        var targetGift = new Dictionary<int, List<int>>();
+        var modCountDiv = data.Count;
 
+        for (int i = 0; i < permutations.Count; i++)
+        {
+            var targetProcessTemp = new List<int>();
+            var targetGiftTemp = new List<int>();
+            for (int j = 0; j < 9*24; j++)
+            {
+                var modCount = (j+1) % modCountDiv;
+                if (modCount == 0)
+                {
+                    modCount = modCountDiv;
+                }
+                if (j == 0)
+                {
+                    targetProcessTemp.Add(permutations[i][0]);
+                    targetGiftTemp.Add(Convert.ToInt32(targetRankList[0][0]));
+                }
+                else
+                {
+                    var targetTemp = targetProcessTemp[j - 1] + permutations[i][modCount-1];
+                    targetTemp %= 24;
+                    if (targetTemp == 0)
+                    {
+                        targetTemp = 24;
+                    }
+                    targetProcessTemp.Add(targetTemp);
+                    //获取价值量
+                    var targetTemp2 = targetGiftTemp[j-1]+ Convert.ToInt32(targetRankList[targetTemp-1][0]);
+                    targetGiftTemp.Add(targetTemp2);
+                }
+            }
+            targetProcess[i]=targetProcessTemp;
+            targetGift[i]=targetGiftTemp;
+        }
+        var filteredData = targetProcess;
+        //过滤方案
+        for (int i = 0; i < targetKeyList.Count; i++)
+        {
+            var rollTimes = targetKeyList[i][0];
+            var rollGrid = targetKeyList[i][1];
+            if (rollTimes != null)
+            {
+                var colIndex = Convert.ToInt32(rollTimes)-1;
+                var colValue = Convert.ToInt32(rollGrid) ;
+                //筛出指定列有目标值的行
+                filteredData = filteredData
+                    .Where(entry => entry.Value[colIndex] == colValue)
+                    .ToDictionary(entry => entry.Key, entry => entry.Value);
+                //去除非指定列有目标值的行
+                var filterCondition = GenerateFilterConditions(colIndex, maxRoll ,colValue);
+                filteredData = filteredData
+                    .Where(entry => filterCondition.All(condition => condition(entry.Value)))
+                    .ToDictionary(entry => entry.Key, entry => entry.Value);
+            }
+        }
+        //方案整理
+        var filteredDataGift = new List<List<object>>();
+        var filteredDataMethod = new List<List<object>>();
+        foreach (var key in filteredData.Keys)
+        {
+            filteredDataGift.Add(new List<object> { targetGift[key][maxRoll-1] });
+            var methodStr = "";
+            foreach (var method in permutations[key])
+            {
+                methodStr += method.ToString()+",";
+            }
+            methodStr.Substring(0, methodStr.Length - 1);
+            filteredDataMethod.Add(new List<object> { methodStr });
+        }
+        PubMetToExcel.ListToArrayToRange(filteredDataGift, ws,11, 6);
+        PubMetToExcel.ListToArrayToRange(filteredDataMethod, ws, 11, 5);
 
-        //int[] numbers = { 1, 2, 3, 4 ,5, 6};
+        // 释放 COM 对象
+        Marshal.ReleaseComObject(ws);
+        Marshal.ReleaseComObject(Wk);
+        Marshal.ReleaseComObject(CreatRibbon._app);
 
+        //Debug.Print("All Permutations:");
+        //foreach (var permutation in permutations)
+        //{
+        //    Debug.Print(string.Join(", ", permutation));
+        //}
+    }
+    static List<Func<List<int>, bool>> GenerateFilterConditions(int onlyCol,int otherCol,int conditionValue)
+    {
+        // 在实际情况下，你可以根据动态条件生成适当的委托列表
+        var conditions = new List<Func<List<int>, bool>>();
 
-        //Debug.Print("所有可能的随机排序：");
-        //EnumeratePermutations(numbers, 0, numbers.Length - 1);
+        //conditions.Add(values => values[onlyCol] == conditionValue);
+        //添加动态条件的示例
+        for (int i = 0; i < otherCol; i++)
+        {
+            if (i != onlyCol)
+            {
+                conditions.Add(values => values[i] != conditionValue);
+            }
+        }
+        return conditions;
     }
 
-    static void EnumeratePermutations(int[] array, int startIndex, int endIndex)
+    static List<List<int>> GeneratePermutations(List<int> data)
     {
-        if (startIndex == endIndex)
+        List<List<int>> result = new List<List<int>>();
+        GeneratePermutationsHelper(data, 0, result);
+        return result;
+    }
+
+    static void GeneratePermutationsHelper(List<int> data, int index, List<List<int>> result)
+    {
+        if (index == data.Count)
         {
-            // 打印当前排列
-            PrintArray(array);
+            // 当索引达到数组末尾时，添加当前排列到结果集
+            result.Add(new List<int>(data));
+            return;
         }
-        else
+        // 使用 HashSet 来去重
+        HashSet<int> usedValues = new HashSet<int>();
+
+        for (int i = index; i < data.Count; i++)
         {
-            for (int i = startIndex; i <= endIndex; i++)
+            if (usedValues.Add(data[i]))
             {
-                // 交换元素，生成不同的排列
-                Swap(ref array[startIndex], ref array[i]);
+                // 交换当前位置和索引位置的元素
+                Swap(data, index, i);
 
-                // 递归调用，生成下一个位置的排列
-                EnumeratePermutations(array, startIndex + 1, endIndex);
-
-                // 恢复数组，以便后续交换
-                Swap(ref array[startIndex], ref array[i]);
+                // 递归生成下一个位置的排列
+                GeneratePermutationsHelper(data, index + 1, result);
+                // 恢复交换的元素，以便进行下一次交换
+                Swap(data, index, i);
             }
         }
     }
-
-    static void Swap(ref int a, ref int b)
+    static void Swap(List<int> data, int i, int j)
     {
-        int temp = a;
-        a = b;
-        b = temp;
-    }
-
-    static void PrintArray(int[] array)
-    {
-        string abc="";
-        foreach (var number in array)
-        {
-            
-           abc += number.ToString()+",";
-        }
-        Debug.Print(abc);
+        int temp = data[i];
+        data[i] = data[j];
+        data[j] = temp;
     }
 
     public static void TestCAPI()
