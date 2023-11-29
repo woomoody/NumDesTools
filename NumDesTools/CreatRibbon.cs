@@ -205,32 +205,6 @@ namespace NumDesTools
                     comButton1.Click += ExcelDataAutoInsertMulti.RightClickInsertData;
                 }
             }
-            else if (sheetName.Contains("【模板】") && bookName.Contains("#【自动填表】多语言对话"))
-            {
-                foreach (var tempControl in from CommandBarControl tempControl in bars
-                         let t = tempControl.Tag
-                         where t is "多语言对话Copy"
-                         select tempControl)
-                    try
-                    {
-                        tempControl.Delete();
-                    }
-                    catch
-                    {
-                        // ignored
-                    }
-                //生成自己的菜单
-                var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-                var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
-                if (comControl == null) return;
-                if (comButton1 != null)
-                {
-                    comButton1.Tag = "多语言对话Copy";
-                    comButton1.Caption = "多语言对话合并";
-                    comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                    comButton1.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeDataForMultiLanModel; ;
-                }
-            }
             else 
             {
                 foreach (var tempControl in from CommandBarControl tempControl in bars
