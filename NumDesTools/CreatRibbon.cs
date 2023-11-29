@@ -43,6 +43,45 @@ namespace NumDesTools
         public static dynamic _app = ExcelDnaUtil.Application;
         public static dynamic XllPathList = new List<string>();
 
+        #region 释放COM
+        // 析构函数
+        ~CreatRibbon()
+        {
+            Dispose(false);
+        }
+        // 实现 IDisposable 接口
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        // 可以由子类覆盖的受保护的虚拟 Dispose 方法
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // 释放托管资源
+                // ...
+                // 释放 COM 对象
+                ReleaseComObjects();
+            }
+            // 释放非托管资源
+            // ...
+        }
+        // 释放 COM 对象的方法
+        private void ReleaseComObjects()
+        {
+            // 释放你的 COM 对象
+            if (_app != null)
+            {
+                Marshal.ReleaseComObject(_app);
+                _app = null;
+            }
+
+            // 可以继续添加其他 COM 对象的释放逻辑
+        }
+        #endregion 释放COM
+
         AddInWatcher _watcher;
         ExcelDna.Integration.ExcelComAddIn _comAddIn;
         void IExcelAddIn.AutoOpen()
