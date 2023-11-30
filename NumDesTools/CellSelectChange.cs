@@ -21,7 +21,7 @@ public class CellSelectChange : Form
         //单表选择单元格触发
         //ws.SelectionChange += new Excel.DocEvents_SelectionChangeEventHandler(GetCellValueMulti);
         //全（多）工作簿选择单元格触发
-        CreatRibbon._app.SheetSelectionChange += new WorkbookEvents_SheetSelectionChangeEventHandler(GetCellValue);
+        CreatRibbon._app.SheetSelectionChange += new AppEvents_SheetSelectionChangeEventHandler(GetCellValue);
     }
 
     public void GetCellValue(object sh, Range target)
