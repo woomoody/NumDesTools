@@ -6,15 +6,10 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using System.Xml.Serialization;
-using DocumentFormat.OpenXml.Spreadsheet;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
-using ExcelDna.Logging;
 using Microsoft.Office.Interop.Excel;
-using Microsoft.Vbe.Interop;
 using NumDesTools.image;
-using Org.BouncyCastle.Bcpg.Sig;
 using stdole;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
@@ -40,7 +35,7 @@ namespace NumDesTools
         public static string TempPath = @"\Client\Assets\Resources\Table";
         public static IRibbonUI R;
         private static CommandBarButton _btn;
-        public static dynamic _app = ExcelDnaUtil.Application;
+        public static dynamic _app = ExcelDnaUtil.Application;//这特么是个大雷（COM）
         public static dynamic XllPathList = new List<string>();
 
         #region 释放COM
@@ -1310,7 +1305,7 @@ namespace NumDesTools
             //var monkeyList = new List<(int, int)>();
             //monkeyList.Add((2, 1));
             //TmCaculate.CreatTmTargetEle();
-            PubMetToExcelFunc.AliceBigRicherDFS();
+            PubMetToExcelFunc.AliceBigRicherDFS2();
             //Lua2Excel.LuaDataExportToExcel(@"C:\Users\cent\Desktop\二合数据\TableABTestCountry.lua.txt");
             //Program.NodeMain();
             //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");

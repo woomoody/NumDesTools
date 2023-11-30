@@ -12,6 +12,7 @@ using Microsoft.Office.Interop.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System.IO;
+using System.Windows;
 using NPOI.SS.Util;
 using OfficeOpenXml;
 
@@ -22,7 +23,7 @@ namespace NumDesTools;
 public class PubMetToExcelFunc
 {
     private static readonly dynamic Wk = CreatRibbon._app.ActiveWorkbook;
-    private static readonly dynamic path = Wk.Path;
+    private static readonly string path = Wk.Path;
     //Excel数据查询并合并表格数据
     public static void ExcelDataSearchAndMerge(string searchValue)
     {
@@ -146,7 +147,7 @@ public class PubMetToExcelFunc
         }
         PubMetToExcel.OpenExcelAndSelectCell(newPath, "Sheet1", cellAddress);
     }
-    public static void AliceBigRicherDFS()
+    public static void AliceBigRicherDFS1()
     {
         var ws = Wk.ActiveSheet;
         object[,] targetRank  = ws.Range["D11:D34"].Value;
@@ -156,66 +157,6 @@ public class PubMetToExcelFunc
         object[,] targetKey = ws.Range["D4:E8"].Value;
         var targetKeyList = PubMetToExcel.RangeDataToList(targetKey);
         int maxRoll = Convert.ToInt32(ws.Range["D9"].Value);
-        //string targetA = ws.Range["A3"].Value.ToString();
-        //string targetB = ws.Range["B3"].Value.ToString();
-        //string targetC = ws.Range["C3"].Value.ToString();
-        //string targetCount =ws.Range["D3"].Value.ToString();
-        //var filterDataRange = ws.Range["E14:AE1454"];
-        //// 读取数据到一个二维数组中
-        //object[,] filterDataRangeValue = filterDataRange.Value;
-        //var filterDataRangeValueList = PubMetToExcel.RangeDataToList(filterDataRangeValue);
-
-        //// 使用正则表达式匹配数字
-        //var numbersA = Regex.Split(targetA, "#");
-        //var numbersB = Regex.Split(targetB, "#");
-        //var numbersC = Regex.Split(targetC, "#");
-        //var numbersCount = Regex.Split(targetCount, "#");
-        //// 使用LINQ进行筛选
-        //List<List<object>> filteredRows = filterDataRangeValueList
-        //    .Where(row => row[Convert.ToInt32(numbersA[0])+8].ToString() == numbersA[1])
-        //    .ToList();
-        //if (numbersB[0] != "")
-        //{
-        //    filteredRows = filteredRows
-        //        .Where(row => row[Convert.ToInt32(numbersB[0]) + 8].ToString() == numbersB[1])
-        //        .ToList();
-        //}
-        //if (numbersC[0] != "0")
-        //{
-        //    filteredRows = filteredRows
-        //        .Where(row => row[Convert.ToInt32(numbersC[0]) + 8].ToString() == numbersC[1])
-        //        .ToList();
-        //}
-        //if (numbersCount[0] != "0")
-        //{
-        //    filteredRows = filteredRows
-        //            .Where(row => numbersCount.Any(condition => row[25].ToString() == condition))
-        //            .ToList();
-        //}
-        //int columnIndex = 26; // 第四列（索引从0开始）
-        //var errorLog="";
-        //// 写入每一行的指定列数据
-        //foreach (var row in filteredRows)
-        //{
-        //    errorLog+= row[columnIndex]+"\n";
-        //}
-        //ErrorLogCtp.DisposeCtp();
-        //ErrorLogCtp.CreateCtpNormal(errorLog);
-
-
-
-        //int targetSum = (int)a;
-        //int numberOfNumbers = (int)b;
-        //int maxnum = (int)c;
-
-        //for (int i = numberOfNumbers; i <= maxnum; i++)
-        //{
-        //    List<List<int>> combinations = FindCombinations(targetSum, i);
-        //    foreach (var combination in combinations)
-        //    {
-        //        Debug.Print(string.Join(", ", combination));
-        //    }
-        //}
         List<int> data = new List<int>();
         for (int i = 0; i < dataSeed[0].Count; i++)
         {
@@ -311,6 +252,164 @@ public class PubMetToExcelFunc
         //{
         //    Debug.Print(string.Join(", ", permutation));
         //}
+    }
+    public static void AliceBigRicherDFS2()
+    {
+        var ws = Wk.ActiveSheet;
+        object[,] targetRank = ws.Range["C17:C40"].Value;
+        var targetRankList = PubMetToExcel.RangeDataToList(targetRank);
+        object[,] seedRangeValue = ws.Range["G3:G8"].Value;
+        var dataSeed = PubMetToExcel.RangeDataToList(seedRangeValue);
+        object[,] targetKey = ws.Range["C9:D11"].Value;
+        var targetKeyList = PubMetToExcel.RangeDataToList(targetKey);
+        object[,] targetKeySoft = ws.Range["C3:D7"].Value;
+        var targetKeySoftList = PubMetToExcel.RangeDataToList(targetKeySoft);
+        int maxRoll = Convert.ToInt32(ws.Range["C14"].Value);
+        List<int> data = new List<int>();
+        for (int i = 0; i < dataSeed.Count; i++)
+        {
+            var seed = dataSeed[i][0];
+            for (int j = 0; j < Convert.ToInt32(seed); j++)
+            {
+                data.Add(i + 1);
+            }
+        }
+        List<List<int>> permutations = GeneratePermutations(data);
+        var targetProcess = new Dictionary<int, List<int>>();
+        var bpProcess = new Dictionary<int, List<int>>();
+        var targetGift = new Dictionary<int, List<int>>();
+        var modCountDiv = data.Count;
+
+        for (int i = 0; i < permutations.Count; i++)
+        {
+            var targetProcessTemp = new List<int>();
+            var bpProcessTemp = new List<int>();
+            var targetGiftTemp = new List<int>();
+            for (int j = 0; j < 9 * 24; j++)
+            {
+                var modCount = (j + 1) % modCountDiv;
+                if (modCount == 0)
+                {
+                    modCount = modCountDiv;
+                }
+                if (j == 0)
+                {
+                    targetProcessTemp.Add(permutations[i][0]);
+                    bpProcessTemp.Add(permutations[i][0]);
+                    targetGiftTemp.Add(Convert.ToInt32(targetRankList[0][0]));
+                }
+                else
+                {
+                    var targetTemp = targetProcessTemp[j - 1] + permutations[i][modCount - 1];
+                    var processTemp = bpProcessTemp[j - 1] + permutations[i][modCount - 1];
+                    bpProcessTemp.Add(processTemp);
+                    targetTemp %= 24;
+                    if (targetTemp == 0)
+                    {
+                        targetTemp = 24;
+                    }
+                    targetProcessTemp.Add(targetTemp);
+                    //获取价值量
+                    var targetTemp2 = targetGiftTemp[j - 1] + Convert.ToInt32(targetRankList[targetTemp - 1][0]);
+                    targetGiftTemp.Add(targetTemp2);
+                }
+            }
+            targetProcess[i] = targetProcessTemp;
+            bpProcess[i] = bpProcessTemp;
+            targetGift[i] = targetGiftTemp;
+        }
+        var filteredData = targetProcess;
+        //过滤固定目标
+        for (int i = 0; i < targetKeyList.Count; i++)
+        {
+            var rollTimes = targetKeyList[i][0];
+            var rollGrid = targetKeyList[i][1];
+            if (rollTimes != null)
+            {
+                var colIndex = Convert.ToInt32(rollTimes) - 1;
+                var colValue = Convert.ToInt32(rollGrid);
+                //筛选指定列有固定目标值的行
+                filteredData = filteredData
+                    .Where(entry => entry.Value[colIndex] == colValue)
+                    .ToDictionary(entry => entry.Key, entry => entry.Value);
+                //去除非指定列有固定目标值的行
+                var filterCondition = GenerateFilterConditions(colIndex, maxRoll, colValue);
+                filteredData = filteredData
+                    .Where(entry => filterCondition.All(condition => condition(entry.Value)))
+                    .ToDictionary(entry => entry.Key, entry => entry.Value);
+            }
+        }
+        //过滤动态目标
+        for (int i = 0; i < targetKeySoftList.Count; i++)
+        {
+            var softTimes = targetKeySoftList[i][1];
+            var softGrid = targetKeySoftList[i][0];
+            if (softGrid != null)
+            {
+                //筛选动态目标值满足出现次数的行
+                filteredData = filteredData
+                    .Where(pair => pair.Value.Take(maxRoll - 1).Count(item => item == Convert.ToInt32(softGrid)) == Convert.ToInt32(softTimes))
+                    .ToDictionary(pair => pair.Key, pair => pair.Value);
+            }
+        }
+        //方案整理
+        var filteredDataGift = new Dictionary<int, int>();
+        var filteredDataMethod = new List<List<object>>();
+        var filteredDataBpProcess = new List<List<object>>();
+        foreach (var key in filteredData.Keys)
+        {
+            filteredDataGift[key] = targetGift[key][maxRoll - 1];
+        }
+        //选择升阶进度中众数项
+        int modeValue = GetMode(filteredDataGift.Values);
+        var filteredDataGiftMode = filteredDataGift.Where(pair => pair.Value == modeValue).ToList();
+        var filteredDataGiftList= new List<List<object>>();
+        int methodCount = filteredDataGiftMode.Count;
+        foreach (var kvp in filteredDataGiftMode)
+        {
+            int key = kvp.Key;
+            int value = kvp.Value;
+            filteredDataGiftList.Add(new List<object>{value});
+            filteredDataBpProcess.Add(new List<object> { bpProcess[key][maxRoll - 1] });
+            var methodStr = "";
+            foreach (var method in permutations[key])
+            {
+                methodStr += method + ",";
+            }
+            methodStr = methodStr.Substring(0, methodStr.Length - 1);
+            filteredDataMethod.Add(new List<object> { methodStr });
+        }
+        //清理数据
+        var range1 = ws.Range[ws.Cells[17, 6], ws.Cells[65535, 6]];
+        var range2 = ws.Range[ws.Cells[17, 5], ws.Cells[65535, 5]];
+        var range3 = ws.Range[ws.Cells[17, 5], ws.Cells[65535, 7]];
+        range1.ClearContents();
+        range2.ClearContents();
+        range3.ClearContents();
+        //写入数据
+        PubMetToExcel.ListToArrayToRange(filteredDataBpProcess, ws, 17, 7);
+        PubMetToExcel.ListToArrayToRange(filteredDataGiftList, ws, 17, 6);
+        PubMetToExcel.ListToArrayToRange(filteredDataMethod, ws, 17, 5);
+        if (filteredDataBpProcess.Count == 0)
+        {
+            ws.Cells[17, 5].Value = "#Error#";
+        }
+        // 释放 COM 对象
+        Marshal.ReleaseComObject(ws);
+        Marshal.ReleaseComObject(Wk);
+        Marshal.ReleaseComObject(CreatRibbon._app);
+
+    }
+    // 获取列表的众数
+    static int GetMode(IEnumerable<int> values)
+    {
+        var modes = values
+            .GroupBy(v => v)
+            .OrderByDescending(g => g.Count())
+            .Select(g => g.Key);
+
+        // 如果有多个众数，可以在这里选择处理方式，此处选择返回第一个众数
+        return modes.FirstOrDefault();
     }
     static List<Func<List<int>, bool>> GenerateFilterConditions(int onlyCol,int otherCol,int conditionValue)
     {
