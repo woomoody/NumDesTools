@@ -1294,7 +1294,35 @@ namespace NumDesTools
             Debug.Print(ts2.ToString());
             _app.StatusBar = "导出完成，用时：" + ts2;
         }
+        public void AliceBigRicher_Click(IRibbonControl control)
+        {
+            var sw = new Stopwatch();
+            sw.Start();
+            PubMetToExcelFunc.AliceBigRicherDFS2();
+            var ts2 = sw.Elapsed;
+            Debug.Print(ts2.ToString());
+            _app.StatusBar = "导出完成，用时：" + ts2;
+        }
+        public void TmTargetEle_Click(IRibbonControl control)
+        {
+            var sw = new Stopwatch();
+            sw.Start();
 
+            TmCaculate.CreatTmTargetEle();
+            var ts2 = sw.Elapsed;
+            Debug.Print(ts2.ToString());
+            _app.StatusBar = "导出完成，用时：" + ts2;
+        }
+        public void TmNormalEle_Click(IRibbonControl control)
+        {
+            var sw = new Stopwatch();
+            sw.Start();
+
+            TmCaculate.CreatTmNormalEle();
+            var ts2 = sw.Elapsed;
+            Debug.Print(ts2.ToString());
+            _app.StatusBar = "导出完成，用时：" + ts2;
+        }
         public void TestBar1_Click(IRibbonControl control)
         {
             //SVNTools.RevertAndUpFile();
@@ -1305,6 +1333,8 @@ namespace NumDesTools
             //var monkeyList = new List<(int, int)>();
             //monkeyList.Add((2, 1));
             //TmCaculate.CreatTmTargetEle();
+            //string sheetName = _app.ActiveWorkbook.ActiveSheet.Name;
+            //Debug.Print(sheetName);
             PubMetToExcelFunc.AliceBigRicherDFS2();
             //Lua2Excel.LuaDataExportToExcel(@"C:\Users\cent\Desktop\二合数据\TableABTestCountry.lua.txt");
             //Program.NodeMain();
