@@ -20,6 +20,7 @@ using NPOI.XSSF.UserModel;
 using OfficeOpenXml.FormulaParsing;
 using NPOI.SS.UserModel;
 using System.Runtime.InteropServices;
+using DocumentFormat.OpenXml.Office2016.Excel;
 
 namespace NumDesTools;
 
@@ -984,7 +985,53 @@ public class PubMetToExcel
         }
         return list;
     }
+    //通过C-API的方式读取打开当前活动Excel表格各个Sheet的数据
+    public static object[,] ReadExcelDataC(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast)
+    {
+        ExcelReference sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
+        ExcelReference range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
+        object rangeValue = range.GetValue();
+        //兼容range和cell获取数据变为二维数据
+        object[,] rangeValues;
+        if (rangeValue is object[,] arrayValue)
+        {
+            rangeValues = arrayValue;
+        }
+        else
+        {
+            rangeValues = new object[1,1];
+            rangeValues[0,0] = rangeValue;
+        }
+        return rangeValues;
+    }
+    //通过C-API的方式写入打开当前活动Excel表格各个Sheet的数据
+    public static void WriteExcelDataC(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast, object[,] rangeValue)
+    {
+        ExcelReference sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
+        ExcelReference range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            range.SetValue(rangeValue);
+        });
+    }
+    public static object[,] ConvertListToArray(List<List<object>> listOfLists)
+    {
+        int rowCount = listOfLists.Count;
+        int colCount = listOfLists.Count > 0 ? listOfLists[0].Count : 0;
 
+        object[,] twoDArray = new object[rowCount, colCount];
+
+        for (int i = 0; i < rowCount; i++)
+        {
+            List<object> innerList = listOfLists[i];
+
+            for (int j = 0; j < colCount; j++)
+            {
+                twoDArray[i, j] = innerList[j];
+            }
+        }
+        return twoDArray;
+    }
     public static void testEpPlus()
     {
         //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;

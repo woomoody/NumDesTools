@@ -15,6 +15,7 @@ using System.IO;
 using System.Windows;
 using NPOI.SS.Util;
 using OfficeOpenXml;
+using DocumentFormat.OpenXml.Drawing.Charts;
 
 namespace NumDesTools;
 /// <summary>
@@ -255,20 +256,19 @@ public class PubMetToExcelFunc
     }
     public static void AliceBigRicherDFS2()
     {
-        var ws = Wk.ActiveSheet;
-        object[,] targetRank = ws.Range["C17:C40"].Value;
-        var targetRankList = PubMetToExcel.RangeDataToList(targetRank);
-        object[,] seedRangeValue = ws.Range["G3:G8"].Value;
-        var dataSeed = PubMetToExcel.RangeDataToList(seedRangeValue);
-        object[,] targetKey = ws.Range["C9:D11"].Value;
-        var targetKeyList = PubMetToExcel.RangeDataToList(targetKey);
-        object[,] targetKeySoft = ws.Range["C3:D7"].Value;
-        var targetKeySoftList = PubMetToExcel.RangeDataToList(targetKeySoft);
-        int maxRoll = Convert.ToInt32(ws.Range["C14"].Value);
+        var sheetName = "Alice大富翁";
+        //读取数据（0起始）
+        object[,] targetRank = PubMetToExcel.ReadExcelDataC(sheetName, 16, 39, 2, 2);
+        object[,] seedRangeValue = PubMetToExcel.ReadExcelDataC(sheetName, 2, 7, 6, 6);
+        object[,] targetKey = PubMetToExcel.ReadExcelDataC(sheetName, 8, 10, 2, 3);
+        object[,] targetKeySoft = PubMetToExcel.ReadExcelDataC(sheetName, 2, 6, 2, 3);
+        object[,] maxRollCell = PubMetToExcel.ReadExcelDataC(sheetName, 13, 13, 2, 2);
+        int maxRoll = Convert.ToInt32(maxRollCell[0, 0]);
+
         List<int> data = new List<int>();
-        for (int i = 0; i < dataSeed.Count; i++)
+        for (int i = 0; i < seedRangeValue.GetLength(0); i++)
         {
-            var seed = dataSeed[i][0];
+            var seed = seedRangeValue[i,0];
             for (int j = 0; j < Convert.ToInt32(seed); j++)
             {
                 data.Add(i + 1);
@@ -285,6 +285,7 @@ public class PubMetToExcelFunc
             var targetProcessTemp = new List<int>();
             var bpProcessTemp = new List<int>();
             var targetGiftTemp = new List<int>();
+            //需要获取循环种子和24格子之间最小公倍数
             for (int j = 0; j < 9 * 24; j++)
             {
                 var modCount = (j + 1) % modCountDiv;
@@ -296,7 +297,12 @@ public class PubMetToExcelFunc
                 {
                     targetProcessTemp.Add(permutations[i][0]);
                     bpProcessTemp.Add(permutations[i][0]);
-                    targetGiftTemp.Add(Convert.ToInt32(targetRankList[0][0]));
+                    var tempValue = targetRank[0, 0];
+                    if (tempValue is ExcelEmpty)
+                    {
+                        tempValue = null;
+                    }
+                    targetGiftTemp.Add(Convert.ToInt32(tempValue));
                 }
                 else
                 {
@@ -310,7 +316,12 @@ public class PubMetToExcelFunc
                     }
                     targetProcessTemp.Add(targetTemp);
                     //获取价值量
-                    var targetTemp2 = targetGiftTemp[j - 1] + Convert.ToInt32(targetRankList[targetTemp - 1][0]);
+                    var tempValue = targetRank[targetTemp - 1, 0];
+                    if (tempValue is ExcelEmpty)
+                    {
+                        tempValue = null;
+                    }
+                    var targetTemp2 = targetGiftTemp[j - 1] + Convert.ToInt32(tempValue);
                     targetGiftTemp.Add(targetTemp2);
                 }
             }
@@ -320,11 +331,11 @@ public class PubMetToExcelFunc
         }
         var filteredData = targetProcess;
         //过滤固定目标
-        for (int i = 0; i < targetKeyList.Count; i++)
+        for (int i = 0; i < targetKey.GetLength(0); i++)
         {
-            var rollTimes = targetKeyList[i][0];
-            var rollGrid = targetKeyList[i][1];
-            if (rollTimes != null)
+            var rollTimes = targetKey[i,0];
+            var rollGrid = targetKey[i,1];
+            if (!(rollTimes is ExcelEmpty))
             {
                 var colIndex = Convert.ToInt32(rollTimes) - 1;
                 var colValue = Convert.ToInt32(rollGrid);
@@ -332,19 +343,22 @@ public class PubMetToExcelFunc
                 filteredData = filteredData
                     .Where(entry => entry.Value[colIndex] == colValue)
                     .ToDictionary(entry => entry.Key, entry => entry.Value);
-                //去除非指定列有固定目标值的行
-                var filterCondition = GenerateFilterConditions(colIndex, maxRoll, colValue);
+                //去除非指定列有固定目标值的行(换种思路，前XRoll只存在一个固定目标)
+                                //var filterCondition = GenerateFilterConditions(colIndex, maxRoll, colValue);
+                                //filteredData = filteredData
+                                //    .Where(entry => filterCondition.All(condition => condition(entry.Value)))
+                                //    .ToDictionary(entry => entry.Key, entry => entry.Value);
                 filteredData = filteredData
-                    .Where(entry => filterCondition.All(condition => condition(entry.Value)))
-                    .ToDictionary(entry => entry.Key, entry => entry.Value);
+                    .Where(pair => pair.Value.Take(maxRoll - 1).Count(item => item == colValue) == 1)
+                    .ToDictionary(pair => pair.Key, pair => pair.Value);
             }
         }
         //过滤动态目标
-        for (int i = 0; i < targetKeySoftList.Count; i++)
+        for (int i = 0; i < targetKeySoft.GetLength(0); i++)
         {
-            var softTimes = targetKeySoftList[i][1];
-            var softGrid = targetKeySoftList[i][0];
-            if (softGrid != null)
+            var softTimes = targetKeySoft[i,1];
+            var softGrid = targetKeySoft[i,0];
+            if (!(softGrid is ExcelEmpty))
             {
                 //筛选动态目标值满足出现次数的行
                 filteredData = filteredData
@@ -379,26 +393,39 @@ public class PubMetToExcelFunc
             methodStr = methodStr.Substring(0, methodStr.Length - 1);
             filteredDataMethod.Add(new List<object> { methodStr });
         }
-        //清理数据
-        var range1 = ws.Range[ws.Cells[17, 6], ws.Cells[65535, 6]];
-        var range2 = ws.Range[ws.Cells[17, 5], ws.Cells[65535, 5]];
-        var range3 = ws.Range[ws.Cells[17, 5], ws.Cells[65535, 7]];
-        range1.ClearContents();
-        range2.ClearContents();
-        range3.ClearContents();
-        //写入数据
-        PubMetToExcel.ListToArrayToRange(filteredDataBpProcess, ws, 17, 7);
-        PubMetToExcel.ListToArrayToRange(filteredDataGiftList, ws, 17, 6);
-        PubMetToExcel.ListToArrayToRange(filteredDataMethod, ws, 17, 5);
+        //清理
+        object[,] emptyData = new object[65535-17+1, 6 - 6 +1];
+        PubMetToExcel.WriteExcelDataC(sheetName, 16, 65534, 4, 4, emptyData);
+        PubMetToExcel.WriteExcelDataC(sheetName, 16, 65534, 5, 5, emptyData);
+        PubMetToExcel.WriteExcelDataC(sheetName, 16, 65534, 6, 6, emptyData);
+        //错误提示
         if (filteredDataBpProcess.Count == 0)
         {
-            ws.Cells[17, 5].Value = "#Error#";
+            var error = new object[1,1];
+            error[0,0] = "#Error#";
+            PubMetToExcel.WriteExcelDataC(sheetName,16,16,4,4, error);
         }
-        // 释放 COM 对象
-        Marshal.ReleaseComObject(ws);
-        Marshal.ReleaseComObject(Wk);
-        Marshal.ReleaseComObject(CreatRibbon._app);
+        else
+        {
+            //写入
+            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataBpProcess.Count - 1, 6, 6, PubMetToExcel.ConvertListToArray(filteredDataBpProcess));
+            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataGiftList.Count - 1, 5, 5, PubMetToExcel.ConvertListToArray(filteredDataGiftList));
+            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataMethod.Count - 1, 4, 4, PubMetToExcel.ConvertListToArray(filteredDataMethod));
+        }
+    }
+    public static void DataC()
+    {
+        object[,] result = new object[2,2];
+        // 给数组赋予指定的值
+        result[0, 0] = "A1";
+        result[0, 1] = "B1";
+        result[1, 0] = "A2";
+        result[1, 1] = "B2";
 
+        //读取数据（0起始）
+        object[,] abc = PubMetToExcel.ReadExcelDataC("Sheet2", 0, 1, 0, 1);
+        //写入数据（0起始）
+        PubMetToExcel.WriteExcelDataC("Sheet2", 0, 1, 0, 1,result);
     }
     // 获取列表的众数
     static int GetMode(IEnumerable<int> values)

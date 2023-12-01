@@ -67,13 +67,18 @@
         </group>
         <group id="Group8" label="Excel搜索" >
           <editBox id="ExcelSearchBoxEdit"  onChange="ExcelOnEditBoxTextChanged" sizeString="…………………………………………" />
-          <button id="ExcelSearchBoxButton1" size="large" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件' onAction='ExcelSearchAll_Click' image="key" />
-          <button id="ExcelSearchBoxButton3" size="large" label="全局搜索(多线程)" screentip='全列，按照A-Z的顺序遍历文件' onAction='ExcelSearchAllMultiThread_Click' image="autohotkey" />
-          <button id="ExcelSearchBoxButton2" size="large" label="编号搜索" screentip='二列，按照A-Z的顺序遍历文件' onAction='ExcelSearchID_Click' image="log" />
-          <button id="ExcelSearchBoxButton4" size="large" label="合并数据-关键词" screentip='合并Excel(Alice-Cove)当前关键词' onAction='ExcelSearchAllToExcel_Click' image="redux-reducer" />
+          <button id="ExcelSearchBoxButton1" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件' onAction='ExcelSearchAll_Click' image="key" />
+          <button id="ExcelSearchBoxButton3" label="全局搜索(多线程)" screentip='全列，按照A-Z的顺序遍历文件' onAction='ExcelSearchAllMultiThread_Click' image="autohotkey" />
+          <button id="ExcelSearchBoxButton2" label="编号搜索" screentip='二列，按照A-Z的顺序遍历文件' onAction='ExcelSearchID_Click' image="log" />
+          <button id="ExcelSearchBoxButton4" label="合并数据-关键词" screentip='合并Excel(Alice-Cove)当前关键词' onAction='ExcelSearchAllToExcel_Click' image="redux-reducer" />
         </group>
         <group id="Group9" label="运营工具" >
           <button id="ActivityServerDataButton1" size='large' label="生成活动" screentip='根据运营排期自动生成活动配置' onAction='ActivityServerData_Click' image="csharp" />
+        </group>
+        <group id='Group10' label='玩法计算'>
+            <button id='Button15' size='large' label='Alice大富翁' image='dart' screentip='大富翁方案整理' onAction='AliceBigRicher_Click' />
+            <button id='Button16' size='large' label='TM目标元素' image='ejs' screentip='Tm目标元素生成' onAction='TmTargetEle_Click' />
+            <button id='Button17' size='large' label='TM非目标元素' image='email' screentip='Tm非目标元素生成' onAction='TmNormalEle_Click' />
         </group>
         <group id='Group9999' label='测试功能区'>
           <button id='Button6' size='large' label='不要点击红色按钮' image='sofa' onAction='TestBar1_Click' />
