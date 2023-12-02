@@ -2,25 +2,14 @@
 using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Windows.Forms;
 using ExcelDna.Integration;
-using Button = System.Windows.Forms.Button;
 using Color = System.Drawing.Color;
 using System.Threading.Tasks;
 using System.Data;
 using DataTable = System.Data.DataTable;
-using DocumentFormat.OpenXml.Spreadsheet;
 using System.Data.OleDb;
-using NLua;
-using DocumentFormat.OpenXml.Wordprocessing;
-using NPOI.XSSF.UserModel;
-using OfficeOpenXml.FormulaParsing;
-using NPOI.SS.UserModel;
-using System.Runtime.InteropServices;
-using DocumentFormat.OpenXml.Office2016.Excel;
 
 namespace NumDesTools;
 

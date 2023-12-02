@@ -3,7 +3,7 @@ using Microsoft.Office.Interop.Excel;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NumDesTools.image;
+namespace NumDesTools;
 
 public class TmCaculate
 {

@@ -7,15 +7,8 @@ using Microsoft.Office.Core;
 using System.Runtime.InteropServices;
 using System;
 using System.Diagnostics;
-using DocumentFormat.OpenXml.Math;
-using Microsoft.Office.Interop.Excel;
-using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Wordprocessing;
 using System.IO;
-using System.Windows;
-using NPOI.SS.Util;
 using OfficeOpenXml;
-using DocumentFormat.OpenXml.Drawing.Charts;
 
 namespace NumDesTools;
 /// <summary>
