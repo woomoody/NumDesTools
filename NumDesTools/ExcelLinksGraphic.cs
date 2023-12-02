@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using ExcelDna.Integration;
 
 namespace NumDesTools;
 /// <summary>
