@@ -10,6 +10,10 @@ using System.Threading.Tasks;
 using System.Data;
 using DataTable = System.Data.DataTable;
 using System.Data.OleDb;
+using System.Diagnostics;
+using DocumentFormat.OpenXml.Spreadsheet;
+using ExcelReference = ExcelDna.Integration.ExcelReference;
+using System.Threading;
 
 namespace NumDesTools;
 
@@ -18,6 +22,289 @@ namespace NumDesTools;
 /// </summary>
 public class PubMetToExcel
 {
+    #region EPPlus与Excel
+    //EPPlus创建新Excel表格或获取已经存在的表格
+    public static List<(string, string, string)> OpenOrCreatExcelByEpPlus(string excelFilePath, string excelName,
+        out ExcelWorksheet sheet, out ExcelPackage excel)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        sheet = null;
+        excel = null;
+        var path = excelFilePath + @"\" + excelName + @".xlsx";
+        if (!File.Exists(excelFilePath))
+        {
+            using (ExcelPackage packageCreat = new ExcelPackage())
+            {
+                var sheetCreat = packageCreat.Workbook.Worksheets.Add("Sheet1");
+                FileInfo excelFile = new FileInfo(path);
+                packageCreat.SaveAs(excelFile);
+                sheetCreat.Dispose();
+            }
+        }
+
+        var errorList = SetExcelObjectEpPlus(excelFilePath, excelName + @".xlsx", out sheet, out excel);
+        return errorList;
+    }
+    //EPPlus创建Excel对象
+    public static List<(string, string, string)> SetExcelObjectEpPlus(dynamic excelPath, dynamic excelName,
+    out ExcelWorksheet sheet, out ExcelPackage excel)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        sheet = null;
+        excel = null;
+        string errorExcelLog;
+        var errorList = new List<(string, string, string)>();
+        string path;
+        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
+        switch (excelName)
+        {
+            case "Localizations.xlsx":
+                path = newPath + @"\Excels\Localizations\Localizations.xlsx";
+                break;
+            case "UIConfigs.xlsx":
+                path = newPath + @"\Excels\UIs\UIConfigs.xlsx";
+                break;
+            case "UIItemConfigs.xlsx":
+                path = newPath + @"\Excels\UIs\UIItemConfigs.xlsx";
+                break;
+            default:
+                path = excelPath + @"\" + excelName;
+                break;
+        }
+
+        bool fileExists = File.Exists(path);
+        if (fileExists == false)
+        {
+            errorExcelLog = excelName + "不存在表格文件";
+            errorList.Add((excelName, errorExcelLog, excelName));
+            return errorList;
+        }
+
+        excel = new ExcelPackage(new FileInfo(path));
+        ExcelWorkbook workBook;
+        try
+        {
+            workBook = excel.Workbook;
+        }
+        catch (Exception ex)
+        {
+            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
+            errorList.Add((excelName, errorExcelLog, excelName));
+            return errorList;
+        }
+
+        try
+        {
+            sheet = workBook.Worksheets["Sheet1"];
+        }
+        catch (Exception ex)
+        {
+            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
+            errorList.Add((excelName, errorExcelLog, excelName));
+            return errorList;
+        }
+
+        sheet ??= workBook.Worksheets[0];
+        return errorList;
+    }
+    public static List<int> MergeExcelCol(object[,] sourceRangeValue, ExcelWorksheet targetSheet,
+    object[,] targetRangeTitle, object[,] sourceRangeTitle)
+    {
+        var targetColList = new List<int>();
+        int defaultCol = targetSheet.Dimension.End.Column;
+        int beforTargetCol = defaultCol;
+        for (int c = 0; c < sourceRangeValue.GetLength(1); c++)
+        {
+            //target中找列
+            var sourceCol = sourceRangeValue[1, c];
+            if (sourceCol == null)
+            {
+                sourceCol = "";
+            }
+
+            //获取目标单元格填写数值的位置，默认位置未最后一行
+            var targetCol = ExcelDataAutoInsert.FindSourceCol(targetSheet, 2, sourceCol.ToString());
+            if (targetCol == -1)
+            {
+                targetSheet.InsertColumn(beforTargetCol + 1, 1);
+                targetCol = beforTargetCol + 1;
+            }
+
+            beforTargetCol = targetCol;
+            for (int i = 0; i < targetRangeTitle.GetLength(0); i++)
+            {
+                var targetTitle = targetRangeTitle[i, 0];
+                if (targetTitle == null)
+                {
+                    targetTitle = "";
+                }
+
+                for (int j = 0; j < sourceRangeTitle.GetLength(0); j++)
+                {
+                    var sourceTitle = sourceRangeTitle[j, 0];
+                    if (sourceTitle == null)
+                    {
+                        sourceTitle = "";
+                    }
+
+                    //target中找列
+                    if (targetTitle.ToString() == sourceTitle.ToString())
+                    {
+                        var sourceValue = sourceRangeValue[c, j];
+                        if (sourceValue == null)
+                        {
+                            sourceValue = "";
+                        }
+
+                        var targetCell = targetSheet.Cells[targetCol, i + 1];
+                        targetCell.Value = sourceValue;
+                    }
+                }
+            }
+
+            targetColList.Add(targetCol);
+        }
+
+        return targetColList;
+    }
+    public static List<int> MergeExcel(object[,] sourceRangeValue, ExcelWorksheet targetSheet,
+    object[,] targetRangeTitle, object[,] sourceRangeTitle)
+    {
+        var targetRowList = new List<int>();
+        int defaultRow = targetSheet.Dimension.End.Row;
+        int beforTargetRow = defaultRow;
+        for (int r = 0; r < sourceRangeValue.GetLength(0); r++)
+        {
+            //target中找行
+            var sourceRow = sourceRangeValue[r, 1];
+            if (sourceRow == null)
+            {
+                sourceRow = "";
+            }
+
+            //获取目标单元格填写数值的位置，默认位置未最后一行
+            var targetRow = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, sourceRow.ToString());
+            if (targetRow == -1)
+            {
+                targetSheet.InsertRow(beforTargetRow + 1, 1);
+                targetRow = beforTargetRow + 1;
+            }
+
+            beforTargetRow = targetRow;
+            for (int i = 0; i < targetRangeTitle.GetLength(1); i++)
+            {
+                var targetTitle = targetRangeTitle[0, i];
+                if (targetTitle == null)
+                {
+                    targetTitle = "";
+                }
+
+                for (int j = 0; j < sourceRangeTitle.GetLength(1); j++)
+                {
+                    var sourceTitle = sourceRangeTitle[0, j];
+                    if (sourceTitle == null)
+                    {
+                        sourceTitle = "";
+                    }
+
+                    //target中找列
+                    if (targetTitle.ToString() == sourceTitle.ToString())
+                    {
+                        var sourceValue = sourceRangeValue[r, j];
+                        if (sourceValue == null)
+                        {
+                            sourceValue = "";
+                        }
+
+                        var targetCell = targetSheet.Cells[targetRow, i + 1];
+                        targetCell.Value = sourceValue;
+                    }
+                }
+            }
+
+            targetRowList.Add(targetRow);
+        }
+
+        return targetRowList;
+    }
+    #endregion
+
+    #region C-API与Excel
+    //通过C-API的方式读取打开当前活动Excel表格各个Sheet的数据
+    public static object[,] ReadExcelDataC(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast)
+    {
+        ExcelReference sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
+        ExcelReference range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
+        object rangeValue = range.GetValue();
+        //兼容range和cell获取数据变为二维数据
+        object[,] rangeValues;
+        if (rangeValue is object[,] arrayValue)
+        {
+            rangeValues = arrayValue;
+        }
+        else
+        {
+            rangeValues = new object[1, 1];
+            rangeValues[0, 0] = rangeValue;
+        }
+        return rangeValues;
+    }
+    //通过C-API的方式写入打开当前活动Excel表格各个Sheet的数据
+    public static void WriteExcelDataC(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast, object[,] rangeValue)
+    {
+        ExcelReference sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
+        ExcelReference range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            range.SetValue(rangeValue);
+        });
+    }
+
+    public static void GetCurrentExcelObjectC()
+    {
+        ExcelReference currentRange;
+        string sheetName  ;
+        string sheetPath;
+
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            // 获取当前工作簿、工作表选中单元格（[工作簿]工作表）
+            currentRange = (ExcelReference)XlCall.Excel(XlCall.xlfSelection);
+            // 获取当前工作簿、工作表名称（[工作簿]工作表）
+            sheetName = (string)XlCall.Excel(XlCall.xlfGetDocument, 1);
+            // 获取当前工作簿路径（不包含工作簿名称）
+            sheetPath = (string)XlCall.Excel(XlCall.xlfGetDocument, 2);
+        });
+    }
+    public static Task<(ExcelReference currentRange,string sheetName,string sheetPath)> GetCurrentExcelObjectCAsync()
+    {
+        //因为Excel的异步问题导致return值只捕捉到第一次，所以使用TCS确保等待异步完成，进而获得正确的return
+        var tcs = new TaskCompletionSource<(ExcelReference currentRange, string sheetName, string sheetPath)>();
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            (ExcelReference currentRange, string sheetName, string sheetPath) result = (null, null, null);
+            try
+            {
+                // 获取当前工作簿、工作表选中单元格（[工作簿]工作表）
+                var currentRange = (ExcelReference)XlCall.Excel(XlCall.xlfSelection);
+                // 获取当前工作簿、工作表名称（[工作簿]工作表）
+                var sheetName = (string)XlCall.Excel(XlCall.xlfGetDocument, 1);
+                // 获取当前工作簿路径（不包含工作簿名称）
+                var sheetPath = (string)XlCall.Excel(XlCall.xlfGetDocument, 2);
+                // 处理获取结果的逻辑
+                result = (currentRange,sheetName,sheetPath);
+                tcs.SetResult(result);
+            }
+            catch (Exception ex)
+            {
+                // 处理异常
+                tcs.SetException(ex);
+            }
+        });
+        return tcs.Task;
+    }
+    #endregion
+
     //Excel数据输出为List
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToList(dynamic workSheet)
     {
@@ -662,190 +949,6 @@ public class PubMetToExcel
         return errorLog;
     }
 
-    public static List<int> MergeExcel(object[,] sourceRangeValue, ExcelWorksheet targetSheet,
-        object[,] targetRangeTitle, object[,] sourceRangeTitle)
-    {
-        var targetRowList = new List<int>();
-        int defaultRow = targetSheet.Dimension.End.Row;
-        int beforTargetRow = defaultRow;
-        for (int r = 0; r < sourceRangeValue.GetLength(0); r++)
-        {
-            //target中找行
-            var sourceRow = sourceRangeValue[r, 1];
-            if (sourceRow == null)
-            {
-                sourceRow = "";
-            }
-
-            //获取目标单元格填写数值的位置，默认位置未最后一行
-            var targetRow = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, sourceRow.ToString());
-            if (targetRow == -1)
-            {
-                targetSheet.InsertRow(beforTargetRow + 1, 1);
-                targetRow = beforTargetRow + 1;
-            }
-
-            beforTargetRow = targetRow;
-            for (int i = 0; i < targetRangeTitle.GetLength(1); i++)
-            {
-                var targetTitle = targetRangeTitle[0, i];
-                if (targetTitle == null)
-                {
-                    targetTitle = "";
-                }
-
-                for (int j = 0; j < sourceRangeTitle.GetLength(1); j++)
-                {
-                    var sourceTitle = sourceRangeTitle[0, j];
-                    if (sourceTitle == null)
-                    {
-                        sourceTitle = "";
-                    }
-
-                    //target中找列
-                    if (targetTitle.ToString() == sourceTitle.ToString())
-                    {
-                        var sourceValue = sourceRangeValue[r, j];
-                        if (sourceValue == null)
-                        {
-                            sourceValue = "";
-                        }
-
-                        var targetCell = targetSheet.Cells[targetRow, i + 1];
-                        targetCell.Value = sourceValue;
-                    }
-                }
-            }
-
-            targetRowList.Add(targetRow);
-        }
-
-        return targetRowList;
-    }
-
-    public static List<int> MergeExcelCol(object[,] sourceRangeValue, ExcelWorksheet targetSheet,
-        object[,] targetRangeTitle, object[,] sourceRangeTitle)
-    {
-        var targetColList = new List<int>();
-        int defaultCol = targetSheet.Dimension.End.Column;
-        int beforTargetCol = defaultCol;
-        for (int c = 0; c < sourceRangeValue.GetLength(1); c++)
-        {
-            //target中找列
-            var sourceCol = sourceRangeValue[1, c];
-            if (sourceCol == null)
-            {
-                sourceCol = "";
-            }
-
-            //获取目标单元格填写数值的位置，默认位置未最后一行
-            var targetCol = ExcelDataAutoInsert.FindSourceCol(targetSheet, 2, sourceCol.ToString());
-            if (targetCol == -1)
-            {
-                targetSheet.InsertColumn(beforTargetCol + 1, 1);
-                targetCol = beforTargetCol + 1;
-            }
-
-            beforTargetCol = targetCol;
-            for (int i = 0; i < targetRangeTitle.GetLength(0); i++)
-            {
-                var targetTitle = targetRangeTitle[i, 0];
-                if (targetTitle == null)
-                {
-                    targetTitle = "";
-                }
-
-                for (int j = 0; j < sourceRangeTitle.GetLength(0); j++)
-                {
-                    var sourceTitle = sourceRangeTitle[j, 0];
-                    if (sourceTitle == null)
-                    {
-                        sourceTitle = "";
-                    }
-
-                    //target中找列
-                    if (targetTitle.ToString() == sourceTitle.ToString())
-                    {
-                        var sourceValue = sourceRangeValue[c, j];
-                        if (sourceValue == null)
-                        {
-                            sourceValue = "";
-                        }
-
-                        var targetCell = targetSheet.Cells[targetCol, i + 1];
-                        targetCell.Value = sourceValue;
-                    }
-                }
-            }
-
-            targetColList.Add(targetCol);
-        }
-
-        return targetColList;
-    }
-
-    public static List<(string, string, string)> SetExcelObjectEpPlus(dynamic excelPath, dynamic excelName,
-        out ExcelWorksheet sheet, out ExcelPackage excel)
-    {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        sheet = null;
-        excel = null;
-        string errorExcelLog;
-        var errorList = new List<(string, string, string)>();
-        string path;
-        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
-        switch (excelName)
-        {
-            case "Localizations.xlsx":
-                path = newPath + @"\Excels\Localizations\Localizations.xlsx";
-                break;
-            case "UIConfigs.xlsx":
-                path = newPath + @"\Excels\UIs\UIConfigs.xlsx";
-                break;
-            case "UIItemConfigs.xlsx":
-                path = newPath + @"\Excels\UIs\UIItemConfigs.xlsx";
-                break;
-            default:
-                path = excelPath + @"\" + excelName;
-                break;
-        }
-
-        bool fileExists = File.Exists(path);
-        if (fileExists == false)
-        {
-            errorExcelLog = excelName + "不存在表格文件";
-            errorList.Add((excelName, errorExcelLog, excelName));
-            return errorList;
-        }
-
-        excel = new ExcelPackage(new FileInfo(path));
-        ExcelWorkbook workBook;
-        try
-        {
-            workBook = excel.Workbook;
-        }
-        catch (Exception ex)
-        {
-            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
-            errorList.Add((excelName, errorExcelLog, excelName));
-            return errorList;
-        }
-
-        try
-        {
-            sheet = workBook.Worksheets["Sheet1"];
-        }
-        catch (Exception ex)
-        {
-            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
-            errorList.Add((excelName, errorExcelLog, excelName));
-            return errorList;
-        }
-
-        sheet ??= workBook.Worksheets[0];
-        return errorList;
-    }
-
     //数字转Excel字母列
     public static string ConvertToExcelColumn(int columnNumber)
     {
@@ -861,7 +964,7 @@ public class PubMetToExcel
         return columnName;
     }
 
-    //打开指定Excel文件，并定位到指定sheet的指定单元格
+    //打开指定Excel文件，并定位到指定sheet的指定单元格（Com）
     public static void OpenExcelAndSelectCell(string filePath, string sheetName, string cellAddress)
     {
         try
@@ -884,29 +987,7 @@ public class PubMetToExcel
         GC.Collect();
     }
 
-    //EPPlus创建新Excel表格或获取已经存在的表格
-    public static List<(string, string, string)> OpenOrCreatExcelByEpPlus(string excelFilePath, string excelName,
-        out ExcelWorksheet sheet, out ExcelPackage excel)
-    {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        sheet = null;
-        excel = null;
-        var path = excelFilePath + @"\" + excelName + @".xlsx";
-        if (!File.Exists(excelFilePath))
-        {
-            using (ExcelPackage packageCreat = new ExcelPackage())
-            {
-                var sheetCreat = packageCreat.Workbook.Worksheets.Add("Sheet1");
-                FileInfo excelFile = new FileInfo(path);
-                packageCreat.SaveAs(excelFile);
-                sheetCreat.Dispose();
-            }
-        }
-
-        var errorList = SetExcelObjectEpPlus(excelFilePath, excelName + @".xlsx", out sheet, out excel);
-        return errorList;
-    }
-    //List转换数据为Range数据（已开启的表格）
+    //List转换数据为Range数据（已开启的表格）（Com）
     public static void ListToArrayToRange(List<List<object>> targetList, dynamic workSheet, int startRow, int startCol)
     {
         int rowCount = targetList.Count;
@@ -929,7 +1010,7 @@ public class PubMetToExcel
             workSheet.Cells[startRow + rowCount - 1, startCol + columnCount - 1]];
         targetRange.Value = targetDataArr;
     }
-    //Range数据转List
+    //Range数据转List（Com）
     public static List<List<object>> RangeDataToList(object[,] rangeValue)
     {
         // 获取行数和列数
@@ -974,35 +1055,7 @@ public class PubMetToExcel
         }
         return list;
     }
-    //通过C-API的方式读取打开当前活动Excel表格各个Sheet的数据
-    public static object[,] ReadExcelDataC(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast)
-    {
-        ExcelReference sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
-        ExcelReference range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
-        object rangeValue = range.GetValue();
-        //兼容range和cell获取数据变为二维数据
-        object[,] rangeValues;
-        if (rangeValue is object[,] arrayValue)
-        {
-            rangeValues = arrayValue;
-        }
-        else
-        {
-            rangeValues = new object[1,1];
-            rangeValues[0,0] = rangeValue;
-        }
-        return rangeValues;
-    }
-    //通过C-API的方式写入打开当前活动Excel表格各个Sheet的数据
-    public static void WriteExcelDataC(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast, object[,] rangeValue)
-    {
-        ExcelReference sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
-        ExcelReference range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
-        ExcelAsyncUtil.QueueAsMacro(() =>
-        {
-            range.SetValue(rangeValue);
-        });
-    }
+    //List转数组
     public static object[,] ConvertListToArray(List<List<object>> listOfLists)
     {
         int rowCount = listOfLists.Count;
