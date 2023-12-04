@@ -5,6 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
@@ -1322,19 +1323,17 @@ namespace NumDesTools
             Debug.Print(ts2.ToString());
             _app.StatusBar = "导出完成，用时：" + ts2;
         }
-        public void TestBar1_Click(IRibbonControl control)
+        public async void TestBar1_Click(IRibbonControl control)
         {
-            //SVNTools.RevertAndUpFile();
+  
             var sw = new Stopwatch();
             sw.Start();
-            //ExcelDataAutoInsertCopyMulti.SearchData(false);
-            //var testStr = "{2001,3008,4005}";
-            //var monkeyList = new List<(int, int)>();
-            //monkeyList.Add((2, 1));
-            //TmCaculate.CreatTmTargetEle();
-            //string sheetName = _app.ActiveWorkbook.ActiveSheet.Name;
-            //Debug.Print(sheetName);
-            PubMetToExcelFunc.AliceBigRicherDFS2();
+            var abc = await PubMetToExcel.GetCurrentExcelObjectC();
+            var name = abc.sheetName;
+            var path  = abc.sheetPath;
+            var range = abc.currentRange;
+            object rangeValue = range.GetValue();
+
             //Lua2Excel.LuaDataExportToExcel(@"C:\Users\cent\Desktop\二合数据\TableABTestCountry.lua.txt");
             //Program.NodeMain();
             //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");
