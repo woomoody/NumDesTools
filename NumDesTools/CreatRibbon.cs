@@ -209,8 +209,8 @@ namespace NumDesTools
                 }
                 else if (sheetName.Contains("【模板】"))
                 {
-                    var menuItem = new ToolStripMenuItem("自选表格写入", null, PubMetToExcelFunc.OpenBaseLanExcel);
-                    contextMenu.Items.Add(menuItem);
+                    //var menuItem = new ToolStripMenuItem("自选表格写入", null, PubMetToExcelFunc.ExcelDataAutoInsertMulti.RightClickInsertData);
+                    //contextMenu.Items.Add(menuItem);
                     var menuItem1 = new ToolStripMenuItem("当前项目Lan", null, PubMetToExcelFunc.OpenBaseLanExcel);
                     contextMenu.Items.Add(menuItem1);
                     var menuItem2 = new ToolStripMenuItem("合并项目Lan", null, PubMetToExcelFunc.OpenMergeLanExcel);
