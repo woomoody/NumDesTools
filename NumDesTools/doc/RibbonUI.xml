@@ -85,8 +85,12 @@
           <button id='Button7' size='large' label='测试' image='sofa' onAction='TestBar2_Click' />
           <checkBox id='checkbox1' label='是否后台' />
         </group>
-
       </tab>
     </tabs>
   </ribbon>
+    <contextMenus>
+        <contextMenu idMso='ContextMenuCell'>
+            <button id='UnRibbonContextMenuTips' label='更多右键菜单[Ctr+Q]'  screentip='使用快捷键打开自定义右键功能,点击无效' insertBeforeMso='Cut' />
+        </contextMenu>
+    </contextMenus>
 </customUI>
