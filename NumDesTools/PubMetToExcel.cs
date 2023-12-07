@@ -259,6 +259,7 @@ public class PubMetToExcel
             range.SetValue(rangeValue);
         });
     }
+
     public static Task<(ExcelReference currentRange,string sheetName,string sheetPath)> GetCurrentExcelObjectC()
     {
         //因为Excel的异步问题导致return值只捕捉到第一次，所以使用TCS确保等待异步完成，进而获得正确的return
@@ -719,7 +720,7 @@ public class PubMetToExcel
 
             currentCount++;
             //wk.Properties.Company = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
-            CreatRibbon.App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
+            CreatRibbon._app.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
         }
 
         return targetList;
@@ -851,7 +852,7 @@ public class PubMetToExcel
 
             currentCount++;
             //wk.Properties.Company = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
-            CreatRibbon.App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
+            CreatRibbon._app.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
         }
 
         var tupleError = ("", "", 0, 0);
@@ -953,7 +954,7 @@ public class PubMetToExcel
         try
         {
             // 打开指定路径的 Excel 文件
-            var workbook = CreatRibbon.App.Workbooks.Open(filePath);
+            var workbook = CreatRibbon._app.Workbooks.Open(filePath);
             // 获取指定名称的工作表
             var worksheet = workbook.Sheets[sheetName];
             // 选择指定的单元格
@@ -1015,6 +1016,7 @@ public class PubMetToExcel
         }
         return sheetData;
     }
+
     //随机不重复值列表
     public static List<int> GenerateUniqueRandomList(int minValue, int maxValue,int baseValue)
     {
