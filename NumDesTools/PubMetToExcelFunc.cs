@@ -16,7 +16,7 @@ namespace NumDesTools;
 /// </summary>
 public class PubMetToExcelFunc
 {
-    private static readonly dynamic Wk = CreatRibbon._app.ActiveWorkbook;
+    private static readonly dynamic Wk = CreatRibbon.App.ActiveWorkbook;
     private static readonly string path = Wk.Path;
     //Excel数据查询并合并表格数据
     public static void ExcelDataSearchAndMerge(string searchValue)
@@ -43,11 +43,11 @@ public class PubMetToExcelFunc
         dynamic tempWorkbook;
         try
         {
-            tempWorkbook = CreatRibbon._app.Workbooks.Open(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
+            tempWorkbook = CreatRibbon.App.Workbooks.Open(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
         }
         catch
         {
-            tempWorkbook = CreatRibbon._app.Workbooks.Add();
+            tempWorkbook = CreatRibbon.App.Workbooks.Add();
             tempWorkbook.SaveAs(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
         }
         dynamic tempSheet = tempWorkbook.Sheets["Sheet1"];
@@ -67,33 +67,37 @@ public class PubMetToExcelFunc
         //合并数据
     }
     //Excel右键识别文件路径并打开
-    public static void RightOpenExcelByActiveCell(CommandBarButton ctrl, ref bool cancelDefault)
+    public static void RightOpenExcelByActiveCell(object sender, EventArgs e, ExcelReference currentRange, string sheet)
     {
-        var sheet = CreatRibbon._app.ActiveSheet;
-        var selectCell = CreatRibbon._app.ActiveCell;
-        string selectCellValue = "";
-        if (selectCell.Value != null)
+        object rangeValue = currentRange.GetValue();
+        //兼容range和cell获取数据变为二维数据
+        object[,] rangeValues;
+        if (rangeValue is object[,] arrayValue)
         {
-            selectCellValue = selectCell.Value.ToString();
+            rangeValues = arrayValue;
+        }
+        else
+        {
+            rangeValues = new object[1, 1];
+            rangeValues[0, 0] = rangeValue;
         }
         //正则出是Excel路径的单元格
-        var isMatch = Regex.IsMatch(selectCellValue, @"^[A-Za-z]:(\\[\w-]+)+(\.xlsx)$");
+        var isMatch = Regex.IsMatch(rangeValues[0,0].ToString(), @"^[A-Za-z]:(\\[\w-]+)+(\.xlsx)$");
         if (isMatch)
         {
-            var selectRow = selectCell.Row;
-            var selectCol = selectCell.Column;
-            var sheetName = sheet.Cells[selectRow, selectCol+1].Value;
-            var cellAdress = sheet.Cells[selectRow, selectCol + 2].Value;
-            PubMetToExcel.OpenExcelAndSelectCell(selectCellValue,sheetName,cellAdress);
+            var selectRow = currentRange.RowFirst;
+            var selectCol = currentRange.ColumnFirst;
+            PubMetToExcel.ReadExcelDataC(sheet, selectRow, selectRow, selectCol + 1, selectCol + 1);
+            var sheetName = PubMetToExcel.ReadExcelDataC(sheet, selectRow, selectRow, selectCol + 1, selectCol + 1)[0,0].ToString();
+            var cellAdress = PubMetToExcel.ReadExcelDataC(sheet, selectRow, selectRow, selectCol + 2, selectCol + 2)[0,0].ToString();
+            PubMetToExcel.OpenExcelAndSelectCell(rangeValues[0,0].ToString(), sheetName,cellAdress);
         }
-
-
     }
-    public static void OpenBaseLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
+    public static void OpenBaseLanExcel(object sender, EventArgs e)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        var selectCell = CreatRibbon._app.ActiveCell;
-        var basePath = CreatRibbon._app.ActiveWorkbook.Path;
+        var selectCell = CreatRibbon.App.ActiveCell;
+        var basePath = CreatRibbon.App.ActiveWorkbook.Path;
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(basePath));
         newPath = newPath + @"\Excels\Localizations\Localizations.xlsx";
         var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(newPath);
@@ -101,11 +105,11 @@ public class PubMetToExcelFunc
         var cellAddress = PubMetToExcel.ConvertToExcelColumn(findValue[0].Item4) + findValue[0].Item3;
         PubMetToExcel.OpenExcelAndSelectCell(newPath, "Sheet1", cellAddress);
     }
-    public static void OpenMergeLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
+    public static void OpenMergeLanExcel(object sender, EventArgs e)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        var selectCell = CreatRibbon._app.ActiveCell;
-        var basePath = CreatRibbon._app.ActiveWorkbook.Path;
+        var selectCell = CreatRibbon.App.ActiveCell;
+        var basePath = CreatRibbon.App.ActiveWorkbook.Path;
         string mergePath = "";
         //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
