@@ -259,7 +259,6 @@ public class PubMetToExcel
             range.SetValue(rangeValue);
         });
     }
-
     public static Task<(ExcelReference currentRange,string sheetName,string sheetPath)> GetCurrentExcelObjectC()
     {
         //因为Excel的异步问题导致return值只捕捉到第一次，所以使用TCS确保等待异步完成，进而获得正确的return
@@ -1016,7 +1015,6 @@ public class PubMetToExcel
         }
         return sheetData;
     }
-
     //随机不重复值列表
     public static List<int> GenerateUniqueRandomList(int minValue, int maxValue,int baseValue)
     {

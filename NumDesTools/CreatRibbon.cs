@@ -1330,7 +1330,7 @@ namespace NumDesTools
             sw.Start();
             var abc = await PubMetToExcel.GetCurrentExcelObjectC();
             var name = abc.sheetName;
-            var path = abc.sheetPath;
+            var path  = abc.sheetPath;
             var range = abc.currentRange;
             object rangeValue = range.GetValue();
 

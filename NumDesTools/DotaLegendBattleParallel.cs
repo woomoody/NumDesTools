@@ -11,7 +11,7 @@ namespace NumDesTools;
 /// </summary>
 internal class ExcelData
 {
-    private static readonly Worksheet Ws = CreatRibbon.App.Worksheets["战斗模拟"];
+    private static readonly Worksheet Ws = CreatRibbon._app.Worksheets["战斗模拟"];
     public static dynamic GroupARowMinPvp = Convert.ToInt32(Ws.Range["C9"].Value);
     public static dynamic GroupAColMinPvp = Convert.ToInt32(Ws.Range["C10"].Value);
     public static dynamic GroupARowMaxPvp = Convert.ToInt32(Ws.Range["C11"].Value);
