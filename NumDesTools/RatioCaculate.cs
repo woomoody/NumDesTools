@@ -12,7 +12,7 @@ public class RatioCaculate
     public static void CacCardCollect()
     {
         //获取表格源数据
-        var workBook = CreatRibbon.App.ActiveWorkbook;
+        var workBook = CreatRibbon._app.ActiveWorkbook;
         var collectCardGroup = workBook.Worksheets["CollectCardGroup"];
         var collectCardInfo = workBook.Worksheets["CollectCardInfo"];
         var collectCardRarity = workBook.Worksheets["CollectCardRarity"];

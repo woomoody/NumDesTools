@@ -12,20 +12,22 @@ namespace NumDesTools;
 /// </summary>
 public class ExcelUdf
 {
+    private static readonly dynamic IndexWk = CreatRibbon._app.ActiveWorkbook;
+    private static readonly dynamic ExcelPath = IndexWk.Path;
+
     [ExcelFunction(Category = "test", IsVolatile = true, IsMacroType = true, Description = "测试自定义函数")]
     public static double Sum2Num([ExcelArgument(AllowReference = true, Description = "选个格子")] double a,
         [ExcelArgument(AllowReference = true,Description = "选个格子")] double b)
     {
         return a + b;
     }
+
     [ExcelFunction(Category = "test2", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在列")]
     public static int FindKeyCol([ExcelArgument(Description = "工作簿")] string targetWorkbook,
-        [ExcelArgument(Description = "目标行")] int row,
-        [ExcelArgument(Description = "匹配值")] string searchValue,
+        [ExcelArgument(Description = "目标行")] int row, [ExcelArgument(Description = "匹配值")] string searchValue,
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1")
     {
-        var sheetPath = (string)XlCall.Excel(XlCall.xlfGetDocument, 2);
-        var path = sheetPath + @"\" + targetWorkbook;
+        var path = ExcelPath + @"\" + targetWorkbook;
         var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         var workbook = new XSSFWorkbook(fs);
         var sheet = workbook.GetSheet(targetSheet);
@@ -56,8 +58,7 @@ public class ExcelUdf
         [ExcelArgument(Description = "目标列")] int col, [ExcelArgument(Description = "匹配值")] string searchValue,
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1")
     {
-        var sheetPath = (string)XlCall.Excel(XlCall.xlfGetDocument, 2);
-        var path = sheetPath + @"\" + targetWorkbook;
+        var path = ExcelPath + @"\" + targetWorkbook;
         var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         var workbook = new XSSFWorkbook(fs);
         var sheet = workbook.GetSheet(targetSheet);
@@ -86,7 +87,7 @@ public class ExcelUdf
     [ExcelFunction(Category = "test3", IsVolatile = true, IsMacroType = true, Description = "获取单元格背景色")]
     public static string GetCellColor([ExcelArgument(AllowReference =true,Description = "目标列")] string address)
     {
-        var range = CreatRibbon.App.ActiveSheet.Range[address];
+        var range = CreatRibbon._app.ActiveSheet.Range[address];
         var color = range.Interior.Color;
         // 将Excel VBA颜色值转换为RGB格式
         int red = (int)(color % 256);
@@ -178,14 +179,5 @@ public class ExcelUdf
         }
         result = delimiterList[0] + result + delimiterList[2];
         return result;
-    }
-    [ExcelFunction(Category = "StrToNum33", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）")]
-    public static string CallingFileName()
-    {
-        ExcelReference reference = (ExcelReference)XlCall.Excel
-            (XlCall.xlfCaller);
-        string sheetName = (string)XlCall.Excel(XlCall.xlSheetNm,
-            reference);
-        return sheetName;
     }
 }
