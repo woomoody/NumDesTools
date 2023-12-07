@@ -6,7 +6,7 @@ namespace NumDesTools;
 
 public class TmCaculate
 {
-    private static readonly dynamic Wk = CreatRibbon._app.ActiveWorkbook;
+    private static readonly dynamic Wk = CreatRibbon.App.ActiveWorkbook;
     private static readonly dynamic Path = Wk.Path;
     //TM关卡目标生成
     public static void CreatTmTargetEle()
