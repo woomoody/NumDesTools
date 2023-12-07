@@ -259,24 +259,7 @@ public class PubMetToExcel
             range.SetValue(rangeValue);
         });
     }
-
-    public static void GetCurrentExcelObjectC()
-    {
-        ExcelReference currentRange;
-        string sheetName  ;
-        string sheetPath;
-
-        ExcelAsyncUtil.QueueAsMacro(() =>
-        {
-            // 获取当前工作簿、工作表选中单元格（[工作簿]工作表）
-            currentRange = (ExcelReference)XlCall.Excel(XlCall.xlfSelection);
-            // 获取当前工作簿、工作表名称（[工作簿]工作表）
-            sheetName = (string)XlCall.Excel(XlCall.xlfGetDocument, 1);
-            // 获取当前工作簿路径（不包含工作簿名称）
-            sheetPath = (string)XlCall.Excel(XlCall.xlfGetDocument, 2);
-        });
-    }
-    public static Task<(ExcelReference currentRange,string sheetName,string sheetPath)> GetCurrentExcelObjectCAsync()
+    public static Task<(ExcelReference currentRange,string sheetName,string sheetPath)> GetCurrentExcelObjectC()
     {
         //因为Excel的异步问题导致return值只捕捉到第一次，所以使用TCS确保等待异步完成，进而获得正确的return
         var tcs = new TaskCompletionSource<(ExcelReference currentRange, string sheetName, string sheetPath)>();
