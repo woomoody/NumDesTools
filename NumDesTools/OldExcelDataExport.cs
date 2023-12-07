@@ -519,15 +519,6 @@ public static class PreviewTableCtp
     }
 }
 
-[ComVisible(true)]
-public partial class CreatRibbon : ExcelRibbon, IExcelAddIn
-{
-    //控件id 不能重复
-
-    //ribbon按钮的label提出来编辑的方式
-
-    //加载定义选项卡
-}
 //public static class SvnLogCTP
 //{
 //    public static UserControl uc;
@@ -569,10 +560,10 @@ public class MyComAddIn : ExcelComAddIn
 
     public override void OnDisconnection(ext_DisconnectMode RemoveMode, ref Array custom)
     {
-        if (CreatRibbon._app != null)
+        if (CreatRibbon.App != null)
         {
-            CreatRibbon._app.SheetBeforeRightClick = null;
-            CreatRibbon._app.Quit();
+            CreatRibbon.App.SheetBeforeRightClick = null;
+            CreatRibbon.App.Quit();
         }
         //Marshal.ReleaseComObject(CreatRibbon._app);
         //CreatRibbon._app = null;
@@ -592,10 +583,10 @@ public class MyComAddIn : ExcelComAddIn
 
     public override void OnBeginShutdown(ref Array custom)
     {
-        if (CreatRibbon._app != null)
+        if (CreatRibbon.App != null)
         {
-            CreatRibbon._app.SheetBeforeRightClick = null;
-            CreatRibbon._app.Quit();
+            CreatRibbon.App.SheetBeforeRightClick = null;
+            CreatRibbon.App.Quit();
         }
         //CreatRibbon._app.Quit();
         //Marshal.ReleaseComObject(CreatRibbon._app);
