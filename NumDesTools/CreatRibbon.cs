@@ -1328,7 +1328,7 @@ namespace NumDesTools
   
             var sw = new Stopwatch();
             sw.Start();
-            var abc = await PubMetToExcel.GetCurrentExcelObjectC();
+            var abc = await PubMetToExcel.GetCurrentExcelObjectCAsync();
             var name = abc.sheetName;
             var path  = abc.sheetPath;
             var range = abc.currentRange;
