@@ -91,7 +91,7 @@
     <!--
     <contextMenus>
         <contextMenu idMso='ContextMenuCell'>
-            <button id='UnRibbonContextMenuTips' label='更多右键菜单[Ctr+Q]' screentip='使用快捷键打开自定义右键功能,点击无效' insertBeforeMso='Cut' />
+            <button id='UnRibbonContextMenuTips' label='更多右键菜单[Ctr+Q]' getVisible='GetVisible' screentip='使用快捷键打开自定义右键功能,点击无效' insertBeforeMso='Cut' onAction='RightClickMergeData'/>
             <menu id='SubMenu' label='Sub Menu'>
                 <button id='SubMenu_Item1' label='Sub Item 1' onAction='OnMenuItemClicked' />
                 <button id='SubMenu_Item2' label='Sub Item 2' onAction='OnMenuItemClicked' />
