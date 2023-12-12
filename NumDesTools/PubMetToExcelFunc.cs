@@ -146,34 +146,36 @@ public class PubMetToExcelFunc
         var sheetName = "Alice大富翁";
         //读取数据（0起始）
         object[,] targetRank = PubMetToExcel.ReadExcelDataC(sheetName, 16, 39, 2, 2);
-        object[,] seedRangeValue = PubMetToExcel.ReadExcelDataC(sheetName, 2, 7, 6, 6);
+        //object[,] seedRangeValue = PubMetToExcel.ReadExcelDataC(sheetName, 2, 7, 6, 6);
         object[,] targetKey = PubMetToExcel.ReadExcelDataC(sheetName, 8, 10, 2, 3);
         object[,] targetKeySoft = PubMetToExcel.ReadExcelDataC(sheetName, 2, 6, 2, 3);
         object[,] maxRollCell = PubMetToExcel.ReadExcelDataC(sheetName, 13, 13, 2, 2);
+        object[,] maxGridLoopCell = PubMetToExcel.ReadExcelDataC(sheetName, 12, 12, 2, 2);
         int maxRoll = Convert.ToInt32(maxRollCell[0, 0]);
+        int maxGridLoop = Convert.ToInt32(maxGridLoopCell[0, 0]);
 
-        List<int> data = new List<int>();
-        for (int i = 0; i < seedRangeValue.GetLength(0); i++)
-        {
-            var seed = seedRangeValue[i,0];
-            for (int j = 0; j < Convert.ToInt32(seed); j++)
-            {
-                data.Add(i + 1);
-            }
-        }
-        List<List<int>> permutations = GeneratePermutations(data);
+        //List<int> data = new List<int>();
+        //for (int i = 0; i < seedRangeValue.GetLength(0); i++)
+        //{
+        //    var seed = seedRangeValue[i,0];
+        //    for (int j = 0; j < Convert.ToInt32(seed); j++)
+        //    {
+        //        data.Add(i + 1);
+        //    }
+        //}
+        var permutations = GenerateUniqueSchemes(maxRoll, maxRoll*10000);
         var targetProcess = new Dictionary<int, List<int>>();
         var bpProcess = new Dictionary<int, List<int>>();
         var targetGift = new Dictionary<int, List<int>>();
-        var modCountDiv = data.Count;
+        var modCountDiv = maxRoll;
 
         for (int i = 0; i < permutations.Count; i++)
         {
             var targetProcessTemp = new List<int>();
             var bpProcessTemp = new List<int>();
             var targetGiftTemp = new List<int>();
-            //需要获取循环种子和24格子之间最小公倍数
-            for (int j = 0; j < 9 * 24; j++)
+            //生成多少个格子
+            for (int j = 0; j < maxGridLoop * 24; j++)
             {
                 var modCount = (j + 1) % modCountDiv;
                 if (modCount == 0)
@@ -220,8 +222,8 @@ public class PubMetToExcelFunc
         //过滤固定目标
         for (int i = 0; i < targetKey.GetLength(0); i++)
         {
-            var rollTimes = targetKey[i,0];
-            var rollGrid = targetKey[i,1];
+            var rollTimes = targetKey[i, 0];
+            var rollGrid = targetKey[i, 1];
             if (!(rollTimes is ExcelEmpty))
             {
                 var colIndex = Convert.ToInt32(rollTimes) - 1;
@@ -231,25 +233,25 @@ public class PubMetToExcelFunc
                     .Where(entry => entry.Value[colIndex] == colValue)
                     .ToDictionary(entry => entry.Key, entry => entry.Value);
                 //去除非指定列有固定目标值的行(换种思路，前XRoll只存在一个固定目标)
-                                //var filterCondition = GenerateFilterConditions(colIndex, maxRoll, colValue);
-                                //filteredData = filteredData
-                                //    .Where(entry => filterCondition.All(condition => condition(entry.Value)))
-                                //    .ToDictionary(entry => entry.Key, entry => entry.Value);
+                //var filterCondition = GenerateFilterConditions(colIndex, maxRoll, colValue);
+                //filteredData = filteredData
+                //    .Where(entry => filterCondition.All(condition => condition(entry.Value)))
+                //    .ToDictionary(entry => entry.Key, entry => entry.Value);
                 filteredData = filteredData
-                    .Where(pair => pair.Value.Take(maxRoll - 1).Count(item => item == colValue) == 1)
+                    .Where(pair => pair.Value.Take(maxRoll).Count(item => item == colValue) == 1)
                     .ToDictionary(pair => pair.Key, pair => pair.Value);
             }
         }
         //过滤动态目标
         for (int i = 0; i < targetKeySoft.GetLength(0); i++)
         {
-            var softTimes = targetKeySoft[i,1];
-            var softGrid = targetKeySoft[i,0];
+            var softTimes = targetKeySoft[i, 1];
+            var softGrid = targetKeySoft[i, 0];
             if (!(softGrid is ExcelEmpty))
             {
                 //筛选动态目标值满足出现次数的行
                 filteredData = filteredData
-                    .Where(pair => pair.Value.Take(maxRoll - 1).Count(item => item == Convert.ToInt32(softGrid)) == Convert.ToInt32(softTimes))
+                    .Where(pair => pair.Value.Take(maxRoll).Count(item => item == Convert.ToInt32(softGrid)) == Convert.ToInt32(softTimes))
                     .ToDictionary(pair => pair.Key, pair => pair.Value);
             }
         }
@@ -259,19 +261,19 @@ public class PubMetToExcelFunc
         var filteredDataBpProcess = new List<List<object>>();
         foreach (var key in filteredData.Keys)
         {
-            filteredDataGift[key] = targetGift[key][maxRoll - 1];
+            filteredDataGift[key] = targetGift[key][maxRoll];
         }
         //选择升阶进度中众数项
         int modeValue = GetMode(filteredDataGift.Values);
         var filteredDataGiftMode = filteredDataGift.Where(pair => pair.Value == modeValue).ToList();
-        var filteredDataGiftList= new List<List<object>>();
+        var filteredDataGiftList = new List<List<object>>();
         int methodCount = filteredDataGiftMode.Count;
         foreach (var kvp in filteredDataGiftMode)
         {
             int key = kvp.Key;
             int value = kvp.Value;
-            filteredDataGiftList.Add(new List<object>{value});
-            filteredDataBpProcess.Add(new List<object> { bpProcess[key][maxRoll - 1] });
+            filteredDataGiftList.Add(new List<object> { value });
+            filteredDataBpProcess.Add(new List<object> { bpProcess[key][maxRoll] });
             var methodStr = "";
             foreach (var method in permutations[key])
             {
@@ -281,16 +283,16 @@ public class PubMetToExcelFunc
             filteredDataMethod.Add(new List<object> { methodStr });
         }
         //清理
-        object[,] emptyData = new object[65535-17+1, 6 - 6 +1];
+        object[,] emptyData = new object[65535 - 17 + 1, 6 - 6 + 1];
         PubMetToExcel.WriteExcelDataC(sheetName, 16, 65534, 4, 4, emptyData);
         PubMetToExcel.WriteExcelDataC(sheetName, 16, 65534, 5, 5, emptyData);
         PubMetToExcel.WriteExcelDataC(sheetName, 16, 65534, 6, 6, emptyData);
         //错误提示
         if (filteredDataBpProcess.Count == 0)
         {
-            var error = new object[1,1];
-            error[0,0] = "#Error#";
-            PubMetToExcel.WriteExcelDataC(sheetName,16,16,4,4, error);
+            var error = new object[1, 1];
+            error[0, 0] = "#Error#";
+            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16, 4, 4, error);
         }
         else
         {
@@ -300,19 +302,20 @@ public class PubMetToExcelFunc
             PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataMethod.Count - 1, 4, 4, PubMetToExcel.ConvertListToArray(filteredDataMethod));
         }
     }
-    public static void DataC()
+    static int GetGCD(int a, int b)
     {
-        object[,] result = new object[2,2];
-        // 给数组赋予指定的值
-        result[0, 0] = "A1";
-        result[0, 1] = "B1";
-        result[1, 0] = "A2";
-        result[1, 1] = "B2";
+        while (b != 0)
+        {
+            int temp = b;
+            b = a % b;
+            a = temp;
+        }
+        return a;
+    }
 
-        //读取数据（0起始）
-        object[,] abc = PubMetToExcel.ReadExcelDataC("Sheet2", 0, 1, 0, 1);
-        //写入数据（0起始）
-        PubMetToExcel.WriteExcelDataC("Sheet2", 0, 1, 0, 1,result);
+    static int GetLCM(int a, int b)
+    {
+        return Math.Abs(a * b) / GetGCD(a, b);
     }
     // 获取列表的众数
     static int GetMode(IEnumerable<int> values)
@@ -324,22 +327,6 @@ public class PubMetToExcelFunc
 
         // 如果有多个众数，可以在这里选择处理方式，此处选择返回第一个众数
         return modes.FirstOrDefault();
-    }
-    static List<Func<List<int>, bool>> GenerateFilterConditions(int onlyCol,int otherCol,int conditionValue)
-    {
-        // 在实际情况下，你可以根据动态条件生成适当的委托列表
-        var conditions = new List<Func<List<int>, bool>>();
-
-        //conditions.Add(values => values[onlyCol] == conditionValue);
-        //添加动态条件的示例
-        for (int i = 0; i < otherCol; i++)
-        {
-            if (i != onlyCol)
-            {
-                conditions.Add(values => values[i] != conditionValue);
-            }
-        }
-        return conditions;
     }
 
     static List<List<int>> GeneratePermutations(List<int> data)
@@ -373,6 +360,7 @@ public class PubMetToExcelFunc
                 Swap(data, index, i);
             }
         }
+
     }
     static void Swap(List<int> data, int i, int j)
     {
@@ -381,12 +369,32 @@ public class PubMetToExcelFunc
         data[j] = temp;
     }
 
-    public static void TestCAPI()
+    static List<List<int>> GenerateUniqueSchemes(int numberOfRolls, int numberOfSchemes)
     {
-        Wk.Cells[1,1].Value = "Hello World";
+        List<List<int>> result = new List<List<int>>();
+        HashSet<string> seenSchemes = new HashSet<string>();
+        Random random = new Random();
 
+        for (int i = 0; i < numberOfSchemes; i++)
+        {
+            List<int> scheme = new List<int>();
 
+            // 随机生成一个方案
+            for (int j = 0; j < numberOfRolls; j++)
+            {
+                int randomNumber = random.Next(1, 7);
+                scheme.Add(randomNumber);
+            }
 
+            // 转换为字符串，检查是否已经存在该方案
+            string schemeString = string.Join(",", scheme);
+            if (!seenSchemes.Contains(schemeString))
+            {
+                seenSchemes.Add(schemeString);
+                result.Add(new List<int>(scheme));
+            }
+        }
+
+        return result;
     }
-
 }
