@@ -38,7 +38,7 @@ namespace NumDesTools
         // 析构函数
         ~CreatRibbon()
         {
-            Dispose(false);
+            Dispose(true);
         }
         // 实现 IDisposable 接口
         public void Dispose()
@@ -73,6 +73,92 @@ namespace NumDesTools
         }
         #endregion 释放COM
 
+        #region Ribbon配置
+        public override string GetCustomUI(string ribbonId)
+        {
+            return RibbonResources.RibbonUI;
+        }
+
+        public override object LoadImage(string imageId)
+        {
+            return RibbonResources.ResourceManager.GetObject(imageId);
+        }
+
+        public IPictureDisp GetImage(IRibbonControl control)
+        {
+            IPictureDisp pictureDips;
+            switch (control.Id)
+            {
+                case "Button1":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("file.png"));
+                    break;
+
+                case "Button2":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("document.png"));
+                    break;
+
+                case "Button3":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("database.png"));
+                    break;
+
+                case "Button4":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("verilog.png"));
+                    break;
+
+                case "Button5":
+                    pictureDips =
+                        GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("redux-reducer.png"));
+                    break;
+
+                case "Button8":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("asciidoc.png"));
+                    break;
+
+                case "Button9":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("folder-docs.png"));
+                    break;
+
+                case "Button10":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("log.png"));
+                    break;
+                case "Button11":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("reason.png"));
+                    break;
+                case "Button12":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("scheme.png"));
+                    break;
+                case "Button13":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("bower.png"));
+                    break;
+                case "Button14":
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("edge.png"));
+                    break;
+                default:
+                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("folder-audio.png"));
+                    break;
+            }
+
+            return pictureDips;
+        }
+
+        public string GetLableText(IRibbonControl control)
+        {
+            var latext = control.Id switch
+            {
+                "Button5" => LabelText,
+                "Button14" => LabelTextRoleDataPreview,
+                _ => ""
+            };
+
+            return latext;
+        }
+        public void OnLoad(IRibbonUI ribbon)
+        {
+            R = ribbon;
+            R.ActivateTab("Tab1");
+        }
+        #endregion
+
         void IExcelAddIn.AutoOpen()
         {
             App.SheetBeforeRightClick += UD_RightClickButton;
@@ -82,15 +168,30 @@ namespace NumDesTools
             App.SheetBeforeRightClick -= UD_RightClickButton;
         }
 
+        private bool isDynamicButtonVisible = false;
+        public bool GetVisible(IRibbonControl control)
+        {
+            // 控制菜单项的可见性
+            if (control.Id == "UnRibbonContextMenuTips")
+            {
+                return isDynamicButtonVisible;
+            }
+            else
+            {
+                return false;
+            }
+        }
         private void UD_RightClickButton(object sh, Range target, ref bool cancel)
         {
-
+            Worksheet sheet = sh as Worksheet;
+            var sheetName = sheet.Name;
+            Workbook book = sheet.Parent;
+            var bookName = book.Name;
+            var bookPath = book.Path;
             //excel文档已有的右键菜单cell
             CommandBar mzBar = App.CommandBars["cell"];
             mzBar.Reset();
             var bars = mzBar.Controls;
-            var bookName = App.ActiveWorkbook.Name;
-            var sheetName = App.ActiveSheet.Name;
             var missing = Type.Missing;
 
             if (bookName == "角色怪物数据生成" || sheetName == "角色基础")
@@ -451,85 +552,6 @@ namespace NumDesTools
             MessageBox.Show(@"检查公式完毕！" + Math.Round(milliseconds / 1000, 2) + @"秒");
         }
 
-        public override string GetCustomUI(string ribbonId)
-        {
-            return RibbonResources.RibbonUI;
-        }
-
-        public override object LoadImage(string imageId)
-        {
-            return RibbonResources.ResourceManager.GetObject(imageId);
-        }
-
-        public IPictureDisp GetImage(IRibbonControl control)
-        {
-            IPictureDisp pictureDips;
-            switch (control.Id)
-            {
-                case "Button1":
-                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("file.png"));
-                    break;
-
-                case "Button2":
-                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("document.png"));
-                    break;
-
-                case "Button3":
-                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("database.png"));
-                    break;
-
-                case "Button4":
-                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("verilog.png"));
-                    break;
-
-                case "Button5":
-                    pictureDips =
-                        GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("redux-reducer.png"));
-                    break;
-
-                case "Button8":
-                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("asciidoc.png"));
-                    break;
-
-                case "Button9":
-                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("folder-docs.png"));
-                    break;
-
-                case "Button10":
-                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("log.png"));
-                    break;
-                case "Button11":
-                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("reason.png"));
-                    break;
-                case "Button12":
-                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("scheme.png"));
-                    break;
-                case "Button13":
-                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("bower.png"));
-                    break;
-                case "Button14":
-                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("edge.png"));
-                    break;
-                default:
-                    pictureDips = GetImageByStdole.ImageToPictureDisp(ResourceHelper.GetResourceBitmap("folder-audio.png"));
-                    break;
-            }
-
-            return pictureDips;
-        }
-
-        public string GetLableText(IRibbonControl control)
-        {
-            var latext = control.Id switch
-            {
-                "Button5" => LabelText,
-                "Button14" => LabelTextRoleDataPreview,
-                _ => ""
-            };
-
-            return latext;
-        }
-
         public void IndexSheetOpen_Click(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
         {
             var ws = App.ActiveSheet;
@@ -872,12 +894,6 @@ namespace NumDesTools
             {
                 MessageBox.Show(@"错误：先打开个表");
             }
-        }
-
-        public void OnLoad(IRibbonUI ribbon)
-        {
-            R = ribbon;
-            R.ActivateTab("Tab1");
         }
 
         public void SvnCommitExcel_Click(IRibbonControl control)
