@@ -6,7 +6,7 @@ namespace NumDesTools;
 
 public class TmCaculate
 {
-    private static readonly dynamic Wk = CreatRibbon._app.ActiveWorkbook;
+    private static readonly dynamic Wk = CreatRibbon.App.ActiveWorkbook;
     private static readonly dynamic Path = Wk.Path;
     //TM关卡目标生成
     public static void CreatTmTargetEle()
@@ -88,14 +88,14 @@ public class TmCaculate
         {
             int loopTimes = Convert.ToInt32(targetEleMaxValueList[i][5]);
             int eleMax = Convert.ToInt32(targetEleMaxValueList[i][4]);
-            int eleBaseID = Convert.ToInt32(targetEleMaxValueList[i][3]);
+            int eleBaseId = Convert.ToInt32(targetEleMaxValueList[i][3]);
             string eleTheme = Convert.ToString(targetEleMaxValueList[i][0]);
             var loopIdList = new List<int>();
             for (int j = 0; j < loopTimes*eleMax; j++)
             {
                 int loopId = (j+1) % eleMax;
                 if (loopId == 0) loopId = eleMax;
-                loopIdList.Add( eleBaseID + loopId);
+                loopIdList.Add( eleBaseId + loopId);
             }
             eleIdLoop[eleTheme] = loopIdList;
         }

@@ -12,7 +12,6 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
-using ExcelDna.Integration.Extensibility;
 using Microsoft.Office.Interop.Excel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -555,55 +554,6 @@ public partial class CreatRibbon : ExcelRibbon, IExcelAddIn
 //}
 
 #region 获取Excel单表格的数据并导出到txt
-[ComVisible(true)]
-public class MyComAddIn : ExcelComAddIn
-{
-    public MyComAddIn()
-    {
-    }
-
-    public override void OnConnection(object Application, ext_ConnectMode ConnectMode, object AddInInst, ref Array custom)
-    {
-        //SWF.MessageBox.Show("OnConnection");
-    }
-
-    public override void OnDisconnection(ext_DisconnectMode RemoveMode, ref Array custom)
-    {
-        if (CreatRibbon._app != null)
-        {
-            CreatRibbon._app.SheetBeforeRightClick = null;
-            CreatRibbon._app.Quit();
-        }
-        //Marshal.ReleaseComObject(CreatRibbon._app);
-        //CreatRibbon._app = null;
-        //GC.Collect();
-        //SWF.MessageBox.Show("OnDisconnection");
-    }
-
-    public override void OnAddInsUpdate(ref Array custom)
-    {
-        //SWF.MessageBox.Show("OnAddInsUpdate");
-    }
-
-    public override void OnStartupComplete(ref Array custom)
-    {
-        //SWF.MessageBox.Show("OnStartupComplete");
-    }
-
-    public override void OnBeginShutdown(ref Array custom)
-    {
-        if (CreatRibbon._app != null)
-        {
-            CreatRibbon._app.SheetBeforeRightClick = null;
-            CreatRibbon._app.Quit();
-        }
-        //CreatRibbon._app.Quit();
-        //Marshal.ReleaseComObject(CreatRibbon._app);
-        //CreatRibbon._app = null;
-        //GC.Collect();
-        //SWF.MessageBox.Show("OnBeginShutDown");
-    }
-}
 public static class ExcelSheetData
 {
     public static void RwExcelDataUseNpoi()
@@ -650,24 +600,22 @@ public static class ExcelSheetData
     //整理单元格格式
     public static void CellFormat()
     {
-        dynamic app = ExcelDnaUtil.Application;
-        app.ActiveSheet.Cells.Font.Size = 9;
-        app.ActiveSheet.Cells.Font.Name = "微软雅黑";
-        app.ActiveSheet.Cells.HorizontalAlignment = XlHAlign.xlHAlignCenter;
-        app.ActiveSheet.Cells.VerticalAlignment = XlHAlign.xlHAlignCenter;
-        app.ActiveSheet.Cells.ColumnWidth = 8.38;
-        app.ActiveSheet.Cells.RowHeight = 14.25;
-        app.ActiveSheet.Cells.ShrinkToFit = true;
-        app.ActiveSheet.Cells.Borders.LineStyle = XlLineStyle.xlDash;
-        app.ActiveSheet.Cells.Borders.Weight = XlBorderWeight.xlHairline;
+        CreatRibbon.App.ActiveSheet.Cells.Font.Size = 9;
+        CreatRibbon.App.ActiveSheet.Cells.Font.Name = "微软雅黑";
+        CreatRibbon.App.ActiveSheet.Cells.HorizontalAlignment = XlHAlign.xlHAlignCenter;
+        CreatRibbon.App.ActiveSheet.Cells.VerticalAlignment = XlHAlign.xlHAlignCenter;
+        CreatRibbon.App.ActiveSheet.Cells.ColumnWidth = 8.38;
+        CreatRibbon.App.ActiveSheet.Cells.RowHeight = 14.25;
+        CreatRibbon.App.ActiveSheet.Cells.ShrinkToFit = true;
+        CreatRibbon.App.ActiveSheet.Cells.Borders.LineStyle = XlLineStyle.xlDash;
+        CreatRibbon.App.ActiveSheet.Cells.Borders.Weight = XlBorderWeight.xlHairline;
         MessageBox.Show(@"格式整理完毕");
-        app.Dispose();
+        Marshal.ReleaseComObject(CreatRibbon.App);
     }
 
     public static void GetDataToTxt(string sheetName, string outFilePath)
     {
-        dynamic app = ExcelDnaUtil.Application;
-        Worksheet ws = app.Worksheets[sheetName];
+        Worksheet ws = CreatRibbon.App.Worksheets[sheetName];
         //app.Visible = false;
         //获取表格最大数据规模
         var rowCnt = ws.UsedRange.Rows.Count;
@@ -770,7 +718,6 @@ public static class ExcelSheetData
                 dataValueStrFull = "";
             }
         }
-        app.Dispose();
     }
 }
 

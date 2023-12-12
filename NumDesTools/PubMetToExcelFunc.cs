@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Office.Core;
-using System.Runtime.InteropServices;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -16,14 +15,14 @@ namespace NumDesTools;
 /// </summary>
 public class PubMetToExcelFunc
 {
-    private static readonly dynamic Wk = CreatRibbon._app.ActiveWorkbook;
-    private static readonly string path = Wk.Path;
+    private static readonly dynamic Wk = CreatRibbon.App.ActiveWorkbook;
+    private static readonly string Path = Wk.Path;
     //Excel数据查询并合并表格数据
     public static void ExcelDataSearchAndMerge(string searchValue)
     {
         //获取所有的表格路径
         string[] ignoreFileNames = { "#","副本"};
-        var rootPath = Path.GetDirectoryName(Path.GetDirectoryName(path));
+        var rootPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(Path));
         var fileList = new List<string>() { rootPath+ @"\Excels\Tables\", rootPath + @"\Excels\Localizations\", rootPath + @"\Excels\UIs\" };
         var files = PubMetToExcel.PathExcelFileCollect(fileList, "*.xlsx", ignoreFileNames);
         //查找指定关键词，记录行号和表格索引号
@@ -43,11 +42,11 @@ public class PubMetToExcelFunc
         dynamic tempWorkbook;
         try
         {
-            tempWorkbook = CreatRibbon._app.Workbooks.Open(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
+            tempWorkbook = CreatRibbon.App.Workbooks.Open(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
         }
         catch
         {
-            tempWorkbook = CreatRibbon._app.Workbooks.Add();
+            tempWorkbook = CreatRibbon.App.Workbooks.Add();
             tempWorkbook.SaveAs(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
         }
         dynamic tempSheet = tempWorkbook.Sheets["Sheet1"];
@@ -69,8 +68,8 @@ public class PubMetToExcelFunc
     //Excel右键识别文件路径并打开
     public static void RightOpenExcelByActiveCell(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        var sheet = CreatRibbon._app.ActiveSheet;
-        var selectCell = CreatRibbon._app.ActiveCell;
+        var sheet = CreatRibbon.App.ActiveSheet;
+        var selectCell = CreatRibbon.App.ActiveCell;
         string selectCellValue = "";
         if (selectCell.Value != null)
         {
@@ -92,9 +91,9 @@ public class PubMetToExcelFunc
     public static void OpenBaseLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        var selectCell = CreatRibbon._app.ActiveCell;
-        var basePath = CreatRibbon._app.ActiveWorkbook.Path;
-        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(basePath));
+        var selectCell = CreatRibbon.App.ActiveCell;
+        var basePath = CreatRibbon.App.ActiveWorkbook.Path;
+        var newPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(basePath));
         newPath = newPath + @"\Excels\Localizations\Localizations.xlsx";
         var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(newPath);
         var findValue = PubMetToExcel.FindDataInDataTable(newPath, dataTable, selectCell.Value.ToString());
@@ -104,12 +103,12 @@ public class PubMetToExcelFunc
     public static void OpenMergeLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        var selectCell = CreatRibbon._app.ActiveCell;
-        var basePath = CreatRibbon._app.ActiveWorkbook.Path;
+        var selectCell = CreatRibbon.App.ActiveCell;
+        var basePath = CreatRibbon.App.ActiveWorkbook.Path;
         string mergePath = "";
         //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        var filePath = Path.Combine(documentsFolder, "mergePath.txt");
+        var filePath = System.IO.Path.Combine(documentsFolder, "mergePath.txt");
         var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
         //第一行Alice，第二行Cove
         if (mergePathList.Count <= 1)
@@ -126,7 +125,7 @@ public class PubMetToExcelFunc
         {
             mergePath = basePath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
         }
-        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(mergePath));
+        var newPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(mergePath));
         newPath = newPath + @"\Excels\Localizations\Localizations.xlsx";
         var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(newPath);
         var findValue = PubMetToExcel.FindDataInDataTable(newPath, dataTable, selectCell.Value.ToString());
@@ -141,7 +140,7 @@ public class PubMetToExcelFunc
         }
         PubMetToExcel.OpenExcelAndSelectCell(newPath, "Sheet1", cellAddress);
     }
-    public static void AliceBigRicherDFS2()
+    public static void AliceBigRicherDfs2()
     {
         var sheetName = "Alice大富翁";
         //读取数据（0起始）
@@ -302,7 +301,7 @@ public class PubMetToExcelFunc
             PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataMethod.Count - 1, 4, 4, PubMetToExcel.ConvertListToArray(filteredDataMethod));
         }
     }
-    static int GetGCD(int a, int b)
+    static int GetGcd(int a, int b)
     {
         while (b != 0)
         {
@@ -313,9 +312,9 @@ public class PubMetToExcelFunc
         return a;
     }
 
-    static int GetLCM(int a, int b)
+    static int GetLcm(int a, int b)
     {
-        return Math.Abs(a * b) / GetGCD(a, b);
+        return Math.Abs(a * b) / GetGcd(a, b);
     }
     // 获取列表的众数
     static int GetMode(IEnumerable<int> values)

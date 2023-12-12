@@ -1,16 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
 using Microsoft.Office.Interop.Excel;
 using stdole;
+using Application = Microsoft.Office.Interop.Excel.Application;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
 using Color = System.Drawing.Color;
@@ -19,8 +18,6 @@ using CommandBarControl = Microsoft.Office.Core.CommandBarControl;
 using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
 using MsoControlType = Microsoft.Office.Core.MsoControlType;
 using Point = System.Drawing.Point;
-using Workbook = Microsoft.Office.Interop.Excel.Workbook;
-using Worksheet = Microsoft.Office.Interop.Excel.Worksheet;
 
 
 namespace NumDesTools
@@ -35,8 +32,7 @@ namespace NumDesTools
         public static string TempPath = @"\Client\Assets\Resources\Table";
         public static IRibbonUI R;
         private static CommandBarButton _btn;
-        public static dynamic _app = ExcelDnaUtil.Application;//这特么是个大雷（COM）
-        public static dynamic XllPathList = new List<string>();
+        public static Application App = (Application)ExcelDnaUtil.Application;
 
         #region 释放COM
         // 析构函数
@@ -67,102 +63,34 @@ namespace NumDesTools
         private void ReleaseComObjects()
         {
             // 释放你的 COM 对象
-            if (_app != null)
+            if (App != null)
             {
-                Marshal.ReleaseComObject(_app);
-                _app = null;
+                Marshal.ReleaseComObject(App);
+                App = null;
             }
 
             // 可以继续添加其他 COM 对象的释放逻辑
         }
         #endregion 释放COM
 
-        AddInWatcher _watcher;
-        ExcelDna.Integration.ExcelComAddIn _comAddIn;
         void IExcelAddIn.AutoOpen()
         {
-            //提前加载，解决只触发1次的问题
-            //此处如果多选单元格会有BUG，再看看怎么处理
-            //_app.SheetSelectionChange += new Excel.WorkbookEvents_SheetSelectionChangeEventHandler(App_SheetSelectionChange); ;
-            //XlCall.Excel(XlCall.xlcAlert, "AutoOpen");
-            //打开插件时会自动检索指定名字的XLL文件
-            //XllPathList = GetAllXllPath();
-            //foreach (var path in XllPathList)
-            //{
-            //    ExcelIntegration.RegisterXLL(path);
-            //}
-            _comAddIn = new MyComAddIn();
-            ExcelComAddInHelper.LoadComAddIn(_comAddIn);
-
-            _app.SheetBeforeRightClick += new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
-
-            //var configFileName = "XllConfig.xml";
-            //var xllDirectory = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
-            //if (xllDirectory != null)
-            //{
-            //    var configPath = Path.Combine(xllDirectory, configFileName);
-
-            //    try
-            //    {
-            //        // Load config
-            //        XmlSerializer configLoader = new XmlSerializer(typeof(AddInReloaderConfiguration));
-            //        AddInReloaderConfiguration config = (AddInReloaderConfiguration)configLoader.Deserialize(File.OpenRead(configPath));
-            //        _watcher = new AddInWatcher(config);
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        LogDisplay.WriteLine("Error loading the configuration file: " + ex);
-            //    }
-            //}
+            App.SheetBeforeRightClick += UD_RightClickButton;
         }
         void IExcelAddIn.AutoClose()
         {
-            //string filePath = app.ActiveWorkbook.Path;
-            //string file = filePath + @"\errorLog.txt";
-            //File.Delete(file);
-            //Console.ReadKey();
-            //Module1.DisposeCTP();
-            //XlCall.Excel(XlCall.xlcAlert, "AutoClose");//采用C API接口
-
-            _app.SheetBeforeRightClick -= new WorkbookEvents_SheetBeforeRightClickEventHandler(UD_RightClickButton);
-
-            //以便插件关闭时，注销掉相关插件，在XLL更新是不会出错
-            //foreach (var path in XllPathList)
-            //{
-            //    ExcelIntegration.UnregisterXLL(path);
-            //}
-
-            ////防止打开最后一个工作簿，excel.exe进程不关闭
-            //_app.Quit();
-            //System.Runtime.InteropServices.Marshal.ReleaseComObject(_app);
-            //_app=null;
-            //// 垃圾回收
-            //GC.Collect();
-            _watcher.Dispose();
-        }
-        private static List<string> GetAllXllPath()
-        {
-            var pathList = new List<string>();
-            foreach (var addIn in _app.AddIns)
-            {
-                var fullName = addIn.FullName;
-                if (fullName.EndsWith("NumDesToolsPack64.XLL", StringComparison.OrdinalIgnoreCase))
-                {
-                    pathList.Add(addIn.FullName);
-                }
-            }
-            return pathList;
+            App.SheetBeforeRightClick -= UD_RightClickButton;
         }
 
         private void UD_RightClickButton(object sh, Range target, ref bool cancel)
         {
 
             //excel文档已有的右键菜单cell
-            CommandBar mzBar = _app.CommandBars["cell"];
+            CommandBar mzBar = App.CommandBars["cell"];
             mzBar.Reset();
             var bars = mzBar.Controls;
-            var bookName = _app.ActiveWorkbook.Name;
-            var sheetName = _app.ActiveSheet.Name;
+            var bookName = App.ActiveWorkbook.Name;
+            var sheetName = App.ActiveSheet.Name;
             var missing = Type.Missing;
 
             if (bookName == "角色怪物数据生成" || sheetName == "角色基础")
@@ -202,7 +130,7 @@ namespace NumDesTools
                         comButton1.Click += RoleDataPri.DataKey;
                         sw.Stop();
                         var ts2 = sw.Elapsed;
-                        _app.StatusBar = "导出完成，用时：" + ts2;
+                        App.StatusBar = "导出完成，用时：" + ts2;
                     }
                     if (comButton2 != null)
                     {
@@ -310,10 +238,10 @@ namespace NumDesTools
         {
             if (control == null) throw new ArgumentNullException(nameof(control));
             var filesName = "";
-            if (_app.ActiveSheet != null)
+            if (App.ActiveSheet != null)
             {
-                _app.ScreenUpdating = false;
-                _app.DisplayAlerts = false;
+                App.ScreenUpdating = false;
+                App.DisplayAlerts = false;
 
                 #region 生成窗口和基础控件
 
@@ -345,14 +273,14 @@ namespace NumDesTools
                 #endregion 生成窗口和基础控件
 
                 //获取公共目录
-                string outFilePath = _app.ActiveWorkbook.Path;
+                string outFilePath = App.ActiveWorkbook.Path;
                 Directory.SetCurrentDirectory(Directory.GetParent(outFilePath)?.FullName ?? string.Empty);
                 outFilePath = Directory.GetCurrentDirectory() + TempPath;
 
                 #region 动态加载复选框
 
-                string filePath = _app.ActiveWorkbook.Path;
-                string fileName = _app.ActiveWorkbook.Name;
+                string filePath = App.ActiveWorkbook.Path;
+                string fileName = App.ActiveWorkbook.Name;
                 var fileFolder = new DirectoryInfo(filePath);
                 var fileCount = 1;
                 foreach (var file in fileFolder.GetFiles())
@@ -440,14 +368,14 @@ namespace NumDesTools
                         {
                             var file2Name = cd.Text;
                             var missing = Type.Missing;
-                            Workbook book = _app.Workbooks.Open(filePath + "\\" + file2Name, missing,
+                            var book = App.Workbooks.Open(filePath + "\\" + file2Name, missing,
                                 missing, missing, missing, missing, missing, missing, missing,
                                 missing, missing, missing, missing, missing, missing);
-                            _app.Visible = false;
-                            int sheetCount = _app.Worksheets.Count;
+                            App.Visible = false;
+                            int sheetCount = App.Worksheets.Count;
                             for (var i = 1; i <= sheetCount; i++)
                             {
-                                string sheetName = _app.Worksheets[i].Name;
+                                string sheetName = App.Worksheets[i].Name;
                                 var key = "_cfg";
                                 var isRealSheet = sheetName.ToLower().Contains(key.ToLower());
                                 if (isRealSheet)
@@ -463,7 +391,7 @@ namespace NumDesTools
                             filesName += file2Name + "\n";
                         }
 
-                    _app.Visible = true;
+                    App.Visible = true;
                     stopwatch.Stop();
                     var timespan = stopwatch.Elapsed; //获取总时间
                     var milliseconds = timespan.TotalMilliseconds;
@@ -481,8 +409,8 @@ namespace NumDesTools
                         //app = null;
                     }
 
-                    _app.ScreenUpdating = true;
-                    _app.DisplayAlerts = true;
+                    App.ScreenUpdating = true;
+                    App.DisplayAlerts = true;
                 }
 
                 #endregion 导出文件
@@ -509,10 +437,10 @@ namespace NumDesTools
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            int sheetCount = _app.Worksheets.Count;
+            int sheetCount = App.Worksheets.Count;
             for (var i = 1; i <= sheetCount; i++)
             {
-                var sheetName = _app.Worksheets[i].Name;
+                var sheetName = App.Worksheets[i].Name;
                 FormularCheck.GetFormularToCurrent(sheetName);
             }
 
@@ -604,10 +532,10 @@ namespace NumDesTools
 
         public void IndexSheetOpen_Click(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
         {
-            var ws = _app.ActiveSheet;
-            var cellCol = _app.Selection.Column;
+            var ws = App.ActiveSheet;
+            var cellCol = App.Selection.Column;
             var fileTemp = Convert.ToString(ws.Cells[7, cellCol].Value);
-            var cellAdress = _app.Selection.Address;
+            var cellAdress = App.Selection.Address;
             cellAdress = cellAdress.Substring(0, cellAdress.LastIndexOf("$") + 1) + "7";
             if (fileTemp != null)
             {
@@ -627,11 +555,11 @@ namespace NumDesTools
 
         public void IndexSheetUnOpen_Click(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
         {
-            string filePath = _app.ActiveWorkbook.Path;
-            var ws = _app.ActiveSheet;
-            var cellCol = _app.Selection.Column;
+            string filePath = App.ActiveWorkbook.Path;
+            var ws = App.ActiveSheet;
+            var cellCol = App.Selection.Column;
             var fileTemp = Convert.ToString(ws.Cells[7, cellCol].Value);
-            var cellAdress = _app.Selection.Address;
+            var cellAdress = App.Selection.Address;
             cellAdress = cellAdress.Substring(0, cellAdress.LastIndexOf("$") + 1) + "7";
             if (fileTemp != null)
             {
@@ -658,7 +586,7 @@ namespace NumDesTools
             //string filePath = app.ActiveWorkbook.FullName;
             //string filePath = @"C:\Users\user\Desktop\test.xlsx";
             //string sheetName = app.ActiveSheet.Name;
-            if (_app.ActiveSheet != null)
+            if (App.ActiveSheet != null)
             {
                 #region 生成窗口和基础控件
 
@@ -690,14 +618,14 @@ namespace NumDesTools
                 #endregion 生成窗口和基础控件
 
                 //获取公共目录
-                string outFilePath = _app.ActiveWorkbook.Path;
+                string outFilePath = App.ActiveWorkbook.Path;
                 Directory.SetCurrentDirectory(Directory.GetParent(outFilePath)?.FullName ?? string.Empty);
                 outFilePath = Directory.GetCurrentDirectory() + TempPath;
 
                 #region 动态加载复选框
 
                 var i = 1;
-                foreach (var sheet in _app.Worksheets)
+                foreach (Worksheet sheet in App.ActiveWorkbook.Sheets)
                 {
                     string sheetName = sheet.Name;
                     const string key = "_cfg";
@@ -788,7 +716,7 @@ namespace NumDesTools
                         //errorLogs = errorLogs + errorLog;
                     }
 
-                    _app.Visible = true;
+                    App.Visible = true;
                     stopwatch.Stop();
                     var timespan = stopwatch.Elapsed; //获取总时间
                     var milliseconds = timespan.TotalMilliseconds;
@@ -818,21 +746,21 @@ namespace NumDesTools
         public void OneSheetOutPut_Click(IRibbonControl control)
         {
             //string filePath = app.ActiveWorkbook.FullName;
-            if (_app.ActiveSheet != null)
+            if (App.ActiveSheet != null)
             {
                 //初始化清除老的CTP
                 ErrorLogCtp.DisposeCtp();
                 //检查代码运行时间
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
-                string sheetName = _app.ActiveSheet.Name;
+                string sheetName = App.ActiveSheet.Name;
                 //获取公共目录
-                string outFilePath = _app.ActiveWorkbook.Path;
+                string outFilePath = App.ActiveWorkbook.Path;
                 Directory.SetCurrentDirectory(Directory.GetParent(outFilePath)?.FullName ?? string.Empty);
                 outFilePath = Directory.GetCurrentDirectory() + TempPath;
                 var errorLog = ExcelSheetDataIsError2.GetData2(sheetName);
                 if (errorLog == "") ExcelSheetData.GetDataToTxt(sheetName, outFilePath);
-                _app.Visible = true;
+                App.Visible = true;
                 stopwatch.Stop();
                 var timespan = stopwatch.Elapsed; //获取总时间
                 var milliseconds = timespan.TotalMilliseconds; //换算成毫秒
@@ -840,7 +768,7 @@ namespace NumDesTools
                 if (errorLog == "")
                 {
                     var endTips = path + "~@~导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + "秒";
-                    _app.StatusBar = endTips;
+                    App.StatusBar = endTips;
                     //MessageBox.Show(sheetName + "\n" + "导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + "秒");
                     //var f = new DataExportForm
                     //{
@@ -959,7 +887,7 @@ namespace NumDesTools
 
         public void SvnCommitTxt_Click(IRibbonControl control)
         {
-            string path = _app.ActiveWorkbook.Path;
+            string path = App.ActiveWorkbook.Path;
             Directory.SetCurrentDirectory(Directory.GetParent(path)?.FullName ?? throw new InvalidOperationException());
 /*
         path = Directory.GetCurrentDirectory() + TempPath;
@@ -976,7 +904,7 @@ namespace NumDesTools
             sw.Stop();
             var ts2 = sw.Elapsed;
             var milliseconds = ts2.TotalMilliseconds; //换算成毫秒
-            _app.StatusBar = "PVP(回合)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
+            App.StatusBar = "PVP(回合)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
         }
 
         public void PVP_J_Click(IRibbonControl control)
@@ -988,7 +916,7 @@ namespace NumDesTools
             sw.Stop();
             var ts2 = sw.Elapsed;
             var milliseconds = ts2.TotalMilliseconds; //换算成毫秒
-            _app.StatusBar = "PVP(即时)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
+            App.StatusBar = "PVP(即时)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
         }
 
         public void PVE_Click(IRibbonControl control)
@@ -1000,19 +928,19 @@ namespace NumDesTools
             sw.Stop();
             var ts2 = sw.Elapsed;
             var milliseconds = ts2.TotalMilliseconds; //换算成毫秒
-            _app.StatusBar = "PVE(即时)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
+            App.StatusBar = "PVE(即时)战斗模拟完成，用时" + Math.Round(milliseconds / 1000, 2) + "秒";
         }
 
         public void RoleDataPreview_Click(IRibbonControl control)
         {
-            Worksheet ws = _app.ActiveSheet;
+            Worksheet ws = App.ActiveSheet;
             if (ws.Name == "角色基础")
             {
                 if (control == null) throw new ArgumentNullException(nameof(control));
                 LabelTextRoleDataPreview = LabelTextRoleDataPreview == "角色数据预览：开启" ? "角色数据预览：关闭" : "角色数据预览：开启";
                 R.InvalidateControl("Button14");
                 _ = new CellSelectChangePro();
-                _app.StatusBar = false;
+                App.StatusBar = false;
             }
             else
             {
@@ -1049,7 +977,7 @@ namespace NumDesTools
             var sw = new Stopwatch();
             sw.Start();
 
-            var wk = _app.ActiveWorkbook;
+            var wk = App.ActiveWorkbook;
             var path = wk.Path;
 
             //var tuple =PubMetToExcel.ErrorKeyFromExcelAll(path, _excelSeachStr);
@@ -1089,7 +1017,7 @@ namespace NumDesTools
         
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "搜索完成，用时：" + ts2;
+            App.StatusBar = "搜索完成，用时：" + ts2;
         }
 
         public void ExcelSearchAllMultiThread_Click(IRibbonControl control)
@@ -1097,7 +1025,7 @@ namespace NumDesTools
             var sw = new Stopwatch();
             sw.Start();
 
-            var wk = _app.ActiveWorkbook;
+            var wk = App.ActiveWorkbook;
             var path = wk.Path;
 
             //var tuple =PubMetToExcel.ErrorKeyFromExcelAll(path, _excelSeachStr);
@@ -1137,7 +1065,7 @@ namespace NumDesTools
 
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "搜索完成，用时：" + ts2;
+            App.StatusBar = "搜索完成，用时：" + ts2;
         }
 
         public void ExcelSearchID_Click(IRibbonControl control)
@@ -1145,7 +1073,7 @@ namespace NumDesTools
             var sw = new Stopwatch();
             sw.Start();
 
-            var wk = _app.ActiveWorkbook;
+            var wk = App.ActiveWorkbook;
             var path = wk.Path;
 
             var tuple = PubMetToExcel.ErrorKeyFromExcelId(path, _excelSeachStr);
@@ -1157,7 +1085,7 @@ namespace NumDesTools
             else
             {
                 //打开表格
-                var targetWk = _app.Workbooks.Open(tuple.Item1);
+                var targetWk = App.Workbooks.Open(tuple.Item1);
                 var targetSh = targetWk.Worksheets[tuple.Item2];
                 targetSh.Activate();
                 var cell = targetSh.Cells[tuple.Item3, tuple.Item4];
@@ -1166,7 +1094,7 @@ namespace NumDesTools
             }
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "搜索完成，用时：" + ts2;
+            App.StatusBar = "搜索完成，用时：" + ts2;
         }
 
         public void ExcelSearchAllToExcel_Click(IRibbonControl control)
@@ -1177,14 +1105,14 @@ namespace NumDesTools
             sw.Stop();
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "搜索完成，用时：" + ts2;
+            App.StatusBar = "搜索完成，用时：" + ts2;
         }
 
         public void AutoInsertExcelData_Click(IRibbonControl control)
         {
             var sw = new Stopwatch();
             sw.Start();
-            var indexWk = _app.ActiveWorkbook;
+            var indexWk = App.ActiveWorkbook;
             var sheet = indexWk.ActiveSheet;
             var name = sheet.Name;
             if (!name.Contains("【模板】"))
@@ -1196,14 +1124,14 @@ namespace NumDesTools
             ExcelDataAutoInsertMulti.InsertData(false);
             sw.Stop();
             var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-            _app.StatusBar = "完成，用时：" + ts2;
+            App.StatusBar = "完成，用时：" + ts2;
         }
 
         public void AutoInsertExcelDataThread_Click(IRibbonControl control)
         {
             var sw = new Stopwatch();
             sw.Start();
-            var indexWk = _app.ActiveWorkbook;
+            var indexWk = App.ActiveWorkbook;
             var sheet = indexWk.ActiveSheet;
             var name = sheet.Name;
             if (!name.Contains("【模板】"))
@@ -1215,7 +1143,7 @@ namespace NumDesTools
             ExcelDataAutoInsertMulti.InsertData(true);
             sw.Stop();
             var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-            _app.StatusBar = "完成，用时：" + ts2;
+            App.StatusBar = "完成，用时：" + ts2;
         }
 
         public void AutoInsertExcelDataDialog_Click(IRibbonControl control)
@@ -1230,28 +1158,28 @@ namespace NumDesTools
             ExcelDataAutoInsertLanguage.AutoInsertData();
             sw.Stop();
             var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-            _app.StatusBar = "完成，用时：" + ts2;
+            App.StatusBar = "完成，用时：" + ts2;
         }
 
         public void AutoLinkExcel_Click(IRibbonControl control)
         {
             var sw = new Stopwatch();
             sw.Start();
-            var indexWk = _app.ActiveWorkbook;
+            var indexWk = App.ActiveWorkbook;
             var sheet = indexWk.ActiveSheet;
             var excelPath = indexWk.Path;
             ExcelDataAutoInsert.ExcelHyperLinks(excelPath, sheet);
             sw.Stop();
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "完成，用时：" + ts2;
+            App.StatusBar = "完成，用时：" + ts2;
         }
 
         public void AutoCellFormatEPPlus_Click(IRibbonControl control)
         {
             var sw = new Stopwatch();
             sw.Start();
-            var indexWk = _app.ActiveWorkbook;
+            var indexWk = App.ActiveWorkbook;
             var sheet = indexWk.ActiveSheet;
             var excelPath = indexWk.Path;
             ExcelDataAutoInsert.ExcelHyperLinksNormal(excelPath, sheet);
@@ -1259,7 +1187,7 @@ namespace NumDesTools
             sw.Stop();
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "完成，用时：" + ts2;
+            App.StatusBar = "完成，用时：" + ts2;
         }
 
         public void AutoSeachExcel_Click(IRibbonControl control)
@@ -1270,7 +1198,7 @@ namespace NumDesTools
             sw.Stop();
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "导出完成，用时：" + ts2;
+            App.StatusBar = "导出完成，用时：" + ts2;
         }
 
         public void ActivityServerData_Click(IRibbonControl control)
@@ -1281,7 +1209,7 @@ namespace NumDesTools
             sw.Stop();
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "完成，用时：" + ts2;
+            App.StatusBar = "完成，用时：" + ts2;
         }
 
         public void AutoMergeExcel_Click(IRibbonControl control)
@@ -1292,16 +1220,16 @@ namespace NumDesTools
             sw.Stop();
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "导出完成，用时：" + ts2;
+            App.StatusBar = "导出完成，用时：" + ts2;
         }
         public void AliceBigRicher_Click(IRibbonControl control)
         {
             var sw = new Stopwatch();
             sw.Start();
-            PubMetToExcelFunc.AliceBigRicherDFS2();
+            PubMetToExcelFunc.AliceBigRicherDfs2();
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "导出完成，用时：" + ts2;
+            App.StatusBar = "导出完成，用时：" + ts2;
         }
         public void TmTargetEle_Click(IRibbonControl control)
         {
@@ -1311,7 +1239,7 @@ namespace NumDesTools
             TmCaculate.CreatTmTargetEle();
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "导出完成，用时：" + ts2;
+            App.StatusBar = "导出完成，用时：" + ts2;
         }
         public void TmNormalEle_Click(IRibbonControl control)
         {
@@ -1321,7 +1249,7 @@ namespace NumDesTools
             TmCaculate.CreatTmNormalEle();
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "导出完成，用时：" + ts2;
+            App.StatusBar = "导出完成，用时：" + ts2;
         }
         public async void TestBar1_Click(IRibbonControl control)
         {
@@ -1351,7 +1279,7 @@ namespace NumDesTools
             sw.Stop();
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "导出完成，用时：" + ts2;
+            App.StatusBar = "导出完成，用时：" + ts2;
         }
 
         public void TestBar2_Click(IRibbonControl control)
@@ -1370,7 +1298,7 @@ namespace NumDesTools
             //ExcelIntegration.UnregisterXLL(@"C:\M1Work\Public\Excels\TablesTools\NumDesToolsPack64.XLL");
             var ts2 = sw.Elapsed;
             Debug.Print(ts2.ToString());
-            _app.StatusBar = "导出完成，用时：" + ts2;
+            App.StatusBar = "导出完成，用时：" + ts2;
             //DotaLegendBattle.LocalRC(8,3,3);
             //SVNTools.FileLogs();
             //SVNTools.CommitFile();
@@ -1388,7 +1316,7 @@ namespace NumDesTools
         private void App_SheetSelectionChange(object sh, Range target)
         {
             //excel文档已有的右键菜单cell
-            CommandBar mzBar = _app.CommandBars["cell"];
+            CommandBar mzBar = App.CommandBars["cell"];
             mzBar.Reset();
             var bars = mzBar.Controls;
             foreach (CommandBarControl tempContrl in bars)
@@ -1441,7 +1369,7 @@ namespace NumDesTools
         private void App_SheetSelectionChange1(object sh, Range target)
         {
             //右键重置避免按钮重复
-            CommandBar currentMenuBar = _app.CommandBars["cell"];
+            CommandBar currentMenuBar = App.CommandBars["cell"];
             //currentMenuBar.Reset();
             var bars = currentMenuBar.Controls;
             //删除右键
