@@ -10,10 +10,7 @@ using System.Threading.Tasks;
 using System.Data;
 using DataTable = System.Data.DataTable;
 using System.Data.OleDb;
-using System.Diagnostics;
-using DocumentFormat.OpenXml.Spreadsheet;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
-using System.Threading;
 
 namespace NumDesTools;
 
@@ -719,7 +716,7 @@ public class PubMetToExcel
 
             currentCount++;
             //wk.Properties.Company = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
-            CreatRibbon._app.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
+            CreatRibbon.App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
         }
 
         return targetList;
@@ -851,7 +848,7 @@ public class PubMetToExcel
 
             currentCount++;
             //wk.Properties.Company = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
-            CreatRibbon._app.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
+            CreatRibbon.App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
         }
 
         var tupleError = ("", "", 0, 0);
@@ -953,7 +950,7 @@ public class PubMetToExcel
         try
         {
             // 打开指定路径的 Excel 文件
-            var workbook = CreatRibbon._app.Workbooks.Open(filePath);
+            var workbook = CreatRibbon.App.Workbooks.Open(filePath);
             // 获取指定名称的工作表
             var worksheet = workbook.Sheets[sheetName];
             // 选择指定的单元格
@@ -1057,7 +1054,7 @@ public class PubMetToExcel
         }
         return twoDArray;
     }
-    public static void testEpPlus()
+    public static void TestEpPlus()
     {
         //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         //using (ExcelPackage package = new ExcelPackage(@"C:\Users\cent\Desktop\text.xlsx"))

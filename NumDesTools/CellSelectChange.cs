@@ -14,13 +14,13 @@ public class CellSelectChange : Form
     //private readonly dynamic _app = ExcelDnaUtil.Application;
     public CellSelectChange()
     {
-        Worksheet ws = CreatRibbon._app.ActiveSheet;
+        Worksheet ws = CreatRibbon.App.ActiveSheet;
         var sCount = ws.Shapes.Count;
         if (sCount > 0) ws.Shapes.Item(sCount).Delete();
         //单表选择单元格触发
         //ws.SelectionChange += new Excel.DocEvents_SelectionChangeEventHandler(GetCellValueMulti);
         //全（多）工作簿选择单元格触发
-        CreatRibbon._app.SheetSelectionChange += new AppEvents_SheetSelectionChangeEventHandler(GetCellValue);
+        CreatRibbon.App.SheetSelectionChange += new AppEvents_SheetSelectionChangeEventHandler(GetCellValue);
     }
 
     public void GetCellValue(object sh, Range target)
@@ -80,7 +80,7 @@ public class CellSelectChange : Form
             //aaa.Show();
 
             //创建shape用做提示？？会删掉表里的第一个shape
-            Worksheet ws = CreatRibbon._app.ActiveSheet;
+            Worksheet ws = CreatRibbon.App.ActiveSheet;
             var sCount = ws.Shapes.Count;
             if (sCount != 0)
             {

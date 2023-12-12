@@ -309,7 +309,7 @@ public class ExcelDataAutoInsertLanguage
     public static void AutoInsertData()
     {
         //dynamic app = ExcelDnaUtil.Application;
-        var workBook = CreatRibbon._app.ActiveWorkbook;
+        var workBook = CreatRibbon.App.ActiveWorkbook;
         var excelPath = workBook.Path;
         var sourceSheet = workBook.Worksheets["多语言对话【模板】"];
         var fixSheet = workBook.Worksheets["数据修改"];
@@ -321,7 +321,7 @@ public class ExcelDataAutoInsertLanguage
         var errorExcelList = new List<List<(int, string, string)>>();
         if (errorExcelList == null) throw new ArgumentNullException(nameof(errorExcelList));
 
-        List<(int, string, string)> error = LanguageDialogData(sourceSheet, fixSheet, classSheet,emoSheet, excelPath, CreatRibbon._app);
+        List<(int, string, string)> error = LanguageDialogData(sourceSheet, fixSheet, classSheet,emoSheet, excelPath, CreatRibbon.App);
 
         if (error.Count != 0) errorExcelList.Add(error);
 
@@ -747,8 +747,8 @@ public class ExcelDataAutoInsertMulti
     public static void InsertData(dynamic isMulti)
     {
         //dynamic app = ExcelDnaUtil.Application;
-        var indexWk = CreatRibbon._app.ActiveWorkbook;
-        var sheet = CreatRibbon._app.ActiveSheet;
+        var indexWk = CreatRibbon.App.ActiveWorkbook;
+        var sheet = CreatRibbon.App.ActiveSheet;
         var excelPath = indexWk.Path;
         var colsCount = sheet.UsedRange.Columns.Count;
         var sheetData = PubMetToExcel.ExcelDataToList(sheet);
@@ -791,7 +791,7 @@ public class ExcelDataAutoInsertMulti
                 var ignoreStr = ignore.ToString();
                 if (ignoreStr == "跳过")
                 {
-                    CreatRibbon._app.StatusBar = "跳过" + "<" + excelName;
+                    CreatRibbon.App.StatusBar = "跳过" + "<" + excelName;
                     excelCount++;
                     continue;
                 }
@@ -799,7 +799,7 @@ public class ExcelDataAutoInsertMulti
             List<(string, string, string)> error =
                 ExcelDataWrite(modelId, modelIdNew, fixKey, excelPath, excelName, addValue, isMulti, commentValue,
                     cellColor, writeMode);
-            CreatRibbon._app.StatusBar = "写入数据" + "<" + excelCount + "/" + modelId.Count + ">" + excelName;
+            CreatRibbon.App.StatusBar = "写入数据" + "<" + excelCount + "/" + modelId.Count + ">" + excelName;
             errorExcelList.Add(error);
             excelCount++;
         }
@@ -809,7 +809,7 @@ public class ExcelDataAutoInsertMulti
         if (errorLog == "")
         {
             //sheet.Range["B4"].Value = "否";
-            CreatRibbon._app.StatusBar = "完成写入";
+            CreatRibbon.App.StatusBar = "完成写入";
             return;
         }
 
@@ -823,8 +823,8 @@ public class ExcelDataAutoInsertMulti
         sw.Start();
 
         //dynamic app = ExcelDnaUtil.Application;
-        var indexWk = CreatRibbon._app.ActiveWorkbook;
-        var sheet = CreatRibbon._app.ActiveSheet;
+        var indexWk = CreatRibbon.App.ActiveWorkbook;
+        var sheet = CreatRibbon.App.ActiveSheet;
         var excelPath = indexWk.Path;
         var colsCount = sheet.UsedRange.Columns.Count;
         var sheetData = PubMetToExcel.ExcelDataToList(sheet);
@@ -854,7 +854,7 @@ public class ExcelDataAutoInsertMulti
         var fixKey = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, fixKeyCol, rowCount, colFixKeyCount);
         //遍历文件写入
         var errorExcelList = new List<List<(string, string, string)>>();
-        var cell = CreatRibbon._app.Selection;
+        var cell = CreatRibbon.App.Selection;
         var rowStart = cell.Row;
         var rowCountNew = cell.Rows.Count;
         var rowEnd = rowStart + rowCountNew - 1;
@@ -876,7 +876,7 @@ public class ExcelDataAutoInsertMulti
             List<(string, string, string)> error =
                 ExcelDataWrite(modelId, modelIdNew, fixKey, excelPath, excelName, addValue, false, commentValue,
                     cellColor, writeMode);
-            CreatRibbon._app.StatusBar = "写入数据" + "<" + i + "/" + newExcelList.Count + ">" + excelName;
+            CreatRibbon.App.StatusBar = "写入数据" + "<" + i + "/" + newExcelList.Count + ">" + excelName;
             errorExcelList.Add(error);
         }
 
@@ -887,14 +887,14 @@ public class ExcelDataAutoInsertMulti
             //sheet.Range["B4"].Value = "否";
             sw.Stop();
             var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-            CreatRibbon._app.StatusBar = "完成写入，用时：" + ts2.ToString(CultureInfo.InvariantCulture);
+            CreatRibbon.App.StatusBar = "完成写入，用时：" + ts2.ToString(CultureInfo.InvariantCulture);
             return;
         }
         ErrorLogCtp.DisposeCtp();
         ErrorLogCtp.CreateCtpNormal(errorLog);
         sw.Stop();
         var ts3 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-        CreatRibbon._app.StatusBar = "完成写入:有错误，用时：" + ts3.ToString(CultureInfo.InvariantCulture);
+        CreatRibbon.App.StatusBar = "完成写入:有错误，用时：" + ts3.ToString(CultureInfo.InvariantCulture);
 
     }
 
@@ -1208,8 +1208,8 @@ public class ExcelDataAutoInsertCopyMulti
     public static void SearchData(dynamic isMulti)
     {
         //dynamic app = ExcelDnaUtil.Application;
-        var indexWk = CreatRibbon._app.ActiveWorkbook;
-        var sheet = CreatRibbon._app.ActiveSheet;
+        var indexWk = CreatRibbon.App.ActiveWorkbook;
+        var sheet = CreatRibbon.App.ActiveSheet;
         var excelPath = indexWk.Path;
         var sheetData = PubMetToExcel.ExcelDataToList(sheet);
         var title = sheetData.Item1;
@@ -1307,7 +1307,7 @@ public class ExcelDataAutoInsertCopyMulti
                 }
             }
 
-            CreatRibbon._app.StatusBar = "遍历表格" + "<" + excelCount + "/" + modelIdNew.Count + ">" + excelName;
+            CreatRibbon.App.StatusBar = "遍历表格" + "<" + excelCount + "/" + modelIdNew.Count + ">" + excelName;
             errorExcelList.Add(errorList);
             excelCount++;
         }
@@ -1321,11 +1321,11 @@ public class ExcelDataAutoInsertCopyMulti
             dynamic tempWorkbook;
             try
             {
-                tempWorkbook = CreatRibbon._app.Workbooks.Open(excelPath + @"\#合并表格数据缓存.xlsx");
+                tempWorkbook = CreatRibbon.App.Workbooks.Open(excelPath + @"\#合并表格数据缓存.xlsx");
             }
             catch
             {
-                tempWorkbook = CreatRibbon._app.Workbooks.Add();
+                tempWorkbook = CreatRibbon.App.Workbooks.Add();
                 tempWorkbook.SaveAs(excelPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
             }
             dynamic tempSheet = tempWorkbook.Sheets["Sheet1"];
@@ -1345,7 +1345,7 @@ public class ExcelDataAutoInsertCopyMulti
             //数据转range
             tempDataRange.Value = tempDataArray;
             tempWorkbook.Save();
-            CreatRibbon._app.Visible = true;
+            CreatRibbon.App.Visible = true;
             //if (!File.Exists(outFilePath))
             //{
             //    // 创建新的文本文件
@@ -1365,7 +1365,7 @@ public class ExcelDataAutoInsertCopyMulti
             //    }
             //}
             //Process.Start(outFilePath);
-            CreatRibbon._app.StatusBar = "完成统计";
+            CreatRibbon.App.StatusBar = "完成统计";
             return;
         }
         ErrorLogCtp.DisposeCtp();
@@ -1374,8 +1374,8 @@ public class ExcelDataAutoInsertCopyMulti
     public static void MergeData(dynamic isMulti)
     {
         //dynamic app = ExcelDnaUtil.Application;
-        var indexWk = CreatRibbon._app.ActiveWorkbook;
-        var sheet = CreatRibbon._app.ActiveSheet;
+        var indexWk = CreatRibbon.App.ActiveWorkbook;
+        var sheet = CreatRibbon.App.ActiveSheet;
         var excelPath = indexWk.Path;
         var sheetData = PubMetToExcel.ExcelDataToList(sheet);
         var title = sheetData.Item1;
@@ -1398,7 +1398,7 @@ public class ExcelDataAutoInsertCopyMulti
             //写入算法
             var excelName = key.Key;
             List<(string, string, string)> error = AutoCopyData(false,modelIdNew,excelName,excelPath,cellColor);
-            CreatRibbon._app.StatusBar = "写入数据" + "<" + excelCount + "/" + modelIdNew.Count + ">" + excelName;
+            CreatRibbon.App.StatusBar = "写入数据" + "<" + excelCount + "/" + modelIdNew.Count + ">" + excelName;
             errorExcelList.Add(error);
             excelCount++;
         }
@@ -1408,7 +1408,7 @@ public class ExcelDataAutoInsertCopyMulti
         if (errorLog == "")
         {
             //sheet.Range["B4"].Value = "否";
-            CreatRibbon._app.StatusBar = "完成写入";
+            CreatRibbon.App.StatusBar = "完成写入";
             return;
         }
 
@@ -1528,13 +1528,13 @@ public class ExcelDataAutoInsertCopyMulti
         sw.Start();
 
         //dynamic app = ExcelDnaUtil.Application;
-        var indexWk = CreatRibbon._app.ActiveWorkbook;
-        var sheet = CreatRibbon._app.ActiveSheet;
+        var indexWk = CreatRibbon.App.ActiveWorkbook;
+        var sheet = CreatRibbon.App.ActiveSheet;
         var excelPath = indexWk.Path;
         var excelName = indexWk.Name;
         ErrorLogCtp.DisposeCtp();
         var errorExcelList = new List<List<(string, string, string)>>();
-        List<(string, string, string)> error = AutoCopyDataRight(CreatRibbon._app, excelPath, excelName, sheet);
+        List<(string, string, string)> error = AutoCopyDataRight(CreatRibbon.App, excelPath, excelName, sheet);
         errorExcelList.Add(error);
         //错误日志处理
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
@@ -1543,7 +1543,7 @@ public class ExcelDataAutoInsertCopyMulti
             //sheet.Range["B4"].Value = "否";
             sw.Stop();
             var ts1 = sw.Elapsed;
-            CreatRibbon._app.StatusBar = "完成写入：" + ts1;
+            CreatRibbon.App.StatusBar = "完成写入：" + ts1;
             return;
         }
         ErrorLogCtp.DisposeCtp();
@@ -1551,7 +1551,7 @@ public class ExcelDataAutoInsertCopyMulti
 
         sw.Stop();
         var ts2 = sw.Elapsed;
-        CreatRibbon._app.StatusBar = "完成写入：" + ts2;
+        CreatRibbon.App.StatusBar = "完成写入：" + ts2;
         Marshal.ReleaseComObject(sheet);
         Marshal.ReleaseComObject(indexWk);
     }
@@ -1646,13 +1646,13 @@ public class ExcelDataAutoInsertCopyMulti
         sw.Start();
 
         //dynamic app = ExcelDnaUtil.Application;
-        var indexWk = CreatRibbon._app.ActiveWorkbook;
-        var sheet = CreatRibbon._app.ActiveSheet;
+        var indexWk = CreatRibbon.App.ActiveWorkbook;
+        var sheet = CreatRibbon.App.ActiveSheet;
         var excelPath = indexWk.Path;
         var excelName = indexWk.Name;
         ErrorLogCtp.DisposeCtp();
         var errorExcelList = new List<List<(string, string, string)>>();
-        List<(string, string, string)> error = AutoCopyDataRightCol(CreatRibbon._app, excelPath, excelName, sheet);
+        List<(string, string, string)> error = AutoCopyDataRightCol(CreatRibbon.App, excelPath, excelName, sheet);
         errorExcelList.Add(error);
         //错误日志处理
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
@@ -1661,7 +1661,7 @@ public class ExcelDataAutoInsertCopyMulti
             //sheet.Range["B4"].Value = "否";
             sw.Stop();
             var ts1 = sw.Elapsed;
-            CreatRibbon._app.StatusBar = "完成写入：" + ts1;
+            CreatRibbon.App.StatusBar = "完成写入：" + ts1;
             return;
         }
         ErrorLogCtp.DisposeCtp();
@@ -1669,7 +1669,7 @@ public class ExcelDataAutoInsertCopyMulti
 
         sw.Stop();
         var ts2 = sw.Elapsed;
-        CreatRibbon._app.StatusBar = "完成写入：" + ts2;
+        CreatRibbon.App.StatusBar = "完成写入：" + ts2;
     }
 
     private static List<(string, string, string)> AutoCopyDataRightCol(dynamic app, dynamic excelPath, dynamic excelName, dynamic sheet)
@@ -1764,7 +1764,7 @@ public class ExcelDataAutoInsertActivityServer
     public static void Source()
     {
         //dynamic app = ExcelDnaUtil.Application;
-        var indexWk = CreatRibbon._app.ActiveWorkbook;
+        var indexWk = CreatRibbon.App.ActiveWorkbook;
 
         var sourceSheet = indexWk.Worksheets["运营排期"];
         var targetSheet = indexWk.Worksheets["Sheet1"];
