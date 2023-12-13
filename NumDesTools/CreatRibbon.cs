@@ -254,11 +254,7 @@ namespace NumDesTools
                 //生成自己的菜单---调用不同的Click命令需要不同的Tag
                 var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
                 var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
-                var comControl1 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-                var comButton2 = comControl1 as Microsoft.Office.Core.CommandBarButton;
-                var comControl2 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-                var comButton3 = comControl2 as Microsoft.Office.Core.CommandBarButton;
-                if (comControl == null || comControl1 == null || comControl2 == null) return;
+                if (comControl == null ) return;
                 if (comButton1 != null)
                 {
                     comButton1.Tag = "自选写入";
@@ -268,6 +264,11 @@ namespace NumDesTools
                 }
                 if (bookName.Contains("#【自动填表】多语言对话"))
                 {
+                    var comControl1 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
+                    var comButton2 = comControl1 as Microsoft.Office.Core.CommandBarButton;
+                    var comControl2 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
+                    var comButton3 = comControl2 as Microsoft.Office.Core.CommandBarButton;
+                    if (comControl1 == null || comControl2 == null) return;
                     if (comButton2 != null)
                     {
                         comButton2.Tag = "BaseLan表";
