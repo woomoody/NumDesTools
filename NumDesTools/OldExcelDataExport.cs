@@ -518,15 +518,6 @@ public static class PreviewTableCtp
     }
 }
 
-[ComVisible(true)]
-public partial class CreatRibbon : ExcelRibbon, IExcelAddIn
-{
-    //控件id 不能重复
-
-    //ribbon按钮的label提出来编辑的方式
-
-    //加载定义选项卡
-}
 //public static class SvnLogCTP
 //{
 //    public static UserControl uc;
