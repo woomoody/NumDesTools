@@ -25,7 +25,8 @@ namespace NumDesTools
     /// <summary>
     /// 插件界面类，各类点击事件方法集合
     /// </summary>
-    public partial class CreatRibbon
+    [ComVisible(true)]
+    public  class CreatRibbon:ExcelRibbon, IExcelAddIn
     {
         public static string LabelText = "放大镜：关闭";
         public static string LabelTextRoleDataPreview = "角色数据预览：关闭";
@@ -162,25 +163,19 @@ namespace NumDesTools
         void IExcelAddIn.AutoOpen()
         {
             App.SheetBeforeRightClick += UD_RightClickButton;
+            App.WorkbookBeforeClose += App_WorkbookBeforeClose;
         }
+        private void App_WorkbookBeforeClose(Workbook workbook, ref bool Cancel)
+        {
+            App.SheetBeforeRightClick -= UD_RightClickButton;
+            App.WorkbookBeforeClose -= App_WorkbookBeforeClose;
+        }
+
         void IExcelAddIn.AutoClose()
         {
             App.SheetBeforeRightClick -= UD_RightClickButton;
         }
 
-        private bool isDynamicButtonVisible = false;
-        public bool GetVisible(IRibbonControl control)
-        {
-            // 控制菜单项的可见性
-            if (control.Id == "UnRibbonContextMenuTips")
-            {
-                return isDynamicButtonVisible;
-            }
-            else
-            {
-                return false;
-            }
-        }
         private void UD_RightClickButton(object sh, Range target, ref bool cancel)
         {
             Worksheet sheet = sh as Worksheet;
