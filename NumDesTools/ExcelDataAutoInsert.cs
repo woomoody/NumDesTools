@@ -1218,7 +1218,7 @@ public class ExcelDataAutoInsertCopyMulti
         var modelIdNewCol = title.IndexOf("实际模板(上一期)");
         //获取单元格颜色
         var colorCell = sheet.Cells[6, 1];
-        var cellColor = PubMetToExcel.GetCellBackgroundColor(colorCell);
+        PubMetToExcel.GetCellBackgroundColor(colorCell);
         ErrorLogCtp.DisposeCtp();
         //字典Value跨度（行）
         var rowCount = 2;
@@ -1228,12 +1228,10 @@ public class ExcelDataAutoInsertCopyMulti
         var errorExcelList = new List<List<(string, string, string)>>();
         var excelCount = 1;
         //统计写入的内容
-        var errorList = new List<(string, string, string)>();
         var diffList = new List<(string, string, string)>();
         //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
-        var outFilePath = Path.Combine(documentsFolder, "result.txt");
         var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
         foreach (var key in modelIdNew)
         {
@@ -1241,7 +1239,7 @@ public class ExcelDataAutoInsertCopyMulti
             var excelName = key.Key;
             var targetExcelPath = excelPath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
             //创建excel对象
-            errorList = PubMetToExcel.SetExcelObjectEpPlus(targetExcelPath, excelName, out ExcelWorksheet targetSheet, out ExcelPackage _);
+            List<(string, string, string)> errorList = PubMetToExcel.SetExcelObjectEpPlus(targetExcelPath, excelName, out ExcelWorksheet targetSheet, out ExcelPackage _);
             if (errorList.Count != 0)
             {
                 //return errorList;
@@ -1260,7 +1258,6 @@ public class ExcelDataAutoInsertCopyMulti
                 var endRowSource = ExcelDataAutoInsert.FindSourceRow(sourceSheet, 2, endValue);
                 var startRowTarget = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, startValue);
                 var endRowTarget = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, endValue);
-                var isSame=false;
                 if (endRowSource - startRowSource > endRowTarget- startRowTarget)
                 {
                     for (int i = startRowSource; i <= endRowSource; i++)
@@ -1397,7 +1394,7 @@ public class ExcelDataAutoInsertCopyMulti
         {
             //写入算法
             var excelName = key.Key;
-            List<(string, string, string)> error = AutoCopyData(false,modelIdNew,excelName,excelPath,cellColor);
+            List<(string, string, string)> error = AutoCopyData(modelIdNew,excelName,excelPath,cellColor);
             CreatRibbon.App.StatusBar = "写入数据" + "<" + excelCount + "/" + modelIdNew.Count + ">" + excelName;
             errorExcelList.Add(error);
             excelCount++;
@@ -1417,7 +1414,7 @@ public class ExcelDataAutoInsertCopyMulti
 
     }
 
-    private static List<(string, string, string)> AutoCopyData(dynamic isMulti,dynamic modelIdNew,dynamic excelName ,dynamic excelPath,dynamic cellColor)
+    private static List<(string, string, string)> AutoCopyData(dynamic modelIdNew,dynamic excelName ,dynamic excelPath,dynamic cellColor)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var errorList = new List<(string, string, string)>();
@@ -1652,7 +1649,7 @@ public class ExcelDataAutoInsertCopyMulti
         var excelName = indexWk.Name;
         ErrorLogCtp.DisposeCtp();
         var errorExcelList = new List<List<(string, string, string)>>();
-        List<(string, string, string)> error = AutoCopyDataRightCol(CreatRibbon.App, excelPath, excelName, sheet);
+        List<(string, string, string)> error = AutoCopyDataRightCol(CreatRibbon.App, excelPath, excelName);
         errorExcelList.Add(error);
         //错误日志处理
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
@@ -1672,7 +1669,7 @@ public class ExcelDataAutoInsertCopyMulti
         CreatRibbon.App.StatusBar = "完成写入：" + ts2;
     }
 
-    private static List<(string, string, string)> AutoCopyDataRightCol(dynamic app, dynamic excelPath, dynamic excelName, dynamic sheet)
+    private static List<(string, string, string)> AutoCopyDataRightCol(dynamic app, dynamic excelPath, dynamic excelName)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var errorList = new List<(string, string, string)>();
@@ -1734,7 +1731,7 @@ public class ExcelDataAutoInsertCopyMulti
             var sourceRangeValueTitle = (object[,])sourceRangeTitle.Value;
             var targetRangeValueTitle = (object[,])targetRangeTitle.Value;
             //获取target字段，匹配source的数据进行过滤，并填充数据
-            var targetRowList = PubMetToExcel.MergeExcelCol(sourceRangeValue, targetSheet, targetRangeValueTitle, sourceRangeValueTitle);
+            PubMetToExcel.MergeExcelCol(sourceRangeValue, targetSheet, targetRangeValueTitle, sourceRangeValueTitle);
 
             //for (int i = 0; i < targetRowList.Count; i++)
             //{

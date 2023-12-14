@@ -6,7 +6,6 @@ using System.Text.RegularExpressions;
 using Microsoft.Office.Core;
 using System;
 using System.Diagnostics;
-using System.IO;
 using OfficeOpenXml;
 
 namespace NumDesTools;
@@ -129,7 +128,7 @@ public class PubMetToExcelFunc
         newPath = newPath + @"\Excels\Localizations\Localizations.xlsx";
         var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(newPath);
         var findValue = PubMetToExcel.FindDataInDataTable(newPath, dataTable, selectCell.Value.ToString());
-        var cellAddress = "";
+        string cellAddress;
         if (findValue.Count == 0)
         {
             cellAddress = "A1";
@@ -266,7 +265,6 @@ public class PubMetToExcelFunc
         var modeValue = GetMode(filteredDataGift.Values);
         var filteredDataGiftMode = filteredDataGift.Where(pair => pair.Value == modeValue).ToList();
         var filteredDataGiftList = new List<List<object>>();
-        var methodCount = filteredDataGiftMode.Count;
         foreach (var kvp in filteredDataGiftMode)
         {
             var key = kvp.Key;
@@ -301,23 +299,9 @@ public class PubMetToExcelFunc
             PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataMethod.Count - 1, 4, 4, PubMetToExcel.ConvertListToArray(filteredDataMethod));
         }
     }
-    static int GetGcd(int a, int b)
-    {
-        while (b != 0)
-        {
-            var temp = b;
-            b = a % b;
-            a = temp;
-        }
-        return a;
-    }
 
-    static int GetLcm(int a, int b)
-    {
-        return Math.Abs(a * b) / GetGcd(a, b);
-    }
     // 获取列表的众数
-    static int GetMode(IEnumerable<int> values)
+    private static int GetMode(IEnumerable<int> values)
     {
         var modes = values
             .GroupBy(v => v)
@@ -326,46 +310,6 @@ public class PubMetToExcelFunc
 
         // 如果有多个众数，可以在这里选择处理方式，此处选择返回第一个众数
         return modes.FirstOrDefault();
-    }
-
-    static List<List<int>> GeneratePermutations(List<int> data)
-    {
-        var result = new List<List<int>>();
-        GeneratePermutationsHelper(data, 0, result);
-        return result;
-    }
-
-    static void GeneratePermutationsHelper(List<int> data, int index, List<List<int>> result)
-    {
-        if (index == data.Count)
-        {
-            // 当索引达到数组末尾时，添加当前排列到结果集
-            result.Add(new List<int>(data));
-            return;
-        }
-        // 使用 HashSet 来去重
-        var usedValues = new HashSet<int>();
-
-        for (var i = index; i < data.Count; i++)
-        {
-            if (usedValues.Add(data[i]))
-            {
-                // 交换当前位置和索引位置的元素
-                Swap(data, index, i);
-
-                // 递归生成下一个位置的排列
-                GeneratePermutationsHelper(data, index + 1, result);
-                // 恢复交换的元素，以便进行下一次交换
-                Swap(data, index, i);
-            }
-        }
-
-    }
-    static void Swap(List<int> data, int i, int j)
-    {
-        var temp = data[i];
-        data[i] = data[j];
-        data[j] = temp;
     }
 
     static List<List<int>> GenerateUniqueSchemes(int numberOfRolls, int numberOfSchemes)

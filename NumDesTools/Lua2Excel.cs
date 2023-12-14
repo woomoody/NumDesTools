@@ -25,7 +25,7 @@ public class Lua2Excel
             var excelName = Path.GetFileNameWithoutExtension(filePath);
             excelName = excelName.Substring(0, excelName.Length - 4);
             excelName = excelName.Replace("Table", "");
-            var errorList = PubMetToExcel.OpenOrCreatExcelByEpPlus(excelFilePath, excelName, out var sheet, out var excel);
+            PubMetToExcel.OpenOrCreatExcelByEpPlus(excelFilePath, excelName, out var sheet, out var excel);
             errorLogLua += LuaDataExportToExcel(filePath,sheet);
             excel.Save();
             excel.Dispose();
@@ -120,7 +120,7 @@ public class Lua2Excel
                     var cellTitle = sheet.Cells[1, j].Value;
                     var value = luaData[cellTitle];
                     var cellValue = value;
-                    if (value is LuaTable newTable)
+                    if (value is LuaTable)
                     {
                         cellValue = ProcessLuaTable((LuaTable)value);
                     }

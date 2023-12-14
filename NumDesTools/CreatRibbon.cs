@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using DocumentFormat.OpenXml.Office2016.Drawing.Command;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
 using Microsoft.Office.Interop.Excel;
@@ -14,7 +13,7 @@ using Application = Microsoft.Office.Interop.Excel.Application;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
 using Color = System.Drawing.Color;
-using CommandBar = Microsoft.Office.Core.CommandBar;
+using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
 using CommandBarControl = Microsoft.Office.Core.CommandBarControl;
 using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
 using MsoControlType = Microsoft.Office.Core.MsoControlType;
@@ -186,10 +185,7 @@ namespace NumDesTools
             var missing = Type.Missing;
             const string defaultControlTag = "自定义右键菜单";
             //清理已有的自定义菜单
-            foreach (var selfControl in from CommandBarControl tempControl in currentBars
-                     let t = tempControl.Tag
-                     where t is defaultControlTag
-                     select tempControl)
+            foreach (var selfControl in from CommandBarControl tempControl in currentBars let t = tempControl.Tag where t is defaultControlTag select tempControl) 
                 try
                 {
                     selfControl.Delete();
@@ -207,19 +203,14 @@ namespace NumDesTools
                 }
                 else
                 {
-                    if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton)
+                    if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton comButton)
                     { 
                         comButton.Tag = defaultControlTag;
                         comButton.Caption = "导出：单个卡牌"; 
                         comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                        var sw = new Stopwatch();
-                        sw.Start();
                         comButton.Click += RoleDataPri.DataKey;
-                        sw.Stop();
-                        var ts2 = sw.Elapsed;
-                        App.StatusBar = "导出完成，用时：" + ts2;
                     }
-                    if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton1)
+                    if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton comButton1)
                     {
                         comButton1.Tag = defaultControlTag;
                         comButton1.Caption = "导出：多个卡牌";
@@ -230,8 +221,7 @@ namespace NumDesTools
             }
             else if (sheetName.Contains("【模板】"))
             {
-                //生成自己的菜单---调用不同的Click命令需要不同的Tag
-                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton)
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton comButton)
                 {
                     comButton.Tag = defaultControlTag;
                     comButton.Caption = "自选表格写入";
@@ -241,14 +231,14 @@ namespace NumDesTools
             }
             else if (bookName.Contains("#【自动填表】多语言对话"))
             {
-                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton)
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton comButton)
                 {
                     comButton.Tag = defaultControlTag;
                     comButton.Caption = "当前项目Lan";
                     comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
                     comButton.Click += PubMetToExcelFunc.OpenBaseLanExcel;
                 }
-                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton1)
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton comButton1)
                 {
                     comButton1.Tag = defaultControlTag;
                     comButton1.Caption = "合并项目Lan";
@@ -258,14 +248,14 @@ namespace NumDesTools
             }
             else if(!(bookName.Contains("#")) && bookPath.Contains(@"Public\Excels\Tables"))
             {
-                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton)
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton comButton)
                 {
                     comButton.Tag = defaultControlTag;
                     comButton.Caption = "合并表格Row";
                     comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
                     comButton.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeData;
                 }
-                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton1)
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton comButton1)
                 {
                     comButton1.Tag = defaultControlTag;
                     comButton1.Caption = "合并表格Col";
@@ -277,7 +267,7 @@ namespace NumDesTools
             else if(targetValue.Contains(".xlsx"))
             {
                 if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is not
-                    Microsoft.Office.Core.CommandBarButton comButton) return;
+                    CommandBarButton comButton) return;
                 comButton.Tag = defaultControlTag;
                 comButton.Caption = "打开表格";
                 comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
@@ -502,7 +492,7 @@ namespace NumDesTools
             MessageBox.Show(@"检查公式完毕！" + Math.Round(milliseconds / 1000, 2) + @"秒");
         }
 
-        public void IndexSheetOpen_Click(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
+        public void IndexSheetOpen_Click(CommandBarButton ctrl, ref bool cancelDefault)
         {
             var ws = App.ActiveSheet;
             var cellCol = App.Selection.Column;
@@ -525,7 +515,7 @@ namespace NumDesTools
             }
         }
 
-        public void IndexSheetUnOpen_Click(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
+        public void IndexSheetUnOpen_Click(CommandBarButton ctrl, ref bool cancelDefault)
         {
             var filePath = App.ActiveWorkbook.Path;
             var ws = App.ActiveSheet;
@@ -1217,16 +1207,16 @@ namespace NumDesTools
             Debug.Print(ts2.ToString());
             App.StatusBar = "导出完成，用时：" + ts2;
         }
-        public async void TestBar1_Click(IRibbonControl control)
+        public  void TestBar1_Click(IRibbonControl control)
         {
   
             var sw = new Stopwatch();
             sw.Start();
-            var abc = await PubMetToExcel.GetCurrentExcelObjectC();
-            var name = abc.sheetName;
-            var path  = abc.sheetPath;
-            var range = abc.currentRange;
-            var rangeValue = range.GetValue();
+            //var abc = await PubMetToExcel.GetCurrentExcelObjectC();
+            //var name = abc.sheetName;
+            //var path  = abc.sheetPath;
+            //var range = abc.currentRange;
+            //var rangeValue = range.GetValue();
 
             //Lua2Excel.LuaDataExportToExcel(@"C:\Users\cent\Desktop\二合数据\TableABTestCountry.lua.txt");
             //Program.NodeMain();
@@ -1308,7 +1298,7 @@ namespace NumDesTools
             var missing = Type.Missing;
             var comControl = bars.Add(MsoControlType.msoControlButton,
                 missing, missing, 1, true);
-            var comButton = comControl as Microsoft.Office.Core.CommandBarButton;
+            var comButton = comControl as CommandBarButton;
             if (comControl != null)
                 if (comButton != null)
                 {
@@ -1321,7 +1311,7 @@ namespace NumDesTools
             //添加第二个菜单
             var comControl1 = bars.Add(MsoControlType.msoControlButton,
                 missing, missing, 2, true); //添加自己的菜单项
-            var comButton1 = comControl1 as Microsoft.Office.Core.CommandBarButton;
+            var comButton1 = comControl1 as CommandBarButton;
             if (comControl1 != null)
                 if (comButton1 != null)
                 {
