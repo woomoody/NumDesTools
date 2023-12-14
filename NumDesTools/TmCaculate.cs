@@ -22,9 +22,9 @@ public class TmCaculate
         object[,] targetEleMaxValue = targetEleMax.Value;
         var targetEleMaxValueList = PubMetToExcel.RangeDataToList(targetEleMaxValue);
         //计数列表
-        Dictionary<string, int> eleCount = new Dictionary<string, int>();
+        var eleCount = new Dictionary<string, int>();
         //新eleID列表
-        List<List<object>> targetRangeValueList = new List<List<object>>();
+        var targetRangeValueList = new List<List<object>>();
         for (var i = 0; i < modelRangeValueList.Count; i++)
         {
             var tempTarget = new List<object>();
@@ -32,7 +32,7 @@ public class TmCaculate
             {
                 if (modelRangeValueList[i][j] != null)
                 {
-                    string ele = modelRangeValueList[i][j].ToString();
+                    var ele = modelRangeValueList[i][j].ToString();
                     if (eleCount.ContainsKey(ele))
                     {
                         eleCount[ele] ++;
@@ -79,21 +79,21 @@ public class TmCaculate
         var targetModelRangeValueList = PubMetToExcel.RangeDataToList(targetModelRangeValue);
 
         //新eleID列表
-        List<List<object>> targetRangeValueList = new List<List<object>>();
+        var targetRangeValueList = new List<List<object>>();
         //非目标计数列表
-        Dictionary<string, int> eleCount = new Dictionary<string, int>();
+        var eleCount = new Dictionary<string, int>();
         //非目标ID库循环列表
-        Dictionary<string, List<int>> eleIdLoop = new Dictionary<string, List<int>>();
-        for (int i = 0; i < targetEleMaxValueList.Count; i ++)
+        var eleIdLoop = new Dictionary<string, List<int>>();
+        for (var i = 0; i < targetEleMaxValueList.Count; i ++)
         {
-            int loopTimes = Convert.ToInt32(targetEleMaxValueList[i][5]);
-            int eleMax = Convert.ToInt32(targetEleMaxValueList[i][4]);
-            int eleBaseId = Convert.ToInt32(targetEleMaxValueList[i][3]);
-            string eleTheme = Convert.ToString(targetEleMaxValueList[i][0]);
+            var loopTimes = Convert.ToInt32(targetEleMaxValueList[i][5]);
+            var eleMax = Convert.ToInt32(targetEleMaxValueList[i][4]);
+            var eleBaseId = Convert.ToInt32(targetEleMaxValueList[i][3]);
+            var eleTheme = Convert.ToString(targetEleMaxValueList[i][0]);
             var loopIdList = new List<int>();
-            for (int j = 0; j < loopTimes*eleMax; j++)
+            for (var j = 0; j < loopTimes*eleMax; j++)
             {
-                int loopId = (j+1) % eleMax;
+                var loopId = (j+1) % eleMax;
                 if (loopId == 0) loopId = eleMax;
                 loopIdList.Add( eleBaseId + loopId);
             }
@@ -107,7 +107,7 @@ public class TmCaculate
                 if (modelRangeValueList[i][j] != "")
                 {
                     //非目标元素整体计数
-                    string ele = modelRangeValueList[i][j].ToString();
+                    var ele = modelRangeValueList[i][j].ToString();
                     if (eleCount.ContainsKey(ele))
                     {
                         eleCount[ele]++;
@@ -117,7 +117,7 @@ public class TmCaculate
                         eleCount[ele] = 1;
                     }
                     //非目标元素ID获取、和目标元素去重（向后索引）处理
-                    int eleId = eleIdLoop[ele][eleCount[ele] - 1];
+                    var eleId = eleIdLoop[ele][eleCount[ele] - 1];
                     foreach (var id in targetModelRangeValueList[i])
                     {
                         if (Convert.ToInt32(id) == eleId)

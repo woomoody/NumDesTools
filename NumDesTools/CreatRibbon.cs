@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using DocumentFormat.OpenXml.Office2016.Drawing.Command;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
 using Microsoft.Office.Interop.Excel;
@@ -163,14 +164,8 @@ namespace NumDesTools
         void IExcelAddIn.AutoOpen()
         {
             App.SheetBeforeRightClick += UD_RightClickButton;
-            App.WorkbookBeforeClose += App_WorkbookBeforeClose;
-        }
-        private void App_WorkbookBeforeClose(Workbook workbook, ref bool Cancel)
-        {
-            App.SheetBeforeRightClick -= UD_RightClickButton;
-            App.WorkbookBeforeClose -= App_WorkbookBeforeClose;
-        }
 
+        }
         void IExcelAddIn.AutoClose()
         {
             App.SheetBeforeRightClick -= UD_RightClickButton;
@@ -178,16 +173,31 @@ namespace NumDesTools
 
         private void UD_RightClickButton(object sh, Range target, ref bool cancel)
         {
-            Worksheet sheet = sh as Worksheet;
+            if (sh is not Worksheet sheet) return;
             var sheetName = sheet.Name;
             Workbook book = sheet.Parent;
             var bookName = book.Name;
             var bookPath = book.Path;
+            var targetValue = target.Value2.ToString();
             //excel文档已有的右键菜单cell
-            CommandBar mzBar = App.CommandBars["cell"];
-            mzBar.Reset();
-            var bars = mzBar.Controls;
+            var currentBar = App.CommandBars["cell"];
+            currentBar.Reset();
+            var currentBars = currentBar.Controls;
             var missing = Type.Missing;
+            const string defaultControlTag = "自定义右键菜单";
+            //清理已有的自定义菜单
+            foreach (var selfControl in from CommandBarControl tempControl in currentBars
+                     let t = tempControl.Tag
+                     where t is defaultControlTag
+                     select tempControl)
+                try
+                {
+                    selfControl.Delete();
+                }
+                catch
+                {
+                    // ignored
+                }
 
             if (bookName == "角色怪物数据生成" || sheetName == "角色基础")
             {
@@ -197,137 +207,81 @@ namespace NumDesTools
                 }
                 else
                 {
-                    foreach (var tempControl in from CommandBarControl tempControl in bars
-                             let t = tempControl.Tag
-                             where t is "单独导出" or "批量导出"
-                             select tempControl)
-                        try
-                        {
-                            tempControl.Delete();
-                        }
-                        catch
-                        {
-                            // ignored
-                        }
-
-                    //生成自己的菜单
-                    var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-                    var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
-                    var comControl1 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-                    var comButton2 = comControl1 as Microsoft.Office.Core.CommandBarButton;
-                    if (comControl == null || comControl1 ==null) return;
-                    if (comButton1 != null)
-                    {
-                        comButton1.Tag = "单独导出";
-                        comButton1.Caption = "导出：单个卡牌";
-                        comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton)
+                    { 
+                        comButton.Tag = defaultControlTag;
+                        comButton.Caption = "导出：单个卡牌"; 
+                        comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
                         var sw = new Stopwatch();
                         sw.Start();
-                        comButton1.Click += RoleDataPri.DataKey;
+                        comButton.Click += RoleDataPri.DataKey;
                         sw.Stop();
                         var ts2 = sw.Elapsed;
                         App.StatusBar = "导出完成，用时：" + ts2;
                     }
-                    if (comButton2 != null)
+                    if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton1)
                     {
-                        comButton2.Tag = "批量导出";
-                        comButton2.Caption = "导出：多个卡牌";
-                        comButton2.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                        comButton2.Click += RoleDataPri.DataKey;
+                        comButton1.Tag = defaultControlTag;
+                        comButton1.Caption = "导出：多个卡牌";
+                        comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                        comButton1.Click += RoleDataPri.DataKey;
                     }
                 }
             }
             else if (sheetName.Contains("【模板】"))
             {
-                foreach (var tempControl in from CommandBarControl tempControl in bars
-                         let t = tempControl.Tag
-                         where t is "自选写入" or "BaseLan表" or "MergeLan表"
-                         select tempControl)
-                    try
-                    {
-                        tempControl.Delete();
-                    }
-                    catch
-                    {
-                        // ignored
-                    }
                 //生成自己的菜单---调用不同的Click命令需要不同的Tag
-                var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-                var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
-                if (comControl == null ) return;
-                if (comButton1 != null)
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton)
                 {
-                    comButton1.Tag = "自选写入";
-                    comButton1.Caption = "自选表格写入";
-                    comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                    comButton1.Click += ExcelDataAutoInsertMulti.RightClickInsertData;
-                }
-                if (bookName.Contains("#【自动填表】多语言对话"))
-                {
-                    var comControl1 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-                    var comButton2 = comControl1 as Microsoft.Office.Core.CommandBarButton;
-                    var comControl2 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-                    var comButton3 = comControl2 as Microsoft.Office.Core.CommandBarButton;
-                    if (comControl1 == null || comControl2 == null) return;
-                    if (comButton2 != null)
-                    {
-                        comButton2.Tag = "BaseLan表";
-                        comButton2.Caption = "当前项目Lan";
-                        comButton2.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                        comButton2.Click += PubMetToExcelFunc.OpenBaseLanExcel;
-                    }
-                    if (comButton3 != null)
-                    {
-                        comButton3.Tag = "MergeLan表";
-                        comButton3.Caption = "合并项目Lan";
-                        comButton3.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                        comButton3.Click += PubMetToExcelFunc.OpenMergeLanExcel;
-                    }
+                    comButton.Tag = defaultControlTag;
+                    comButton.Caption = "自选表格写入";
+                    comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    comButton.Click += ExcelDataAutoInsertMulti.RightClickInsertData;
                 }
             }
-            else 
+            else if (bookName.Contains("#【自动填表】多语言对话"))
             {
-                foreach (var tempControl in from CommandBarControl tempControl in bars
-                         let t = tempControl.Tag
-                         where t is "超级复制" or "打开表格"
-                         select tempControl)
-                    try
-                    {
-                        tempControl.Delete();
-                    }
-                    catch
-                    {
-                        // ignored
-                    }
-                //生成自己的菜单
-                var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-                var comButton1 = comControl as Microsoft.Office.Core.CommandBarButton;
-                var comControl1 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-                var comButton2 = comControl1 as Microsoft.Office.Core.CommandBarButton;
-                var comControl2 = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-                var comButton3 = comControl2 as Microsoft.Office.Core.CommandBarButton;
-                if (comControl == null || comControl1 == null || comControl2 == null) return;
-                if (comButton1 != null )
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton)
                 {
-                    comButton1.Tag = "超级复制";
-                    comButton1.Caption = "合并表格Row";
+                    comButton.Tag = defaultControlTag;
+                    comButton.Caption = "当前项目Lan";
+                    comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    comButton.Click += PubMetToExcelFunc.OpenBaseLanExcel;
+                }
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton1)
+                {
+                    comButton1.Tag = defaultControlTag;
+                    comButton1.Caption = "合并项目Lan";
                     comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                    comButton1.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeData;
+                    comButton1.Click += PubMetToExcelFunc.OpenMergeLanExcel;
                 }
-                if (comButton3 != null)
+            }
+            else if(!(bookName.Contains("#")) && bookPath.Contains(@"Public\Excels\Tables"))
+            {
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton)
                 {
-                    comButton3.Tag = "超级复制";
-                    comButton3.Caption = "合并表格Col";
-                    comButton3.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                    comButton3.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol;
+                    comButton.Tag = defaultControlTag;
+                    comButton.Caption = "合并表格Row";
+                    comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    comButton.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeData;
                 }
-                if (comButton2 != null)
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is Microsoft.Office.Core.CommandBarButton comButton1)
                 {
-                    comButton2.Tag = "打开表格";
-                    comButton2.Caption = "打开表格";
-                    comButton2.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                    comButton2.Click += PubMetToExcelFunc.RightOpenExcelByActiveCell;
+                    comButton1.Tag = defaultControlTag;
+                    comButton1.Caption = "合并表格Col";
+                    comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    comButton1.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol;
                 }
+
+            }
+            else if(targetValue.Contains(".xlsx"))
+            {
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is not
+                    Microsoft.Office.Core.CommandBarButton comButton) return;
+                comButton.Tag = defaultControlTag;
+                comButton.Caption = "打开表格";
+                comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                comButton.Click += PubMetToExcelFunc.RightOpenExcelByActiveCell;
             }
         }
 
@@ -370,14 +324,14 @@ namespace NumDesTools
                 #endregion 生成窗口和基础控件
 
                 //获取公共目录
-                string outFilePath = App.ActiveWorkbook.Path;
+                var outFilePath = App.ActiveWorkbook.Path;
                 Directory.SetCurrentDirectory(Directory.GetParent(outFilePath)?.FullName ?? string.Empty);
                 outFilePath = Directory.GetCurrentDirectory() + TempPath;
 
                 #region 动态加载复选框
 
-                string filePath = App.ActiveWorkbook.Path;
-                string fileName = App.ActiveWorkbook.Name;
+                var filePath = App.ActiveWorkbook.Path;
+                var fileName = App.ActiveWorkbook.Name;
                 var fileFolder = new DirectoryInfo(filePath);
                 var fileCount = 1;
                 foreach (var file in fileFolder.GetFiles())
@@ -469,7 +423,7 @@ namespace NumDesTools
                                 missing, missing, missing, missing, missing, missing, missing,
                                 missing, missing, missing, missing, missing, missing);
                             App.Visible = false;
-                            int sheetCount = App.Worksheets.Count;
+                            var sheetCount = App.Worksheets.Count;
                             for (var i = 1; i <= sheetCount; i++)
                             {
                                 string sheetName = App.Worksheets[i].Name;
@@ -534,7 +488,7 @@ namespace NumDesTools
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            int sheetCount = App.Worksheets.Count;
+            var sheetCount = App.Worksheets.Count;
             for (var i = 1; i <= sheetCount; i++)
             {
                 var sheetName = App.Worksheets[i].Name;
@@ -573,7 +527,7 @@ namespace NumDesTools
 
         public void IndexSheetUnOpen_Click(Microsoft.Office.Core.CommandBarButton ctrl, ref bool cancelDefault)
         {
-            string filePath = App.ActiveWorkbook.Path;
+            var filePath = App.ActiveWorkbook.Path;
             var ws = App.ActiveSheet;
             var cellCol = App.Selection.Column;
             var fileTemp = Convert.ToString(ws.Cells[7, cellCol].Value);
@@ -636,7 +590,7 @@ namespace NumDesTools
                 #endregion 生成窗口和基础控件
 
                 //获取公共目录
-                string outFilePath = App.ActiveWorkbook.Path;
+                var outFilePath = App.ActiveWorkbook.Path;
                 Directory.SetCurrentDirectory(Directory.GetParent(outFilePath)?.FullName ?? string.Empty);
                 outFilePath = Directory.GetCurrentDirectory() + TempPath;
 
@@ -645,7 +599,7 @@ namespace NumDesTools
                 var i = 1;
                 foreach (Worksheet sheet in App.ActiveWorkbook.Sheets)
                 {
-                    string sheetName = sheet.Name;
+                    var sheetName = sheet.Name;
                     const string key = "_cfg";
                     var isRealSheet = sheetName.ToLower().Contains(key.ToLower());
                     if (!isRealSheet) continue;
@@ -773,7 +727,7 @@ namespace NumDesTools
                 stopwatch.Start();
                 string sheetName = App.ActiveSheet.Name;
                 //获取公共目录
-                string outFilePath = App.ActiveWorkbook.Path;
+                var outFilePath = App.ActiveWorkbook.Path;
                 Directory.SetCurrentDirectory(Directory.GetParent(outFilePath)?.FullName ?? string.Empty);
                 outFilePath = Directory.GetCurrentDirectory() + TempPath;
                 var errorLog = ExcelSheetDataIsError2.GetData2(sheetName);
@@ -899,7 +853,7 @@ namespace NumDesTools
 
         public void SvnCommitTxt_Click(IRibbonControl control)
         {
-            string path = App.ActiveWorkbook.Path;
+            var path = App.ActiveWorkbook.Path;
             Directory.SetCurrentDirectory(Directory.GetParent(path)?.FullName ?? throw new InvalidOperationException());
 /*
         path = Directory.GetCurrentDirectory() + TempPath;
@@ -1019,7 +973,7 @@ namespace NumDesTools
             {
                 ErrorLogCtp.DisposeCtp();
                 var log="";
-                for (int i = 0; i < targetList.Count; i++)
+                for (var i = 0; i < targetList.Count; i++)
                 {
                     log += targetList[i].Item1+"#"+targetList[i].Item2+"#"+targetList[i].Item3+"::"+targetList[i].Item4+"\n";
                 }
@@ -1067,7 +1021,7 @@ namespace NumDesTools
             {
                 ErrorLogCtp.DisposeCtp();
                 var log = "";
-                for (int i = 0; i < targetList.Count; i++)
+                for (var i = 0; i < targetList.Count; i++)
                 {
                     log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" + targetList[i].Item4 + "\n";
                 }
@@ -1272,7 +1226,7 @@ namespace NumDesTools
             var name = abc.sheetName;
             var path  = abc.sheetPath;
             var range = abc.currentRange;
-            object rangeValue = range.GetValue();
+            var rangeValue = range.GetValue();
 
             //Lua2Excel.LuaDataExportToExcel(@"C:\Users\cent\Desktop\二合数据\TableABTestCountry.lua.txt");
             //Program.NodeMain();
@@ -1328,7 +1282,7 @@ namespace NumDesTools
         private void App_SheetSelectionChange(object sh, Range target)
         {
             //excel文档已有的右键菜单cell
-            CommandBar mzBar = App.CommandBars["cell"];
+            var mzBar = App.CommandBars["cell"];
             mzBar.Reset();
             var bars = mzBar.Controls;
             foreach (CommandBarControl tempContrl in bars)
@@ -1381,7 +1335,7 @@ namespace NumDesTools
         private void App_SheetSelectionChange1(object sh, Range target)
         {
             //右键重置避免按钮重复
-            CommandBar currentMenuBar = App.CommandBars["cell"];
+            var currentMenuBar = App.CommandBars["cell"];
             //currentMenuBar.Reset();
             var bars = currentMenuBar.Controls;
             //删除右键

@@ -11,6 +11,7 @@ using System.Data;
 using DataTable = System.Data.DataTable;
 using System.Data.OleDb;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
+using System.Text.RegularExpressions;
 
 namespace NumDesTools;
 
@@ -30,10 +31,10 @@ public class PubMetToExcel
         var path = excelFilePath + @"\" + excelName + @".xlsx";
         if (!File.Exists(excelFilePath))
         {
-            using (ExcelPackage packageCreat = new ExcelPackage())
+            using (var packageCreat = new ExcelPackage())
             {
                 var sheetCreat = packageCreat.Workbook.Worksheets.Add("Sheet1");
-                FileInfo excelFile = new FileInfo(path);
+                var excelFile = new FileInfo(path);
                 packageCreat.SaveAs(excelFile);
                 sheetCreat.Dispose();
             }
@@ -69,7 +70,7 @@ public class PubMetToExcel
                 break;
         }
 
-        bool fileExists = File.Exists(path);
+        var fileExists = File.Exists(path);
         if (fileExists == false)
         {
             errorExcelLog = excelName + "不存在表格文件";
@@ -108,9 +109,9 @@ public class PubMetToExcel
     object[,] targetRangeTitle, object[,] sourceRangeTitle)
     {
         var targetColList = new List<int>();
-        int defaultCol = targetSheet.Dimension.End.Column;
-        int beforTargetCol = defaultCol;
-        for (int c = 0; c < sourceRangeValue.GetLength(1); c++)
+        var defaultCol = targetSheet.Dimension.End.Column;
+        var beforTargetCol = defaultCol;
+        for (var c = 0; c < sourceRangeValue.GetLength(1); c++)
         {
             //target中找列
             var sourceCol = sourceRangeValue[1, c];
@@ -128,7 +129,7 @@ public class PubMetToExcel
             }
 
             beforTargetCol = targetCol;
-            for (int i = 0; i < targetRangeTitle.GetLength(0); i++)
+            for (var i = 0; i < targetRangeTitle.GetLength(0); i++)
             {
                 var targetTitle = targetRangeTitle[i, 0];
                 if (targetTitle == null)
@@ -136,7 +137,7 @@ public class PubMetToExcel
                     targetTitle = "";
                 }
 
-                for (int j = 0; j < sourceRangeTitle.GetLength(0); j++)
+                for (var j = 0; j < sourceRangeTitle.GetLength(0); j++)
                 {
                     var sourceTitle = sourceRangeTitle[j, 0];
                     if (sourceTitle == null)
@@ -168,9 +169,9 @@ public class PubMetToExcel
     object[,] targetRangeTitle, object[,] sourceRangeTitle)
     {
         var targetRowList = new List<int>();
-        int defaultRow = targetSheet.Dimension.End.Row;
-        int beforTargetRow = defaultRow;
-        for (int r = 0; r < sourceRangeValue.GetLength(0); r++)
+        var defaultRow = targetSheet.Dimension.End.Row;
+        var beforTargetRow = defaultRow;
+        for (var r = 0; r < sourceRangeValue.GetLength(0); r++)
         {
             //target中找行
             var sourceRow = sourceRangeValue[r, 1];
@@ -188,7 +189,7 @@ public class PubMetToExcel
             }
 
             beforTargetRow = targetRow;
-            for (int i = 0; i < targetRangeTitle.GetLength(1); i++)
+            for (var i = 0; i < targetRangeTitle.GetLength(1); i++)
             {
                 var targetTitle = targetRangeTitle[0, i];
                 if (targetTitle == null)
@@ -196,7 +197,7 @@ public class PubMetToExcel
                     targetTitle = "";
                 }
 
-                for (int j = 0; j < sourceRangeTitle.GetLength(1); j++)
+                for (var j = 0; j < sourceRangeTitle.GetLength(1); j++)
                 {
                     var sourceTitle = sourceRangeTitle[0, j];
                     if (sourceTitle == null)
@@ -230,9 +231,9 @@ public class PubMetToExcel
     //通过C-API的方式读取打开当前活动Excel表格各个Sheet的数据
     public static object[,] ReadExcelDataC(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast)
     {
-        ExcelReference sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
-        ExcelReference range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
-        object rangeValue = range.GetValue();
+        var sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
+        var range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
+        var rangeValue = range.GetValue();
         //兼容range和cell获取数据变为二维数据
         object[,] rangeValues;
         if (rangeValue is object[,] arrayValue)
@@ -249,8 +250,8 @@ public class PubMetToExcel
     //通过C-API的方式写入打开当前活动Excel表格各个Sheet的数据
     public static void WriteExcelDataC(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast, object[,] rangeValue)
     {
-        ExcelReference sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
-        ExcelReference range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
+        var sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
+        var range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
         ExcelAsyncUtil.QueueAsMacro(() =>
         {
             range.SetValue(rangeValue);
@@ -363,24 +364,24 @@ public class PubMetToExcel
     public static DataTable ExcelDataToDataTable(string filePath)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        FileInfo file = new FileInfo(filePath);
-        using (ExcelPackage package = new ExcelPackage(file))
+        var file = new FileInfo(filePath);
+        using (var package = new ExcelPackage(file))
         {
             var dataTable = new DataTable();
             // 默认导入第一个 Sheet 的数据
-            ExcelWorksheet worksheet = package.Workbook.Worksheets["Sheet1"] ?? package.Workbook.Worksheets[0];
+            var worksheet = package.Workbook.Worksheets["Sheet1"] ?? package.Workbook.Worksheets[0];
             dataTable.TableName = worksheet.Name;
             //创建列，可以添加值作为列名
-            for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
+            for (var col = 1; col <= worksheet.Dimension.End.Column; col++)
             {
                 dataTable.Columns.Add();
             }
 
             // 读取数据行
-            for (int row = 1; row <= worksheet.Dimension.End.Row; row++)
+            for (var row = 1; row <= worksheet.Dimension.End.Row; row++)
             {
-                DataRow dataRow = dataTable.NewRow();
-                for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
+                var dataRow = dataTable.NewRow();
+                for (var col = 1; col <= worksheet.Dimension.End.Column; col++)
                 {
                     dataRow[col - 1] = worksheet.Cells[row, col].Value?.ToString();
                 }
@@ -396,18 +397,18 @@ public class PubMetToExcel
     public static DataTable ExcelDataToDataTableOleDb(string filePath)
     {
         // Excel 连接字符串，根据 Excel 版本和文件类型进行调整
-        string connectionString =
+        var connectionString =
             $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={filePath};Extended Properties='Excel 12.0 Xml;HDR=YES;'";
         var sheetName = "Sheet1";
-        using (OleDbConnection connection = new OleDbConnection(connectionString))
+        using (var connection = new OleDbConnection(connectionString))
         {
             try
             {
                 connection.Open();
-                DataTable dataTable = new DataTable();
+                var dataTable = new DataTable();
 
                 // 获取所有可用的工作表名称
-                DataTable schemaTable = connection.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
+                var schemaTable = connection.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
                 // 检查 Sheet1 是否存在
                 foreach (DataRow row in schemaTable.Rows)
                 {
@@ -421,9 +422,9 @@ public class PubMetToExcel
                 }
 
                 // 读取 Excel 表格数据
-                using (OleDbCommand command = new OleDbCommand($"SELECT * FROM [{sheetName}]", connection))
+                using (var command = new OleDbCommand($"SELECT * FROM [{sheetName}]", connection))
                 {
-                    using (OleDbDataAdapter adapter = new OleDbDataAdapter(command))
+                    using (var adapter = new OleDbDataAdapter(command))
                     {
                         adapter.Fill(dataTable);
                     }
@@ -510,7 +511,7 @@ public class PubMetToExcel
 
     public static string[] PathExcelFileCollect(List<string> pathList, string fileSuffixName, string[] ignoreFileNames)
     {
-        string[] files = new string[] { };
+        var files = new string[] { };
         foreach (var path in pathList)
         {
             var file = Directory.EnumerateFiles(path, fileSuffixName)
@@ -558,8 +559,8 @@ public class PubMetToExcel
 
     public static string RepeatValue(ExcelWorksheet sheet, int row, int col, string repeatValue)
     {
-        string errorLog = "";
-        for (int r = sheet.Dimension.End.Row; r >= row; r--)
+        var errorLog = "";
+        for (var r = sheet.Dimension.End.Row; r >= row; r--)
         {
             var colA = sheet.Cells[r, col].Value?.ToString();
             if (colA == repeatValue)
@@ -581,7 +582,7 @@ public class PubMetToExcel
 
     public static string RepeatValue2(ExcelWorksheet sheet, int row, int col, List<string> repeatValue)
     {
-        string errorLog = "";
+        var errorLog = "";
         // 获取指定列的单元格数据
         var sourceValues = sheet.Cells[row, col, sheet.Dimension.End.Row, col].Select(c => c.Value.ToString()).ToList();
 
@@ -590,7 +591,7 @@ public class PubMetToExcel
         foreach (var repeat in repeatValue)
         {
             // 查找存在的值所在的行
-            int rowIndex = sourceValues.FindIndex(c => c == repeat);
+            var rowIndex = sourceValues.FindIndex(c => c == repeat);
             if (rowIndex == -1) continue;
             rowIndex += row;
             indexList.Add(rowIndex);
@@ -600,10 +601,10 @@ public class PubMetToExcel
         if (indexList.Count != 0)
         {
             //合并List
-            List<List<int>> outputList = new List<List<int>>();
-            int start = indexList[0];
+            var outputList = new List<List<int>>();
+            var start = indexList[0];
 
-            for (int i = 1; i < indexList.Count; i++)
+            for (var i = 1; i < indexList.Count; i++)
             {
                 if (indexList[i] != indexList[i - 1] + 1)
                 {
@@ -640,21 +641,21 @@ public class PubMetToExcel
 
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
         var mainPath = newPath + @"\Excels\Tables\";
-        string[] files1 = Directory.EnumerateFiles(mainPath, "*.xlsx")
+        var files1 = Directory.EnumerateFiles(mainPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var langPath = newPath + @"\Excels\Localizations\";
-        string[] files2 = Directory.EnumerateFiles(langPath, "*.xlsx")
+        var files2 = Directory.EnumerateFiles(langPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var uiPath = newPath + @"\Excels\UIs\";
-        string[] files3 = Directory.EnumerateFiles(uiPath, "*.xlsx")
+        var files3 = Directory.EnumerateFiles(uiPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var files = files1.Concat(files2).Concat(files3).ToArray();
 
         var targetList = new List<(string, string, int, int)>();
-        int currentCount = 0;
+        var currentCount = 0;
         var count = files.Length;
         var isAll = errorValue.Contains("*");
         errorValue = errorValue.Replace("*", "");
@@ -663,7 +664,7 @@ public class PubMetToExcel
             try
             {
                 // 使用 EPPlus 打开 Excel 文件进行操作
-                using (ExcelPackage package = new ExcelPackage(new FileInfo(file)))
+                using (var package = new ExcelPackage(new FileInfo(file)))
                 {
                     var wk = package.Workbook;
                     try
@@ -728,15 +729,15 @@ public class PubMetToExcel
 
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
         var mainPath = newPath + @"\Excels\Tables\";
-        string[] files1 = Directory.EnumerateFiles(mainPath, "*.xlsx")
+        var files1 = Directory.EnumerateFiles(mainPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var langPath = newPath + @"\Excels\Localizations\";
-        string[] files2 = Directory.EnumerateFiles(langPath, "*.xlsx")
+        var files2 = Directory.EnumerateFiles(langPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var uiPath = newPath + @"\Excels\UIs\";
-        string[] files3 = Directory.EnumerateFiles(uiPath, "*.xlsx")
+        var files3 = Directory.EnumerateFiles(uiPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var files = files1.Concat(files2).Concat(files3).ToArray();
@@ -750,7 +751,7 @@ public class PubMetToExcel
             try
             {
 
-                using (ExcelPackage package = new ExcelPackage(new FileInfo(file)))
+                using (var package = new ExcelPackage(new FileInfo(file)))
                 {
                     try
                     {
@@ -793,20 +794,20 @@ public class PubMetToExcel
 
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
         var mainPath = newPath + @"\Excels\Tables\";
-        string[] files1 = Directory.EnumerateFiles(mainPath, "*.xlsx")
+        var files1 = Directory.EnumerateFiles(mainPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var langPath = newPath + @"\Excels\Localizations\";
-        string[] files2 = Directory.EnumerateFiles(langPath, "*.xlsx")
+        var files2 = Directory.EnumerateFiles(langPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var uiPath = newPath + @"\Excels\UIs\";
-        string[] files3 = Directory.EnumerateFiles(uiPath, "*.xlsx")
+        var files3 = Directory.EnumerateFiles(uiPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var files = files1.Concat(files2).Concat(files3).ToArray();
 
-        int currentCount = 0;
+        var currentCount = 0;
         var count = files.Length;
         foreach (var file in files)
         {
@@ -814,7 +815,7 @@ public class PubMetToExcel
             var fileName = Path.GetFileName(file);
             if (fileName.Contains("#")) continue;
             // 使用 EPPlus 打开 Excel 文件进行操作
-            using (ExcelPackage package = new ExcelPackage(new FileInfo(file)))
+            using (var package = new ExcelPackage(new FileInfo(file)))
             {
                 try
                 {
@@ -857,18 +858,18 @@ public class PubMetToExcel
 
     public static Color GetCellBackgroundColor(Range cell)
     {
-        Color color = Color.Empty;
+        var color = Color.Empty;
 
         if (cell.Interior.Color != null)
         {
             object excelColor = cell.Interior.Color;
             if (excelColor is double)
             {
-                double colorValue = (double)excelColor;
-                int intValue = (int)colorValue;
-                int red = intValue & 0xFF;
-                int green = (intValue & 0xFF00) >> 8;
-                int blue = (intValue & 0xFF0000) >> 16;
+                var colorValue = (double)excelColor;
+                var intValue = (int)colorValue;
+                var red = intValue & 0xFF;
+                var green = (intValue & 0xFF00) >> 8;
+                var blue = (intValue & 0xFF0000) >> 16;
                 color = Color.FromArgb(red, green, blue);
             }
         }
@@ -892,7 +893,7 @@ public class PubMetToExcel
         if (!File.Exists(filePath))
         {
             // 创建新的文本文件
-            using (StreamWriter writer = File.CreateText(filePath))
+            using (var writer = File.CreateText(filePath))
             {
                 writer.WriteLine("Alice路径");
                 writer.WriteLine("Cove路径");
@@ -932,11 +933,11 @@ public class PubMetToExcel
     //数字转Excel字母列
     public static string ConvertToExcelColumn(int columnNumber)
     {
-        string columnName = "";
+        var columnName = "";
 
         while (columnNumber > 0)
         {
-            int remainder = (columnNumber - 1) % 26;
+            var remainder = (columnNumber - 1) % 26;
             columnName = (char)('A' + remainder) + columnName;
             columnNumber = (columnNumber - 1) / 26;
         }
@@ -953,8 +954,17 @@ public class PubMetToExcel
             var workbook = CreatRibbon.App.Workbooks.Open(filePath);
             // 获取指定名称的工作表
             var worksheet = workbook.Sheets[sheetName];
-            // 选择指定的单元格
-            var cellRange = worksheet.Range[cellAddress];
+            // 选择指定的单元格,非法则选择默认值A1
+            Regex regex = new Regex(@"^[A-Za-z]+\d+$");
+            string cellAddressDefault = "A1";
+            if (cellAddress != null)
+            {
+                if (regex.IsMatch(cellAddress))
+                {
+                    cellAddressDefault = cellAddress;
+                }
+            }
+            var cellRange = worksheet.Range[cellAddressDefault];
             cellRange.Select();
         }
         catch (Exception ex)
@@ -970,18 +980,18 @@ public class PubMetToExcel
     //List转换数据为Range数据（已开启的表格）（Com）
     public static void ListToArrayToRange(List<List<object>> targetList, dynamic workSheet, int startRow, int startCol)
     {
-        int rowCount = targetList.Count;
-        int columnCount = 0;
+        var rowCount = targetList.Count;
+        var columnCount = 0;
         foreach (var innerList in targetList)
         {
-            int currentColumnCount = innerList.Count;
+            var currentColumnCount = innerList.Count;
             columnCount = Math.Max(columnCount, currentColumnCount);
         }
 
-        object[,] targetDataArr = new object[rowCount, columnCount];
-        for (int i = 0; i < rowCount; i++)
+        var targetDataArr = new object[rowCount, columnCount];
+        for (var i = 0; i < rowCount; i++)
         {
-            for (int j = 0; j < targetList[i].Count; j++)
+            for (var j = 0; j < targetList[i].Count; j++)
             {
                 targetDataArr[i, j] = targetList[i][j];
             }
@@ -1015,21 +1025,21 @@ public class PubMetToExcel
     //随机不重复值列表
     public static List<int> GenerateUniqueRandomList(int minValue, int maxValue,int baseValue)
     {
-        List<int> list = new List<int>();
+        var list = new List<int>();
 
         // 初始化列表
-        for (int i = minValue; i <= maxValue; i++)
+        for (var i = minValue; i <= maxValue; i++)
         {
             list.Add(i+baseValue);
         }
 
         // 使用 Fisher-Yates 洗牌算法生成随机不重复列表
-        Random random = new Random();
-        int n = list.Count;
-        for (int i = n - 1; i > 0; i--)
+        var random = new Random();
+        var n = list.Count;
+        for (var i = n - 1; i > 0; i--)
         {
-            int j = random.Next(0, i + 1);
-            int temp = list[i];
+            var j = random.Next(0, i + 1);
+            var temp = list[i];
             list[i] = list[j];
             list[j] = temp;
         }
@@ -1038,16 +1048,16 @@ public class PubMetToExcel
     //List转数组
     public static object[,] ConvertListToArray(List<List<object>> listOfLists)
     {
-        int rowCount = listOfLists.Count;
-        int colCount = listOfLists.Count > 0 ? listOfLists[0].Count : 0;
+        var rowCount = listOfLists.Count;
+        var colCount = listOfLists.Count > 0 ? listOfLists[0].Count : 0;
 
-        object[,] twoDArray = new object[rowCount, colCount];
+        var twoDArray = new object[rowCount, colCount];
 
-        for (int i = 0; i < rowCount; i++)
+        for (var i = 0; i < rowCount; i++)
         {
-            List<object> innerList = listOfLists[i];
+            var innerList = listOfLists[i];
 
-            for (int j = 0; j < colCount; j++)
+            for (var j = 0; j < colCount; j++)
             {
                 twoDArray[i, j] = innerList[j];
             }
