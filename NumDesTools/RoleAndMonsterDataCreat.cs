@@ -11,12 +11,12 @@ using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
 namespace NumDesTools;
+
 /// <summary>
 /// 卡牌英雄与怪物数据生成类
 /// </summary>
 public class CellSelectChangePro
 {
-
     public CellSelectChangePro()
     {
         //单表选择单元格触发
@@ -85,7 +85,6 @@ public class CellSelectChangePro
             CreatRibbon.App.StatusBar = "当前非【角色基础】表，数据预览功能关闭";
         }
     }
-
 }
 
 #region 每个角色全量数据的导出

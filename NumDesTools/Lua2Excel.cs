@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
+using ExcelDna.Integration;
 
 
 namespace NumDesTools;
@@ -26,13 +27,15 @@ public class Lua2Excel
             excelName = excelName.Substring(0, excelName.Length - 4);
             excelName = excelName.Replace("Table", "");
             PubMetToExcel.OpenOrCreatExcelByEpPlus(excelFilePath, excelName, out var sheet, out var excel);
-            errorLogLua += LuaDataExportToExcel(filePath,sheet);
+            errorLogLua += LuaDataExportToExcel(filePath, sheet);
             excel.Save();
             excel.Dispose();
         }
+
         Debug.Print(errorLogLua);
     }
-    public static string LuaDataExportToExcel(string luaPath,dynamic sheet )
+    [ExcelFunction(IsHidden = true)]
+    public static string LuaDataExportToExcel(string luaPath, dynamic sheet)
     {
         var errorLog = string.Empty;
         //转写Lua表头
@@ -42,24 +45,21 @@ public class Lua2Excel
         var targetContent = "Tables = {}";
         var lines = File.ReadAllLines(luaPath);
         foreach (var line in lines)
-        {
             if (line.Contains(targetContent))
             {
                 contentFound = true;
                 break;
             }
-        }
+
         if (!contentFound)
         {
             // 在文件的第一行插入特定内容
-            var newLines = new string[lines.Length+1];
+            var newLines = new string[lines.Length + 1];
             newLines[0] = targetContent;
-            for (var i = 0; i < lines.Length; i++)
-            {
-                newLines[i + 1] = lines[i];
-            }
+            for (var i = 0; i < lines.Length; i++) newLines[i + 1] = lines[i];
             File.WriteAllLines(luaPath, newLines);
         }
+
         //匹配两个---@class之间数据
         var pattern = @"---@class\s+(.*?)\s+@.*?(?=(---@class|$))";
         var matches = Regex.Matches(fileContent, pattern, RegexOptions.Singleline);
@@ -67,17 +67,19 @@ public class Lua2Excel
         var classPattern = @"---@class\s+(?<className>\S+)\s+(?<classDescription>.+?)\r?\n";
         var classMatches = Regex.Matches(fileContent, classPattern, RegexOptions.Singleline);
         //匹配---@field数据
-        var fieldPattern = @"---@field\s+(?<fieldName>\S+)\s+(?<fieldType>\S+)\s+(?<fieldDescription>.+?)(?=(\n---@field|\n|\z))";
+        var fieldPattern =
+            @"---@field\s+(?<fieldName>\S+)\s+(?<fieldType>\S+)\s+(?<fieldDescription>.+?)(?=(\n---@field|\n|\z))";
         var fieldMatches = Regex.Matches(matches[0].Value, fieldPattern, RegexOptions.Singleline);
         //获取表名
-        if (classMatches.Count== 1)
+        if (classMatches.Count == 1)
         {
-            errorLog=luaPath + "→没有Class不能导出\n";
+            errorLog = luaPath + "→没有Class不能导出\n";
             return errorLog;
         }
+
         var tableName = classMatches[1].Groups["className"].Value;
         var tableDes = classMatches[1].Groups["classDescription"].Value;
-        sheet.Cells[1,1].Value = tableDes;
+        sheet.Cells[1, 1].Value = tableDes;
         var keyCol = 2;
         foreach (Match fieldMatch in fieldMatches)
         {
@@ -95,6 +97,7 @@ public class Lua2Excel
             //Debug.Print($"Field Description: {fieldMatch.Groups["fieldDescription"].Value}");
             keyCol++;
         }
+
         //转写Lua数据
         var lua = new Lua();
         //NLua原始编码是ASCII，lua文件是UTF8，中文会乱码，强制改为UTF8读取数据
@@ -108,9 +111,10 @@ public class Lua2Excel
             var luaTables = (LuaTable)luaTable[tableName];
             if (luaTables == null)
             {
-                errorLog=luaPath + "→不能创建LuaTable\n";
+                errorLog = luaPath + "→不能创建LuaTable\n";
                 return errorLog;
             }
+
             var row = 4;
             foreach (var kvp in luaTables.Keys)
             {
@@ -120,27 +124,25 @@ public class Lua2Excel
                     var cellTitle = sheet.Cells[1, j].Value;
                     var value = luaData[cellTitle];
                     var cellValue = value;
-                    if (value is LuaTable)
-                    {
-                        cellValue = ProcessLuaTable((LuaTable)value);
-                    }
+                    if (value is LuaTable) cellValue = ProcessLuaTable((LuaTable)value);
                     sheet.Cells[row, j].Value = cellValue;
                 }
+
                 row++;
             }
+
             // 自动调整所有有数据的列的宽度
-            for (var col = 1; col <= sheet.Dimension.End.Column; col++)
-            {
-                sheet.Column(col).AutoFit();
-            }
+            for (var col = 1; col <= sheet.Dimension.End.Column; col++) sheet.Column(col).AutoFit();
         }
         catch
         {
-            errorLog= luaPath + "→Lua文件没有全局变量导致不能导出\n";
+            errorLog = luaPath + "→Lua文件没有全局变量导致不能导出\n";
             return errorLog;
         }
+
         return errorLog;
     }
+
     private static string ProcessLuaTable(LuaTable luaTable)
     {
         var cellValue = "";
@@ -155,28 +157,23 @@ public class Lua2Excel
             else
             {
                 if (int.TryParse(key, out _))
-                {
                     cellValue += $"{value},";
-                }
                 else
-                {
                     cellValue += $"{key} = {value},";
-                }
             }
         }
+
         if (!string.IsNullOrEmpty(cellValue))
         {
             var lastCharacter = cellValue[cellValue.Length - 1].ToString();
-            if (lastCharacter == ",")
-            {
-                cellValue = cellValue.Substring(0, cellValue.Length - 1);
-            }
+            if (lastCharacter == ",") cellValue = cellValue.Substring(0, cellValue.Length - 1);
             cellValue = "{" + cellValue + "}";
         }
         else
         {
             cellValue = "{}";
         }
+
         return cellValue;
     }
 }

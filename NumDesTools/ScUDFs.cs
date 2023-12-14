@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 
 
 namespace NumDesTools;
+
 /// <summary>
 /// Excel自定义函数类
 /// </summary>
@@ -15,14 +16,7 @@ public class ExcelUdf
     private static readonly dynamic IndexWk = CreatRibbon.App.ActiveWorkbook;
     private static readonly dynamic ExcelPath = IndexWk.Path;
 
-    [ExcelFunction(Category = "test", IsVolatile = true, IsMacroType = true, Description = "测试自定义函数")]
-    public static double Sum2Num([ExcelArgument(AllowReference = true, Description = "选个格子")] double a,
-        [ExcelArgument(AllowReference = true,Description = "选个格子")] double b)
-    {
-        return a + b;
-    }
-
-    [ExcelFunction(Category = "test2", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在列")]
+    [ExcelFunction(Category = "FindValue", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在列")]
     public static int FindKeyCol([ExcelArgument(Description = "工作簿")] string targetWorkbook,
         [ExcelArgument(Description = "目标行")] int row, [ExcelArgument(Description = "匹配值")] string searchValue,
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1")
@@ -53,7 +47,7 @@ public class ExcelUdf
         return -1;
     }
 
-    [ExcelFunction(Category = "test2", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在列")]
+    [ExcelFunction(Category = "FindValue", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在行")]
     public static int FindKeyRow([ExcelArgument(Description = "工作簿")] string targetWorkbook,
         [ExcelArgument(Description = "目标列")] int col, [ExcelArgument(Description = "匹配值")] string searchValue,
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1")
@@ -84,8 +78,8 @@ public class ExcelUdf
         return -1;
     }
 
-    [ExcelFunction(Category = "test3", IsVolatile = true, IsMacroType = true, Description = "获取单元格背景色")]
-    public static string GetCellColor([ExcelArgument(AllowReference =true,Description = "目标列")] string address)
+    [ExcelFunction(Category = "GetExcelInfo", IsVolatile = true, IsMacroType = true, Description = "获取单元格背景色")]
+    public static string GetCellColor([ExcelArgument(AllowReference = true, Description = "目标列")] string address)
     {
         var range = CreatRibbon.App.ActiveSheet.Range[address];
         var color = range.Interior.Color;
@@ -96,11 +90,14 @@ public class ExcelUdf
         // 返回RGB格式的颜色值
         return $"{red}#{green}#{blue}";
     }
+
     //拆分字符串
-    [ExcelFunction(Category = "StrToNum" , IsVolatile = true, IsMacroType = true, Description = "提取字符串中数字")]
-    public static int GetNumFromStr([ExcelArgument(AllowReference = true, Description = "输入字符串")] string inputValue, 
-        [ExcelArgument(AllowReference = true, Description = "分隔符")] string delimiter, 
-        [ExcelArgument(AllowReference = true, Description = "第几个数字")] int numCount)
+    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "提取字符串中数字")]
+    public static int GetNumFromStr([ExcelArgument(AllowReference = true, Description = "输入字符串")] string inputValue,
+        [ExcelArgument(AllowReference = true, Description = "分隔符")]
+        string delimiter,
+        [ExcelArgument(AllowReference = true, Description = "第几个数字")]
+        int numCount)
     {
         // 使用正则表达式匹配数字
         var numbers = Regex.Split(inputValue, delimiter)
@@ -108,13 +105,20 @@ public class ExcelUdf
             .ToArray();
         return Convert.ToInt32(numbers[numCount - 1]);
     }
+
     //组装字符串
     [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range")]
-    public static string CreatValueToArray([ExcelArgument(AllowReference = true, Description = "单元格范围")] object rangeObj,
-        [ExcelArgument(AllowReference = true, Description = "默认值单元格范围")] object rangeObjDef,
-        [ExcelArgument(AllowReference = true, Description = "分隔符")] string delimiter, 
-        [ExcelArgument(AllowReference = true, Description = "过滤值")] string ignoreValue,
-        [ExcelArgument(AllowReference = true, Description = "返回值类型")] int returnType)
+    public static string CreatValueToArray(
+        [ExcelArgument(AllowReference = true, Description = "单元格范围")]
+        object rangeObj,
+        [ExcelArgument(AllowReference = true, Description = "默认值单元格范围")]
+        object rangeObjDef,
+        [ExcelArgument(AllowReference = true, Description = "分隔符")]
+        string delimiter,
+        [ExcelArgument(AllowReference = true, Description = "过滤值")]
+        string ignoreValue,
+        [ExcelArgument(AllowReference = true, Description = "返回值类型")]
+        int returnType)
     {
         // 将传递的 object 类型参数转换为 Range 对象
         var rangeRef = (ExcelReference)rangeObj;
@@ -129,13 +133,12 @@ public class ExcelUdf
         {
             if (item is ExcelEmpty || item.ToString() == ignoreValue)
             {
-
             }
             else
             {
                 if (returnType != 0)
                 {
-                    var itemDef = valuesDef[0,count];
+                    var itemDef = valuesDef[0, count];
                     result += itemDef + delimiter;
                 }
                 else
@@ -143,19 +146,23 @@ public class ExcelUdf
                     result += item + delimiter;
                 }
             }
+
             count++;
         }
-        if (result != "")
-        {
-            result = result.Substring(0, result.Length - 1);
-        }
+
+        if (result != "") result = result.Substring(0, result.Length - 1);
         return result;
     }
+
     //组装字符串(二维)
     [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）")]
-    public static string CreatValueToArray2([ExcelArgument(AllowReference = true, Description = "单元格范围1")] object rangeObj1,
-        [ExcelArgument(AllowReference = true, Description = "单元格范围2")] object rangeObj2,
-        [ExcelArgument(AllowReference = true, Description = "分隔符")] string delimiter)
+    public static string CreatValueToArray2(
+        [ExcelArgument(AllowReference = true, Description = "单元格范围1")]
+        object rangeObj1,
+        [ExcelArgument(AllowReference = true, Description = "单元格范围2")]
+        object rangeObj2,
+        [ExcelArgument(AllowReference = true, Description = "分隔符")]
+        string delimiter)
     {
         // 将传递的 object 类型参数转换为 Range 对象
         var rangeRef1 = (ExcelReference)rangeObj1;
@@ -173,10 +180,11 @@ public class ExcelUdf
         var count = 0;
         foreach (var item in values1Objects)
         {
-            var itemDef = delimiterList[0] + item+ delimiterList[1] + values2Objects[count]+ delimiterList[2];
+            var itemDef = delimiterList[0] + item + delimiterList[1] + values2Objects[count] + delimiterList[2];
             result += itemDef + delimiter[1];
             count++;
         }
+
         result = delimiterList[0] + result + delimiterList[2];
         return result;
     }
