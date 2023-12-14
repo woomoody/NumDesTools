@@ -24,6 +24,7 @@ using ScrollBars = System.Windows.Forms.ScrollBars;
 using SWF = System.Windows.Forms;
 
 namespace NumDesTools;
+
 /// <summary>
 /// Excel插件基础类CreatRibbon，其他为具体功能类，古早代码，主要完成Excel数据转换为Txt，之后的功能代码基本按文件名归类
 /// </summary>
@@ -244,6 +245,7 @@ public static class ExcelSheetDataIsError
         {
             errorLog = "";
         }
+
         app.Dispose();
         return errorLog;
     }
@@ -356,6 +358,7 @@ public static class ExcelSheetDataIsError2
             isErrors = isErrors + isError;
             isError = "";
         }
+
         app.Dispose();
         return isErrors;
     }
@@ -493,6 +496,7 @@ public static class FormularCheck
                     arrNew[i - 1, j - 1] = currentFormulaStr;
                 }
         }
+
         rng.Value[Missing.Value] = arrNew;
         app.Dispose();
     }
@@ -545,6 +549,7 @@ public static class PreviewTableCtp
 //}
 
 #region 获取Excel单表格的数据并导出到txt
+
 public static class ExcelSheetData
 {
     public static void RwExcelDataUseNpoi()

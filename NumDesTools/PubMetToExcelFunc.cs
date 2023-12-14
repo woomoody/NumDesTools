@@ -9,34 +9,36 @@ using System.Diagnostics;
 using OfficeOpenXml;
 
 namespace NumDesTools;
+
 /// <summary>
 /// 公共的Excel功能类调用的具体业务逻辑
 /// </summary>
 public class PubMetToExcelFunc
 {
     private static readonly dynamic Wk = CreatRibbon.App.ActiveWorkbook;
+
     private static readonly string Path = Wk.Path;
+
     //Excel数据查询并合并表格数据
     public static void ExcelDataSearchAndMerge(string searchValue)
     {
         //获取所有的表格路径
-        string[] ignoreFileNames = { "#","副本"};
+        string[] ignoreFileNames = { "#", "副本" };
         var rootPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(Path));
-        var fileList = new List<string>() { rootPath+ @"\Excels\Tables\", rootPath + @"\Excels\Localizations\", rootPath + @"\Excels\UIs\" };
+        var fileList = new List<string>()
+            { rootPath + @"\Excels\Tables\", rootPath + @"\Excels\Localizations\", rootPath + @"\Excels\UIs\" };
         var files = PubMetToExcel.PathExcelFileCollect(fileList, "*.xlsx", ignoreFileNames);
         //查找指定关键词，记录行号和表格索引号
-        var findValueList = new List<(string, string, int, int,string,string)>();
+        var findValueList = new List<(string, string, int, int, string, string)>();
         Parallel.ForEach(files, file =>
-        {
-            var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(file);
-            var findValue = PubMetToExcel.FindDataInDataTable(file , dataTable, searchValue);
-            if (findValue.Count > 0)
             {
-                //findValueList.Add(findValue);
-                findValueList = findValueList.Concat(findValue).ToList();
+                var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(file);
+                var findValue = PubMetToExcel.FindDataInDataTable(file, dataTable, searchValue);
+                if (findValue.Count > 0)
+                    //findValueList.Add(findValue);
+                    findValueList = findValueList.Concat(findValue).ToList();
             }
-        }
-            );
+        );
         //人工查询所需要的数据，可以打开表格，可以删除和手动增加数据，专用表格进行操作
         dynamic tempWorkbook;
         try
@@ -48,45 +50,44 @@ public class PubMetToExcelFunc
             tempWorkbook = CreatRibbon.App.Workbooks.Add();
             tempWorkbook.SaveAs(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
         }
+
         var tempSheet = tempWorkbook.Sheets["Sheet1"];
         var tempDataArray = new string[findValueList.Count, 5];
         for (var i = 0; i < findValueList.Count; i++)
         {
             tempDataArray[i, 0] = findValueList[i].Item1;
             tempDataArray[i, 1] = findValueList[i].Item2;
-            tempDataArray[i, 2] = PubMetToExcel.ConvertToExcelColumn(findValueList[i].Item4)+findValueList[i].Item3;
+            tempDataArray[i, 2] = PubMetToExcel.ConvertToExcelColumn(findValueList[i].Item4) + findValueList[i].Item3;
             tempDataArray[i, 3] = findValueList[i].Item5;
             tempDataArray[i, 4] = findValueList[i].Item6;
-            
         }
-        var tempDataRange = tempSheet.Range[tempSheet.Cells[2, 2], tempSheet.Cells[2 + tempDataArray.GetLength(0) - 1, 2 + tempDataArray.GetLength(1) - 1]];
+
+        var tempDataRange = tempSheet.Range[tempSheet.Cells[2, 2],
+            tempSheet.Cells[2 + tempDataArray.GetLength(0) - 1, 2 + tempDataArray.GetLength(1) - 1]];
         tempDataRange.Value = tempDataArray;
         tempWorkbook.Save();
         //合并数据
     }
+
     //Excel右键识别文件路径并打开
     public static void RightOpenExcelByActiveCell(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var sheet = CreatRibbon.App.ActiveSheet;
         var selectCell = CreatRibbon.App.ActiveCell;
         var selectCellValue = "";
-        if (selectCell.Value != null)
-        {
-            selectCellValue = selectCell.Value.ToString();
-        }
+        if (selectCell.Value != null) selectCellValue = selectCell.Value.ToString();
         //正则出是Excel路径的单元格
         var isMatch = Regex.IsMatch(selectCellValue, @"^[A-Za-z]:(\\[\w-]+)+(\.xlsx)$");
         if (isMatch)
         {
             var selectRow = selectCell.Row;
             var selectCol = selectCell.Column;
-            var sheetName = sheet.Cells[selectRow, selectCol+1].Value;
+            var sheetName = sheet.Cells[selectRow, selectCol + 1].Value;
             var cellAddress = sheet.Cells[selectRow, selectCol + 2].Value;
-            PubMetToExcel.OpenExcelAndSelectCell(selectCellValue,sheetName, cellAddress);
+            PubMetToExcel.OpenExcelAndSelectCell(selectCellValue, sheetName, cellAddress);
         }
-
-
     }
+
     public static void OpenBaseLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -99,6 +100,7 @@ public class PubMetToExcelFunc
         var cellAddress = PubMetToExcel.ConvertToExcelColumn(findValue[0].Item4) + findValue[0].Item3;
         PubMetToExcel.OpenExcelAndSelectCell(newPath, "Sheet1", cellAddress);
     }
+
     public static void OpenMergeLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -111,34 +113,25 @@ public class PubMetToExcelFunc
         var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
         //第一行Alice，第二行Cove
         if (mergePathList.Count <= 1)
-        {
             //打开文本文件
             Process.Start(filePath);
-        }
         if (mergePathList[0] == "" || mergePathList[1] == "" || mergePathList[1] == mergePathList[0])
-        {
             //打开文本文件
             Process.Start(filePath);
-        }
         else
-        {
             mergePath = basePath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
-        }
         var newPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(mergePath));
         newPath = newPath + @"\Excels\Localizations\Localizations.xlsx";
         var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(newPath);
         var findValue = PubMetToExcel.FindDataInDataTable(newPath, dataTable, selectCell.Value.ToString());
         string cellAddress;
         if (findValue.Count == 0)
-        {
             cellAddress = "A1";
-        }
         else
-        {
             cellAddress = PubMetToExcel.ConvertToExcelColumn(findValue[0].Item4) + findValue[0].Item3;
-        }
         PubMetToExcel.OpenExcelAndSelectCell(newPath, "Sheet1", cellAddress);
     }
+
     public static void AliceBigRicherDfs2()
     {
         var sheetName = "Alice大富翁";
@@ -161,7 +154,7 @@ public class PubMetToExcelFunc
         //        data.Add(i + 1);
         //    }
         //}
-        var permutations = GenerateUniqueSchemes(maxRoll, maxRoll*10000);
+        var permutations = GenerateUniqueSchemes(maxRoll, maxRoll * 10000);
         var targetProcess = new Dictionary<int, List<int>>();
         var bpProcess = new Dictionary<int, List<int>>();
         var targetGift = new Dictionary<int, List<int>>();
@@ -176,19 +169,13 @@ public class PubMetToExcelFunc
             for (var j = 0; j < maxGridLoop * 24; j++)
             {
                 var modCount = (j + 1) % modCountDiv;
-                if (modCount == 0)
-                {
-                    modCount = modCountDiv;
-                }
+                if (modCount == 0) modCount = modCountDiv;
                 if (j == 0)
                 {
                     targetProcessTemp.Add(permutations[i][0]);
                     bpProcessTemp.Add(permutations[i][0]);
                     var tempValue = targetRank[0, 0];
-                    if (tempValue is ExcelEmpty)
-                    {
-                        tempValue = null;
-                    }
+                    if (tempValue is ExcelEmpty) tempValue = null;
                     targetGiftTemp.Add(Convert.ToInt32(tempValue));
                 }
                 else
@@ -197,25 +184,21 @@ public class PubMetToExcelFunc
                     var processTemp = bpProcessTemp[j - 1] + permutations[i][modCount - 1];
                     bpProcessTemp.Add(processTemp);
                     targetTemp %= 24;
-                    if (targetTemp == 0)
-                    {
-                        targetTemp = 24;
-                    }
+                    if (targetTemp == 0) targetTemp = 24;
                     targetProcessTemp.Add(targetTemp);
                     //获取价值量
                     var tempValue = targetRank[targetTemp - 1, 0];
-                    if (tempValue is ExcelEmpty)
-                    {
-                        tempValue = null;
-                    }
+                    if (tempValue is ExcelEmpty) tempValue = null;
                     var targetTemp2 = targetGiftTemp[j - 1] + Convert.ToInt32(tempValue);
                     targetGiftTemp.Add(targetTemp2);
                 }
             }
+
             targetProcess[i] = targetProcessTemp;
             bpProcess[i] = bpProcessTemp;
             targetGift[i] = targetGiftTemp;
         }
+
         var filteredData = targetProcess;
         //过滤固定目标
         for (var i = 0; i < targetKey.GetLength(0); i++)
@@ -240,27 +223,26 @@ public class PubMetToExcelFunc
                     .ToDictionary(pair => pair.Key, pair => pair.Value);
             }
         }
+
         //过滤动态目标
         for (var i = 0; i < targetKeySoft.GetLength(0); i++)
         {
             var softTimes = targetKeySoft[i, 1];
             var softGrid = targetKeySoft[i, 0];
             if (!(softGrid is ExcelEmpty))
-            {
                 //筛选动态目标值满足出现次数的行
                 filteredData = filteredData
-                    .Where(pair => pair.Value.Take(maxRoll).Count(item => item == Convert.ToInt32(softGrid)) == Convert.ToInt32(softTimes))
+                    .Where(pair =>
+                        pair.Value.Take(maxRoll).Count(item => item == Convert.ToInt32(softGrid)) ==
+                        Convert.ToInt32(softTimes))
                     .ToDictionary(pair => pair.Key, pair => pair.Value);
-            }
         }
+
         //方案整理
         var filteredDataGift = new Dictionary<int, int>();
         var filteredDataMethod = new List<List<object>>();
         var filteredDataBpProcess = new List<List<object>>();
-        foreach (var key in filteredData.Keys)
-        {
-            filteredDataGift[key] = targetGift[key][maxRoll];
-        }
+        foreach (var key in filteredData.Keys) filteredDataGift[key] = targetGift[key][maxRoll];
         //选择升阶进度中众数项
         var modeValue = GetMode(filteredDataGift.Values);
         var filteredDataGiftMode = filteredDataGift.Where(pair => pair.Value == modeValue).ToList();
@@ -272,13 +254,11 @@ public class PubMetToExcelFunc
             filteredDataGiftList.Add(new List<object> { value });
             filteredDataBpProcess.Add(new List<object> { bpProcess[key][maxRoll] });
             var methodStr = "";
-            foreach (var method in permutations[key])
-            {
-                methodStr += method + ",";
-            }
+            foreach (var method in permutations[key]) methodStr += method + ",";
             methodStr = methodStr.Substring(0, methodStr.Length - 1);
             filteredDataMethod.Add(new List<object> { methodStr });
         }
+
         //清理
         var emptyData = new object[65535 - 17 + 1, 6 - 6 + 1];
         PubMetToExcel.WriteExcelDataC(sheetName, 16, 65534, 4, 4, emptyData);
@@ -294,9 +274,12 @@ public class PubMetToExcelFunc
         else
         {
             //写入
-            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataBpProcess.Count - 1, 6, 6, PubMetToExcel.ConvertListToArray(filteredDataBpProcess));
-            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataGiftList.Count - 1, 5, 5, PubMetToExcel.ConvertListToArray(filteredDataGiftList));
-            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataMethod.Count - 1, 4, 4, PubMetToExcel.ConvertListToArray(filteredDataMethod));
+            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataBpProcess.Count - 1, 6, 6,
+                PubMetToExcel.ConvertListToArray(filteredDataBpProcess));
+            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataGiftList.Count - 1, 5, 5,
+                PubMetToExcel.ConvertListToArray(filteredDataGiftList));
+            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataMethod.Count - 1, 4, 4,
+                PubMetToExcel.ConvertListToArray(filteredDataMethod));
         }
     }
 
@@ -312,7 +295,7 @@ public class PubMetToExcelFunc
         return modes.FirstOrDefault();
     }
 
-    static List<List<int>> GenerateUniqueSchemes(int numberOfRolls, int numberOfSchemes)
+    private static List<List<int>> GenerateUniqueSchemes(int numberOfRolls, int numberOfSchemes)
     {
         var result = new List<List<int>>();
         var seenSchemes = new HashSet<string>();
