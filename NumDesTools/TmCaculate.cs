@@ -7,7 +7,6 @@ namespace NumDesTools;
 public class TmCaculate
 {
     private static readonly dynamic Wk = CreatRibbon.App.ActiveWorkbook;
-    private static readonly dynamic Path = Wk.Path;
     //TM关卡目标生成
     public static void CreatTmTargetEle()
     {
@@ -72,7 +71,7 @@ public class TmCaculate
         object[,] modelRangeValue = modelRange.Value;
         var modelRangeValueList = PubMetToExcel.RangeDataToList(modelRangeValue);
         object[,] modelRangeValue2 = modelRange2.Value;
-        var modelRangeValueList2 = PubMetToExcel.RangeDataToList(modelRangeValue2);
+        PubMetToExcel.RangeDataToList(modelRangeValue2);
         object[,] targetEleMaxValue = targetEleMax.Value;
         var targetEleMaxValueList = PubMetToExcel.RangeDataToList(targetEleMaxValue);
         object[,] targetModelRangeValue = targetModelRange.Value;
@@ -104,7 +103,7 @@ public class TmCaculate
             var tempTarget = new List<object>();
             for (var j = 0; j < modelRangeValueList[i].Count; j++)
             {
-                if (modelRangeValueList[i][j] != "")
+                if ((string)modelRangeValueList[i][j] != "")
                 {
                     //非目标元素整体计数
                     var ele = modelRangeValueList[i][j].ToString();

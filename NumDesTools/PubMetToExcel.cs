@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Data;
 using DataTable = System.Data.DataTable;
 using System.Data.OleDb;
+using System.Diagnostics;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
 using System.Text.RegularExpressions;
 
@@ -263,7 +264,6 @@ public class PubMetToExcel
         var tcs = new TaskCompletionSource<(ExcelReference currentRange, string sheetName, string sheetPath)>();
         ExcelAsyncUtil.QueueAsMacro(() =>
         {
-            (ExcelReference currentRange, string sheetName, string sheetPath) result = (null, null, null);
             try
             {
                 // 获取当前工作簿、工作表选中单元格（[工作簿]工作表）
@@ -273,7 +273,7 @@ public class PubMetToExcel
                 // 获取当前工作簿路径（不包含工作簿名称）
                 var sheetPath = (string)XlCall.Excel(XlCall.xlfGetDocument, 2);
                 // 处理获取结果的逻辑
-                result = (currentRange,sheetName,sheetPath);
+                var result = (currentRange,sheetName,sheetPath);
                 tcs.SetResult(result);
             }
             catch (Exception ex)
@@ -410,16 +410,17 @@ public class PubMetToExcel
                 // 获取所有可用的工作表名称
                 var schemaTable = connection.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
                 // 检查 Sheet1 是否存在
-                foreach (DataRow row in schemaTable.Rows)
-                {
-                    if (row["TABLE_NAME"].ToString().Equals("Sheet1"))
+                if (schemaTable != null)
+                    foreach (DataRow row in schemaTable.Rows)
                     {
-                        sheetName = "Sheet1";
-                        break;
-                    }
+                        if (row["TABLE_NAME"].ToString().Equals("Sheet1"))
+                        {
+                            sheetName = "Sheet1";
+                            break;
+                        }
 
-                    sheetName = schemaTable.Rows[0]["TABLE_NAME"].ToString();
-                }
+                        sheetName = schemaTable.Rows[0]["TABLE_NAME"].ToString();
+                    }
 
                 // 读取 Excel 表格数据
                 using (var command = new OleDbCommand($"SELECT * FROM [{sheetName}]", connection))
@@ -436,7 +437,7 @@ public class PubMetToExcel
             catch (Exception ex)
             {
                 // 处理异常
-                Console.WriteLine("读取 Excel 表格数据出现异常：" + ex.Message);
+               Debug.Print("读取 Excel 表格数据出现异常：" + ex.Message);
                 return null;
             }
         }
@@ -843,7 +844,7 @@ public class PubMetToExcel
                 }
                 catch
                 {
-
+                    // ignored
                 }
             }
 
@@ -967,7 +968,7 @@ public class PubMetToExcel
             var cellRange = worksheet.Range[cellAddressDefault];
             cellRange.Select();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // 处理异常
             // ...
