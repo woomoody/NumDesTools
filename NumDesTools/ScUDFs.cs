@@ -90,9 +90,9 @@ public class ExcelUdf
         var range = CreatRibbon.App.ActiveSheet.Range[address];
         var color = range.Interior.Color;
         // 将Excel VBA颜色值转换为RGB格式
-        int red = (int)(color % 256);
-        int green = (int)(color / 256 % 256);
-        int blue = (int)(color / 65536 % 256);
+        var red = (int)(color % 256);
+        var green = (int)(color / 256 % 256);
+        var blue = (int)(color / 65536 % 256);
         // 返回RGB格式的颜色值
         return $"{red}#{green}#{blue}";
     }
@@ -117,14 +117,14 @@ public class ExcelUdf
         [ExcelArgument(AllowReference = true, Description = "返回值类型")] int returnType)
     {
         // 将传递的 object 类型参数转换为 Range 对象
-        ExcelReference rangeRef = (ExcelReference)rangeObj;
-        ExcelReference rangeRefDef = (ExcelReference)rangeObjDef;
+        var rangeRef = (ExcelReference)rangeObj;
+        var rangeRefDef = (ExcelReference)rangeObjDef;
         // 使用 ExcelReference.GetValue 获取选定范围的值
-        object[,] values = (object[,])rangeRef.GetValue();
-        object[,] valuesDef = (object[,])rangeRefDef.GetValue();
+        var values = (object[,])rangeRef.GetValue();
+        var valuesDef = (object[,])rangeRefDef.GetValue();
         //过滤掉空值并将二维数组中的值按行拼接成字符串
-        string result = string.Empty;
-        int count = 0;
+        var result = string.Empty;
+        var count = 0;
         foreach (var item in values)
         {
             if (item is ExcelEmpty || item.ToString() == ignoreValue)
@@ -158,19 +158,19 @@ public class ExcelUdf
         [ExcelArgument(AllowReference = true, Description = "分隔符")] string delimiter)
     {
         // 将传递的 object 类型参数转换为 Range 对象
-        ExcelReference rangeRef1 = (ExcelReference)rangeObj1;
-        ExcelReference rangeRef2 = (ExcelReference)rangeObj2;
+        var rangeRef1 = (ExcelReference)rangeObj1;
+        var rangeRef2 = (ExcelReference)rangeObj2;
         // 使用 ExcelReference.GetValue 获取选定范围的值
-        object[,] values1 = (object[,])rangeRef1.GetValue();
-        object[,] values2 = (object[,])rangeRef2.GetValue();
+        var values1 = (object[,])rangeRef1.GetValue();
+        var values2 = (object[,])rangeRef2.GetValue();
         //变为一维数组
-        object[] values1Objects = values1.Cast<object>().ToArray();
-        object[] values2Objects = values2.Cast<object>().ToArray();
+        var values1Objects = values1.Cast<object>().ToArray();
+        var values2Objects = values2.Cast<object>().ToArray();
         //获取间隔方案
-        string[] delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
+        var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
         //过滤掉空值并将二维数组中的值按行拼接成字符串
-        string result = string.Empty;
-        int count = 0;
+        var result = string.Empty;
+        var count = 0;
         foreach (var item in values1Objects)
         {
             var itemDef = delimiterList[0] + item+ delimiterList[1] + values2Objects[count]+ delimiterList[2];

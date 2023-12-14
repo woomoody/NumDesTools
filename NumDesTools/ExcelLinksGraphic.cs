@@ -12,23 +12,23 @@ public class ExcelLinksGraphic
         var workbook = CreatRibbon.App.ActiveWorkbook;
         var sheet = workbook.ActiveSheet;
         //读取Excel文件统计数据
-        Dictionary<string, List<string>> mainExcel = new Dictionary<string, List<string>>();
+        var mainExcel = new Dictionary<string, List<string>>();
         var usedRange = sheet.UsedRange;
-        for (int row = 1; row <= usedRange.Rows.Count; row++)
+        for (var row = 1; row <= usedRange.Rows.Count; row++)
         {
-            List<string> linkExcel = new List<string>();
+            var linkExcel = new List<string>();
             var mainCell = usedRange.Cells[row, 1].Value;
-            string mainValue = "";
+            var mainValue = "";
             if (mainCell != null)
             {
                 mainValue = mainCell.ToString();
             }
             if (mainValue!= "")
             {
-                for (int col = 2; col <= usedRange.Columns.Count; col++)
+                for (var col = 2; col <= usedRange.Columns.Count; col++)
                 {
                     var linkCell = usedRange.Cells[row, col].Value;
-                    string linkValue = "";
+                    var linkValue = "";
                     if (linkCell != null)
                     {
                         linkValue = linkCell.ToString() + @".xlsx";
@@ -42,12 +42,12 @@ public class ExcelLinksGraphic
             }
         }
         //生成关系图
-        using (System.IO.StreamWriter file = new System.IO.StreamWriter(@"C:\Users\admin\Desktop\output.dot"))
+        using (var file = new System.IO.StreamWriter(@"C:\Users\admin\Desktop\output.dot"))
         {
             file.WriteLine("digraph G {");
-            foreach (KeyValuePair<string, List<string>> pair in mainExcel)
+            foreach (var pair in mainExcel)
             {
-                foreach (string field in pair.Value)
+                foreach (var field in pair.Value)
                 {
                     if (mainExcel.ContainsKey(field))
                     {

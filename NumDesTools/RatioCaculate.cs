@@ -42,20 +42,20 @@ public class RatioCaculate
         var groupCount = collectCardGroupDataList.Count;
         var cardCount = collectCardInfoDataList.Count;
         var groupRarityCount = new List<(string, int, int, int)>();
-        for (int i = 0; i < groupCount; i++)
+        for (var i = 0; i < groupCount; i++)
         {
             var cardGroupStr = collectCardGroupDataList[i][cardGroupIndex];
             var cardGroupName = collectCardGroupDataList[i][cardGroupNameIndex];
             //拆ID，查ID，获取各个品质的个数
             var reg = "\\d+";
             var matches = Regex.Matches(cardGroupStr, reg);
-            int rarity1 = 0;
-            int rarity2 = 0;
-            int rarity3 = 0;
+            var rarity1 = 0;
+            var rarity2 = 0;
+            var rarity3 = 0;
             foreach (var match in matches)
             {
                 var sourceCardId = match.Value;
-                for (int j = 0; j < cardCount; j++)
+                for (var j = 0; j < cardCount; j++)
                 {
                     var targetCardId = collectCardInfoDataList[j][cardInfoIdIndex].ToString();
                     if (targetCardId == sourceCardId)
@@ -79,23 +79,23 @@ public class RatioCaculate
             groupRarityCount.Add((cardGroupName, rarity1, rarity2, rarity3));
         }
 
-        int weight1 = (int)collectCardRarityDataList[0][cardRarityWeightIndex];
-        int weight2 = (int)collectCardRarityDataList[1][cardRarityWeightIndex];
-        int weight3 = (int)collectCardRarityDataList[2][cardRarityWeightIndex];
+        var weight1 = (int)collectCardRarityDataList[0][cardRarityWeightIndex];
+        var weight2 = (int)collectCardRarityDataList[1][cardRarityWeightIndex];
+        var weight3 = (int)collectCardRarityDataList[2][cardRarityWeightIndex];
 
-        int score1 = (int)collectCardRarityDataList[0][cardRarityScoreIndex];
-        int score2 = (int)collectCardRarityDataList[1][cardRarityScoreIndex];
-        int score3 = (int)collectCardRarityDataList[2][cardRarityScoreIndex];
+        var score1 = (int)collectCardRarityDataList[0][cardRarityScoreIndex];
+        var score2 = (int)collectCardRarityDataList[1][cardRarityScoreIndex];
+        var score3 = (int)collectCardRarityDataList[2][cardRarityScoreIndex];
         var newGroupRarityCount = new List<(string, int, int, int)>();
-        int maxScore = (int)collectCardScoreDataLIst[0][cardScoreIndex];
+        var maxScore = (int)collectCardScoreDataLIst[0][cardScoreIndex];
         var countRarity = groupRarityCount.Count;
-        int newRarity1 = 0;
-        int newRarity2 = 0;
-        int newRarity3 = 0;
-        int simTimes = 100000;
+        var newRarity1 = 0;
+        var newRarity2 = 0;
+        var newRarity3 = 0;
+        var simTimes = 100000;
 
         //模拟期望
-        for (int i = 0; i < countRarity; i++)
+        for (var i = 0; i < countRarity; i++)
         {
             newRarity1 += groupRarityCount[i].Item2;
             newRarity2 += groupRarityCount[i].Item3;
@@ -123,7 +123,7 @@ public class RatioCaculate
             //collectCardGroup.Cells[i + 5, cardGroupIndex + 3].Value = randCountSelf.Item2;
             collectCardGroup.Cells[i + 5, cardGroupIndex + 4].Value = randCountTotal.Item1;
             collectCardGroup.Cells[i + 5, cardGroupIndex + 5].Value = randCountTotal.Item2;
-            for (int a = 0; a < randCountTotal.Item3.Count; a++)
+            for (var a = 0; a < randCountTotal.Item3.Count; a++)
             {
                 collectCardGroup.Cells[a + 5, cardGroupIndex + 6+i].Value = randCountTotal.Item3[a];
             }
@@ -171,14 +171,14 @@ public class RatioCaculate
 
     private static Tuple<double, double, List<double>> RandCount(dynamic groupRarityCount,int i, dynamic newGroupRarityCount,  int maxScore, int score3, int score2, int score1, int weight1, int weight2, int weight3, int simTimes)
     {
-        int scoreGetTimes = 0;
+        var scoreGetTimes = 0;
         var otherRankCountTotal = new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         var maxRankCountTotal = 0;
 
         var currentLimit1 = new List<(int, int)>();
         var currentLimit2 = new List<(int, int)>();
         var currentLimit3= new List<(int, int)>();
-        for (int k = 0; k < i + 1; k++)
+        for (var k = 0; k < i + 1; k++)
         {
             var minValue1 = 0;
             var maxValue1 = newGroupRarityCount[k].Item2;
@@ -197,14 +197,14 @@ public class RatioCaculate
             currentLimit3.Add((minValue3, maxValue3));
         }
 
-        for (int s = 0; s < simTimes; s++)
+        for (var s = 0; s < simTimes; s++)
         {
             var rarityRandom = new Random();
             var cardRandom = new Random();
             var cardList1 = new List<int>();
             var cardList2 = new List<int>();
             var cardList3 = new List<int>();
-            int currentScore = 0;
+            var currentScore = 0;
             var otherRankCount = new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
             var maxRankCount = 0;
             var currentCount1 = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -244,7 +244,7 @@ public class RatioCaculate
                         {
                             cardList1.Add(cardSeed);
                             //统计达到各个卡池时用的次数
-                            for (int k = 0; k < i + 1; k++)
+                            for (var k = 0; k < i + 1; k++)
                             {
                                 if (cardSeed <= currentLimit1[k].Item2 && cardSeed > currentLimit1[k].Item1)
                                 {
@@ -257,7 +257,7 @@ public class RatioCaculate
                         {
                             cardList2.Add(cardSeed);
                             //统计达到各个卡池时用的次数
-                            for (int k = 0; k < i + 1; k++)
+                            for (var k = 0; k < i + 1; k++)
                             {
                                  if (cardSeed <= currentLimit2[k].Item2 && cardSeed > currentLimit2[k].Item1)
                                  {
@@ -270,7 +270,7 @@ public class RatioCaculate
                         {
                             cardList3.Add(cardSeed);
                             //统计达到各个卡池时用的次数
-                            for (int k = 0; k < i + 1; k++)
+                            for (var k = 0; k < i + 1; k++)
                             {
                                 if (cardSeed <= currentLimit3[k].Item2 && cardSeed > currentLimit3[k].Item1)
                                 {
@@ -285,7 +285,7 @@ public class RatioCaculate
                 }
                 else
                 {
-                    int rairtySeed = rarityRandom.Next(1, weight1 + weight2 + weight3 + 1);
+                    var rairtySeed = rarityRandom.Next(1, weight1 + weight2 + weight3 + 1);
                     //Debug.Print("品质seed：" +rairtySeed);
                     if (rairtySeed <= weight1 && weight1 != 0)
                     {
@@ -298,7 +298,7 @@ public class RatioCaculate
                         {
                             cardList1.Add(cardSeed);
                             //统计达到各个卡池时用的次数
-                            for (int k = 0; k < i + 1; k++)
+                            for (var k = 0; k < i + 1; k++)
                             {
                                 if (cardSeed <= currentLimit1[k].Item2 && cardSeed > currentLimit1[k].Item1)
                                 {
@@ -319,7 +319,7 @@ public class RatioCaculate
                         {
                             cardList2.Add(cardSeed);
                             //统计达到各个卡池时用的次数
-                            for (int k = 0; k < i + 1; k++)
+                            for (var k = 0; k < i + 1; k++)
                             {
                                if (cardSeed <= currentLimit2[k].Item2 && cardSeed > currentLimit2[k].Item1)
                                {
@@ -341,7 +341,7 @@ public class RatioCaculate
                         {
                             cardList3.Add(cardSeed);
                             //统计达到各个卡池时用的次数
-                            for (int k = 0; k < i + 1; k++)
+                            for (var k = 0; k < i + 1; k++)
                             {
                                  if (cardSeed <= currentLimit3[k].Item2 && cardSeed > currentLimit3[k].Item1)
                                  {
@@ -354,7 +354,7 @@ public class RatioCaculate
                 }
                 maxRankCount++;
                 //统计达到各个卡池时用的次数
-                for (int k = 0; k < i + 1; k++)
+                for (var k = 0; k < i + 1; k++)
                 {
                     if (currentCount1[k] == groupRarityCount[k].Item2 && currentCount2[k] == groupRarityCount[k].Item3 && currentCount3[k] == groupRarityCount[k].Item4 && otherRankCount[k] ==0)
                     {
@@ -364,14 +364,14 @@ public class RatioCaculate
             }
             //统计达到各个卡池时用的次数的累加
             maxRankCountTotal += maxRankCount;
-            for (int o = 0; o < otherRankCount.Count ; o++)
+            for (var o = 0; o < otherRankCount.Count ; o++)
             {
                 otherRankCountTotal[o] += otherRankCount[o];
             }
         }
         //清理list
         otherRankCountTotal.RemoveAll(x=>x== 0);
-        for (int o = 0; o < otherRankCountTotal.Count; o++)
+        for (var o = 0; o < otherRankCountTotal.Count; o++)
         {
             otherRankCountTotal[o] /= simTimes;
         }

@@ -441,7 +441,7 @@ public class ExcelDataAutoInsertLanguage
                 c = 3;
             }
             var idList = new List<string>();
-            for (int r = 0; r < sourceDataList.Count; r++)
+            for (var r = 0; r < sourceDataList.Count; r++)
             {
                 var value = sourceDataList[r][c]?.ToString() ?? "";
                 idList.Add(value);
@@ -449,7 +449,7 @@ public class ExcelDataAutoInsertLanguage
             var newIdList = idList.Distinct().ToList();
 
             // 定义要删除的行的列表
-            List<int> rowsToDelete = new List<int>();
+            var rowsToDelete = new List<int>();
             foreach (var id in newIdList)
             {
                 var reDd = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, id);
@@ -922,7 +922,7 @@ public class ExcelDataAutoInsertMulti
                 path = excelPath + @"\" + excelName;
                 break;
         }
-        bool fileExists = File.Exists(path);
+        var fileExists = File.Exists(path);
         if (fileExists == false)
         {
             errorExcelLog = excelName + "不存在表格文件";
@@ -1166,7 +1166,7 @@ public class ExcelDataAutoInsertMulti
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var excelFileFixKey = 2;
         var writeIdList = new List<string>();
-        int lastRow = 0;
+        var lastRow = 0;
         for (var excelMulti = 0; excelMulti < modelId[excelName].Count; excelMulti++)
         {
             var startValue = modelId[excelName][excelMulti].Item1[0, 0].ToString();
@@ -1260,14 +1260,14 @@ public class ExcelDataAutoInsertCopyMulti
                 var endRowSource = ExcelDataAutoInsert.FindSourceRow(sourceSheet, 2, endValue);
                 var startRowTarget = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, startValue);
                 var endRowTarget = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, endValue);
-                bool isSame=false;
+                var isSame=false;
                 if (endRowSource - startRowSource > endRowTarget- startRowTarget)
                 {
                     for (int i = startRowSource; i <= endRowSource; i++)
                     {
                         var cellSourceValue = sourceSheet.Cells[i, 2].Value.ToString();
                         var resultValue = "";
-                        string resultRow = "";
+                        var resultRow = "";
                         for (int j = startRowTarget; j <= endRowTarget; j++)
                         {
                             var cellTargetValue = targetSheet.Cells[j, 2].Value.ToString();
@@ -1289,7 +1289,7 @@ public class ExcelDataAutoInsertCopyMulti
                     {
                         var cellTargetValue = targetSheet.Cells[i, 2].Value.ToString();
                         var resultValue = "";
-                        string resultRow = "";
+                        var resultRow = "";
                         for (int j = startRowSource; j <= endRowSource; j++)
                         {
                             var cellSourceValue = sourceSheet.Cells[j, 2].Value.ToString();
@@ -1328,13 +1328,13 @@ public class ExcelDataAutoInsertCopyMulti
                 tempWorkbook = CreatRibbon.App.Workbooks.Add();
                 tempWorkbook.SaveAs(excelPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
             }
-            dynamic tempSheet = tempWorkbook.Sheets["Sheet1"];
+            var tempSheet = tempWorkbook.Sheets["Sheet1"];
             // 清除数据（将单元格内容设置为空字符串）
             Range usedRange = tempSheet.UsedRange;
             usedRange.ClearContents();
             //数据转数组
-            string[,] tempDataArray = new string[diffList.Count, 4];
-            for (int i = 0; i < diffList.Count; i++)
+            var tempDataArray = new string[diffList.Count, 4];
+            for (var i = 0; i < diffList.Count; i++)
             {
                 tempDataArray[i, 0] = diffList[i].Item1;
                 tempDataArray[i, 1] = "Sheet1";
@@ -1421,7 +1421,7 @@ public class ExcelDataAutoInsertCopyMulti
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var errorList = new List<(string, string, string)>();
-        string targetExcelPath = "";
+        var targetExcelPath = "";
         //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
@@ -1499,12 +1499,12 @@ public class ExcelDataAutoInsertCopyMulti
             //获取目标、源数据表列，以目标表格的行、列为准复制源数据
             var targetMaxCol = targetSheet.Dimension.Columns;
             var sourceMaxCol = sourceSheet.Dimension.Columns;
-            object[,] targetRangeTitle = (object[,])targetSheet.Cells[2, 1, 2, targetMaxCol].Value;
-            object[,] sourceRangeTitle = (object[,])sourceSheet.Cells[2, 1, 2, sourceMaxCol].Value;
-            object[,] sourceRangeValue = (object[,])sourceSheet.Cells[startRowSource, 1, endRowSource, sourceMaxCol].Value;
+            var targetRangeTitle = (object[,])targetSheet.Cells[2, 1, 2, targetMaxCol].Value;
+            var sourceRangeTitle = (object[,])sourceSheet.Cells[2, 1, 2, sourceMaxCol].Value;
+            var sourceRangeValue = (object[,])sourceSheet.Cells[startRowSource, 1, endRowSource, sourceMaxCol].Value;
             //合并数据
             var targetRowList = PubMetToExcel.MergeExcel(sourceRangeValue, targetSheet, targetRangeTitle, sourceRangeTitle);
-            for (int i = 0; i < targetRowList.Count; i++)
+            for (var i = 0; i < targetRowList.Count; i++)
             {
                 var cellTarget = targetSheet.Cells[targetRowList[i], 1, targetRowList[i], targetMaxCol];
                 var isColorCell = targetSheet.Cells[targetRowList[i], 2];
@@ -1622,7 +1622,7 @@ public class ExcelDataAutoInsertCopyMulti
             //获取单元格颜色
             var colorCell = sheet.Cells[minRow, 2];
             var cellColor = PubMetToExcel.GetCellBackgroundColor(colorCell);
-            for (int i = 0; i < targetRowList.Count; i++)
+            for (var i = 0; i < targetRowList.Count; i++)
             {
                 var cellTarget = targetSheet.Cells[targetRowList[i], 1, targetRowList[i], targetMaxCol];
                 var isColorCell = targetSheet.Cells[targetRowList[i], 2];
@@ -1815,12 +1815,12 @@ public class ExcelDataAutoInsertActivityServer
         //对比活动的索引抓取修正时间数据
         var targetDataList = new List <List<string>>();
         var errorLog = "";
-        DateTime unixEpoch = new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc);
-        for (int j = 0; j < sourceData.Count; j++)
+        var unixEpoch = new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc);
+        for (var j = 0; j < sourceData.Count; j++)
         {
-            bool exit = false;
+            var exit = false;
             var sourceName = sourceData[j].Item1;
-            for (int i = 0; i < fixDataList.Count; i++)
+            for (var i = 0; i < fixDataList.Count; i++)
             {
                 var fixName = fixDataList[i][fixNames];
                 if (fixName != sourceName && !sourceName.Contains("#"))
@@ -1834,25 +1834,25 @@ public class ExcelDataAutoInsertActivityServer
                 {
                     exit = true;
                     var targetData = new List<string>();
-                    long sourceStartTimeLong = (long)(DateTime.FromOADate(sourceData[j].Item2).AddHours(8).ToUniversalTime()- unixEpoch).TotalSeconds;
-                    long sourceEndTimeLong = (long)(DateTime.FromOADate(sourceData[j].Item3).AddHours(8).ToUniversalTime() - unixEpoch).TotalSeconds;
+                    var sourceStartTimeLong = (long)(DateTime.FromOADate(sourceData[j].Item2).AddHours(8).ToUniversalTime()- unixEpoch).TotalSeconds;
+                    var sourceEndTimeLong = (long)(DateTime.FromOADate(sourceData[j].Item3).AddHours(8).ToUniversalTime() - unixEpoch).TotalSeconds;
 
                     var targetId = fixDataList[i][fixIds];
                     var targetName = sourceName;
                     //时间计算规则
                     string targetPushTimeString = DateTime.FromOADate(sourceData[j].Item2).AddHours(fixDataList[i][fixPushs] * 24 + 8).ToString();
-                    long targetPushTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixPushs]*24*3600);
+                    var targetPushTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixPushs]*24*3600);
                     string targetPushEndTimeString = DateTime.FromOADate(sourceData[j].Item2).AddHours(fixDataList[i][fixPushEnds] * 24 + 8).ToString();
-                    long targetPushEndTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixPushEnds] * 24 * 3600);
+                    var targetPushEndTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixPushEnds] * 24 * 3600);
                     string targetPreHeatTimeString = DateTime.FromOADate(sourceData[j].Item2).AddHours(fixDataList[i][fixPreHeats] * 24 + 8).ToString();
-                    long targetPreHeatTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixPreHeats] * 24 * 3600);
+                    var targetPreHeatTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixPreHeats] * 24 * 3600);
                     string targetOpenTimeString = DateTime.FromOADate(sourceData[j].Item2).AddHours(fixDataList[i][fixOpens] * 24 + 8).ToString();
-                    long targetOpenTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixOpens] * 24 * 3600);
+                    var targetOpenTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixOpens] * 24 * 3600);
                     //结束时间开始默认+1，因为表格里记录的是时间点不是段
                     string targetEndTimeString = DateTime.FromOADate(sourceData[j].Item3).AddHours((fixDataList[i][fixEnds] +1)* 24 + 8).ToString();
-                    long targetEndTimeLong = sourceEndTimeLong + (long)(fixDataList[i][fixEnds] * 24 * 3600);
+                    var targetEndTimeLong = sourceEndTimeLong + (long)(fixDataList[i][fixEnds] * 24 * 3600);
                     string targetCloseTimeString = DateTime.FromOADate(sourceData[j].Item3).AddHours((fixDataList[i][fixCloses] +1)* 24 + 8).ToString();
-                    long targetCloseTimeLong = sourceEndTimeLong + (long)(fixDataList[i][fixCloses] * 24 * 3600);
+                    var targetCloseTimeLong = sourceEndTimeLong + (long)(fixDataList[i][fixCloses] * 24 * 3600);
                     targetData.Add(targetId.ToString());
                     targetData.Add(targetName);
                     targetData.Add(targetPushTimeString);
@@ -1884,12 +1884,12 @@ public class ExcelDataAutoInsertActivityServer
             var targetRangeOld = targetSheet.Range[targetSheet.Cells[targetStartRow, targetStartCol], targetSheet.Cells[targetSheet.UsedRange.Rows.Count, targetSheet.UsedRange.Columns.Count]];
             targetRangeOld.Value = null;
 
-            int rows = targetDataList.Count;
-            int columns = targetDataList[0].Count;
-            string[,] targetDataArr = new string[rows, columns];
-            for (int i = 0; i < rows; i++)
+            var rows = targetDataList.Count;
+            var columns = targetDataList[0].Count;
+            var targetDataArr = new string[rows, columns];
+            for (var i = 0; i < rows; i++)
             {
-                for (int j = 0; j < columns; j++)
+                for (var j = 0; j < columns; j++)
                 {
                     targetDataArr[i, j] = targetDataList[i][j];
                 }

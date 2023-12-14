@@ -49,9 +49,9 @@ public class PubMetToExcelFunc
             tempWorkbook = CreatRibbon.App.Workbooks.Add();
             tempWorkbook.SaveAs(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
         }
-        dynamic tempSheet = tempWorkbook.Sheets["Sheet1"];
-        string[,] tempDataArray = new string[findValueList.Count, 5];
-        for (int i = 0; i < findValueList.Count; i++)
+        var tempSheet = tempWorkbook.Sheets["Sheet1"];
+        var tempDataArray = new string[findValueList.Count, 5];
+        for (var i = 0; i < findValueList.Count; i++)
         {
             tempDataArray[i, 0] = findValueList[i].Item1;
             tempDataArray[i, 1] = findValueList[i].Item2;
@@ -70,7 +70,7 @@ public class PubMetToExcelFunc
     {
         var sheet = CreatRibbon.App.ActiveSheet;
         var selectCell = CreatRibbon.App.ActiveCell;
-        string selectCellValue = "";
+        var selectCellValue = "";
         if (selectCell.Value != null)
         {
             selectCellValue = selectCell.Value.ToString();
@@ -82,8 +82,8 @@ public class PubMetToExcelFunc
             var selectRow = selectCell.Row;
             var selectCol = selectCell.Column;
             var sheetName = sheet.Cells[selectRow, selectCol+1].Value;
-            var cellAdress = sheet.Cells[selectRow, selectCol + 2].Value;
-            PubMetToExcel.OpenExcelAndSelectCell(selectCellValue,sheetName,cellAdress);
+            var cellAddress = sheet.Cells[selectRow, selectCol + 2].Value;
+            PubMetToExcel.OpenExcelAndSelectCell(selectCellValue,sheetName, cellAddress);
         }
 
 
@@ -105,7 +105,7 @@ public class PubMetToExcelFunc
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var selectCell = CreatRibbon.App.ActiveCell;
         var basePath = CreatRibbon.App.ActiveWorkbook.Path;
-        string mergePath = "";
+        var mergePath = "";
         //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = System.IO.Path.Combine(documentsFolder, "mergePath.txt");
@@ -129,7 +129,7 @@ public class PubMetToExcelFunc
         newPath = newPath + @"\Excels\Localizations\Localizations.xlsx";
         var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(newPath);
         var findValue = PubMetToExcel.FindDataInDataTable(newPath, dataTable, selectCell.Value.ToString());
-        string cellAddress = "";
+        var cellAddress = "";
         if (findValue.Count == 0)
         {
             cellAddress = "A1";
@@ -144,14 +144,14 @@ public class PubMetToExcelFunc
     {
         var sheetName = "Alice大富翁";
         //读取数据（0起始）
-        object[,] targetRank = PubMetToExcel.ReadExcelDataC(sheetName, 16, 39, 2, 2);
+        var targetRank = PubMetToExcel.ReadExcelDataC(sheetName, 16, 39, 2, 2);
         //object[,] seedRangeValue = PubMetToExcel.ReadExcelDataC(sheetName, 2, 7, 6, 6);
-        object[,] targetKey = PubMetToExcel.ReadExcelDataC(sheetName, 8, 10, 2, 3);
-        object[,] targetKeySoft = PubMetToExcel.ReadExcelDataC(sheetName, 2, 6, 2, 3);
-        object[,] maxRollCell = PubMetToExcel.ReadExcelDataC(sheetName, 13, 13, 2, 2);
-        object[,] maxGridLoopCell = PubMetToExcel.ReadExcelDataC(sheetName, 12, 12, 2, 2);
-        int maxRoll = Convert.ToInt32(maxRollCell[0, 0]);
-        int maxGridLoop = Convert.ToInt32(maxGridLoopCell[0, 0]);
+        var targetKey = PubMetToExcel.ReadExcelDataC(sheetName, 8, 10, 2, 3);
+        var targetKeySoft = PubMetToExcel.ReadExcelDataC(sheetName, 2, 6, 2, 3);
+        var maxRollCell = PubMetToExcel.ReadExcelDataC(sheetName, 13, 13, 2, 2);
+        var maxGridLoopCell = PubMetToExcel.ReadExcelDataC(sheetName, 12, 12, 2, 2);
+        var maxRoll = Convert.ToInt32(maxRollCell[0, 0]);
+        var maxGridLoop = Convert.ToInt32(maxGridLoopCell[0, 0]);
 
         //List<int> data = new List<int>();
         //for (int i = 0; i < seedRangeValue.GetLength(0); i++)
@@ -168,13 +168,13 @@ public class PubMetToExcelFunc
         var targetGift = new Dictionary<int, List<int>>();
         var modCountDiv = maxRoll;
 
-        for (int i = 0; i < permutations.Count; i++)
+        for (var i = 0; i < permutations.Count; i++)
         {
             var targetProcessTemp = new List<int>();
             var bpProcessTemp = new List<int>();
             var targetGiftTemp = new List<int>();
             //生成多少个格子
-            for (int j = 0; j < maxGridLoop * 24; j++)
+            for (var j = 0; j < maxGridLoop * 24; j++)
             {
                 var modCount = (j + 1) % modCountDiv;
                 if (modCount == 0)
@@ -219,7 +219,7 @@ public class PubMetToExcelFunc
         }
         var filteredData = targetProcess;
         //过滤固定目标
-        for (int i = 0; i < targetKey.GetLength(0); i++)
+        for (var i = 0; i < targetKey.GetLength(0); i++)
         {
             var rollTimes = targetKey[i, 0];
             var rollGrid = targetKey[i, 1];
@@ -242,7 +242,7 @@ public class PubMetToExcelFunc
             }
         }
         //过滤动态目标
-        for (int i = 0; i < targetKeySoft.GetLength(0); i++)
+        for (var i = 0; i < targetKeySoft.GetLength(0); i++)
         {
             var softTimes = targetKeySoft[i, 1];
             var softGrid = targetKeySoft[i, 0];
@@ -263,14 +263,14 @@ public class PubMetToExcelFunc
             filteredDataGift[key] = targetGift[key][maxRoll];
         }
         //选择升阶进度中众数项
-        int modeValue = GetMode(filteredDataGift.Values);
+        var modeValue = GetMode(filteredDataGift.Values);
         var filteredDataGiftMode = filteredDataGift.Where(pair => pair.Value == modeValue).ToList();
         var filteredDataGiftList = new List<List<object>>();
-        int methodCount = filteredDataGiftMode.Count;
+        var methodCount = filteredDataGiftMode.Count;
         foreach (var kvp in filteredDataGiftMode)
         {
-            int key = kvp.Key;
-            int value = kvp.Value;
+            var key = kvp.Key;
+            var value = kvp.Value;
             filteredDataGiftList.Add(new List<object> { value });
             filteredDataBpProcess.Add(new List<object> { bpProcess[key][maxRoll] });
             var methodStr = "";
@@ -282,7 +282,7 @@ public class PubMetToExcelFunc
             filteredDataMethod.Add(new List<object> { methodStr });
         }
         //清理
-        object[,] emptyData = new object[65535 - 17 + 1, 6 - 6 + 1];
+        var emptyData = new object[65535 - 17 + 1, 6 - 6 + 1];
         PubMetToExcel.WriteExcelDataC(sheetName, 16, 65534, 4, 4, emptyData);
         PubMetToExcel.WriteExcelDataC(sheetName, 16, 65534, 5, 5, emptyData);
         PubMetToExcel.WriteExcelDataC(sheetName, 16, 65534, 6, 6, emptyData);
@@ -305,7 +305,7 @@ public class PubMetToExcelFunc
     {
         while (b != 0)
         {
-            int temp = b;
+            var temp = b;
             b = a % b;
             a = temp;
         }
@@ -330,7 +330,7 @@ public class PubMetToExcelFunc
 
     static List<List<int>> GeneratePermutations(List<int> data)
     {
-        List<List<int>> result = new List<List<int>>();
+        var result = new List<List<int>>();
         GeneratePermutationsHelper(data, 0, result);
         return result;
     }
@@ -344,9 +344,9 @@ public class PubMetToExcelFunc
             return;
         }
         // 使用 HashSet 来去重
-        HashSet<int> usedValues = new HashSet<int>();
+        var usedValues = new HashSet<int>();
 
-        for (int i = index; i < data.Count; i++)
+        for (var i = index; i < data.Count; i++)
         {
             if (usedValues.Add(data[i]))
             {
@@ -363,30 +363,30 @@ public class PubMetToExcelFunc
     }
     static void Swap(List<int> data, int i, int j)
     {
-        int temp = data[i];
+        var temp = data[i];
         data[i] = data[j];
         data[j] = temp;
     }
 
     static List<List<int>> GenerateUniqueSchemes(int numberOfRolls, int numberOfSchemes)
     {
-        List<List<int>> result = new List<List<int>>();
-        HashSet<string> seenSchemes = new HashSet<string>();
-        Random random = new Random();
+        var result = new List<List<int>>();
+        var seenSchemes = new HashSet<string>();
+        var random = new Random();
 
-        for (int i = 0; i < numberOfSchemes; i++)
+        for (var i = 0; i < numberOfSchemes; i++)
         {
-            List<int> scheme = new List<int>();
+            var scheme = new List<int>();
 
             // 随机生成一个方案
-            for (int j = 0; j < numberOfRolls; j++)
+            for (var j = 0; j < numberOfRolls; j++)
             {
-                int randomNumber = random.Next(1, 7);
+                var randomNumber = random.Next(1, 7);
                 scheme.Add(randomNumber);
             }
 
             // 转换为字符串，检查是否已经存在该方案
-            string schemeString = string.Join(",", scheme);
+            var schemeString = string.Join(",", scheme);
             if (!seenSchemes.Contains(schemeString))
             {
                 seenSchemes.Add(schemeString);
