@@ -15,7 +15,7 @@ namespace NumDesTools;
 /// </summary>
 public class PubMetToExcelFunc
 {
-    private static readonly dynamic Wk = CreatRibbon.App.ActiveWorkbook;
+    private static readonly dynamic Wk = NumDesAddIn.App.ActiveWorkbook;
 
     private static readonly string Path = Wk.Path;
 
@@ -43,11 +43,11 @@ public class PubMetToExcelFunc
         dynamic tempWorkbook;
         try
         {
-            tempWorkbook = CreatRibbon.App.Workbooks.Open(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
+            tempWorkbook = NumDesAddIn.App.Workbooks.Open(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
         }
         catch
         {
-            tempWorkbook = CreatRibbon.App.Workbooks.Add();
+            tempWorkbook = NumDesAddIn.App.Workbooks.Add();
             tempWorkbook.SaveAs(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
         }
 
@@ -72,8 +72,8 @@ public class PubMetToExcelFunc
     //Excel右键识别文件路径并打开
     public static void RightOpenExcelByActiveCell(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        var sheet = CreatRibbon.App.ActiveSheet;
-        var selectCell = CreatRibbon.App.ActiveCell;
+        var sheet = NumDesAddIn.App.ActiveSheet;
+        var selectCell = NumDesAddIn.App.ActiveCell;
         var selectCellValue = "";
         if (selectCell.Value != null) selectCellValue = selectCell.Value.ToString();
         //正则出是Excel路径的单元格
@@ -91,8 +91,8 @@ public class PubMetToExcelFunc
     public static void OpenBaseLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        var selectCell = CreatRibbon.App.ActiveCell;
-        var basePath = CreatRibbon.App.ActiveWorkbook.Path;
+        var selectCell = NumDesAddIn.App.ActiveCell;
+        var basePath = NumDesAddIn.App.ActiveWorkbook.Path;
         var newPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(basePath));
         newPath = newPath + @"\Excels\Localizations\Localizations.xlsx";
         var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(newPath);
@@ -104,8 +104,8 @@ public class PubMetToExcelFunc
     public static void OpenMergeLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        var selectCell = CreatRibbon.App.ActiveCell;
-        var basePath = CreatRibbon.App.ActiveWorkbook.Path;
+        var selectCell = NumDesAddIn.App.ActiveCell;
+        var basePath = NumDesAddIn.App.ActiveWorkbook.Path;
         var mergePath = "";
         //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);

@@ -26,7 +26,7 @@ using SWF = System.Windows.Forms;
 namespace NumDesTools;
 
 /// <summary>
-/// Excel插件基础类CreatRibbon，其他为具体功能类，古早代码，主要完成Excel数据转换为Txt，之后的功能代码基本按文件名归类
+/// Excel插件基础类NumDesAddIn，其他为具体功能类，古早代码，主要完成Excel数据转换为Txt，之后的功能代码基本按文件名归类
 /// </summary>
 public static class ErrorLogCtp
 {
@@ -164,7 +164,7 @@ public static class ExcelSheetDataIsError
                 //获取索引列的txt文件所有字符串
                 var filePath1 = app.ActiveWorkbook.Path;
                 Directory.SetCurrentDirectory(Directory.GetParent(filePath1)?.FullName ?? string.Empty);
-                filePath1 = Directory.GetCurrentDirectory() + CreatRibbon.TempPath + @"\" + indexTxt + @".txt";
+                filePath1 = Directory.GetCurrentDirectory() + NumDesAddIn.TempPath + @"\" + indexTxt + @".txt";
                 if (File.Exists(filePath1))
                     fileStr = ExcelIndexDataIsWrong.FileToStr(filePath1);
                 else
@@ -292,7 +292,7 @@ public static class ExcelSheetDataIsError2
                 //获取索引列的txt文件所有字符串
                 string filePath = app.ActiveWorkbook.Path;
                 Directory.SetCurrentDirectory(Directory.GetParent(filePath)?.FullName ?? string.Empty);
-                filePath = Directory.GetCurrentDirectory() + CreatRibbon.TempPath + @"\" + indexTxt + @".txt";
+                filePath = Directory.GetCurrentDirectory() + NumDesAddIn.TempPath + @"\" + indexTxt + @".txt";
                 if (File.Exists(filePath))
                     fileStr = ExcelIndexDataIsWrong.FileToStr(filePath);
                 else
@@ -596,22 +596,22 @@ public static class ExcelSheetData
     //整理单元格格式
     public static void CellFormat()
     {
-        CreatRibbon.App.ActiveSheet.Cells.Font.Size = 9;
-        CreatRibbon.App.ActiveSheet.Cells.Font.Name = "微软雅黑";
-        CreatRibbon.App.ActiveSheet.Cells.HorizontalAlignment = XlHAlign.xlHAlignCenter;
-        CreatRibbon.App.ActiveSheet.Cells.VerticalAlignment = XlHAlign.xlHAlignCenter;
-        CreatRibbon.App.ActiveSheet.Cells.ColumnWidth = 8.38;
-        CreatRibbon.App.ActiveSheet.Cells.RowHeight = 14.25;
-        CreatRibbon.App.ActiveSheet.Cells.ShrinkToFit = true;
-        CreatRibbon.App.ActiveSheet.Cells.Borders.LineStyle = XlLineStyle.xlDash;
-        CreatRibbon.App.ActiveSheet.Cells.Borders.Weight = XlBorderWeight.xlHairline;
+        NumDesAddIn.App.ActiveSheet.Cells.Font.Size = 9;
+        NumDesAddIn.App.ActiveSheet.Cells.Font.Name = "微软雅黑";
+        NumDesAddIn.App.ActiveSheet.Cells.HorizontalAlignment = XlHAlign.xlHAlignCenter;
+        NumDesAddIn.App.ActiveSheet.Cells.VerticalAlignment = XlHAlign.xlHAlignCenter;
+        NumDesAddIn.App.ActiveSheet.Cells.ColumnWidth = 8.38;
+        NumDesAddIn.App.ActiveSheet.Cells.RowHeight = 14.25;
+        NumDesAddIn.App.ActiveSheet.Cells.ShrinkToFit = true;
+        NumDesAddIn.App.ActiveSheet.Cells.Borders.LineStyle = XlLineStyle.xlDash;
+        NumDesAddIn.App.ActiveSheet.Cells.Borders.Weight = XlBorderWeight.xlHairline;
         MessageBox.Show(@"格式整理完毕");
-        Marshal.ReleaseComObject(CreatRibbon.App);
+        Marshal.ReleaseComObject(NumDesAddIn.App);
     }
 
     public static void GetDataToTxt(string sheetName, string outFilePath)
     {
-        Worksheet ws = CreatRibbon.App.Worksheets[sheetName];
+        Worksheet ws = NumDesAddIn.App.Worksheets[sheetName];
         //app.Visible = false;
         //获取表格最大数据规模
         var rowCnt = ws.UsedRange.Rows.Count;
