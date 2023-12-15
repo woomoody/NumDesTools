@@ -81,7 +81,7 @@ public class CellSelectChangePro
         {
             NumDesAddIn.LabelTextRoleDataPreview = "角色数据预览：关闭";
             //更新控件lable信息
-            NumDesAddIn.R.InvalidateControl("Button14");
+            RibbonUI.CustomRibbon.InvalidateControl("Button14");
             NumDesAddIn.App.StatusBar = "当前非【角色基础】表，数据预览功能关闭";
         }
     }
@@ -776,17 +776,14 @@ public class RoleDataPriNpoi
         for (var i = ws2.FirstRowNum; i <= ws2.LastRowNum; i++)
         {
             var row = ws2.GetRow(i);
-            if (row != null)
+            var cell = row?.GetCell(colNum);
+            if (cell != null)
             {
-                var cell = row.GetCell(colNum);
-                if (cell != null)
+                var cellValue = cell.ToString();
+                if (cellValue == stateKeys)
                 {
-                    var cellValue = cell.ToString();
-                    if (cellValue == stateKeys)
-                    {
-                        rowIndex = i;
-                        break;
-                    }
+                    rowIndex = i;
+                    break;
                 }
             }
         }

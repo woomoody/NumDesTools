@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
@@ -19,6 +16,7 @@ using CommandBarControl = Microsoft.Office.Core.CommandBarControl;
 using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
 using MsoControlType = Microsoft.Office.Core.MsoControlType;
 using Point = System.Drawing.Point;
+// ReSharper disable All
 
 
 namespace NumDesTools;
@@ -32,11 +30,54 @@ public class NumDesAddIn:  IExcelAddIn
     public static string LabelText = "放大镜：关闭";
     public static string LabelTextRoleDataPreview = "角色数据预览：关闭";
     public static string TempPath = @"\Client\Assets\Resources\Table";
-    public static IRibbonUI R;
-    private static CommandBarButton _btn;
+    public static CommandBarButton Btn;
     public static Application App = (Application)ExcelDnaUtil.Application;
+    private string _seachStr = "";
+    private string _excelSeachStr = "";
 
+    #region 释放COM
 
+    // 析构函数
+    ~NumDesAddIn()
+    {
+        Dispose(true);
+    }
+
+    // 实现 IDisposable 接口
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    // 可以由子类覆盖的受保护的虚拟 Dispose 方法
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+            // 释放托管资源
+            // ...
+            // 释放 COM 对象
+            ReleaseComObjects();
+        // 释放非托管资源
+        // ...
+    }
+
+    // 释放 COM 对象的方法
+    private void ReleaseComObjects()
+    {
+        // 释放你的 COM 对象
+        // ReSharper disable once RedundantCheckBeforeAssignment
+        if (App != null)
+        {
+            App = null;
+        }
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+    }
+
+    #endregion 释放COM
 
     void IExcelAddIn.AutoOpen()
     {
@@ -435,6 +476,7 @@ public class NumDesAddIn:  IExcelAddIn
 
     public void MutiSheetOutPut_Click(IRibbonControl control)
     {
+        if (control == null) throw new ArgumentNullException(nameof(control));
         //string filePath = app.ActiveWorkbook.FullName;
         //string filePath = @"C:\Users\user\Desktop\test.xlsx";
         //string sheetName = app.ActiveSheet.Name;
@@ -784,7 +826,7 @@ public class NumDesAddIn:  IExcelAddIn
         {
             if (control == null) throw new ArgumentNullException(nameof(control));
             LabelTextRoleDataPreview = LabelTextRoleDataPreview == "角色数据预览：开启" ? "角色数据预览：关闭" : "角色数据预览：开启";
-            R.InvalidateControl("Button14");
+            RibbonUI.CustomRibbon.InvalidateControl("Button14");
             _ = new CellSelectChangePro();
             App.StatusBar = false;
         }
@@ -793,9 +835,6 @@ public class NumDesAddIn:  IExcelAddIn
             MessageBox.Show(@"非【角色基础】表格，不能使用此功能");
         }
     }
-
-    //所有动态改的东西一定要在Xml使用“get类进行命名，并且在这里进行方法实现，才能动态的将数据传输，执行后续功能
-    private string _seachStr = "";
 
     public void OnEditBoxTextChanged(IRibbonControl control, string text)
     {
@@ -811,8 +850,6 @@ public class NumDesAddIn:  IExcelAddIn
     {
         SearchEngine.BingSearch(_seachStr);
     }
-
-    private string _excelSeachStr = "";
 
     public void ExcelOnEditBoxTextChanged(IRibbonControl control, string text)
     {
@@ -1158,7 +1195,7 @@ public class NumDesAddIn:  IExcelAddIn
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
         LabelText = LabelText == "放大镜：开启" ? "放大镜：关闭" : "放大镜：开启";
-        R.InvalidateControl("Button5");
+        RibbonUI.CustomRibbon.InvalidateControl("Button5");
         _ = new CellSelectChange();
     }
 
@@ -1245,7 +1282,7 @@ public class NumDesAddIn:  IExcelAddIn
         }
 
         //解决事件连续触发
-        _btn = null;
+        Btn = null;
         GC.Collect();
         GC.WaitForPendingFinalizers();
 

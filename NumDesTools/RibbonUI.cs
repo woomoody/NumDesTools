@@ -1,24 +1,71 @@
-﻿using DocumentFormat.OpenXml.Wordprocessing;
-using ExcelDna.Integration.CustomUI;
+﻿using ExcelDna.Integration.CustomUI;
 using System.Runtime.InteropServices;
 using System;
+using System.IO;
+using System.Reflection;
+using System.Windows;
 
 namespace NumDesTools;
 
+/// <summary>
+/// 插件界面类，各类点击事件方法集合
+/// </summary>
+
 [ComVisible(true)]
+// ReSharper disable once InconsistentNaming
 public class RibbonUI : ExcelRibbon
 {
+    public static IRibbonUI CustomRibbon;
+
+    //加载Ribbon
+    public void OnLoad(IRibbonUI ribbon)
+    {
+        CustomRibbon = ribbon;
+        CustomRibbon.ActivateTab("Tab1");
+    }
+    //加载自定义Ribbon
     public override string GetCustomUI(string ribbonId)
     {
-        return RibbonResources.RibbonUI;
+        var ribbonXml = string.Empty;
+        try
+        {
+            ribbonXml = GetRibbonXml("RibbonUI.xml");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message);
+        }
+        return ribbonXml;
     }
+    //自定义获取RibbonUI.xml
+    internal static string GetRibbonXml(string resourceName)
+    {
+        var text = string.Empty;
+        var assn = Assembly.GetExecutingAssembly();
+        var resources = assn.GetManifestResourceNames();
+        foreach (var resource in resources)
+        {
+            if (!resource.EndsWith(resourceName)) continue;
+            var streamText = assn.GetManifestResourceStream(resource);
+            if (streamText != null)
+            {
+                var reader = new StreamReader(streamText);
+                text = reader.ReadToEnd();
+                reader.Close();
+            }
 
+            streamText?.Close();
+            break;
+        }
+
+        return text;
+    }
+    //获取自定义图片： Visual Studio 的工具自动生成的的方法
     public override object LoadImage(string imageId)
     {
         return RibbonResources.ResourceManager.GetObject(imageId);
     }
-
-
+    //自定义切换按钮显示文字
     public string GetLableText(IRibbonControl control)
     {
         var latext = control.Id switch
@@ -27,53 +74,6 @@ public class RibbonUI : ExcelRibbon
             "Button14" => NumDesAddIn.LabelTextRoleDataPreview,
             _ => ""
         };
-
         return latext;
     }
-
-    public void OnLoad(IRibbonUI ribbon)
-    {
-        NumDesAddIn.R = ribbon;
-        NumDesAddIn.R.ActivateTab("Tab1");
-    }
-
-
-    #region 释放COM
-
-    // 析构函数
-    ~RibbonUI()
-    {
-        Dispose(true);
-    }
-
-    // 实现 IDisposable 接口
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
-    // 可以由子类覆盖的受保护的虚拟 Dispose 方法
-    protected virtual void Dispose(bool disposing)
-    {
-        if (disposing)
-            // 释放托管资源
-            // ...
-            // 释放 COM 对象
-            ReleaseComObjects();
-        // 释放非托管资源
-        // ...
-    }
-
-    // 释放 COM 对象的方法
-    private void ReleaseComObjects()
-    {
-        // 释放你的 COM 对象
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-    }
-
-    #endregion 释放COM
 }
