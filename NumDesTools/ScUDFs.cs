@@ -13,7 +13,7 @@ namespace NumDesTools;
 /// </summary>
 public class ExcelUdf
 {
-    private static readonly dynamic IndexWk = CreatRibbon.App.ActiveWorkbook;
+    private static readonly dynamic IndexWk = NumDesAddIn.App.ActiveWorkbook;
     private static readonly dynamic ExcelPath = IndexWk.Path;
 
     [ExcelFunction(Category = "FindValue", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在列")]
@@ -81,7 +81,7 @@ public class ExcelUdf
     [ExcelFunction(Category = "GetExcelInfo", IsVolatile = true, IsMacroType = true, Description = "获取单元格背景色")]
     public static string GetCellColor([ExcelArgument(AllowReference = true, Description = "目标列")] string address)
     {
-        var range = CreatRibbon.App.ActiveSheet.Range[address];
+        var range = NumDesAddIn.App.ActiveSheet.Range[address];
         var color = range.Interior.Color;
         // 将Excel VBA颜色值转换为RGB格式
         var red = (int)(color % 256);

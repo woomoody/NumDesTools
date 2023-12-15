@@ -10,7 +10,7 @@ public class ExcelLinksGraphic
     public static void Graph()
     {
         //打开Excel文件
-        var workbook = CreatRibbon.App.ActiveWorkbook;
+        var workbook = NumDesAddIn.App.ActiveWorkbook;
         var sheet = workbook.ActiveSheet;
         //读取Excel文件统计数据
         var mainExcel = new Dictionary<string, List<string>>();
