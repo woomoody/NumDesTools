@@ -295,7 +295,6 @@
     <None Include="doc\战斗数值.xlsm" />
     <None Include="doc\数值理论.md" />
     <None Include="packages.config" />
-    <None Include="NumDesTools-AddIn.dna" />
     <None Include="Properties\ExcelDna.Build.props" />
   </ItemGroup>
   <ItemGroup>
