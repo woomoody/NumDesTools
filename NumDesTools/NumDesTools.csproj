@@ -296,6 +296,7 @@
     <None Include="doc\数值理论.md" />
     <None Include="packages.config" />
     <None Include="NumDesTools-AddIn.dna" />
+    <None Include="Properties\ExcelDna.Build.props" />
   </ItemGroup>
   <ItemGroup>
     <None Include="image\谷歌.png" />
