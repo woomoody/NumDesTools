@@ -18,6 +18,7 @@
 
        Excel-DNA also allows the XML for ribbon UI extensions to be specified in the .dna file.
        See the main Excel-DNA site at https://excel-dna.net for downloads of the full distribution.
-  -->
+
   	<Reference Path=".\libs\*.dll" Pack="true" />
+  -->
 </DnaLibrary>
