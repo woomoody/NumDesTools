@@ -271,8 +271,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <None Include="doc\战斗数值.xlsm" />
-    <None Include="doc\数值理论.md" />
     <None Include="NumDesTools-AddIn.dna">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
