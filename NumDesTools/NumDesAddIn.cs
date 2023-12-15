@@ -32,8 +32,8 @@ public class NumDesAddIn:  IExcelAddIn
     public static string TempPath = @"\Client\Assets\Resources\Table";
     public static CommandBarButton Btn;
     public static Application App = (Application)ExcelDnaUtil.Application;
-    private string _seachStr = "";
-    private string _excelSeachStr = "";
+    private string _seachStr = string.Empty;
+    private string _excelSeachStr = string.Empty;
 
     #region 释放COM
 
