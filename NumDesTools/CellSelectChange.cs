@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Microsoft.Office.Core;
 using Microsoft.Office.Interop.Excel;
 using Font = System.Drawing.Font;
+using Range = Microsoft.Office.Interop.Excel.Range;
 using XlHAlign = Microsoft.Office.Interop.Excel.XlHAlign;
 using XlVAlign = Microsoft.Office.Interop.Excel.XlVAlign;
 

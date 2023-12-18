@@ -18,7 +18,7 @@ using CommandBarControl = Microsoft.Office.Core.CommandBarControl;
 using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
 using MsoControlType = Microsoft.Office.Core.MsoControlType;
 using Point = System.Drawing.Point;
-
+using Range = Microsoft.Office.Interop.Excel.Range;
 
 
 namespace NumDesTools;
@@ -82,6 +82,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
 
     #endregion 释放COM
 
+    #region 创建Ribbon
     //加载Ribbon
     public void OnLoad(IRibbonUI ribbon)
     {
@@ -141,6 +142,9 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         };
         return latext;
     }
+    #endregion
+
+    #region 加载Ribbon
     void IExcelAddIn.AutoOpen()
     {
         App.SheetBeforeRightClick += UD_RightClickButton;
@@ -150,7 +154,9 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     {
         App.SheetBeforeRightClick -= UD_RightClickButton;
     }
+    #endregion
 
+    #region Ribbon点击命令
     private void UD_RightClickButton(object sh, Range target, ref bool cancel)
     {
         if (sh is not Worksheet sheet) return;
@@ -237,7 +243,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
                 comButton4.Click += PubMetToExcelFunc.OpenMergeLanExcel;
             }
         }
-        if (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables"))
+        if (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables") || bookPath.Contains(@"Public\Excels\Localizations"))
         {
             if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
                 comButton5)
@@ -1211,7 +1217,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         //var path  = abc.sheetPath;
         //var range = abc.currentRange;
         //var rangeValue = range.GetValue();
-
+        PubMetToExcelFunc.test123();
         //Lua2Excel.LuaDataExportToExcel(@"C:\Users\cent\Desktop\二合数据\TableABTestCountry.lua.txt");
         //Program.NodeMain();
         //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");
@@ -1378,4 +1384,5 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         //    }
         //}
     }
+    #endregion
 }

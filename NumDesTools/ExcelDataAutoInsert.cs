@@ -17,6 +17,7 @@ using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
 using LicenseContext = OfficeOpenXml.LicenseContext;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.Forms.MessageBox;
+using Range = Microsoft.Office.Interop.Excel.Range;
 
 namespace NumDesTools;
 
