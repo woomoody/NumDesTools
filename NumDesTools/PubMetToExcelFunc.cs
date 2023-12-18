@@ -7,6 +7,7 @@ using Microsoft.Office.Core;
 using System;
 using System.Diagnostics;
 using OfficeOpenXml;
+using System.IO;
 
 namespace NumDesTools;
 
@@ -18,6 +19,32 @@ public class PubMetToExcelFunc
     private static readonly dynamic Wk = NumDesAddIn.App.ActiveWorkbook;
 
     private static readonly string Path = Wk.Path;
+
+    public static void test123()
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+
+        try
+        {
+
+
+            using (var targetExcel = new ExcelPackage(new FileInfo(@"C:\Users\cent\Desktop\工作簿2.xlsx")))
+            {
+                ExcelWorkbook targetBook = targetExcel.Workbook;
+                var targetSheet = targetBook.Worksheets["Sheet1"] ?? targetBook.Worksheets[0];
+
+                // 读取 A1 单元格的内容
+                var cellA1Value = targetSheet.Cells[1, 1].Value;
+            }
+        }
+        catch (Exception ex)
+        {
+            // 处理异常信息
+            Debug.Print($"Exception: {ex.Message}");
+        }
+    }
+
 
     //Excel数据查询并合并表格数据
     public static void ExcelDataSearchAndMerge(string searchValue)

@@ -13,6 +13,7 @@ using System.Data.OleDb;
 using System.Diagnostics;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
 using System.Text.RegularExpressions;
+using Range = Microsoft.Office.Interop.Excel.Range;
 
 namespace NumDesTools;
 

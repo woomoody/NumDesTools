@@ -1,3 +1,0 @@
-NumDesTools.dll
-SharpSvn.dll
-SharpSvn.UI.dll

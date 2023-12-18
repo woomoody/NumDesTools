@@ -9,6 +9,7 @@ using Microsoft.Office.Core;
 using Microsoft.Office.Interop.Excel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
+using Range = Microsoft.Office.Interop.Excel.Range;
 
 namespace NumDesTools;
 
