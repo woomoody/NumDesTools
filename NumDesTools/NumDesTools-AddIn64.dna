@@ -21,4 +21,5 @@
 
   	<Reference Path=".\libs\*.dll" Pack="true" />
   -->
+  <TargetFramework>net6.0</TargetFramework>
 </DnaLibrary>

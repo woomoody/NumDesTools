@@ -134,7 +134,7 @@ public class PubMetToExcelFunc
 
     public static void AliceBigRicherDfs2()
     {
-        var sheetName = "Alice大富翁";
+        var sheetName = "大富翁随机";
         //读取数据（0起始）
         var targetRank = PubMetToExcel.ReadExcelDataC(sheetName, 16, 39, 2, 2);
         //object[,] seedRangeValue = PubMetToExcel.ReadExcelDataC(sheetName, 2, 7, 6, 6);
