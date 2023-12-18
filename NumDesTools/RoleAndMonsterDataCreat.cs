@@ -81,7 +81,7 @@ public class CellSelectChangePro
         {
             NumDesAddIn.LabelTextRoleDataPreview = "角色数据预览：关闭";
             //更新控件lable信息
-            RibbonUI.CustomRibbon.InvalidateControl("Button14");
+            NumDesAddIn.CustomRibbon.InvalidateControl("Button14");
             NumDesAddIn.App.StatusBar = "当前非【角色基础】表，数据预览功能关闭";
         }
     }
