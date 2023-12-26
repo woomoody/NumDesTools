@@ -185,7 +185,8 @@ public class ExcelUdf
             count++;
         }
 
-        result = delimiterList[0] + result + delimiterList[2];
+        result = result.Substring(0, result.Length - 1);
+        result = delimiterList[0] + result+ delimiterList[2];
         return result;
     }
 }

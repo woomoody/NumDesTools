@@ -7,7 +7,6 @@ using Microsoft.Office.Core;
 using System;
 using System.Diagnostics;
 using OfficeOpenXml;
-using System.IO;
 
 namespace NumDesTools;
 
@@ -19,32 +18,6 @@ public class PubMetToExcelFunc
     private static readonly dynamic Wk = NumDesAddIn.App.ActiveWorkbook;
 
     private static readonly string Path = Wk.Path;
-
-    public static void test123()
-    {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-
-        try
-        {
-
-
-            using (var targetExcel = new ExcelPackage(new FileInfo(@"C:\Users\cent\Desktop\工作簿2.xlsx")))
-            {
-                ExcelWorkbook targetBook = targetExcel.Workbook;
-                var targetSheet = targetBook.Worksheets["Sheet1"] ?? targetBook.Worksheets[0];
-
-                // 读取 A1 单元格的内容
-                var cellA1Value = targetSheet.Cells[1, 1].Value;
-            }
-        }
-        catch (Exception ex)
-        {
-            // 处理异常信息
-            Debug.Print($"Exception: {ex.Message}");
-        }
-    }
-
 
     //Excel数据查询并合并表格数据
     public static void ExcelDataSearchAndMerge(string searchValue)
@@ -163,15 +136,16 @@ public class PubMetToExcelFunc
     {
         var sheetName = "大富翁随机";
         //读取数据（0起始）
-        var targetRank = PubMetToExcel.ReadExcelDataC(sheetName, 16, 39, 2, 2);
+        var targetRank = PubMetToExcel.ReadExcelDataC(sheetName, 21, 44, 2, 2);
         //object[,] seedRangeValue = PubMetToExcel.ReadExcelDataC(sheetName, 2, 7, 6, 6);
-        var targetKey = PubMetToExcel.ReadExcelDataC(sheetName, 8, 10, 2, 3);
-        var targetKeySoft = PubMetToExcel.ReadExcelDataC(sheetName, 2, 6, 2, 3);
-        var maxRollCell = PubMetToExcel.ReadExcelDataC(sheetName, 13, 13, 2, 2);
-        var maxGridLoopCell = PubMetToExcel.ReadExcelDataC(sheetName, 12, 12, 2, 2);
+        var targetKey = PubMetToExcel.ReadExcelDataC(sheetName, 13, 15, 2, 3);
+        var targetKeySoft = PubMetToExcel.ReadExcelDataC(sheetName, 2, 11, 2, 3);
+        var maxRollCell = PubMetToExcel.ReadExcelDataC(sheetName, 18, 18, 2, 2);
+        var maxGridLoopCell = PubMetToExcel.ReadExcelDataC(sheetName, 17, 17, 2, 2);
+        var maxRankCell = PubMetToExcel.ReadExcelDataC(sheetName, 18, 18, 5, 5);
         var maxRoll = Convert.ToInt32(maxRollCell[0, 0]);
         var maxGridLoop = Convert.ToInt32(maxGridLoopCell[0, 0]);
-
+        var maxRankValue = Convert.ToInt32(maxRankCell[0, 0]);
         //List<int> data = new List<int>();
         //for (int i = 0; i < seedRangeValue.GetLength(0); i++)
         //{
@@ -181,7 +155,7 @@ public class PubMetToExcelFunc
         //        data.Add(i + 1);
         //    }
         //}
-        var permutations = GenerateUniqueSchemes(maxRoll, maxRoll * 10000);
+        var permutations = GenerateUniqueSchemes(maxRoll, maxRoll * 100000);
         var targetProcess = new Dictionary<int, List<int>>();
         var bpProcess = new Dictionary<int, List<int>>();
         var targetGift = new Dictionary<int, List<int>>();
@@ -245,9 +219,9 @@ public class PubMetToExcelFunc
                 //filteredData = filteredData
                 //    .Where(entry => filterCondition.All(condition => condition(entry.Value)))
                 //    .ToDictionary(entry => entry.Key, entry => entry.Value);
-                filteredData = filteredData
-                    .Where(pair => pair.Value.Take(maxRoll).Count(item => item == colValue) == 1)
-                    .ToDictionary(pair => pair.Key, pair => pair.Value);
+                //filteredData = filteredData
+                //    .Where(pair => pair.Value.Take(maxRoll).Count(item => item == colValue) == 1)
+                //    .ToDictionary(pair => pair.Key, pair => pair.Value);
             }
         }
 
@@ -271,7 +245,9 @@ public class PubMetToExcelFunc
         var filteredDataBpProcess = new List<List<object>>();
         foreach (var key in filteredData.Keys) filteredDataGift[key] = targetGift[key][maxRoll];
         //选择升阶进度中众数项
-        var modeValue = GetMode(filteredDataGift.Values);
+        //var modeValue = GetMode(filteredDataGift.Values);
+        //选择升阶进度中指定值
+        var modeValue = maxRankValue;
         var filteredDataGiftMode = filteredDataGift.Where(pair => pair.Value == modeValue).ToList();
         var filteredDataGiftList = new List<List<object>>();
         foreach (var kvp in filteredDataGiftMode)
@@ -288,40 +264,27 @@ public class PubMetToExcelFunc
 
         //清理
         var emptyData = new object[65535 - 17 + 1, 6 - 6 + 1];
-        PubMetToExcel.WriteExcelDataC(sheetName, 16, 65534, 4, 4, emptyData);
-        PubMetToExcel.WriteExcelDataC(sheetName, 16, 65534, 5, 5, emptyData);
-        PubMetToExcel.WriteExcelDataC(sheetName, 16, 65534, 6, 6, emptyData);
+        PubMetToExcel.WriteExcelDataC(sheetName, 21, 65534, 4, 4, emptyData);
+        PubMetToExcel.WriteExcelDataC(sheetName, 21, 65534, 5, 5, emptyData);
+        PubMetToExcel.WriteExcelDataC(sheetName, 21, 65534, 6, 6, emptyData);
         //错误提示
         if (filteredDataBpProcess.Count == 0)
         {
             var error = new object[1, 1];
             error[0, 0] = "#Error#";
-            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16, 4, 4, error);
+            PubMetToExcel.WriteExcelDataC(sheetName, 21, 21, 4, 4, error);
         }
         else
         {
             //写入
-            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataBpProcess.Count - 1, 6, 6,
+            PubMetToExcel.WriteExcelDataC(sheetName, 21, 21 + filteredDataBpProcess.Count - 1, 6, 6,
                 PubMetToExcel.ConvertListToArray(filteredDataBpProcess));
-            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataGiftList.Count - 1, 5, 5,
+            PubMetToExcel.WriteExcelDataC(sheetName, 21, 21 + filteredDataGiftList.Count - 1, 5, 5,
                 PubMetToExcel.ConvertListToArray(filteredDataGiftList));
-            PubMetToExcel.WriteExcelDataC(sheetName, 16, 16 + filteredDataMethod.Count - 1, 4, 4,
+            PubMetToExcel.WriteExcelDataC(sheetName, 21, 21 + filteredDataMethod.Count - 1, 4, 4,
                 PubMetToExcel.ConvertListToArray(filteredDataMethod));
         }
     }
-
-    // 获取列表的众数
-    private static int GetMode(IEnumerable<int> values)
-    {
-        var modes = values
-            .GroupBy(v => v)
-            .OrderByDescending(g => g.Count())
-            .Select(g => g.Key);
-
-        // 如果有多个众数，可以在这里选择处理方式，此处选择返回第一个众数
-        return modes.FirstOrDefault();
-    }
-
     private static List<List<int>> GenerateUniqueSchemes(int numberOfRolls, int numberOfSchemes)
     {
         var result = new List<List<int>>();
@@ -347,7 +310,8 @@ public class PubMetToExcelFunc
                 result.Add(new List<int>(scheme));
             }
         }
-
         return result;
     }
+
 }
+

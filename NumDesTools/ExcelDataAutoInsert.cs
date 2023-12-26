@@ -1,5 +1,4 @@
 ﻿using ExcelDna.Integration;
-using Microsoft.Office.Interop.Excel;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using System;
