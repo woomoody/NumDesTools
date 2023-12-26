@@ -1,6 +1,5 @@
 ﻿using ExcelDna.Integration;
 using System;
-using System.Diagnostics;
 using System.Net;
 using System.Text;
 
@@ -37,7 +36,7 @@ public class SearchEngine
         var result = new StringBuilder();
         try
         {
-            Process.Start(url);
+            //Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
             result.Append("Search successful!");
         }
         catch (Exception ex)
@@ -57,7 +56,7 @@ public class SearchEngine
         var result = new StringBuilder();
         try
         {
-            Process.Start(url);
+            //Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
             result.Append("Search successful!");
         }
         catch (Exception ex)

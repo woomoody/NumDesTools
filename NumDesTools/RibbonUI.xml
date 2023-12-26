@@ -22,13 +22,14 @@
                             screentip='点击检查当前工作簿所有sheet中的公式，看是否有错误的连接，推荐合完表后进行检查' />
                 </group>
                 <!--
-        <group id='Group3' label='SVN功能'>
-          <button id='Button9' size='large' label='更新Excel表' image='folder-docs' onAction='SvnCommitExcel_Click'
-                  screentip='点击更新当前目录所有Excel表格' />
-          <button id='Button10' size='large' label='更新Txt表' image='log' onAction='SvnCommitTxt_Click'
-                  screentip='点击更新当前目录所有Txt表格' />
-        </group>        
-        -->
+                <group id='Group3' label='SVN功能'>
+                  <button id='Button9' size='large' label='更新Excel表' image='folder-docs' onAction='SvnCommitExcel_Click'
+                          screentip='点击更新当前目录所有Excel表格' />
+                  <button id='Button10' size='large' label='更新Txt表' image='log' onAction='SvnCommitTxt_Click'
+                          screentip='点击更新当前目录所有Txt表格' />
+                </group>        
+                -->
+                <!--
                 <group id='Group4' label='战斗仿真'>
                     <menu id='RootMenu' label='战斗' size='large' imageMso='ReviewCompareMenu'>
                         <button id='Button11' label='PVP回合(不推荐)' image='reason' onAction='PVP_H_Click'
@@ -53,6 +54,7 @@
                     <button id="SearchBoxButton1" label="谷歌" onAction="GoogleSearch_Click" image="谷歌" />
                     <button id="SearchBoxButton2" label="必应" onAction="BingSearch_Click" image="bing" />
                 </group>
+                -->
                 <group id='Group7' label='自动填表'>
                     <button id='AutoInsertExcelData' size='large' label='自动数据LTE' image='database'
                             onAction='AutoInsertExcelData_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI' />
@@ -72,7 +74,8 @@
                             onAction='AutoSeachExcel_Click' screentip='查看模版表写入后的数据：EPPlusI' />
                 </group>
                 <group id="Group8" label="Excel搜索">
-                    <editBox id="ExcelSearchBoxEdit" onChange="ExcelOnEditBoxTextChanged" sizeString="…………………………………………" />
+                    <labelControl id="SearchLab" label="搜索编号/关键字" />
+                    <editBox id="ExcelSearchBoxEdit" onChange="ExcelOnEditBoxTextChanged" sizeString="……………………"  />
                     <button id="ExcelSearchBoxButton1" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件'
                             onAction='ExcelSearchAll_Click' image="key" />
                     <button id="ExcelSearchBoxButton3" label="全局搜索(多线程)" screentip='全列，按照A-Z的顺序遍历文件'
@@ -95,10 +98,18 @@
                             onAction='TmNormalEle_Click' />
                 </group>
                 <group id='Group9999' label='测试功能区'>
-                    <button id='Button6' size='large' label='不要点击红色按钮' image='sofa' onAction='TestBar1_Click' />
-                    <button id='Button7' size='large' label='测试' image='sofa' onAction='TestBar2_Click' />
-                    <checkBox id='checkbox1' label='是否后台' />
+                    <button id='Button99991' size='large' label='不要点击红色按钮' image='sofa' onAction='TestBar1_Click' />
+                    <button id='Button99992' size='large' label='测试' image='sofa' onAction='TestBar2_Click' />
+                    <checkBox id='checkbox99991' label='是否后台' />
                 </group>
+                <group id='FileInfo' label='文件信息'>
+                    <labelControl id="BasePathLab" label=" 源表/目标"  />
+                    <editBox id="BasePathEdit" getText="GetFileInfo" onChange="BaseFileInfoChanged"  sizeString="........................................................................." image ="folder-android" screentip='输入自己本地目录，自动保存'/>
+                    <editBox id="TargetPathEdit" getText="GetFileInfo"  onChange="TargetFileInfoChanged"  sizeString="........................................................................." image ="folder-aws" screentip='输入自己本地目录，自动保存'/>
+                </group>
+                <!--
+                <group id='Group4' label='战斗仿真'>控件id不能重复，否则无法加载Ribbon
+                -->
             </tab>
         </tabs>
     </ribbon>

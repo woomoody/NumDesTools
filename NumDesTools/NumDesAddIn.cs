@@ -37,6 +37,9 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     private string _seachStr = string.Empty;
     private string _excelSeachStr = string.Empty;
     public static IRibbonUI CustomRibbon;
+    private string _defaultFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "mergePath.txt");
+    private string _currentBaseText;
+    private string _currentTargetText;
 
     #region 释放COM
 
@@ -148,15 +151,18 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     void IExcelAddIn.AutoOpen()
     {
         App.SheetBeforeRightClick += UD_RightClickButton;
+        App.WorkbookActivate += ExcelApp_WorkbookActivate;
     }
 
     void IExcelAddIn.AutoClose()
     {
         App.SheetBeforeRightClick -= UD_RightClickButton;
+        App.WorkbookActivate -= ExcelApp_WorkbookActivate;
     }
     #endregion
 
     #region Ribbon点击命令
+    //Excel右键命令注册
     private void UD_RightClickButton(object sh, Range target, ref bool cancel)
     {
         if (sh is not Worksheet sheet) return;
@@ -274,6 +280,12 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
                 comButton7.Click += PubMetToExcelFunc.RightOpenExcelByActiveCell;
             }
         }
+    }
+    //Excel工作簿激活事件处理
+    private void ExcelApp_WorkbookActivate(Workbook wb)
+    {
+        //状态栏信息显示文件所在路径
+        App.StatusBar = wb.FullName;
     }
 
     public void AllWorkbookOutPut_Click(IRibbonControl control)
@@ -1212,12 +1224,11 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-        //var abc = await PubMetToExcel.GetCurrentExcelObjectC();
+        //PubMetToExcelFunc.Main();
         //var name = abc.sheetName;
         //var path  = abc.sheetPath;
         //var range = abc.currentRange;
         //var rangeValue = range.GetValue();
-        PubMetToExcelFunc.test123();
         //Lua2Excel.LuaDataExportToExcel(@"C:\Users\cent\Desktop\二合数据\TableABTestCountry.lua.txt");
         //Program.NodeMain();
         //var error=PubMetToExcel.ErrorKeyFromExcel(path, "role_500803");
@@ -1259,6 +1270,49 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         //SVNTools.FileLogs();
         //SVNTools.CommitFile();
         //SVNTools.DiffFile();
+    }
+
+    public string GetFileInfo(IRibbonControl control)
+    {
+        if (!File.Exists(_defaultFilePath))
+        {
+            string defaultContent = @"C:\M1Work\Public\Excels\Tables\" + Environment.NewLine +
+                                   @"C:\M2Work\Public\Excels\Tables\";
+
+            File.WriteAllText(_defaultFilePath, defaultContent);
+        }
+        // 读取指定行
+        string line1 = File.ReadLines(_defaultFilePath).Skip(1 - 1).FirstOrDefault();
+        string line2 = File.ReadLines(_defaultFilePath).Skip(2 - 1).FirstOrDefault();
+        if (control.Id == "BasePathEdit")
+        {
+            return line1;
+        }
+        else if (control.Id == "TargetPathEdit")
+        {
+            return line2;
+        }
+        return @"..\Public\Excels\Tables\";
+    }
+
+    public void BaseFileInfoChanged(IRibbonControl control, string text)
+    {
+        _currentBaseText = text;
+        string[] lines =File.ReadAllLines(_defaultFilePath);
+        // 插入新文本到指定行
+        lines[1 - 1] = _currentBaseText;
+        // 将修改后的内容写回文件
+        File.WriteAllLines(_defaultFilePath, lines);
+    }
+
+    public void TargetFileInfoChanged(IRibbonControl control, string text)
+    {
+        _currentTargetText = text;
+        string[] lines = File.ReadAllLines(_defaultFilePath);
+        // 插入新文本到指定行
+        lines[2 - 1] = _currentTargetText;
+        // 将修改后的内容写回文件
+        File.WriteAllLines(_defaultFilePath, lines);
     }
 
     public void ZoomInOut_Click(IRibbonControl control)
