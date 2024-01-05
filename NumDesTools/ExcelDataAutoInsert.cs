@@ -25,7 +25,7 @@ namespace NumDesTools;
 /// </summary>
 public class ExcelDataAutoInsert
 {
-    [ExcelFunction(IsHidden = true)]
+    [ExcelDna.Integration.ExcelFunction(IsHidden = true)]
     public static int FindTitle(dynamic sheet, int rows, string findValue)
     {
         var maxColumn = sheet.UsedRange.Columns.Count;

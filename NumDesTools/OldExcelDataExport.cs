@@ -28,15 +28,26 @@ namespace NumDesTools;
 /// <summary>
 /// Excel插件基础类NumDesAddIn，其他为具体功能类，古早代码，主要完成Excel数据转换为Txt，之后的功能代码基本按文件名归类
 /// </summary>
+
+#region 升级net6后带来的问题，UserControl需要一个显示的“默认接口”
+public interface IMyUserControl { }
+[ComVisible(true)]
+[ComDefaultInterface(typeof(IMyUserControl))]
+public  class LabelControl : UserControl, IMyUserControl
+{
+    public LabelControl()
+    {
+    }
+}
+#endregion
 public static class ErrorLogCtp
 {
-    public static CustomTaskPane Ctp;
-    public static UserControl LinkControl;
-    public static UserControl LabelControl;
-
+    public static ExcelDna.Integration.CustomUI.CustomTaskPane Ctp;
+    public static LabelControl LinkControl;
+    public static LabelControl LabelControl;
     public static void CreateCtp(string errorLog)
     {
-        LinkControl = new UserControl();
+        LinkControl = new LabelControl();
         var strErrorFilter = Regex.Split(errorLog, "\r\n", RegexOptions.IgnoreCase);
         var i = 0;
         //动态创建连接框体
@@ -70,7 +81,7 @@ public static class ErrorLogCtp
 
     public static void CreateCtpNormal(string errorLog)
     {
-        LabelControl = new UserControl();
+        LabelControl = new LabelControl();
         var errorLinkLable = new RichTextBox()
         {
             Text = errorLog,
@@ -504,7 +515,7 @@ public static class FormularCheck
 
 public static class PreviewTableCtp
 {
-    public static CustomTaskPane Ctp;
+    public static ExcelDna.Integration.CustomUI.CustomTaskPane Ctp;
     public static UserControl Uc;
 
     public static void CreateCtpTaable(string filePath, string sheetName)

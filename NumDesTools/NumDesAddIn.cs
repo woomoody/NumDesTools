@@ -1224,6 +1224,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
+        ErrorLogCtp.CreateCtpNormal("123");
         //PubMetToExcelFunc.Main();
         //var name = abc.sheetName;
         //var path  = abc.sheetPath;
