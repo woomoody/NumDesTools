@@ -1,6 +1,6 @@
 # NumDesTools简介
 游戏数值计算过程中，需要用到的一些小工具
-# 工程引用缺失（net6以前适用）
+# 工程引用缺失
 https://blog.csdn.net/weixin_43650637/article/details/114318408<br>
 步骤1：将.csproj文件中的类似下列代码删除
 ~~~ Html
