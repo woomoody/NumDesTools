@@ -16,7 +16,6 @@ public class SearchEngine
     {
         const string seachIndex1 = "/search?q=";
         const string google = "https://www.google.com";
-        var url = google + seachIndex1 + query;
         //if (PingWebsite(google))
         //{
         //    url = google + seachIndex1 + query;
@@ -52,7 +51,6 @@ public class SearchEngine
     {
         const string seachIndex1 = "/search?q=";
         const string bingInternational = "https://www.bing.com";
-        var url = bingInternational + seachIndex1 + query;
         var result = new StringBuilder();
         try
         {

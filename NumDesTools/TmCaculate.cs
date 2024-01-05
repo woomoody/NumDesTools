@@ -32,17 +32,19 @@ public class TmCaculate
                 if (modelRangeValueList[i][j] != null)
                 {
                     var ele = modelRangeValueList[i][j].ToString();
-                    if (eleCount.ContainsKey(ele))
+                    if (ele != null && eleCount.ContainsKey(ele))
                         eleCount[ele]++;
-                    else
-                        eleCount[ele] = 1;
+                    else if (ele != null) eleCount[ele] = 1;
                     for (var k = 0; k < targetEleMaxValueList.Count; k++)
                         if (ele == targetEleMaxValueList[k][0].ToString())
                         {
                             var eleId = Convert.ToInt32(targetEleMaxValueList[k][3]);
                             var eleMax = Convert.ToInt32(targetEleMaxValueList[k][1]);
-                            var targetId = eleId + (eleCount[ele] - 1) % eleMax + 1;
-                            tempTarget.Add(targetId);
+                            if (ele != null)
+                            {
+                                var targetId = eleId + (eleCount[ele] - 1) % eleMax + 1;
+                                tempTarget.Add(targetId);
+                            }
                         }
                 }
 
@@ -93,7 +95,7 @@ public class TmCaculate
                 loopIdList.Add(eleBaseId + loopId);
             }
 
-            eleIdLoop[eleTheme] = loopIdList;
+            if (eleTheme != null) eleIdLoop[eleTheme] = loopIdList;
         }
 
         for (var i = 0; i < modelRangeValueList.Count; i++)
@@ -104,20 +106,22 @@ public class TmCaculate
                 {
                     //非目标元素整体计数
                     var ele = modelRangeValueList[i][j].ToString();
-                    if (eleCount.ContainsKey(ele))
+                    if (ele != null && eleCount.ContainsKey(ele))
                         eleCount[ele]++;
-                    else
-                        eleCount[ele] = 1;
+                    else if (ele != null) eleCount[ele] = 1;
                     //非目标元素ID获取、和目标元素去重（向后索引）处理
-                    var eleId = eleIdLoop[ele][eleCount[ele] - 1];
-                    foreach (var id in targetModelRangeValueList[i])
-                        if (Convert.ToInt32(id) == eleId)
-                        {
-                            eleCount[ele]++;
-                            eleId = eleIdLoop[ele][eleCount[ele] - 1];
-                        }
+                    if (ele != null)
+                    {
+                        var eleId = eleIdLoop[ele][eleCount[ele] - 1];
+                        foreach (var id in targetModelRangeValueList[i])
+                            if (Convert.ToInt32(id) == eleId)
+                            {
+                                eleCount[ele]++;
+                                eleId = eleIdLoop[ele][eleCount[ele] - 1];
+                            }
 
-                    tempTarget.Add(eleId);
+                        tempTarget.Add(eleId);
+                    }
                 }
 
             targetRangeValueList.Add(tempTarget);

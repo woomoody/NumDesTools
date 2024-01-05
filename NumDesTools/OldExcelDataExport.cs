@@ -42,7 +42,7 @@ public  class LabelControl : UserControl, IMyUserControl
 #endregion
 public static class ErrorLogCtp
 {
-    public static ExcelDna.Integration.CustomUI.CustomTaskPane Ctp;
+    public static CustomTaskPane Ctp;
     public static LabelControl LinkControl;
     public static LabelControl LabelControl;
     public static void CreateCtp(string errorLog)
@@ -515,7 +515,7 @@ public static class FormularCheck
 
 public static class PreviewTableCtp
 {
-    public static ExcelDna.Integration.CustomUI.CustomTaskPane Ctp;
+    public static CustomTaskPane Ctp;
     public static UserControl Uc;
 
     public static void CreateCtpTaable(string filePath, string sheetName)
