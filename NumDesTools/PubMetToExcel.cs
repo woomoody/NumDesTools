@@ -13,6 +13,8 @@ using System.Diagnostics;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
 using System.Text.RegularExpressions;
 using Range = Microsoft.Office.Interop.Excel.Range;
+// ReSharper disable All
+#pragma warning disable CA1416
 
 namespace NumDesTools;
 
@@ -361,7 +363,7 @@ public class PubMetToExcel
             {
                 var dataRow = dataTable.NewRow();
                 for (var col = 1; col <= worksheet.Dimension.End.Column; col++)
-                    dataRow[col - 1] = worksheet.Cells[row, col].Value?.ToString();
+                    dataRow[col - 1] = worksheet.Cells[row, col].Value?.ToString() ?? string.Empty;
 
                 dataTable.Rows.Add(dataRow);
             }
@@ -390,7 +392,8 @@ public class PubMetToExcel
                 if (schemaTable != null)
                     foreach (DataRow row in schemaTable.Rows)
                     {
-                        if (row["TABLE_NAME"].ToString().Equals("Sheet1"))
+                        // ReSharper disable once PossibleNullReferenceException
+                        if (row != null && row["TABLE_NAME"].ToString().Equals("Sheet1"))
                         {
                             sheetName = "Sheet1";
                             break;
@@ -408,7 +411,7 @@ public class PubMetToExcel
                     }
                 }
 
-                dataTable.TableName = sheetName;
+                if (sheetName != null) dataTable.TableName = sheetName;
                 return dataTable;
             }
             catch (Exception ex)
@@ -432,7 +435,7 @@ public class PubMetToExcel
             //模糊查询
             if (isAll)
             {
-                if (row[column].ToString().Contains(findValue))
+                if (row != null && row[column].ToString().Contains(findValue))
                     findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2,
                         row.Table.Columns.IndexOf(column) + 1, row[1].ToString(), row[2].ToString()));
             }
@@ -458,7 +461,7 @@ public class PubMetToExcel
             //模糊查询
             if (isAll)
             {
-                if (row[key - 1].ToString().Contains(findValue))
+                if (row != null && row[key - 1].ToString().Contains(findValue))
                     findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, key, row[1].ToString(),
                         row[2].ToString()));
             }
@@ -715,7 +718,7 @@ public class PubMetToExcel
                         for (var row = 4; row <= sheet.Dimension.End.Row; row++)
                         {
                             var cellValue = sheet.Cells[row, col].Value;
-                            if (cellValue != null && cellValue.ToString().Contains(errorValue))
+                            if (cellValue != null && cellValue != null && cellValue.ToString().Contains(errorValue))
                             {
                                 var cellAddress = new ExcelCellAddress(row, col);
                                 var cellCol = cellAddress.Column;
@@ -843,12 +846,13 @@ public class PubMetToExcel
         if (!File.Exists(filePath))
         {
             // 创建新的文本文件
-            using (var writer = File.CreateText(filePath))
-            {
-                writer.WriteLine("Alice路径");
-                writer.WriteLine("Cove路径");
-                writer.Close();
-            }
+            if (filePath != null)
+                using (var writer = File.CreateText(filePath))
+                {
+                    writer.WriteLine("Alice路径");
+                    writer.WriteLine("Cove路径");
+                    writer.Close();
+                }
         }
         else
         {

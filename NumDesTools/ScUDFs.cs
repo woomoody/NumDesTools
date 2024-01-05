@@ -4,6 +4,8 @@ using NPOI.XSSF.UserModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+#pragma warning disable CA1416
+#pragma warning disable CA1416
 
 
 namespace NumDesTools;
@@ -101,7 +103,7 @@ public class ExcelUdf
     {
         // 使用正则表达式匹配数字
         var numbers = Regex.Split(inputValue, delimiter)
-            .SelectMany(s => Regex.Matches(s, @"\d+").Cast<Match>().Select(m => m.Value))
+            .SelectMany(s => Regex.Matches(s, @"\d+").Select(m => m.Value))
             .ToArray();
         return Convert.ToInt32(numbers[numCount - 1]);
     }

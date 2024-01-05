@@ -139,8 +139,8 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     {
         var latext = control.Id switch
         {
-            "Button5" => NumDesAddIn.LabelText,
-            "Button14" => NumDesAddIn.LabelTextRoleDataPreview,
+            "Button5" => LabelText,
+            "Button14" => LabelTextRoleDataPreview,
             _ => ""
         };
         return latext;
@@ -908,7 +908,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         {
             if (control == null) throw new ArgumentNullException(nameof(control));
             LabelTextRoleDataPreview = LabelTextRoleDataPreview == "角色数据预览：开启" ? "角色数据预览：关闭" : "角色数据预览：开启";
-            NumDesAddIn.CustomRibbon.InvalidateControl("Button14");
+            CustomRibbon.InvalidateControl("Button14");
             _ = new CellSelectChangePro();
             App.StatusBar = false;
         }
@@ -1320,7 +1320,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
         LabelText = LabelText == "放大镜：开启" ? "放大镜：关闭" : "放大镜：开启";
-        NumDesAddIn.CustomRibbon.InvalidateControl("Button5");
+        CustomRibbon.InvalidateControl("Button5");
         _ = new CellSelectChange();
     }
 
