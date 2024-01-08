@@ -187,7 +187,11 @@ public class ExcelUdf
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2",Name = "第二单元格范围")]
         object rangeObj2,
         [ExcelArgument(AllowReference = true, Description = "分隔符,eg:,",Name = "分隔符")]
-        string delimiter)
+        string delimiter, 
+        [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false",Name = "过滤空值")]
+        bool ignoreEmpty
+        )
+
     {
         // 将传递的 object 类型参数转换为 Range 对象
         var rangeRef1 = (ExcelReference)rangeObj1;
@@ -228,11 +232,16 @@ public class ExcelUdf
         var count = 0;
         foreach (var item in values1Objects)
         {
-            var itemDef = delimiterList[0] + item + delimiterList[1] + values2Objects[count] + delimiterList[2];
-            result += itemDef + delimiter[1];
-            count++;
+            if (item is ExcelEmpty && ignoreEmpty)
+            {
+            }
+            else
+            {
+                var itemDef = delimiterList[0] + item + delimiterList[1] + values2Objects[count] + delimiterList[2];
+                result += itemDef + delimiter[1];
+                count++;
+            }
         }
-
         result = result.Substring(0, result.Length - 1);
         result = delimiterList[0] + result+ delimiterList[2];
         return result;
