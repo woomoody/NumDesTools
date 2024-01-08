@@ -4,7 +4,6 @@ using NPOI.XSSF.UserModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using OfficeOpenXml.FormulaParsing.Excel.Functions.MathFunctions;
 #pragma warning disable CA1416
 #pragma warning disable CA1416
 
@@ -52,7 +51,8 @@ public class ExcelUdf
 
     [ExcelFunction(Category = "FindValue", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在行")]
     public static int FindKeyRow([ExcelArgument(Description = "工作簿")] string targetWorkbook,
-        [ExcelArgument(Description = "目标列")] int col, [ExcelArgument(Description = "匹配值")] string searchValue,
+        [ExcelArgument(Description = "目标列")] int col,
+        [ExcelArgument(Description = "匹配值")] string searchValue,
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1")
     {
         var path = ExcelPath + @"\" + targetWorkbook;
@@ -82,7 +82,7 @@ public class ExcelUdf
     }
 
     [ExcelFunction(Category = "GetExcelInfo", IsVolatile = true, IsMacroType = true, Description = "获取单元格背景色")]
-    public static string GetCellColor([ExcelArgument(AllowReference = true, Description = "目标列")] string address)
+    public static string GetCellColor([ExcelArgument(AllowReference = true, Name = "单元格地址",Description = "引用Range&Cell地址,eg:A1")] object address)
     {
         var range = NumDesAddIn.App.ActiveSheet.Range[address];
         var color = range.Interior.Color;
@@ -97,9 +97,9 @@ public class ExcelUdf
     //拆分字符串
     [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "提取字符串中数字")]
     public static int GetNumFromStr([ExcelArgument(AllowReference = true, Description = "输入字符串")] string inputValue,
-        [ExcelArgument(AllowReference = true, Description = "分隔符")]
+        [ExcelArgument(AllowReference = true, Name = "分隔符",Description = "分隔符,eg:,")]
         string delimiter,
-        [ExcelArgument(AllowReference = true, Description = "第几个数字")]
+        [ExcelArgument(AllowReference = true, Name = "数字序号",Description = "选择提取字符串中的第几个数字")]
         int numCount)
     {
         // 使用正则表达式匹配数字
@@ -110,17 +110,17 @@ public class ExcelUdf
     }
 
     //组装字符串
-    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range")]
+    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range，不需要默认值的直接用TEXTJION，这个支持默认值")]
     public static string CreatValueToArray(
-        [ExcelArgument(AllowReference = true, Description = "单元格范围")]
+        [ExcelArgument(AllowReference = true, Name = "单元格范围" ,Description ="Range&Cell,eg:A1:A2")]
         object rangeObj,
-        [ExcelArgument(AllowReference = true, Description = "默认值单元格范围")]
+        [ExcelArgument(AllowReference = true, Name = "默认值单元格范围",Description ="Range&Cell,eg:A1:A2")]
         object rangeObjDef,
-        [ExcelArgument(AllowReference = true, Description = "分隔符")]
+        [ExcelArgument(AllowReference = true, Name = "分隔符",Description ="分隔符,eg:,")]
         string delimiter,
-        [ExcelArgument(AllowReference = true, Description = "过滤值")]
+        [ExcelArgument(AllowReference = true, Name = "过滤值",Description ="一般为空值")]
         string ignoreValue,
-        [ExcelArgument(AllowReference = true, Description = "返回值类型")]
+        [ExcelArgument(AllowReference = true, Name = "返回值类型",Description ="0指使用默认值模式，非0为一般模式")]
         int returnType)
     {
         // 将传递的 object 类型参数转换为 Range 对象
@@ -182,11 +182,11 @@ public class ExcelUdf
     //组装字符串(二维)
     [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）")]
     public static string CreatValueToArray2(
-        [ExcelArgument(AllowReference = true, Description = "单元格范围1", Name = "第一单元格范围")]
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "第一单元格范围")]
         object rangeObj1,
-        [ExcelArgument(AllowReference = true, Description = "单元格范围2",Name = "第二单元格范围")]
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2",Name = "第二单元格范围")]
         object rangeObj2,
-        [ExcelArgument(AllowReference = true, Description = "分隔符",Name = "分隔符")]
+        [ExcelArgument(AllowReference = true, Description = "分隔符,eg:,",Name = "分隔符")]
         string delimiter)
     {
         // 将传递的 object 类型参数转换为 Range 对象
