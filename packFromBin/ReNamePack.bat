@@ -4,8 +4,8 @@ set "destinationFolder=%~dp0"
 cd /d "%destinationFolder%"
 
 REM 删除Bat下旧文件
-set "targetFileName64=NumDesToolsPack64.XLL"  
-set "targetFileName32=NumDesToolsPack.XLL"  
+set "targetFileName64=NumDesToolsPack64.xll"  
+set "targetFileName32=NumDesToolsPack.xll"  
 if exist "%targetFileName64%" (
     del "%targetFileName64%"
     echo File %targetFileName64% deleted successfully.
