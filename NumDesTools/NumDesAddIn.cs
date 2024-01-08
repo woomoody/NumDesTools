@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
+using ExcelDna.IntelliSense;
 using Microsoft.Office.Interop.Excel;
 using Application = Microsoft.Office.Interop.Excel.Application;
 using Button = System.Windows.Forms.Button;
@@ -150,12 +151,14 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     #region 加载Ribbon
     void IExcelAddIn.AutoOpen()
     {
+        IntelliSenseServer.Install();
         App.SheetBeforeRightClick += UD_RightClickButton;
         App.WorkbookActivate += ExcelApp_WorkbookActivate;
     }
 
     void IExcelAddIn.AutoClose()
     {
+        IntelliSenseServer.Uninstall();
         App.SheetBeforeRightClick -= UD_RightClickButton;
         App.WorkbookActivate -= ExcelApp_WorkbookActivate;
     }
