@@ -4,6 +4,7 @@ using NPOI.XSSF.UserModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.MathFunctions;
 #pragma warning disable CA1416
 #pragma warning disable CA1416
 
@@ -126,12 +127,34 @@ public class ExcelUdf
         var rangeRef = (ExcelReference)rangeObj;
         var rangeRefDef = (ExcelReference)rangeObjDef;
         // 使用 ExcelReference.GetValue 获取选定范围的值
-        var values = (object[,])rangeRef.GetValue();
-        var valuesDef = (object[,])rangeRefDef.GetValue();
+        var values = rangeRef.GetValue();
+        //兼容range和cell获取数据变为二维数据
+        object[,] rangeValues1;
+        if (values is object[,] arrayValue1)
+        {
+            rangeValues1 = arrayValue1;
+        }
+        else
+        {
+            rangeValues1 = new object[1, 1];
+            rangeValues1[0, 0] = values;
+        }
+        var valuesDef = rangeRefDef.GetValue();
+        //兼容range和cell获取数据变为二维数据
+        object[,] rangeValues2;
+        if (valuesDef is object[,] arrayValue2)
+        {
+            rangeValues2 = arrayValue2;
+        }
+        else
+        {
+            rangeValues2 = new object[1, 1];
+            rangeValues2[0, 0] = valuesDef;
+        }
         //过滤掉空值并将二维数组中的值按行拼接成字符串
         var result = string.Empty;
         var count = 0;
-        foreach (var item in values)
+        foreach (var item in rangeValues1)
         {
             if (item is ExcelEmpty || item.ToString() == ignoreValue)
             {
@@ -140,7 +163,7 @@ public class ExcelUdf
             {
                 if (returnType != 0)
                 {
-                    var itemDef = valuesDef[0, count];
+                    var itemDef = rangeValues2[0, count];
                     result += itemDef + delimiter;
                 }
                 else
@@ -159,23 +182,46 @@ public class ExcelUdf
     //组装字符串(二维)
     [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）")]
     public static string CreatValueToArray2(
-        [ExcelArgument(AllowReference = true, Description = "单元格范围1")]
+        [ExcelArgument(AllowReference = true, Description = "单元格范围1", Name = "第一单元格范围")]
         object rangeObj1,
-        [ExcelArgument(AllowReference = true, Description = "单元格范围2")]
+        [ExcelArgument(AllowReference = true, Description = "单元格范围2",Name = "第二单元格范围")]
         object rangeObj2,
-        [ExcelArgument(AllowReference = true, Description = "分隔符")]
+        [ExcelArgument(AllowReference = true, Description = "分隔符",Name = "分隔符")]
         string delimiter)
     {
         // 将传递的 object 类型参数转换为 Range 对象
         var rangeRef1 = (ExcelReference)rangeObj1;
         var rangeRef2 = (ExcelReference)rangeObj2;
         // 使用 ExcelReference.GetValue 获取选定范围的值
-        var values1 = (object[,])rangeRef1.GetValue();
-        var values2 = (object[,])rangeRef2.GetValue();
+        var values1 = rangeRef1.GetValue();
+        //兼容range和cell获取数据变为二维数据
+        object[,] rangeValues1;
+        if (values1 is object[,] arrayValue1)
+        {
+            rangeValues1 = arrayValue1;
+        }
+        else
+        {
+            rangeValues1 = new object[1, 1];
+            rangeValues1[0, 0] = values1;
+        }
+        var values2 = rangeRef2.GetValue();
+        //兼容range和cell获取数据变为二维数据
+        object[,] rangeValues2;
+        if (values2 is object[,] arrayValue2)
+        {
+            rangeValues2 = arrayValue2;
+        }
+        else
+        {
+            rangeValues2 = new object[1, 1];
+            rangeValues2[0, 0] = values2;
+        }
         //变为一维数组
-        var values1Objects = values1.Cast<object>().ToArray();
-        var values2Objects = values2.Cast<object>().ToArray();
+        var values1Objects = rangeValues1.Cast<object>().ToArray();
+        var values2Objects = rangeValues2.Cast<object>().ToArray();
         //获取间隔方案
+        
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
         //过滤掉空值并将二维数组中的值按行拼接成字符串
         var result = string.Empty;
