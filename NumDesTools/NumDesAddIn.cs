@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -20,6 +21,7 @@ using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
 using MsoControlType = Microsoft.Office.Core.MsoControlType;
 using Point = System.Drawing.Point;
 using Range = Microsoft.Office.Interop.Excel.Range;
+#pragma warning disable CA1416
 
 
 namespace NumDesTools;
@@ -100,6 +102,9 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         try
         {
             ribbonXml = GetRibbonXml("RibbonUI.xml");
+#if DEBUG//Debug状态Ribbon添加特别标识，和Release版本标识做出区分
+            ribbonXml = ribbonXml.Replace("<tab id='Tab1' label='NumDesTools' insertBeforeMso='TabHome'>", "<tab id='Tab1' label='N*D*T*Debug' insertBeforeMso='TabHome'>");
+#endif
         }
         catch (Exception ex)
         {
