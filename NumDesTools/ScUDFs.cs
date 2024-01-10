@@ -180,7 +180,7 @@ public class ExcelUdf
     }
 
     //组装字符串(二维)
-    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）")]
+    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）2")]
     public static string CreatValueToArray2(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "第一单元格范围")]
         object rangeObj1,
@@ -225,25 +225,30 @@ public class ExcelUdf
         var values1Objects = rangeValues1.Cast<object>().ToArray();
         var values2Objects = rangeValues2.Cast<object>().ToArray();
         //获取间隔方案
-        
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
         //过滤掉空值并将二维数组中的值按行拼接成字符串
         var result = string.Empty;
         var count = 0;
-        foreach (var item in values1Objects)
+        if(values1Objects.Length > 0 && values2Objects.Length > 0 && delimiterList.Length >0 )
         {
-            if (item is ExcelEmpty && ignoreEmpty)
+            foreach (var item in values1Objects)
             {
+                var excelNull = item is ExcelEmpty;
+                var stringNull = item == "";
+                if ( !excelNull && !stringNull)
+                {
+                    if (ignoreEmpty)
+                    {
+                        var itemDef = delimiterList[0] + item + delimiterList[1] + values2Objects[count] + delimiterList[2];
+                        result += itemDef + delimiter[1];
+                        count++;
+                    }
+                }
             }
-            else
-            {
-                var itemDef = delimiterList[0] + item + delimiterList[1] + values2Objects[count] + delimiterList[2];
-                result += itemDef + delimiter[1];
-                count++;
-            }
+            result = result.Substring(0, result.Length - 1);
+            result = delimiterList[0] + result+ delimiterList[2];
+
         }
-        result = result.Substring(0, result.Length - 1);
-        result = delimiterList[0] + result+ delimiterList[2];
         return result;
     }
 }
