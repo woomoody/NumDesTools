@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using ExcelDna.Integration;
 using NPOI.XSSF.UserModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Windows.Documents;
+
 #pragma warning disable CA1416
 #pragma warning disable CA1416
 
@@ -94,7 +97,7 @@ public class ExcelUdf
         return $"{red}#{green}#{blue}";
     }
 
-    //拆分字符串
+    //拆分字符串为int数字
     [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "提取字符串中数字")]
     public static int GetNumFromStr([ExcelArgument(AllowReference = true, Description = "输入字符串")] string inputValue,
         [ExcelArgument(AllowReference = true, Name = "分隔符",Description = "分隔符,eg:,")]
@@ -108,7 +111,31 @@ public class ExcelUdf
             .ToArray();
         return Convert.ToInt32(numbers[numCount - 1]);
     }
-
+    //拆分字符串为Str字符串
+    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "分割字符串为若干字符串")]
+    public static string GetStrFromStr([ExcelArgument(AllowReference = true, Name="单元格索引",Description = "输入字符串")] string inputValue,
+        [ExcelArgument(AllowReference = true, Name = "分隔符",Description = "分隔符,eg:,")]
+        string delimiter,
+        [ExcelArgument(AllowReference = true, Name = "过滤符",Description = "过滤符,eg:[,]")]
+        string filter,
+        [ExcelArgument(AllowReference = true, Name = "序号",Description = "选择提取字符串中的第几个字符串")]
+        int numCount)
+    {
+        // 分割字符串
+        var filterGroup = filter.ToCharArray().Select(c => c.ToString()).ToArray();
+        var strGroup = Regex.Split(inputValue, delimiter);
+        if (filterGroup.Length > 0)
+        {
+            foreach (var filterItem in filterGroup)
+            {
+                for (int i =0;i< strGroup.Length;i++)
+                {
+                    strGroup[i]= strGroup[i].Replace(filterItem, "");
+                }
+            }
+        }
+        return strGroup[numCount - 1];
+    }
     //组装字符串
     [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range，不需要默认值的直接用TEXTJION，这个支持默认值")]
     public static string CreatValueToArray(
@@ -180,7 +207,7 @@ public class ExcelUdf
     }
 
     //组装字符串(二维)
-    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）2")]
+    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）")]
     public static string CreatValueToArray2(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "第一单元格范围")]
         object rangeObj1,
@@ -234,7 +261,7 @@ public class ExcelUdf
             foreach (var item in values1Objects)
             {
                 var excelNull = item is ExcelEmpty;
-                var stringNull = item == "";
+                var stringNull = ReferenceEquals(item, "");
                 if ( !excelNull && !stringNull)
                 {
                     if (ignoreEmpty)
