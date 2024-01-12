@@ -21,7 +21,7 @@ using Font = System.Drawing.Font;
 using Image = System.Drawing.Image;
 using Point = System.Drawing.Point;
 using ScrollBars = System.Windows.Forms.ScrollBars;
-using SWF = System.Windows.Forms;
+#pragma warning disable CA1416
 
 namespace NumDesTools;
 
@@ -35,9 +35,6 @@ public interface IMyUserControl { }
 [ComDefaultInterface(typeof(IMyUserControl))]
 public  class LabelControl : UserControl, IMyUserControl
 {
-    public LabelControl()
-    {
-    }
 }
 #endregion
 public static class ErrorLogCtp
