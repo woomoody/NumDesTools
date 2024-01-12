@@ -9,6 +9,8 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
@@ -20,6 +22,7 @@ using DataTable = System.Data.DataTable;
 using Font = System.Drawing.Font;
 using Image = System.Drawing.Image;
 using Point = System.Drawing.Point;
+using Range = Microsoft.Office.Interop.Excel.Range;
 using ScrollBars = System.Windows.Forms.ScrollBars;
 #pragma warning disable CA1416
 
@@ -604,18 +607,32 @@ public static class ExcelSheetData
     //整理单元格格式
     public static void CellFormat()
     {
-        NumDesAddIn.App.ActiveSheet.Cells.Font.Size = 9;
-        NumDesAddIn.App.ActiveSheet.Cells.Font.Name = "微软雅黑";
-        NumDesAddIn.App.ActiveSheet.Cells.HorizontalAlignment = XlHAlign.xlHAlignCenter;
-        NumDesAddIn.App.ActiveSheet.Cells.VerticalAlignment = XlHAlign.xlHAlignCenter;
-        NumDesAddIn.App.ActiveSheet.Cells.ColumnWidth = 8.38;
-        NumDesAddIn.App.ActiveSheet.Cells.RowHeight = 14.25;
-        NumDesAddIn.App.ActiveSheet.Cells.ShrinkToFit = true;
-        NumDesAddIn.App.ActiveSheet.Cells.Borders.LineStyle = XlLineStyle.xlDash;
-        NumDesAddIn.App.ActiveSheet.Cells.Borders.Weight = XlBorderWeight.xlHairline;
-        MessageBox.Show(@"格式整理完毕");
-        Marshal.ReleaseComObject(NumDesAddIn.App);
+        var app = NumDesAddIn.App;
+        try
+        {
+            Worksheet activeSheet = app.ActiveSheet;
+            var cells = activeSheet.Cells;
+
+            cells.Font.Size = 9;
+            cells.Font.Name = "微软雅黑";
+            cells.HorizontalAlignment = XlHAlign.xlHAlignCenter;
+            cells.VerticalAlignment = XlHAlign.xlHAlignCenter;
+            cells.ColumnWidth = 8.38;
+            cells.RowHeight = 14.25;
+            cells.ShrinkToFit = true;
+            cells.Borders.LineStyle = XlLineStyle.xlDash;
+            cells.Borders.Weight = XlBorderWeight.xlHairline;
+
+            MessageBox.Show(@"格式整理完毕");
+        }
+        catch (Exception ex)
+        {
+            // 处理异常，例如记录日志
+            MessageBox.Show($@"发生异常: {ex.Message}");
+        }
+
     }
+
 
     public static void GetDataToTxt(string sheetName, string outFilePath)
     {
