@@ -140,9 +140,9 @@ public class ExcelUdf
     [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range，不需要默认值的直接用TEXT JOIN，这个支持默认值")]
     public static string CreatValueToArray(
         [ExcelArgument(AllowReference = true, Name = "单元格范围" ,Description ="Range&Cell,eg:A1:A2")]
-        object rangeObj,
+        object[,] rangeObj,
         [ExcelArgument(AllowReference = true, Name = "默认值单元格范围",Description ="Range&Cell,eg:A1:A2")]
-        object rangeObjDef,
+        object[,] rangeObjDef,
         [ExcelArgument(AllowReference = true, Name = "分隔符",Description ="分隔符,eg:,")]
         string delimiter,
         [ExcelArgument(AllowReference = true, Name = "过滤值",Description ="一般为空值")]
@@ -150,38 +150,10 @@ public class ExcelUdf
         [ExcelArgument(AllowReference = true, Name = "返回值类型",Description ="0指使用默认值模式，非0为一般模式")]
         int returnType)
     {
-        // 将传递的 object 类型参数转换为 Range 对象
-        var rangeRef = (ExcelReference)rangeObj;
-        var rangeRefDef = (ExcelReference)rangeObjDef;
-        // 使用 ExcelReference.GetValue 获取选定范围的值
-        var values = rangeRef.GetValue();
-        //兼容range和cell获取数据变为二维数据
-        object[,] rangeValues1;
-        if (values is object[,] arrayValue1)
-        {
-            rangeValues1 = arrayValue1;
-        }
-        else
-        {
-            rangeValues1 = new object[1, 1];
-            rangeValues1[0, 0] = values;
-        }
-        var valuesDef = rangeRefDef.GetValue();
-        //兼容range和cell获取数据变为二维数据
-        object[,] rangeValues2;
-        if (valuesDef is object[,] arrayValue2)
-        {
-            rangeValues2 = arrayValue2;
-        }
-        else
-        {
-            rangeValues2 = new object[1, 1];
-            rangeValues2[0, 0] = valuesDef;
-        }
         //过滤掉空值并将二维数组中的值按行拼接成字符串
         var result = string.Empty;
         var count = 0;
-        foreach (var item in rangeValues1)
+        foreach (var item in rangeObj)
         {
             if (item is ExcelEmpty || item.ToString() == ignoreValue)
             {
@@ -190,7 +162,7 @@ public class ExcelUdf
             {
                 if (returnType != 0)
                 {
-                    var itemDef = rangeValues2[0, count];
+                    var itemDef = rangeObjDef[0, count];
                     result += itemDef + delimiter;
                 }
                 else
@@ -210,9 +182,9 @@ public class ExcelUdf
     [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）")]
     public static string CreatValueToArray2(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "第一单元格范围")]
-        object rangeObj1,
+        object[,] rangeObj1,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2",Name = "第二单元格范围")]
-        object rangeObj2,
+        object[,] rangeObj2,
         [ExcelArgument(AllowReference = true, Description = "分隔符,eg:,",Name = "分隔符")]
         string delimiter, 
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false",Name = "过滤空值")]
@@ -220,37 +192,9 @@ public class ExcelUdf
         )
 
     {
-        // 将传递的 object 类型参数转换为 Range 对象
-        var rangeRef1 = (ExcelReference)rangeObj1;
-        var rangeRef2 = (ExcelReference)rangeObj2;
-        // 使用 ExcelReference.GetValue 获取选定范围的值
-        var values1 = rangeRef1.GetValue();
-        //兼容range和cell获取数据变为二维数据
-        object[,] rangeValues1;
-        if (values1 is object[,] arrayValue1)
-        {
-            rangeValues1 = arrayValue1;
-        }
-        else
-        {
-            rangeValues1 = new object[1, 1];
-            rangeValues1[0, 0] = values1;
-        }
-        var values2 = rangeRef2.GetValue();
-        //兼容range和cell获取数据变为二维数据
-        object[,] rangeValues2;
-        if (values2 is object[,] arrayValue2)
-        {
-            rangeValues2 = arrayValue2;
-        }
-        else
-        {
-            rangeValues2 = new object[1, 1];
-            rangeValues2[0, 0] = values2;
-        }
         //变为一维数组
-        var values1Objects = rangeValues1.Cast<object>().ToArray();
-        var values2Objects = rangeValues2.Cast<object>().ToArray();
+        var values1Objects = rangeObj1.Cast<object>().ToArray();
+        var values2Objects = rangeObj2.Cast<object>().ToArray();
         //获取间隔方案
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
         //过滤掉空值并将二维数组中的值按行拼接成字符串
