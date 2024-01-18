@@ -137,7 +137,7 @@ public class ExcelUdf
         return strGroup[numCount - 1];
     }
     //组装字符串
-    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range，不需要默认值的直接用TEXTJION，这个支持默认值")]
+    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range，不需要默认值的直接用TEXT JOIN，这个支持默认值")]
     public static string CreatValueToArray(
         [ExcelArgument(AllowReference = true, Name = "单元格范围" ,Description ="Range&Cell,eg:A1:A2")]
         object rangeObj,
@@ -260,21 +260,71 @@ public class ExcelUdf
         {
             foreach (var item in values1Objects)
             {
-                var excelNull = item is ExcelEmpty;
-                var stringNull = ReferenceEquals(item, "");
-                if ( !excelNull && !stringNull)
+                if (ignoreEmpty)
                 {
-                    if (ignoreEmpty)
+                    var excelNull = item is ExcelEmpty;
+                    var stringNull = ReferenceEquals(item.ToString(), "");
+                    if ( !excelNull && !stringNull )
                     {
                         var itemDef = delimiterList[0] + item + delimiterList[1] + values2Objects[count] + delimiterList[2];
                         result += itemDef + delimiter[1];
                         count++;
                     }
                 }
+                else
+                {
+                    var itemDef = delimiterList[0] + item + delimiterList[1] + values2Objects[count] + delimiterList[2];
+                    result += itemDef + delimiter[1];
+                    count++;
+                }
             }
             result = result.Substring(0, result.Length - 1);
             result = delimiterList[0] + result+ delimiterList[2];
 
+        }
+        return result;
+    }
+    //转置二维数组为一维
+    [ExcelFunction(Category = "TransArray", IsVolatile = true, IsMacroType = true, Description = "二维数据转换为一维数据，并可选择是否过滤空值")]
+    public static object[,] Trans2ArrayTo1Arrays(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")] object[,] rangeObj,
+        [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false",Name = "过滤空值")] bool ignoreEmpty)
+    {
+        List<object> rangeValueList = new List<object>();
+        List<object> rangeColIndexList = new List<object>();
+
+        int rowCount = rangeObj.GetLength(0);
+        int colCount = rangeObj.GetLength(1);
+
+        for (int col = 0; col < colCount; col++)
+        {
+            for (int row = 0; row < rowCount; row++)
+            {
+                object value = rangeObj[row , col ];
+
+                if (ignoreEmpty)
+                {
+                    var excelNull = value is ExcelEmpty;
+                    var stringNull = ReferenceEquals(value.ToString(), "");
+                    if (!excelNull && !stringNull)
+                    {
+                        rangeValueList.Add(value);
+                        rangeColIndexList.Add(col +1);
+                    }
+                }
+                else
+                {
+                    rangeValueList.Add(value);
+                    rangeColIndexList.Add(col+1 );
+                }
+            }
+        }
+        object[,] result = new object[rangeValueList.Count,2];
+
+        for (int i = 0; i < rangeValueList.Count; i++)
+        {
+            result[i, 1] = rangeValueList[i];
+            result[i, 0] = rangeColIndexList[i];
         }
         return result;
     }
