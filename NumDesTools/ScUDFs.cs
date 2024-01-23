@@ -98,7 +98,7 @@ public class ExcelUdf
     }
 
     //拆分字符串为int数字
-    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "提取字符串中数字")]
+    [ExcelFunction(Category = "Str&Num", IsVolatile = true, IsMacroType = true, Description = "提取字符串中数字")]
     public static int GetNumFromStr([ExcelArgument(AllowReference = true, Description = "输入字符串")] string inputValue,
         [ExcelArgument(AllowReference = true, Name = "分隔符",Description = "分隔符,eg:,")]
         string delimiter,
@@ -112,7 +112,7 @@ public class ExcelUdf
         return Convert.ToInt32(numbers[numCount - 1]);
     }
     //拆分字符串为Str字符串
-    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "分割字符串为若干字符串")]
+    [ExcelFunction(Category = "Str&Num", IsVolatile = true, IsMacroType = true, Description = "分割字符串为若干字符串")]
     public static string GetStrFromStr([ExcelArgument(AllowReference = true, Name="单元格索引",Description = "输入字符串")] string inputValue,
         [ExcelArgument(AllowReference = true, Name = "分隔符",Description = "分隔符,eg:,")]
         string delimiter,
@@ -137,7 +137,7 @@ public class ExcelUdf
         return strGroup[numCount - 1];
     }
     //组装字符串
-    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range，不需要默认值的直接用TEXT JOIN，这个支持默认值")]
+    [ExcelFunction(Category = "Str&Num", IsVolatile = true, IsMacroType = true, Description = "拼接Range，不需要默认值的直接用TEXT JOIN，这个支持默认值")]
     public static string CreatValueToArray(
         [ExcelArgument(AllowReference = true, Name = "单元格范围" ,Description ="Range&Cell,eg:A1:A2")]
         object[,] rangeObj,
@@ -152,34 +152,74 @@ public class ExcelUdf
     {
         //过滤掉空值并将二维数组中的值按行拼接成字符串
         var result = string.Empty;
-        var count = 0;
-        foreach (var item in rangeObj)
+        var rows = rangeObj.GetLength(0);
+        var cols = rangeObj.GetLength(1);
+        for (int row = 0; row < rows; row++)
         {
-            if (item is ExcelEmpty || item.ToString() == ignoreValue)
+            for (int col = 0; col < cols; col++)
             {
-            }
-            else
-            {
-                if (returnType != 0)
+                var item = rangeObj[row, col];
+                if (item is ExcelEmpty || item.ToString() == ignoreValue)
                 {
-                    var itemDef = rangeObjDef[0, count];
-                    result += itemDef + delimiter;
                 }
                 else
                 {
-                    result += item + delimiter;
+                    if (returnType != 0)
+                    {
+                        var itemDef = rangeObjDef[row, col];
+                        result += itemDef + delimiter;
+                    }
+                    else
+                    {
+                        result += item + delimiter;
+                    }
                 }
             }
-
-            count++;
         }
 
         if (result != "") result = result.Substring(0, result.Length - 1);
         return result;
     }
+    //组装字符串，按数字重复填写ID
+    [ExcelFunction(Category = "Str&Num", IsVolatile = true, IsMacroType = true, Description = "拼接Range，根据第二个单元格范围内数字重复拼接第一个单元格内对应值")]
+    public static string CreatValueToArrayRepeat(
+        [ExcelArgument(AllowReference = true, Name = "单元格范围" ,Description ="Range&Cell,eg:A1:A2")]
+        object[,] rangeObj,
+        [ExcelArgument(AllowReference = true, Name = "单元格范围-数量" ,Description ="Range&Cell,eg:A1:A2")]
+        object[,] rangeObj2,
+        [ExcelArgument(AllowReference = true, Name = "分隔符",Description ="分隔符,eg:,")]
+        string delimiter,
+        [ExcelArgument(AllowReference = true, Name = "过滤值",Description ="一般为空值")]
+        string ignoreValue)
+    {
+        //过滤掉空值并将二维数组中的值按行拼接成字符串
+        var result = string.Empty;
+        var rows = rangeObj.GetLength(0);
+        var cols = rangeObj.GetLength(1);
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < cols; col++)
+            {
+                var item = rangeObj[row, col];
+                if (item is ExcelEmpty || item.ToString() == ignoreValue)
+                {
+                }
+                else
+                {
+                    var item2 = rangeObj2[row, col];
+                    for (int i = 0; i < Convert.ToInt32(item2); i++)
+                    {
+                        result += item + delimiter;
+                    }
+                }
+            }
+        }
+        if (result != "") result = result.Substring(0, result.Length - 1);
+        return result;
+    }
 
     //组装字符串(二维)
-    [ExcelFunction(Category = "StrToNum", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）")]
+    [ExcelFunction(Category = "Str&Num", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）")]
     public static string CreatValueToArray2(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "第一单元格范围")]
         object[,] rangeObj1,
