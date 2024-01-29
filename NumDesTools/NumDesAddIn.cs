@@ -183,11 +183,16 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         currentBar.Reset();
         var currentBars = currentBar.Controls;
         var missing = Type.Missing;
-        const string defaultControlTag = "自定义右键菜单";
-        //清理已有的自定义菜单
+        //清理已有的自定义菜单,新增的按钮Tag一定不一样，否则会执行到其他同tag的命令
         foreach (var selfControl in from CommandBarControl tempControl in currentBars
                  let t = tempControl.Tag
-                 where t is defaultControlTag
+                 where
+                     t is "自选表格写入" || 
+                     t is "当前项目Lan"  ||
+                     t is "合并项目Lan" ||
+                     t is "合并表格Row" ||
+                     t is "合并表格Col" ||
+                     t is "打开表格" 
                  select tempControl)
             try
             {
@@ -198,39 +203,39 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
                 // ignored
             }
 
-        if (bookName == "角色怪物数据生成" || sheetName == "角色基础")
-        {
-            if (target.Row < 16 || target.Column < 5 || target.Column > 21)
-            {
-                //限制在一定range内才触发指令
-            }
-            else
-            {
-                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                    comButton)
-                {
-                    comButton.Tag = defaultControlTag;
-                    comButton.Caption = "导出：单个卡牌";
-                    comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                    comButton.Click += RoleDataPri.DataKey;
-                }
+        //if (bookName == "角色怪物数据生成" || sheetName == "角色基础")
+        //{
+        //    if (target.Row < 16 || target.Column < 5 || target.Column > 21)
+        //    {
+        //        //限制在一定range内才触发指令
+        //    }
+        //    else
+        //    {
+        //        if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
+        //            comButton)
+        //        {
+        //            comButton.Tag = defaultControlTag;
+        //            comButton.Caption = "导出：单个卡牌";
+        //            comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
+        //            comButton.Click += RoleDataPri.DataKey;
+        //        }
 
-                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                    comButton1)
-                {
-                    comButton1.Tag = defaultControlTag;
-                    comButton1.Caption = "导出：多个卡牌";
-                    comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                    comButton1.Click += RoleDataPri.DataKey;
-                }
-            }
-        }
+        //        if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
+        //            comButton1)
+        //        {
+        //            comButton1.Tag = defaultControlTag;
+        //            comButton1.Caption = "导出：多个卡牌";
+        //            comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
+        //            comButton1.Click += RoleDataPri.DataKey;
+        //        }
+        //    }
+        //}
         if (sheetName.Contains("【模板】"))
         {
             if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
                 comButton2)
             {
-                comButton2.Tag = defaultControlTag;
+                comButton2.Tag = "自选表格写入";
                 comButton2.Caption = "自选表格写入";
                 comButton2.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton2.Click += ExcelDataAutoInsertMulti.RightClickInsertData;
@@ -241,7 +246,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
             if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
                 comButton3)
             {
-                comButton3.Tag = defaultControlTag;
+                comButton3.Tag = "当前项目Lan";
                 comButton3.Caption = "当前项目Lan";
                 comButton3.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton3.Click += PubMetToExcelFunc.OpenBaseLanExcel;
@@ -250,7 +255,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
             if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
                 comButton4)
             {
-                comButton4.Tag = defaultControlTag;
+                comButton4.Tag = "合并项目Lan";
                 comButton4.Caption = "合并项目Lan";
                 comButton4.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton4.Click += PubMetToExcelFunc.OpenMergeLanExcel;
@@ -261,7 +266,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
             if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
                 comButton5)
             {
-                comButton5.Tag = defaultControlTag;
+                comButton5.Tag = "合并表格Row";
                 comButton5.Caption = "合并表格Row";
                 comButton5.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton5.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeData;
@@ -270,7 +275,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
             if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
                 comButton6)
             {
-                comButton6.Tag = defaultControlTag;
+                comButton6.Tag = "合并表格Col";
                 comButton6.Caption = "合并表格Col";
                 comButton6.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton6.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol;
@@ -281,7 +286,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
             if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
                 comButton7)
             {
-                comButton7.Tag = defaultControlTag;
+                comButton7.Tag = "打开表格";
                 comButton7.Caption = "打开表格";
                 comButton7.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton7.Click += PubMetToExcelFunc.RightOpenExcelByActiveCell;
