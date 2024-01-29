@@ -121,7 +121,7 @@ public class PubMetToExcelFunc
         else
             mergePath = basePath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
         var newPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(mergePath));
-        newPath = newPath + @"\Excels\Localizations\Localizations.xlsx";
+        newPath = newPath + @"\Localizations\Localizations.xlsx";
         var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(newPath);
         var findValue = PubMetToExcel.FindDataInDataTable(newPath, dataTable, selectCell.Value.ToString());
         string cellAddress;
