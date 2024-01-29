@@ -902,7 +902,16 @@ public class ExcelDataAutoInsertMulti
         var errorList = new List<(string, string, string)>();
         string path;
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
-        switch (excelName)
+        //兼容多表格的工作簿
+        string sheetRealName = "Sheet1";
+        string excelRealName = excelName;
+        if (excelName.Contains("#"))
+        {
+            var excelRealNameGroup = excelName.Split("#");
+            excelRealName = excelRealNameGroup[0];
+            sheetRealName = excelRealNameGroup[1];
+        }
+        switch (excelRealName)
         {
             case "Localizations.xlsx":
                 path = newPath + @"\Excels\Localizations\Localizations.xlsx";
@@ -914,15 +923,15 @@ public class ExcelDataAutoInsertMulti
                 path = newPath + @"\Excels\UIs\UIItemConfigs.xlsx";
                 break;
             default:
-                path = excelPath + @"\" + excelName;
+                path = excelPath + @"\" + excelRealName;
                 break;
         }
 
         var fileExists = File.Exists(path);
         if (fileExists == false)
         {
-            errorExcelLog = excelName + "不存在表格文件";
-            errorList.Add((excelName, errorExcelLog, excelName));
+            errorExcelLog = excelRealName + "不存在表格文件";
+            errorList.Add((excelRealName, errorExcelLog, excelRealName));
             return errorList;
         }
 
@@ -934,20 +943,20 @@ public class ExcelDataAutoInsertMulti
         }
         catch (Exception ex)
         {
-            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
-            errorList.Add((excelName, errorExcelLog, excelName));
+            errorExcelLog = excelRealName + "#不能创建WorkBook对象" + ex.Message;
+            errorList.Add((excelRealName, errorExcelLog, excelRealName));
             return errorList;
         }
 
         ExcelWorksheet sheet;
         try
         {
-            sheet = workBook.Worksheets["Sheet1"];
+            sheet = workBook.Worksheets[sheetRealName];
         }
         catch (Exception ex)
         {
-            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
-            errorList.Add((excelName, errorExcelLog, excelName));
+            errorExcelLog = excelRealName + "#不能创建WorkBook对象" + ex.Message;
+            errorList.Add((excelRealName, errorExcelLog, excelRealName));
             return errorList;
         }
 
@@ -957,7 +966,7 @@ public class ExcelDataAutoInsertMulti
             // 检查单元格是否包含公式
             if (cell.Formula is { Length: > 0 })
             {
-                errorList.Add((excelName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
+                errorList.Add((excelRealName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
                 return errorList;
             }
 
@@ -1017,7 +1026,7 @@ public class ExcelDataAutoInsertMulti
             cellTarget.Style.Fill.BackgroundColor.SetColor(cellBackColor);
 
             //尽量和源数据格式一致，宋体的格式会歪？不知道为什么
-            if (cellTarget.Style.Font.Name == "宋体")
+            if (cellTarget.Style.Font.Name == "微软雅黑")
                 cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             //数据修改
             var fixItem = fixKey[excelName][excelMulti].Item1;
