@@ -57,6 +57,15 @@ public class PubMetToExcel
         var errorList = new List<(string, string, string)>();
         string path;
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
+        //兼容多表格的工作簿
+        string sheetRealName = "Sheet1";
+        string excelRealName = excelName;
+        if (excelName.Contains("#"))
+        {
+            var excelRealNameGroup = excelName.Split("#");
+            excelRealName = excelRealNameGroup[0];
+            sheetRealName = excelRealNameGroup[1];
+        }
         switch (excelName)
         {
             case "Localizations.xlsx":
@@ -69,15 +78,15 @@ public class PubMetToExcel
                 path = newPath + @"\Excels\UIs\UIItemConfigs.xlsx";
                 break;
             default:
-                path = excelPath + @"\" + excelName;
+                path = excelPath + @"\" + excelRealName;
                 break;
         }
 
         var fileExists = File.Exists(path);
         if (fileExists == false)
         {
-            errorExcelLog = excelName + "不存在表格文件";
-            errorList.Add((excelName, errorExcelLog, excelName));
+            errorExcelLog = excelRealName + "不存在表格文件";
+            errorList.Add((excelRealName, errorExcelLog, excelRealName));
             return errorList;
         }
 
@@ -89,19 +98,19 @@ public class PubMetToExcel
         }
         catch (Exception ex)
         {
-            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
-            errorList.Add((excelName, errorExcelLog, excelName));
+            errorExcelLog = excelRealName + "#不能创建WorkBook对象" + ex.Message;
+            errorList.Add((excelRealName, errorExcelLog, excelRealName));
             return errorList;
         }
 
         try
         {
-            sheet = workBook.Worksheets["Sheet1"];
+            sheet = workBook.Worksheets[sheetRealName];
         }
         catch (Exception ex)
         {
-            errorExcelLog = excelName + "#不能创建WorkBook对象" + ex.Message;
-            errorList.Add((excelName, errorExcelLog, excelName));
+            errorExcelLog = excelRealName + "#不能创建WorkBook对象" + ex.Message;
+            errorList.Add((excelRealName, errorExcelLog, excelRealName));
             return errorList;
         }
 
