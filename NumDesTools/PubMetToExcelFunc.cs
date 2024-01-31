@@ -7,6 +7,7 @@ using Microsoft.Office.Core;
 using System;
 using System.Diagnostics;
 using OfficeOpenXml;
+using OfficeOpenXml.DataValidation;
 
 namespace NumDesTools;
 
@@ -74,16 +75,49 @@ public class PubMetToExcelFunc
     {
         var sheet = NumDesAddIn.App.ActiveSheet;
         var selectCell = NumDesAddIn.App.ActiveCell;
+        var workBook = NumDesAddIn.App.ActiveWorkbook;
+        var workBookName = workBook.Name;
+        var workbookPath = workBook.Path;
         var selectCellValue = "";
         if (selectCell.Value != null) selectCellValue = selectCell.Value.ToString();
         //正则出是Excel路径的单元格
-        var isMatch = Regex.IsMatch(selectCellValue, @"^[A-Za-z]:(\\[\w-]+)+(\.xlsx)$");
+        var isMatch = selectCellValue.Contains(".xls");
         if (isMatch)
         {
-            var selectRow = selectCell.Row;
-            var selectCol = selectCell.Column;
-            var sheetName = sheet.Cells[selectRow, selectCol + 1].Value;
-            var cellAddress = sheet.Cells[selectRow, selectCol + 2].Value;
+            string sheetName;
+            var cellAddress = "A1";
+            if (workBookName.Contains("#合并表格数据缓存") )
+            {
+                var selectRow = selectCell.Row;
+                var selectCol = selectCell.Column;
+                sheetName = sheet.Cells[selectRow, selectCol + 1].Value;
+                cellAddress = sheet.Cells[selectRow, selectCol + 2].Value;
+            }
+            else if(selectCellValue.Contains("#"))
+            {
+                var excelSplit = selectCellValue.Split("#");
+                selectCellValue = workbookPath + @"\" + excelSplit[0];
+                sheetName = excelSplit[1];
+            }
+            else
+            {
+                switch (selectCellValue)
+                {
+                    case "Localizations.xlsx":
+                        selectCellValue = workbookPath + @"\Localizations\Localizations.xlsx";
+                        break;
+                    case "UIConfigs.xlsx":
+                        selectCellValue = workbookPath + @"\Excels\UIs\UIConfigs.xlsx";
+                        break;
+                    case "UIItemConfigs.xlsx":
+                        selectCellValue = workbookPath + @"\Excels\UIs\UIItemConfigs.xlsx";
+                        break;
+                    default:
+                        selectCellValue = workbookPath + @"\" + selectCellValue;
+                        break;
+                }
+                sheetName = "Sheet1";
+            }
             PubMetToExcel.OpenExcelAndSelectCell(selectCellValue, sheetName, cellAddress);
         }
     }

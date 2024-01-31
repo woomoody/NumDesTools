@@ -1072,8 +1072,8 @@ public class ExcelDataAutoInsertMulti
                 if (cellSource.Value == null) continue;
 
                 if (cellSource.Value.ToString() == "" || cellSource.Value.ToString() == "0") continue;
-
-                if (cellCol != null && cellCol.Contains("#"))
+                //默认备注
+                if (cellCol != null && cellCol.Contains("#") && commentValue != null)
                 {
                     cellFix.Value = commentValue;
                 }
@@ -1145,7 +1145,7 @@ public class ExcelDataAutoInsertMulti
 
                         if (cellSource.Value.ToString() == "" || cellSource.Value.ToString() == "0") continue;
 
-                        if (cellCol != null && cellCol.Contains("#"))
+                        if (cellCol != null && cellCol.Contains("#") && commentValue != null)
                         {
                             cellFix.Value = commentValue;
                         }
