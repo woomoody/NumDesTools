@@ -19,6 +19,7 @@ using CheckBox = System.Windows.Forms.CheckBox;
 using Color = System.Drawing.Color;
 using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
 using CommandBarControl = Microsoft.Office.Core.CommandBarControl;
+using Exception = System.Exception;
 using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
 using MsoControlType = Microsoft.Office.Core.MsoControlType;
 using Path = System.IO.Path;
@@ -176,13 +177,8 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     //Excel右键命令注册
     private void UD_RightClickButton(object sh, Range target, ref bool cancel)
     {
-        if (sh is not Worksheet sheet) return;
-        var sheetName = sheet.Name;
-        Workbook book = sheet.Parent;
-        var bookName = book.Name;
-        var bookPath = book.Path;
-        var targetValue = target.Value2.ToString();
-        //excel文档已有的右键菜单cell
+
+        //excel文档已有的右键菜单cell，清理自定义菜单
         var currentBar = App.CommandBars["cell"];
         currentBar.Reset();
         var currentBars = currentBar.Controls;
@@ -191,12 +187,12 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         foreach (var selfControl in from CommandBarControl tempControl in currentBars
                  let t = tempControl.Tag
                  where
-                     t is "自选表格写入" || 
-                     t is "当前项目Lan"  ||
+                     t is "自选表格写入" ||
+                     t is "当前项目Lan" ||
                      t is "合并项目Lan" ||
                      t is "合并表格Row" ||
                      t is "合并表格Col" ||
-                     t is "打开表格" 
+                     t is "打开表格"
                  select tempControl)
             try
             {
@@ -206,7 +202,15 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
             {
                 // ignored
             }
-
+        //准备生成自定义菜单
+        if (sh is not Worksheet sheet) return;
+        var sheetName = sheet.Name;
+        Workbook book = sheet.Parent;
+        var bookName = book.Name;
+        var bookPath = book.Path;
+        var targetNull = target.Value;
+        if(targetNull ==null) return;
+        var targetValue = target.Value2.ToString();
         //if (bookName == "角色怪物数据生成" || sheetName == "角色基础")
         //{
         //    if (target.Row < 16 || target.Column < 5 || target.Column > 21)
@@ -235,67 +239,71 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         //    }
         //}
         if (sheetName.Contains("【模板】"))
-        {
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton2)
             {
-                comButton2.Tag = "自选表格写入";
-                comButton2.Caption = "自选表格写入";
-                comButton2.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton2.Click += ExcelDataAutoInsertMulti.RightClickInsertData;
-            }
-        }
-        if (bookName.Contains("#【自动填表】多语言对话"))
-        {
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton3)
-            {
-                comButton3.Tag = "当前项目Lan";
-                comButton3.Caption = "当前项目Lan";
-                comButton3.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton3.Click += PubMetToExcelFunc.OpenBaseLanExcel;
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
+                    comButton2)
+                {
+                    comButton2.Tag = "自选表格写入";
+                    comButton2.Caption = "自选表格写入";
+                    comButton2.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    comButton2.Click += ExcelDataAutoInsertMulti.RightClickInsertData;
+                }
             }
 
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton4)
+            if (bookName.Contains("#【自动填表】多语言对话"))
             {
-                comButton4.Tag = "合并项目Lan";
-                comButton4.Caption = "合并项目Lan";
-                comButton4.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton4.Click += PubMetToExcelFunc.OpenMergeLanExcel;
-            }
-        }
-        if (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables") || bookPath.Contains(@"Public\Excels\Localizations"))
-        {
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton5)
-            {
-                comButton5.Tag = "合并表格Row";
-                comButton5.Caption = "合并表格Row";
-                comButton5.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton5.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeData;
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
+                    comButton3)
+                {
+                    comButton3.Tag = "当前项目Lan";
+                    comButton3.Caption = "当前项目Lan";
+                    comButton3.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    comButton3.Click += PubMetToExcelFunc.OpenBaseLanExcel;
+                }
+
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
+                    comButton4)
+                {
+                    comButton4.Tag = "合并项目Lan";
+                    comButton4.Caption = "合并项目Lan";
+                    comButton4.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    comButton4.Click += PubMetToExcelFunc.OpenMergeLanExcel;
+                }
             }
 
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton6)
+            if (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables") ||
+                bookPath.Contains(@"Public\Excels\Localizations"))
             {
-                comButton6.Tag = "合并表格Col";
-                comButton6.Caption = "合并表格Col";
-                comButton6.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton6.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol;
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
+                    comButton5)
+                {
+                    comButton5.Tag = "合并表格Row";
+                    comButton5.Caption = "合并表格Row";
+                    comButton5.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    comButton5.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeData;
+                }
+
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
+                    comButton6)
+                {
+                    comButton6.Tag = "合并表格Col";
+                    comButton6.Caption = "合并表格Col";
+                    comButton6.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    comButton6.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol;
+                }
             }
-        }
-        if (targetValue.Contains(".xlsx"))
-        {
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton7)
+
+            if (targetValue.Contains(".xlsx"))
             {
-                comButton7.Tag = "打开表格";
-                comButton7.Caption = "打开表格";
-                comButton7.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton7.Click += PubMetToExcelFunc.RightOpenExcelByActiveCell;
+                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
+                    comButton7)
+                {
+                    comButton7.Tag = "打开表格";
+                    comButton7.Caption = "打开表格";
+                    comButton7.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                    comButton7.Click += PubMetToExcelFunc.RightOpenExcelByActiveCell;
+                }
             }
-        }
     }
     //Excel工作簿激活事件处理
     private void ExcelApp_WorkbookActivate(Workbook wb)
@@ -1238,13 +1246,13 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
 
     public void TestBar1_Click(IRibbonControl control)
     {
-        //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        //var excel = new ExcelPackage(new FileInfo(@"C:\M1Work\Public\Excels\Tables\$活动砸冰块.xlsx"));
-        //ExcelWorkbook workBook = excel.Workbook;
-        //var sheet = workBook.Worksheets["IceClimberGridTemp"];
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        var excel = new ExcelPackage(new FileInfo(@"C:\M1Work\Public\Excels\Tables\$活动砸冰块.xlsx"));
+        ExcelWorkbook workBook = excel.Workbook;
+        var sheet = workBook.Worksheets["IceClimberGridTemp"];
         var sw = new Stopwatch();
         sw.Start();
-        //var abc =ExcelDataAutoInsert.FindSourceRow(sheet, 2, "5000144");
+        var abc = ExcelDataAutoInsert.FindSourceRow(sheet, 2, "5000144");
         //PubMetToExcelFunc.Main();
         //var name = abc.sheetName;
         //var path  = abc.sheetPath;
