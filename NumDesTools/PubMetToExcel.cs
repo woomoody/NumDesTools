@@ -920,6 +920,7 @@ public class PubMetToExcel
                 if (regex.IsMatch(cellAddress))
                     cellAddressDefault = cellAddress;
             var cellRange = worksheet.Range[cellAddressDefault];
+            worksheet.Select();
             cellRange.Select();
         }
         catch (Exception)
