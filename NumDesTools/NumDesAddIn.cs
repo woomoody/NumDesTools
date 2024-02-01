@@ -6,10 +6,13 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using System.Windows.Shapes;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
 using ExcelDna.IntelliSense;
 using Microsoft.Office.Interop.Excel;
+using NPOI.SS.UserModel;
+using OfficeOpenXml;
 using Application = Microsoft.Office.Interop.Excel.Application;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
@@ -18,6 +21,7 @@ using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
 using CommandBarControl = Microsoft.Office.Core.CommandBarControl;
 using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
 using MsoControlType = Microsoft.Office.Core.MsoControlType;
+using Path = System.IO.Path;
 using Point = System.Drawing.Point;
 using Range = Microsoft.Office.Interop.Excel.Range;
 #pragma warning disable CA1416
@@ -1234,9 +1238,13 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
 
     public void TestBar1_Click(IRibbonControl control)
     {
+        //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        //var excel = new ExcelPackage(new FileInfo(@"C:\M1Work\Public\Excels\Tables\$活动砸冰块.xlsx"));
+        //ExcelWorkbook workBook = excel.Workbook;
+        //var sheet = workBook.Worksheets["IceClimberGridTemp"];
         var sw = new Stopwatch();
         sw.Start();
-        ErrorLogCtp.CreateCtpNormal("123");
+        //var abc =ExcelDataAutoInsert.FindSourceRow(sheet, 2, "5000144");
         //PubMetToExcelFunc.Main();
         //var name = abc.sheetName;
         //var path  = abc.sheetPath;
