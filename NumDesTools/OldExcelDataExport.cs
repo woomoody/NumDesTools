@@ -9,8 +9,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
@@ -22,7 +20,6 @@ using DataTable = System.Data.DataTable;
 using Font = System.Drawing.Font;
 using Image = System.Drawing.Image;
 using Point = System.Drawing.Point;
-using Range = Microsoft.Office.Interop.Excel.Range;
 using ScrollBars = System.Windows.Forms.ScrollBars;
 #pragma warning disable CA1416
 
