@@ -6,12 +6,10 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using System.Windows.Shapes;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
 using ExcelDna.IntelliSense;
 using Microsoft.Office.Interop.Excel;
-using NPOI.SS.UserModel;
 using OfficeOpenXml;
 using Application = Microsoft.Office.Interop.Excel.Application;
 using Button = System.Windows.Forms.Button;
@@ -1343,13 +1341,23 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         // 将修改后的内容写回文件
         File.WriteAllLines(_defaultFilePath, lines);
     }
-
+    
+    //声明提示
+    private CellSelectChangeTip _rangeValueTip = new CellSelectChangeTip(); 
     public void ZoomInOut_Click(IRibbonControl control)
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
         LabelText = LabelText == "放大镜：开启" ? "放大镜：关闭" : "放大镜：开启";
         CustomRibbon.InvalidateControl("Button5");
-        _ = new CellSelectChange();
+        if (LabelText == "放大镜：开启")
+        {
+            App.SheetSelectionChange += _rangeValueTip.GetCellValue;
+        }
+        else
+        {
+            App.SheetSelectionChange -= _rangeValueTip.GetCellValue;
+            _rangeValueTip.HideToolTip();
+        }
     }
 
     private void App_SheetSelectionChange(object sh, Range target)
