@@ -13,6 +13,7 @@ using System.Diagnostics;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
 using System.Text.RegularExpressions;
 using Range = Microsoft.Office.Interop.Excel.Range;
+using Org.BouncyCastle.Asn1.X509;
 // ReSharper disable All
 #pragma warning disable CA1416
 
@@ -279,6 +280,24 @@ public class PubMetToExcel
 
     #endregion
 
+    #region Excel界面相关
+
+    public static int ExcelRangePixelsX(double targetX)
+    {
+        var workArea = NumDesAddIn.App.ActiveWindow;
+        var targetXPoint = targetX * 1.67;
+        var targetXPixels = workArea.PointsToScreenPixelsX((int)targetXPoint);
+        return targetXPixels;
+
+    }
+    public static int ExcelRangePixelsY(double targetY)
+    {
+        var workArea = NumDesAddIn.App.ActiveWindow;
+        var targetYPoint = targetY * 1.67;
+        var targetYPixels = workArea.PointsToScreenPixelsY((int)targetYPoint);
+        return targetYPixels;
+    }
+    #endregion
     //Excel数据输出为List
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToList(dynamic workSheet)
     {

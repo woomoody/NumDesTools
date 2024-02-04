@@ -5,9 +5,10 @@ using Font = System.Drawing.Font;
 using Range = Microsoft.Office.Interop.Excel.Range;
 using IWin32Window = System.Windows.Forms.IWin32Window;
 
+
 namespace NumDesTools;
 
-public class CellSelectChangeTip : Form
+public class CellSelectChangeTip : ClickThroughForm
 {
     private string _displayText;
     int _currentLeft;
@@ -21,68 +22,76 @@ public class CellSelectChangeTip : Form
     private void InitializeComponent()
     {
         SuspendLayout();
-        AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        ControlBox = false;
-        Name = "CellSelectChange";
-        DoubleBuffered = true;
-        ForeColor = System.Drawing.Color.DimGray;
-        ShowInTaskbar = false;
-        // 设置窗体的属性，大小，位置等
-        ClientSize = new Size(300, 200);
-        FormBorderStyle = FormBorderStyle.None;
+        // 
+        // CellSelectChangeTip
+        // 
+        //AutoSizeMode = AutoSizeMode.GrowAndShrink;
         BackColor = Color.Black;
-        //TopMost = true;
-        //Load += CellSelectChangeTip_Load;
+        ClientSize = new Size(300, 200);
+        ControlBox = false;
+        //DoubleBuffered = true;
+        //ForeColor = Color.DimGray;
+        FormBorderStyle = FormBorderStyle.None;
+        Name = "CellSelectChangeTip";
+        ShowInTaskbar = false;
+        Load += CellSelectChangeTip_Load;
         ResumeLayout(false);
     }
-    private void CellSelectChangeTip_Paint(object sender, PaintEventArgs e)
+
+    private void TargetStrWrite(object sender, PaintEventArgs e)
     {
         // 在窗体上绘制文本
-        using (var brush = new SolidBrush(Color.White))
-        {
-            e.Graphics.DrawString(_displayText, new Font("微软雅黑", 20), brush, new PointF(10, 10));
-        }
+        using var brush = new SolidBrush(Color.White);
+        e.Graphics.DrawString(_displayText, new Font("微软雅黑", 13), brush, new PointF(10, 10));
     }
     public void ShowToolTip(string text, Range target)
     {
         // 更新文本内容
         _displayText = text;
-        // 获取字体占的像素
-        var size = TextRenderer.MeasureText(_displayText, new Font("微软雅黑", 20));
-        var tipWidth = size.Width;
-        var tipHeitht = size.Height;
-        IntPtr excelHandle = (IntPtr)NumDesAddIn.App.Hwnd;
+        if (_displayText == null)
+        {
+            HideToolTip();
+            return;
+        }
         var workingArea = NumDesAddIn.App.ActiveWindow;
-        var baseLeft = (int)workingArea.Left + (int)workingArea.Width;
-        var baseTop = (int)workingArea.Top + (int)workingArea.Height;
-        _currentLeft = baseLeft - tipWidth - 25;
-        _currentTop = baseTop - tipHeitht - 50;
+        var workingAreaLeft = workingArea.Left * 1.67;
+        var workingAreaTop  = workingArea.Top * 1.67;
+        var workingAreaWidth = workingArea.Width * 1.67;
+        var workingAreaHeight = workingArea.Height * 1.67;
+        // 获取字体占的像素
+        var size = TextRenderer.MeasureText(_displayText, new Font("微软雅黑", 13));
+        var tipWidth = size.Width + 10;
+        var tipHeight = size.Height + 10;
+        // 获取单元格的工作区域坐标
+        var targetLeftPixels = PubMetToExcel.ExcelRangePixelsX(target.Left);
+        var targetWidthPixels = Convert.ToInt32(target.Width * 1.67);
+        var targetTopPixels = PubMetToExcel.ExcelRangePixelsY(target.Top);
+        var targetHeightPixels = Convert.ToInt32(target.Height * 1.67);
+        _currentLeft = targetLeftPixels + targetWidthPixels;
+        _currentTop = targetTopPixels + targetHeightPixels;
+        if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth)
+        {
+            _currentLeft = targetLeftPixels - tipWidth;
+        }
+
+        if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight)
+        {
+            _currentTop = targetTopPixels - tipHeight;
+        }
+        //单位为像素
         Location = new Point(_currentLeft, _currentTop);
-        ClientSize = new Size(tipWidth, tipHeitht);
+        ClientSize = new Size(tipWidth, tipHeight);
         //写入文本
-        Paint += CellSelectChangeTip_Paint;
+        Paint += TargetStrWrite;
+        //获取工作区句柄,显示窗口，不使用次方法，窗口闪现
+        IntPtr excelHandle = (IntPtr)NumDesAddIn.App.Hwnd;
+        _owner = new Win32Window(excelHandle);
         Show(_owner);
     }
 
     public void HideToolTip()
     {
         Hide();
-    }
-    public IntPtr OwnerHandle
-    {
-        get
-        {
-            if (_owner == null)
-                return IntPtr.Zero;
-            return _owner.Handle;
-        }
-        set
-        {
-            if (_owner == null || _owner.Handle != value)
-            {
-                _owner = new Win32Window(value);
-            }
-        }
     }
     class Win32Window : IWin32Window
     {
@@ -91,7 +100,6 @@ public class CellSelectChangeTip : Form
             get;
             private set;
         }
-
         public Win32Window(IntPtr handle)
         {
             Handle = handle;
@@ -106,19 +114,28 @@ public class CellSelectChangeTip : Form
         if (rngRow < 100 && rngCol < 10)
         {
             var cellStr = "";
-            var arr = target.Value2;
+            var arr = target.get_Value();
 
-            foreach (var item in arr)
+            if (arr is object[,] arrayValue)
             {
-                cellStr = cellStr+ item.ToString() +"\r\n";
+                for (int i = 1; i <= arr.GetLength(0); i++)
+                {
+                    for (int j = 1; j <= arr.GetLength(1); j++)
+                    {
+                        cellStr += arr[i, j] + "#";
+                    }
+                    cellStr += "\r\n";
+                }
             }
-            //var gra = CreateGraphics();
-            //var sF = gra.MeasureString(cellStr, new Font("微软雅黑", 20), 10000, StringFormat.GenericTypographic);
+            else
+            {
+                cellStr = arr;
+            }
+          
+      
+
             // 显示或更新提示窗口
             ShowToolTip(cellStr, target);
-
-            //// 释放资源
-            //gra.Dispose();
         }
         else
         {
@@ -129,5 +146,69 @@ public class CellSelectChangeTip : Form
     }
     private void CellSelectChangeTip_Load(object sender, EventArgs e)
     {
+        var target = NumDesAddIn.App.ActiveCell;
+        // 获取字体占的像素
+        var size = TextRenderer.MeasureText(_displayText, new Font("微软雅黑", 13));
+        var tipWidth = size.Width + 10;
+        var tipHeight = size.Height + 10;
+        // 获取单元格的工作区域坐标
+        var workingArea = NumDesAddIn.App.ActiveWindow;
+        var workingAreaLeft = workingArea.Left * 1.67;
+        var workingAreaTop = workingArea.Top * 1.67;
+        var workingAreaWidth = workingArea.Width * 1.67;
+        var workingAreaHeight = workingArea.Height * 1.67;
+        var targetLeftPixels = PubMetToExcel.ExcelRangePixelsX(target.Left);
+        var targetWidthPixels = Convert.ToInt32(target.Width * 1.67);
+        var targetTopPixels = PubMetToExcel.ExcelRangePixelsY(target.Top);
+        var targetHeightPixels = Convert.ToInt32(target.Height * 1.67);
+        _currentLeft = targetLeftPixels + targetWidthPixels;
+        _currentTop = targetTopPixels + targetHeightPixels;
+
+        if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth)
+        {
+            _currentLeft = targetLeftPixels - tipWidth;
+        }
+
+        if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight)
+        {
+            _currentTop = targetTopPixels - tipHeight;
+        }
+        Location = new Point(_currentLeft, _currentTop);
+    }
+}
+//点击穿透界面
+public class ClickThroughForm : Form
+{
+    private const int WM_NCHITTEST = 0x84;
+    private const int HTTRANSPARENT = -1;
+
+    public ClickThroughForm()
+    {
+        // 允许窗体透明度
+        SetStyle(ControlStyles.SupportsTransparentBackColor, true);
+        // 设置窗体为透明
+        BackColor = Color.Transparent;
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == WM_NCHITTEST)
+        {
+            // 如果鼠标在窗体区域，返回 HTTRANSPARENT，表示鼠标事件透传到下一层控件
+            m.Result = (IntPtr)HTTRANSPARENT;
+            return;
+        }
+
+        base.WndProc(ref m);
+    }
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            CreateParams createParams = base.CreateParams;
+            createParams.ExStyle |= 0x00000020; // WS_EX_TRANSPARENT
+            return createParams;
+        }
     }
 }
