@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -1341,22 +1342,30 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         // 将修改后的内容写回文件
         File.WriteAllLines(_defaultFilePath, lines);
     }
-    
-    //声明提示
-    private CellSelectChangeTip _rangeValueTip = new CellSelectChangeTip(); 
+    private List<CellSelectChangeTip> customForms = new List<CellSelectChangeTip>();
     public void ZoomInOut_Click(IRibbonControl control)
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
         LabelText = LabelText == "放大镜：开启" ? "放大镜：关闭" : "放大镜：开启";
         CustomRibbon.InvalidateControl("Button5");
+        //声明提示
+        CellSelectChangeTip _rangeValueTip = new CellSelectChangeTip(); 
         if (LabelText == "放大镜：开启")
         {
             App.SheetSelectionChange += _rangeValueTip.GetCellValue;
+            customForms.Add(_rangeValueTip);
         }
         else
         {
-            App.SheetSelectionChange -= _rangeValueTip.GetCellValue;
-            _rangeValueTip.HideToolTip();
+            foreach (var form in customForms)
+            {
+                if (form != null && !form.IsDisposed)
+                {
+                    App.SheetSelectionChange -= form.GetCellValue;
+                    form.HideToolTip();
+                    form.Close();
+                }
+            }
         }
     }
 
