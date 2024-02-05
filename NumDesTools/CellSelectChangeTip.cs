@@ -52,6 +52,7 @@ public class CellSelectChangeTip : ClickThroughForm
             return;
         }
         var workingArea = NumDesAddIn.App.ActiveWindow;
+        var zoom = workingArea.Zoom/100;
         var workingAreaLeft = workingArea.Left * 1.67;
         var workingAreaTop  = workingArea.Top * 1.67;
         var workingAreaWidth = workingArea.Width * 1.67;
@@ -61,10 +62,10 @@ public class CellSelectChangeTip : ClickThroughForm
         var tipWidth = size.Width + 10;
         var tipHeight = size.Height + 10;
         // 获取单元格的工作区域坐标
-        var targetLeftPixels = PubMetToExcel.ExcelRangePixelsX(target.Left);
-        var targetWidthPixels = Convert.ToInt32(target.Width * 1.67);
-        var targetTopPixels = PubMetToExcel.ExcelRangePixelsY(target.Top);
-        var targetHeightPixels = Convert.ToInt32(target.Height * 1.67);
+        var targetLeftPixels = PubMetToExcel.ExcelRangePixelsX(target.Left * zoom);
+        var targetWidthPixels = Convert.ToInt32(target.Width * 1.67 * zoom);
+        var targetTopPixels = PubMetToExcel.ExcelRangePixelsY(target.Top * zoom);
+        var targetHeightPixels = Convert.ToInt32(target.Height * 1.67 * zoom);
         _currentLeft = targetLeftPixels + targetWidthPixels;
         _currentTop = targetTopPixels + targetHeightPixels;
         if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth)
@@ -148,14 +149,15 @@ public class CellSelectChangeTip : ClickThroughForm
         var tipHeight = size.Height + 10;
         // 获取单元格的工作区域坐标
         var workingArea = NumDesAddIn.App.ActiveWindow;
+        var zoom = workingArea.Zoom / 100;
         var workingAreaLeft = workingArea.Left * 1.67;
         var workingAreaTop = workingArea.Top * 1.67;
         var workingAreaWidth = workingArea.Width * 1.67;
         var workingAreaHeight = workingArea.Height * 1.67;
-        var targetLeftPixels = PubMetToExcel.ExcelRangePixelsX(target.Left);
-        var targetWidthPixels = Convert.ToInt32(target.Width * 1.67);
-        var targetTopPixels = PubMetToExcel.ExcelRangePixelsY(target.Top);
-        var targetHeightPixels = Convert.ToInt32(target.Height * 1.67);
+        var targetLeftPixels = PubMetToExcel.ExcelRangePixelsX(target.Left * zoom);
+        var targetWidthPixels = Convert.ToInt32(target.Width * 1.67 * zoom);
+        var targetTopPixels = PubMetToExcel.ExcelRangePixelsY(target.Top * zoom);
+        var targetHeightPixels = Convert.ToInt32(target.Height * 1.67 * zoom);
         _currentLeft = targetLeftPixels + targetWidthPixels;
         _currentTop = targetTopPixels + targetHeightPixels;
 
