@@ -36,6 +36,7 @@ namespace NumDesTools;
 public class NumDesAddIn: ExcelRibbon,IExcelAddIn
 {
     public static string LabelText = "放大镜：关闭";
+    public static string FocusLabelText = "聚光灯：关闭";
     public static string LabelTextRoleDataPreview = "角色数据预览：关闭";
     public static string TempPath = @"\Client\Assets\Resources\Table";
     public static CommandBarButton Btn;
@@ -150,6 +151,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         {
             "Button5" => LabelText,
             "Button14" => LabelTextRoleDataPreview,
+            "FocusLightButton" => FocusLabelText,
             _ => ""
         };
         return latext;
@@ -1342,7 +1344,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         // 将修改后的内容写回文件
         File.WriteAllLines(_defaultFilePath, lines);
     }
-    private List<CellSelectChangeTip> customForms = new List<CellSelectChangeTip>();
+    private List<CellSelectChangeTip> customZoomForms = new List<CellSelectChangeTip>();
     public void ZoomInOut_Click(IRibbonControl control)
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
@@ -1353,11 +1355,11 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         if (LabelText == "放大镜：开启")
         {
             App.SheetSelectionChange += _rangeValueTip.GetCellValue;
-            customForms.Add(_rangeValueTip);
+            customZoomForms.Add(_rangeValueTip);
         }
         else
         {
-            foreach (var form in customForms)
+            foreach (var form in customZoomForms)
             {
                 if (form != null && !form.IsDisposed)
                 {
@@ -1369,6 +1371,16 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         }
     }
 
+    //private List<FocusLightForm> customFocusForms = new List<FocusLightForm>();
+    public void FocusLight_Click(IRibbonControl control)
+    {
+        if (control == null) throw new ArgumentNullException(nameof(control));
+        FocusLabelText = FocusLabelText == "聚光灯：开启" ? "聚光灯：关闭" : "聚光灯：开启";
+        CustomRibbon.InvalidateControl("FocusLightButton");
+        //声明提示
+        FocusLightForm _rangeValueTip = new FocusLightForm();
+        _rangeValueTip.ShowToolTip();
+    }
     private void App_SheetSelectionChange(object sh, Range target)
     {
         //excel文档已有的右键菜单cell
