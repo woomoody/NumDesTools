@@ -17,7 +17,10 @@
                             screentip='点击整理当前sheet格式，标准化文本和单元格大小' />
                     <button id='Button5' size='large' getLabel='GetLableText' image='redux-reducer'
                             onAction='ZoomInOut_Click'
-                            screentip='点击开启单元格内容放大功能，再次点击关闭放大功能(由图表的表格不建议开启，会删掉)！' />
+                            screentip='点击开启单元格内容放大功能，再次点击关闭放大功能(创建Form机制)！' />
+                    <button id='FocusLightButton' size='large' getLabel='GetLableText' image='email'
+                            onAction='FocusLight_Click'
+                            screentip='聚光灯效果！' />
                     <button id='Button8' size='large' label='公式检查' image='asciidoc' onAction='FormularCheck_Click'
                             screentip='点击检查当前工作簿所有sheet中的公式，看是否有错误的连接，推荐合完表后进行检查' />
                 </group>

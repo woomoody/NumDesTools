@@ -25,15 +25,13 @@ public class CellSelectChangeTip : ClickThroughForm
         // 
         // CellSelectChangeTip
         // 
-        //AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        AutoSizeMode = AutoSizeMode.GrowAndShrink;
         BackColor = Color.Black;
         ClientSize = new Size(300, 200);
         ControlBox = false;
-        //DoubleBuffered = true;
-        //ForeColor = Color.DimGray;
         FormBorderStyle = FormBorderStyle.None;
-        Name = "CellSelectChangeTip";
         ShowInTaskbar = false;
+        Name = "CellSelectChangeTip";
         Load += CellSelectChangeTip_Load;
         ResumeLayout(false);
     }
@@ -113,10 +111,10 @@ public class CellSelectChangeTip : ClickThroughForm
 
         if (rngRow < 100 && rngCol < 10)
         {
-            var cellStr = "";
-            var arr = target.get_Value();
-
-            if (arr is object[,] arrayValue)
+            string cellStr = "";
+            var arr = target.Value;
+            var isArray = arr is object[,] ;
+            if (isArray)
             {
                 for (int i = 1; i <= arr.GetLength(0); i++)
                 {
@@ -129,11 +127,8 @@ public class CellSelectChangeTip : ClickThroughForm
             }
             else
             {
-                cellStr = arr;
+                cellStr = arr.ToString() + "\r\n";
             }
-          
-      
-
             // 显示或更新提示窗口
             ShowToolTip(cellStr, target);
         }
@@ -174,6 +169,7 @@ public class CellSelectChangeTip : ClickThroughForm
             _currentTop = targetTopPixels - tipHeight;
         }
         Location = new Point(_currentLeft, _currentTop);
+        ClientSize = new Size(tipWidth, tipHeight);
     }
 }
 //点击穿透界面
