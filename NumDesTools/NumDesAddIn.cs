@@ -1379,7 +1379,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         CustomRibbon.InvalidateControl("FocusLightButton");
         //声明提示
         FocusLightForm _rangeValueTip = new FocusLightForm();
-        _rangeValueTip.ShowToolTip();
+        App.SheetSelectionChange += _rangeValueTip.ShowToolTip;
     }
     private void App_SheetSelectionChange(object sh, Range target)
     {
