@@ -1344,22 +1344,22 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         // 将修改后的内容写回文件
         File.WriteAllLines(_defaultFilePath, lines);
     }
-    private List<CellSelectChangeTip> customZoomForms = new List<CellSelectChangeTip>();
+    private List<CellSelectChangeTip> _customZoomForms = new List<CellSelectChangeTip>();
     public void ZoomInOut_Click(IRibbonControl control)
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
         LabelText = LabelText == "放大镜：开启" ? "放大镜：关闭" : "放大镜：开启";
         CustomRibbon.InvalidateControl("Button5");
         //声明提示
-        CellSelectChangeTip _rangeValueTip = new CellSelectChangeTip(); 
+        CellSelectChangeTip rangeValueTip = new CellSelectChangeTip(); 
         if (LabelText == "放大镜：开启")
         {
-            App.SheetSelectionChange += _rangeValueTip.GetCellValue;
-            customZoomForms.Add(_rangeValueTip);
+            App.SheetSelectionChange += rangeValueTip.GetCellValue;
+            _customZoomForms.Add(rangeValueTip);
         }
         else
         {
-            foreach (var form in customZoomForms)
+            foreach (var form in _customZoomForms)
             {
                 if (form != null && !form.IsDisposed)
                 {
@@ -1370,16 +1370,34 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
             }
         }
     }
-
-    //private List<FocusLightForm> customFocusForms = new List<FocusLightForm>();
     public void FocusLight_Click(IRibbonControl control)
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
         FocusLabelText = FocusLabelText == "聚光灯：开启" ? "聚光灯：关闭" : "聚光灯：开启";
         CustomRibbon.InvalidateControl("FocusLightButton");
-        //声明提示
-        FocusLightForm _rangeValueTip = new FocusLightForm();
-        App.SheetSelectionChange += _rangeValueTip.ShowToolTip;
+        if (FocusLabelText == "聚光灯：开启")
+        {
+            App.SheetSelectionChange += ExcelSheetCalculate;
+        }
+        else
+        {
+            //遍历所有打开工作簿，删除条件格式
+            foreach (Workbook workbook in App.Workbooks)
+            {
+                // 遍历当前工作簿中的所有工作表
+                foreach (Worksheet worksheet in workbook.Worksheets)
+                {
+                    // 在这里处理每个工作表
+                    FocusLight.DeleteCondition(worksheet);
+                }
+            }
+            App.SheetSelectionChange -= ExcelSheetCalculate;
+        }
+    }
+    //聚光能功能sheet事件
+    private void ExcelSheetCalculate(object sh, Range target)
+    {
+        FocusLight.Calculate();
     }
     private void App_SheetSelectionChange(object sh, Range target)
     {
