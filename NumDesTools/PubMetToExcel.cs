@@ -352,7 +352,7 @@ public class PubMetToExcel
             for (var column = dataCol; column <= columns; column++)
             {
                 var value = rangeValue[row, column];
-                if (row == headerRow)
+                if (row == headerRow)//这个可能是冗余判断，暂时未发现问题
                     sheetHeaderCol.Add(value);
                 else
                     rowList.Add(value);
@@ -368,6 +368,69 @@ public class PubMetToExcel
             sheetHeaderCol.Add(value);
         }
 
+        var excelData = (sheetHeaderCol, sheetData);
+        return excelData;
+    }
+    //Excel数据输出为List，自定义数据起始-结束行、列，根据当前选择的单元格
+    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelfToEnd(dynamic workSheet,
+        int dataRow, int dataCol,int headRow)
+    {
+        Range selectRange = NumDesAddIn.App.Selection;
+        Range usedRange = workSheet.UsedRange;
+        int dataRowEnd;
+        int dataColEnd;
+        //确定行，不确定列
+        if (dataRow == 0)
+        {
+            dataRow = selectRange.Row;
+            dataRowEnd = dataRow + selectRange.Rows.Count - 1;
+        }
+        else
+        {
+            dataRow = selectRange.Row;
+            dataRowEnd = dataRow + usedRange.Rows.Count - 1;
+        }
+        //确定列，不确定行
+        if (dataCol == 0)
+        {
+            dataCol = selectRange.Column;
+            dataColEnd = dataCol + selectRange.Columns.Count - 1;
+        }
+        else
+        {
+            dataCol = selectRange.Column;
+            dataColEnd = dataCol + usedRange.Columns.Count - 1;
+        }
+        Range dataRangeStart = workSheet.Cells[dataRow, dataCol];
+        Range dataRangeEnd = workSheet.Cells[dataRowEnd, dataColEnd];
+        Range dataRange = workSheet.Range[dataRangeStart, dataRangeEnd];
+        // 读取数据到一个二维数组中
+        object[,] rangeValue = dataRange.Value;
+        Range headRangeStart = workSheet.Cells[headRow, dataCol];
+        Range headRangeEnd = workSheet.Cells[headRow, dataColEnd];
+        Range headRange = workSheet.Range[headRangeStart, headRangeEnd];
+        // 读取数据到一个二维数组中
+        object[,] headRangeValue = headRange.Value;
+        // 定义工作表数据数组和表头数组
+        var sheetData = new List<List<object>>();
+        var sheetHeaderCol = new List<object>();
+        // 读取数据
+        for (var row = 1; row <= dataRowEnd - dataRow + 1; row++)
+        {
+            var rowList = new List<object>();
+            for (var column = 1; column <= dataColEnd - dataCol + 1; column++)
+            {
+                var value = rangeValue[row, column];
+                rowList.Add(value);
+            }
+            sheetData.Add(rowList);
+        }
+        //读取表头
+        for (var column = 1; column <= dataColEnd - dataCol + 1; column++)
+        {
+            var value = headRangeValue[headRow, column];
+            sheetHeaderCol.Add(value);
+        }
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
