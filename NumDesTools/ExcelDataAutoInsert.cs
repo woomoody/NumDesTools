@@ -310,7 +310,6 @@ public class ExcelDataAutoInsertLanguage
 {
     public static void AutoInsertData()
     {
-        //dynamic app = ExcelDnaUtil.Application;
         var workBook = NumDesAddIn.App.ActiveWorkbook;
         var excelPath = workBook.Path;
         var sourceSheet = workBook.Worksheets["多语言对话【模板】"];
@@ -355,6 +354,431 @@ public class ExcelDataAutoInsertLanguage
 
         var sourceData = PubMetToExcel.ExcelDataToList(sourceSheet);
 
+        var sourceTitle = sourceData.Item1;
+        var sourceDataList = sourceData.Item2;
+
+        var fixData = PubMetToExcel.ExcelDataToList(fixSheet);
+        var fixTitle = fixData.Item1;
+        var fixDataList = fixData.Item2;
+
+        var classData = PubMetToExcel.ExcelDataToList(classSheet);
+        var classTitle = classData.Item1;
+        var classDataList = classData.Item2;
+
+        var emoData = PubMetToExcel.ExcelDataToList(emoSheet);
+        var emoDataList = emoData.Item2;
+
+        var fileIndex = fixTitle.IndexOf("表名");
+        var keyIndex = fixTitle.IndexOf("字段");
+        var modelIdIndex = fixTitle.IndexOf("初始模板");
+
+        var errorExcel = 0;
+        var errorList = new List<(int, string, string)>();
+
+        for (var i = 0; i < fixDataList.Count; i++)
+        {
+            if (fixDataList[i][fileIndex] == null) continue;
+            //整理要修改的表格和原表格数据字段映射
+            var sourceKeyList = new List<string>();
+            var fixKeyList = new List<string>();
+            for (int j = keyIndex; j < fixTitle.Count; j++)
+            {
+                if (fixDataList[i][j] != null)
+                {
+                    var sourceKey = fixDataList[i][j].ToString();
+                    sourceKeyList.Add(sourceKey);
+                }
+
+                if (fixDataList[i + 1][j] != null)
+                {
+                    var fixKey = fixDataList[i + 1][j].ToString();
+                    fixKeyList.Add(fixKey);
+                }
+            }
+
+            //遍历要修改的表格写入数据
+            var fixFileName = fixDataList[i][fileIndex].ToString();
+            var fixFileModeId = fixDataList[i][modelIdIndex].ToString();
+
+            string path = ExcelDataAutoInsert.ExcelPathIgnore(excelPath, fixFileName);
+            var targetExcel = new ExcelPackage(new FileInfo(path));
+            ExcelWorkbook targetBook;
+            string errorExcelLog;
+            try
+            {
+                targetBook = targetExcel.Workbook;
+            }
+            catch (Exception ex)
+            {
+                errorExcel = i * 2 + 2;
+                errorExcelLog = fixFileName + "#不能创建WorkBook对象" + ex.Message;
+                errorList.Add((errorExcel, errorExcelLog, fixFileName));
+                continue;
+            }
+
+            ExcelWorksheet targetSheet;
+            try
+            {
+                targetSheet = targetBook.Worksheets["Sheet1"] ?? targetBook.Worksheets[0];
+            }
+            catch (Exception ex)
+            {
+                errorExcel = i * 2 + 2;
+                errorExcelLog = fixFileName + "#不能创建WorkBook对象" + ex.Message;
+                errorList.Add((errorExcel, errorExcelLog, fixFileName));
+                continue;
+            }
+
+            //数据查重
+            var c = 0;
+            if (fixFileName == "GuideDialogDetail.xlsx")
+                c = 1;
+            else if (fixFileName == "Localizations.xlsx")
+                c = 2;
+            else if (fixFileName == "GuideDialogBranch.xlsx") c = 3;
+            var idList = new List<string>();
+            for (var r = 0; r < sourceDataList.Count; r++)
+            {
+                var value = sourceDataList[r][c]?.ToString() ?? "";
+                idList.Add(value);
+            }
+
+            var newIdList = idList.Distinct().ToList();
+
+            // 定义要删除的行的列表
+            var rowsToDelete = new List<int>();
+            foreach (var id in newIdList)
+            {
+                var reDd = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, id);
+                if (reDd != -1) rowsToDelete.Add(reDd);
+            }
+
+            //int endRow = targetSheet.Dimension.End.Row;
+            //// 遍历行并找到具有相同第一列值的行
+            //for (var row = 4; row <= endRow; row++)
+            //{
+            //    var cellValue = targetSheet.Cells[row, 2].Value?.ToString() ?? "";
+            //    if (idSet.Contains(cellValue))
+            //    {
+            //        // 如果发现第一列值相同的行，则删除该行
+            //        targetSheet.DeleteRow(row);
+            //        // 调整删除后的行号
+            //        row--;
+            //        endRow--;
+            //    }
+            //}
+            rowsToDelete.Sort();
+            rowsToDelete.Reverse();
+            // 逐行删除
+            foreach (var rowToDelete in rowsToDelete)
+                try
+                {
+                    targetSheet.DeleteRow(rowToDelete, 1);
+                }
+                catch (Exception ex)
+                {
+                    errorExcel = i * 2 + 2;
+                    errorExcelLog = fixFileName + "无法删除重复数据，sheet格式问题，复制数据到新表" + ex.Message;
+                    errorList.Add((errorExcel, errorExcelLog, fixFileName));
+                }
+
+            //根据模板插入对应数据行，并复制
+            var endRowSource = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, fixFileModeId);
+            if (endRowSource == -1)
+            {
+                MessageBox.Show(fixFileModeId + @"目标表中不存在");
+                continue;
+            }
+
+            targetSheet.InsertRow(endRowSource + 1, sourceDataList.Count);
+            var colCount = targetSheet.Dimension.Columns;
+            var cellSource = targetSheet.Cells[endRowSource, 1, endRowSource, colCount];
+            for (var m = 0; m < sourceDataList.Count; m++)
+            {
+                var cellTarget = targetSheet.Cells[endRowSource + 1 + m, 1, endRowSource + 1 + m, colCount];
+                cellSource.Copy(cellTarget,
+                    ExcelRangeCopyOptionFlags.ExcludeConditionalFormatting |
+                    ExcelRangeCopyOptionFlags.ExcludeMergedCells);
+                cellSource.CopyStyles(cellTarget);
+            }
+
+            //修改数据
+            for (var m = 0; m < sourceDataList.Count; m++)
+            {
+                var errorCell = sourceDataList[m][0];
+                if (errorCell == null)
+                {
+                    errorExcelLog = sourceSheet.Name + "#表格尾行有，多余格式，清除";
+                    MessageBox.Show(errorExcelLog);
+                    return errorList;
+                }
+
+                var sourceCount = 0;
+                foreach (var source in sourceKeyList)
+                {
+                    var cellCol = ExcelDataAutoInsert.FindSourceCol(targetSheet, 2, fixKeyList[sourceCount]);
+                    if (cellCol == -1)
+                    {
+                        if (fixKeyList[sourceCount] == "bgType")
+                        {
+                            sourceCount++;
+                            continue;
+                        }
+
+                        errorExcel = i * 2 + 2;
+                        errorExcelLog = fixFileName + "#表格字段#[" + fixKeyList[sourceCount] + "]未找到";
+                        errorList.Add((errorExcel, errorExcelLog, fixFileName));
+                        sourceCount++;
+                        continue;
+                    }
+
+                    var cellTarget = targetSheet.Cells[endRowSource + 1 + m, cellCol];
+                    var newStr = "";
+                    if (int.TryParse(source, out var e))
+                    {
+                        var realCol = "";
+                        if (fixFileName == "GuideDialogGroup.xlsx")
+                            realCol = "GroupID";
+                        else if (fixFileName == "GuideDialogBranch.xlsx") realCol = "BranchID";
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf(realCol)];
+                        if (sourceValue == "" || sourceValue == null) continue;
+                        var str = sourceValue.ToString();
+                        var digit = Math.Pow(10, e);
+                        var repeatCount = 0;
+                        for (var k = 0; k < sourceDataList.Count; k++)
+                        {
+                            var repeatValue = sourceDataList[k][sourceTitle.IndexOf(realCol)];
+                            if (repeatValue == "" || repeatValue == null) continue;
+                            if (repeatValue == sourceValue)
+                            {
+                                var newNum = long.Parse(str) * digit + repeatCount + 1;
+                                newStr = newStr + newNum + ",";
+                                repeatCount++;
+                            }
+                        }
+
+                        newStr = "[" + newStr.Substring(0, newStr.Length - 1) + "]";
+                        cellTarget.Value = newStr;
+                    }
+                    else if (source == "枚举1")
+                    {
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf("说话角色")];
+                        var scCol = classTitle.IndexOf(source);
+                        var newId = "";
+                        for (var k = 0; k < classDataList.Count; k++)
+                        {
+                            var targetValueKey = classDataList[k][scCol];
+                            if (targetValueKey == sourceValue)
+                            {
+                                newId = classDataList[k][scCol + 1].ToString();
+                                break;
+                            }
+                        }
+
+                        var sourceStr = cellTarget.Value?.ToString();
+                        var reg = "\\d+";
+                        if (sourceStr == null || sourceStr == "") continue;
+                        var matches = Regex.Matches(sourceStr, reg);
+
+                        var oldId = matches[0].Value.ToString();
+                        if (newId != "") sourceStr = sourceStr.Replace(oldId, newId);
+                        cellTarget.Value = sourceStr;
+                    }
+                    else if (source == "角色表情")
+                    {
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)].ToString();
+                        for (var k = 0; k < emoDataList.Count; k++)
+                        {
+                            var targetValue = emoDataList[k][0].ToString();
+                            if (targetValue == sourceValue)
+                            {
+                                var emoId = emoDataList[k][2];
+                                cellTarget.Value = emoId;
+                                break;
+                            }
+                        }
+                    }
+                    else if (source == "触发分支")
+                    {
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)]?.ToString();
+                        if (sourceValue == null || sourceValue == "" || sourceValue == "0")
+                        {
+                            sourceCount++;
+                            continue;
+                        }
+
+                        var uniqueValues1 = new HashSet<string>();
+                        var strBranch = "";
+                        for (var k = 0; k < sourceDataList.Count; k++)
+                        {
+                            var repeatValue = sourceDataList[k][sourceTitle.IndexOf("分支归属")]?.ToString();
+                            if (repeatValue == null || repeatValue == "") continue;
+                            if (repeatValue == sourceValue)
+                            {
+                                var branchId = sourceDataList[k][sourceTitle.IndexOf("BranchID")];
+                                if (!uniqueValues1.Contains(branchId))
+                                {
+                                    uniqueValues1.Add(branchId);
+                                    strBranch = strBranch + branchId + ",";
+                                }
+                            }
+                        }
+
+                        strBranch = "[" + strBranch.Substring(0, strBranch.Length - 1) + "]";
+                        cellTarget.Value = strBranch;
+                    }
+                    else if (source == "分支多语言")
+                    {
+                        var newId = sourceDataList[m][sourceTitle.IndexOf("BranchID")]?.ToString();
+                        var sourceStr = cellTarget.Value?.ToString();
+                        if (sourceStr == null || sourceStr == "") continue;
+                        var reg = "\\d+";
+                        var matches = Regex.Matches(sourceStr, reg);
+                        var oldId = matches[0].Value.ToString();
+                        if (newId != "") sourceStr = sourceStr.Replace(oldId, newId);
+                        cellTarget.Value = sourceStr;
+                    }
+                    else if (source == "角色换装1")
+                    {
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf("说话角色")];
+                        var sourceValue2 = sourceDataList[m][sourceTitle.IndexOf("角色换装")]?.ToString();
+                        var scCol = classTitle.IndexOf("枚举1");
+                        var newValue = "";
+                        for (var k = 0; k < classDataList.Count; k++)
+                        {
+                            var targetValueKey = classDataList[k][scCol];
+                            if (targetValueKey == sourceValue)
+                            {
+                                newValue = sourceValue2 == "1" ? (string)classDataList[k][scCol + 2].ToString() : "[]";
+                                break;
+                            }
+                        }
+
+                        cellTarget.Value = newValue;
+                    }
+                    else if (source == "角色换装2")
+                    {
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf("说话角色")];
+                        var sourceValue2 = sourceDataList[m][sourceTitle.IndexOf("角色换装")]?.ToString();
+                        var scCol = classTitle.IndexOf("枚举1");
+                        var newValue = "";
+                        for (var k = 0; k < classDataList.Count; k++)
+                        {
+                            var targetValueKey = classDataList[k][scCol];
+                            if (targetValueKey == sourceValue)
+                            {
+                                newValue = sourceValue2 != "1" ? (string)classDataList[k][scCol + 3].ToString() : "";
+                                break;
+                            }
+                        }
+
+                        cellTarget.Value = newValue;
+                    }
+                    else if (source == "UI对话框")
+                    {
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf("UI对话框")];
+                        sourceValue = sourceValue == null ? "1" : sourceValue.ToString();
+                        if (fixKeyList[sourceCount] == "bgType") cellTarget.Value = sourceValue;
+                    }
+                    else
+                    {
+                        //GroupID不连续
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)];
+                        cellTarget.Value = sourceValue;
+                    }
+
+                    sourceCount++;
+                }
+            }
+
+            //数据合并
+            if (errorExcel != 0) continue;
+            int startRow = endRowSource + 1;
+            int endRow2 = startRow + sourceDataList.Count - 1;
+            //int endRow2 = targetSheet.Dimension.End.Row;
+            //if (hasCopy == 2)
+            //{
+            //    var dataCount = int.Parse(fixDataList[i][dataRows]);
+            //    var start = endRow2 + 1;
+            //    targetSheet.DeleteRow(start, dataCount);
+            //}
+            if (fixFileName == "GuideDialogBranch.xlsx" || fixFileName == "GuideDialogGroup.xlsx")
+            {
+                var uniqueValues = new HashSet<string>();
+                // 遍历行并找到具有相同第一列值的行
+                for (var row = 4; row <= endRow2; row++)
+                {
+                    var cellValue = targetSheet.Cells[row, 2].Value?.ToString() ?? "";
+
+                    if (uniqueValues.Contains(cellValue) || cellValue == "")
+                    {
+                        // 如果发现第一列值相同的行，则删除该行
+                        targetSheet.DeleteRow(row);
+                        // 调整删除后的行号
+                        row--;
+                        endRow2--;
+                    }
+                    else
+                    {
+                        uniqueValues.Add(cellValue);
+                    }
+                }
+            }
+
+            targetExcel.Save();
+            targetExcel.Dispose();
+            var excelCount = i / 2 + 1;
+            app.StatusBar = "写入数据" + "<" + excelCount + "/" + fixDataList.Count / 2 + ">" + fixFileName;
+        }
+
+        return errorList;
+    }
+    public static void AutoInsertDataByUd(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var workBook = NumDesAddIn.App.ActiveWorkbook;
+        var excelPath = workBook.Path;
+        var sourceSheet = workBook.Worksheets["多语言对话【模板】"];
+        var fixSheet = workBook.Worksheets["数据修改"];
+        var classSheet = workBook.Worksheets["枚举数据"];
+        var emoSheet = workBook.Worksheets["表情枚举"];
+
+        ErrorLogCtp.DisposeCtp();
+
+        var errorExcelList = new List<List<(int, string, string)>>();
+        if (errorExcelList == null) throw new ArgumentNullException(nameof(errorExcelList));
+
+        List<(int, string, string)> error =
+            LanguageDialogDataByUd(sourceSheet, fixSheet, classSheet, emoSheet, excelPath, NumDesAddIn.App);
+
+        if (error.Count != 0) errorExcelList.Add(error);
+
+        //出错表格处理
+        string errorLog = ExcelDataAutoInsert.ErrorExcelMark(errorExcelList, fixSheet);
+        if (errorLog != "")
+        {
+            ErrorLogCtp.DisposeCtp();
+            ErrorLogCtp.CreateCtpNormal(errorLog);
+        }
+
+        //else
+        //{
+        //    fixSheet.Range["A2:A1000"].Value = "";
+        //}
+        //app.Dispose();
+        Marshal.ReleaseComObject(sourceSheet);
+        Marshal.ReleaseComObject(fixSheet);
+        Marshal.ReleaseComObject(classSheet);
+        Marshal.ReleaseComObject(emoSheet);
+        Marshal.ReleaseComObject(workBook);
+    }
+
+    public static List<(int, string, string)> LanguageDialogDataByUd(dynamic sourceSheet, dynamic fixSheet,
+        dynamic classSheet, dynamic emoSheet, string excelPath, dynamic app)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        //确定行，不确定列
+        var sourceData = PubMetToExcel.ExcelDataToListBySelfToEnd(sourceSheet,0,1,1);
         var sourceTitle = sourceData.Item1;
         var sourceDataList = sourceData.Item2;
 
@@ -1026,8 +1450,8 @@ public class ExcelDataAutoInsertMulti
             cellTarget.Style.Fill.BackgroundColor.SetColor(cellBackColor);
 
             //尽量和源数据格式一致，宋体的格式会歪？不知道为什么
-            if (cellTarget.Style.Font.Name == "微软雅黑")
-                cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            cellTarget.Style.Font.Name = "微软雅黑";
+            cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
             //数据修改
             var fixItem = fixKey[excelName][excelMulti].Item1;
             errorList = modeThread
