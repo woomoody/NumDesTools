@@ -14,6 +14,7 @@ public class Lua2Excel
 {
     //private static readonly dynamic App = ExcelDnaUtil.Application;
 
+    // ReSharper disable once UnusedMember.Global
     public static void LuaDataGet()
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -34,7 +35,9 @@ public class Lua2Excel
 
         Debug.Print(errorLogLua);
     }
+#pragma warning disable CA1416
     [ExcelFunction(IsHidden = true)]
+#pragma warning restore CA1416
     public static string LuaDataExportToExcel(string luaPath, dynamic sheet)
     {
         var errorLog = string.Empty;
@@ -124,6 +127,7 @@ public class Lua2Excel
                     var cellTitle = sheet.Cells[1, j].Value;
                     var value = luaData[cellTitle];
                     var cellValue = value;
+                    // ReSharper disable once MergeCastWithTypeCheck
                     if (value is LuaTable) cellValue = ProcessLuaTable((LuaTable)value);
                     sheet.Cells[row, j].Value = cellValue;
                 }
@@ -165,7 +169,10 @@ public class Lua2Excel
 
         if (!string.IsNullOrEmpty(cellValue))
         {
+#pragma warning disable IDE0056
+            // ReSharper disable once UseIndexFromEndExpression
             var lastCharacter = cellValue[cellValue.Length - 1].ToString();
+#pragma warning restore IDE0056
             if (lastCharacter == ",") cellValue = cellValue.Substring(0, cellValue.Length - 1);
             cellValue = "{" + cellValue + "}";
         }

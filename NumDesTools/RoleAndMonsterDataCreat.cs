@@ -82,7 +82,9 @@ public class CellSelectChangePro
         {
             NumDesAddIn.LabelTextRoleDataPreview = "角色数据预览：关闭";
             //更新控件lable信息
+#pragma warning disable CA1416
             NumDesAddIn.CustomRibbon.InvalidateControl("Button14");
+#pragma warning restore CA1416
             NumDesAddIn.App.StatusBar = "当前非【角色基础】表，数据预览功能关闭";
         }
     }
@@ -90,16 +92,20 @@ public class CellSelectChangePro
 
 #region 每个角色全量数据的导出
 
+// ReSharper disable once UnusedMember.Global
 public class RoleDataPro
 {
     private const string FilePath = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
     private const string CacColStart = "E"; //角色参数配置列数起点
     private const string CacColEnd = "U"; //角色参数配置列数终点c
+#pragma warning disable CA1416
     private static readonly dynamic App = ExcelDnaUtil.Application;
+#pragma warning restore CA1416
     private static readonly Worksheet Ws = App.ActiveSheet;
     private static readonly object Missing = Type.Missing;
     private static readonly dynamic CacRowStart = 16; //角色参数配置行数起点
 
+    // ReSharper disable once UnusedMember.Global
     public static void ExportSig(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var sw = new Stopwatch();
@@ -143,6 +149,7 @@ public class RoleDataPro
         Debug.Print(ts2.ToString());
     }
 
+    // ReSharper disable once UnusedMember.Global
     public static void ExportMulti(CommandBarButton ctrl, ref bool cancelDefault)
     {
         //基础参数
@@ -406,16 +413,20 @@ public class RoleDataPro
 
 #region 角色关键数据导出到一张表
 
+// ReSharper disable once UnusedMember.Global
 public class RoleDataPri
 {
     private const string CacColStart = "E"; //角色参数配置列数起点
     private const string CacColEnd = "U"; //角色参数配置列数终点c
+#pragma warning disable CA1416
     private static readonly dynamic App = ExcelDnaUtil.Application;
+#pragma warning restore CA1416
     private static readonly Worksheet Ws = App.ActiveSheet;
     private static readonly object Missing = Type.Missing;
     private static readonly dynamic CacRowStart = 16; //角色参数配置行数起点
 
     //获取全部角色的关键数据（要导出的），生成List
+    // ReSharper disable once UnusedMember.Global
     public static void DataKey(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var roleHead = Ws.Range[CacColStart + "65535"];
@@ -485,19 +496,6 @@ public class RoleDataPri
             "def",
             "hp"
         };
-        //应该foreach遍历statRoleGroup，通过roleID查找数据，所以导进来的数据，应该是【roleID，数据1，数据2……】
-        //for (int i = 0; i < Math.Min(statRole - 5, roleData.Count); i++)
-        //{
-        //    var statRoleIndex = statRoleGroup.Find(roleData[i][4], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-        //        XlSearchOrder.xlByRows, XlSearchDirection.xlNext, false, false, false).Row;
-        //    for (int j = 0; j < roleDataCol - 1; j++)
-        //    {
-        //        var statKeyIndex = statKeyGroup.Find(stateKeys[j], Missing, XlFindLookIn.xlValues,
-        //            XlLookAt.xlPart,
-        //            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
-        //        Ws2.Cells[statRoleIndex, statKeyIndex] = roleData[i][j];
-        //    }
-        //}
 
         foreach (var rng in statRoleGroup)
         {
@@ -524,7 +522,6 @@ public class RoleDataPri
                     ws2.Cells[ccd, defIndex].Value = Math.Round(roleData[rowIndex][2] * 100, 0);
                     ws2.Cells[ccd, hpIndex].Value = Math.Round(roleData[rowIndex][3] * 100, 0);
                 }
-                //Console.WriteLine("未找到值 {0}", valueToFind);
             }
         }
 
@@ -532,21 +529,13 @@ public class RoleDataPri
         App.ScreenUpdating = true;
         book.Save();
         book.Close(false);
-        //List<ExcelReference> ranges2 = new List<ExcelReference>();
-        //ExcelReference arr = new ExcelReference(1, 1);
-        //ranges2.Add(arr);
-        //ranges2[0].SetValue("asdb");
-        //for (int i = 0; i < ranges.Count; i++)
-        //{
-        //    ranges[i].Value2 = "abc";
-        //}
-        //  range3.Value2 = 1;
     }
     //写入模式？1、愣写（选一个cell，填一个） 2、批量写（range）；行列不连续如何更效率的填写数据：把所有所要填的cell汇集为1个List，这个List的顺序跟数据源的List一一对应，然后for循环写入数据，看情况是否多线程for
 
     //List<ExcelReference> ranges = new List<ExcelReference>();
     //    foreach (string rangeAddress in rangeAddresses)
     //{
+    // ReSharper disable once CommentTypo
     //    ExcelReference range = (ExcelReference)XlCall.Excel(XlCall.xlfTextref, rangeAddress);
     //    ranges.Add(range);
     //}
@@ -573,16 +562,20 @@ public class RoleDataPri
 
 #region 角色关键数据导出到一张表NPOI
 
+// ReSharper disable once UnusedMember.Global
 public class RoleDataPriNpoi
 {
     private const string CacColStart = "E"; //角色参数配置列数起点
     private const string CacColEnd = "U"; //角色参数配置列数终点c
+#pragma warning disable CA1416
     private static readonly dynamic App = ExcelDnaUtil.Application;
+#pragma warning restore CA1416
     private static readonly Worksheet Ws = App.ActiveSheet;
     private static readonly object Missing = Type.Missing;
     private static readonly dynamic CacRowStart = 16; //角色参数配置行数起点
 
     //获取全部角色的关键数据（要导出的），生成List
+    // ReSharper disable once UnusedMember.Global
     public static void DataKey()
     {
         var roleHead = Ws.Range[CacColStart + "65535"];
@@ -741,6 +734,7 @@ public class RoleDataPriNpoi
         //List<ExcelReference> ranges2 = new List<ExcelReference>();
         //ExcelReference arr = new ExcelReference(1, 1);
         //ranges2.Add(arr);
+        // ReSharper disable once CommentTypo
         //ranges2[0].SetValue("asdb");
         //for (int i = 0; i < ranges.Count; i++)
         //{
@@ -796,6 +790,7 @@ public class RoleDataPriNpoi
     //List<ExcelReference> ranges = new List<ExcelReference>();
     //    foreach (string rangeAddress in rangeAddresses)
     //{
+    // ReSharper disable once CommentTypo
     //    ExcelReference range = (ExcelReference)XlCall.Excel(XlCall.xlfTextref, rangeAddress);
     //    ranges.Add(range);
     //}

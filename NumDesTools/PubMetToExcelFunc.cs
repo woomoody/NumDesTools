@@ -22,7 +22,7 @@ public class PubMetToExcelFunc
     public static void ExcelDataSearchAndMerge(string searchValue)
     {
         //获取所有的表格路径
-        string[] ignoreFileNames = { "#", "副本" };
+        string[] ignoreFileNames = ["#", "副本"];
         var rootPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(Path));
         var fileList = new List<string>()
             { rootPath + @"\Excels\Tables\", rootPath + @"\Excels\Localizations\", rootPath + @"\Excels\UIs\" };
@@ -287,12 +287,12 @@ public class PubMetToExcelFunc
         {
             var key = kvp.Key;
             var value = kvp.Value;
-            filteredDataGiftList.Add(new List<object> { value });
-            filteredDataBpProcess.Add(new List<object> { bpProcess[key][maxRoll] });
+            filteredDataGiftList.Add([value]);
+            filteredDataBpProcess.Add([bpProcess[key][maxRoll]]);
             var methodStr = "";
             foreach (var method in permutations[key]) methodStr += method + ",";
             methodStr = methodStr.Substring(0, methodStr.Length - 1);
-            filteredDataMethod.Add(new List<object> { methodStr });
+            filteredDataMethod.Add([methodStr]);
         }
 
         //清理
@@ -337,10 +337,9 @@ public class PubMetToExcelFunc
 
             // 转换为字符串，检查是否已经存在该方案
             var schemeString = string.Join(",", scheme);
-            if (!seenSchemes.Contains(schemeString))
+            if (seenSchemes.Add(schemeString))
             {
-                seenSchemes.Add(schemeString);
-                result.Add(new List<int>(scheme));
+                result.Add([..scheme]);
             }
         }
         return result;

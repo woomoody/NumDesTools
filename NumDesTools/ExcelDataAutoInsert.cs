@@ -17,6 +17,7 @@ using LicenseContext = OfficeOpenXml.LicenseContext;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.Forms.MessageBox;
 using Range = Microsoft.Office.Interop.Excel.Range;
+#pragma warning disable CA1416
 
 namespace NumDesTools;
 
@@ -616,9 +617,8 @@ public class ExcelDataAutoInsertLanguage
                             if (repeatValue == sourceValue)
                             {
                                 var branchId = sourceDataList[k][sourceTitle.IndexOf("BranchID")];
-                                if (!uniqueValues1.Contains(branchId))
+                                if (uniqueValues1.Add(branchId))
                                 {
-                                    uniqueValues1.Add(branchId);
                                     strBranch = strBranch + branchId + ",";
                                 }
                             }
@@ -795,7 +795,6 @@ public class ExcelDataAutoInsertLanguage
 
         var fileIndex = fixTitle.IndexOf("表名");
         var keyIndex = fixTitle.IndexOf("字段");
-        var modelIdIndex = fixTitle.IndexOf("初始模板");
 
         var errorExcel = 0;
         var errorList = new List<(int, string, string)>();
@@ -823,7 +822,6 @@ public class ExcelDataAutoInsertLanguage
 
             //遍历要修改的表格写入数据
             var fixFileName = fixDataList[i][fileIndex].ToString();
-            var fixFileModeId = fixDataList[i][modelIdIndex].ToString();
 
             string path = ExcelDataAutoInsert.ExcelPathIgnore(excelPath, fixFileName);
             var targetExcel = new ExcelPackage(new FileInfo(path));
@@ -908,7 +906,7 @@ public class ExcelDataAutoInsertLanguage
                 }
 
             //根据模板插入对应数据行，并复制
-            var endRowSource1 = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, fixFileModeId);
+            //var endRowSource1 = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, fixFileModeId);
             //if (endRowSource == -1)
             //{
             //    MessageBox.Show(fixFileModeId + @"目标表中不存在");
@@ -1005,10 +1003,10 @@ public class ExcelDataAutoInsertLanguage
 
                         var sourceStr = cellTarget.Value?.ToString();
                         var reg = "\\d+";
-                        if (sourceStr == null || sourceStr == "") continue;
+                        if (string.IsNullOrEmpty(sourceStr)) continue;
                         var matches = Regex.Matches(sourceStr, reg);
 
-                        var oldId = matches[0].Value.ToString();
+                        var oldId = matches[0].Value;
                         if (newId != "") sourceStr = sourceStr.Replace(oldId, newId);
                         cellTarget.Value = sourceStr;
                     }
@@ -1044,9 +1042,8 @@ public class ExcelDataAutoInsertLanguage
                             if (repeatValue == sourceValue)
                             {
                                 var branchId = sourceDataList[k][sourceTitle.IndexOf("BranchID")];
-                                if (!uniqueValues1.Contains(branchId))
+                                if (uniqueValues1.Add(branchId))
                                 {
-                                    uniqueValues1.Add(branchId);
                                     strBranch = strBranch + branchId + ",";
                                 }
                             }
@@ -1059,10 +1056,10 @@ public class ExcelDataAutoInsertLanguage
                     {
                         var newId = sourceDataList[m][sourceTitle.IndexOf("BranchID")]?.ToString();
                         var sourceStr = cellTarget.Value?.ToString();
-                        if (sourceStr == null || sourceStr == "") continue;
+                        if (string.IsNullOrEmpty(sourceStr)) continue;
                         var reg = "\\d+";
                         var matches = Regex.Matches(sourceStr, reg);
-                        var oldId = matches[0].Value.ToString();
+                        var oldId = matches[0].Value;
                         if (newId != "") sourceStr = sourceStr.Replace(oldId, newId);
                         cellTarget.Value = sourceStr;
                     }
@@ -1944,6 +1941,7 @@ public class ExcelDataAutoInsertCopyMulti
             //合并数据
             var targetRowList =
                 PubMetToExcel.MergeExcel(sourceRangeValue, targetSheet, targetRangeTitle, sourceRangeTitle);
+            // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < targetRowList.Count; i++)
             {
                 var cellTarget = targetSheet.Cells[targetRowList[i], 1, targetRowList[i], targetMaxCol];
@@ -2003,7 +2001,6 @@ public class ExcelDataAutoInsertCopyMulti
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var errorList = new List<(string, string, string)>();
-        string targetExcelPath;
         //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
@@ -2019,7 +2016,7 @@ public class ExcelDataAutoInsertCopyMulti
             return errorList;
         }
 
-        targetExcelPath = excelPath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
+        var targetExcelPath = excelPath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
         //获取目标表格对象
         if (targetExcelPath == "") return errorList;
 
@@ -2060,6 +2057,7 @@ public class ExcelDataAutoInsertCopyMulti
             //获取单元格颜色
             var colorCell = sheet.Cells[minRow, 2];
             var cellColor = PubMetToExcel.GetCellBackgroundColor(colorCell);
+            // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < targetRowList.Count; i++)
             {
                 var cellTarget = targetSheet.Cells[targetRowList[i], 1, targetRowList[i], targetMaxCol];
@@ -2117,7 +2115,6 @@ public class ExcelDataAutoInsertCopyMulti
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var errorList = new List<(string, string, string)>();
-        string targetExcelPath;
         //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
@@ -2133,7 +2130,7 @@ public class ExcelDataAutoInsertCopyMulti
             return errorList;
         }
 
-        targetExcelPath = excelPath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
+        var targetExcelPath = excelPath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
         //获取目标表格对象
         if (targetExcelPath == "") return errorList;
 
@@ -2211,6 +2208,7 @@ public class ExcelDataAutoInsertActivityServer
         var fixDataList = fixData.Item2;
         var fixNames = fixTitle.IndexOf("活动名称");
         var fixIds = fixTitle.IndexOf("活动id");
+        // ReSharper disable once IdentifierTypo
         var fixPushs = fixTitle.IndexOf("前端可获取活动时间");
         var fixPushEnds = fixTitle.IndexOf("停止向前端发送活动时间");
         var fixPreHeats = fixTitle.IndexOf("预热期开始时间");
@@ -2239,6 +2237,7 @@ public class ExcelDataAutoInsertActivityServer
                         mergeRange.Column, mergeRange.Column + mergeRange.Columns.Count - 1));
                     //// 打印合并范围的行列信息
                     //Debug.Print($"合并范围：{mergedRange.Address}");
+                    // ReSharper disable once CommentTypo
                     //Debug.Print($"合并范围内值：{tempvalue}");
                     //Debug.Print($"合并范围的起始行列：{mergedRange.Row},{mergedRange.Column}");
                     //Debug.Print($"合并范围的结束行列：{mergedRange.Row + mergedRange.Rows.Count - 1},{mergedRange.Column + mergedRange.Columns.Count - 1}");
