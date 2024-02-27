@@ -908,12 +908,15 @@ public class ExcelDataAutoInsertLanguage
                 }
 
             //根据模板插入对应数据行，并复制
-            var endRowSource = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, fixFileModeId);
-            if (endRowSource == -1)
-            {
-                MessageBox.Show(fixFileModeId + @"目标表中不存在");
-                continue;
-            }
+            var endRowSource1 = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, fixFileModeId);
+            //if (endRowSource == -1)
+            //{
+            //    MessageBox.Show(fixFileModeId + @"目标表中不存在");
+            //    continue;
+            //}
+
+            //统一在最后一行插入
+            var endRowSource = targetSheet.Dimension.End.Row;
 
             targetSheet.InsertRow(endRowSource + 1, sourceDataList.Count);
             var colCount = targetSheet.Dimension.Columns;
@@ -1451,6 +1454,7 @@ public class ExcelDataAutoInsertMulti
 
             //尽量和源数据格式一致，宋体的格式会歪？不知道为什么
             cellTarget.Style.Font.Name = "微软雅黑";
+            cellTarget.Style.Font.Size = 10;
             cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
             //数据修改
             var fixItem = fixKey[excelName][excelMulti].Item1;

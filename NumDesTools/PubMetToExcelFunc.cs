@@ -76,6 +76,7 @@ public class PubMetToExcelFunc
         var workBook = NumDesAddIn.App.ActiveWorkbook;
         var workBookName = workBook.Name;
         var workbookPath = workBook.Path;
+        workbookPath = System.IO.Path.GetDirectoryName(workbookPath);
         var selectCellValue = "";
         if (selectCell.Value != null) selectCellValue = selectCell.Value.ToString();
         //正则出是Excel路径的单元格
@@ -105,13 +106,13 @@ public class PubMetToExcelFunc
                         selectCellValue = workbookPath + @"\Localizations\Localizations.xlsx";
                         break;
                     case "UIConfigs.xlsx":
-                        selectCellValue = workbookPath + @"\Excels\UIs\UIConfigs.xlsx";
+                        selectCellValue = workbookPath + @"\UIs\UIConfigs.xlsx";
                         break;
                     case "UIItemConfigs.xlsx":
-                        selectCellValue = workbookPath + @"\Excels\UIs\UIItemConfigs.xlsx";
+                        selectCellValue = workbookPath + @"\UIs\UIItemConfigs.xlsx";
                         break;
                     default:
-                        selectCellValue = workbookPath + @"\" + selectCellValue;
+                        selectCellValue = workbookPath + @"\Tables\" + selectCellValue;
                         break;
                 }
                 sheetName = "Sheet1";

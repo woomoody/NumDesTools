@@ -133,8 +133,7 @@
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
   </ItemGroup>
   <PropertyGroup>
-    <PostBuildEvent>xcopy "$(TargetDir)NumDesTools.dll" "$(SolutionDir)pack" /y
-call "$(SolutionDir)packFromBin\ReNamePack.bat" /y
+    <PostBuildEvent>call "$(SolutionDir)packFromBin\ReNamePack.bat" /y
 </PostBuildEvent>
   </PropertyGroup>
 </Project>

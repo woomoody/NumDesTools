@@ -387,7 +387,7 @@ public class PubMetToExcel
         }
         else
         {
-            dataRow = selectRange.Row;
+            dataRow = usedRange.Row;
             dataRowEnd = dataRow + usedRange.Rows.Count - 1;
         }
         //确定列，不确定行
@@ -398,7 +398,7 @@ public class PubMetToExcel
         }
         else
         {
-            dataCol = selectRange.Column;
+            dataCol = usedRange.Column;
             dataColEnd = dataCol + usedRange.Columns.Count - 1;
         }
         Range dataRangeStart = workSheet.Cells[dataRow, dataCol];
