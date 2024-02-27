@@ -312,7 +312,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
                 comButton8)
             {
                 comButton8.Tag = "对话写入";
-                comButton8.Caption = "对话写入";
+                comButton8.Caption = "对话写入(末尾)";
                 comButton8.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton8.Click += ExcelDataAutoInsertLanguage.AutoInsertDataByUd;
             }
