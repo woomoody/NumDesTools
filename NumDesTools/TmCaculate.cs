@@ -25,6 +25,7 @@ public class TmCaculate
         var eleCount = new Dictionary<string, int>();
         //新eleID列表
         var targetRangeValueList = new List<List<object>>();
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < modelRangeValueList.Count; i++)
         {
             var tempTarget = new List<object>();
@@ -35,6 +36,7 @@ public class TmCaculate
                     if (ele != null && eleCount.ContainsKey(ele))
                         eleCount[ele]++;
                     else if (ele != null) eleCount[ele] = 1;
+                    // ReSharper disable once ForCanBeConvertedToForeach
                     for (var k = 0; k < targetEleMaxValueList.Count; k++)
                         if (ele == targetEleMaxValueList[k][0].ToString())
                         {
@@ -81,6 +83,7 @@ public class TmCaculate
         var eleCount = new Dictionary<string, int>();
         //非目标ID库循环列表
         var eleIdLoop = new Dictionary<string, List<int>>();
+        // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < targetEleMaxValueList.Count; i++)
         {
             var loopTimes = Convert.ToInt32(targetEleMaxValueList[i][5]);

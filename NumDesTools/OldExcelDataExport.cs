@@ -33,9 +33,7 @@ namespace NumDesTools;
 public interface IMyUserControl { }
 [ComVisible(true)]
 [ComDefaultInterface(typeof(IMyUserControl))]
-public  class LabelControl : UserControl, IMyUserControl
-{
-}
+public  class LabelControl : UserControl, IMyUserControl;
 #endregion
 public static class ErrorLogCtp
 {
@@ -166,7 +164,7 @@ public static class ExcelSheetDataIsError
             var fileStr = "";
             var indexTxt = Convert.ToString(arr.GetValue(6, j));
             //判断是否中文
-            var isChinese = Regex.IsMatch(indexTxt, "[\u4e00-\u9fbb]");
+            var isChinese = indexTxt != null && Regex.IsMatch(indexTxt, "[\u4e00-\u9fbb]");
             if (indexTxt != "" && isChinese != true)
             {
                 //获取索引列的txt文件所有字符串
@@ -227,7 +225,7 @@ public static class ExcelSheetDataIsError
                     }
 
                     if (fileStr == "" || i <= 8) continue;
-                    var isIndexWrong = fileStr.Contains(cellString);
+                    var isIndexWrong = cellString != null && fileStr.Contains(cellString);
                     if (isIndexWrong != true)
                         isError = sheetName + "/" + colEng + i + "→" + indexTxt + ":不存在值" + "\r\n" + isError;
                 }
@@ -294,7 +292,7 @@ public static class ExcelSheetDataIsError2
             var fileStr = "";
             var indexTxt = Convert.ToString(arr.GetValue(6, j));
             //判断是否中文
-            var isChinese = Regex.IsMatch(indexTxt, "[\u4e00-\u9fbb]");
+            var isChinese = indexTxt != null && Regex.IsMatch(indexTxt, "[\u4e00-\u9fbb]");
             if (indexTxt != "" && isChinese != true)
             {
                 //获取索引列的txt文件所有字符串
@@ -459,50 +457,53 @@ public static class FormularCheck
         for (var j = 1; j < colCnt + 1; j++)
         {
             var errorFormula = Convert.ToString(arrOld.GetValue(i, j));
-            var errorFormulaStrArr = errorFormula.Split(',');
-            var currentFormulaStr = errorFormula;
-            if (errorFormula != "")
-                foreach (var errorFormulaStr in errorFormulaStrArr)
-                {
-                    var errorFormulaStrKey = errorFormulaStr.Substring(0, 1);
-                    if (errorFormulaStrKey == "'" || errorFormulaStrKey == "=")
+            if (errorFormula != null)
+            {
+                var errorFormulaStrArr = errorFormula.Split(',');
+                var currentFormulaStr = errorFormula;
+                if (errorFormula != "")
+                    foreach (var errorFormulaStr in errorFormulaStrArr)
                     {
-                        //获取文件名
-                        var indexA = errorFormulaStr.IndexOf(strStar, StringComparison.Ordinal);
-                        var indexB = errorFormulaStr.IndexOf(strEnd, StringComparison.Ordinal);
-                        if (indexA >= 0 && indexB >= 0)
-                            fileName = errorFormulaStr.Substring(indexA + strStar.Length,
-                                indexB - indexA - strEnd.Length);
-                        //获取正确的文件名
-                        var indexRealA = fileName.IndexOf(strRealStar, StringComparison.Ordinal);
-                        var indexRealB = fileName.IndexOf(strRealEnd, StringComparison.Ordinal);
-                        if ((indexA >= 0 && indexB >= 0) || fileName != "")
+                        var errorFormulaStrKey = errorFormulaStr.Substring(0, 1);
+                        if (errorFormulaStrKey == "'" || errorFormulaStrKey == "=")
                         {
-                            var errorStr = fileName.Substring(indexRealA + strRealStar.Length,
-                                indexRealB - indexRealA - strRealEnd.Length - 2);
-                            if (errorStr != "") fileRealName = fileName.Replace(errorStr, "");
+                            //获取文件名
+                            var indexA = errorFormulaStr.IndexOf(strStar, StringComparison.Ordinal);
+                            var indexB = errorFormulaStr.IndexOf(strEnd, StringComparison.Ordinal);
+                            if (indexA >= 0 && indexB >= 0)
+                                fileName = errorFormulaStr.Substring(indexA + strStar.Length,
+                                    indexB - indexA - strEnd.Length);
+                            //获取正确的文件名
+                            var indexRealA = fileName.IndexOf(strRealStar, StringComparison.Ordinal);
+                            var indexRealB = fileName.IndexOf(strRealEnd, StringComparison.Ordinal);
+                            if ((indexA >= 0 && indexB >= 0) || fileName != "")
+                            {
+                                var errorStr = fileName.Substring(indexRealA + strRealStar.Length,
+                                    indexRealB - indexRealA - strRealEnd.Length - 2);
+                                if (errorStr != "") fileRealName = fileName.Replace(errorStr, "");
+                            }
+
+                            //获取文件FullName
+                            var indexFullA = errorFormulaStr.IndexOf(strFullStar, StringComparison.Ordinal);
+                            var indexFullB = errorFormulaStr.IndexOf(strFullEnd, StringComparison.Ordinal);
+                            if (indexFullA >= 0 && indexFullB >= 0)
+                                fileFullName = errorFormulaStr.Substring(indexFullA + strFullStar.Length,
+                                    indexFullB - indexFullA - strFullEnd.Length);
+                            //string cellName = aaa.Substring(aaa.IndexOf("!"), aaa.Length - aaa.IndexOf("!"));
+                            if (fileFullName != "" && fileRealName != "")
+                            {
+                                var filePath = actFilePath + "\\[" + fileRealName;
+                                currentFormulaStr = currentFormulaStr.Replace(fileFullName, filePath);
+                            }
+
+                            fileFullName = "";
+                            fileName = "";
+                            fileRealName = "";
                         }
 
-                        //获取文件FullName
-                        var indexFullA = errorFormulaStr.IndexOf(strFullStar, StringComparison.Ordinal);
-                        var indexFullB = errorFormulaStr.IndexOf(strFullEnd, StringComparison.Ordinal);
-                        if (indexFullA >= 0 && indexFullB >= 0)
-                            fileFullName = errorFormulaStr.Substring(indexFullA + strFullStar.Length,
-                                indexFullB - indexFullA - strFullEnd.Length);
-                        //string cellName = aaa.Substring(aaa.IndexOf("!"), aaa.Length - aaa.IndexOf("!"));
-                        if (fileFullName != "" && fileRealName != "")
-                        {
-                            var filePath = actFilePath + "\\[" + fileRealName;
-                            currentFormulaStr = currentFormulaStr.Replace(fileFullName, filePath);
-                        }
-
-                        fileFullName = "";
-                        fileName = "";
-                        fileRealName = "";
+                        arrNew[i - 1, j - 1] = currentFormulaStr;
                     }
-
-                    arrNew[i - 1, j - 1] = currentFormulaStr;
-                }
+            }
         }
 
         rng.Value[Missing.Value] = arrNew;
@@ -560,6 +561,7 @@ public static class PreviewTableCtp
 
 public static class ExcelSheetData
 {
+    // ReSharper disable once UnusedMember.Global
     public static void RwExcelDataUseNpoi()
     {
         var fpe = @"D:\\work\\Public\\Excels\\Tables\\【关卡-战斗怪物组】 - 副本.xlsx";
@@ -641,10 +643,9 @@ public static class ExcelSheetData
         //string[,] arr = new string[rowCnt, colCnt];
         var range = ws.Range[ws.Cells[1, 1], ws.Cells[rowCnt, colCnt]];
         Array arr = range.Value2;
-        int dataCount;
         var dataPath = "";
         var dataValueStrFull = "";
-        for (dataCount = 1; dataCount < 5; dataCount++)
+        for (var dataCount = 1; dataCount < 5; dataCount++)
         {
             string langTag;
             int dataOrder;
@@ -682,16 +683,14 @@ public static class ExcelSheetData
             if (isLan == -1)
                 continue;
             //数据拼成个大字符串
-            int i;
-            for (i = 1; i < rowCnt + 1; i++)
+            for (var i = 1; i < rowCnt + 1; i++)
             {
                 //定义字符串首行数据
                 var cellsRowIsOut = Convert.ToString(arr.GetValue(i, 1));
                 //判断行数据是否导出
                 if (cellsRowIsOut != "*") continue;
                 var dataValueStr = Convert.ToString(arr.GetValue(i, 2));
-                int j;
-                for (j = 3; j < colCnt + 1; j++)
+                for (var j = 3; j < colCnt + 1; j++)
                 {
                     var cellsValue = Convert.ToString(arr.GetValue(i, j));
                     var cellsValueDefault = Convert.ToString(arr.GetValue(9, j));
@@ -741,6 +740,7 @@ public static class ExcelSheetData
 
 #endregion
 
+// ReSharper disable once UnusedMember.Global
 internal class GetImageByStdole : AxHost
 {
     // ReSharper disable once AssignNullToNotNullAttribute
@@ -748,6 +748,7 @@ internal class GetImageByStdole : AxHost
     {
     }
 
+    // ReSharper disable once UnusedMember.Global
     public static IPictureDisp ImageToPictureDisp(Image image)
     {
         return (IPictureDisp)GetIPictureDispFromPicture(image);

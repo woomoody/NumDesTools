@@ -4,6 +4,8 @@ using System.Windows.Forms;
 using Font = System.Drawing.Font;
 using Range = Microsoft.Office.Interop.Excel.Range;
 using IWin32Window = System.Windows.Forms.IWin32Window;
+#pragma warning disable CA1416
+#pragma warning disable CA1416
 
 
 namespace NumDesTools;
@@ -39,8 +41,12 @@ public class CellSelectChangeTip : ClickThroughForm
     private void TargetStrWrite(object sender, PaintEventArgs e)
     {
         // 在窗体上绘制文本
+#pragma warning disable CA1416
         using var brush = new SolidBrush(Color.White);
+#pragma warning restore CA1416
+#pragma warning disable CA1416
         e.Graphics.DrawString(_displayText, new Font("微软雅黑", 13), brush, new PointF(10, 10));
+#pragma warning restore CA1416
     }
     public void ShowToolTip(string text, Range target)
     {
@@ -58,7 +64,9 @@ public class CellSelectChangeTip : ClickThroughForm
         var workingAreaWidth = workingArea.Width * 1.67;
         var workingAreaHeight = workingArea.Height * 1.67;
         // 获取字体占的像素
+#pragma warning disable CA1416
         var size = TextRenderer.MeasureText(_displayText, new Font("微软雅黑", 13));
+#pragma warning restore CA1416
         var tipWidth = size.Width + 10;
         var tipHeight = size.Height + 10;
         // 获取单元格的工作区域坐标
@@ -97,9 +105,12 @@ public class CellSelectChangeTip : ClickThroughForm
         public IntPtr Handle
         {
             get;
+            // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
             private set;
         }
+#pragma warning disable IDE0290
         public Win32Window(IntPtr handle)
+#pragma warning restore IDE0290
         {
             Handle = handle;
         }
@@ -144,7 +155,9 @@ public class CellSelectChangeTip : ClickThroughForm
     {
         var target = NumDesAddIn.App.ActiveCell;
         // 获取字体占的像素
+#pragma warning disable CA1416
         var size = TextRenderer.MeasureText(_displayText, new Font("微软雅黑", 13));
+#pragma warning restore CA1416
         var tipWidth = size.Width + 10;
         var tipHeight = size.Height + 10;
         // 获取单元格的工作区域坐标
@@ -177,7 +190,11 @@ public class CellSelectChangeTip : ClickThroughForm
 //点击穿透界面
 public class ClickThroughForm : Form
 {
+    // ReSharper disable once InconsistentNaming
+    // ReSharper disable once IdentifierTypo
     private const int WM_NCHITTEST = 0x84;
+    // ReSharper disable once IdentifierTypo
+    // ReSharper disable once InconsistentNaming
     private const int HTTRANSPARENT = -1;
 
     public ClickThroughForm()
@@ -185,6 +202,7 @@ public class ClickThroughForm : Form
         // 允许窗体透明度
         SetStyle(ControlStyles.SupportsTransparentBackColor, true);
         // 设置窗体为透明
+        // ReSharper disable once VirtualMemberCallInConstructor
         BackColor = Color.Transparent;
     }
 
@@ -192,6 +210,7 @@ public class ClickThroughForm : Form
     {
         if (m.Msg == WM_NCHITTEST)
         {
+            // ReSharper disable once CommentTypo
             // 如果鼠标在窗体区域，返回 HTTRANSPARENT，表示鼠标事件透传到下一层控件
             m.Result = (IntPtr)HTTRANSPARENT;
             return;

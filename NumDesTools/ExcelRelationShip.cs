@@ -1,4 +1,5 @@
-﻿namespace NumDesTools;
+﻿// ReSharper disable All
+namespace NumDesTools;
 
 /// <summary>
 /// 废弃的Excel关系图

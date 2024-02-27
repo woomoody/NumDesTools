@@ -28,8 +28,7 @@ public class ExcelUdf
         var path = ExcelPath + @"\" + targetWorkbook;
         var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         var workbook = new XSSFWorkbook(fs);
-        var sheet = workbook.GetSheet(targetSheet);
-        if (sheet == null) sheet = workbook.GetSheetAt(0);
+        var sheet = workbook.GetSheet(targetSheet) ?? workbook.GetSheetAt(0);
         var rowSource = sheet.GetRow(row);
         for (int j = rowSource.FirstCellNum; j <= rowSource.LastCellNum; j++)
         {
@@ -60,8 +59,7 @@ public class ExcelUdf
         var path = ExcelPath + @"\" + targetWorkbook;
         var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         var workbook = new XSSFWorkbook(fs);
-        var sheet = workbook.GetSheet(targetSheet);
-        if (sheet == null) sheet = workbook.GetSheetAt(0);
+        var sheet = workbook.GetSheet(targetSheet) ?? workbook.GetSheetAt(0);
         for (var i = sheet.FirstRowNum; i <= sheet.LastRowNum; i++)
         {
             var rowSource = sheet.GetRow(i);
@@ -273,8 +271,8 @@ public class ExcelUdf
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")] object[,] rangeObj,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false",Name = "过滤空值")] bool ignoreEmpty)
     {
-        List<object> rangeValueList = new List<object>();
-        List<object> rangeColIndexList = new List<object>();
+        List<object> rangeValueList = [];
+        List<object> rangeColIndexList = [];
 
         int rowCount = rangeObj.GetLength(0);
         int colCount = rangeObj.GetLength(1);

@@ -1265,7 +1265,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         var sheet = workBook.Worksheets["IceClimberGridTemp"];
         var sw = new Stopwatch();
         sw.Start();
-        var abc = ExcelDataAutoInsert.FindSourceRow(sheet, 2, "5000144");
+        ExcelDataAutoInsert.FindSourceRow(sheet, 2, "5000144");
         //PubMetToExcelFunc.Main();
         //var name = abc.sheetName;
         //var path  = abc.sheetPath;
@@ -1356,7 +1356,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         // 将修改后的内容写回文件
         File.WriteAllLines(_defaultFilePath, lines);
     }
-    private List<CellSelectChangeTip> _customZoomForms = new List<CellSelectChangeTip>();
+    private List<CellSelectChangeTip> _customZoomForms = [];
     public void ZoomInOut_Click(IRibbonControl control)
     {
         if (control == null) throw new ArgumentNullException(nameof(control));

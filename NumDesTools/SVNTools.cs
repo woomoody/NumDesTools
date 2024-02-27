@@ -1,4 +1,5 @@
-﻿//using System.Diagnostics;
+﻿// ReSharper disable All
+//using System.Diagnostics;
 //using SharpSvn;
 
 //namespace NumDesTools;

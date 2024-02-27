@@ -2,6 +2,7 @@
 using System;
 using System.Net;
 using System.Text;
+#pragma warning disable CA1416
 
 namespace NumDesTools;
 
@@ -14,8 +15,6 @@ public class SearchEngine
     [ExcelFunction(IsHidden = true)]
     public static string GoogleSearch(string query)
     {
-        const string seachIndex1 = "/search?q=";
-        const string google = "https://www.google.com";
         //if (PingWebsite(google))
         //{
         //    url = google + seachIndex1 + query;
@@ -49,8 +48,6 @@ public class SearchEngine
     [ExcelFunction(IsHidden = true)]
     public static string BingSearch(string query)
     {
-        const string seachIndex1 = "/search?q=";
-        const string bingInternational = "https://www.bing.com";
         var result = new StringBuilder();
         try
         {
@@ -66,6 +63,7 @@ public class SearchEngine
     }
 
     [ExcelFunction(IsHidden = true)]
+    [Obsolete("Obsolete")]
     public static bool PingWebsite(string url)
     {
         bool isPass;

@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
 using Range = Microsoft.Office.Interop.Excel.Range;
+// ReSharper disable All
+#pragma warning disable CA1416
 
 namespace NumDesTools;
 
@@ -18,6 +20,7 @@ public class DotaLegendBattleTem
     private static readonly object MMonitorObject = new();
     private static int _hpB;
 
+    // ReSharper disable once UnusedMember.Global
     public static void BatimeTem()
     {
         //    Stopwatch sw = new Stopwatch();
@@ -133,6 +136,7 @@ public class DotaLegendBattleTem
         return cad;
     }
 
+    // ReSharper disable once UnusedMember.Global
     public static void Test234()
     {
         if (!Monitor.TryEnter(MMonitorObject))

@@ -1,5 +1,6 @@
 ﻿using System;
 using Excel = Microsoft.Office.Interop.Excel;
+// ReSharper disable All
 
 
 namespace NumDesTools
