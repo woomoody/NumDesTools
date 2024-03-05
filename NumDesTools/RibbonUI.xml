@@ -99,6 +99,8 @@
                             onAction='TmTargetEle_Click' />
                     <button id='Button17' size='large' label='TM非目标元素' image='email' screentip='Tm非目标元素生成'
                             onAction='TmNormalEle_Click' />
+                    <button id='Button_MagicBottle' size='large' label='移动魔瓶' image='cpp' screentip='移动魔瓶消耗模拟计算'
+                            onAction='MagicBottle_Click' />
                 </group>
                 <group id='Group9999' label='测试功能区'>
                     <button id='Button99991' size='large' label='不要点击红色按钮' image='sofa' onAction='TestBar1_Click' />

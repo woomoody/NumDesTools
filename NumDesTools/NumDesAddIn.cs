@@ -1229,7 +1229,9 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-        PubMetToExcelFunc.AliceBigRicherDfs2();
+        var ws = App.ActiveSheet;
+        var sheetName = ws.Name;
+        PubMetToExcelFunc.AliceBigRicherDfs2(sheetName);
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
@@ -1256,7 +1258,17 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
-
+    public void MagicBottle_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var ws = App.ActiveSheet;
+        var sheetName = ws.Name;
+        PubMetToExcelFunc.MagicBottleCostSimulate(sheetName);
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
     public void TestBar1_Click(IRibbonControl control)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;

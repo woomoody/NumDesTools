@@ -5,6 +5,8 @@ using System.Linq;
 using Microsoft.Office.Core;
 using System;
 using System.Diagnostics;
+using System.Windows;
+using Microsoft.VisualStudio.TextManager.Interop;
 using OfficeOpenXml;
 
 namespace NumDesTools;
@@ -165,9 +167,14 @@ public class PubMetToExcelFunc
         PubMetToExcel.OpenExcelAndSelectCell(newPath, "Sheet1", cellAddress);
     }
 
-    public static void AliceBigRicherDfs2()
+    public static void AliceBigRicherDfs2(string sheetName)
     {
-        var sheetName = "大富翁随机";
+
+        var baseName = "大富翁种";
+        if (!sheetName.Contains(baseName))
+        {
+            MessageBox.Show("当前表格不是【大富翁种**】,无法使用大富翁功能");
+        }
         //读取数据（0起始）
         var targetRank = PubMetToExcel.ReadExcelDataC(sheetName, 21, 44, 2, 2);
         //object[,] seedRangeValue = PubMetToExcel.ReadExcelDataC(sheetName, 2, 7, 6, 6);
@@ -344,6 +351,93 @@ public class PubMetToExcelFunc
         }
         return result;
     }
+    //移动魔瓶模拟消耗
+    public static void MagicBottleCostSimulate(string sheetName)
+    {
 
+        var baseName = "移动魔瓶";
+        if (!sheetName.Contains(baseName))
+        {
+            MessageBox.Show("当前表格不是【移动魔瓶**】,无法使用魔瓶验算");
+        }
+        //读取数据（0起始）
+        var eleCount = PubMetToExcel.ReadExcelDataC(sheetName, 2, 8, 21, 21);
+        var simulateCount = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 21, 21);
+        var simulateCountMax = Convert.ToInt32(simulateCount[0, 0]);
+        var eleCountMax = eleCount.GetLength(0);
+        var filterEleCountMax = new List<int>();
+        //初始化统计list
+        for (var r = 0; r < eleCountMax; r++)
+        {
+            filterEleCountMax.Add(0);
+        }
+        //模拟猜数字
+        for (var s = 0; s < simulateCountMax; s++)
+        {
+            for (var r = 0; r < eleCountMax; r++)
+            {
+                var eleGuessListGroup = new List<List<int>>();
+                var eleNum = Convert.ToInt32(eleCount[r,0]);
+                //创建随机元素序列List
+                var eleList = new List<int>();
+                var eleGuessList = new List<int>();
+                for (int e = 1; e <= eleNum; e++)
+                {
+                    eleList.Add(e);
+                    eleGuessList.Add(e);
+                }
+                var seedTarget = new Random();
+                eleList = eleList.OrderBy(x => seedTarget.Next()).ToList();
+                var seedGuess = new Random();
+                eleGuessList = eleGuessList.OrderBy(x => seedGuess.Next()).ToList();
+                do
+                {
+                    //随机猜数字，剔除对的
+                    for (var eleCurrent = eleList.Count -1; eleCurrent >= 0; eleCurrent--)
+                    {
+                        var ele = eleList[eleCurrent];
+                        var eleGuess = eleGuessList[eleCurrent];
+                        if (eleGuess == ele)
+                        {
+                            eleList.RemoveAt(eleCurrent);
+                            eleGuessList.RemoveAt(eleCurrent);
+                        }
+                        filterEleCountMax[r]++;
+                    }
+                    eleGuessListGroup.Add(eleGuessList);
+                    //List重新排序和上次不同
+                    if (eleList.Count > 1)
+                    {
+                        var eleTempList = new List<int>();
+                        var seedTemp = new Random();
+                        do
+                        {
+                            eleTempList = eleGuessList.OrderBy(x => seedTemp.Next()).ToList();
+                        } while (eleGuessListGroup.Any(list => list.SequenceEqual(eleTempList)));
+                        eleGuessList = eleTempList;
+                    }
+                } while (eleList.Count != 0);
+            }
+        }
+        var filterEleCountMaxObj = filterEleCountMax.Select(item => (double)item / simulateCountMax).Select(simulateValue => new List<object> { simulateValue }).ToList();
+        //清理
+        var emptyData = new object[7, 7];
+        PubMetToExcel.WriteExcelDataC(sheetName, 2, 8, 22, 22, emptyData);
+        var emptyData2 = new object[1, 1];
+        PubMetToExcel.WriteExcelDataC(sheetName, 0, 0, 23, 23, emptyData2);
+        //错误提示
+        if (filterEleCountMax.Count == 0)
+        {
+            var error = new object[1, 1];
+            error[0, 0] = "#Error#";
+            PubMetToExcel.WriteExcelDataC(sheetName, 0, 0, 23, 23, error);
+        }
+        else
+        {
+            //写入
+            PubMetToExcel.WriteExcelDataC(sheetName, 2, 2 + filterEleCountMax.Count - 1, 22, 22,
+                PubMetToExcel.ConvertListToArray(filterEleCountMaxObj));
+        }
+    }
 }
 
