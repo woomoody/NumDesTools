@@ -419,7 +419,9 @@ public class PubMetToExcelFunc
                 } while (eleList.Count != 0);
             }
         }
-        var filterEleCountMaxObj = filterEleCountMax.Select(item => (double)item / simulateCountMax).Select(simulateValue => new List<object> { simulateValue }).ToList();
+        // ReSharper disable once PossibleLossOfFraction
+        var filterEleCountMaxObj = filterEleCountMax.Select(item => (double)(item / simulateCountMax))
+            .Select(simulateValue => new List<object> { simulateValue }).ToList();
         //清理
         var emptyData = new object[7, 7];
         PubMetToExcel.WriteExcelDataC(sheetName, 2, 8, 22, 22, emptyData);
