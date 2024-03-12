@@ -5,6 +5,7 @@ using NPOI.XSSF.UserModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using NPOI.OpenXmlFormats.Vml;
 
 #pragma warning disable CA1416
 #pragma warning disable CA1416
@@ -99,13 +100,16 @@ public class ExcelUdf
     public static int GetNumFromStr([ExcelArgument(AllowReference = true, Description = "输入字符串")] string inputValue,
         [ExcelArgument(AllowReference = true, Name = "分隔符",Description = "分隔符,eg:,")]
         string delimiter,
-        [ExcelArgument(AllowReference = true, Name = "数字序号",Description = "选择提取字符串中的第几个数字")]
+        [ExcelArgument(AllowReference = true, Name = "数字序号",Description = "选择提取字符串中的第几个数字，如果值很大，表示提取最末尾字符")]
         int numCount)
     {
         // 使用正则表达式匹配数字
         var numbers = Regex.Split(inputValue, delimiter)
             .SelectMany(s => Regex.Matches(s, @"\d+").Select(m => m.Value))
             .ToArray();
+        //增加只提取末尾字符的判断
+        var maxNumCount = numbers.Length;
+        numCount = Math.Min(maxNumCount, numCount);
         return Convert.ToInt32(numbers[numCount - 1]);
     }
     //拆分字符串为Str字符串
@@ -115,7 +119,7 @@ public class ExcelUdf
         string delimiter,
         [ExcelArgument(AllowReference = true, Name = "过滤符",Description = "过滤符,eg:[,]")]
         string filter,
-        [ExcelArgument(AllowReference = true, Name = "序号",Description = "选择提取字符串中的第几个字符串")]
+        [ExcelArgument(AllowReference = true, Name = "序号",Description = "选择提取字符串中的第几个字符串，如果值很大，表示提取最末尾字符")]
         int numCount)
     {
         // 分割字符串
@@ -131,6 +135,10 @@ public class ExcelUdf
                 }
             }
         }
+        //增加只提取末尾字符的判断
+        var maxNumCount = strGroup.Length;
+        numCount = Math.Min(maxNumCount, numCount);
+        //返回
         return strGroup[numCount - 1];
     }
     //组装字符串

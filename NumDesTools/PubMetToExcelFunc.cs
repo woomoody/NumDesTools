@@ -97,7 +97,7 @@ public class PubMetToExcelFunc
             else if(selectCellValue.Contains("#"))
             {
                 var excelSplit = selectCellValue.Split("#");
-                selectCellValue = workbookPath + @"\" + excelSplit[0];
+                selectCellValue = workbookPath + @"\Tables\" + excelSplit[0];
                 sheetName = excelSplit[1];
             }
             else
