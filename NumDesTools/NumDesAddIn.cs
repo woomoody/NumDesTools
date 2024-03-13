@@ -1307,8 +1307,9 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
+        var asb = PubMetToExcelFunc.texstEncapsulation();
         //PubMetToExcel.testEpPlus();
-        TmCaculate.CreatTmNormalEle();
+        //ExcelDataByMiniExcel.Read();
         //ExcelRelationShipEpPlus.StartExcelData();
         //并行计算，即时战斗（无先后），计算快
         //DotaLegendBattleParallel.BattleSimTime(true);
