@@ -441,5 +441,43 @@ public class PubMetToExcelFunc
                 PubMetToExcel.ConvertListToArray(filterEleCountMaxObj));
         }
     }
+    public static List<(string, string, string)> texstEncapsulation()
+    {
+        var errorList = new List<(string, string, string)>();
+        string excelPath = @"C:\Users\cent\Desktop";
+        string excelName = "tee.xlsx#Sheet1";
+        var list = new List<dynamic>();
+        //声明新类
+        var excelObj = new ExcelDataByEpplus();
+        //计算类属性
+        excelObj.GetExcelObj(excelPath, excelName);
+        //应用属性
+        if (excelObj.ErrorList.Count > 0)
+        {
+            return excelObj.ErrorList;
+        }
+        //读取数据
+        var sheet = excelObj.Sheet;
+        List<dynamic> data = excelObj.Read(sheet, 5, 899);
+        //修改数据
+        for (int i = 0; i < data.Count; i++)
+        {
+            var firstRecord = (IDictionary<string, object>)data[i];
+            foreach (var key in firstRecord.Keys.ToList())
+            {
+                // 尝试将值转换为字符串
+                string stringValue = firstRecord[key]?.ToString();
+                if (!string.IsNullOrEmpty(stringValue))
+                {
+                    // 如果字符串包含 "3"，则执行替换操作
+                    firstRecord[key] = stringValue.Replace("20", "11");
+                }
+            }
+        }
+        //写入数据-如果要写到别的Excel则需要在声明新类
+        var excel = excelObj.Excel;
+        excelObj.Write(sheet, excel, data, 5);
+        return errorList;
+    }
 }
 
