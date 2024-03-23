@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using NPOI.OpenXmlFormats.Vml;
+using SixLabors.ImageSharp;
 
 #pragma warning disable CA1416
 #pragma warning disable CA1416
@@ -94,7 +95,30 @@ public class ExcelUdf
         // 返回RGB格式的颜色值
         return $"{red}#{green}#{blue}";
     }
-
+    [ExcelFunction(Category = "SetExcelInfo", IsVolatile = true, IsMacroType = true, Description = "设置单元格背景色")]
+    public static string SetCellColor([ExcelArgument(AllowReference = true, Name = "单元格值", Description = "获取单元格值")] string inputValue)
+    {
+        //使用该公式的单元格地址
+        ExcelReference cellRef = (ExcelReference)XlCall.Excel(XlCall.xlfCaller);
+        string address = (string)XlCall.Excel(XlCall.xlfReftext, cellRef, true);
+        var sheet = NumDesAddIn.App.ActiveSheet;
+        var range = sheet.Range[address];
+        bool canConvertToInt = int.TryParse(inputValue, out int intValue);
+        if (!canConvertToInt)
+        {
+            return "error";
+        }
+        var value = intValue % 2;
+        if (value == 0)
+        {
+            range.Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Aquamarine);
+        }
+        else
+        {
+            range.Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.BurlyWood);
+        }
+        return "^0^";
+    }
     //拆分字符串为int数字
     [ExcelFunction(Category = "Str&Num", IsVolatile = true, IsMacroType = true, Description = "提取字符串中数字")]
     public static int GetNumFromStr([ExcelArgument(AllowReference = true, Description = "输入字符串")] string inputValue,
