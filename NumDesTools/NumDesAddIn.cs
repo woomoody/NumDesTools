@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Windows.Forms;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
@@ -1303,11 +1304,76 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
+    //var asb = PubMetToExcelFunc.texstEncapsulation();
+
+    //[DllImport("excel_data_rust.dll", CallingConvention = CallingConvention.Cdecl)]
+    //private static extern IntPtr Read(string path , string sheetName , int rowStart , int rowEnd , int colStart , int colEnd );
+    //[DllImport("excel_data_rust.dll", CallingConvention = CallingConvention.Cdecl)]
+    //private static extern IntPtr Writer(string path, string sheetName, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 3)] Change[] changes,
+    //    ulong changes_len);
+    //// Rust 中的 Change 结构对应的 C# 结构
+    //[StructLayout(LayoutKind.Sequential)]
+    //public struct Change
+    //{
+    //    public uint row;
+    //    public ushort col;
+    //    public string value; 
+    //}
+
+    //[DllImport("excel_data_rust.dll", CallingConvention = CallingConvention.Cdecl)]
+    //private static extern void Release(IntPtr data);
     public void TestBar2_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
-        var asb = PubMetToExcelFunc.texstEncapsulation();
+
+        //string path = "C:/Users/cent/Desktop/tee.xlsx";
+        //string excelName = "Sheet1";
+        var abc = PubMetToExcelFunc.texstEncapsulation();
+        ////只会读取UsedRange范围
+        //IntPtr dataPtr = Read(path , excelName , 1,6,1,2);
+
+        //if (dataPtr != IntPtr.Zero)
+        //{
+        //    try
+        //    {
+        //        string jsonData = Marshal.PtrToStringAnsi(dataPtr);
+        //        // 使用 System.Text.Json 来解析 JSON 数据
+        //        using var jsonDocument = JsonDocument.Parse(jsonData);
+        //        string jsonString =
+        //            JsonSerializer.Serialize(jsonDocument, new JsonSerializerOptions { WriteIndented = true });
+        //        Debug.Print(jsonString);
+        //        // 现在你可以根据你的 JSON 结构来处理 jsonDocument 了
+        //        // 例如，获取一个特定的值
+        //        // string someValue = jsonDocument.RootElement.GetProperty("someKey").GetString();
+
+        //        // Rust写入数据目前有问题
+        //        Change change = new Change
+        //        {
+        //            row = 1, // Excel 中的行和列通常从 1 开始
+        //            col = 1,
+        //            value = "FirstRUST" // 这里需要根据实际的 DataType 来创建和分配适当的值
+        //        };
+        //        // 创建包含单个 Change 结构体的数组
+        //        Change[] changes = new Change[] { change };
+
+        //        // 调用 Writer 函数
+        //        IntPtr resultPtr = Writer(path, "Sheet1", changes, (ulong)changes.Length);
+
+        //        // 将返回的 C 字符串转换为 C# 字符串
+        //        string result = Marshal.PtrToStringAnsi(resultPtr);
+
+        //        // 释放 Rust 分配的字符串内存（如果 Rust 函数确实分配了新的字符串）
+        //        Marshal.FreeHGlobal(resultPtr);
+        //    }
+        //    finally
+        //    {
+        //        // 确保在处理完数据后释放内存
+        //        Release(dataPtr);
+        //    }
+        //}
+
+
         //PubMetToExcel.testEpPlus();
         //ExcelDataByMiniExcel.Read();
         //ExcelRelationShipEpPlus.StartExcelData();

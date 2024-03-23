@@ -1500,7 +1500,7 @@ public class ExcelDataAutoInsertMulti
                 //默认备注
                 if (cellCol != null && cellCol.Contains("#") && commentValue != null)
                 {
-                    cellFix.Value = commentValue;
+                    cellFix.Value = commentValue + "-" + cellFix.Value.ToString();
                 }
                 //特殊字段需要CopyAlice
                 else
@@ -1572,7 +1572,7 @@ public class ExcelDataAutoInsertMulti
 
                         if (cellCol != null && cellCol.Contains("#") && commentValue != null)
                         {
-                            cellFix.Value = commentValue;
+                            cellFix.Value = commentValue + "-" + cellFix.Value.ToString();
                         }
                         else
                         {
