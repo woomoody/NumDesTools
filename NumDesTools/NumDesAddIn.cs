@@ -51,7 +51,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     private string _defaultFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "mergePath.txt");
     private string _currentBaseText;
     private string _currentTargetText;
-    TabControl tabControl = new TabControl();
+    TabControl _tabControl = new TabControl();
 
     #region 释放COM
 
