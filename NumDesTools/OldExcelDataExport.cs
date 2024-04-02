@@ -34,12 +34,14 @@ public interface IMyUserControl { }
 [ComVisible(true)]
 [ComDefaultInterface(typeof(IMyUserControl))]
 public  class LabelControl : UserControl, IMyUserControl;
+
 #endregion
 public static class ErrorLogCtp
 {
     public static CustomTaskPane Ctp;
     public static LabelControl LinkControl;
     public static LabelControl LabelControl;
+
     public static void CreateCtp(string errorLog)
     {
         LinkControl = new LabelControl();
