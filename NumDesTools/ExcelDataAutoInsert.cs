@@ -1502,7 +1502,7 @@ public class ExcelDataAutoInsertMulti
                 {
                     string[] parts = commentValue.Split("-");
                     string replaceValue = parts[0];
-                    cellFix.Value =  cellFix.Value.ToString().Replace(replaceValue, commentValue);
+                    cellFix.Value =  cellFix.Value.ToString()?.Replace(replaceValue, commentValue);
                 }
                 //特殊字段需要CopyAlice
                 else

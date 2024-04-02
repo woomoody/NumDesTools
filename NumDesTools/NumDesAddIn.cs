@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Windows.Forms;
 using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
@@ -22,9 +21,13 @@ using CommandBarControl = Microsoft.Office.Core.CommandBarControl;
 using Exception = System.Exception;
 using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
 using MsoControlType = Microsoft.Office.Core.MsoControlType;
+using Panel = System.Windows.Forms.Panel;
 using Path = System.IO.Path;
 using Point = System.Drawing.Point;
 using Range = Microsoft.Office.Interop.Excel.Range;
+using TabControl = System.Windows.Forms.TabControl;
+
+
 #pragma warning disable CA1416
 
 
@@ -48,6 +51,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     private string _defaultFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "mergePath.txt");
     private string _currentBaseText;
     private string _currentTargetText;
+    TabControl tabControl = new TabControl();
 
     #region 释放COM
 
@@ -1329,7 +1333,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
 
         //string path = "C:/Users/cent/Desktop/tee.xlsx";
         //string excelName = "Sheet1";
-        var abc = PubMetToExcelFunc.texstEncapsulation();
+        //var abc = PubMetToExcelFunc.texstEncapsulation();
         ////只会读取UsedRange范围
         //IntPtr dataPtr = Read(path , excelName , 1,6,1,2);
 
