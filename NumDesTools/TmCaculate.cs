@@ -40,8 +40,12 @@ public class TmCaculate
                     for (var k = 0; k < targetEleMaxValueList.Count; k++)
                         if (ele == targetEleMaxValueList[k][0].ToString())
                         {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                             var eleId = Convert.ToInt32(targetEleMaxValueList[k][3]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
                             var eleMax = Convert.ToInt32(targetEleMaxValueList[k][1]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
                             if (ele != null)
                             {
                                 var targetId = eleId + (eleCount[ele] - 1) % eleMax + 1;
@@ -86,10 +90,18 @@ public class TmCaculate
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < targetEleMaxValueList.Count; i++)
         {
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var loopTimes = Convert.ToInt32(targetEleMaxValueList[i][5]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var eleMax = Convert.ToInt32(targetEleMaxValueList[i][4]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var eleBaseId = Convert.ToInt32(targetEleMaxValueList[i][3]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var eleTheme = Convert.ToString(targetEleMaxValueList[i][0]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
             var loopIdList = new List<int>();
             for (var j = 0; j < loopTimes * eleMax; j++)
             {
@@ -117,11 +129,13 @@ public class TmCaculate
                     {
                         var eleId = eleIdLoop[ele][eleCount[ele] - 1];
                         foreach (var id in targetModelRangeValueList[i])
+#pragma warning disable CA1305 // 指定 IFormatProvider
                             if (Convert.ToInt32(id) == eleId)
                             {
                                 eleCount[ele]++;
                                 eleId = eleIdLoop[ele][eleCount[ele] - 1];
                             }
+#pragma warning restore CA1305 // 指定 IFormatProvider
 
                         tempTarget.Add(eleId);
                     }
