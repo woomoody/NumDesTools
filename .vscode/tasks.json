@@ -17,6 +17,20 @@
             "command": "& 'C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe' '${workspaceFolder}\\NumDesTools\\NumDesTools.csproj' /t:Build /p:Configuration=Release",
             "group": "build",
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "copy-xll-debug",
+            "type": "shell",
+            "command": "& call '${workspaceFolder}\\packFromBin\\ReNamePack.bat'",
+            "dependsOn": ["build-debug"],
+            "problemMatcher": []
+        },
+        {
+            "label": "copy-xll-release",
+            "type": "shell",
+            "command": "& call '${workspaceFolder}\\packFromBin\\ReNamePack.bat'",
+            "dependsOn": ["build-release"],
+            "problemMatcher": []
         }
     ]
 }
