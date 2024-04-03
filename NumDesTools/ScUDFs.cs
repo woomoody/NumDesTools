@@ -22,7 +22,7 @@ public class ExcelUdf
     private static readonly dynamic IndexWk = NumDesAddIn.App.ActiveWorkbook;
     private static readonly dynamic ExcelPath = IndexWk.Path;
 
-    [ExcelFunction(Category = "FindValue", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在列")]
+    [ExcelFunction(Category = "查找值", IsVolatile = true, IsMacroType = true, Description = "寻找同层级指定表格字段所在列")]
     public static int FindKeyCol([ExcelArgument(Description = "工作簿")] string targetWorkbook,
         [ExcelArgument(Description = "目标行")] int row, [ExcelArgument(Description = "匹配值")] string searchValue,
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1")
@@ -52,7 +52,7 @@ public class ExcelUdf
         return -1;
     }
 
-    [ExcelFunction(Category = "FindValue", IsVolatile = true, IsMacroType = true, Description = "寻找指定表格字段所在行")]
+    [ExcelFunction(Category = "查找值", IsVolatile = true, IsMacroType = true, Description = "寻找同层级指定表格字段所在行")]
     public static int FindKeyRow([ExcelArgument(Description = "工作簿")] string targetWorkbook,
         [ExcelArgument(Description = "目标列")] int col,
         [ExcelArgument(Description = "匹配值")] string searchValue,
@@ -83,7 +83,7 @@ public class ExcelUdf
         return -1;
     }
 
-    [ExcelFunction(Category = "GetExcelInfo", IsVolatile = true, IsMacroType = true, Description = "获取单元格背景色")]
+    [ExcelFunction(Category = "获取表格信息", IsVolatile = true, IsMacroType = true, Description = "获取单元格背景色")]
     public static string GetCellColor([ExcelArgument(AllowReference = true, Name = "单元格地址",Description = "引用Range&Cell地址,eg:A1")] object address)
     {
         var range = NumDesAddIn.App.ActiveSheet.Range[address];
@@ -95,7 +95,7 @@ public class ExcelUdf
         // 返回RGB格式的颜色值
         return $"{red}#{green}#{blue}";
     }
-    [ExcelFunction(Category = "SetExcelInfo", IsVolatile = true, IsMacroType = true, Description = "设置单元格背景色")]
+    [ExcelFunction(Category = "设置表格信息", IsVolatile = true, IsMacroType = true, Description = "设置单元格背景色")]
     public static string SetCellColor([ExcelArgument(AllowReference = true, Name = "单元格值", Description = "获取单元格值")] string inputValue)
     {
         //使用该公式的单元格地址
@@ -120,7 +120,7 @@ public class ExcelUdf
         return "^0^";
     }
     //拆分字符串为int数字
-    [ExcelFunction(Category = "Str&Num", IsVolatile = true, IsMacroType = true, Description = "提取字符串中数字")]
+    [ExcelFunction(Category = "字符串提取数字", IsVolatile = true, IsMacroType = true, Description = "提取字符串中数字")]
     public static int GetNumFromStr([ExcelArgument(AllowReference = true, Description = "输入字符串")] string inputValue,
         [ExcelArgument(AllowReference = true, Name = "分隔符",Description = "分隔符,eg:,")]
         string delimiter,
@@ -137,7 +137,7 @@ public class ExcelUdf
         return Convert.ToInt32(numbers[numCount - 1]);
     }
     //拆分字符串为Str字符串
-    [ExcelFunction(Category = "Str&Num", IsVolatile = true, IsMacroType = true, Description = "分割字符串为若干字符串")]
+    [ExcelFunction(Category = "字符串提取数字", IsVolatile = true, IsMacroType = true, Description = "分割字符串为若干字符串")]
     public static string GetStrFromStr([ExcelArgument(AllowReference = true, Name="单元格索引",Description = "输入字符串")] string inputValue,
         [ExcelArgument(AllowReference = true, Name = "分隔符",Description = "分隔符,eg:,")]
         string delimiter,
@@ -166,7 +166,7 @@ public class ExcelUdf
         return strGroup[numCount - 1];
     }
     //组装字符串
-    [ExcelFunction(Category = "Str&Num", IsVolatile = true, IsMacroType = true, Description = "拼接Range，不需要默认值的直接用TEXT JOIN，这个支持默认值")]
+    [ExcelFunction(Category = "组装字符串", IsVolatile = true, IsMacroType = true, Description = "拼接Range，不需要默认值的直接用TEXT JOIN，这个支持默认值")]
     public static string CreatValueToArray(
         [ExcelArgument(AllowReference = true, Name = "单元格范围" ,Description ="Range&Cell,eg:A1:A2")]
         object[,] rangeObj,
@@ -210,7 +210,7 @@ public class ExcelUdf
         return result;
     }
     //组装字符串，按数字重复填写ID
-    [ExcelFunction(Category = "Str&Num", IsVolatile = true, IsMacroType = true, Description = "拼接Range，根据第二个单元格范围内数字重复拼接第一个单元格内对应值")]
+    [ExcelFunction(Category = "组装字符串", IsVolatile = true, IsMacroType = true, Description = "拼接Range，根据第二个单元格范围内数字重复拼接第一个单元格内对应值")]
     public static string CreatValueToArrayRepeat(
         [ExcelArgument(AllowReference = true, Name = "单元格范围" ,Description ="Range&Cell,eg:A1:A2")]
         object[,] rangeObj,
@@ -248,7 +248,7 @@ public class ExcelUdf
     }
 
     //组装字符串(二维)
-    [ExcelFunction(Category = "Str&Num", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）")]
+    [ExcelFunction(Category = "组装字符串", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）")]
     public static string CreatValueToArray2(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "第一单元格范围")]
         object[,] rangeObj1,
@@ -298,7 +298,7 @@ public class ExcelUdf
         return result;
     }
     //转置二维数组为一维
-    [ExcelFunction(Category = "TransArray", IsVolatile = true, IsMacroType = true, Description = "二维数据转换为一维数据，并可选择是否过滤空值")]
+    [ExcelFunction(Category = "数组转置", IsVolatile = true, IsMacroType = true, Description = "二维数据转换为一维数据，并可选择是否过滤空值")]
     public static object[,] Trans2ArrayTo1Arrays(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")] object[,] rangeObj,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false",Name = "过滤空值")] bool ignoreEmpty)
