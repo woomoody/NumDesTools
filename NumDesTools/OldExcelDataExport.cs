@@ -52,7 +52,9 @@ public static class ErrorLogCtp
         {
             if (i < 46)
             {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                 var errorLine = Convert.ToString(strErrorFilter.GetValue(i));
+#pragma warning restore CA1305 // 指定 IFormatProvider
                 if (errorLine != "")
                 {
                     var errorLinkLable = new LinkLabel
@@ -167,10 +169,16 @@ public static class ExcelSheetDataIsError
         for (var j = 1; j < colCnt + 1; j++)
         {
             var colEng = GetColumnChar(j - 1);
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var isCol = Convert.ToString(arr.GetValue(1, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var isCol2 = Convert.ToString(arr.GetValue(2, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
             var fileStr = "";
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var indexTxt = Convert.ToString(arr.GetValue(6, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
             //判断是否中文
             var isChinese = indexTxt != null && Regex.IsMatch(indexTxt, "[\u4e00-\u9fbb]");
             if (indexTxt != "" && isChinese != true)
@@ -188,8 +196,12 @@ public static class ExcelSheetDataIsError
             if (isCol == "*" || isCol2 == "cn")
                 for (var i = 1; i < rowCnt + 1; i++)
                 {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     var cellString = Convert.ToString(arr.GetValue(i, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     var isRow = Convert.ToString(arr.GetValue(i, 1));
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     if (isRow != "*") continue;
                     string errorTag;
                     switch (cellString)
@@ -295,10 +307,16 @@ public static class ExcelSheetDataIsError2
         for (var j = 1; j < colCnt + 1; j++)
         {
             var colEng = GetColumnChar(j - 1);
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var isCol = Convert.ToString(arr.GetValue(1, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var isCol2 = Convert.ToString(arr.GetValue(2, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
             var fileStr = "";
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var indexTxt = Convert.ToString(arr.GetValue(6, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
             //判断是否中文
             var isChinese = indexTxt != null && Regex.IsMatch(indexTxt, "[\u4e00-\u9fbb]");
             if (indexTxt != "" && isChinese != true)
@@ -316,8 +334,12 @@ public static class ExcelSheetDataIsError2
             if (isCol == "*" || isCol2 == "cn")
                 for (var i = 1; i < rowCnt + 1; i++)
                 {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     var cellString = Convert.ToString(arr.GetValue(i, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     var isRow = Convert.ToString(arr.GetValue(i, 1));
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     if (isRow == "*")
                     {
                         string errorTag;
@@ -464,7 +486,9 @@ public static class FormularCheck
         for (var i = 1; i < rowCnt + 1; i++)
         for (var j = 1; j < colCnt + 1; j++)
         {
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var errorFormula = Convert.ToString(arrOld.GetValue(i, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
             if (errorFormula != null)
             {
                 var errorFormulaStrArr = errorFormula.Split(',');
@@ -686,7 +710,9 @@ public static class ExcelSheetData
             var isLanRange = ws.Range[ws.Cells[2, 1], ws.Cells[2, colCnt]];
             Array arr2 = isLanRange.Value2;
             var arr3 = new string[colCnt + 1];
+#pragma warning disable CA1305 // 指定 IFormatProvider
             for (var kk = 1; kk < colCnt + 1; kk++) arr3[kk] = Convert.ToString(arr2.GetValue(1, kk));
+#pragma warning restore CA1305 // 指定 IFormatProvider
             var isLan = Array.IndexOf(arr3, langTag);
             if (isLan == -1)
                 continue;
@@ -694,15 +720,25 @@ public static class ExcelSheetData
             for (var i = 1; i < rowCnt + 1; i++)
             {
                 //定义字符串首行数据
+#pragma warning disable CA1305 // 指定 IFormatProvider
                 var cellsRowIsOut = Convert.ToString(arr.GetValue(i, 1));
+#pragma warning restore CA1305 // 指定 IFormatProvider
                 //判断行数据是否导出
                 if (cellsRowIsOut != "*") continue;
+#pragma warning disable CA1305 // 指定 IFormatProvider
                 var dataValueStr = Convert.ToString(arr.GetValue(i, 2));
+#pragma warning restore CA1305 // 指定 IFormatProvider
                 for (var j = 3; j < colCnt + 1; j++)
                 {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     var cellsValue = Convert.ToString(arr.GetValue(i, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     var cellsValueDefault = Convert.ToString(arr.GetValue(9, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     var cellsColIsOut = Convert.ToString(arr.GetValue(dataOrder, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     //判断列数据是否导出
                     if (cellsColIsOut != langTag) continue;
                     //Cells数据为空填写默认值

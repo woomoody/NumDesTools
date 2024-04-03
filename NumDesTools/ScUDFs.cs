@@ -134,7 +134,9 @@ public class ExcelUdf
         //增加只提取末尾字符的判断
         var maxNumCount = numbers.Length;
         numCount = Math.Min(maxNumCount, numCount);
+#pragma warning disable CA1305 // 指定 IFormatProvider
         return Convert.ToInt32(numbers[numCount - 1]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
     }
     //拆分字符串为Str字符串
     [ExcelFunction(Category = "UDF-字符串提取数字", IsVolatile = true, IsMacroType = true, Description = "分割字符串为若干字符串")]
@@ -236,10 +238,12 @@ public class ExcelUdf
                 else
                 {
                     var item2 = rangeObj2[row, col];
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     for (int i = 0; i < Convert.ToInt32(item2); i++)
                     {
                         result += item + delimiter;
                     }
+#pragma warning restore CA1305 // 指定 IFormatProvider
                 }
             }
         }
