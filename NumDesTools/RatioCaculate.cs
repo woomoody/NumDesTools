@@ -47,23 +47,26 @@ public class RatioCaculate
         var groupRarityCount = new List<(string, int, int, int)>();
         for (var i = 0; i < groupCount; i++)
         {
-            var cardGroupStr = collectCardGroupDataList[i][cardGroupIndex];
-            var cardGroupName = collectCardGroupDataList[i][cardGroupNameIndex];
+            var cardGroupStr = collectCardGroupDataList[i][cardGroupIndex] as string;
+            if (cardGroupStr == null) continue; // 安全转换和处理
+            var cardGroupName = collectCardGroupDataList[i][cardGroupNameIndex] as string;
+            if (string.IsNullOrEmpty(cardGroupName)) continue;
             //拆ID，查ID，获取各个品质的个数
-            var reg = "\\d+";
-            var matches = Regex.Matches(cardGroupStr, reg);
+            var cardIdPattern  = "\\d+";
+            var cardIdMatches = Regex.Matches(cardGroupStr , cardIdPattern );
+           if (cardIdMatches.Count == 0) continue;
             var rarity1 = 0;
             var rarity2 = 0;
             var rarity3 = 0;
-            foreach (var match in matches)
+            foreach (Match item in cardIdMatches)
             {
-                var sourceCardId = match.Value;
+                var sourceCardId = item.Value;
                 for (var j = 0; j < cardCount; j++)
                 {
                     var targetCardId = collectCardInfoDataList[j][cardInfoIdIndex].ToString();
                     if (targetCardId == sourceCardId)
                     {
-                        var targetCardRarity = collectCardInfoDataList[j][cardInfoRarityIndex];
+                        int targetCardRarity = (int)collectCardInfoDataList[j][cardInfoRarityIndex];
                         if (targetCardRarity == 1)
                             rarity1++;
                         else if (targetCardRarity == 2)
@@ -73,7 +76,7 @@ public class RatioCaculate
                 }
             }
 
-            groupRarityCount.Add((cardGroupName, rarity1, rarity2, rarity3));
+            groupRarityCount.Add(((string, int, int, int))(cardGroupName, rarity1, rarity2, rarity3));
         }
 
         var weight1 = (int)collectCardRarityDataList[0][cardRarityWeightIndex];
