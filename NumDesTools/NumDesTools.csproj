@@ -136,7 +136,7 @@
     <Folder Include="Resources\" />
   </ItemGroup>
   <PropertyGroup>
-    <PostBuildEvent>call "$(SolutionDir)packFromBin\ReNamePack.bat" /y
-</PostBuildEvent>
+    <!-- <PostBuildEvent>call "$(SolutionDir)packFromBin\ReNamePack.bat" /y
+</PostBuildEvent> -->
   </PropertyGroup>
 </Project>

@@ -1,0 +1,22 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-debug",
+            "type": "shell",
+            "command": "&'C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe' '${workspaceFolder}\\NumDesTools\\NumDesTools.csproj' /t:Build /p:Configuration=Debug",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$msCompile",
+        },
+        {
+            "label": "build-release",
+            "type": "shell",
+            "command": "& 'C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe' '${workspaceFolder}\\NumDesTools\\NumDesTools.csproj' /t:Build /p:Configuration=Release",
+            "group": "build",
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}
