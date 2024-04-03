@@ -52,9 +52,9 @@ public class RatioCaculate
             var cardGroupName = collectCardGroupDataList[i][cardGroupNameIndex] as string;
             if (string.IsNullOrEmpty(cardGroupName)) continue;
             //拆ID，查ID，获取各个品质的个数
-            var cardIdPattern  = "\\d+";
-            var cardIdMatches = Regex.Matches(cardGroupStr , cardIdPattern );
-           if (cardIdMatches.Count == 0) continue;
+            var cardIdPattern = "\\d+";
+            var cardIdMatches = Regex.Matches(cardGroupStr, cardIdPattern);
+            if (cardIdMatches.Count == 0) continue;
             var rarity1 = 0;
             var rarity2 = 0;
             var rarity3 = 0;
