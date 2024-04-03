@@ -281,7 +281,7 @@ public class PubMetToExcel
     #endregion
 
     #region Excel界面相关
-
+    [ExcelFunction(IsHidden = true)]
     public static int ExcelRangePixelsX(double targetX)
     {
         var workArea = NumDesAddIn.App.ActiveWindow;
@@ -290,6 +290,7 @@ public class PubMetToExcel
         return targetXPixels;
 
     }
+    [ExcelFunction(IsHidden = true)]
     public static int ExcelRangePixelsY(double targetY)
     {
         var workArea = NumDesAddIn.App.ActiveWindow;

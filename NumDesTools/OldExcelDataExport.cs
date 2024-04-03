@@ -89,7 +89,13 @@ public static class ErrorLogCtp
             BackColor = Color.Gray,
             ForeColor = Color.GhostWhite
         };
+
+
         LabelControl.Controls.Add(errorLinkLable);
+
+
+
+
         Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(LabelControl, "写入错误日志");
         Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
         Ctp.Width = 450;
