@@ -1500,9 +1500,9 @@ public class ExcelDataAutoInsertMulti
                 //默认备注
                 if (cellCol != null && cellCol.Contains("#") && commentValue != null)
                 {
-                    string[] parts = commentValue.Split("-");
-                    string replaceValue = parts[0];
-                    cellFix.Value =  cellFix.Value.ToString()?.Replace(replaceValue, commentValue);
+                    string pattern = @"第\d期";
+                    string result = Regex.Replace(cellFix.Value.ToString(), pattern, commentValue);
+                    cellFix.Value = result;
                 }
                 //特殊字段需要CopyAlice
                 else
