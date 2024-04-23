@@ -82,18 +82,142 @@ public class ExcelUdf
         fs.Close();
         return -1;
     }
+    [ExcelFunction(Category = "UDF-查找值", IsVolatile = true, IsMacroType = true, Description = "寻找同层级指定表格字段所在列指定行的值")]
+    public static string FindKeyColToRow([ExcelArgument(Description = "工作簿")] string targetWorkbook,
+    [ExcelArgument(Description = "目标行")] int row, [ExcelArgument(Description = "输出目标行")] int rowOut, [ExcelArgument(Description = "匹配值")] string searchValue,
+    [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1" )
+    {
+        var path = ExcelPath + @"\" + targetWorkbook;
+        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        var workbook = new XSSFWorkbook(fs);
+        var sheet = workbook.GetSheet(targetSheet) ?? workbook.GetSheetAt(0);
+        var rowSource = sheet.GetRow(row);
+        for (int j = rowSource.FirstCellNum; j <= rowSource.LastCellNum; j++)
+        {
+            var cell = rowSource.GetCell(j);
+            if (cell != null)
+            {
+                var cellValue = cell.ToString();
+                if (cellValue == searchValue)
+                {
+                    var outRowSource = sheet.GetRow(rowOut);
+                    var outCell = outRowSource.GetCell(j);
+                    var outCellValue = outCell.ToString();
+                    workbook.Close();
+                    fs.Close();
+                    return outCellValue;
+                }
+            }
+        }
 
+        workbook.Close();
+        fs.Close();
+        return "Error未找到";
+    }
+
+    [ExcelFunction(Category = "UDF-查找值", IsVolatile = true, IsMacroType = true, Description = "寻找同层级指定表格字段所在行指定列的值")]
+    public static string FindKeyRowToCol([ExcelArgument(Description = "工作簿")] string targetWorkbook,
+        [ExcelArgument(Description = "目标列")] int col, [ExcelArgument(Description = "输出目标列")] int outCol,
+        [ExcelArgument(Description = "匹配值")] string searchValue,
+        [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1")
+    {
+        var path = ExcelPath + @"\" + targetWorkbook;
+        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        var workbook = new XSSFWorkbook(fs);
+        var sheet = workbook.GetSheet(targetSheet) ?? workbook.GetSheetAt(0);
+        for (var i = sheet.FirstRowNum; i <= sheet.LastRowNum; i++)
+        {
+            var rowSource = sheet.GetRow(i);
+            if (rowSource != null)
+            {
+                var cell = rowSource.GetCell(col);
+                var cellValue = cell.ToString();
+                if (cellValue == searchValue)
+                {
+                    var outColSource = sheet.GetRow(outCol);
+                    var outCell = outColSource.GetCell(i);
+                    var outCellValue = outCell.ToString();
+                    workbook.Close();
+                    fs.Close();
+                    return outCellValue;
+                }
+            }
+        }
+
+        workbook.Close();
+        fs.Close();
+        return "Error未找到";
+    }
+    [ExcelFunction(Category = "UDF-查找值", IsVolatile = true, IsMacroType = true, Description = "兼容索引，索引单元格有值则相对索引，否则绝对索引，索引最靠近的单元格（上-左）")]
+    public static string FindKeyClose([ExcelArgument(AllowReference = true, Description = "单元格地址：A1" , Name = "单元格")] object inputRange,
+        [ExcelArgument(Description = "行索引或列索引")] bool isRow)
+    {
+        if (inputRange is ExcelReference cellRef)
+        {
+            var sheet = NumDesAddIn.App.ActiveSheet;
+            var rangeRow = cellRef.RowFirst + 1;
+            var rangeCol = cellRef.ColumnFirst + 1;
+            var rangeValue = sheet.Cells[rangeRow, rangeCol].Value;
+            if (rangeValue== null)
+            {
+                if (isRow)
+                {
+                    int count = rangeRow;
+                    while (count > 0)
+                    {
+                        var newRangeValue = sheet.Cells[count, rangeCol].Value;
+                        if (newRangeValue == null)
+                        {
+                            count--;
+                        }
+                        else
+                        {
+                            return newRangeValue.ToString();
+                        }
+                    }
+                }
+                else
+                {
+                    int count = rangeCol;
+                    while (count > 0)
+                    {
+                        var newRangeValue = sheet.Cells[rangeRow, count].Value;
+                        if (newRangeValue == null)
+                        {
+                            count--;
+                        }
+                        else
+                        {
+                            return newRangeValue.ToString();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                return rangeValue.ToString();
+            }
+        }
+        return "Error未找到";
+    }
     [ExcelFunction(Category = "UDF-获取表格信息", IsVolatile = true, IsMacroType = true, Description = "获取单元格背景色")]
     public static string GetCellColor([ExcelArgument(AllowReference = true, Name = "单元格地址",Description = "引用Range&Cell地址,eg:A1")] object address)
     {
-        var range = NumDesAddIn.App.ActiveSheet.Range[address];
-        var color = range.Interior.Color;
-        // 将Excel VBA颜色值转换为RGB格式
-        var red = (int)(color % 256);
-        var green = (int)(color / 256 % 256);
-        var blue = (int)(color / 65536 % 256);
-        // 返回RGB格式的颜色值
-        return $"{red}#{green}#{blue}";
+        if (address is ExcelReference cellRef)
+        {
+            var sheet = NumDesAddIn.App.ActiveSheet;
+            var rangeRow = cellRef.RowFirst + 1;
+            var rangeCol = cellRef.ColumnFirst + 1;
+            var range = sheet.Cells[rangeRow, rangeCol];
+            var color = range.Interior.Color;
+            // 将Excel VBA颜色值转换为RGB格式
+            var red = (int)(color % 256);
+            var green = (int)(color / 256 % 256);
+            var blue = (int)(color / 65536 % 256);
+            // 返回RGB格式的颜色值
+            return $"{red}#{green}#{blue}";
+        }
+        return "error";
     }
     [ExcelFunction(Category = "UDF-设置表格信息", IsVolatile = true, IsMacroType = true, Description = "设置单元格背景色")]
     public static string SetCellColor([ExcelArgument(AllowReference = true, Name = "单元格值", Description = "获取单元格值")] string inputValue)
