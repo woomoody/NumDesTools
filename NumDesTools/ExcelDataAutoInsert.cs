@@ -1523,9 +1523,16 @@ public class ExcelDataAutoInsertMulti
                 //默认备注
                 if (cellCol != null && cellCol.Contains("#") && commentValue != null)
                 {
-                    string[] parts = commentValue.Split("-");
-                    string replaceValue = parts[0];
-                    cellFix.Value =  cellFix.Value.ToString()?.Replace(replaceValue, commentValue);
+                    string[] baseParts = commentValue.Split("#");
+                    string cellValue = cellFix.Value.ToString();
+                    foreach (string item in baseParts)
+                    {
+                        string[] parts = item.Split("-");
+                        string replaceValue = parts[0];
+                        string pattern = parts[1];
+                        if (cellValue != null) cellValue = Regex.Replace(cellValue, pattern, replaceValue);
+                    }
+                    cellFix.Value = cellValue;
                 }
                 //特殊字段需要CopyAlice
                 else
