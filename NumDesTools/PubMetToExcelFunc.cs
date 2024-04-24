@@ -6,8 +6,9 @@ using Microsoft.Office.Core;
 using System;
 using System.Diagnostics;
 using System.Windows;
-using Microsoft.VisualStudio.TextManager.Interop;
 using OfficeOpenXml;
+using System.Text.RegularExpressions;
+using MessageBox = System.Windows.MessageBox;
 
 namespace NumDesTools;
 
@@ -79,6 +80,7 @@ public class PubMetToExcelFunc
         var workBookName = workBook.Name;
         var workbookPath = workBook.Path;
         workbookPath = System.IO.Path.GetDirectoryName(workbookPath);
+
         var selectCellValue = "";
         if (selectCell.Value != null) selectCellValue = selectCell.Value.ToString();
         //正则出是Excel路径的单元格
@@ -120,6 +122,137 @@ public class PubMetToExcelFunc
                 sheetName = "Sheet1";
             }
             PubMetToExcel.OpenExcelAndSelectCell(selectCellValue, sheetName, cellAddress);
+        }
+    }
+
+    public static void RightOpenLinkExcelByActiveCell(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var sheet = NumDesAddIn.App.ActiveSheet;
+        var selectCell = NumDesAddIn.App.ActiveCell;
+        var workBook = NumDesAddIn.App.ActiveWorkbook;
+        var workBookName = workBook.Name;
+        var workbookPath = workBook.Path;
+        var sheetName = sheet.Name;
+        workbookPath = System.IO.Path.GetDirectoryName(workbookPath);
+
+        var selectCellCol = selectCell.Column;
+        var keyCell = sheet.Cells[2, selectCellCol];
+        string excelPath = @"C:\M1Work\Public\Excels\Tables";
+        string excelName = "#表格关联.xlsx##主副表关联";
+        //声明新类
+        var excelObj = new ExcelDataByEpplus();
+        //计算类属性
+        excelObj.GetExcelObj(excelPath, excelName);
+        //应用属性
+        if (excelObj.ErrorList.Count > 0)
+        {
+            return ;
+        }
+        //读取数据
+        var sheetTarget = excelObj.Sheet;
+        var data = excelObj.ReadToDic(sheetTarget, 6, 5, [7, 9], 2);
+
+        string keyName;
+        if (sheetName.Contains("Sheet"))
+        {
+            keyName = workBookName;
+        }
+        else
+        {
+            keyName = workBookName + "##" + sheetName;
+        }
+
+        if (data.ContainsKey(keyName))
+        {
+            // 使用 LINQ 查找第一个匹配的元素
+            List<object> valueList = data[keyName];
+            List<string> result = valueList
+                .Cast<List<string>>()
+                .FirstOrDefault(list => list[0] == keyCell.Value.ToString());
+            if (result != null)
+            {
+                string indexCellValue = result[1];
+                //正则出是Excel路径的单元格
+                var isMatch = indexCellValue.Contains(".xls");
+                if (isMatch)
+                {
+                    string openSheetName;
+                    var selectCellValue = selectCell.Value.ToString();
+                    if (indexCellValue.Contains("##"))
+                    {
+                        var excelSplit = indexCellValue.Split("##");
+                        indexCellValue = workbookPath + @"\Tables\" + excelSplit[0];
+                        openSheetName = excelSplit[1];
+                    }
+                    else
+                    {
+                        switch (indexCellValue)
+                        {
+                            case "Localizations.xlsx":
+                                indexCellValue = workbookPath + @"\Localizations\Localizations.xlsx";
+                                break;
+                            case "UIConfigs.xlsx":
+                                indexCellValue = workbookPath + @"\UIs\UIConfigs.xlsx";
+                                break;
+                            case "UIItemConfigs.xlsx":
+                                indexCellValue = workbookPath + @"\UIs\UIItemConfigs.xlsx";
+                                break;
+                            default:
+                                indexCellValue = workbookPath + @"\Tables\" + indexCellValue;
+                                break;
+                        }
+
+                        openSheetName = "Sheet1";
+                    }
+                    string pattern = @"\d+";  // \d代表数字，+代表一个或多个
+                    MatchCollection matches = Regex.Matches(selectCellValue, pattern);
+                    string cellAddress = "A1";
+                    //声明新类
+                    var excelObjOpen = new ExcelDataByEpplus();
+                    //计算类属性
+                    var excelNameOpen = result[1] + "##Sheet1";
+                    if (result[1].Contains("##"))
+                    {
+                        excelNameOpen = result[1];
+                    }
+                    excelObjOpen.GetExcelObj(workbookPath + @"\Tables", excelNameOpen);
+                    //应用属性
+                    if (excelObjOpen.ErrorList.Count > 0)
+                    {
+                        return;
+                    }
+                    //读取数据
+                    var sheetTargetOpen = excelObjOpen.Sheet;
+                    foreach (var item in matches)
+                    {
+                        int valueIndex = excelObjOpen.FindFromRow(sheetTargetOpen, 2, item.ToString());
+                        if (valueIndex != -1)
+                        {
+                            cellAddress = "A" + valueIndex;
+                            break;
+                        }
+                    }
+                    PubMetToExcel.OpenExcelAndSelectCell(indexCellValue, openSheetName, cellAddress);
+                }
+            }
+            else
+            {
+                MessageBoxResult tips = MessageBox.Show("字段未关联或没有表格索引,是否打开字段表格编辑？", "确认", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (tips == MessageBoxResult.Yes)
+                {
+                    // 用户点击了"Yes"按钮，执行相应的操作
+                    PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", "A1");
+                }
+            }
+        }
+        else
+        {
+            MessageBoxResult tips = MessageBox.Show("字段未关联或没有表格索引,是否打开字段表格编辑？", "确认", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (tips == MessageBoxResult.Yes)
+            {
+                // 用户点击了"Yes"按钮，执行相应的操作
+                PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", "A1");
+            }
         }
     }
 
@@ -387,9 +520,9 @@ public class PubMetToExcelFunc
                     eleGuessList.Add(e);
                 }
                 var seedTarget = new Random();
-                eleList = eleList.OrderBy(x => seedTarget.Next()).ToList();
+                eleList = eleList.OrderBy(_ => seedTarget.Next()).ToList();
                 var seedGuess = new Random();
-                eleGuessList = eleGuessList.OrderBy(x => seedGuess.Next()).ToList();
+                eleGuessList = eleGuessList.OrderBy(_ => seedGuess.Next()).ToList();
                 do
                 {
                     //随机猜数字，剔除对的
@@ -408,11 +541,11 @@ public class PubMetToExcelFunc
                     //List重新排序和上次不同
                     if (eleList.Count > 1)
                     {
-                        var eleTempList = new List<int>();
+                        List<int> eleTempList;
                         var seedTemp = new Random();
                         do
                         {
-                            eleTempList = eleGuessList.OrderBy(x => seedTemp.Next()).ToList();
+                            eleTempList = eleGuessList.OrderBy(_ => seedTemp.Next()).ToList();
                         } while (eleGuessListGroup.Any(list => list.SequenceEqual(eleTempList)));
                         eleGuessList = eleTempList;
                     }
@@ -440,45 +573,6 @@ public class PubMetToExcelFunc
             PubMetToExcel.WriteExcelDataC(sheetName, 2, 2 + filterEleCountMax.Count - 1, 22, 22,
                 PubMetToExcel.ConvertListToArray(filterEleCountMaxObj));
         }
-    }
-    public static List<(string, string, string)> texstEncapsulation()
-    {
-        var errorList = new List<(string, string, string)>();
-        string excelPath = @"C:\Users\cent\Desktop";
-        string excelName = "tee.xlsx#Sheet1";
-        var list = new List<dynamic>();
-        //声明新类
-        var excelObj = new ExcelDataByEpplus();
-        //计算类属性
-        excelObj.GetExcelObj(excelPath, excelName);
-        //应用属性
-        if (excelObj.ErrorList.Count > 0)
-        {
-            return excelObj.ErrorList;
-        }
-        //读取数据
-        var sheet = excelObj.Sheet;
-        List<dynamic> data = excelObj.Read(sheet, 5, 899);
-
-        //修改数据
-        for (int i = 0; i < data.Count; i++)
-        {
-            var firstRecord = (IDictionary<string, object>)data[i];
-            foreach (var key in firstRecord.Keys.ToList())
-            {
-                // 尝试将值转换为字符串
-                string stringValue = firstRecord[key]?.ToString();
-                if (!string.IsNullOrEmpty(stringValue))
-                {
-                    // 如果字符串包含 "3"，则执行替换操作
-                    firstRecord[key] = stringValue.Replace("20", "11");
-                }
-            }
-        }
-        //写入数据-如果要写到别的Excel则需要在声明新类
-        var excel = excelObj.Excel;
-        excelObj.Write(sheet, excel, data, 5);
-        return errorList;
     }
 }
 
