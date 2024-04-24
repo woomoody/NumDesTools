@@ -11,7 +11,6 @@ using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
 using ExcelDna.IntelliSense;
 using Microsoft.Office.Interop.Excel;
-using OfficeOpenXml;
 using Application = Microsoft.Office.Interop.Excel.Application;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
@@ -199,7 +198,8 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
                      t is "合并表格Row" ||
                      t is "合并表格Col" ||
                      t is "打开表格" ||
-                     t is "对话写入"
+                     t is "对话写入" ||
+                     t is "打开关联表格"
                  select tempControl)
             try
             {
@@ -320,6 +320,17 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
                 comButton8.Caption = "对话写入(末尾)";
                 comButton8.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton8.Click += ExcelDataAutoInsertLanguage.AutoInsertDataByUd;
+            }
+        }
+        if (!bookName.Contains("#") && target.Column > 2)
+        {
+            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
+                comButton9)
+            {
+                comButton9.Tag = "打开关联表格";
+                comButton9.Caption = "打开关联表格";
+                comButton9.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                comButton9.Click += PubMetToExcelFunc.RightOpenLinkExcelByActiveCell;
             }
         }
     }
@@ -1276,13 +1287,14 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     }
     public void TestBar1_Click(IRibbonControl control)
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        var excel = new ExcelPackage(new FileInfo(@"C:\M1Work\Public\Excels\Tables\$活动砸冰块.xlsx"));
-        ExcelWorkbook workBook = excel.Workbook;
-        var sheet = workBook.Worksheets["IceClimberGridTemp"];
+        //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        //var excel = new ExcelPackage(new FileInfo(@"C:\M1Work\Public\Excels\Tables\$活动砸冰块.xlsx"));
+        //ExcelWorkbook workBook = excel.Workbook;
+        //var sheet = workBook.Worksheets["IceClimberGridTemp"];
+        //ExcelDataAutoInsert.FindSourceRow(sheet, 2, "5000144");
+        //var abc = PubMetToExcelFunc.texstEncapsulation();
         var sw = new Stopwatch();
         sw.Start();
-        ExcelDataAutoInsert.FindSourceRow(sheet, 2, "5000144");
         //PubMetToExcelFunc.Main();
         //var name = abc.sheetName;
         //var path  = abc.sheetPath;
