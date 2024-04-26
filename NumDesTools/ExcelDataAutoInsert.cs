@@ -760,6 +760,7 @@ public class ExcelDataAutoInsertLanguage
             ErrorLogCtp.CreateCtpNormal(errorLog);
         }
 
+        NumDesAddIn.App.StatusBar = "导出完成";
         //else
         //{
         //    fixSheet.Range["A2:A1000"].Value = "";
@@ -2361,5 +2362,50 @@ public class ExcelDataAutoInsertActivityServer
             //写入错误日志并提示
             MessageBox.Show(@"有活动找不到，查看错误日志");
         }
+    }
+}
+//适应"【*】数值.xlsx"这类表需求频繁更新奖励数据的自动化工具
+public class ExcelDataAutoInsertNumChanges
+{
+    public static dynamic App = NumDesAddIn.App;
+    public static dynamic IndexWk = App.ActiveWorkbook;
+    public static string IndexWkPath = IndexWk.Path;
+
+    public  Dictionary<string, object> GetNumChangesData()
+    {
+        //dynamic app = ExcelDnaUtil.Application;
+        var startRow = 12;
+        var indexSheet = NumDesAddIn.App.ActiveSheet;
+        var indexRange = indexSheet.Rows[startRow];
+
+        var startValue = PubMetToExcel.FindValueInRangeByVsto(indexRange, "*自动填表*");
+        var usedRange = indexSheet.UsedRange;
+        var rowMax = usedRange.Rows.Count;
+        var colMax = usedRange.Columns.Count;
+
+        Dictionary<string, object> dataList = new Dictionary<string, object>();
+
+        for (int col = startValue.Item2+ 2; col <= colMax; col++)
+        {
+            var isCurrentCol = (col - startValue.Item2) % 4;
+            if (isCurrentCol == 2 )
+            {
+                var startCell = indexSheet.Cells[startRow + 2 , col];
+                var endCell = indexSheet.Cells[rowMax, col + 1];
+                var dataRange = indexSheet.Range[startCell , endCell];
+
+                var startHeadCell = indexSheet.Cells[startRow + 1, col];
+                var endHeadCell = indexSheet.Cells[startRow + 1, col + 1];
+                var headRange = indexSheet.Range[startHeadCell, endHeadCell];
+
+                var data = PubMetToExcel.RangeToListByVsto(dataRange, headRange , 1);
+
+                var targetBookRange = indexSheet.Cells[startRow , col];
+                var targetBookRangeName = targetBookRange.Value.ToString();
+
+                dataList.Add(targetBookRangeName, data);
+            }
+        }
+        return dataList;
     }
 }

@@ -1295,6 +1295,10 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         //var abc = PubMetToExcelFunc.texstEncapsulation();
         var sw = new Stopwatch();
         sw.Start();
+        var abc = new ExcelDataAutoInsertNumChanges();
+        var cde = abc.GetNumChangesData();
+
+
         //PubMetToExcelFunc.Main();
         //var name = abc.sheetName;
         //var path  = abc.sheetPath;

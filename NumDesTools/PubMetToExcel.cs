@@ -12,7 +12,10 @@ using System.Data.OleDb;
 using System.Diagnostics;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
 using System.Text.RegularExpressions;
+using System.Windows;
+using System.Windows.Documents;
 using Range = Microsoft.Office.Interop.Excel.Range;
+using Microsoft.Office.Interop.Excel;
 
 // ReSharper disable All
 #pragma warning disable CA1416
@@ -406,33 +409,34 @@ public class PubMetToExcel
         Range dataRangeEnd = workSheet.Cells[dataRowEnd, dataColEnd];
         Range dataRange = workSheet.Range[dataRangeStart, dataRangeEnd];
         // 读取数据到一个二维数组中
-        object[,] rangeValue = dataRange.Value;
+        //object[,] rangeValue = dataRange.Value;
         Range headRangeStart = workSheet.Cells[headRow, dataCol];
         Range headRangeEnd = workSheet.Cells[headRow, dataColEnd];
         Range headRange = workSheet.Range[headRangeStart, headRangeEnd];
         // 读取数据到一个二维数组中
-        object[,] headRangeValue = headRange.Value;
-        // 定义工作表数据数组和表头数组
-        var sheetData = new List<List<object>>();
-        var sheetHeaderCol = new List<object>();
-        // 读取数据
-        for (var row = 1; row <= dataRowEnd - dataRow + 1; row++)
-        {
-            var rowList = new List<object>();
-            for (var column = 1; column <= dataColEnd - dataCol + 1; column++)
-            {
-                var value = rangeValue[row, column];
-                rowList.Add(value);
-            }
-            sheetData.Add(rowList);
-        }
-        //读取表头
-        for (var column = 1; column <= dataColEnd - dataCol + 1; column++)
-        {
-            var value = headRangeValue[headRow, column];
-            sheetHeaderCol.Add(value);
-        }
-        var excelData = (sheetHeaderCol, sheetData);
+        //object[,] headRangeValue = headRange.Value;
+        //// 定义工作表数据数组和表头数组
+        //var sheetData = new List<List<object>>();
+        //var sheetHeaderCol = new List<object>();
+        //// 读取数据
+        //for (var row = 1; row <= dataRowEnd - dataRow + 1; row++)
+        //{
+        //    var rowList = new List<object>();
+        //    for (var column = 1; column <= dataColEnd - dataCol + 1; column++)
+        //    {
+        //        var value = rangeValue[row, column];
+        //        rowList.Add(value);
+        //    }
+        //    sheetData.Add(rowList);
+        //}
+        ////读取表头
+        //for (var column = 1; column <= dataColEnd - dataCol + 1; column++)
+        //{
+        //    var value = headRangeValue[headRow, column];
+        //    sheetHeaderCol.Add(value);
+        //}
+        //var excelData = (sheetHeaderCol, sheetData);
+        var excelData = RangeToListByVsto(dataRange, headRange, headRow);
         return excelData;
     }
 
@@ -992,6 +996,13 @@ public class PubMetToExcel
     {
         try
         {
+            //验证文件名
+            if (!File.Exists(filePath))
+            {
+                MessageBox.Show("文件不存在，请检查！");
+                return;
+            }
+
             // 打开指定路径的 Excel 文件
             var workbook = NumDesAddIn.App.Workbooks.Open(filePath);
             // 获取指定名称的工作表
@@ -1008,8 +1019,7 @@ public class PubMetToExcel
         }
         catch (Exception)
         {
-            // 处理异常
-            // ...
+            //异常处理
         }
 
         // 垃圾回收
@@ -1099,7 +1109,53 @@ public class PubMetToExcel
 
         return twoDArray;
     }
-
+    
+    //VSTO内置在Range内查找特定值(第一个)的方法
+    public static (int row, int column) FindValueInRangeByVsto(Range searchRange, object valueToFind)
+    {
+        // 使用 Find 方法在指定范围内查找特定值
+        Range foundRange = searchRange.Find(valueToFind);
+        // 如果找到了特定值
+        if (foundRange != null)
+        {
+            // 返回找到的单元格的行号和列号
+            return (foundRange.Row, foundRange.Column);
+        }
+        else
+        {
+            // 如果没有找到特定值，返回 (-1, -1)
+            return (-1, -1);
+        }
+    }
+    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) RangeToListByVsto(Range rangeData , Range rangeHeader , int headRow)
+    {
+        // 读取数据到一个二维数组中
+        object[,] rangeValue = rangeData.Value;
+        // 读取数据到一个二维数组中
+        object[,] headRangeValue = rangeHeader.Value;
+        // 定义工作表数据数组和表头数组
+        var sheetData = new List<List<object>>();
+        var sheetHeaderCol = new List<object>();
+        // 读取数据
+        for (var row = 1; row <= rangeValue.GetLength(0); row++)
+        {
+            var rowList = new List<object>();
+            for (var column = 1; column <= rangeValue.GetLength(1); column++)
+            {
+                var valueData = rangeValue[row, column];
+                rowList.Add(valueData);
+            }
+            sheetData.Add(rowList);
+        }
+        //读取表头
+        for (var column = 1; column <= rangeValue.GetLength(1); column++)
+        {
+            var value = headRangeValue[headRow, column];
+            sheetHeaderCol.Add(value);
+        }
+        var excelData = (sheetHeaderCol, sheetData);
+        return excelData;
+    }
     public static void TestEpPlus()
     {
         //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
