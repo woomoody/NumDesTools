@@ -5,6 +5,7 @@ using System.Linq;
 using Microsoft.Office.Core;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using OfficeOpenXml;
 using System.Text.RegularExpressions;
@@ -161,11 +162,10 @@ public class PubMetToExcelFunc
         {
             keyName = workBookName + "##" + sheetName;
         }
-
-        if (data.ContainsKey(keyName))
+        
+        if (data.TryGetValue(keyName, out var valueList))
         {
             // 使用 LINQ 查找第一个匹配的元素
-            List<object> valueList = data[keyName];
             List<string> result = valueList
                 .Cast<List<string>>()
                 .FirstOrDefault(list => list[0] == keyCell.Value.ToString());
@@ -203,6 +203,33 @@ public class PubMetToExcelFunc
                         }
 
                         openSheetName = "Sheet1";
+                    }
+                    //声明新类
+                    var excelLinkObjOpen = new ExcelDataByEpplus();
+                    excelLinkObjOpen.GetExcelObj(excelPath, excelName);
+                    //应用属性
+                    if (excelLinkObjOpen.ErrorList.Count > 0)
+                    {
+                        return;
+                    }
+                    //读取数据
+                    var sheetLinkOpen = excelLinkObjOpen.Sheet;
+                    int valueLinkIndex = excelLinkObjOpen.FindFromRow(sheetLinkOpen, 5, workBookName);
+                    string cellLinkAddress = "A1";
+                    if (valueLinkIndex != -1)
+                    {
+                        cellLinkAddress = "A" + valueLinkIndex;
+                    }
+                    //验证文件名
+                    if (!File.Exists(indexCellValue))
+                    {
+                        MessageBoxResult tips = MessageBox.Show("文件[" + indexCellValue + "]不存在，是否打开字段表格编辑？", "确认", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                        if (tips == MessageBoxResult.Yes)
+                        {
+                            // 用户点击了"Yes"按钮，执行相应的操作
+                            PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", cellLinkAddress);
+                        }
+                        return;
                     }
                     string pattern = @"\d+";  // \d代表数字，+代表一个或多个
                     MatchCollection matches = Regex.Matches(selectCellValue, pattern);
