@@ -1285,6 +1285,16 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
+    public void AutoInsertNumChanges_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var excelData = new ExcelDataAutoInsertNumChanges();
+        excelData.OutDataIsAll(12);
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "数据写入完成，用时：" + ts2;
+    }
     public void TestBar1_Click(IRibbonControl control)
     {
         //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -1295,9 +1305,8 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         //var abc = PubMetToExcelFunc.texstEncapsulation();
         var sw = new Stopwatch();
         sw.Start();
-        var abc = new ExcelDataAutoInsertNumChanges();
-        var cde = abc.GetNumChangesData();
-
+        //var abc = new ExcelDataAutoInsertNumChanges();
+        //abc.OutDataIsAll(12);
 
         //PubMetToExcelFunc.Main();
         //var name = abc.sheetName;
