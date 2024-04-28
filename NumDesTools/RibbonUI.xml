@@ -74,7 +74,9 @@
                             onAction='AutoCellFormatEPPlus_Click'
                             screentip='整理表格样式' />
                     <button id='AutoSeachExcel' size='large' label='查验模版写入数据' image='document'
-                            onAction='AutoSeachExcel_Click' screentip='查看模版表写入后的数据：EPPlusI' />
+                            onAction='AutoSeachExcel_Click' screentip='查看模版表写入后的数据：EPPlus' />
+                    <button id='AutoInsertNumChanges' size='large' label='活动奖励写入' image='console'
+                            onAction='AutoInsertNumChanges_Click' screentip='针对各类活动奖励内容反复修改，防止漏填数据的自动化填写工具' />
                 </group>
                 <group id="Group8" label="Excel搜索">
                     <labelControl id="SearchLab" label="搜索编号/关键字" />

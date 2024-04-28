@@ -11,12 +11,14 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows;
 using Color = System.Drawing.Color;
 using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
 using LicenseContext = OfficeOpenXml.LicenseContext;
 using Match = System.Text.RegularExpressions.Match;
-using MessageBox = System.Windows.Forms.MessageBox;
 using Range = Microsoft.Office.Interop.Excel.Range;
+using MessageBox = System.Windows.MessageBox;
+using NPOI.SS.Formula.Functions;
 #pragma warning disable CA1416
 
 
@@ -777,6 +779,7 @@ public class ExcelDataAutoInsertLanguage
             ErrorLogCtp.CreateCtpNormal(errorLog);
         }
 
+        NumDesAddIn.App.StatusBar = "导出完成";
         //else
         //{
         //    fixSheet.Range["A2:A1000"].Value = "";
@@ -795,7 +798,7 @@ public class ExcelDataAutoInsertLanguage
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
         //确定行，不确定列
-        var sourceData = PubMetToExcel.ExcelDataToListBySelfToEnd(sourceSheet,0,1,1);
+        var sourceData = PubMetToExcel.ExcelDataToListBySelfToEnd(sourceSheet, 0, 1, 1);
         var sourceTitle = sourceData.Item1;
         var sourceDataList = sourceData.Item2;
 
@@ -2400,8 +2403,8 @@ public class ExcelDataAutoInsertActivityServer
             var columns = targetDataList[0].Count;
             var targetDataArr = new string[rows, columns];
             for (var i = 0; i < rows; i++)
-            for (var j = 0; j < columns; j++)
-                targetDataArr[i, j] = targetDataList[i][j];
+                for (var j = 0; j < columns; j++)
+                    targetDataArr[i, j] = targetDataList[i][j];
             var targetRange = targetSheet.Range[targetSheet.Cells[targetStartRow, targetStartCol],
                 targetSheet.Cells[targetStartRow + targetDataArr.GetLength(0) - 1,
                     targetStartCol + targetDataArr.GetLength(1) - 1]];
@@ -2413,6 +2416,121 @@ public class ExcelDataAutoInsertActivityServer
             ErrorLogCtp.CreateCtp(errorLog);
             //写入错误日志并提示
             MessageBox.Show(@"有活动找不到，查看错误日志");
+        }
+    }
+}
+//适应"【*】数值.xlsx"这类表需求频繁更新奖励数据的自动化工具
+public class ExcelDataAutoInsertNumChanges
+{
+    public string ExcelPath;
+
+    public Dictionary<string, (List<object>, List<List<object>>)> GetNumChangesData(int startRow, dynamic indexSheet, dynamic startValue, dynamic workBook)
+    {
+        var usedRange = indexSheet.UsedRange;
+        var rowMax = usedRange.Rows.Count;
+        var colMax = usedRange.Columns.Count;
+
+        Dictionary<string, (List<object>, List<List<object>>)> dataList =
+            new Dictionary<string, (List<object>, List<List<object>>)>();
+
+        for (int col = startValue.Item2 + 2; col <= colMax; col++)
+        {
+            var isCurrentCol = (col - startValue.Item2) % 4;
+            if (isCurrentCol == 2)
+            {
+                var startCell = indexSheet.Cells[startRow + 2, col];
+                var endCell = indexSheet.Cells[rowMax, col + 1];
+                var dataRange = indexSheet.Range[startCell, endCell];
+
+                var startHeadCell = indexSheet.Cells[startRow + 1, col];
+                var endHeadCell = indexSheet.Cells[startRow + 1, col + 1];
+                var headRange = indexSheet.Range[startHeadCell, endHeadCell];
+
+                var data = workBook.Read(dataRange, headRange, 1);
+
+                var targetBookRange = indexSheet.Cells[startRow, col];
+                var targetBookRangeName = targetBookRange.Value.ToString();
+
+                dataList.Add(targetBookRangeName, data);
+            }
+        }
+        return dataList;
+    }
+
+    public void SetNumChangesData(Dictionary<string, (List<object>, List<List<object>>)> data)
+    {
+
+        foreach (KeyValuePair<string, (List<object>, List<List<object>>)> eachExcelData in data)
+        {
+            var workBookName = eachExcelData.Key;
+            var excelObj = new ExcelDataByEpplus();
+            excelObj.GetExcelObj(ExcelPath, workBookName);
+            if (excelObj.ErrorList.Count > 0)
+            {
+                return;
+            }
+
+            //读取数据
+            var sheetTarget = excelObj.Sheet;
+            var excelTarget = excelObj.Excel;
+            var keyIndex = eachExcelData.Value.Item1[0].ToString();
+            var keyTarget = eachExcelData.Value.Item1[1].ToString();
+            var keyIndexRowCount = eachExcelData.Value.Item2.Count;
+
+            var keyIndexCol = excelObj.FindFromCol(sheetTarget, 2, keyIndex);
+            var keyTargetCol = excelObj.FindFromCol(sheetTarget, 2, keyTarget);
+
+            if (keyIndexCol == -1 || keyTargetCol == -1)
+            {
+                MessageBox.Show(workBookName + "*找不到字段");
+                return;
+            }
+
+            for (int i = 0; i < keyIndexRowCount; i++)
+            {
+                var keyIndexValue = eachExcelData.Value.Item2[i][0]?.ToString();
+                var keyTargetValue = eachExcelData.Value.Item2[i][1]?.ToString();
+                if (keyIndexValue != null && keyTargetValue != null)
+                {
+                    var keyIndexRow = excelObj.FindFromRow(sheetTarget, keyIndexCol, keyIndexValue);
+                    sheetTarget.Cells[keyIndexRow, keyTargetCol].Value = keyTargetValue;
+                }
+
+            }
+
+            excelTarget.Save();
+        }
+    }
+
+    public void OutDataIsAll(int startRow)
+    {
+        var workBook = new ExcelDataByVsto();
+        workBook.GetExcelObj();
+        var indexSheet = workBook.ActiveSheet;
+        var indexRange = indexSheet.Rows[startRow];
+        var startValue = workBook.FindValue(indexRange, "*自动填表*");
+        var activityRankRange = indexSheet.Cells[startRow - 1, startValue.Item2 + 1];
+        var activityRankCountRange = indexSheet.Cells[startRow - 2, startValue.Item2 + 1];
+        int activityRank = (int)activityRankRange.Value;
+        int activityRankCount = (int)activityRankCountRange.Value;
+        ExcelPath = workBook.ActiveWorkbookPath;
+
+        MessageBoxResult tips = MessageBox.Show("是否导出全部活动数据（Y：全部；N：当前）", "确认", MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        if (tips == MessageBoxResult.Yes)
+        {
+            for (int i = activityRank; i <= activityRankCount; i++)
+            {
+                activityRankRange.Value = i;
+                var data = GetNumChangesData(startRow, indexSheet, startValue, workBook);
+                SetNumChangesData(data);
+            }
+            activityRankRange.Value = activityRank;
+        }
+        else
+        {
+            var data = GetNumChangesData(startRow, indexSheet, startValue, workBook);
+            SetNumChangesData(data);
         }
     }
 }
