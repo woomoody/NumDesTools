@@ -1,9 +1,12 @@
-﻿using OfficeOpenXml;
+﻿using ExcelDna.Integration;
+using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
+using Range = Microsoft.Office.Interop.Excel.Range;
+#pragma warning disable CA1416
 
 // ReSharper disable All
 
@@ -180,7 +183,7 @@ public class ExcelDataByEpplus
         return dataDict;
     }
     //数据写入
-    public  void Write(ExcelWorksheet sheet, ExcelPackage Excel ,  List<dynamic> data, int rowFirst)
+    public void Write(ExcelWorksheet sheet, ExcelPackage Excel ,  List<dynamic> data, int rowFirst)
     {
         // 更新 Excel 数据
         for (int row = 0; row < data.Count; row++)
@@ -231,5 +234,80 @@ public class ExcelDataByEpplus
         }
 
         return -1;
+    }
+}
+public class ExcelDataByVsto
+{
+    public  dynamic ActiveWorkbook { get; set; }
+    public  dynamic ActiveSheet { get; set; }
+    public  string ActiveWorkbookPath { get; set; }
+
+    //创建对象获取基本信息
+    public void GetExcelObj()
+    {
+        dynamic app = NumDesAddIn.App;
+        dynamic activeWorkbook = app.ActiveWorkbook;
+        dynamic activeSheet = app.ActiveSheet;
+        string activeWorkbookPath = activeWorkbook.Path;
+
+        ActiveWorkbook = activeWorkbook;
+        ActiveSheet = activeSheet;
+        ActiveWorkbookPath = activeWorkbookPath;
+    }
+
+    //数据读取
+    public (List<object> sheetHeaderCol, List<List<object>> sheetData) Read(Range rangeData, Range rangeHeader, int headRow)
+    {
+        // 读取数据到一个二维数组中
+        object[,] rangeValue = rangeData.Value;
+        // 读取数据到一个二维数组中
+        object[,] headRangeValue = rangeHeader.Value;
+        // 定义工作表数据数组和表头数组
+        var sheetData = new List<List<object>>();
+        var sheetHeaderCol = new List<object>();
+        // 读取数据
+        for (var row = 1; row <= rangeValue.GetLength(0); row++)
+        {
+            var rowList = new List<object>();
+            for (var column = 1; column <= rangeValue.GetLength(1); column++)
+            {
+                var valueData = rangeValue[row, column];
+                rowList.Add(valueData);
+            }
+            sheetData.Add(rowList);
+        }
+        //读取表头
+        for (var column = 1; column <= rangeValue.GetLength(1); column++)
+        {
+            var value = headRangeValue[headRow, column];
+            sheetHeaderCol.Add(value);
+        }
+        var excelData = (sheetHeaderCol, sheetData);
+        return excelData;
+    }
+    //通过C-API的方式写入打开当前活动Excel表格各个Sheet的数据
+    public  void Write(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast,
+        object[,] rangeValue)
+    {
+        var sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
+        var range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
+        ExcelAsyncUtil.QueueAsMacro(() => { range.SetValue(rangeValue); });
+    }
+    //VSTO内置在Range内查找特定值(第一个)的方法
+    public  (int row, int column) FindValue(Range searchRange, object valueToFind)
+    {
+        // 使用 Find 方法在指定范围内查找特定值
+        Range foundRange = searchRange.Find(valueToFind);
+        // 如果找到了特定值
+        if (foundRange != null)
+        {
+            // 返回找到的单元格的行号和列号
+            return (foundRange.Row, foundRange.Column);
+        }
+        else
+        {
+            // 如果没有找到特定值，返回 (-1, -1)
+            return (-1, -1);
+        }
     }
 }
