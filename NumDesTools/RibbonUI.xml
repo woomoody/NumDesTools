@@ -110,6 +110,8 @@
                     <checkBox id='checkbox99991' label='是否后台' />
                 </group>
                 <group id='FileInfo' label='文件信息'>
+                    <button id='CopyFileName' size='large' label='文件名称' image='document' onAction='CopyFileName_Click' />
+                    <button id='CopyFilePath' size='large' label='文件路径' image='file' onAction='CopyFilePath_Click' />
                     <labelControl id="BasePathLab" label=" 源表/目标"  />
                     <editBox id="BasePathEdit" getText="GetFileInfo" onChange="BaseFileInfoChanged"  sizeString="........................................................................." image ="folder-android" screentip='输入自己本地目录，自动保存'/>
                     <editBox id="TargetPathEdit" getText="GetFileInfo"  onChange="TargetFileInfoChanged"  sizeString="........................................................................." image ="folder-aws" screentip='输入自己本地目录，自动保存'/>
