@@ -1295,6 +1295,25 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "数据写入完成，用时：" + ts2;
     }
+
+    public void CopyFileName_Click(IRibbonControl control)
+    {
+        var wk = App.ActiveWorkbook;
+        if (wk != null)
+        {
+            var excelName = wk.Name;
+            Clipboard.SetText(excelName);
+        }
+    }
+    public void CopyFilePath_Click(IRibbonControl control)
+    {
+        var wk = App.ActiveWorkbook;
+        if (wk != null)
+        {
+            var excelPath = wk.FullName;
+            Clipboard.SetText(excelPath);
+        }
+    }
     public void TestBar1_Click(IRibbonControl control)
     {
         //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
