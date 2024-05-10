@@ -524,7 +524,7 @@ public static class PreviewTableCtp
     public static CustomTaskPane Ctp;
     public static UserControl Uc;
 
-    public static void CreateCtpTaable(string filePath, string sheetName)
+    public static void CreateCtpTable(string filePath, string sheetName)
     {
         Uc = new UserControl();
         Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(Uc, filePath + @"\" + sheetName);

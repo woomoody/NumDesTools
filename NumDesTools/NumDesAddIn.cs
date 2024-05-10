@@ -596,7 +596,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
                 var fileName = fileTemp.Substring(0, fileTemp.IndexOf("@"));
                 var sheetName = fileTemp.Substring(fileTemp.LastIndexOf("@") + 1);
                 filePath = filePath + @"\" + fileName;
-                PreviewTableCtp.CreateCtpTaable(filePath, sheetName);
+                PreviewTableCtp.CreateCtpTable(filePath, sheetName);
             }
             else
             {
