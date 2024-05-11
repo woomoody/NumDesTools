@@ -56,6 +56,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     private string _currentBaseText;
     private string _currentTargetText;
     TabControl _tabControl = new();
+    private CustomTaskPane _sheetMenuCtp;
 
     #region 释放COM
 
@@ -345,18 +346,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     {
         //状态栏信息显示文件所在路径
         App.StatusBar = wb.FullName;
-        //SheetMenu
-#if !DEBUG//Debug状态不自动开启，否则与原xll冲突
-#endif
-        if (SheetMenuText == "表格目录：开启")
-        {
-            ErrorLogCtp.DisposeSheetMenuCtp();
-            ErrorLogCtp.CreateCtpSheetMenu(App);
-        }
-        else
-        {
-            ErrorLogCtp.DisposeSheetMenuCtp();
-        }
+    }
 
     }
 
@@ -1558,23 +1548,6 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     private void ExcelSheetCalculate(object sh, Range target)
     {
         FocusLight.Calculate();
-    }
-    //表格目录点击事件
-    public void SheetMenu_Click(IRibbonControl control)
-    {
-        if (control == null) throw new ArgumentNullException(nameof(control));
-        SheetMenuText = SheetMenuText == "表格目录：开启" ? "表格目录：关闭" : "表格目录：开启";
-        CustomRibbon.InvalidateControl("SheetMenu");
-        if (SheetMenuText == "表格目录：开启")
-        {
-            ErrorLogCtp.DisposeSheetMenuCtp();
-            ErrorLogCtp.CreateCtpSheetMenu(App);
-        }
-        else
-        {
-            ErrorLogCtp.HideSheetMenuCtp();
-        }
-        _globalValue.SaveValue("SheetMenuText" , SheetMenuText);
     }
     private void App_SheetSelectionChange(object sh, Range target)
     {
