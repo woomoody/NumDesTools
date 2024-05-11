@@ -173,6 +173,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         IntelliSenseServer.Install();
         App.SheetBeforeRightClick += UD_RightClickButton;
         App.WorkbookActivate += ExcelApp_WorkbookActivate;
+        App.WorkbookBeforeClose += ExcelApp_WorkbookBeforeClose;
     }
 
     void IExcelAddIn.AutoClose()
@@ -180,6 +181,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         IntelliSenseServer.Uninstall();
         App.SheetBeforeRightClick -= UD_RightClickButton;
         App.WorkbookActivate -= ExcelApp_WorkbookActivate;
+        App.WorkbookBeforeClose -= ExcelApp_WorkbookBeforeClose;
     }
     #endregion
 
@@ -352,11 +354,18 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         }
         else
         {
-            ErrorLogCtp.HideSheetMenuCtp();
+            ErrorLogCtp.DisposeSheetMenuCtp();
         }
 
     }
-
+    private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
+    {
+        //表格目录
+        if (SheetMenuText == "表格目录：开启")
+        {
+            ErrorLogCtp.CreateCtpSheetMenu(App);
+        }
+    }
     public void AllWorkbookOutPut_Click(IRibbonControl control)
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
