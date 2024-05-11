@@ -1571,6 +1571,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         {
             ErrorLogCtp.HideSheetMenuCtp();
         }
+        _globalValue.SaveValue("SheetMenuText", SheetMenuText);
     }
     private void App_SheetSelectionChange(object sh, Range target)
     {

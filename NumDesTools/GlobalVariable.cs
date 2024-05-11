@@ -59,5 +59,27 @@ namespace NumDesTools
                 File.WriteAllLines(_filePath, lines);
             }
         }
+        public void SaveValue(string key, string value)
+        {
+
+            if (File.Exists(_filePath))
+            {
+
+                // 检查字典中是否存在要更新的键
+                if (_defaultValue.ContainsKey(key))
+                {
+                    // 如果存在，更新它的值
+                    _defaultValue[key] = value;
+                }
+
+                List<string> lines = new List<string>();
+
+                foreach (KeyValuePair<string, string> kvp in _defaultValue)
+                {
+                    lines.Add($"{kvp.Key} = {kvp.Value}");
+                }
+                File.WriteAllLines(_filePath, lines);
+            }
+        }
     }
 }
