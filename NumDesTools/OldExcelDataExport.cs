@@ -206,12 +206,23 @@ public static class ErrorLogCtp
 
     public static void DisposeSheetMenuCtp()
     {
-        if(Ctp == null) return;
-        if (Ctp.Title == "表格目录" )
+        if (Ctp == null) return;
+        try
         {
-            Ctp.Delete();
-            Ctp = null;
+            if (!Ctp.Visible) return;
+            // 在这里处理 Ctp 是可见的情况
+            if (Ctp.Title == "表格目录")
+            {
+                Ctp.Delete();
+                Ctp = null;
+            }
         }
+        catch (InvalidComObjectException)
+        {
+            // 如果访问失败，那么 CTP 可能已经被销毁
+            // 在这里处理 Ctp 已被销毁的情况
+        }
+  
     }
     public static void HideSheetMenuCtp()
     {
