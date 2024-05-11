@@ -55,7 +55,6 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     private string _currentBaseText;
     private string _currentTargetText;
     TabControl _tabControl = new();
-    private CustomTaskPane _sheetMenuCtp;
 
     #region 释放COM
 

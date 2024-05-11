@@ -1,0 +1,16 @@
+[*.cs]
+
+# CA1305: 指定 IFormatProvider
+dotnet_diagnostic.CA1305.severity = error
+dotnet_diagnostic.CA1305.severity = none
+# IDE0048: 为清楚起见，请添加括号
+dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity
+
+
+# IDE0048: 为清楚起见，请添加括号
+dotnet_style_parentheses_in_arithmetic_binary_operators = never_if_unnecessary
+
+# IDE0048: 为清楚起见，请添加括号
+dotnet_style_parentheses_in_relational_binary_operators = never_if_unnecessary
+# IDE0048: 为清楚起见，请添加括号
+dotnet_diagnostic.IDE0048.severity = none

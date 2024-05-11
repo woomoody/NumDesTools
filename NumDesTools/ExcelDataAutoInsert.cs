@@ -21,6 +21,7 @@ using MessageBox = System.Windows.MessageBox;
 
 #pragma warning disable CA1416
 
+
 namespace NumDesTools;
 
 /// <summary>
@@ -116,7 +117,9 @@ public class ExcelDataAutoInsert
             var match2 = matches2[matchCount];
             var numStr = match2.Value;
             var index = match2.Index;
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var num = long.Parse(numStr);
+#pragma warning restore CA1305 // 指定 IFormatProvider
             if (digit.Any(item => item.Item1 == matchCount + 1))
             {
                 //数字累加
@@ -253,7 +256,9 @@ public class ExcelDataAutoInsert
                 }
                 else
                 {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     monkeyList.Add((int.Parse(pair), 1));
+#pragma warning restore CA1305 // 指定 IFormatProvider
                 }
         }
         else
@@ -261,8 +266,12 @@ public class ExcelDataAutoInsert
             if (str.Contains('#'))
             {
                 var parts = str.Split('#');
+#pragma warning disable CA1305 // 指定 IFormatProvider
                 var key = Convert.ToInt32(parts[0]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
                 var value = Convert.ToInt32(parts[1]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
                 monkeyList.Add((key, value));
             }
             else
@@ -275,7 +284,9 @@ public class ExcelDataAutoInsert
                 }
                 else
                 {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     strTemp = int.Parse(str);
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     monkeyList.Add((0, strTemp));
                 }
             }
@@ -544,17 +555,23 @@ public class ExcelDataAutoInsertLanguage
                             realCol = "GroupID";
                         else if (fixFileName == "GuideDialogBranch.xlsx") realCol = "BranchID";
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf(realCol)];
+#pragma warning disable CS0252 // 可能非有意的引用比较；左侧需要强制转换
                         if (sourceValue == "" || sourceValue == null) continue;
+#pragma warning restore CS0252 // 可能非有意的引用比较；左侧需要强制转换
                         var str = sourceValue.ToString();
                         var digit = Math.Pow(10, e);
                         var repeatCount = 0;
                         for (var k = 0; k < sourceDataList.Count; k++)
                         {
                             var repeatValue = sourceDataList[k][sourceTitle.IndexOf(realCol)];
+#pragma warning disable CS0252 // 可能非有意的引用比较；左侧需要强制转换
                             if (repeatValue == "" || repeatValue == null) continue;
+#pragma warning restore CS0252 // 可能非有意的引用比较；左侧需要强制转换
                             if (repeatValue == sourceValue)
                             {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                                 var newNum = long.Parse(str) * digit + repeatCount + 1;
+#pragma warning restore CA1305 // 指定 IFormatProvider
                                 newStr = newStr + newNum + ",";
                                 repeatCount++;
                             }
@@ -619,7 +636,7 @@ public class ExcelDataAutoInsertLanguage
                             if (repeatValue == sourceValue)
                             {
                                 var branchId = sourceDataList[k][sourceTitle.IndexOf("BranchID")];
-                                if (uniqueValues1.Add(branchId))
+                                if (uniqueValues1.Add((string)branchId))
                                 {
                                     strBranch = strBranch + branchId + ",";
                                 }
@@ -970,17 +987,23 @@ public class ExcelDataAutoInsertLanguage
                             realCol = "GroupID";
                         else if (fixFileName == "GuideDialogBranch.xlsx") realCol = "BranchID";
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf(realCol)];
+#pragma warning disable CS0252 // 可能非有意的引用比较；左侧需要强制转换
                         if (sourceValue == "" || sourceValue == null) continue;
+#pragma warning restore CS0252 // 可能非有意的引用比较；左侧需要强制转换
                         var str = sourceValue.ToString();
                         var digit = Math.Pow(10, e);
                         var repeatCount = 0;
                         for (var k = 0; k < sourceDataList.Count; k++)
                         {
                             var repeatValue = sourceDataList[k][sourceTitle.IndexOf(realCol)];
+#pragma warning disable CS0252 // 可能非有意的引用比较；左侧需要强制转换
                             if (repeatValue == "" || repeatValue == null) continue;
+#pragma warning restore CS0252 // 可能非有意的引用比较；左侧需要强制转换
                             if (repeatValue == sourceValue)
                             {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                                 var newNum = long.Parse(str) * digit + repeatCount + 1;
+#pragma warning restore CA1305 // 指定 IFormatProvider
                                 newStr = newStr + newNum + ",";
                                 repeatCount++;
                             }
@@ -1045,7 +1068,7 @@ public class ExcelDataAutoInsertLanguage
                             if (repeatValue == sourceValue)
                             {
                                 var branchId = sourceDataList[k][sourceTitle.IndexOf("BranchID")];
-                                if (uniqueValues1.Add(branchId))
+                                if (uniqueValues1.Add((string)branchId))
                                 {
                                     strBranch = strBranch + branchId + ",";
                                 }
@@ -1285,7 +1308,7 @@ public class ExcelDataAutoInsertMulti
         for (int i = rowStart; i <= rowEnd; i++)
         {
             var excelName = data[i - 2][sheetNameCol];
-            excelList.Add(excelName);
+            excelList.Add((string)excelName);
         }
 
         //去重
@@ -1724,7 +1747,9 @@ public class ExcelDataAutoInsertCopyMulti
                             if (cellSourceValue != cellTargetValue)
                             {
                                 resultValue = cellTargetValue;
+#pragma warning disable CA1305 // 指定 IFormatProvider
                                 resultRow = j.ToString();
+#pragma warning restore CA1305 // 指定 IFormatProvider
                             }
                         }
 
@@ -1742,7 +1767,9 @@ public class ExcelDataAutoInsertCopyMulti
                             if (cellSourceValue != cellTargetValue)
                             {
                                 resultValue = cellSourceValue;
+#pragma warning disable CA1305 // 指定 IFormatProvider
                                 resultRow = j.ToString();
+#pragma warning restore CA1305 // 指定 IFormatProvider
                             }
                         }
 
@@ -2273,6 +2300,7 @@ public class ExcelDataAutoInsertActivityServer
             for (var i = 0; i < fixDataList.Count; i++)
             {
                 var fixName = fixDataList[i][fixNames];
+#pragma warning disable CS0252 // 可能非有意的引用比较；左侧需要强制转换
                 if (fixName != sourceName && !sourceName.Contains("#"))
                 {
                 }
@@ -2294,41 +2322,66 @@ public class ExcelDataAutoInsertActivityServer
                     var targetId = fixDataList[i][fixIds];
                     var targetName = sourceName;
                     //时间计算规则
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     string targetPushTimeString = DateTime.FromOADate(sourceData[j].Item2)
-                        .AddHours(fixDataList[i][fixPushs] * 24 + 8).ToString();
-                    var targetPushTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixPushs] * 24 * 3600);
+                        .AddHours((long)fixDataList[i][fixPushs] * 24 + 8).ToString();
+#pragma warning restore CA1305 // 指定 IFormatProvider
+                    var targetPushTimeLong = sourceStartTimeLong + ((long)fixDataList[i][fixPushs] * 24 * 3600);
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     string targetPushEndTimeString = DateTime.FromOADate(sourceData[j].Item2)
-                        .AddHours(fixDataList[i][fixPushEnds] * 24 + 8).ToString();
-                    var targetPushEndTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixPushEnds] * 24 * 3600);
+                        .AddHours((long)fixDataList[i][fixPushEnds] * 24 + 8).ToString();
+#pragma warning restore CA1305 // 指定 IFormatProvider
+                    var targetPushEndTimeLong = sourceStartTimeLong + ((long)fixDataList[i][fixPushEnds] * 24 * 3600);
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     string targetPreHeatTimeString = DateTime.FromOADate(sourceData[j].Item2)
-                        .AddHours(fixDataList[i][fixPreHeats] * 24 + 8).ToString();
-                    var targetPreHeatTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixPreHeats] * 24 * 3600);
+                        .AddHours((long)fixDataList[i][fixPreHeats] * 24 + 8).ToString();
+#pragma warning restore CA1305 // 指定 IFormatProvider
+                    var targetPreHeatTimeLong = sourceStartTimeLong + ((long)fixDataList[i][fixPreHeats] * 24 * 3600);
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     string targetOpenTimeString = DateTime.FromOADate(sourceData[j].Item2)
-                        .AddHours(fixDataList[i][fixOpens] * 24 + 8).ToString();
-                    var targetOpenTimeLong = sourceStartTimeLong + (long)(fixDataList[i][fixOpens] * 24 * 3600);
+                        .AddHours((long)fixDataList[i][fixOpens] * 24 + 8).ToString();
+#pragma warning restore CA1305 // 指定 IFormatProvider
+                    var targetOpenTimeLong = sourceStartTimeLong + ((long)fixDataList[i][fixOpens] * 24 * 3600);
                     //结束时间开始默认+1，因为表格里记录的是时间点不是段
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     string targetEndTimeString = DateTime.FromOADate(sourceData[j].Item3)
-                        .AddHours((fixDataList[i][fixEnds] + 1) * 24 + 8).ToString();
-                    var targetEndTimeLong = sourceEndTimeLong + (long)(fixDataList[i][fixEnds] * 24 * 3600);
+                        .AddHours(((long)fixDataList[i][fixEnds] + 1) * 24 + 8).ToString();
+#pragma warning restore CA1305 // 指定 IFormatProvider
+                    var targetEndTimeLong = sourceEndTimeLong + ((long)fixDataList[i][fixEnds] * 24 * 3600);
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     string targetCloseTimeString = DateTime.FromOADate(sourceData[j].Item3)
-                        .AddHours((fixDataList[i][fixCloses] + 1) * 24 + 8).ToString();
-                    var targetCloseTimeLong = sourceEndTimeLong + (long)(fixDataList[i][fixCloses] * 24 * 3600);
+                        .AddHours(((long)fixDataList[i][fixCloses] + 1) * 24 + 8).ToString();
+#pragma warning restore CA1305 // 指定 IFormatProvider
+                    var targetCloseTimeLong = sourceEndTimeLong + ((long)fixDataList[i][fixCloses] * 24 * 3600);
                     targetData.Add(targetId.ToString());
                     targetData.Add(targetName);
                     targetData.Add(targetPushTimeString);
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     targetData.Add(targetPushTimeLong.ToString());
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     targetData.Add(targetPushEndTimeString);
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     targetData.Add(targetPushEndTimeLong.ToString());
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     targetData.Add(targetPreHeatTimeString);
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     targetData.Add(targetPreHeatTimeLong.ToString());
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     targetData.Add(targetOpenTimeString);
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     targetData.Add(targetOpenTimeLong.ToString());
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     targetData.Add(targetEndTimeString);
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     targetData.Add(targetEndTimeLong.ToString());
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     targetData.Add(targetCloseTimeString);
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     targetData.Add(targetCloseTimeLong.ToString());
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     targetDataList.Add(targetData);
                 }
+#pragma warning restore CS0252 // 可能非有意的引用比较；左侧需要强制转换
             }
 
             if (exit == false)
