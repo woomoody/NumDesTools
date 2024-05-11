@@ -105,97 +105,101 @@ public static class ErrorLogCtp
 
     public static void CreateCtpSheetMenu(dynamic excelApp)
     {
-        LabelControl = new LabelControl();
-        var listBoxSheet = new ListBox();
-
-        ContextMenuStrip contextMenu = new ContextMenuStrip();
-        ToolStripMenuItem hideItem = new ToolStripMenuItem("隐藏");
-        ToolStripMenuItem showItem = new ToolStripMenuItem("显示");
-        contextMenu.Items.AddRange(new ToolStripItem[] { hideItem, showItem });
-        listBoxSheet.ContextMenuStrip = contextMenu;
-
-        foreach (var worksheet in excelApp.ActiveWorkbook.Sheets)
+        ExcelAsyncUtil.QueueAsMacro(() =>
         {
-            listBoxSheet.Items.Add(worksheet.Name);
-        }
+            LabelControl = new LabelControl();
+            var listBoxSheet = new ListBox();
 
-        //ListBox点击事件（SheetMenu）
-        listBoxSheet.SelectedIndexChanged += (sender, _) =>
-        {
-            if (sender is ListBox listBox)
+            ContextMenuStrip contextMenu = new ContextMenuStrip();
+            ToolStripMenuItem hideItem = new ToolStripMenuItem("隐藏");
+            ToolStripMenuItem showItem = new ToolStripMenuItem("显示");
+            contextMenu.Items.AddRange(new ToolStripItem[] { hideItem, showItem });
+            listBoxSheet.ContextMenuStrip = contextMenu;
+
+            foreach (var worksheet in excelApp.ActiveWorkbook.Sheets)
             {
-                var sheetName = listBox.SelectedItem.ToString() ??
+                listBoxSheet.Items.Add(worksheet.Name);
+            }
+
+            //ListBox点击事件（SheetMenu）
+            listBoxSheet.SelectedIndexChanged += (sender, _) =>
+            {
+                if (sender is ListBox listBox)
+                {
+                    var sheetName = listBox.SelectedItem.ToString() ??
+                                    throw new ArgumentNullException(nameof(excelApp));
+                    if (excelApp.Sheets[sheetName] is Worksheet sheet)
+                    {
+                        sheet.Activate();
+                    }
+                }
+            };
+
+            //隐藏Sheet
+            hideItem.Click += (_, _) =>
+            {
+                var sheetName = listBoxSheet.SelectedItem.ToString() ??
                                 throw new ArgumentNullException(nameof(excelApp));
                 if (excelApp.Sheets[sheetName] is Worksheet sheet)
                 {
-                    sheet.Activate();
+                    sheet.Visible = XlSheetVisibility.xlSheetHidden;
                 }
-            }
-        };
+            };
+            //显示Sheet
+            showItem.Click += (_, _) =>
+            {
+                var sheetName = listBoxSheet.SelectedItem.ToString() ??
+                                throw new ArgumentNullException(nameof(excelApp));
+                if (excelApp.Sheets[sheetName] is Worksheet sheet)
+                {
+                    sheet.Visible = XlSheetVisibility.xlSheetVisible;
+                }
+            };
 
-        //隐藏Sheet
-        hideItem.Click += (_, _) =>
-        {
-            var sheetName = listBoxSheet.SelectedItem.ToString() ??
-                            throw new ArgumentNullException(nameof(excelApp));
-            if (excelApp.Sheets[sheetName] is Worksheet sheet)
+            //标记隐藏Sheet
+            listBoxSheet.ItemHeight = 20; // 设置项目的高度为20像素
+            listBoxSheet.DrawMode = DrawMode.OwnerDrawFixed;
+            listBoxSheet.DrawItem += (_, e) =>
             {
-                sheet.Visible = XlSheetVisibility.xlSheetHidden;
-            }
-        };
-        //显示Sheet
-        showItem.Click += (_, _) =>
-        {
-            var sheetName = listBoxSheet.SelectedItem.ToString() ??
-                            throw new ArgumentNullException(nameof(excelApp));
-            if (excelApp.Sheets[sheetName] is Worksheet sheet)
-            {
-                sheet.Visible = XlSheetVisibility.xlSheetVisible;
-            }
-        };
-
-        //标记隐藏Sheet
-        listBoxSheet.ItemHeight = 20; // 设置项目的高度为20像素
-        listBoxSheet.DrawMode = DrawMode.OwnerDrawFixed;
-        listBoxSheet.DrawItem += (_, e) =>
-        {
-            e.DrawBackground();
-            var sheetName = listBoxSheet.Items[e.Index].ToString();
-            var sheet = excelApp.Sheets[sheetName] as Worksheet;
-            bool isHidden = sheet != null && sheet.Visible == XlSheetVisibility.xlSheetHidden;
-            if (e.Font != null)
-            {
-                float verticalOffset =
-                    // ReSharper disable once PossibleLossOfFraction
-                    (e.Bounds.Height - e.Font.Height) / 2;
+                e.DrawBackground();
+                var sheetName = listBoxSheet.Items[e.Index].ToString();
+                var sheet = excelApp.Sheets[sheetName] as Worksheet;
+                bool isHidden = sheet != null && sheet.Visible == XlSheetVisibility.xlSheetHidden;
                 if (e.Font != null)
                 {
+                    float verticalOffset =
+                        // ReSharper disable once PossibleLossOfFraction
+                        (e.Bounds.Height - e.Font.Height) / 2;
                     if (e.Font != null)
                     {
                         if (e.Font != null)
                         {
-                            Font font = isHidden ? new Font(e.Font, FontStyle.Italic) : e.Font;
-                            Brush brush = new SolidBrush(e.ForeColor);
                             if (e.Font != null)
                             {
-                                e.Graphics.DrawString(sheetName, font, brush,
-                                    new RectangleF(e.Bounds.X, e.Bounds.Y + verticalOffset, e.Bounds.Width, e.Bounds.Height),
-                                    StringFormat.GenericDefault);
+                                Font font = isHidden ? new Font(e.Font, FontStyle.Italic) : e.Font;
+                                Brush brush = new SolidBrush(e.ForeColor);
+                                if (e.Font != null)
+                                {
+                                    e.Graphics.DrawString(sheetName, font, brush,
+                                        new RectangleF(e.Bounds.X, e.Bounds.Y + verticalOffset, e.Bounds.Width,
+                                            e.Bounds.Height),
+                                        StringFormat.GenericDefault);
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            e.DrawFocusRectangle();
-        };
+                e.DrawFocusRectangle();
+            };
 
-        LabelControl.Controls.Add(listBoxSheet);
-        Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(LabelControl, "表格目录");
-        Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionLeft;
-        Ctp.Width = 350;
-        Ctp.Visible = true;
-        listBoxSheet.Dock = DockStyle.Fill;
+            LabelControl.Controls.Add(listBoxSheet);
+            Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(LabelControl, "表格目录");
+            Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionLeft;
+            Ctp.Width = 350;
+            Ctp.Visible = true;
+            listBoxSheet.Dock = DockStyle.Fill;
+        });
     }
 
     public static void DisposeSheetMenuCtp()
