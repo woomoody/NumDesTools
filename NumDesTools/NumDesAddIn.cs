@@ -344,6 +344,17 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     {
         //状态栏信息显示文件所在路径
         App.StatusBar = wb.FullName;
+        //表格目录
+        if (SheetMenuText == "表格目录：开启")
+        {
+            ErrorLogCtp.DisposeSheetMenuCtp();
+            ErrorLogCtp.CreateCtpSheetMenu(App);
+        }
+        else
+        {
+            ErrorLogCtp.HideSheetMenuCtp();
+        }
+
     }
 
     public void AllWorkbookOutPut_Click(IRibbonControl control)
@@ -1560,6 +1571,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         {
             ErrorLogCtp.HideSheetMenuCtp();
         }
+        App.ScreenUpdating = true;
         _globalValue.SaveValue("SheetMenuText", SheetMenuText);
     }
     private void App_SheetSelectionChange(object sh, Range target)

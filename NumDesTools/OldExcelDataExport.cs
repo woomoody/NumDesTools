@@ -198,7 +198,7 @@ public static class ErrorLogCtp
             LabelControl.Controls.Add(listBoxSheet);
             Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(LabelControl, "表格目录");
             Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionLeft;
-            Ctp.Width = 350;
+            Ctp.Width = 250;
             Ctp.Visible = true;
             listBoxSheet.Dock = DockStyle.Fill;
         });
