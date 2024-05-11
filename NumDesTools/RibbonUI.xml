@@ -17,12 +17,14 @@
                             screentip='点击整理当前sheet格式，标准化文本和单元格大小' />
                     <button id='Button5' size='large' getLabel='GetLableText' image='redux-reducer'
                             onAction='ZoomInOut_Click'
-                            screentip='点击开启单元格内容放大功能，再次点击关闭放大功能(创建Form机制)！' />
+                            screentip='点击开启单元格内容放大功能，再次点击关闭放大功能(创建Form机制)！配置路径：\Documents\NumDesGlobalKey.txt' />
                     <button id='FocusLightButton' size='large' getLabel='GetLableText' image='email'
                             onAction='FocusLight_Click'
-                            screentip='聚光灯效果！' />
+                            screentip='聚光灯效果！配置路径：\Documents\NumDesGlobalKey.txt' />
                     <button id='Button8' size='large' label='公式检查' image='asciidoc' onAction='FormularCheck_Click'
                             screentip='点击检查当前工作簿所有sheet中的公式，看是否有错误的连接，推荐合完表后进行检查' />
+                    <button id='SheetMenu' size='large' getLabel= 'GetLableText'  image='reason' onAction='SheetMenu_Click'
+                            screentip='点击创建表格目录，再次点击关闭! 配置路径：\Documents\NumDesGlobalKey.txt' />
                 </group>
                 <!--
                 <group id='Group3' label='SVN功能'>
@@ -50,7 +52,7 @@
                 <group id='Group5' label='表格功能定制'>
                     <button id='Button14' size='large' getLabel='GetLableText' image='edge'
                             onAction='RoleDataPreview_Click'
-                            screentip='点击启用角色数据实时预览' />
+                            screentip='点击启用角色数据实时预览！配置路径：\Documents\NumDesGlobalKey.txt' />
                 </group>
                 <group id="Group6" label="网页搜索">
                     <editBox id="SearchBoxEdit" onChange="OnEditBoxTextChanged" sizeString="…………………………………………" />

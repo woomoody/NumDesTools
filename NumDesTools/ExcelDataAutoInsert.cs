@@ -18,7 +18,7 @@ using LicenseContext = OfficeOpenXml.LicenseContext;
 using Match = System.Text.RegularExpressions.Match;
 using Range = Microsoft.Office.Interop.Excel.Range;
 using MessageBox = System.Windows.MessageBox;
-using NPOI.SS.Formula.Functions;
+
 #pragma warning disable CA1416
 
 namespace NumDesTools;
