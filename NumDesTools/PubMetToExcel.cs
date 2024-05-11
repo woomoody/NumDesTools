@@ -13,9 +13,7 @@ using System.Diagnostics;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
 using System.Text.RegularExpressions;
 using System.Windows;
-using System.Windows.Documents;
 using Range = Microsoft.Office.Interop.Excel.Range;
-using Microsoft.Office.Interop.Excel;
 
 // ReSharper disable All
 #pragma warning disable CA1416
