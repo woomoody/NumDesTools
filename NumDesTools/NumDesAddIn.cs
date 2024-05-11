@@ -38,10 +38,14 @@ namespace NumDesTools;
 [ComVisible(true)]
 public class NumDesAddIn: ExcelRibbon,IExcelAddIn
 {
-    public static string LabelText = "放大镜：关闭";
-    public static string FocusLabelText = "聚光灯：关闭";
-    public static string LabelTextRoleDataPreview = "角色数据预览：关闭";
-    public static string TempPath = @"\Client\Assets\Resources\Table";
+    //尝试读取本地文件中的全局变量配置
+    private static GlobalVariable _globalValue = new ();
+    public static string LabelText = _globalValue.Value["LabelText"];
+    public static string FocusLabelText = _globalValue.Value["FocusLabelText"];
+    public static string LabelTextRoleDataPreview = _globalValue.Value["LabelTextRoleDataPreview"];
+    public static string SheetMenuText = _globalValue.Value["SheetMenuText"];
+    public static string TempPath = _globalValue.Value["TempPath"];
+
     public static CommandBarButton Btn;
     public static Application App = (Application)ExcelDnaUtil.Application;
     private string _seachStr = string.Empty;
@@ -50,7 +54,8 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     private string _defaultFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "mergePath.txt");
     private string _currentBaseText;
     private string _currentTargetText;
-    TabControl _tabControl = new TabControl();
+    TabControl _tabControl = new();
+    private CustomTaskPane _sheetMenuCtp;
 
     #region 释放COM
 
@@ -156,6 +161,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
             "Button5" => LabelText,
             "Button14" => LabelTextRoleDataPreview,
             "FocusLightButton" => FocusLabelText,
+            "SheetMenu" => SheetMenuText,
             _ => ""
         };
         return latext;
@@ -596,7 +602,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
                 var fileName = fileTemp.Substring(0, fileTemp.IndexOf("@"));
                 var sheetName = fileTemp.Substring(fileTemp.LastIndexOf("@") + 1);
                 filePath = filePath + @"\" + fileName;
-                PreviewTableCtp.CreateCtpTaable(filePath, sheetName);
+                PreviewTableCtp.CreateCtpTable(filePath, sheetName);
             }
             else
             {
@@ -1295,6 +1301,25 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "数据写入完成，用时：" + ts2;
     }
+
+    public void CopyFileName_Click(IRibbonControl control)
+    {
+        var wk = App.ActiveWorkbook;
+        if (wk != null)
+        {
+            var excelName = wk.Name;
+            Clipboard.SetText(excelName);
+        }
+    }
+    public void CopyFilePath_Click(IRibbonControl control)
+    {
+        var wk = App.ActiveWorkbook;
+        if (wk != null)
+        {
+            var excelPath = wk.FullName;
+            Clipboard.SetText(excelPath);
+        }
+    }
     public void TestBar1_Click(IRibbonControl control)
     {
         //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -1305,6 +1330,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         //var abc = PubMetToExcelFunc.texstEncapsulation();
         var sw = new Stopwatch();
         sw.Start();
+        ErrorLogCtp.CreateCtpSheetMenu(App);
         //var abc = new ExcelDataAutoInsertNumChanges();
         //abc.OutDataIsAll(12);
 
@@ -1442,6 +1468,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
         {
             return line2;
         }
+
         return @"..\Public\Excels\Tables\";
     }
 
@@ -1493,7 +1520,7 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     public void FocusLight_Click(IRibbonControl control)
     {
         if (control == null) throw new ArgumentNullException(nameof(control));
-        FocusLabelText = FocusLabelText == "聚光灯：开启" ? "聚光灯：关闭" : "聚光灯：开启";
+        FocusLabelText = FocusLabelText == "聚光灯：开启" ? "聚光灯：关闭": "聚光灯：开启";
         CustomRibbon.InvalidateControl("FocusLightButton");
         if (FocusLabelText == "聚光灯：开启")
         {
@@ -1518,6 +1545,23 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     private void ExcelSheetCalculate(object sh, Range target)
     {
         FocusLight.Calculate();
+    }
+    //表格目录点击事件
+    public void SheetMenu_Click(IRibbonControl control)
+    {
+        if (control == null) throw new ArgumentNullException(nameof(control));
+        SheetMenuText = SheetMenuText == "表格目录：开启" ? "表格目录：关闭" : "表格目录：开启";
+        CustomRibbon.InvalidateControl("SheetMenu");
+        if (SheetMenuText == "表格目录：开启")
+        {
+            ErrorLogCtp.DisposeSheetMenuCtp();
+            ErrorLogCtp.CreateCtpSheetMenu(App);
+        }
+        else
+        {
+            ErrorLogCtp.HideSheetMenuCtp();
+        }
+        _globalValue.SaveValue("SheetMenuText", SheetMenuText);
     }
     private void App_SheetSelectionChange(object sh, Range target)
     {
@@ -1636,3 +1680,4 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     }
     #endregion
 }
+

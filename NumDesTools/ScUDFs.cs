@@ -422,6 +422,69 @@ public class ExcelUdf
         }
         return result;
     }
+    //组装字符串：条件
+    [ExcelFunction(Category = "UDF-组装字符串", IsVolatile = true, IsMacroType = true, Description = "拼接Range：条件")]
+    public static string CreatValueToArrayFilter(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "第一单元格范围")]
+        object[,] rangeObj1,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2",Name = "第二单元格范围")]
+        object[,] rangeObj2,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1",Name = "第二个单元格筛选条件值")]
+        object[,] filterObj,
+        [ExcelArgument(AllowReference = true, Description = "分隔符,eg:[,](头-中-尾)",Name = "分隔符")]
+        string delimiter,
+        [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false",Name = "过滤空值")]
+        bool ignoreEmpty
+        )
+
+    {
+        //变为一维数组
+        var values1Objects = rangeObj1.Cast<object>().ToArray();
+        var values2Objects = rangeObj2.Cast<object>().ToArray();
+        var valuesFilterObjects = filterObj.Cast<object>().ToArray();
+
+        //获取间隔方案
+        var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
+        //过滤掉空值并将二维数组中的值按行拼接成字符串
+        var result = string.Empty;
+        var count = 0;
+        if (values1Objects.Length > 0 && values2Objects.Length > 0 && delimiterList.Length > 0)
+        {
+            foreach (object item in values1Objects)
+            {
+                if (ignoreEmpty)
+                {
+                    var excelNull = item is ExcelEmpty;
+                    var stringNull = item?.ToString();
+                    if (!excelNull && stringNull != "")
+                    {
+                        var filterObjectBase = values2Objects[count];
+                        if (filterObjectBase.ToString() == valuesFilterObjects[0].ToString())
+                        {
+                             result += item + delimiterList[1];
+                        }
+                    }
+                    count++;
+                }
+                else
+                {
+                    var filterObjectBase = values2Objects[count];
+                    if (filterObjectBase == valuesFilterObjects[0])
+                    {
+                        result += item + delimiterList[1];
+                    }
+                    count++;
+                }
+            }
+            if (!string.IsNullOrEmpty(result))
+            {
+                result = result.Substring(0, result.Length - 1);
+            }
+            result = delimiterList[0] + result + delimiterList[2];
+
+        }
+        return result;
+    }
     //转置二维数组为一维
     [ExcelFunction(Category = "UDF-数组转置", IsVolatile = true, IsMacroType = true, Description = "二维数据转换为一维数据，并可选择是否过滤空值")]
     public static object[,] Trans2ArrayTo1Arrays(

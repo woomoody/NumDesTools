@@ -19,8 +19,12 @@ using stdole;
 using DataTable = System.Data.DataTable;
 using Font = System.Drawing.Font;
 using Image = System.Drawing.Image;
+using ListBox = System.Windows.Forms.ListBox;
 using Point = System.Drawing.Point;
+using RichTextBox = System.Windows.Forms.RichTextBox;
 using ScrollBars = System.Windows.Forms.ScrollBars;
+using UserControl = System.Windows.Forms.UserControl;
+
 #pragma warning disable CA1416
 
 namespace NumDesTools;
@@ -92,21 +96,134 @@ public static class ErrorLogCtp
             ForeColor = Color.GhostWhite
         };
 
-
         LabelControl.Controls.Add(errorLinkLable);
-
-
-
 
         Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(LabelControl, "写入错误日志");
         Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
         Ctp.Width = 450;
+        LabelControl.Dock = DockStyle.Fill;
         Ctp.Visible = true;
     }
 
-    public static void DisposeCtp()
+    public static void CreateCtpSheetMenu(dynamic excelApp)
+    {
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            LabelControl = new LabelControl();
+            var listBoxSheet = new ListBox();
+
+            ContextMenuStrip contextMenu = new ContextMenuStrip();
+            ToolStripMenuItem hideItem = new ToolStripMenuItem("隐藏");
+            ToolStripMenuItem showItem = new ToolStripMenuItem("显示");
+            contextMenu.Items.AddRange(new ToolStripItem[] { hideItem, showItem });
+            listBoxSheet.ContextMenuStrip = contextMenu;
+
+            foreach (var worksheet in excelApp.ActiveWorkbook.Sheets)
+            {
+                listBoxSheet.Items.Add(worksheet.Name);
+            }
+
+            //ListBox点击事件（SheetMenu）
+            listBoxSheet.SelectedIndexChanged += (sender, _) =>
+            {
+                if (sender is ListBox listBox)
+                {
+                    var sheetName = listBox.SelectedItem.ToString() ??
+                                    throw new ArgumentNullException(nameof(excelApp));
+                    if (excelApp.Sheets[sheetName] is Worksheet sheet)
+                    {
+                        sheet.Activate();
+                    }
+                }
+            };
+
+            //隐藏Sheet
+            hideItem.Click += (_, _) =>
+            {
+                var sheetName = listBoxSheet.SelectedItem.ToString() ??
+                                throw new ArgumentNullException(nameof(excelApp));
+                if (excelApp.Sheets[sheetName] is Worksheet sheet)
+                {
+                    sheet.Visible = XlSheetVisibility.xlSheetHidden;
+                }
+            };
+            //显示Sheet
+            showItem.Click += (_, _) =>
+            {
+                var sheetName = listBoxSheet.SelectedItem.ToString() ??
+                                throw new ArgumentNullException(nameof(excelApp));
+                if (excelApp.Sheets[sheetName] is Worksheet sheet)
+                {
+                    sheet.Visible = XlSheetVisibility.xlSheetVisible;
+                }
+            };
+
+            //标记隐藏Sheet
+            listBoxSheet.ItemHeight = 20; // 设置项目的高度为20像素
+            listBoxSheet.DrawMode = DrawMode.OwnerDrawFixed;
+            listBoxSheet.DrawItem += (_, e) =>
+            {
+                e.DrawBackground();
+                var sheetName = listBoxSheet.Items[e.Index].ToString();
+                var sheet = excelApp.Sheets[sheetName] as Worksheet;
+                bool isHidden = sheet != null && sheet.Visible == XlSheetVisibility.xlSheetHidden;
+                if (e.Font != null)
+                {
+                    float verticalOffset =
+                        // ReSharper disable once PossibleLossOfFraction
+                        (e.Bounds.Height - e.Font.Height) / 2;
+                    if (e.Font != null)
+                    {
+                        if (e.Font != null)
+                        {
+                            if (e.Font != null)
+                            {
+                                Font font = isHidden ? new Font(e.Font, FontStyle.Italic) : e.Font;
+                                Brush brush = new SolidBrush(e.ForeColor);
+                                if (e.Font != null)
+                                {
+                                    e.Graphics.DrawString(sheetName, font, brush,
+                                        new RectangleF(e.Bounds.X, e.Bounds.Y + verticalOffset, e.Bounds.Width,
+                                            e.Bounds.Height),
+                                        StringFormat.GenericDefault);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                e.DrawFocusRectangle();
+            };
+
+            LabelControl.Controls.Add(listBoxSheet);
+            Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(LabelControl, "表格目录");
+            Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionLeft;
+            Ctp.Width = 350;
+            Ctp.Visible = true;
+            listBoxSheet.Dock = DockStyle.Fill;
+        });
+    }
+
+    public static void DisposeSheetMenuCtp()
+    {
+        if(Ctp == null) return;
+        if (Ctp.Title == "表格目录" )
+        {
+            Ctp.Delete();
+            Ctp = null;
+        }
+    }
+    public static void HideSheetMenuCtp()
     {
         if (Ctp == null) return;
+        if (Ctp.Title == "表格目录")
+        {
+            Ctp.Visible = false;
+        }
+    }
+    public static void DisposeCtp()
+    {
+        if (Ctp == null || Ctp.Title != "表格目录") return;
         Ctp.Delete();
         Ctp = null;
     }
@@ -548,7 +665,7 @@ public static class PreviewTableCtp
     public static CustomTaskPane Ctp;
     public static UserControl Uc;
 
-    public static void CreateCtpTaable(string filePath, string sheetName)
+    public static void CreateCtpTable(string filePath, string sheetName)
     {
         Uc = new UserControl();
         Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(Uc, filePath + @"\" + sheetName);

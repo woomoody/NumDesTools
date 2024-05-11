@@ -18,7 +18,7 @@ using LicenseContext = OfficeOpenXml.LicenseContext;
 using Match = System.Text.RegularExpressions.Match;
 using Range = Microsoft.Office.Interop.Excel.Range;
 using MessageBox = System.Windows.MessageBox;
-using NPOI.SS.Formula.Functions;
+
 #pragma warning disable CA1416
 
 
@@ -2486,6 +2486,7 @@ public class ExcelDataAutoInsertNumChanges
                 return;
             }
 
+            int repeatValueCount = 0;
             for (int i = 0; i < keyIndexRowCount; i++)
             {
                 var keyIndexValue = eachExcelData.Value.Item2[i][0]?.ToString();
@@ -2493,12 +2494,24 @@ public class ExcelDataAutoInsertNumChanges
                 if (keyIndexValue != null && keyTargetValue != null)
                 {
                     var keyIndexRow = excelObj.FindFromRow(sheetTarget, keyIndexCol, keyIndexValue);
-                    sheetTarget.Cells[keyIndexRow, keyTargetCol].Value = keyTargetValue;
+                    var baseValue = sheetTarget.Cells[keyIndexRow, keyTargetCol].Value;
+                    //统计重复值，但凡有一个不重复表名此次写入有新增内容，需要保存文件
+                    if ((string)baseValue != keyTargetValue)
+                    {
+                        sheetTarget.Cells[keyIndexRow, keyTargetCol].Value = keyTargetValue;
+                    }
+                    else
+                    {
+                        repeatValueCount++;
+                    }
                 }
-
             }
 
-            excelTarget.Save();
+            if (keyIndexRowCount - repeatValueCount > 0)
+            {
+                excelTarget.Save();
+            }
+
         }
     }
 
