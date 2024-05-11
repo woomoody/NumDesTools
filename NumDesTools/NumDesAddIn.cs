@@ -11,7 +11,6 @@ using ExcelDna.Integration;
 using ExcelDna.Integration.CustomUI;
 using ExcelDna.IntelliSense;
 using Microsoft.Office.Interop.Excel;
-using NPOI.SS.Formula.Functions;
 using Application = Microsoft.Office.Interop.Excel.Application;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
@@ -346,8 +345,6 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     {
         //状态栏信息显示文件所在路径
         App.StatusBar = wb.FullName;
-    }
-
     }
 
     public void AllWorkbookOutPut_Click(IRibbonControl control)
@@ -1683,3 +1680,4 @@ public class NumDesAddIn: ExcelRibbon,IExcelAddIn
     }
     #endregion
 }
+
