@@ -343,9 +343,15 @@ public class PubMetToExcelFunc
         var maxRollCell = PubMetToExcel.ReadExcelDataC(sheetName, 18, 18, 2, 2);
         var maxGridLoopCell = PubMetToExcel.ReadExcelDataC(sheetName, 17, 17, 2, 2);
         var maxRankCell = PubMetToExcel.ReadExcelDataC(sheetName, 18, 18, 5, 5);
+#pragma warning disable CA1305 // 指定 IFormatProvider
         var maxRoll = Convert.ToInt32(maxRollCell[0, 0]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
         var maxGridLoop = Convert.ToInt32(maxGridLoopCell[0, 0]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
         var maxRankValue = Convert.ToInt32(maxRankCell[0, 0]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
         //List<int> data = new List<int>();
         //for (int i = 0; i < seedRangeValue.GetLength(0); i++)
         //{
@@ -377,7 +383,9 @@ public class PubMetToExcelFunc
                     bpProcessTemp.Add(permutations[i][0]);
                     var tempValue = targetRank[0, 0];
                     if (tempValue is ExcelEmpty) tempValue = null;
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     targetGiftTemp.Add(Convert.ToInt32(tempValue));
+#pragma warning restore CA1305 // 指定 IFormatProvider
                 }
                 else
                 {
@@ -390,7 +398,9 @@ public class PubMetToExcelFunc
                     //获取价值量
                     var tempValue = targetRank[targetTemp - 1, 0];
                     if (tempValue is ExcelEmpty) tempValue = null;
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     var targetTemp2 = targetGiftTemp[j - 1] + Convert.ToInt32(tempValue);
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     targetGiftTemp.Add(targetTemp2);
                 }
             }
@@ -408,8 +418,12 @@ public class PubMetToExcelFunc
             var rollGrid = targetKey[i, 1];
             if (!(rollTimes is ExcelEmpty))
             {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                 var colIndex = Convert.ToInt32(rollTimes) - 1;
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
                 var colValue = Convert.ToInt32(rollGrid);
+#pragma warning restore CA1305 // 指定 IFormatProvider
                 //筛选指定列有固定目标值的行
                 filteredData = filteredData
                     .Where(entry => entry.Value[colIndex] == colValue)
@@ -432,11 +446,15 @@ public class PubMetToExcelFunc
             var softGrid = targetKeySoft[i, 0];
             if (!(softGrid is ExcelEmpty))
                 //筛选动态目标值满足出现次数的行
+#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305 // 指定 IFormatProvider
                 filteredData = filteredData
                     .Where(pair =>
                         pair.Value.Take(maxRoll).Count(item => item == Convert.ToInt32(softGrid)) ==
                         Convert.ToInt32(softTimes))
                     .ToDictionary(pair => pair.Key, pair => pair.Value);
+#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305 // 指定 IFormatProvider
         }
 
         //方案整理
@@ -523,7 +541,9 @@ public class PubMetToExcelFunc
         //读取数据（0起始）
         var eleCount = PubMetToExcel.ReadExcelDataC(sheetName, 2, 8, 21, 21);
         var simulateCount = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 21, 21);
+#pragma warning disable CA1305 // 指定 IFormatProvider
         var simulateCountMax = Convert.ToInt32(simulateCount[0, 0]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
         var eleCountMax = eleCount.GetLength(0);
         var filterEleCountMax = new List<int>();
         //初始化统计list
@@ -537,7 +557,9 @@ public class PubMetToExcelFunc
             for (var r = 0; r < eleCountMax; r++)
             {
                 var eleGuessListGroup = new List<List<int>>();
+#pragma warning disable CA1305 // 指定 IFormatProvider
                 var eleNum = Convert.ToInt32(eleCount[r,0]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
                 //创建随机元素序列List
                 var eleList = new List<int>();
                 var eleGuessList = new List<int>();

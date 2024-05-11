@@ -562,11 +562,15 @@ internal class DotaLegendBattleSerial
         var data = new List<double>();
         for (var i = 1; i < row + 1; i++)
         {
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var sss = string.IsNullOrWhiteSpace(Convert.ToString(arr.GetValue(i, col)));
+#pragma warning restore CA1305 // 指定 IFormatProvider
             if (sss == false)
             {
                 if (mode == 1)
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     data.Add(Convert.ToDouble(arr.GetValue(i, col)));
+#pragma warning restore CA1305 // 指定 IFormatProvider
                 else
                     data.Add(0);
             }
@@ -580,10 +584,14 @@ internal class DotaLegendBattleSerial
         var data = new List<string>();
         for (var i = 1; i < row + 1; i++)
         {
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var sss = string.IsNullOrWhiteSpace(Convert.ToString(arr.GetValue(i, col)));
+#pragma warning restore CA1305 // 指定 IFormatProvider
             if (sss == false)
                 if (mode == 1)
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     data.Add(Convert.ToString(arr.GetValue(i, col)));
+#pragma warning restore CA1305 // 指定 IFormatProvider
         }
 
         return data;

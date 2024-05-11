@@ -203,7 +203,9 @@ public class RoleDataPro
         var newArr = new double[100, 6];
         for (var i = 0; i < 6; i++)
         for (var j = 0; j < 100; j++)
+#pragma warning disable CA1305 // 指定 IFormatProvider
             newArr[j, i] = Convert.ToDouble(oldArr[i][j]);
+#pragma warning restore CA1305 // 指定 IFormatProvider
         //打开文件写入数据
         var usherette = book.Worksheets[roleDataSheetName];
         usherette.Range["A3:F102"].Value = newArr;
@@ -292,10 +294,14 @@ public class RoleDataPro
             var oneRoleDataDoubleList = new List<double>();
             for (var j = 1; j < totalCol + 1; j++)
             {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                 var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
                 try
                 {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     var temp = Convert.ToDouble(tempData);
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     oneRoleDataDoubleList.Add(temp);
                 }
                 catch
@@ -315,7 +321,9 @@ public class RoleDataPro
         var pubData = new List<double>();
         for (var i = 1; i < pubDataRng.Count + 1; i++)
         {
+#pragma warning disable CA1305 // 指定 IFormatProvider
             var tempData = Convert.ToDouble(pubDataArr.GetValue(i, 1));
+#pragma warning restore CA1305 // 指定 IFormatProvider
             pubData.Add(tempData);
         }
 
@@ -454,10 +462,14 @@ public class RoleDataPri
             for (var j = 1; j < totalCol + 1; j++)
                 if (j == atkIndex || j == defIndex || j == hpIndex || j == atkSpeedIndex || j == roleIdIndex)
                 {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     try
                     {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                         var temp = Convert.ToDouble(tempData);
+#pragma warning restore CA1305 // 指定 IFormatProvider
                         oneRoleDataDoubleList.Add(temp);
                     }
                     catch
@@ -603,10 +615,14 @@ public class RoleDataPriNpoi
             for (var j = 1; j < totalCol + 1; j++)
                 if (j == atkIndex || j == defIndex || j == hpIndex || j == atkSpeedIndex || j == roleIdIndex)
                 {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                     var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
+#pragma warning restore CA1305 // 指定 IFormatProvider
                     try
                     {
+#pragma warning disable CA1305 // 指定 IFormatProvider
                         var temp = Convert.ToDouble(tempData);
+#pragma warning restore CA1305 // 指定 IFormatProvider
                         oneRoleDataDoubleList.Add(temp);
                     }
                     catch

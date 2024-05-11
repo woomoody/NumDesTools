@@ -136,7 +136,7 @@
     <Folder Include="Resources\" />
   </ItemGroup>
   <PropertyGroup>
-    <PostBuildEvent>call "$(SolutionDir)packFromBin\ReNamePack.bat" /y
+    <PostBuildEvent>call "C:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesToolsCode\packFromBin\ReNamePack.bat" /y
 </PostBuildEvent>
   </PropertyGroup>
 </Project>
