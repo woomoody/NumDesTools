@@ -6,6 +6,7 @@ using System.Dynamic;
 using System.IO;
 using System.Linq;
 using Range = Microsoft.Office.Interop.Excel.Range;
+
 #pragma warning disable CA1416
 
 // ReSharper disable All
@@ -20,6 +21,7 @@ public class ExcelDataByEpplus
     public ExcelPackage Excel { get; set; }
     public ExcelWorksheet Sheet { get; set; }
     public List<(string, string, string)> ErrorList { get; private set; }
+
     public bool GetExcelObj(dynamic excelPath, dynamic excelName)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -38,6 +40,7 @@ public class ExcelDataByEpplus
             excelRealName = excelRealNameGroup[0];
             sheetRealName = excelRealNameGroup[1];
         }
+
         switch (excelName)
         {
             case "Localizations.xlsx":
@@ -95,8 +98,9 @@ public class ExcelDataByEpplus
         Excel = excel;
         return true;
     }
+
     //数据读取
-    public List<dynamic> Read(ExcelWorksheet sheet,  int rowFirst, int rowEnd, int colFirst = 1, int indexRow = 4)
+    public List<dynamic> Read(ExcelWorksheet sheet, int rowFirst, int rowEnd, int colFirst = 1, int indexRow = 4)
     {
         var list = new List<dynamic>();
         int colCount = sheet.Dimension.Columns;
@@ -109,19 +113,24 @@ public class ExcelDataByEpplus
                 string columnName = sheet.Cells[indexRow, col].Value?.ToString() ?? string.Empty;
                 expando[columnName] = sheet.Cells[row, col].Value;
             }
+
             list.Add(expando);
         }
+
         return list;
     }
+
     //数据读取
-    public Dictionary<string, List<object>> ReadToDic(ExcelWorksheet sheet, int rowFirst, int colFirst, List<int> usedData, int rowEnd = 1 )
+    public Dictionary<string, List<object>> ReadToDic(ExcelWorksheet sheet, int rowFirst, int colFirst,
+        List<int> usedData, int rowEnd = 1)
     {
         Dictionary<string, List<object>> dataDict = new Dictionary<string, List<object>>();
         var colCount = usedData.Count();
-        if(rowEnd != 1)
+        if (rowEnd != 1)
         {
             rowEnd = sheet.Dimension.End.Row;
         }
+
         string lastMainTable = null;
         for (int i = rowFirst; i <= rowEnd; i++)
         {
@@ -136,6 +145,7 @@ public class ExcelDataByEpplus
                     dataDict[lastMainTable] = new List<object>();
                 }
             }
+
             string data;
             List<string> usedDataList = new List<string>();
             for (int j = 0; j < colCount; j++)
@@ -143,11 +153,15 @@ public class ExcelDataByEpplus
                 data = sheet.Cells[i, usedData[j]].Text;
                 usedDataList.Add(data);
             }
+
             dataDict[lastMainTable].Add(usedDataList);
         }
+
         return dataDict;
     }
-    public static Dictionary<string, List<object>> ReadExcelDataToDicByEpplus(string path, string sheetName, int startRow, int startCol, List<int> usedData)
+
+    public static Dictionary<string, List<object>> ReadExcelDataToDicByEpplus(string path, string sheetName,
+        int startRow, int startCol, List<int> usedData)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         Dictionary<string, List<object>> dataDict = new Dictionary<string, List<object>>();
@@ -170,6 +184,7 @@ public class ExcelDataByEpplus
                         dataDict[lastMainTable] = new List<object>();
                     }
                 }
+
                 string data;
                 List<string> usedDataList = new List<string>();
                 for (int j = 0; j < colCount; j++)
@@ -177,13 +192,16 @@ public class ExcelDataByEpplus
                     data = worksheet.Cells[i, usedData[j]].Text;
                     usedDataList.Add(data);
                 }
+
                 dataDict[lastMainTable].Add(usedDataList);
             }
         }
+
         return dataDict;
     }
+
     //数据写入
-    public void Write(ExcelWorksheet sheet, ExcelPackage Excel ,  List<dynamic> data, int rowFirst)
+    public void Write(ExcelWorksheet sheet, ExcelPackage Excel, List<dynamic> data, int rowFirst)
     {
         // 更新 Excel 数据
         for (int row = 0; row < data.Count; row++)
@@ -196,9 +214,11 @@ public class ExcelDataByEpplus
                 col++;
             }
         }
+
         Excel.Save();
     }
-    public  int FindFromRow(ExcelWorksheet sheet, int col, string searchValue)
+
+    public int FindFromRow(ExcelWorksheet sheet, int col, string searchValue)
     {
         for (var row = 2; row <= sheet.Dimension.End.Row; row++)
         {
@@ -214,9 +234,11 @@ public class ExcelDataByEpplus
                 return rowAddress;
             }
         }
+
         return -1;
     }
-    public  int FindFromCol(ExcelWorksheet sheet, int row, string searchValue)
+
+    public int FindFromCol(ExcelWorksheet sheet, int row, string searchValue)
     {
         for (var col = 2; col <= sheet.Dimension.End.Column; col++)
         {
@@ -236,11 +258,12 @@ public class ExcelDataByEpplus
         return -1;
     }
 }
+
 public class ExcelDataByVsto
 {
-    public  dynamic ActiveWorkbook { get; set; }
-    public  dynamic ActiveSheet { get; set; }
-    public  string ActiveWorkbookPath { get; set; }
+    public dynamic ActiveWorkbook { get; set; }
+    public dynamic ActiveSheet { get; set; }
+    public string ActiveWorkbookPath { get; set; }
 
     //创建对象获取基本信息
     public void GetExcelObj()
@@ -256,7 +279,8 @@ public class ExcelDataByVsto
     }
 
     //数据读取
-    public (List<object> sheetHeaderCol, List<List<object>> sheetData) Read(Range rangeData, Range rangeHeader, int headRow)
+    public (List<object> sheetHeaderCol, List<List<object>> sheetData) Read(Range rangeData, Range rangeHeader,
+        int headRow)
     {
         // 读取数据到一个二维数组中
         object[,] rangeValue = rangeData.Value;
@@ -274,27 +298,32 @@ public class ExcelDataByVsto
                 var valueData = rangeValue[row, column];
                 rowList.Add(valueData);
             }
+
             sheetData.Add(rowList);
         }
+
         //读取表头
         for (var column = 1; column <= rangeValue.GetLength(1); column++)
         {
             var value = headRangeValue[headRow, column];
             sheetHeaderCol.Add(value);
         }
+
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
+
     //通过C-API的方式写入打开当前活动Excel表格各个Sheet的数据
-    public  void Write(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast,
+    public void Write(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast,
         object[,] rangeValue)
     {
         var sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
         var range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
         ExcelAsyncUtil.QueueAsMacro(() => { range.SetValue(rangeValue); });
     }
+
     //VSTO内置在Range内查找特定值(第一个)的方法
-    public  (int row, int column) FindValue(Range searchRange, object valueToFind)
+    public (int row, int column) FindValue(Range searchRange, object valueToFind)
     {
         // 使用 Find 方法在指定范围内查找特定值
         Range foundRange = searchRange.Find(valueToFind);

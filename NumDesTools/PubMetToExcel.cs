@@ -68,6 +68,7 @@ public class PubMetToExcel
             excelRealName = excelRealNameGroup[0];
             sheetRealName = excelRealNameGroup[1];
         }
+
         switch (excelName)
         {
             case "Localizations.xlsx":
@@ -221,6 +222,7 @@ public class PubMetToExcel
     #endregion
 
     #region C-API与Excel
+
     [ExcelFunction(IsHidden = true)]
     //通过C-API的方式读取打开当前活动Excel表格各个Sheet的数据
     public static object[,] ReadExcelDataC(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast)
@@ -282,6 +284,7 @@ public class PubMetToExcel
     #endregion
 
     #region Excel界面相关
+
     [ExcelFunction(IsHidden = true)]
     public static int ExcelRangePixelsX(double targetX)
     {
@@ -289,8 +292,8 @@ public class PubMetToExcel
         var targetXPoint = targetX * 1.67;
         var targetXPixels = workArea.PointsToScreenPixelsX((int)targetXPoint);
         return targetXPixels;
-
     }
+
     [ExcelFunction(IsHidden = true)]
     public static int ExcelRangePixelsY(double targetY)
     {
@@ -299,7 +302,9 @@ public class PubMetToExcel
         var targetYPixels = workArea.PointsToScreenPixelsY((int)targetYPoint);
         return targetYPixels;
     }
+
     #endregion
+
     //Excel数据输出为List
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToList(dynamic workSheet)
     {
@@ -354,7 +359,7 @@ public class PubMetToExcel
             for (var column = dataCol; column <= columns; column++)
             {
                 var value = rangeValue[row, column];
-                if (row == headerRow)//这个可能是冗余判断，暂时未发现问题
+                if (row == headerRow) //这个可能是冗余判断，暂时未发现问题
                     sheetHeaderCol.Add(value);
                 else
                     rowList.Add(value);
@@ -373,9 +378,11 @@ public class PubMetToExcel
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
+
     //Excel数据输出为List，自定义数据起始-结束行、列，根据当前选择的单元格
-    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelfToEnd(dynamic workSheet,
-        int dataRow, int dataCol,int headRow)
+    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelfToEnd(
+        dynamic workSheet,
+        int dataRow, int dataCol, int headRow)
     {
         Range selectRange = NumDesAddIn.App.Selection;
         Range usedRange = workSheet.UsedRange;
@@ -392,6 +399,7 @@ public class PubMetToExcel
             dataRow = usedRange.Row;
             dataRowEnd = dataRow + usedRange.Rows.Count - 1;
         }
+
         //确定列，不确定行
         if (dataCol == 0)
         {
@@ -403,6 +411,7 @@ public class PubMetToExcel
             dataCol = usedRange.Column;
             dataColEnd = dataCol + usedRange.Columns.Count - 1;
         }
+
         Range dataRangeStart = workSheet.Cells[dataRow, dataCol];
         Range dataRangeEnd = workSheet.Cells[dataRowEnd, dataColEnd];
         Range dataRange = workSheet.Range[dataRangeStart, dataRangeEnd];
@@ -923,6 +932,7 @@ public class PubMetToExcel
 
         return color;
     }
+
     [ExcelFunction(IsHidden = true)]
     public static string ChangeExcelColChar(int col)
     {
@@ -957,6 +967,7 @@ public class PubMetToExcel
 
         return textLineList;
     }
+
     [ExcelFunction(IsHidden = true)]
     public static string ErrorLogAnalysis(dynamic errorList, dynamic sheet)
     {
@@ -973,6 +984,7 @@ public class PubMetToExcel
 
         return errorLog;
     }
+
     [ExcelFunction(IsHidden = true)]
     //数字转Excel字母列
     public static string ConvertToExcelColumn(int columnNumber)
@@ -1107,7 +1119,7 @@ public class PubMetToExcel
 
         return twoDArray;
     }
-    
+
     //VSTO内置在Range内查找特定值(第一个)的方法
     public static (int row, int column) FindValueInRangeByVsto(Range searchRange, object valueToFind)
     {
@@ -1125,7 +1137,9 @@ public class PubMetToExcel
             return (-1, -1);
         }
     }
-    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) RangeToListByVsto(Range rangeData , Range rangeHeader , int headRow)
+
+    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) RangeToListByVsto(Range rangeData,
+        Range rangeHeader, int headRow)
     {
         // 读取数据到一个二维数组中
         object[,] rangeValue = rangeData.Value;
@@ -1143,17 +1157,21 @@ public class PubMetToExcel
                 var valueData = rangeValue[row, column];
                 rowList.Add(valueData);
             }
+
             sheetData.Add(rowList);
         }
+
         //读取表头
         for (var column = 1; column <= rangeValue.GetLength(1); column++)
         {
             var value = headRangeValue[headRow, column];
             sheetHeaderCol.Add(value);
         }
+
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
+
     public static void TestEpPlus()
     {
         //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;

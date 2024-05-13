@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Font = System.Drawing.Font;
 using Range = Microsoft.Office.Interop.Excel.Range;
 using IWin32Window = System.Windows.Forms.IWin32Window;
+
 #pragma warning disable CA1416
 #pragma warning disable CA1416
 
@@ -13,14 +14,17 @@ namespace NumDesTools;
 public class CellSelectChangeTip : ClickThroughForm
 {
     private string _displayText;
-    int _currentLeft;
-    int _currentTop;
-    Win32Window _owner;
+    private int _currentLeft;
+    private int _currentTop;
+
+    private Win32Window _owner;
+
     //绘制窗口
     public CellSelectChangeTip()
     {
         InitializeComponent();
     }
+
     private void InitializeComponent()
     {
         SuspendLayout();
@@ -48,6 +52,7 @@ public class CellSelectChangeTip : ClickThroughForm
         e.Graphics.DrawString(_displayText, new Font("微软雅黑", 13), brush, new PointF(10, 10));
 #pragma warning restore CA1416
     }
+
     public void ShowToolTip(string text, Range target)
     {
         // 更新文本内容
@@ -57,10 +62,11 @@ public class CellSelectChangeTip : ClickThroughForm
             HideToolTip();
             return;
         }
+
         var workingArea = NumDesAddIn.App.ActiveWindow;
-        var zoom = workingArea.Zoom/100;
+        var zoom = workingArea.Zoom / 100;
         var workingAreaLeft = workingArea.Left * 1.67;
-        var workingAreaTop  = workingArea.Top * 1.67;
+        var workingAreaTop = workingArea.Top * 1.67;
         var workingAreaWidth = workingArea.Width * 1.67;
         var workingAreaHeight = workingArea.Height * 1.67;
         // 获取字体占的像素
@@ -76,22 +82,16 @@ public class CellSelectChangeTip : ClickThroughForm
         var targetHeightPixels = Convert.ToInt32(target.Height * 1.67 * zoom);
         _currentLeft = targetLeftPixels + targetWidthPixels;
         _currentTop = targetTopPixels + targetHeightPixels;
-        if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth)
-        {
-            _currentLeft = targetLeftPixels - tipWidth;
-        }
+        if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth) _currentLeft = targetLeftPixels - tipWidth;
 
-        if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight)
-        {
-            _currentTop = targetTopPixels - tipHeight;
-        }
+        if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight) _currentTop = targetTopPixels - tipHeight;
         //单位为像素
         Location = new Point(_currentLeft, _currentTop);
         ClientSize = new Size(tipWidth, tipHeight);
         //写入文本
         Paint += TargetStrWrite;
         //获取工作区句柄,显示窗口，不使用次方法，窗口闪现
-        IntPtr excelHandle = (IntPtr)NumDesAddIn.App.Hwnd;
+        var excelHandle = (IntPtr)NumDesAddIn.App.Hwnd;
         _owner = new Win32Window(excelHandle);
         Show(_owner);
     }
@@ -100,7 +100,8 @@ public class CellSelectChangeTip : ClickThroughForm
     {
         Hide();
     }
-    class Win32Window : IWin32Window
+
+    private class Win32Window : IWin32Window
     {
         public IntPtr Handle
         {
@@ -115,6 +116,7 @@ public class CellSelectChangeTip : ClickThroughForm
             Handle = handle;
         }
     }
+
     public void GetCellValue(object sh, Range target)
     {
         HideToolTip();
@@ -123,24 +125,18 @@ public class CellSelectChangeTip : ClickThroughForm
 
         if (rngRow < 100 && rngCol < 10)
         {
-            string cellStr = "";
+            var cellStr = "";
             var arr = target.Value;
-            var isArray = arr is object[,] ;
+            var isArray = arr is object[,];
             if (isArray)
-            {
-                for (int i = 1; i <= arr.GetLength(0); i++)
+                for (var i = 1; i <= arr.GetLength(0); i++)
                 {
-                    for (int j = 1; j <= arr.GetLength(1); j++)
-                    {
-                        cellStr += arr[i, j] + "#";
-                    }
+                    for (var j = 1; j <= arr.GetLength(1); j++) cellStr += arr[i, j] + "#";
                     cellStr += "\r\n";
                 }
-            }
             else
-            {
                 cellStr = arr.ToString() + "\r\n";
-            }
+
             // 显示或更新提示窗口
             ShowToolTip(cellStr, target);
         }
@@ -151,6 +147,7 @@ public class CellSelectChangeTip : ClickThroughForm
             HideToolTip();
         }
     }
+
     private void CellSelectChangeTip_Load(object sender, EventArgs e)
     {
         var target = NumDesAddIn.App.ActiveCell;
@@ -174,25 +171,21 @@ public class CellSelectChangeTip : ClickThroughForm
         _currentLeft = targetLeftPixels + targetWidthPixels;
         _currentTop = targetTopPixels + targetHeightPixels;
 
-        if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth)
-        {
-            _currentLeft = targetLeftPixels - tipWidth;
-        }
+        if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth) _currentLeft = targetLeftPixels - tipWidth;
 
-        if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight)
-        {
-            _currentTop = targetTopPixels - tipHeight;
-        }
+        if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight) _currentTop = targetTopPixels - tipHeight;
         Location = new Point(_currentLeft, _currentTop);
         ClientSize = new Size(tipWidth, tipHeight);
     }
 }
+
 //点击穿透界面
 public class ClickThroughForm : Form
 {
     // ReSharper disable once InconsistentNaming
     // ReSharper disable once IdentifierTypo
     private const int WM_NCHITTEST = 0x84;
+
     // ReSharper disable once IdentifierTypo
     // ReSharper disable once InconsistentNaming
     private const int HTTRANSPARENT = -1;
@@ -223,7 +216,7 @@ public class ClickThroughForm : Form
     {
         get
         {
-            CreateParams createParams = base.CreateParams;
+            var createParams = base.CreateParams;
             createParams.ExStyle |= 0x00000020; // WS_EX_TRANSPARENT
             return createParams;
         }
