@@ -23,7 +23,8 @@
                             screentip='聚光灯效果！配置路径：\Documents\NumDesGlobalKey.txt' />
                     <button id='Button8' size='large' label='公式检查' image='asciidoc' onAction='FormularCheck_Click'
                             screentip='点击检查当前工作簿所有sheet中的公式，看是否有错误的连接，推荐合完表后进行检查' />
-                    <button id='SheetMenu' size='large' getLabel= 'GetLableText'  image='reason' onAction='SheetMenu_Click'
+                    <button id='SheetMenu' size='large' getLabel='GetLableText' image='reason'
+                            onAction='SheetMenu_Click'
                             screentip='点击创建表格目录，再次点击关闭! 配置路径：\Documents\NumDesGlobalKey.txt' />
                 </group>
                 <!--
@@ -82,7 +83,7 @@
                 </group>
                 <group id="Group8" label="Excel搜索">
                     <labelControl id="SearchLab" label="搜索编号/关键字" />
-                    <editBox id="ExcelSearchBoxEdit" onChange="ExcelOnEditBoxTextChanged" sizeString="……………………"  />
+                    <editBox id="ExcelSearchBoxEdit" onChange="ExcelOnEditBoxTextChanged" sizeString="……………………" />
                     <button id="ExcelSearchBoxButton1" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件'
                             onAction='ExcelSearchAll_Click' image="key" />
                     <button id="ExcelSearchBoxButton3" label="全局搜索(多线程)" screentip='全列，按照A-Z的顺序遍历文件'
@@ -114,9 +115,13 @@
                 <group id='FileInfo' label='文件信息'>
                     <button id='CopyFileName' size='large' label='文件名称' image='document' onAction='CopyFileName_Click' />
                     <button id='CopyFilePath' size='large' label='文件路径' image='file' onAction='CopyFilePath_Click' />
-                    <labelControl id="BasePathLab" label=" 源表/目标"  />
-                    <editBox id="BasePathEdit" getText="GetFileInfo" onChange="BaseFileInfoChanged"  sizeString="........................................................................." image ="folder-android" screentip='输入自己本地目录，自动保存'/>
-                    <editBox id="TargetPathEdit" getText="GetFileInfo"  onChange="TargetFileInfoChanged"  sizeString="........................................................................." image ="folder-aws" screentip='输入自己本地目录，自动保存'/>
+                    <labelControl id="BasePathLab" label=" 源表/目标" />
+                    <editBox id="BasePathEdit" getText="GetFileInfo" onChange="BaseFileInfoChanged"
+                             sizeString="........................................................................."
+                             image="folder-android" screentip='输入自己本地目录，自动保存' />
+                    <editBox id="TargetPathEdit" getText="GetFileInfo" onChange="TargetFileInfoChanged"
+                             sizeString="........................................................................."
+                             image="folder-aws" screentip='输入自己本地目录，自动保存' />
                 </group>
                 <!--
                 <group id='Group4' label='战斗仿真'>控件id不能重复，否则无法加载Ribbon

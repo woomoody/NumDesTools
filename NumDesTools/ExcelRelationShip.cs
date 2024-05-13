@@ -1,4 +1,5 @@
 ﻿// ReSharper disable All
+
 namespace NumDesTools;
 
 /// <summary>

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
 using Range = Microsoft.Office.Interop.Excel.Range;
+
 // ReSharper disable All
 #pragma warning disable CA1416
 
