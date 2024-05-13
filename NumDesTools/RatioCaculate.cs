@@ -66,7 +66,7 @@ public class RatioCaculate
                     var targetCardId = collectCardInfoDataList[j][cardInfoIdIndex].ToString();
                     if (targetCardId == sourceCardId)
                     {
-                        int targetCardRarity = (int)collectCardInfoDataList[j][cardInfoRarityIndex];
+                        var targetCardRarity = (int)collectCardInfoDataList[j][cardInfoRarityIndex];
                         if (targetCardRarity == 1)
                             rarity1++;
                         else if (targetCardRarity == 2)

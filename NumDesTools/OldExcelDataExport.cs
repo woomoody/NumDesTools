@@ -34,12 +34,17 @@ namespace NumDesTools;
 /// </summary>
 
 #region 升级net6后带来的问题，UserControl需要一个显示的“默认接口”
-public interface IMyUserControl { }
+
+public interface IMyUserControl
+{
+}
+
 [ComVisible(true)]
 [ComDefaultInterface(typeof(IMyUserControl))]
-public  class LabelControl : UserControl, IMyUserControl;
+public class LabelControl : UserControl, IMyUserControl;
 
 #endregion
+
 public static class ErrorLogCtp
 {
     public static CustomTaskPane Ctp;
@@ -112,16 +117,13 @@ public static class ErrorLogCtp
             LabelControl = new LabelControl();
             var listBoxSheet = new ListBox();
 
-            ContextMenuStrip contextMenu = new ContextMenuStrip();
-            ToolStripMenuItem hideItem = new ToolStripMenuItem("隐藏");
-            ToolStripMenuItem showItem = new ToolStripMenuItem("显示");
+            var contextMenu = new ContextMenuStrip();
+            var hideItem = new ToolStripMenuItem("隐藏");
+            var showItem = new ToolStripMenuItem("显示");
             contextMenu.Items.AddRange(new ToolStripItem[] { hideItem, showItem });
             listBoxSheet.ContextMenuStrip = contextMenu;
 
-            foreach (var worksheet in excelApp.ActiveWorkbook.Sheets)
-            {
-                listBoxSheet.Items.Add(worksheet.Name);
-            }
+            foreach (var worksheet in excelApp.ActiveWorkbook.Sheets) listBoxSheet.Items.Add(worksheet.Name);
 
             //ListBox点击事件（SheetMenu）
             listBoxSheet.SelectedIndexChanged += (sender, _) =>
@@ -130,10 +132,7 @@ public static class ErrorLogCtp
                 {
                     var sheetName = listBox.SelectedItem.ToString() ??
                                     throw new ArgumentNullException(nameof(excelApp));
-                    if (excelApp.Sheets[sheetName] is Worksheet sheet)
-                    {
-                        sheet.Activate();
-                    }
+                    if (excelApp.Sheets[sheetName] is Worksheet sheet) sheet.Activate();
                 }
             };
 
@@ -142,20 +141,14 @@ public static class ErrorLogCtp
             {
                 var sheetName = listBoxSheet.SelectedItem.ToString() ??
                                 throw new ArgumentNullException(nameof(excelApp));
-                if (excelApp.Sheets[sheetName] is Worksheet sheet)
-                {
-                    sheet.Visible = XlSheetVisibility.xlSheetHidden;
-                }
+                if (excelApp.Sheets[sheetName] is Worksheet sheet) sheet.Visible = XlSheetVisibility.xlSheetHidden;
             };
             //显示Sheet
             showItem.Click += (_, _) =>
             {
                 var sheetName = listBoxSheet.SelectedItem.ToString() ??
                                 throw new ArgumentNullException(nameof(excelApp));
-                if (excelApp.Sheets[sheetName] is Worksheet sheet)
-                {
-                    sheet.Visible = XlSheetVisibility.xlSheetVisible;
-                }
+                if (excelApp.Sheets[sheetName] is Worksheet sheet) sheet.Visible = XlSheetVisibility.xlSheetVisible;
             };
 
             //标记隐藏Sheet
@@ -166,30 +159,24 @@ public static class ErrorLogCtp
                 e.DrawBackground();
                 var sheetName = listBoxSheet.Items[e.Index].ToString();
                 var sheet = excelApp.Sheets[sheetName] as Worksheet;
-                bool isHidden = sheet != null && sheet.Visible == XlSheetVisibility.xlSheetHidden;
+                var isHidden = sheet != null && sheet.Visible == XlSheetVisibility.xlSheetHidden;
                 if (e.Font != null)
                 {
                     float verticalOffset =
                         // ReSharper disable once PossibleLossOfFraction
                         (e.Bounds.Height - e.Font.Height) / 2;
                     if (e.Font != null)
-                    {
                         if (e.Font != null)
-                        {
                             if (e.Font != null)
                             {
-                                Font font = isHidden ? new Font(e.Font, FontStyle.Italic) : e.Font;
+                                var font = isHidden ? new Font(e.Font, FontStyle.Italic) : e.Font;
                                 Brush brush = new SolidBrush(e.ForeColor);
                                 if (e.Font != null)
-                                {
                                     e.Graphics.DrawString(sheetName, font, brush,
                                         new RectangleF(e.Bounds.X, e.Bounds.Y + verticalOffset, e.Bounds.Width,
                                             e.Bounds.Height),
                                         StringFormat.GenericDefault);
-                                }
                             }
-                        }
-                    }
                 }
 
                 e.DrawFocusRectangle();
@@ -206,21 +193,30 @@ public static class ErrorLogCtp
 
     public static void DisposeSheetMenuCtp()
     {
-        if(Ctp == null) return;
-        if (Ctp.Title == "表格目录" )
+        if (Ctp == null) return;
+        try
         {
-            Ctp.Delete();
-            Ctp = null;
+            if (!Ctp.Visible) return;
+            // 在这里处理 Ctp 是可见的情况
+            if (Ctp.Title == "表格目录")
+            {
+                Ctp.Delete();
+                Ctp = null;
+            }
+        }
+        catch (InvalidComObjectException)
+        {
+            // 如果访问失败，那么 CTP 可能已经被销毁
+            // 在这里处理 Ctp 已被销毁的情况
         }
     }
+
     public static void HideSheetMenuCtp()
     {
         if (Ctp == null) return;
-        if (Ctp.Title == "表格目录")
-        {
-            Ctp.Visible = false;
-        }
+        if (Ctp.Title == "表格目录") Ctp.Visible = false;
     }
+
     public static void DisposeCtp()
     {
         if (Ctp == null || Ctp.Title != "表格目录") return;
@@ -778,7 +774,6 @@ public static class ExcelSheetData
             // 处理异常，例如记录日志
             MessageBox.Show($@"发生异常: {ex.Message}");
         }
-
     }
 
 

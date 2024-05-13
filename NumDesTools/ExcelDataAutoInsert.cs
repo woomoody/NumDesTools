@@ -636,10 +636,7 @@ public class ExcelDataAutoInsertLanguage
                             if (repeatValue == sourceValue)
                             {
                                 var branchId = sourceDataList[k][sourceTitle.IndexOf("BranchID")];
-                                if (uniqueValues1.Add((string)branchId))
-                                {
-                                    strBranch = strBranch + branchId + ",";
-                                }
+                                if (uniqueValues1.Add((string)branchId)) strBranch = strBranch + branchId + ",";
                             }
                         }
 
@@ -752,6 +749,7 @@ public class ExcelDataAutoInsertLanguage
 
         return errorList;
     }
+
     public static void AutoInsertDataByUd(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var workBook = NumDesAddIn.App.ActiveWorkbook;
@@ -1068,10 +1066,7 @@ public class ExcelDataAutoInsertLanguage
                             if (repeatValue == sourceValue)
                             {
                                 var branchId = sourceDataList[k][sourceTitle.IndexOf("BranchID")];
-                                if (uniqueValues1.Add((string)branchId))
-                                {
-                                    strBranch = strBranch + branchId + ",";
-                                }
+                                if (uniqueValues1.Add((string)branchId)) strBranch = strBranch + branchId + ",";
                             }
                         }
 
@@ -1144,7 +1139,7 @@ public class ExcelDataAutoInsertLanguage
 
             //数据合并
             if (errorExcel != 0) continue;
-            int startRow = endRowSource + 1;
+            var startRow = endRowSource + 1;
             int endRow2 = startRow + sourceDataList.Count - 1;
             //int endRow2 = targetSheet.Dimension.End.Row;
             //if (hasCopy == 2)
@@ -1353,7 +1348,7 @@ public class ExcelDataAutoInsertMulti
         string path;
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
         //兼容多表格的工作簿
-        string sheetRealName = "Sheet1";
+        var sheetRealName = "Sheet1";
         string excelRealName = excelName;
         if (excelName.Contains("#"))
         {
@@ -1361,6 +1356,7 @@ public class ExcelDataAutoInsertMulti
             excelRealName = excelRealNameGroup[0];
             sheetRealName = excelRealNameGroup[1];
         }
+
         switch (excelRealName)
         {
             case "Localizations.xlsx":
@@ -1527,14 +1523,15 @@ public class ExcelDataAutoInsertMulti
                 if (cellCol != null && cellCol.Contains("#") && commentValue != null)
                 {
                     string[] baseParts = commentValue.Split("#");
-                    string cellValue = cellFix.Value.ToString();
-                    foreach (string item in baseParts)
+                    var cellValue = cellFix.Value.ToString();
+                    foreach (var item in baseParts)
                     {
-                        string[] parts = item.Split("-");
-                        string replaceValue = parts[0];
-                        string pattern = parts[1];
+                        var parts = item.Split("-");
+                        var replaceValue = parts[0];
+                        var pattern = parts[1];
                         if (cellValue != null) cellValue = Regex.Replace(cellValue, pattern, replaceValue);
                     }
+
                     cellFix.Value = cellValue;
                 }
                 //特殊字段需要CopyAlice
@@ -2323,36 +2320,36 @@ public class ExcelDataAutoInsertActivityServer
                     var targetName = sourceName;
                     //时间计算规则
 #pragma warning disable CA1305 // 指定 IFormatProvider
-                    string targetPushTimeString = DateTime.FromOADate(sourceData[j].Item2)
+                    var targetPushTimeString = DateTime.FromOADate(sourceData[j].Item2)
                         .AddHours((long)fixDataList[i][fixPushs] * 24 + 8).ToString();
 #pragma warning restore CA1305 // 指定 IFormatProvider
-                    var targetPushTimeLong = sourceStartTimeLong + ((long)fixDataList[i][fixPushs] * 24 * 3600);
+                    var targetPushTimeLong = sourceStartTimeLong + (long)fixDataList[i][fixPushs] * 24 * 3600;
 #pragma warning disable CA1305 // 指定 IFormatProvider
-                    string targetPushEndTimeString = DateTime.FromOADate(sourceData[j].Item2)
+                    var targetPushEndTimeString = DateTime.FromOADate(sourceData[j].Item2)
                         .AddHours((long)fixDataList[i][fixPushEnds] * 24 + 8).ToString();
 #pragma warning restore CA1305 // 指定 IFormatProvider
-                    var targetPushEndTimeLong = sourceStartTimeLong + ((long)fixDataList[i][fixPushEnds] * 24 * 3600);
+                    var targetPushEndTimeLong = sourceStartTimeLong + (long)fixDataList[i][fixPushEnds] * 24 * 3600;
 #pragma warning disable CA1305 // 指定 IFormatProvider
-                    string targetPreHeatTimeString = DateTime.FromOADate(sourceData[j].Item2)
+                    var targetPreHeatTimeString = DateTime.FromOADate(sourceData[j].Item2)
                         .AddHours((long)fixDataList[i][fixPreHeats] * 24 + 8).ToString();
 #pragma warning restore CA1305 // 指定 IFormatProvider
-                    var targetPreHeatTimeLong = sourceStartTimeLong + ((long)fixDataList[i][fixPreHeats] * 24 * 3600);
+                    var targetPreHeatTimeLong = sourceStartTimeLong + (long)fixDataList[i][fixPreHeats] * 24 * 3600;
 #pragma warning disable CA1305 // 指定 IFormatProvider
-                    string targetOpenTimeString = DateTime.FromOADate(sourceData[j].Item2)
+                    var targetOpenTimeString = DateTime.FromOADate(sourceData[j].Item2)
                         .AddHours((long)fixDataList[i][fixOpens] * 24 + 8).ToString();
 #pragma warning restore CA1305 // 指定 IFormatProvider
-                    var targetOpenTimeLong = sourceStartTimeLong + ((long)fixDataList[i][fixOpens] * 24 * 3600);
+                    var targetOpenTimeLong = sourceStartTimeLong + (long)fixDataList[i][fixOpens] * 24 * 3600;
                     //结束时间开始默认+1，因为表格里记录的是时间点不是段
 #pragma warning disable CA1305 // 指定 IFormatProvider
-                    string targetEndTimeString = DateTime.FromOADate(sourceData[j].Item3)
+                    var targetEndTimeString = DateTime.FromOADate(sourceData[j].Item3)
                         .AddHours(((long)fixDataList[i][fixEnds] + 1) * 24 + 8).ToString();
 #pragma warning restore CA1305 // 指定 IFormatProvider
-                    var targetEndTimeLong = sourceEndTimeLong + ((long)fixDataList[i][fixEnds] * 24 * 3600);
+                    var targetEndTimeLong = sourceEndTimeLong + (long)fixDataList[i][fixEnds] * 24 * 3600;
 #pragma warning disable CA1305 // 指定 IFormatProvider
-                    string targetCloseTimeString = DateTime.FromOADate(sourceData[j].Item3)
+                    var targetCloseTimeString = DateTime.FromOADate(sourceData[j].Item3)
                         .AddHours(((long)fixDataList[i][fixCloses] + 1) * 24 + 8).ToString();
 #pragma warning restore CA1305 // 指定 IFormatProvider
-                    var targetCloseTimeLong = sourceEndTimeLong + ((long)fixDataList[i][fixCloses] * 24 * 3600);
+                    var targetCloseTimeLong = sourceEndTimeLong + (long)fixDataList[i][fixCloses] * 24 * 3600;
                     targetData.Add(targetId.ToString());
                     targetData.Add(targetName);
                     targetData.Add(targetPushTimeString);
@@ -2403,8 +2400,8 @@ public class ExcelDataAutoInsertActivityServer
             var columns = targetDataList[0].Count;
             var targetDataArr = new string[rows, columns];
             for (var i = 0; i < rows; i++)
-                for (var j = 0; j < columns; j++)
-                    targetDataArr[i, j] = targetDataList[i][j];
+            for (var j = 0; j < columns; j++)
+                targetDataArr[i, j] = targetDataList[i][j];
             var targetRange = targetSheet.Range[targetSheet.Cells[targetStartRow, targetStartCol],
                 targetSheet.Cells[targetStartRow + targetDataArr.GetLength(0) - 1,
                     targetStartCol + targetDataArr.GetLength(1) - 1]];
@@ -2419,18 +2416,20 @@ public class ExcelDataAutoInsertActivityServer
         }
     }
 }
+
 //适应"【*】数值.xlsx"这类表需求频繁更新奖励数据的自动化工具
 public class ExcelDataAutoInsertNumChanges
 {
     public string ExcelPath;
 
-    public Dictionary<string, (List<object>, List<List<object>>)> GetNumChangesData(int startRow, dynamic indexSheet, dynamic startValue, dynamic workBook)
+    public Dictionary<string, (List<object>, List<List<object>>)> GetNumChangesData(int startRow, dynamic indexSheet,
+        dynamic startValue, dynamic workBook)
     {
         var usedRange = indexSheet.UsedRange;
         var rowMax = usedRange.Rows.Count;
         var colMax = usedRange.Columns.Count;
 
-        Dictionary<string, (List<object>, List<List<object>>)> dataList =
+        var dataList =
             new Dictionary<string, (List<object>, List<List<object>>)>();
 
         for (int col = startValue.Item2 + 2; col <= colMax; col++)
@@ -2454,21 +2453,18 @@ public class ExcelDataAutoInsertNumChanges
                 dataList.Add(targetBookRangeName, data);
             }
         }
+
         return dataList;
     }
 
     public void SetNumChangesData(Dictionary<string, (List<object>, List<List<object>>)> data)
     {
-
-        foreach (KeyValuePair<string, (List<object>, List<List<object>>)> eachExcelData in data)
+        foreach (var eachExcelData in data)
         {
             var workBookName = eachExcelData.Key;
             var excelObj = new ExcelDataByEpplus();
             excelObj.GetExcelObj(ExcelPath, workBookName);
-            if (excelObj.ErrorList.Count > 0)
-            {
-                return;
-            }
+            if (excelObj.ErrorList.Count > 0) return;
 
             //读取数据
             var sheetTarget = excelObj.Sheet;
@@ -2486,8 +2482,8 @@ public class ExcelDataAutoInsertNumChanges
                 return;
             }
 
-            int repeatValueCount = 0;
-            for (int i = 0; i < keyIndexRowCount; i++)
+            var repeatValueCount = 0;
+            for (var i = 0; i < keyIndexRowCount; i++)
             {
                 var keyIndexValue = eachExcelData.Value.Item2[i][0]?.ToString();
                 var keyTargetValue = eachExcelData.Value.Item2[i][1]?.ToString();
@@ -2497,21 +2493,13 @@ public class ExcelDataAutoInsertNumChanges
                     var baseValue = sheetTarget.Cells[keyIndexRow, keyTargetCol].Value;
                     //统计重复值，但凡有一个不重复表名此次写入有新增内容，需要保存文件
                     if ((string)baseValue != keyTargetValue)
-                    {
                         sheetTarget.Cells[keyIndexRow, keyTargetCol].Value = keyTargetValue;
-                    }
                     else
-                    {
                         repeatValueCount++;
-                    }
                 }
             }
 
-            if (keyIndexRowCount - repeatValueCount > 0)
-            {
-                excelTarget.Save();
-            }
-
+            if (keyIndexRowCount - repeatValueCount > 0) excelTarget.Save();
         }
     }
 
@@ -2524,20 +2512,21 @@ public class ExcelDataAutoInsertNumChanges
         var startValue = workBook.FindValue(indexRange, "*自动填表*");
         var activityRankRange = indexSheet.Cells[startRow - 1, startValue.Item2 + 1];
         var activityRankCountRange = indexSheet.Cells[startRow - 2, startValue.Item2 + 1];
-        int activityRank = (int)activityRankRange.Value;
-        int activityRankCount = (int)activityRankCountRange.Value;
+        var activityRank = (int)activityRankRange.Value;
+        var activityRankCount = (int)activityRankCountRange.Value;
         ExcelPath = workBook.ActiveWorkbookPath;
 
-        MessageBoxResult tips = MessageBox.Show("是否导出全部活动数据（Y：全部；N：当前）", "确认", MessageBoxButton.YesNo,
+        var tips = MessageBox.Show("是否导出全部活动数据（Y：全部；N：当前）", "确认", MessageBoxButton.YesNo,
             MessageBoxImage.Question);
         if (tips == MessageBoxResult.Yes)
         {
-            for (int i = activityRank; i <= activityRankCount; i++)
+            for (var i = activityRank; i <= activityRankCount; i++)
             {
                 activityRankRange.Value = i;
                 var data = GetNumChangesData(startRow, indexSheet, startValue, workBook);
                 SetNumChangesData(data);
             }
+
             activityRankRange.Value = activityRank;
         }
         else
