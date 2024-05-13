@@ -1,5 +1,6 @@
 ﻿using System;
 using Excel = Microsoft.Office.Interop.Excel;
+
 // ReSharper disable All
 
 
@@ -8,6 +9,7 @@ namespace NumDesTools
     public class FocusLight
     {
         public static string Formula = "=(ROW()=CELL(\"row\"))+(COLUMN()=CELL(\"col\"))";
+
         private static void AddCondition(dynamic sheet)
         {
             var range = sheet.UsedRange;
@@ -25,13 +27,16 @@ namespace NumDesTools
                     }
                 }
             }
+
             if (formatCount == 0)
             {
                 //设置新条件格式
-                var formatCondition = formatConditions.Add(Excel.XlFormatConditionType.xlExpression, Type.Missing, Formula);
+                var formatCondition =
+                    formatConditions.Add(Excel.XlFormatConditionType.xlExpression, Type.Missing, Formula);
                 formatCondition.Interior.Color = Excel.XlRgbColor.rgbOrange;
             }
         }
+
         public static void DeleteCondition(dynamic sheet)
         {
             var range = sheet.UsedRange;
@@ -50,6 +55,7 @@ namespace NumDesTools
                 }
             }
         }
+
         public static void Calculate()
         {
             var sheet = NumDesAddIn.App.ActiveSheet;
@@ -58,6 +64,7 @@ namespace NumDesTools
             {
                 DeleteCondition(sheet);
             }
+
             sheet.Calculate();
         }
     }

@@ -90,14 +90,14 @@ public class PubMetToExcelFunc
         {
             string sheetName;
             var cellAddress = "A1";
-            if (workBookName.Contains("#合并表格数据缓存") )
+            if (workBookName.Contains("#合并表格数据缓存"))
             {
                 var selectRow = selectCell.Row;
                 var selectCol = selectCell.Column;
                 sheetName = sheet.Cells[selectRow, selectCol + 1].Value;
                 cellAddress = sheet.Cells[selectRow, selectCol + 2].Value;
             }
-            else if(selectCellValue.Contains("#"))
+            else if (selectCellValue.Contains("#"))
             {
                 var excelSplit = selectCellValue.Split("#");
                 selectCellValue = workbookPath + @"\Tables\" + excelSplit[0];
@@ -120,8 +120,10 @@ public class PubMetToExcelFunc
                         selectCellValue = workbookPath + @"\Tables\" + selectCellValue;
                         break;
                 }
+
                 sheetName = "Sheet1";
             }
+
             PubMetToExcel.OpenExcelAndSelectCell(selectCellValue, sheetName, cellAddress);
         }
     }
@@ -138,40 +140,33 @@ public class PubMetToExcelFunc
 
         var selectCellCol = selectCell.Column;
         var keyCell = sheet.Cells[2, selectCellCol];
-        string excelPath = @"C:\M1Work\Public\Excels\Tables";
-        string excelName = "#表格关联.xlsx##主副表关联";
+        var excelPath = @"C:\M1Work\Public\Excels\Tables";
+        var excelName = "#表格关联.xlsx##主副表关联";
         //声明新类
         var excelObj = new ExcelDataByEpplus();
         //计算类属性
         excelObj.GetExcelObj(excelPath, excelName);
         //应用属性
-        if (excelObj.ErrorList.Count > 0)
-        {
-            return ;
-        }
+        if (excelObj.ErrorList.Count > 0) return;
         //读取数据
         var sheetTarget = excelObj.Sheet;
         var data = excelObj.ReadToDic(sheetTarget, 6, 5, [7, 9], 2);
 
         string keyName;
         if (sheetName.Contains("Sheet"))
-        {
             keyName = workBookName;
-        }
         else
-        {
             keyName = workBookName + "##" + sheetName;
-        }
-        
+
         if (data.TryGetValue(keyName, out var valueList))
         {
             // 使用 LINQ 查找第一个匹配的元素
-            List<string> result = valueList
+            var result = valueList
                 .Cast<List<string>>()
                 .FirstOrDefault(list => list[0] == keyCell.Value.ToString());
             if (result != null)
             {
-                string indexCellValue = result[1];
+                var indexCellValue = result[1];
                 //正则出是Excel路径的单元格
                 var isMatch = indexCellValue.Contains(".xls");
                 if (isMatch)
@@ -204,82 +199,70 @@ public class PubMetToExcelFunc
 
                         openSheetName = "Sheet1";
                     }
+
                     //声明新类
                     var excelLinkObjOpen = new ExcelDataByEpplus();
                     excelLinkObjOpen.GetExcelObj(excelPath, excelName);
                     //应用属性
-                    if (excelLinkObjOpen.ErrorList.Count > 0)
-                    {
-                        return;
-                    }
+                    if (excelLinkObjOpen.ErrorList.Count > 0) return;
                     //读取数据
                     var sheetLinkOpen = excelLinkObjOpen.Sheet;
-                    int valueLinkIndex = excelLinkObjOpen.FindFromRow(sheetLinkOpen, 5, workBookName);
-                    string cellLinkAddress = "A1";
-                    if (valueLinkIndex != -1)
-                    {
-                        cellLinkAddress = "A" + valueLinkIndex;
-                    }
+                    var valueLinkIndex = excelLinkObjOpen.FindFromRow(sheetLinkOpen, 5, workBookName);
+                    var cellLinkAddress = "A1";
+                    if (valueLinkIndex != -1) cellLinkAddress = "A" + valueLinkIndex;
                     //验证文件名
                     if (!File.Exists(indexCellValue))
                     {
-                        MessageBoxResult tips = MessageBox.Show("文件[" + indexCellValue + "]不存在，是否打开字段表格编辑？", "确认", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                        var tips = MessageBox.Show("文件[" + indexCellValue + "]不存在，是否打开字段表格编辑？", "确认",
+                            MessageBoxButton.YesNo, MessageBoxImage.Question);
                         if (tips == MessageBoxResult.Yes)
-                        {
                             // 用户点击了"Yes"按钮，执行相应的操作
                             PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", cellLinkAddress);
-                        }
                         return;
                     }
-                    string pattern = @"\d+";  // \d代表数字，+代表一个或多个
+
+                    var pattern = @"\d+"; // \d代表数字，+代表一个或多个
                     MatchCollection matches = Regex.Matches(selectCellValue, pattern);
-                    string cellAddress = "A1";
+                    var cellAddress = "A1";
                     //声明新类
                     var excelObjOpen = new ExcelDataByEpplus();
                     //计算类属性
                     var excelNameOpen = result[1] + "##Sheet1";
-                    if (result[1].Contains("##"))
-                    {
-                        excelNameOpen = result[1];
-                    }
+                    if (result[1].Contains("##")) excelNameOpen = result[1];
                     excelObjOpen.GetExcelObj(workbookPath + @"\Tables", excelNameOpen);
                     //应用属性
-                    if (excelObjOpen.ErrorList.Count > 0)
-                    {
-                        return;
-                    }
+                    if (excelObjOpen.ErrorList.Count > 0) return;
                     //读取数据
                     var sheetTargetOpen = excelObjOpen.Sheet;
                     foreach (var item in matches)
                     {
-                        int valueIndex = excelObjOpen.FindFromRow(sheetTargetOpen, 2, item.ToString());
+                        var valueIndex = excelObjOpen.FindFromRow(sheetTargetOpen, 2, item.ToString());
                         if (valueIndex != -1)
                         {
                             cellAddress = "A" + valueIndex;
                             break;
                         }
                     }
+
                     PubMetToExcel.OpenExcelAndSelectCell(indexCellValue, openSheetName, cellAddress);
                 }
             }
             else
             {
-                MessageBoxResult tips = MessageBox.Show("字段未关联或没有表格索引,是否打开字段表格编辑？", "确认", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                var tips = MessageBox.Show("字段未关联或没有表格索引,是否打开字段表格编辑？", "确认", MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
                 if (tips == MessageBoxResult.Yes)
-                {
                     // 用户点击了"Yes"按钮，执行相应的操作
                     PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", "A1");
-                }
             }
         }
         else
         {
-            MessageBoxResult tips = MessageBox.Show("字段未关联或没有表格索引,是否打开字段表格编辑？", "确认", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            var tips = MessageBox.Show("字段未关联或没有表格索引,是否打开字段表格编辑？", "确认", MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
             if (tips == MessageBoxResult.Yes)
-            {
                 // 用户点击了"Yes"按钮，执行相应的操作
                 PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", "A1");
-            }
         }
     }
 
@@ -329,12 +312,8 @@ public class PubMetToExcelFunc
 
     public static void AliceBigRicherDfs2(string sheetName)
     {
-
         var baseName = "大富翁种";
-        if (!sheetName.Contains(baseName))
-        {
-            MessageBox.Show("当前表格不是【大富翁种**】,无法使用大富翁功能");
-        }
+        if (!sheetName.Contains(baseName)) MessageBox.Show("当前表格不是【大富翁种**】,无法使用大富翁功能");
         //读取数据（0起始）
         var targetRank = PubMetToExcel.ReadExcelDataC(sheetName, 21, 44, 2, 2);
         //object[,] seedRangeValue = PubMetToExcel.ReadExcelDataC(sheetName, 2, 7, 6, 6);
@@ -503,6 +482,7 @@ public class PubMetToExcelFunc
                 PubMetToExcel.ConvertListToArray(filteredDataMethod));
         }
     }
+
     private static List<List<int>> GenerateUniqueSchemes(int numberOfRolls, int numberOfSchemes)
     {
         var result = new List<List<int>>();
@@ -522,22 +502,17 @@ public class PubMetToExcelFunc
 
             // 转换为字符串，检查是否已经存在该方案
             var schemeString = string.Join(",", scheme);
-            if (seenSchemes.Add(schemeString))
-            {
-                result.Add([..scheme]);
-            }
+            if (seenSchemes.Add(schemeString)) result.Add([..scheme]);
         }
+
         return result;
     }
+
     //移动魔瓶模拟消耗
     public static void MagicBottleCostSimulate(string sheetName)
     {
-
         var baseName = "移动魔瓶";
-        if (!sheetName.Contains(baseName))
-        {
-            MessageBox.Show("当前表格不是【移动魔瓶**】,无法使用魔瓶验算");
-        }
+        if (!sheetName.Contains(baseName)) MessageBox.Show("当前表格不是【移动魔瓶**】,无法使用魔瓶验算");
         //读取数据（0起始）
         var eleCount = PubMetToExcel.ReadExcelDataC(sheetName, 2, 8, 21, 21);
         var simulateCount = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 21, 21);
@@ -547,60 +522,62 @@ public class PubMetToExcelFunc
         var eleCountMax = eleCount.GetLength(0);
         var filterEleCountMax = new List<int>();
         //初始化统计list
-        for (var r = 0; r < eleCountMax; r++)
-        {
-            filterEleCountMax.Add(0);
-        }
+        for (var r = 0; r < eleCountMax; r++) filterEleCountMax.Add(0);
         //模拟猜数字
         for (var s = 0; s < simulateCountMax; s++)
+        for (var r = 0; r < eleCountMax; r++)
         {
-            for (var r = 0; r < eleCountMax; r++)
+            var eleGuessListGroup = new List<List<int>>();
+#pragma warning disable CA1305
+            // 指定 IFormatProvider
+            var eleNum = Convert.ToInt32(eleCount[r, 0]);
+#pragma warning restore CA1305
+            // 指定 IFormatProvider
+            //创建随机元素序列List
+            var eleList = new List<int>();
+            var eleGuessList = new List<int>();
+            for (var e = 1; e <= eleNum; e++)
             {
-                var eleGuessListGroup = new List<List<int>>();
-#pragma warning disable CA1305 // 指定 IFormatProvider
-                var eleNum = Convert.ToInt32(eleCount[r,0]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
-                //创建随机元素序列List
-                var eleList = new List<int>();
-                var eleGuessList = new List<int>();
-                for (int e = 1; e <= eleNum; e++)
-                {
-                    eleList.Add(e);
-                    eleGuessList.Add(e);
-                }
-                var seedTarget = new Random();
-                eleList = eleList.OrderBy(_ => seedTarget.Next()).ToList();
-                var seedGuess = new Random();
-                eleGuessList = eleGuessList.OrderBy(_ => seedGuess.Next()).ToList();
-                do
-                {
-                    //随机猜数字，剔除对的
-                    for (var eleCurrent = eleList.Count -1; eleCurrent >= 0; eleCurrent--)
-                    {
-                        var ele = eleList[eleCurrent];
-                        var eleGuess = eleGuessList[eleCurrent];
-                        if (eleGuess == ele)
-                        {
-                            eleList.RemoveAt(eleCurrent);
-                            eleGuessList.RemoveAt(eleCurrent);
-                        }
-                        filterEleCountMax[r]++;
-                    }
-                    eleGuessListGroup.Add(eleGuessList);
-                    //List重新排序和上次不同
-                    if (eleList.Count > 1)
-                    {
-                        List<int> eleTempList;
-                        var seedTemp = new Random();
-                        do
-                        {
-                            eleTempList = eleGuessList.OrderBy(_ => seedTemp.Next()).ToList();
-                        } while (eleGuessListGroup.Any(list => list.SequenceEqual(eleTempList)));
-                        eleGuessList = eleTempList;
-                    }
-                } while (eleList.Count != 0);
+                eleList.Add(e);
+                eleGuessList.Add(e);
             }
+
+            var seedTarget = new Random();
+            eleList = eleList.OrderBy(_ => seedTarget.Next()).ToList();
+            var seedGuess = new Random();
+            eleGuessList = eleGuessList.OrderBy(_ => seedGuess.Next()).ToList();
+            do
+            {
+                //随机猜数字，剔除对的
+                for (var eleCurrent = eleList.Count - 1; eleCurrent >= 0; eleCurrent--)
+                {
+                    var ele = eleList[eleCurrent];
+                    var eleGuess = eleGuessList[eleCurrent];
+                    if (eleGuess == ele)
+                    {
+                        eleList.RemoveAt(eleCurrent);
+                        eleGuessList.RemoveAt(eleCurrent);
+                    }
+
+                    filterEleCountMax[r]++;
+                }
+
+                eleGuessListGroup.Add(eleGuessList);
+                //List重新排序和上次不同
+                if (eleList.Count > 1)
+                {
+                    List<int> eleTempList;
+                    var seedTemp = new Random();
+                    do
+                    {
+                        eleTempList = eleGuessList.OrderBy(_ => seedTemp.Next()).ToList();
+                    } while (eleGuessListGroup.Any(list => list.SequenceEqual(eleTempList)));
+
+                    eleGuessList = eleTempList;
+                }
+            } while (eleList.Count != 0);
         }
+
         // ReSharper disable once PossibleLossOfFraction
         var filterEleCountMaxObj = filterEleCountMax.Select(item => (double)(item / simulateCountMax))
             .Select(simulateValue => new List<object> { simulateValue }).ToList();
@@ -624,4 +601,3 @@ public class PubMetToExcelFunc
         }
     }
 }
-
