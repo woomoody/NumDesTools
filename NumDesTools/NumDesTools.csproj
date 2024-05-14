@@ -33,6 +33,9 @@
         <Page Remove="pack\**" />
     </ItemGroup>
     <ItemGroup>
+      <None Remove="ScUDFs.cs~RF14a310c8.TMP" />
+    </ItemGroup>
+    <ItemGroup>
         <None Update="NumDesTools-AddIn.dna">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
