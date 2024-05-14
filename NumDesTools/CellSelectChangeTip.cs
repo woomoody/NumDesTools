@@ -1,7 +1,4 @@
-﻿using System;
-using System.Drawing;
-using System.Windows.Forms;
-using Font = System.Drawing.Font;
+﻿using Font = System.Drawing.Font;
 using Range = Microsoft.Office.Interop.Excel.Range;
 using IWin32Window = System.Windows.Forms.IWin32Window;
 
@@ -86,7 +83,7 @@ public class CellSelectChangeTip : ClickThroughForm
 
         if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight) _currentTop = targetTopPixels - tipHeight;
         //单位为像素
-        Location = new Point(_currentLeft, _currentTop);
+        Location = new System.Drawing.Point(_currentLeft, _currentTop);
         ClientSize = new Size(tipWidth, tipHeight);
         //写入文本
         Paint += TargetStrWrite;
@@ -174,7 +171,7 @@ public class CellSelectChangeTip : ClickThroughForm
         if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth) _currentLeft = targetLeftPixels - tipWidth;
 
         if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight) _currentTop = targetTopPixels - tipHeight;
-        Location = new Point(_currentLeft, _currentTop);
+        Location = new System.Drawing.Point(_currentLeft, _currentTop);
         ClientSize = new Size(tipWidth, tipHeight);
     }
 }

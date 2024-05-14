@@ -1,10 +1,5 @@
-﻿using ExcelDna.Integration;
-using OfficeOpenXml;
-using System;
-using System.Collections.Generic;
+﻿using OfficeOpenXml;
 using System.Dynamic;
-using System.IO;
-using System.Linq;
 using Range = Microsoft.Office.Interop.Excel.Range;
 
 #pragma warning disable CA1416

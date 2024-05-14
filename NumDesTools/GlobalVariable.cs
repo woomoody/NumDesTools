@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-
-namespace NumDesTools;
+﻿namespace NumDesTools;
 
 /// <summary>
 /// 把一些全局变量生成本地配置，可以自定义修改

@@ -1,18 +1,11 @@
 ﻿using OfficeOpenXml;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using ExcelDna.Integration;
 using Color = System.Drawing.Color;
 using System.Threading.Tasks;
 using System.Data;
 using DataTable = System.Data.DataTable;
 using System.Data.OleDb;
-using System.Diagnostics;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
 using System.Text.RegularExpressions;
-using System.Windows;
 using Range = Microsoft.Office.Interop.Excel.Range;
 
 // ReSharper disable All
@@ -1009,7 +1002,7 @@ public class PubMetToExcel
             //验证文件名
             if (!File.Exists(filePath))
             {
-                MessageBox.Show("文件不存在，请检查！");
+                System.Windows.Forms.MessageBox.Show("文件不存在，请检查！");
                 return;
             }
 
