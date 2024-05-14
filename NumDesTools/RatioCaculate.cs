@@ -74,7 +74,7 @@ public class RatioCaculate
                 }
             }
 
-            groupRarityCount.Add(((string, int, int, int))(cardGroupName, rarity1, rarity2, rarity3));
+            groupRarityCount.Add((cardGroupName, rarity1, rarity2, rarity3));
         }
 
         var weight1 = (int)collectCardRarityDataList[0][cardRarityWeightIndex];

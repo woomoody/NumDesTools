@@ -2314,33 +2314,33 @@ public class ExcelDataAutoInsertActivityServer
                     //时间计算规则
 #pragma warning disable CA1305 // 指定 IFormatProvider
                     var targetPushTimeString = DateTime.FromOADate(sourceData[j].Item2)
-                        .AddHours((long)fixDataList[i][fixPushs] * 24 + 8).ToString();
+                        .AddHours((long)fixDataList[i][fixPushs] * 24 + 8).ToString(CultureInfo.InvariantCulture);
 #pragma warning restore CA1305 // 指定 IFormatProvider
                     var targetPushTimeLong = sourceStartTimeLong + (long)fixDataList[i][fixPushs] * 24 * 3600;
 #pragma warning disable CA1305 // 指定 IFormatProvider
                     var targetPushEndTimeString = DateTime.FromOADate(sourceData[j].Item2)
-                        .AddHours((long)fixDataList[i][fixPushEnds] * 24 + 8).ToString();
+                        .AddHours((long)fixDataList[i][fixPushEnds] * 24 + 8).ToString(CultureInfo.InvariantCulture);
 #pragma warning restore CA1305 // 指定 IFormatProvider
                     var targetPushEndTimeLong = sourceStartTimeLong + (long)fixDataList[i][fixPushEnds] * 24 * 3600;
 #pragma warning disable CA1305 // 指定 IFormatProvider
                     var targetPreHeatTimeString = DateTime.FromOADate(sourceData[j].Item2)
-                        .AddHours((long)fixDataList[i][fixPreHeats] * 24 + 8).ToString();
+                        .AddHours((long)fixDataList[i][fixPreHeats] * 24 + 8).ToString(CultureInfo.InvariantCulture);
 #pragma warning restore CA1305 // 指定 IFormatProvider
                     var targetPreHeatTimeLong = sourceStartTimeLong + (long)fixDataList[i][fixPreHeats] * 24 * 3600;
 #pragma warning disable CA1305 // 指定 IFormatProvider
                     var targetOpenTimeString = DateTime.FromOADate(sourceData[j].Item2)
-                        .AddHours((long)fixDataList[i][fixOpens] * 24 + 8).ToString();
+                        .AddHours((long)fixDataList[i][fixOpens] * 24 + 8).ToString(CultureInfo.InvariantCulture);
 #pragma warning restore CA1305 // 指定 IFormatProvider
                     var targetOpenTimeLong = sourceStartTimeLong + (long)fixDataList[i][fixOpens] * 24 * 3600;
                     //结束时间开始默认+1，因为表格里记录的是时间点不是段
 #pragma warning disable CA1305 // 指定 IFormatProvider
                     var targetEndTimeString = DateTime.FromOADate(sourceData[j].Item3)
-                        .AddHours(((long)fixDataList[i][fixEnds] + 1) * 24 + 8).ToString();
+                        .AddHours(((long)fixDataList[i][fixEnds] + 1) * 24 + 8).ToString(CultureInfo.InvariantCulture);
 #pragma warning restore CA1305 // 指定 IFormatProvider
                     var targetEndTimeLong = sourceEndTimeLong + (long)fixDataList[i][fixEnds] * 24 * 3600;
 #pragma warning disable CA1305 // 指定 IFormatProvider
                     var targetCloseTimeString = DateTime.FromOADate(sourceData[j].Item3)
-                        .AddHours(((long)fixDataList[i][fixCloses] + 1) * 24 + 8).ToString();
+                        .AddHours(((long)fixDataList[i][fixCloses] + 1) * 24 + 8).ToString(CultureInfo.InvariantCulture);
 #pragma warning restore CA1305 // 指定 IFormatProvider
                     var targetCloseTimeLong = sourceEndTimeLong + (long)fixDataList[i][fixCloses] * 24 * 3600;
                     targetData.Add(targetId.ToString());
