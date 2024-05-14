@@ -11,7 +11,6 @@ global using System.Linq;
 global using System.Reflection;
 global using System.Runtime.InteropServices;
 global using System.Windows.Forms;
-
 global using Application = Microsoft.Office.Interop.Excel.Application;
 global using Button = System.Windows.Forms.Button;
 global using CheckBox = System.Windows.Forms.CheckBox;
