@@ -1,6 +1,4 @@
-﻿using ExcelDna.Integration;
-using System;
-using System.Net;
+﻿using System.Net;
 using System.Text;
 
 #pragma warning disable CA1416

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using ExcelDna.Integration;
-using Microsoft.Office.Interop.Excel;
+﻿using System.Threading.Tasks;
 using Range = Microsoft.Office.Interop.Excel.Range;
 
 // ReSharper disable All

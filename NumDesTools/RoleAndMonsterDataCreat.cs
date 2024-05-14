@@ -1,14 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Windows.Forms;
-using ExcelDna.Integration;
-using Microsoft.Office.Core;
-using Microsoft.Office.Interop.Excel;
+﻿using System.Globalization;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
+using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
 using Range = Microsoft.Office.Interop.Excel.Range;
 
 namespace NumDesTools;

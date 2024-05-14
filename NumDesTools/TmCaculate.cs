@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Range = Microsoft.Office.Interop.Excel.Range;
+﻿using Range = Microsoft.Office.Interop.Excel.Range;
 
 namespace NumDesTools;
 

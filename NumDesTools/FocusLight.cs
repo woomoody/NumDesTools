@@ -1,5 +1,4 @@
-﻿using System;
-using Excel = Microsoft.Office.Interop.Excel;
+﻿using Excel = Microsoft.Office.Interop.Excel;
 
 // ReSharper disable All
 
