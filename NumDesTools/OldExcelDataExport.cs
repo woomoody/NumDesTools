@@ -9,7 +9,6 @@ using DataTable = System.Data.DataTable;
 using Font = System.Drawing.Font;
 using Image = System.Drawing.Image;
 using ListBox = System.Windows.Forms.ListBox;
-using Point = System.Drawing.Point;
 using RichTextBox = System.Windows.Forms.RichTextBox;
 using ScrollBars = System.Windows.Forms.ScrollBars;
 using UserControl = System.Windows.Forms.UserControl;

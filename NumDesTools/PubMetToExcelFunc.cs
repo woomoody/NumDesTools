@@ -2,7 +2,6 @@
 using System.Windows;
 using OfficeOpenXml;
 using System.Text.RegularExpressions;
-using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
 using MessageBox = System.Windows.MessageBox;
 
 namespace NumDesTools;

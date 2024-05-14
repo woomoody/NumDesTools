@@ -1,12 +1,10 @@
 ﻿using OfficeOpenXml;
-using Color = System.Drawing.Color;
 using System.Threading.Tasks;
 using System.Data;
 using DataTable = System.Data.DataTable;
 using System.Data.OleDb;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
 using System.Text.RegularExpressions;
-using Range = Microsoft.Office.Interop.Excel.Range;
 
 // ReSharper disable All
 #pragma warning disable CA1416

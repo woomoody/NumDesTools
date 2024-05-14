@@ -1,5 +1,4 @@
-﻿using Range = Microsoft.Office.Interop.Excel.Range;
-
+﻿
 namespace NumDesTools;
 
 public class TmCaculate
