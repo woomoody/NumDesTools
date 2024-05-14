@@ -227,9 +227,9 @@ public class ExcelUdf
         if (!canConvertToInt) return "error";
         var value = intValue % 2;
         if (value == 0)
-            range.Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Aquamarine);
+            range.Interior.Color = ColorTranslator.ToOle(Color.Aquamarine);
         else
-            range.Interior.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.BurlyWood);
+            range.Interior.Color = ColorTranslator.ToOle(Color.BurlyWood);
         return "^0^";
     }
 

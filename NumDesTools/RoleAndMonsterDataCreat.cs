@@ -1,8 +1,6 @@
 ﻿using System.Globalization;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
-using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
-using Range = Microsoft.Office.Interop.Excel.Range;
 
 namespace NumDesTools;
 

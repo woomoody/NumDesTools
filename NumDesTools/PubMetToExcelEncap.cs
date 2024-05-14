@@ -1,6 +1,5 @@
 ﻿using OfficeOpenXml;
 using System.Dynamic;
-using Range = Microsoft.Office.Interop.Excel.Range;
 
 #pragma warning disable CA1416
 

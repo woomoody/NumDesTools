@@ -12,20 +12,20 @@ global using System.Reflection;
 global using System.Runtime.InteropServices;
 global using System.Windows.Forms;
 
-using Application = Microsoft.Office.Interop.Excel.Application;
-using Button = System.Windows.Forms.Button;
-using CheckBox = System.Windows.Forms.CheckBox;
-using Color = System.Drawing.Color;
-using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
-using CommandBarControl = Microsoft.Office.Core.CommandBarControl;
-using Exception = System.Exception;
-using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
-using MsoControlType = Microsoft.Office.Core.MsoControlType;
-using Panel = System.Windows.Forms.Panel;
-using Path = System.IO.Path;
-using Point = System.Drawing.Point;
-using Range = Microsoft.Office.Interop.Excel.Range;
-using TabControl = System.Windows.Forms.TabControl;
+global using Application = Microsoft.Office.Interop.Excel.Application;
+global using Button = System.Windows.Forms.Button;
+global using CheckBox = System.Windows.Forms.CheckBox;
+global using Color = System.Drawing.Color;
+global using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
+global using CommandBarControl = Microsoft.Office.Core.CommandBarControl;
+global using Exception = System.Exception;
+global using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
+global using MsoControlType = Microsoft.Office.Core.MsoControlType;
+global using Panel = System.Windows.Forms.Panel;
+global using Path = System.IO.Path;
+global using Point = System.Drawing.Point;
+global using Range = Microsoft.Office.Interop.Excel.Range;
+global using TabControl = System.Windows.Forms.TabControl;
 
 
 #pragma warning disable CA1416

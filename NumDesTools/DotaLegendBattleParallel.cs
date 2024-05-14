@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Range = Microsoft.Office.Interop.Excel.Range;
 
 // ReSharper disable All
 #pragma warning disable CA1416
