@@ -25,6 +25,7 @@ global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
 global using TabControl = System.Windows.Forms.TabControl;
+using NumDesTools.UI;
 
 
 #pragma warning disable CA1416
@@ -1360,7 +1361,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //var abc = PubMetToExcelFunc.texstEncapsulation();
         var sw = new Stopwatch();
         sw.Start();
-        ErrorLogCtp.CreateCtpSheetMenu(App);
+        var window = new TestWPF();
+        window.ShowDialog();
         //var abc = new ExcelDataAutoInsertNumChanges();
         //abc.OutDataIsAll(12);
 
