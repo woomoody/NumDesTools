@@ -28,6 +28,7 @@ public interface IMyUserControl
 }
 
 [ComVisible(true)]
+[Guid("6305c139-c70f-4c61-aa2e-462641bdd029")]
 [ComDefaultInterface(typeof(IMyUserControl))]
 public class LabelControl : UserControl, IMyUserControl;
 
