@@ -20,18 +20,13 @@ namespace NumDesTools;
 /// <summary>
 /// Excel插件基础类NumDesAddIn，其他为具体功能类，古早代码，主要完成Excel数据转换为Txt，之后的功能代码基本按文件名归类
 /// </summary>
-
-#region 升级net6后带来的问题，UserControl需要一个显示的“默认接口”
-
-public interface IMyUserControl
-{
-}
-
 [ComVisible(true)]
+#region 升级net6后带来的问题，UserControl需要一个显示的“默认接口”
+//创建WF接口
+public interface IMyUserControl { }
 [Guid("6305c139-c70f-4c61-aa2e-462641bdd029")]
 [ComDefaultInterface(typeof(IMyUserControl))]
 public class LabelControl : UserControl, IMyUserControl;
-
 #endregion
 
 public static class ErrorLogCtp

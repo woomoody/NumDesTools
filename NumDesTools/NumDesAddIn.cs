@@ -25,6 +25,7 @@ global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
 global using TabControl = System.Windows.Forms.TabControl;
+using System.Windows.Forms.Integration;
 using NumDesTools.UI;
 
 #pragma warning disable CA1416
@@ -1349,6 +1350,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             Clipboard.SetText(excelPath);
         }
     }
+
     public void TestBar1_Click(IRibbonControl control)
     {
         //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -1360,19 +1362,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-        //// 创建 ElementHost 控件
-        //var elementHost = new ElementHost
-        //{
-        //    Dock = DockStyle.Fill
-        //};
-        //var control1 = new SheetListWindow();
-        //// 将 WPF 控件承载在 ElementHost 控件中
-        //elementHost.Child = control1;
+        SheetListControl sheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250,"SheetMenu" , true);
 
-        //ctp = CustomTaskPaneFactory.CreateCustomTaskPane(elementHost, "Sheet List");
-        //ctp.Visible = true;
-        var window = new SheetListWindow();
-        window.Show();
+
+
+        //var window = new SheetListWindow();
+        //window.Show();
 
         //Guid guid = Guid.NewGuid();
         //Debug.Print(guid.ToString());
