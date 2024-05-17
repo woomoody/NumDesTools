@@ -17,12 +17,12 @@ namespace NumDesTools.UI
     public partial class SheetListControl : UserControl
     {
         public static Application excelApp = NumDesAddIn.App;
-        public ObservableCollection<WorksheetWrapper> Sheets { get; } = new ObservableCollection<WorksheetWrapper>();
+        public ObservableCollection<SelfComSheetCollect> Sheets { get; } = new ObservableCollection<SelfComSheetCollect>();
         public SheetListControl()
         {
             InitializeComponent();
             var worksheets = excelApp.ActiveWorkbook.Sheets.Cast<Worksheet>()
-                .Select(x => new WorksheetWrapper { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden });
+                .Select(x => new SelfComSheetCollect { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden });
             foreach (var worksheet in worksheets)
             {
                 Sheets.Add(worksheet);
@@ -53,7 +53,7 @@ namespace NumDesTools.UI
             var showItem = new MenuItem { Header = "显示" };
             showItem.Click += (s, args) =>
             {
-                foreach (WorksheetWrapper item in ListBoxSheet.SelectedItems)
+                foreach (SelfComSheetCollect item in ListBoxSheet.SelectedItems)
                 {
                     var sheet = excelApp.ActiveWorkbook.Sheets[item.Name];
                     sheet.Visible = XlSheetVisibility.xlSheetVisible;
@@ -75,7 +75,7 @@ namespace NumDesTools.UI
                     return;
                 }
 
-                foreach (WorksheetWrapper item in ListBoxSheet.SelectedItems)
+                foreach (SelfComSheetCollect item in ListBoxSheet.SelectedItems)
                 {
                     var sheet = excelApp.ActiveWorkbook.Sheets[item.Name];
                     sheet.Visible = XlSheetVisibility.xlSheetHidden;
@@ -96,7 +96,7 @@ namespace NumDesTools.UI
             var listBox = (ListBox)sender;
             if (listBox.SelectedItem != null)
             {
-                var selectedSheetName = ((WorksheetWrapper)listBox.SelectedItem).Name;
+                var selectedSheetName = ((SelfComSheetCollect)listBox.SelectedItem).Name;
                 var selectedSheet = excelApp.ActiveWorkbook.Sheets[selectedSheetName];
                 selectedSheet.Activate();
             }

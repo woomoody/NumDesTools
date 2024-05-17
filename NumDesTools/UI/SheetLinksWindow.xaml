@@ -1,0 +1,8 @@
+﻿<Window x:Class="NumDesTools.UI.SheetLinksWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:NumDesTools"
+        Title="MainWindow" Height="900" Width="1600">
+    <Grid x:Name ="BaseGrid">
+    </Grid>
+</Window>

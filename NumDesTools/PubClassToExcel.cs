@@ -1,11 +1,18 @@
-﻿using System.ComponentModel;
+﻿using GraphX.Common.Models;
+using GraphX.Controls;
+using QuickGraph;
+using System.ComponentModel;
+using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace NumDesTools;
 
 /// <summary>
 /// 公共的Excel自定义类
 /// </summary>
-public class WorksheetWrapper : INotifyPropertyChanged
+
+//自定义Com表格容器类
+public class SelfComSheetCollect : INotifyPropertyChanged
 {
     private string _name;
     private bool _isHidden;
@@ -43,3 +50,24 @@ public class WorksheetWrapper : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
+
+//自定义GraphX顶点数据类
+public class SelfGraphXVertex : VertexBase
+{
+    public string Name { get; set; }
+    public override string ToString()
+    {
+        return Name;
+    }
+}
+
+// 自定义GraphX边数据类
+public class SelfGraphXEdge : EdgeBase<SelfGraphXVertex>
+{
+    public SelfGraphXEdge(SelfGraphXVertex source, SelfGraphXVertex target) : base(source, target) { }
+    public override string ToString()
+    {
+        return $"{Source.Name} -> {Target.Name}";
+    }
+}
+//
