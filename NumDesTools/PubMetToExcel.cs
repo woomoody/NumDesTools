@@ -1,21 +1,12 @@
 ﻿using OfficeOpenXml;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using ExcelDna.Integration;
-using Color = System.Drawing.Color;
 using System.Threading.Tasks;
 using System.Data;
 using DataTable = System.Data.DataTable;
 using System.Data.OleDb;
-using System.Diagnostics;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
 using System.Text.RegularExpressions;
-using System.Windows;
-using Range = Microsoft.Office.Interop.Excel.Range;
-
 // ReSharper disable All
+
 #pragma warning disable CA1416
 
 namespace NumDesTools;
@@ -27,7 +18,6 @@ public class PubMetToExcel
 {
     #region EPPlus与Excel
 
-    //EPPlus创建新Excel表格或获取已经存在的表格
     public static List<(string, string, string)> OpenOrCreatExcelByEpPlus(string excelFilePath, string excelName,
         out ExcelWorksheet sheet, out ExcelPackage excel)
     {
@@ -48,7 +38,6 @@ public class PubMetToExcel
         return errorList;
     }
 
-    //EPPlus创建Excel对象
     public static List<(string, string, string)> SetExcelObjectEpPlus(dynamic excelPath, dynamic excelName,
         out ExcelWorksheet sheet, out ExcelPackage excel)
     {
@@ -59,7 +48,6 @@ public class PubMetToExcel
         var errorList = new List<(string, string, string)>();
         string path;
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
-        //兼容多表格的工作簿
         string sheetRealName = "Sheet1";
         string excelRealName = excelName;
         if (excelName.Contains("#"))
@@ -129,11 +117,9 @@ public class PubMetToExcel
         var beforTargetCol = defaultCol;
         for (var c = 0; c < sourceRangeValue.GetLength(1); c++)
         {
-            //target中找列
             var sourceCol = sourceRangeValue[1, c];
             if (sourceCol == null) sourceCol = "";
 
-            //获取目标单元格填写数值的位置，默认位置未最后一行
             var targetCol = ExcelDataAutoInsert.FindSourceCol(targetSheet, 2, sourceCol.ToString());
             if (targetCol == -1)
             {
@@ -152,7 +138,6 @@ public class PubMetToExcel
                     var sourceTitle = sourceRangeTitle[j, 0];
                     if (sourceTitle == null) sourceTitle = "";
 
-                    //target中找列
                     if (targetTitle.ToString() == sourceTitle.ToString())
                     {
                         var sourceValue = sourceRangeValue[c, j];
@@ -178,11 +163,9 @@ public class PubMetToExcel
         var beforTargetRow = defaultRow;
         for (var r = 0; r < sourceRangeValue.GetLength(0); r++)
         {
-            //target中找行
             var sourceRow = sourceRangeValue[r, 1];
             if (sourceRow == null) sourceRow = "";
 
-            //获取目标单元格填写数值的位置，默认位置未最后一行
             var targetRow = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, sourceRow.ToString());
             if (targetRow == -1)
             {
@@ -201,7 +184,6 @@ public class PubMetToExcel
                     var sourceTitle = sourceRangeTitle[0, j];
                     if (sourceTitle == null) sourceTitle = "";
 
-                    //target中找列
                     if (targetTitle.ToString() == sourceTitle.ToString())
                     {
                         var sourceValue = sourceRangeValue[r, j];
@@ -224,13 +206,11 @@ public class PubMetToExcel
     #region C-API与Excel
 
     [ExcelFunction(IsHidden = true)]
-    //通过C-API的方式读取打开当前活动Excel表格各个Sheet的数据
     public static object[,] ReadExcelDataC(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast)
     {
         var sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
         var range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
         var rangeValue = range.GetValue();
-        //兼容range和cell获取数据变为二维数据
         object[,] rangeValues;
         if (rangeValue is object[,] arrayValue)
         {
@@ -245,7 +225,6 @@ public class PubMetToExcel
         return rangeValues;
     }
 
-    //通过C-API的方式写入打开当前活动Excel表格各个Sheet的数据
     public static void WriteExcelDataC(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast,
         object[,] rangeValue)
     {
@@ -256,25 +235,19 @@ public class PubMetToExcel
 
     public static Task<(ExcelReference currentRange, string sheetName, string sheetPath)> GetCurrentExcelObjectC()
     {
-        //因为Excel的异步问题导致return值只捕捉到第一次，所以使用TCS确保等待异步完成，进而获得正确的return
         var tcs = new TaskCompletionSource<(ExcelReference currentRange, string sheetName, string sheetPath)>();
         ExcelAsyncUtil.QueueAsMacro(() =>
         {
             try
             {
-                // 获取当前工作簿、工作表选中单元格（[工作簿]工作表）
                 var currentRange = (ExcelReference)XlCall.Excel(XlCall.xlfSelection);
-                // 获取当前工作簿、工作表名称（[工作簿]工作表）
                 var sheetName = (string)XlCall.Excel(XlCall.xlfGetDocument, 1);
-                // 获取当前工作簿路径（不包含工作簿名称）
                 var sheetPath = (string)XlCall.Excel(XlCall.xlfGetDocument, 2);
-                // 处理获取结果的逻辑
                 var result = (currentRange, sheetName, sheetPath);
                 tcs.SetResult(result);
             }
             catch (Exception ex)
             {
-                // 处理异常
                 tcs.SetException(ex);
             }
         });
@@ -305,20 +278,14 @@ public class PubMetToExcel
 
     #endregion
 
-    //Excel数据输出为List
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToList(dynamic workSheet)
     {
         Range dataRange = workSheet.UsedRange;
-        // 读取数据到一个二维数组中
         object[,] rangeValue = dataRange.Value;
-        // 获取行数和列数
         var rows = rangeValue.GetLength(0);
         var columns = rangeValue.GetLength(1);
-        // 定义工作表数据数组和表头数组
         var sheetData = new List<List<object>>();
         var sheetHeaderCol = new List<object>();
-        // 读取数据和表头
-        //单线程
         for (var row = 1; row <= rows; row++)
         {
             var rowList = new List<object>();
@@ -338,28 +305,22 @@ public class PubMetToExcel
         return excelData;
     }
 
-    //Excel数据输出为List，自定义数据起始行列
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelf(dynamic workSheet,
         int dataRow, int dataCol, int headerRow, int headerCol)
     {
         Range dataRange = workSheet.UsedRange;
-        // 读取数据到一个二维数组中
         object[,] rangeValue = dataRange.Value;
-        // 获取行数和列数
         var rows = rangeValue.GetLength(0);
         var columns = rangeValue.GetLength(1);
-        // 定义工作表数据数组和表头数组
         var sheetData = new List<List<object>>();
         var sheetHeaderCol = new List<object>();
-        // 读取数据
-        //单线程
         for (var row = dataRow; row <= rows; row++)
         {
             var rowList = new List<object>();
             for (var column = dataCol; column <= columns; column++)
             {
                 var value = rangeValue[row, column];
-                if (row == headerRow) //这个可能是冗余判断，暂时未发现问题
+                if (row == headerRow)
                     sheetHeaderCol.Add(value);
                 else
                     rowList.Add(value);
@@ -368,7 +329,6 @@ public class PubMetToExcel
             if (row > 1) sheetData.Add(rowList);
         }
 
-        //读取表头
         for (var column = headerCol; column <= columns; column++)
         {
             var value = rangeValue[headerRow, column];
@@ -379,7 +339,6 @@ public class PubMetToExcel
         return excelData;
     }
 
-    //Excel数据输出为List，自定义数据起始-结束行、列，根据当前选择的单元格
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelfToEnd(
         dynamic workSheet,
         int dataRow, int dataCol, int headRow)
@@ -388,7 +347,6 @@ public class PubMetToExcel
         Range usedRange = workSheet.UsedRange;
         int dataRowEnd;
         int dataColEnd;
-        //确定行，不确定列
         if (dataRow == 0)
         {
             dataRow = selectRange.Row;
@@ -400,7 +358,6 @@ public class PubMetToExcel
             dataRowEnd = dataRow + usedRange.Rows.Count - 1;
         }
 
-        //确定列，不确定行
         if (dataCol == 0)
         {
             dataCol = selectRange.Column;
@@ -415,39 +372,13 @@ public class PubMetToExcel
         Range dataRangeStart = workSheet.Cells[dataRow, dataCol];
         Range dataRangeEnd = workSheet.Cells[dataRowEnd, dataColEnd];
         Range dataRange = workSheet.Range[dataRangeStart, dataRangeEnd];
-        // 读取数据到一个二维数组中
-        //object[,] rangeValue = dataRange.Value;
         Range headRangeStart = workSheet.Cells[headRow, dataCol];
         Range headRangeEnd = workSheet.Cells[headRow, dataColEnd];
         Range headRange = workSheet.Range[headRangeStart, headRangeEnd];
-        // 读取数据到一个二维数组中
-        //object[,] headRangeValue = headRange.Value;
-        //// 定义工作表数据数组和表头数组
-        //var sheetData = new List<List<object>>();
-        //var sheetHeaderCol = new List<object>();
-        //// 读取数据
-        //for (var row = 1; row <= dataRowEnd - dataRow + 1; row++)
-        //{
-        //    var rowList = new List<object>();
-        //    for (var column = 1; column <= dataColEnd - dataCol + 1; column++)
-        //    {
-        //        var value = rangeValue[row, column];
-        //        rowList.Add(value);
-        //    }
-        //    sheetData.Add(rowList);
-        //}
-        ////读取表头
-        //for (var column = 1; column <= dataColEnd - dataCol + 1; column++)
-        //{
-        //    var value = headRangeValue[headRow, column];
-        //    sheetHeaderCol.Add(value);
-        //}
-        //var excelData = (sheetHeaderCol, sheetData);
         var excelData = RangeToListByVsto(dataRange, headRange, headRow);
         return excelData;
     }
 
-    //Excel数据输出为DataTable，无表头，EPPlus
     public static DataTable ExcelDataToDataTable(string filePath)
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -455,13 +386,10 @@ public class PubMetToExcel
         using (var package = new ExcelPackage(file))
         {
             var dataTable = new DataTable();
-            // 默认导入第一个 Sheet 的数据
             var worksheet = package.Workbook.Worksheets["Sheet1"] ?? package.Workbook.Worksheets[0];
             dataTable.TableName = worksheet.Name;
-            //创建列，可以添加值作为列名
             for (var col = 1; col <= worksheet.Dimension.End.Column; col++) dataTable.Columns.Add();
 
-            // 读取数据行
             for (var row = 1; row <= worksheet.Dimension.End.Row; row++)
             {
                 var dataRow = dataTable.NewRow();
@@ -475,10 +403,8 @@ public class PubMetToExcel
         }
     }
 
-    //Excel数据输出为DataTable，无表头，OLeDb，几乎是EPPlus的两倍速度
     public static DataTable ExcelDataToDataTableOleDb(string filePath)
     {
-        // Excel 连接字符串，根据 Excel 版本和文件类型进行调整
         var connectionString =
             $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={filePath};Extended Properties='Excel 12.0 Xml;HDR=YES;'";
         var sheetName = "Sheet1";
@@ -489,14 +415,13 @@ public class PubMetToExcel
                 connection.Open();
                 var dataTable = new DataTable();
 
-                // 获取所有可用的工作表名称
                 var schemaTable = connection.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, null);
-                // 检查 Sheet1 是否存在
                 if (schemaTable != null)
                     foreach (DataRow row in schemaTable.Rows)
                     {
-                        // ReSharper disable once PossibleNullReferenceException
-                        if (row != null && row["TABLE_NAME"].ToString().Equals("Sheet1"))
+                        // ReSharper disable ConditionIsAlwaysTrueOrFalse
+                        if (row is not null && row["TABLE_NAME"].ToString().Equals("Sheet1"))
+                            // ReSharper restore ConditionIsAlwaysTrueOrFalse
                         {
                             sheetName = "Sheet1";
                             break;
@@ -505,7 +430,6 @@ public class PubMetToExcel
                         sheetName = schemaTable.Rows[0]["TABLE_NAME"].ToString();
                     }
 
-                // 读取 Excel 表格数据
                 using (var command = new OleDbCommand($"SELECT * FROM [{sheetName}]", connection))
                 {
                     using (var adapter = new OleDbDataAdapter(command))
@@ -519,7 +443,6 @@ public class PubMetToExcel
             }
             catch (Exception ex)
             {
-                // 处理异常
                 Debug.Print("读取 Excel 表格数据出现异常：" + ex.Message);
                 return null;
             }
@@ -535,14 +458,12 @@ public class PubMetToExcel
         var sheetName = dataTable.TableName.ToString().Replace("$", "");
         foreach (DataRow row in dataTable.Rows)
         foreach (DataColumn column in dataTable.Columns)
-            //模糊查询
             if (isAll)
             {
-                if (row != null && row[column].ToString().Contains(findValue))
+                if (row is not null && row[column].ToString().Contains(findValue))
                     findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2,
                         row.Table.Columns.IndexOf(column) + 1, row[1].ToString(), row[2].ToString()));
             }
-            //精确查询
             else
             {
                 if (row[column].ToString() == findValue)
@@ -561,14 +482,12 @@ public class PubMetToExcel
         findValue = findValue.Replace("*", "");
         var sheetName = dataTable.TableName.ToString().Replace("$", "");
         foreach (DataRow row in dataTable.Rows)
-            //模糊查询
             if (isAll)
             {
-                if (row != null && row[key - 1].ToString().Contains(findValue))
+                if (row is not null && row[key - 1].ToString().Contains(findValue))
                     findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, key, row[1].ToString(),
                         row[2].ToString()));
             }
-            //精确查询
             else
             {
                 if (row[key - 1].ToString() == findValue)
@@ -640,7 +559,6 @@ public class PubMetToExcel
                 }
                 catch (Exception ex)
                 {
-                    // 记录错误日志
                     errorLog += $"Error {repeatValue}: {ex.Message}\n";
                 }
         }
@@ -651,14 +569,11 @@ public class PubMetToExcel
     public static string RepeatValue2(ExcelWorksheet sheet, int row, int col, List<string> repeatValue)
     {
         var errorLog = "";
-        // 获取指定列的单元格数据
         var sourceValues = sheet.Cells[row, col, sheet.Dimension.End.Row, col].Select(c => c.Value.ToString()).ToList();
 
-        // 生成索引List
         var indexList = new List<int>();
         foreach (var repeat in repeatValue)
         {
-            // 查找存在的值所在的行
             var rowIndex = sourceValues.FindIndex(c => c == repeat);
             if (rowIndex == -1) continue;
             rowIndex += row;
@@ -668,7 +583,6 @@ public class PubMetToExcel
         indexList.Sort();
         if (indexList.Count != 0)
         {
-            //合并List
             var outputList = new List<List<int>>();
             var start = indexList[0];
 
@@ -680,9 +594,7 @@ public class PubMetToExcel
                 }
 
             outputList.Add(new List<int>() { start, indexList[indexList.Count - 1] });
-            // 翻转输出列表
             outputList.Reverse();
-            // 删除要删除的行
             foreach (var rowToDelete in outputList)
                 try
                 {
@@ -690,8 +602,6 @@ public class PubMetToExcel
                 }
                 catch (Exception)
                 {
-                    //可能因为之前的填充格式问题导致异常
-                    // 记录错误日志
                     errorLog += $"Error {sheet.Name}:#行号{rowToDelete}背景格式问题，更改背景色重试\n";
                 }
         }
@@ -727,7 +637,6 @@ public class PubMetToExcel
         {
             try
             {
-                // 使用 EPPlus 打开 Excel 文件进行操作
                 using (var package = new ExcelPackage(new FileInfo(file)))
                 {
                     var wk = package.Workbook;
@@ -737,14 +646,11 @@ public class PubMetToExcel
                         for (var col = 2; col <= sheet.Dimension.End.Column; col++)
                         for (var row = 4; row <= sheet.Dimension.End.Row; row++)
                         {
-                            // 获取当前行的单元格数据
                             var cellValue = sheet.Cells[row, col].Value;
                             if (!isAll)
                             {
-                                // 全词
                                 if (cellValue != null && cellValue.ToString() == errorValue)
                                 {
-                                    // 返回该单元格的行地址
                                     var cellAddress = new ExcelCellAddress(row, col);
                                     var cellCol = cellAddress.Column;
                                     var cellRow = cellAddress.Row;
@@ -753,10 +659,8 @@ public class PubMetToExcel
                             }
                             else
                             {
-                                // 模糊
                                 if (cellValue != null && cellValue.ToString().Contains(errorValue))
                                 {
-                                    // 返回该单元格的行地址
                                     var cellAddress = new ExcelCellAddress(row, col);
                                     var cellCol = cellAddress.Column;
                                     var cellRow = cellAddress.Row;
@@ -777,7 +681,6 @@ public class PubMetToExcel
             }
 
             currentCount++;
-            //wk.Properties.Company = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
             NumDesAddIn.App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
         }
 
@@ -805,7 +708,7 @@ public class PubMetToExcel
 
         var targetList = new List<(string, string, int, int)>();
         var options = new ParallelOptions
-            { MaxDegreeOfParallelism = Environment.ProcessorCount }; // 设置并行处理的最大线程数为处理器核心数
+            { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
         Parallel.ForEach(files, options, file =>
         {
@@ -821,7 +724,7 @@ public class PubMetToExcel
                         for (var row = 4; row <= sheet.Dimension.End.Row; row++)
                         {
                             var cellValue = sheet.Cells[row, col].Value;
-                            if (cellValue != null && cellValue != null && cellValue.ToString().Contains(errorValue))
+                            if (!(cellValue == null || !cellValue.ToString().Contains(errorValue)))
                             {
                                 var cellAddress = new ExcelCellAddress(row, col);
                                 var cellCol = cellAddress.Column;
@@ -832,7 +735,7 @@ public class PubMetToExcel
                     }
                     catch
                     {
-                        // 处理异常
+                        // ignored
                     }
                 }
             }
@@ -869,10 +772,8 @@ public class PubMetToExcel
         var count = files.Length;
         foreach (var file in files)
         {
-            //过滤非配置表
             var fileName = Path.GetFileName(file);
             if (fileName.Contains("#")) continue;
-            // 使用 EPPlus 打开 Excel 文件进行操作
             using (var package = new ExcelPackage(new FileInfo(file)))
             {
                 try
@@ -882,13 +783,10 @@ public class PubMetToExcel
                     for (var col = 2; col <= 2; col++)
                     for (var row = 4; row <= sheet.Dimension.End.Row; row++)
                     {
-                        // 获取当前行的单元格数据
                         var cellValue = sheet.Cells[row, col].Value;
 
-                        // 如果找到了匹配的值
                         if (cellValue != null && cellValue.ToString() == errorValue)
                         {
-                            // 返回该单元格的行地址
                             var cellAddress = new ExcelCellAddress(row, col);
                             var cellCol = cellAddress.Column;
                             var cellRow = cellAddress.Row;
@@ -904,7 +802,6 @@ public class PubMetToExcel
             }
 
             currentCount++;
-            //wk.Properties.Company = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
             NumDesAddIn.App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
         }
 
@@ -949,7 +846,6 @@ public class PubMetToExcel
         var textLineList = new List<string>();
         if (!File.Exists(filePath))
         {
-            // 创建新的文本文件
             if (filePath != null)
                 using (var writer = File.CreateText(filePath))
                 {
@@ -960,7 +856,6 @@ public class PubMetToExcel
         }
         else
         {
-            // 读取已存在的文本文件
             using var reader = new StreamReader(filePath);
             while (reader.ReadLine() is { } line) textLineList.Add(line);
         }
@@ -986,7 +881,6 @@ public class PubMetToExcel
     }
 
     [ExcelFunction(IsHidden = true)]
-    //数字转Excel字母列
     public static string ConvertToExcelColumn(int columnNumber)
     {
         var columnName = "";
@@ -1001,23 +895,20 @@ public class PubMetToExcel
         return columnName;
     }
 
-    //打开指定Excel文件，并定位到指定sheet的指定单元格（Com）
     public static void OpenExcelAndSelectCell(string filePath, string sheetName, string cellAddress)
     {
         try
         {
-            //验证文件名
             if (!File.Exists(filePath))
             {
+                // ReSharper disable LocalizableElement
                 MessageBox.Show("文件不存在，请检查！");
+                // ReSharper restore LocalizableElement
                 return;
             }
 
-            // 打开指定路径的 Excel 文件
             var workbook = NumDesAddIn.App.Workbooks.Open(filePath);
-            // 获取指定名称的工作表
             var worksheet = workbook.Sheets[sheetName];
-            // 选择指定的单元格,非法则选择默认值A1
             var regex = new Regex(@"^[A-Za-z]+\d+$");
             var cellAddressDefault = "A1";
             if (cellAddress != null)
@@ -1027,16 +918,15 @@ public class PubMetToExcel
             worksheet.Select();
             cellRange.Select();
         }
+        // ReSharper disable EmptyGeneralCatchClause
         catch (Exception)
+            // ReSharper restore EmptyGeneralCatchClause
         {
-            //异常处理
         }
 
-        // 垃圾回收
         GC.Collect();
     }
 
-    //List转换数据为Range数据（已开启的表格）（Com）
     public static void ListToArrayToRange(List<List<object>> targetList, dynamic workSheet, int startRow, int startCol)
     {
         var rowCount = targetList.Count;
@@ -1056,15 +946,11 @@ public class PubMetToExcel
         targetRange.Value = targetDataArr;
     }
 
-    //Range数据转List（Com）
     public static List<List<object>> RangeDataToList(object[,] rangeValue)
     {
-        // 获取行数和列数
         var rows = rangeValue.GetLength(0);
         var columns = rangeValue.GetLength(1);
-        // 定义工作表数据数组和表头数组
         var sheetData = new List<List<object>>();
-        // 读取数据
         for (var row = 1; row <= rows; row++)
         {
             var rowList = new List<object>();
@@ -1080,15 +966,12 @@ public class PubMetToExcel
         return sheetData;
     }
 
-    //随机不重复值列表
     public static List<int> GenerateUniqueRandomList(int minValue, int maxValue, int baseValue)
     {
         var list = new List<int>();
 
-        // 初始化列表
         for (var i = minValue; i <= maxValue; i++) list.Add(i + baseValue);
 
-        // 使用 Fisher-Yates 洗牌算法生成随机不重复列表
         var random = new Random();
         var n = list.Count;
         for (var i = n - 1; i > 0; i--)
@@ -1102,7 +985,6 @@ public class PubMetToExcel
         return list;
     }
 
-    //List转数组
     public static object[,] ConvertListToArray(List<List<object>> listOfLists)
     {
         var rowCount = listOfLists.Count;
@@ -1120,20 +1002,15 @@ public class PubMetToExcel
         return twoDArray;
     }
 
-    //VSTO内置在Range内查找特定值(第一个)的方法
     public static (int row, int column) FindValueInRangeByVsto(Range searchRange, object valueToFind)
     {
-        // 使用 Find 方法在指定范围内查找特定值
         Range foundRange = searchRange.Find(valueToFind);
-        // 如果找到了特定值
         if (foundRange != null)
         {
-            // 返回找到的单元格的行号和列号
             return (foundRange.Row, foundRange.Column);
         }
         else
         {
-            // 如果没有找到特定值，返回 (-1, -1)
             return (-1, -1);
         }
     }
@@ -1141,14 +1018,10 @@ public class PubMetToExcel
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) RangeToListByVsto(Range rangeData,
         Range rangeHeader, int headRow)
     {
-        // 读取数据到一个二维数组中
         object[,] rangeValue = rangeData.Value;
-        // 读取数据到一个二维数组中
         object[,] headRangeValue = rangeHeader.Value;
-        // 定义工作表数据数组和表头数组
         var sheetData = new List<List<object>>();
         var sheetHeaderCol = new List<object>();
-        // 读取数据
         for (var row = 1; row <= rangeValue.GetLength(0); row++)
         {
             var rowList = new List<object>();
@@ -1161,7 +1034,6 @@ public class PubMetToExcel
             sheetData.Add(rowList);
         }
 
-        //读取表头
         for (var column = 1; column <= rangeValue.GetLength(1); column++)
         {
             var value = headRangeValue[headRow, column];
@@ -1174,53 +1046,5 @@ public class PubMetToExcel
 
     public static void TestEpPlus()
     {
-        //ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        //using (ExcelPackage package = new ExcelPackage(@"C:\Users\cent\Desktop\text.xlsx"))
-        //{
-        //    // Get the first worksheet
-        //    ExcelWorksheet worksheet = package.Workbook.Worksheets["Sheet2"];
-
-        //    // Read the data from the worksheet
-        //    var readValue = worksheet.Cells[1, 1].Value;
-
-        //    for (int i = 1; i < 100001; i++)
-        //    {
-        //        var writeValue = readValue + "+New Value" + i;
-        //        worksheet.Cells[i, 2].Value = writeValue;
-        //    }
-        //    package.Save();
-        //}
-
-        //string path = @"C:\Users\cent\Desktop\text.xlsx";
-        //using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read))
-        //{
-        //    var wk = new XSSFWorkbook(stream);
-        //    var sheet = wk.GetSheetAt(1);
-        //    var readValue = sheet.GetRow(0).GetCell(0).ToString();
-        //    for (int i = 0; i < 100001; i++)
-        //    {
-        //        var row = sheet.GetRow(i) ?? sheet.CreateRow(i);
-        //        var cell = row.GetCell(1) ?? row.CreateCell(1);
-        //        cell.SetCellValue(readValue + "+New Value" + i);
-        //    }
-        //    // 保存更改
-        //    using (FileStream stream2 = new FileStream(path, FileMode.Create, FileAccess.Write))
-        //    {
-        //        wk.Write(stream2);
-        //    }
-        //}
     }
 }
-//// 自定义比较器来比较元组
-//public class TupleEqualityComparer : IEqualityComparer<(string, string, string)>
-//{
-//    public bool Equals((string, string, string) x, (string, string, string) y)
-//    {
-//        return x.Item1 == y.Item1 && x.Item2 == y.Item2 && x.Item3 == y.Item3;
-//    }
-
-//    public int GetHashCode((string, string, string) obj)
-//    {
-//        return obj.Item1.GetHashCode() ^ obj.Item2.GetHashCode() ^ obj.Item3.GetHashCode();
-//    }
-//}
