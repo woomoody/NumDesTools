@@ -321,7 +321,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private void Excel_CtpUpdate()
     {
         var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
-            .Select(x => new WorksheetWrapper { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();
+            .Select(x => new SelfComSheetCollect { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();
         SheetMenuCTP.Sheets.Clear();
         foreach (var worksheet in worksheets)
         {
@@ -1147,14 +1147,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-        SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "SheetMenu", true , "SheetMenu");
-        var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
-            .Select(x => new WorksheetWrapper { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();
-        SheetMenuCTP.Sheets.Clear();
-        foreach (var worksheet in worksheets)
-        {
-            SheetMenuCTP.Sheets.Add(worksheet);
-        }
+        //SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "SheetMenu", true , "SheetMenu");
+        //var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
+        //    .Select(x => new SelfComSheetCollect { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();
+        //SheetMenuCTP.Sheets.Clear();
+        //foreach (var worksheet in worksheets)
+        //{
+        //    SheetMenuCTP.Sheets.Add(worksheet);
+        //}
+        var window = new SheetLinksWindow();
+        window.Show();
 
         sw.Stop();
         var ts2 = sw.Elapsed;
@@ -1166,7 +1168,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-
 
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
