@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using Range = Microsoft.Office.Interop.Excel.Range;
-
+﻿
 namespace NumDesTools;
 
 public class TmCaculate
 {
     private static readonly dynamic Wk = NumDesAddIn.App.ActiveWorkbook;
 
-    //TM关卡目标生成
     public static void CreatTmTargetEle()
     {
         var ws = Wk.ActiveSheet;
@@ -16,36 +12,31 @@ public class TmCaculate
         var wsEle = Wk.Worksheets["TM元素"];
         Range targetEleMax = wsEle.Range["N16:S25"];
         var wsNewEle = Wk.Worksheets["TM关卡设计"];
-        // 读取数据到一个二维数组中
         object[,] modelRangeValue = modelRange.Value;
         var modelRangeValueList = PubMetToExcel.RangeDataToList(modelRangeValue);
         object[,] targetEleMaxValue = targetEleMax.Value;
         var targetEleMaxValueList = PubMetToExcel.RangeDataToList(targetEleMaxValue);
-        //计数列表
         var eleCount = new Dictionary<string, int>();
-        //新eleID列表
         var targetRangeValueList = new List<List<object>>();
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < modelRangeValueList.Count; i++)
+        foreach (var t in modelRangeValueList)
         {
             var tempTarget = new List<object>();
-            for (var j = 0; j < modelRangeValueList[i].Count; j++)
-                if (modelRangeValueList[i][j] != null)
+            for (var j = 0; j < t.Count; j++)
+                if (t[j] != null)
                 {
-                    var ele = modelRangeValueList[i][j].ToString();
+                    var ele = t[j].ToString();
                     if (ele != null && eleCount.ContainsKey(ele))
                         eleCount[ele]++;
                     else if (ele != null) eleCount[ele] = 1;
-                    // ReSharper disable once ForCanBeConvertedToForeach
-                    for (var k = 0; k < targetEleMaxValueList.Count; k++)
-                        if (ele == targetEleMaxValueList[k][0].ToString())
+                    foreach (var t1 in targetEleMaxValueList)
+                        if (ele == t1[0].ToString())
                         {
-#pragma warning disable CA1305 // 指定 IFormatProvider
-                            var eleId = Convert.ToInt32(targetEleMaxValueList[k][3]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
-#pragma warning disable CA1305 // 指定 IFormatProvider
-                            var eleMax = Convert.ToInt32(targetEleMaxValueList[k][1]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
+                            var eleId = Convert.ToInt32(t1[3]);
+#pragma warning restore CA1305
+#pragma warning disable CA1305
+                            var eleMax = Convert.ToInt32(t1[1]);
+#pragma warning restore CA1305
                             if (ele != null)
                             {
                                 var targetId = eleId + (eleCount[ele] - 1) % eleMax + 1;
@@ -57,11 +48,9 @@ public class TmCaculate
             targetRangeValueList.Add(tempTarget);
         }
 
-        //写入数据
         PubMetToExcel.ListToArrayToRange(targetRangeValueList, wsNewEle, 2, 2);
     }
 
-    //TM关卡非目标生成
     public static void CreatTmNormalEle()
     {
         var ws = Wk.ActiveSheet;
@@ -71,7 +60,6 @@ public class TmCaculate
         Range targetEleMax = wsEle.Range["N16:S25"];
         var wsNewEle = Wk.Worksheets["TM关卡设计"];
         Range targetModelRange = wsNewEle.Range["B2:G2001"];
-        // 读取数据到一个二维数组中
         object[,] modelRangeValue = modelRange.Value;
         var modelRangeValueList = PubMetToExcel.RangeDataToList(modelRangeValue);
         object[,] modelRangeValue2 = modelRange2.Value;
@@ -81,27 +69,23 @@ public class TmCaculate
         object[,] targetModelRangeValue = targetModelRange.Value;
         var targetModelRangeValueList = PubMetToExcel.RangeDataToList(targetModelRangeValue);
 
-        //新eleID列表
         var targetRangeValueList = new List<List<object>>();
-        //非目标计数列表
         var eleCount = new Dictionary<string, int>();
-        //非目标ID库循环列表
         var eleIdLoop = new Dictionary<string, List<int>>();
-        // ReSharper disable once ForCanBeConvertedToForeach
-        for (var i = 0; i < targetEleMaxValueList.Count; i++)
+        foreach (var t in targetEleMaxValueList)
         {
-#pragma warning disable CA1305 // 指定 IFormatProvider
-            var loopTimes = Convert.ToInt32(targetEleMaxValueList[i][5]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
-#pragma warning disable CA1305 // 指定 IFormatProvider
-            var eleMax = Convert.ToInt32(targetEleMaxValueList[i][4]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
-#pragma warning disable CA1305 // 指定 IFormatProvider
-            var eleBaseId = Convert.ToInt32(targetEleMaxValueList[i][3]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
-#pragma warning disable CA1305 // 指定 IFormatProvider
-            var eleTheme = Convert.ToString(targetEleMaxValueList[i][0]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
+            var loopTimes = Convert.ToInt32(t[5]);
+#pragma warning restore CA1305
+#pragma warning disable CA1305
+            var eleMax = Convert.ToInt32(t[4]);
+#pragma warning restore CA1305
+#pragma warning disable CA1305
+            var eleBaseId = Convert.ToInt32(t[3]);
+#pragma warning restore CA1305
+#pragma warning disable CA1305
+            var eleTheme = Convert.ToString(t[0]);
+#pragma warning restore CA1305
             var loopIdList = new List<int>();
             for (var j = 0; j < loopTimes * eleMax; j++)
             {
@@ -119,23 +103,21 @@ public class TmCaculate
             for (var j = 0; j < modelRangeValueList[i].Count; j++)
                 if ((string)modelRangeValueList[i][j] != "")
                 {
-                    //非目标元素整体计数
                     var ele = modelRangeValueList[i][j].ToString();
                     if (ele != null && eleCount.ContainsKey(ele))
                         eleCount[ele]++;
                     else if (ele != null) eleCount[ele] = 1;
-                    //非目标元素ID获取、和目标元素去重（向后索引）处理
                     if (ele != null)
                     {
                         var eleId = eleIdLoop[ele][eleCount[ele] - 1];
                         foreach (var id in targetModelRangeValueList[i])
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                             if (Convert.ToInt32(id) == eleId)
                             {
                                 eleCount[ele]++;
                                 eleId = eleIdLoop[ele][eleCount[ele] - 1];
                             }
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
 
                         tempTarget.Add(eleId);
                     }
@@ -144,7 +126,6 @@ public class TmCaculate
             targetRangeValueList.Add(tempTarget);
         }
 
-        //写入数据
         PubMetToExcel.ListToArrayToRange(targetRangeValueList, wsNewEle, 2, 9);
     }
 }

@@ -1,20 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace NumDesTools;
 
 /// <summary>
 /// 概率计算类
 /// </summary>
-// ReSharper disable once UnusedMember.Global
 public class RatioCaculate
 {
-    //卡牌收集概率计算
-    // ReSharper disable once UnusedMember.Global
     public static void CacCardCollect()
     {
-        //获取表格源数据
         var workBook = NumDesAddIn.App.ActiveWorkbook;
         var collectCardGroup = workBook.Worksheets["CollectCardGroup"];
         var collectCardInfo = workBook.Worksheets["CollectCardInfo"];
@@ -33,7 +27,6 @@ public class RatioCaculate
         var collectCardScoreData = PubMetToExcel.ExcelDataToListBySelf(collectCardScore, 5, 1, 2, 1);
         var collectCardScoreTitle = collectCardScoreData.Item1;
         var collectCardScoreDataLIst = collectCardScoreData.Item2;
-        //分拆出每个卡组的稀有度构成
         var cardGroupIndex = collectCardGroupTitle.IndexOf("card_id");
         var cardGroupNameIndex = collectCardGroupTitle.IndexOf("#备注");
         var cardInfoIdIndex = collectCardInfoTitle.IndexOf("id");
@@ -48,10 +41,9 @@ public class RatioCaculate
         for (var i = 0; i < groupCount; i++)
         {
             var cardGroupStr = collectCardGroupDataList[i][cardGroupIndex] as string;
-            if (cardGroupStr == null) continue; // 安全转换和处理
+            if (cardGroupStr == null) continue;
             var cardGroupName = collectCardGroupDataList[i][cardGroupNameIndex] as string;
             if (string.IsNullOrEmpty(cardGroupName)) continue;
-            //拆ID，查ID，获取各个品质的个数
             var cardIdPattern = "\\d+";
             var cardIdMatches = Regex.Matches(cardGroupStr, cardIdPattern);
             if (cardIdMatches.Count == 0) continue;
@@ -76,7 +68,7 @@ public class RatioCaculate
                 }
             }
 
-            groupRarityCount.Add(((string, int, int, int))(cardGroupName, rarity1, rarity2, rarity3));
+            groupRarityCount.Add((cardGroupName, rarity1, rarity2, rarity3));
         }
 
         var weight1 = (int)collectCardRarityDataList[0][cardRarityWeightIndex];
@@ -94,7 +86,6 @@ public class RatioCaculate
         var newRarity3 = 0;
         var simTimes = 100000;
 
-        //模拟期望
         for (var i = 0; i < countRarity; i++)
         {
             newRarity1 += groupRarityCount[i].Item2;
@@ -105,58 +96,13 @@ public class RatioCaculate
             if (groupRarityCount[i].Item2 == 0) weight1 = 0;
             if (groupRarityCount[i].Item3 == 0) weight2 = 0;
             if (groupRarityCount[i].Item4 == 0) weight3 = 0;
-            //各自期望
-            //var randCountSelf = RandCount(groupRarityCount,i, newGroupRarityCount, maxScore, score3, score2, score1, weight1, weight2, weight3, simTimes);
-            //累积期望
             var randCountTotal = RandCount(groupRarityCount, i, newGroupRarityCount, maxScore, score3, score2, score1,
                 weight1, weight2, weight3, simTimes);
-            //Debug.Print("各自尝试次数：[" + randCountSelf.Item1 + "] ## " + "累积尝试次数：[" + randCountTotal.Item1 + "]");
-            //collectCardGroup.Cells[i + 5, cardGroupIndex + 2].Value = randCountSelf.Item1;
-            //collectCardGroup.Cells[i + 5, cardGroupIndex + 3].Value = randCountSelf.Item2;
             collectCardGroup.Cells[i + 5, cardGroupIndex + 4].Value = randCountTotal.Item1;
             collectCardGroup.Cells[i + 5, cardGroupIndex + 5].Value = randCountTotal.Item2;
             for (var a = 0; a < randCountTotal.Item3.Count; a++)
                 collectCardGroup.Cells[a + 5, cardGroupIndex + 6 + i].Value = randCountTotal.Item3[a];
         }
-        //计算各自期望--计算公式有问题
-        //for (int i = 0; i < countRarity; i++)
-        //{
-        //    var rarity1Count = groupRarityCount[i].Item2;
-        //    var rarity2Count = groupRarityCount[i].Item3;
-        //    var rarity3Count = groupRarityCount[i].Item4;
-        //    if (rarity1Count == 0)
-        //    {
-        //        weight1 = 0;
-        //    }
-        //    else if (rarity2Count == 0)
-        //    {
-        //        weight2 = 0;
-        //    }
-        //    else if (rarity3Count == 0)
-        //    {
-        //        weight3 = 0;
-        //    }
-        //    double ratio1 =(double) weight1 / (weight1 + weight2 + weight3);
-        //    double ratio2 = (double)weight1 / (weight1 + weight2 + weight3);
-        //    double ratio3 = (double)weight1 / (weight1 + weight2 + weight3);
-        //    var eRarity = 1/ratio1+1/ratio2+1/ratio3-1/(ratio1+ratio2)-1/(ratio1+ratio3)-1/(ratio2+ratio3)+1/(ratio1+ratio2+ratio3);
-        //    var eCard1 =PlusGG(rarity1Count);
-        //    var eCard2 = PlusGG(rarity2Count);
-        //    var eCard3 = PlusGG(rarity3Count);
-        //    var eFinal = Math.Max(Math.Max(eCard1, eCard2), eCard3) * eRarity;
-        //    Debug.Print("计算期望："+eFinal);
-        //}
-        ////计算累积期望
-        //int PlusGG(int rarityCount)
-        //{
-        //    var sum =0;
-        //    for (int i = 1; i <= rarityCount; i++)
-        //    {
-        //        sum += 1 / i;
-        //    }
-        //    var result = rarityCount * sum;
-        //    return result;
-        //}
     }
 
     private static Tuple<double, double, List<double>> RandCount(dynamic groupRarityCount, int i,
@@ -328,5 +274,4 @@ public class RatioCaculate
             (double)scoreGetTimes / simTimes, otherRankCountTotal);
         return resultValue;
     }
-    //其他概率计算
 }

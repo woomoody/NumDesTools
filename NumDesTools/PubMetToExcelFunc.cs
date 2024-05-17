@@ -1,11 +1,4 @@
-﻿using ExcelDna.Integration;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Linq;
-using Microsoft.Office.Core;
-using System;
-using System.Diagnostics;
-using System.IO;
+﻿using System.Threading.Tasks;
 using System.Windows;
 using OfficeOpenXml;
 using System.Text.RegularExpressions;
@@ -22,27 +15,21 @@ public class PubMetToExcelFunc
 
     private static readonly string Path = Wk.Path;
 
-    //Excel数据查询并合并表格数据
     public static void ExcelDataSearchAndMerge(string searchValue)
     {
-        //获取所有的表格路径
         string[] ignoreFileNames = ["#", "副本"];
         var rootPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(Path));
         var fileList = new List<string>()
             { rootPath + @"\Excels\Tables\", rootPath + @"\Excels\Localizations\", rootPath + @"\Excels\UIs\" };
         var files = PubMetToExcel.PathExcelFileCollect(fileList, "*.xlsx", ignoreFileNames);
-        //查找指定关键词，记录行号和表格索引号
         var findValueList = new List<(string, string, int, int, string, string)>();
         Parallel.ForEach(files, file =>
             {
                 var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(file);
                 var findValue = PubMetToExcel.FindDataInDataTable(file, dataTable, searchValue);
-                if (findValue.Count > 0)
-                    //findValueList.Add(findValue);
-                    findValueList = findValueList.Concat(findValue).ToList();
+                if (findValue.Count > 0) findValueList = findValueList.Concat(findValue).ToList();
             }
         );
-        //人工查询所需要的数据，可以打开表格，可以删除和手动增加数据，专用表格进行操作
         dynamic tempWorkbook;
         try
         {
@@ -69,10 +56,8 @@ public class PubMetToExcelFunc
             tempSheet.Cells[2 + tempDataArray.GetLength(0) - 1, 2 + tempDataArray.GetLength(1) - 1]];
         tempDataRange.Value = tempDataArray;
         tempWorkbook.Save();
-        //合并数据
     }
 
-    //Excel右键识别文件路径并打开
     public static void RightOpenExcelByActiveCell(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var sheet = NumDesAddIn.App.ActiveSheet;
@@ -84,7 +69,6 @@ public class PubMetToExcelFunc
 
         var selectCellValue = "";
         if (selectCell.Value != null) selectCellValue = selectCell.Value.ToString();
-        //正则出是Excel路径的单元格
         var isMatch = selectCellValue.Contains(".xls");
         if (isMatch)
         {
@@ -142,13 +126,9 @@ public class PubMetToExcelFunc
         var keyCell = sheet.Cells[2, selectCellCol];
         var excelPath = @"C:\M1Work\Public\Excels\Tables";
         var excelName = "#表格关联.xlsx##主副表关联";
-        //声明新类
         var excelObj = new ExcelDataByEpplus();
-        //计算类属性
         excelObj.GetExcelObj(excelPath, excelName);
-        //应用属性
         if (excelObj.ErrorList.Count > 0) return;
-        //读取数据
         var sheetTarget = excelObj.Sheet;
         var data = excelObj.ReadToDic(sheetTarget, 6, 5, [7, 9], 2);
 
@@ -160,14 +140,12 @@ public class PubMetToExcelFunc
 
         if (data.TryGetValue(keyName, out var valueList))
         {
-            // 使用 LINQ 查找第一个匹配的元素
             var result = valueList
                 .Cast<List<string>>()
                 .FirstOrDefault(list => list[0] == keyCell.Value.ToString());
             if (result != null)
             {
                 var indexCellValue = result[1];
-                //正则出是Excel路径的单元格
                 var isMatch = indexCellValue.Contains(".xls");
                 if (isMatch)
                 {
@@ -200,39 +178,29 @@ public class PubMetToExcelFunc
                         openSheetName = "Sheet1";
                     }
 
-                    //声明新类
                     var excelLinkObjOpen = new ExcelDataByEpplus();
                     excelLinkObjOpen.GetExcelObj(excelPath, excelName);
-                    //应用属性
                     if (excelLinkObjOpen.ErrorList.Count > 0) return;
-                    //读取数据
                     var sheetLinkOpen = excelLinkObjOpen.Sheet;
                     var valueLinkIndex = excelLinkObjOpen.FindFromRow(sheetLinkOpen, 5, workBookName);
                     var cellLinkAddress = "A1";
                     if (valueLinkIndex != -1) cellLinkAddress = "A" + valueLinkIndex;
-                    //验证文件名
                     if (!File.Exists(indexCellValue))
                     {
                         var tips = MessageBox.Show("文件[" + indexCellValue + "]不存在，是否打开字段表格编辑？", "确认",
                             MessageBoxButton.YesNo, MessageBoxImage.Question);
-                        if (tips == MessageBoxResult.Yes)
-                            // 用户点击了"Yes"按钮，执行相应的操作
-                            PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", cellLinkAddress);
+                        if (tips == MessageBoxResult.Yes) PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", cellLinkAddress);
                         return;
                     }
 
-                    var pattern = @"\d+"; // \d代表数字，+代表一个或多个
+                    var pattern = @"\d+";
                     MatchCollection matches = Regex.Matches(selectCellValue, pattern);
                     var cellAddress = "A1";
-                    //声明新类
                     var excelObjOpen = new ExcelDataByEpplus();
-                    //计算类属性
                     var excelNameOpen = result[1] + "##Sheet1";
                     if (result[1].Contains("##")) excelNameOpen = result[1];
                     excelObjOpen.GetExcelObj(workbookPath + @"\Tables", excelNameOpen);
-                    //应用属性
                     if (excelObjOpen.ErrorList.Count > 0) return;
-                    //读取数据
                     var sheetTargetOpen = excelObjOpen.Sheet;
                     foreach (var item in matches)
                     {
@@ -251,18 +219,14 @@ public class PubMetToExcelFunc
             {
                 var tips = MessageBox.Show("字段未关联或没有表格索引,是否打开字段表格编辑？", "确认", MessageBoxButton.YesNo,
                     MessageBoxImage.Question);
-                if (tips == MessageBoxResult.Yes)
-                    // 用户点击了"Yes"按钮，执行相应的操作
-                    PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", "A1");
+                if (tips == MessageBoxResult.Yes) PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", "A1");
             }
         }
         else
         {
             var tips = MessageBox.Show("字段未关联或没有表格索引,是否打开字段表格编辑？", "确认", MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
-            if (tips == MessageBoxResult.Yes)
-                // 用户点击了"Yes"按钮，执行相应的操作
-                PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", "A1");
+            if (tips == MessageBoxResult.Yes) PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", "A1");
         }
     }
 
@@ -285,16 +249,11 @@ public class PubMetToExcelFunc
         var selectCell = NumDesAddIn.App.ActiveCell;
         var basePath = NumDesAddIn.App.ActiveWorkbook.Path;
         var mergePath = "";
-        //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = System.IO.Path.Combine(documentsFolder, "mergePath.txt");
         var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
-        //第一行Alice，第二行Cove
-        if (mergePathList.Count <= 1)
-            //打开文本文件
-            Process.Start(filePath);
+        if (mergePathList.Count <= 1) Process.Start(filePath);
         if (mergePathList[0] == "" || mergePathList[1] == "" || mergePathList[1] == mergePathList[0])
-            //打开文本文件
             Process.Start(filePath);
         else
             mergePath = basePath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
@@ -314,32 +273,21 @@ public class PubMetToExcelFunc
     {
         var baseName = "大富翁种";
         if (!sheetName.Contains(baseName)) MessageBox.Show("当前表格不是【大富翁种**】,无法使用大富翁功能");
-        //读取数据（0起始）
         var targetRank = PubMetToExcel.ReadExcelDataC(sheetName, 21, 44, 2, 2);
-        //object[,] seedRangeValue = PubMetToExcel.ReadExcelDataC(sheetName, 2, 7, 6, 6);
         var targetKey = PubMetToExcel.ReadExcelDataC(sheetName, 13, 15, 2, 3);
         var targetKeySoft = PubMetToExcel.ReadExcelDataC(sheetName, 2, 11, 2, 3);
         var maxRollCell = PubMetToExcel.ReadExcelDataC(sheetName, 18, 18, 2, 2);
         var maxGridLoopCell = PubMetToExcel.ReadExcelDataC(sheetName, 17, 17, 2, 2);
         var maxRankCell = PubMetToExcel.ReadExcelDataC(sheetName, 18, 18, 5, 5);
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
         var maxRoll = Convert.ToInt32(maxRollCell[0, 0]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
+#pragma warning disable CA1305
         var maxGridLoop = Convert.ToInt32(maxGridLoopCell[0, 0]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
+#pragma warning disable CA1305
         var maxRankValue = Convert.ToInt32(maxRankCell[0, 0]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
-        //List<int> data = new List<int>();
-        //for (int i = 0; i < seedRangeValue.GetLength(0); i++)
-        //{
-        //    var seed = seedRangeValue[i,0];
-        //    for (int j = 0; j < Convert.ToInt32(seed); j++)
-        //    {
-        //        data.Add(i + 1);
-        //    }
-        //}
+#pragma warning restore CA1305
         var permutations = GenerateUniqueSchemes(maxRoll, maxRoll * 100000);
         var targetProcess = new Dictionary<int, List<int>>();
         var bpProcess = new Dictionary<int, List<int>>();
@@ -351,7 +299,6 @@ public class PubMetToExcelFunc
             var targetProcessTemp = new List<int>();
             var bpProcessTemp = new List<int>();
             var targetGiftTemp = new List<int>();
-            //生成多少个格子
             for (var j = 0; j < maxGridLoop * 24; j++)
             {
                 var modCount = (j + 1) % modCountDiv;
@@ -362,9 +309,9 @@ public class PubMetToExcelFunc
                     bpProcessTemp.Add(permutations[i][0]);
                     var tempValue = targetRank[0, 0];
                     if (tempValue is ExcelEmpty) tempValue = null;
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     targetGiftTemp.Add(Convert.ToInt32(tempValue));
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                 }
                 else
                 {
@@ -374,12 +321,11 @@ public class PubMetToExcelFunc
                     targetTemp %= 24;
                     if (targetTemp == 0) targetTemp = 24;
                     targetProcessTemp.Add(targetTemp);
-                    //获取价值量
                     var tempValue = targetRank[targetTemp - 1, 0];
                     if (tempValue is ExcelEmpty) tempValue = null;
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     var targetTemp2 = targetGiftTemp[j - 1] + Convert.ToInt32(tempValue);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     targetGiftTemp.Add(targetTemp2);
                 }
             }
@@ -390,60 +336,44 @@ public class PubMetToExcelFunc
         }
 
         var filteredData = targetProcess;
-        //过滤固定目标
         for (var i = 0; i < targetKey.GetLength(0); i++)
         {
             var rollTimes = targetKey[i, 0];
             var rollGrid = targetKey[i, 1];
             if (!(rollTimes is ExcelEmpty))
             {
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                 var colIndex = Convert.ToInt32(rollTimes) - 1;
-#pragma warning restore CA1305 // 指定 IFormatProvider
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
+#pragma warning disable CA1305
                 var colValue = Convert.ToInt32(rollGrid);
-#pragma warning restore CA1305 // 指定 IFormatProvider
-                //筛选指定列有固定目标值的行
+#pragma warning restore CA1305
                 filteredData = filteredData
                     .Where(entry => entry.Value[colIndex] == colValue)
                     .ToDictionary(entry => entry.Key, entry => entry.Value);
-                //去除非指定列有固定目标值的行(换种思路，前XRoll只存在一个固定目标)
-                //var filterCondition = GenerateFilterConditions(colIndex, maxRoll, colValue);
-                //filteredData = filteredData
-                //    .Where(entry => filterCondition.All(condition => condition(entry.Value)))
-                //    .ToDictionary(entry => entry.Key, entry => entry.Value);
-                //filteredData = filteredData
-                //    .Where(pair => pair.Value.Take(maxRoll).Count(item => item == colValue) == 1)
-                //    .ToDictionary(pair => pair.Key, pair => pair.Value);
             }
         }
 
-        //过滤动态目标
         for (var i = 0; i < targetKeySoft.GetLength(0); i++)
         {
             var softTimes = targetKeySoft[i, 1];
             var softGrid = targetKeySoft[i, 0];
             if (!(softGrid is ExcelEmpty))
-                //筛选动态目标值满足出现次数的行
-#pragma warning disable CA1305 // 指定 IFormatProvider
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
+#pragma warning disable CA1305
                 filteredData = filteredData
                     .Where(pair =>
                         pair.Value.Take(maxRoll).Count(item => item == Convert.ToInt32(softGrid)) ==
                         Convert.ToInt32(softTimes))
                     .ToDictionary(pair => pair.Key, pair => pair.Value);
-#pragma warning restore CA1305 // 指定 IFormatProvider
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
+#pragma warning restore CA1305
         }
 
-        //方案整理
         var filteredDataGift = new Dictionary<int, int>();
         var filteredDataMethod = new List<List<object>>();
         var filteredDataBpProcess = new List<List<object>>();
         foreach (var key in filteredData.Keys) filteredDataGift[key] = targetGift[key][maxRoll];
-        //选择升阶进度中众数项
-        //var modeValue = GetMode(filteredDataGift.Values);
-        //选择升阶进度中指定值
         var modeValue = maxRankValue;
         var filteredDataGiftMode = filteredDataGift.Where(pair => pair.Value == modeValue).ToList();
         var filteredDataGiftList = new List<List<object>>();
@@ -459,12 +389,10 @@ public class PubMetToExcelFunc
             filteredDataMethod.Add([methodStr]);
         }
 
-        //清理
         var emptyData = new object[65535 - 17 + 1, 6 - 6 + 1];
         PubMetToExcel.WriteExcelDataC(sheetName, 21, 65534, 4, 4, emptyData);
         PubMetToExcel.WriteExcelDataC(sheetName, 21, 65534, 5, 5, emptyData);
         PubMetToExcel.WriteExcelDataC(sheetName, 21, 65534, 6, 6, emptyData);
-        //错误提示
         if (filteredDataBpProcess.Count == 0)
         {
             var error = new object[1, 1];
@@ -473,7 +401,6 @@ public class PubMetToExcelFunc
         }
         else
         {
-            //写入
             PubMetToExcel.WriteExcelDataC(sheetName, 21, 21 + filteredDataBpProcess.Count - 1, 6, 6,
                 PubMetToExcel.ConvertListToArray(filteredDataBpProcess));
             PubMetToExcel.WriteExcelDataC(sheetName, 21, 21 + filteredDataGiftList.Count - 1, 5, 5,
@@ -493,14 +420,12 @@ public class PubMetToExcelFunc
         {
             var scheme = new List<int>();
 
-            // 随机生成一个方案
             for (var j = 0; j < numberOfRolls; j++)
             {
                 var randomNumber = random.Next(1, 7);
                 scheme.Add(randomNumber);
             }
 
-            // 转换为字符串，检查是否已经存在该方案
             var schemeString = string.Join(",", scheme);
             if (seenSchemes.Add(schemeString)) result.Add([..scheme]);
         }
@@ -508,32 +433,25 @@ public class PubMetToExcelFunc
         return result;
     }
 
-    //移动魔瓶模拟消耗
     public static void MagicBottleCostSimulate(string sheetName)
     {
         var baseName = "移动魔瓶";
         if (!sheetName.Contains(baseName)) MessageBox.Show("当前表格不是【移动魔瓶**】,无法使用魔瓶验算");
-        //读取数据（0起始）
         var eleCount = PubMetToExcel.ReadExcelDataC(sheetName, 2, 8, 21, 21);
         var simulateCount = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 21, 21);
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
         var simulateCountMax = Convert.ToInt32(simulateCount[0, 0]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
         var eleCountMax = eleCount.GetLength(0);
         var filterEleCountMax = new List<int>();
-        //初始化统计list
         for (var r = 0; r < eleCountMax; r++) filterEleCountMax.Add(0);
-        //模拟猜数字
         for (var s = 0; s < simulateCountMax; s++)
         for (var r = 0; r < eleCountMax; r++)
         {
             var eleGuessListGroup = new List<List<int>>();
 #pragma warning disable CA1305
-            // 指定 IFormatProvider
             var eleNum = Convert.ToInt32(eleCount[r, 0]);
 #pragma warning restore CA1305
-            // 指定 IFormatProvider
-            //创建随机元素序列List
             var eleList = new List<int>();
             var eleGuessList = new List<int>();
             for (var e = 1; e <= eleNum; e++)
@@ -548,7 +466,6 @@ public class PubMetToExcelFunc
             eleGuessList = eleGuessList.OrderBy(_ => seedGuess.Next()).ToList();
             do
             {
-                //随机猜数字，剔除对的
                 for (var eleCurrent = eleList.Count - 1; eleCurrent >= 0; eleCurrent--)
                 {
                     var ele = eleList[eleCurrent];
@@ -563,7 +480,6 @@ public class PubMetToExcelFunc
                 }
 
                 eleGuessListGroup.Add(eleGuessList);
-                //List重新排序和上次不同
                 if (eleList.Count > 1)
                 {
                     List<int> eleTempList;
@@ -578,15 +494,14 @@ public class PubMetToExcelFunc
             } while (eleList.Count != 0);
         }
 
-        // ReSharper disable once PossibleLossOfFraction
+        // ReSharper disable PossibleLossOfFraction
         var filterEleCountMaxObj = filterEleCountMax.Select(item => (double)(item / simulateCountMax))
+            // ReSharper restore PossibleLossOfFraction
             .Select(simulateValue => new List<object> { simulateValue }).ToList();
-        //清理
         var emptyData = new object[7, 7];
         PubMetToExcel.WriteExcelDataC(sheetName, 2, 8, 22, 22, emptyData);
         var emptyData2 = new object[1, 1];
         PubMetToExcel.WriteExcelDataC(sheetName, 0, 0, 23, 23, emptyData2);
-        //错误提示
         if (filterEleCountMax.Count == 0)
         {
             var error = new object[1, 1];
@@ -595,7 +510,6 @@ public class PubMetToExcelFunc
         }
         else
         {
-            //写入
             PubMetToExcel.WriteExcelDataC(sheetName, 2, 2 + filterEleCountMax.Count - 1, 22, 22,
                 PubMetToExcel.ConvertListToArray(filterEleCountMaxObj));
         }
