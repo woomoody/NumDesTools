@@ -23,7 +23,6 @@ public class GlobalVariable
     {
         if (File.Exists(_filePath))
         {
-            // 如果文件存在，读取文件中的数据
             var lines = File.ReadAllLines(_filePath);
 
             foreach (var line in lines)
@@ -34,16 +33,13 @@ public class GlobalVariable
                 {
                     var key = parts[0].Trim();
                     var value = parts[1].Trim();
-                    //Txt不能随意添加变量
                     if (_defaultValue.ContainsKey(key)) Value[key] = value;
                 }
             }
         }
         else
         {
-            // 如果文件不存在，设置默认值
             Value = _defaultValue;
-            // 将默认值写入文件
             var lines = new List<string>();
             foreach (var kvp in _defaultValue) lines.Add($"{kvp.Key} = {kvp.Value}");
             File.WriteAllLines(_filePath, lines);
@@ -54,10 +50,7 @@ public class GlobalVariable
     {
         if (File.Exists(_filePath))
         {
-            // 检查字典中是否存在要更新的键
-            if (_defaultValue.ContainsKey(key))
-                // 如果存在，更新它的值
-                _defaultValue[key] = value;
+            if (_defaultValue.ContainsKey(key)) _defaultValue[key] = value;
 
             var lines = new List<string>();
 

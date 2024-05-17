@@ -203,11 +203,9 @@ public class ExcelUdf
             var rangeCol = cellRef.ColumnFirst + 1;
             var range = sheet.Cells[rangeRow, rangeCol];
             var color = range.Interior.Color;
-            // 将Excel VBA颜色值转换为RGB格式
             var red = (int)(color % 256);
             var green = (int)(color / 256 % 256);
             var blue = (int)(color / 65536 % 256);
-            // 返回RGB格式的颜色值
             return $"{red}#{green}#{blue}";
         }
 
@@ -218,7 +216,6 @@ public class ExcelUdf
     public static string SetCellColor(
         [ExcelArgument(AllowReference = true, Name = "单元格值", Description = "获取单元格值")] string inputValue)
     {
-        //使用该公式的单元格地址
         var cellRef = (ExcelReference)XlCall.Excel(XlCall.xlfCaller);
         var address = (string)XlCall.Excel(XlCall.xlfReftext, cellRef, true);
         var sheet = NumDesAddIn.App.ActiveSheet;
@@ -226,14 +223,10 @@ public class ExcelUdf
         var canConvertToInt = int.TryParse(inputValue, out var intValue);
         if (!canConvertToInt) return "error";
         var value = intValue % 2;
-        if (value == 0)
-            range.Interior.Color = ColorTranslator.ToOle(Color.Aquamarine);
-        else
-            range.Interior.Color = ColorTranslator.ToOle(Color.BurlyWood);
+        range.Interior.Color = ColorTranslator.ToOle(value == 0 ? Color.Aquamarine : Color.BurlyWood);
         return "^0^";
     }
 
-    //拆分字符串为int数字
     [ExcelFunction(Category = "UDF-字符串提取数字", IsVolatile = true, IsMacroType = true, Description = "提取字符串中数字")]
     public static int GetNumFromStr([ExcelArgument(AllowReference = true, Description = "输入字符串")] string inputValue,
         [ExcelArgument(AllowReference = true, Name = "分隔符", Description = "分隔符,eg:,")]
@@ -241,19 +234,16 @@ public class ExcelUdf
         [ExcelArgument(AllowReference = true, Name = "数字序号", Description = "选择提取字符串中的第几个数字，如果值很大，表示提取最末尾字符")]
         int numCount)
     {
-        // 使用正则表达式匹配数字
         var numbers = Regex.Split(inputValue, delimiter)
             .SelectMany(s => Regex.Matches(s, @"\d+").Select(m => m.Value))
             .ToArray();
-        //增加只提取末尾字符的判断
         var maxNumCount = numbers.Length;
         numCount = Math.Min(maxNumCount, numCount);
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
         return Convert.ToInt32(numbers[numCount - 1]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
     }
 
-    //拆分字符串为Str字符串
     [ExcelFunction(Category = "UDF-字符串提取数字", IsVolatile = true, IsMacroType = true, Description = "分割字符串为若干字符串")]
     public static string GetStrFromStr(
         [ExcelArgument(AllowReference = true, Name = "单元格索引", Description = "输入字符串")] string inputValue,
@@ -264,21 +254,17 @@ public class ExcelUdf
         [ExcelArgument(AllowReference = true, Name = "序号", Description = "选择提取字符串中的第几个字符串，如果值很大，表示提取最末尾字符")]
         int numCount)
     {
-        // 分割字符串
         var filterGroup = filter.ToCharArray().Select(c => c.ToString()).ToArray();
         var strGroup = Regex.Split(inputValue, delimiter);
         if (filterGroup.Length > 0)
             foreach (var filterItem in filterGroup)
                 for (var i = 0; i < strGroup.Length; i++)
                     strGroup[i] = strGroup[i].Replace(filterItem, "");
-        //增加只提取末尾字符的判断
         var maxNumCount = strGroup.Length;
         numCount = Math.Min(maxNumCount, numCount);
-        //返回
         return strGroup[numCount - 1];
     }
 
-    //组装字符串
     [ExcelFunction(Category = "UDF-组装字符串", IsVolatile = true, IsMacroType = true,
         Description = "拼接Range，不需要默认值的直接用TEXT JOIN，这个支持默认值")]
     public static string CreatValueToArray(
@@ -293,7 +279,6 @@ public class ExcelUdf
         [ExcelArgument(AllowReference = true, Name = "返回值类型", Description = "0指使用默认值模式，非0为一般模式")]
         int returnType)
     {
-        //过滤掉空值并将二维数组中的值按行拼接成字符串
         var result = string.Empty;
         var rows = rangeObj.GetLength(0);
         var cols = rangeObj.GetLength(1);
@@ -322,7 +307,6 @@ public class ExcelUdf
         return result;
     }
 
-    //组装字符串，按数字重复填写ID
     [ExcelFunction(Category = "UDF-组装字符串", IsVolatile = true, IsMacroType = true,
         Description = "拼接Range，根据第二个单元格范围内数字重复拼接第一个单元格内对应值")]
     public static string CreatValueToArrayRepeat(
@@ -335,7 +319,6 @@ public class ExcelUdf
         [ExcelArgument(AllowReference = true, Name = "过滤值", Description = "一般为空值")]
         string ignoreValue)
     {
-        //过滤掉空值并将二维数组中的值按行拼接成字符串
         var result = string.Empty;
         var rows = rangeObj.GetLength(0);
         var cols = rangeObj.GetLength(1);
@@ -350,10 +333,8 @@ public class ExcelUdf
             {
                 var item2 = rangeObj2[row, col];
 #pragma warning disable CA1305
-                // 指定 IFormatProvider
                 for (var i = 0; i < Convert.ToInt32(item2); i++) result += item + delimiter;
 #pragma warning restore CA1305
-                // 指定 IFormatProvider
             }
         }
 
@@ -361,7 +342,6 @@ public class ExcelUdf
         return result;
     }
 
-    //组装字符串(二维)
     [ExcelFunction(Category = "UDF-组装字符串", IsVolatile = true, IsMacroType = true, Description = "拼接Range（二维）")]
     public static string CreatValueToArray2(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "第一单元格范围")]
@@ -375,12 +355,9 @@ public class ExcelUdf
     )
 
     {
-        //变为一维数组
         var values1Objects = rangeObj1.Cast<object>().ToArray();
         var values2Objects = rangeObj2.Cast<object>().ToArray();
-        //获取间隔方案
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
-        //过滤掉空值并将二维数组中的值按行拼接成字符串
         var result = string.Empty;
         var count = 0;
         if (values1Objects.Length > 0 && values2Objects.Length > 0 && delimiterList.Length > 0)
@@ -412,7 +389,6 @@ public class ExcelUdf
         return result;
     }
 
-    //组装字符串：条件
     [ExcelFunction(Category = "UDF-组装字符串", IsVolatile = true, IsMacroType = true, Description = "拼接Range：条件")]
     public static string CreatValueToArrayFilter(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "第一单元格范围")]
@@ -428,14 +404,11 @@ public class ExcelUdf
     )
 
     {
-        //变为一维数组
         var values1Objects = rangeObj1.Cast<object>().ToArray();
         var values2Objects = rangeObj2.Cast<object>().ToArray();
         var valuesFilterObjects = filterObj.Cast<object>().ToArray();
 
-        //获取间隔方案
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
-        //过滤掉空值并将二维数组中的值按行拼接成字符串
         var result = string.Empty;
         var count = 0;
         if (values1Objects.Length > 0 && values2Objects.Length > 0 && delimiterList.Length > 0)
@@ -468,7 +441,6 @@ public class ExcelUdf
         return result;
     }
 
-    //转置二维数组为一维
     [ExcelFunction(Category = "UDF-数组转置", IsVolatile = true, IsMacroType = true,
         Description = "二维数据转换为一维数据，并可选择是否过滤空值")]
     public static object[,] Trans2ArrayTo1Arrays(

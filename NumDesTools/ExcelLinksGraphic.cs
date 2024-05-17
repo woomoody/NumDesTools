@@ -1,8 +1,4 @@
-﻿
-
-// ReSharper disable All
-
-namespace NumDesTools;
+﻿namespace NumDesTools;
 
 /// <summary>
 /// 输出dot文件表现Excel索引关系图
@@ -11,10 +7,8 @@ public class ExcelLinksGraphic
 {
     public static void Graph()
     {
-        //打开Excel文件
         var workbook = NumDesAddIn.App.ActiveWorkbook;
         var sheet = workbook.ActiveSheet;
-        //读取Excel文件统计数据
         var mainExcel = new Dictionary<string, List<string>>();
         var usedRange = sheet.UsedRange;
         for (var row = 1; row <= usedRange.Rows.Count; row++)
@@ -37,8 +31,7 @@ public class ExcelLinksGraphic
             }
         }
 
-        //生成关系图
-        using (var file = new System.IO.StreamWriter(@"C:\Users\admin\Desktop\output.dot"))
+        using (var file = new StreamWriter(@"C:\Users\admin\Desktop\output.dot"))
         {
             file.WriteLine("digraph G {");
             foreach (var pair in mainExcel)

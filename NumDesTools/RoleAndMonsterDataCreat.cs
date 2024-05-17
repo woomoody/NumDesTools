@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
+// ReSharper disable All
 
 namespace NumDesTools;
 
@@ -11,36 +12,8 @@ public class CellSelectChangePro
 {
     public CellSelectChangePro()
     {
-        //单表选择单元格触发
-        //ws.SelectionChange += GetCellValue;
-        //多表选择单元格触发
         NumDesAddIn.App.SheetSelectionChange += GetCellValueMulti;
     }
-    //public void GetCellValue(Range range)
-    //{
-    //    if (NumDesAddIn.LabelTextRoleDataPreview == "角色数据预览：开启")
-    //    {
-    //        if (range.Row < 16 || range.Column < 5 || range.Column > 21)
-    //        {
-    //            App.StatusBar = "当前行不是角色数据行，另选一行";
-    //            //MessageBox.Show("单元格越界");
-    //        }
-    //        else
-    //        {
-    //            var roleName = _ws.Cells[range.Row, 5].Value2;
-    //            if (roleName != null)
-    //            {
-    //                _ws.Range["U1"].Value2 = roleName;
-    //                App.StatusBar = "角色：【" + roleName + "】数据已经更新，右侧查看~！~→→→→→→→→→→→→→→→~！~";
-    //            }
-    //            else
-    //            {
-    //                App.StatusBar = "当前行没有角色数据，另选一行";
-    //                //MessageBox.Show("没有找到角色数据");
-    //            }
-    //        }
-    //    }
-    //}
 
     private static void GetCellValueMulti(object sh, Range range)
     {
@@ -49,10 +22,9 @@ public class CellSelectChangePro
         if (name == "角色基础")
         {
             if (NumDesAddIn.LabelTextRoleDataPreview != "角色数据预览：开启") return;
-            if (range.Row < 16 || range.Column < 5 || range.Column > 21)
+            if (range.Row < 16 || range.Column is < 5 or > 21)
             {
                 NumDesAddIn.App.StatusBar = "当前行不是角色数据行，另选一行";
-                //MessageBox.Show("单元格越界");
             }
             else
             {
@@ -65,14 +37,12 @@ public class CellSelectChangePro
                 else
                 {
                     NumDesAddIn.App.StatusBar = "当前行没有角色数据，另选一行";
-                    //MessageBox.Show("没有找到角色数据");
                 }
             }
         }
         else
         {
             NumDesAddIn.LabelTextRoleDataPreview = "角色数据预览：关闭";
-            //更新控件lable信息
 #pragma warning disable CA1416
             NumDesAddIn.CustomRibbon.InvalidateControl("Button14");
 #pragma warning restore CA1416
@@ -83,36 +53,31 @@ public class CellSelectChangePro
 
 #region 每个角色全量数据的导出
 
-// ReSharper disable once UnusedMember.Global
 public class RoleDataPro
 {
     private const string FilePath = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
-    private const string CacColStart = "E"; //角色参数配置列数起点
-    private const string CacColEnd = "U"; //角色参数配置列数终点c
+    private const string CacColStart = "E";
+    private const string CacColEnd = "U";
 #pragma warning disable CA1416
     private static readonly dynamic App = ExcelDnaUtil.Application;
 #pragma warning restore CA1416
     private static readonly Worksheet Ws = App.ActiveSheet;
     private static readonly object Missing = Type.Missing;
-    private static readonly dynamic CacRowStart = 16; //角色参数配置行数起点
+    private static readonly dynamic CacRowStart = 16;
 
-    // ReSharper disable once UnusedMember.Global
     public static void ExportSig(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var sw = new Stopwatch();
         sw.Start();
-        //基础参数
         var roleIndex = App.ActiveCell.Row - 16;
         var roleData = StateCalculate();
         App.DisplayAlerts = false;
         App.ScreenUpdating = false;
-        //创建文件
         var roleDataSheetName = new List<string>();
         var roleDataRoleName = new List<string>();
         roleDataSheetName.Add(roleData[0][roleIndex][3]);
         roleDataRoleName.Add(roleData[0][roleIndex][0]);
         var erroLog = CreatDataTable(FilePath, Missing, roleDataSheetName, roleDataRoleName);
-        //写入数据
         Workbook book = App.Workbooks.Open(FilePath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
             Missing, Missing, Missing, Missing, Missing, Missing, Missing);
         ExpData(roleIndex, book);
@@ -130,7 +95,7 @@ public class RoleDataPro
         }
         catch
         {
-            //ignore
+            // ignored
         }
 
         App.DisplayAlerts = true;
@@ -140,15 +105,12 @@ public class RoleDataPro
         Debug.Print(ts2.ToString());
     }
 
-    // ReSharper disable once UnusedMember.Global
     public static void ExportMulti(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        //基础参数
         var roleCount = StateCalculate().Count;
         var roleData = StateCalculate();
         App.DisplayAlerts = false;
         App.ScreenUpdating = false;
-        //创建文件
         var roleDataSheetName = new List<string>();
         var roleDataRoleName = new List<string>();
         for (var i = 0; i < roleCount - 1; i++)
@@ -159,7 +121,6 @@ public class RoleDataPro
 
         var errorLog = CreatDataTable(FilePath, Missing, roleDataSheetName, roleDataRoleName);
         if (errorLog != "") errorLog += @"\";
-        //写入数据
         Workbook book = App.Workbooks.Open(FilePath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
             Missing, Missing, Missing, Missing, Missing, Missing, Missing);
         for (var i = 0; i < roleCount - 1; i++) ExpData(i, book);
@@ -177,7 +138,7 @@ public class RoleDataPro
         }
         catch
         {
-            //ignore
+            // ignored
         }
 
         App.DisplayAlerts = true;
@@ -187,17 +148,15 @@ public class RoleDataPro
     private static void ExpData(dynamic roleId, dynamic book)
     {
         var roleData = StateCalculate();
-        var roleDataSheetName = roleData[0][roleId][3]; //string数据；角色编号；sheet表名
+        var roleDataSheetName = roleData[0][roleId][3];
         if (roleDataSheetName == "") return;
-        //数据List转Array+转置set到Range中
         var oldArr = roleData[roleId + 1];
         var newArr = new double[100, 6];
         for (var i = 0; i < 6; i++)
         for (var j = 0; j < 100; j++)
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
             newArr[j, i] = Convert.ToDouble(oldArr[i][j]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
-        //打开文件写入数据
+#pragma warning restore CA1305
         var usherette = book.Worksheets[roleDataSheetName];
         usherette.Range["A3:F102"].Value = newArr;
     }
@@ -206,7 +165,6 @@ public class RoleDataPro
         dynamic roleDataRoleName)
     {
         var errorLog = "";
-        //已存在文件则打开，否则新建文件打开
         if (File.Exists(filePath))
         {
             Workbook book = App.Workbooks.Open(filePath, missing, missing, missing, missing, missing, missing, missing,
@@ -219,11 +177,9 @@ public class RoleDataPro
                 allSheetName.Add(sheetName);
             }
 
-            //创建所需表格
             for (var i = 0; i < roleDataSheetName.Count; i++)
                 if (allSheetName.Contains(roleDataSheetName[i]))
                 {
-                    //已经存在，不用创建
                 }
                 else
                 {
@@ -238,14 +194,12 @@ public class RoleDataPro
                     }
                 }
 
-            //保存文件
             book.Save();
             book.Close(false);
         }
         else
         {
             Workbook book = App.Workbooks.Add();
-            //创建所需表格
             for (var i = 0; i < roleDataSheetName.Count; i++)
                 if (roleDataSheetName[i] != "")
                 {
@@ -259,7 +213,6 @@ public class RoleDataPro
 
             book.Sheets["Sheet1"].Delete();
             book.SaveAs(filePath);
-            //保存文件
             book.Save();
             book.Close(false);
         }
@@ -271,10 +224,8 @@ public class RoleDataPro
     {
         var roleHead = Ws.Range[CacColStart + "65535"];
         var cacRowEnd = roleHead.End[XlDirection.xlUp].Row;
-        //角色数据组
         var roleDataRng = Ws.Range[CacColStart + CacRowStart + ":" + CacColEnd + cacRowEnd];
         Array roleDataArr = roleDataRng.Value2;
-        //角色调整参数List,文本和数字分开
         var totalRow = roleDataRng.Rows.Count;
         var totalCol = roleDataRng.Columns.Count;
         var allRoleDataStringList = new List<List<string>>();
@@ -285,14 +236,14 @@ public class RoleDataPro
             var oneRoleDataDoubleList = new List<double>();
             for (var j = 1; j < totalCol + 1; j++)
             {
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                 var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                 try
                 {
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     var temp = Convert.ToDouble(tempData);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     oneRoleDataDoubleList.Add(temp);
                 }
                 catch
@@ -305,20 +256,17 @@ public class RoleDataPro
             allRoleDataDoubleList.Add(oneRoleDataDoubleList);
         }
 
-        //公共数据组
         var pubDataRng = Ws.Range["C5:C16"];
         Array pubDataArr = pubDataRng.Value2;
-        //公共固定参数List
         var pubData = new List<double>();
         for (var i = 1; i < pubDataRng.Count + 1; i++)
         {
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
             var tempData = Convert.ToDouble(pubDataArr.GetValue(i, 1));
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
             pubData.Add(tempData);
         }
 
-        //根据数据进行数据计算-多线程
         var attrZoom = pubData[0];
         var attrLvRatio = pubData[1];
         var baseArmour = pubData[2];
@@ -335,7 +283,6 @@ public class RoleDataPro
         const int hpOffset = 9;
         const int takenDmg = 12;
         const int defOffset = 7;
-        //计算例子--之后用多线程的for循环进行
         var allRoleDataLevel = new List<List<List<string>>> { allRoleDataStringList };
         for (var i = 0; i < totalRow; i++)
         {
@@ -412,30 +359,25 @@ public class RoleDataPro
 
 #region 角色关键数据导出到一张表
 
-// ReSharper disable once UnusedMember.Global
 public class RoleDataPri
 {
-    private const string CacColStart = "E"; //角色参数配置列数起点
-    private const string CacColEnd = "U"; //角色参数配置列数终点c
+    private const string CacColStart = "E";
+    private const string CacColEnd = "U";
 #pragma warning disable CA1416
     private static readonly dynamic App = ExcelDnaUtil.Application;
 #pragma warning restore CA1416
     private static readonly Worksheet Ws = App.ActiveSheet;
     private static readonly object Missing = Type.Missing;
-    private static readonly dynamic CacRowStart = 16; //角色参数配置行数起点
+    private static readonly dynamic CacRowStart = 16;
 
-    //获取全部角色的关键数据（要导出的），生成List
-    // ReSharper disable once UnusedMember.Global
     public static void DataKey(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var roleHead = Ws.Range[CacColStart + "65535"];
         var cacRowEnd = roleHead.End[XlDirection.xlUp].Row;
-        //角色数据组
         var roleDataRng = Ws.Range[CacColStart + CacRowStart + ":" + CacColEnd + cacRowEnd];
         Array roleDataArr = roleDataRng.Value2;
         var totalRow = roleDataRng.Rows.Count;
         var totalCol = roleDataRng.Columns.Count;
-        //数值数据
         var allRoleDataDoubleList = new List<List<double>>();
         var atkIndex = Ws.Range["E15:U15"].Find("攻击力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
             XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
@@ -453,14 +395,14 @@ public class RoleDataPri
             for (var j = 1; j < totalCol + 1; j++)
                 if (j == atkIndex || j == defIndex || j == hpIndex || j == atkSpeedIndex || j == roleIdIndex)
                 {
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     try
                     {
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                         var temp = Convert.ToDouble(tempData);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                         oneRoleDataDoubleList.Add(temp);
                     }
                     catch
@@ -476,7 +418,6 @@ public class RoleDataPri
         WrData(allRoleDataDoubleList);
     }
 
-    //获取目标表格需要填入字段的位置，与List进行匹配
     public static void WrData(List<List<double>> roleData)
     {
         App.DisplayAlerts = false;
@@ -533,62 +474,31 @@ public class RoleDataPri
         book.Save();
         book.Close(false);
     }
-    //写入模式？1、愣写（选一个cell，填一个） 2、批量写（range）；行列不连续如何更效率的填写数据：把所有所要填的cell汇集为1个List，这个List的顺序跟数据源的List一一对应，然后for循环写入数据，看情况是否多线程for
-
-    //List<ExcelReference> ranges = new List<ExcelReference>();
-    //    foreach (string rangeAddress in rangeAddresses)
-    //{
-    // ReSharper disable once CommentTypo
-    //    ExcelReference range = (ExcelReference)XlCall.Excel(XlCall.xlfTextref, rangeAddress);
-    //    ranges.Add(range);
-    //}
-    //ExcelReference range3 = new ExcelReference(2, 3);
-    //ExcelAsyncUtil.Run("WriteToExcel", () =>
-    //{
-    //    int rowCount = data.Length / ranges.Count;
-    //    object[,] dataValues = new object[rowCount, ranges.Count];
-    //    for (int i = 0; i<data.Length; i++)
-    //    {
-    //        int row = i / ranges.Count;
-    //        int column = i % ranges.Count;
-    //        dataValues[row, column] = data[i];
-    //    }
-
-    //    for (int i = 0; i < ranges.Count; i++)
-    //    {
-    //        ranges[i].Value2 = dataValues;
-    //    }
-    //});
 }
 
 #endregion
 
 #region 角色关键数据导出到一张表NPOI
 
-// ReSharper disable once UnusedMember.Global
 public class RoleDataPriNpoi
 {
-    private const string CacColStart = "E"; //角色参数配置列数起点
-    private const string CacColEnd = "U"; //角色参数配置列数终点c
+    private const string CacColStart = "E";
+    private const string CacColEnd = "U";
 #pragma warning disable CA1416
     private static readonly dynamic App = ExcelDnaUtil.Application;
 #pragma warning restore CA1416
     private static readonly Worksheet Ws = App.ActiveSheet;
     private static readonly object Missing = Type.Missing;
-    private static readonly dynamic CacRowStart = 16; //角色参数配置行数起点
+    private static readonly dynamic CacRowStart = 16;
 
-    //获取全部角色的关键数据（要导出的），生成List
-    // ReSharper disable once UnusedMember.Global
     public static void DataKey()
     {
         var roleHead = Ws.Range[CacColStart + "65535"];
         var cacRowEnd = roleHead.End[XlDirection.xlUp].Row;
-        //角色数据组
         var roleDataRng = Ws.Range[CacColStart + CacRowStart + ":" + CacColEnd + cacRowEnd];
         Array roleDataArr = roleDataRng.Value2;
         var totalRow = roleDataRng.Rows.Count;
         var totalCol = roleDataRng.Columns.Count;
-        //数值数据
         var allRoleDataDoubleList = new List<List<double>>();
         var atkIndex = Ws.Range["E15:U15"].Find("攻击力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
             XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
@@ -606,14 +516,14 @@ public class RoleDataPriNpoi
             for (var j = 1; j < totalCol + 1; j++)
                 if (j == atkIndex || j == defIndex || j == hpIndex || j == atkSpeedIndex || j == roleIdIndex)
                 {
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     try
                     {
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                         var temp = Convert.ToDouble(tempData);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                         oneRoleDataDoubleList.Add(temp);
                     }
                     catch
@@ -629,7 +539,6 @@ public class RoleDataPriNpoi
         WrData(allRoleDataDoubleList);
     }
 
-    //获取目标表格需要填入字段的位置，与List进行匹配
     public static void WrData(List<List<double>> roleData)
     {
         App.DisplayAlerts = false;
@@ -643,10 +552,6 @@ public class RoleDataPriNpoi
         IWorkbook workbook = new XSSFWorkbook(file);
         var ws2 = workbook.GetSheet("CharacterBaseAttribute");
 
-        //var statKey = ws2.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
-        //var statRole = ws2.Range["B65534"].End[XlDirection.xlUp].Row;
-        //var statKeyGroup = ws2.Range[ws2.Cells[2, 1], ws2.Cells[2, statKey]];
-        //var statRoleGroup = ws2.Range[ws2.Cells[6, 2], ws2.Cells[statRole, 2]];
         var rowNum = 1;
         var colNum = 1;
         var stateKeys = new List<string>
@@ -656,16 +561,10 @@ public class RoleDataPriNpoi
             "def",
             "hp"
         };
-        //var atkSpeedIndex =FindColValueNP(ws2, colNum, stateKeys[0]);
-        //var atkIndex = FindColValueNP(ws2, colNum, stateKeys[1]);
-        //var defIndex = FindColValueNP(ws2, colNum, stateKeys[2]);
-        //var hpIndex = FindColValueNP(ws2, colNum, stateKeys[3]);
-        // 遍历列
         var atkSpeedIndex = FindColValueNp(ws2, rowNum, stateKeys[0]);
         var atkIndex = FindColValueNp(ws2, rowNum, stateKeys[1]);
         var defIndex = FindColValueNp(ws2, rowNum, stateKeys[2]);
         var hpIndex = FindColValueNp(ws2, rowNum, stateKeys[3]);
-        // 遍历行
         foreach (var t in roleData)
         {
             var rowIndex = FindRowValueNp(ws2, colNum, t[4].ToString(CultureInfo.InvariantCulture));
@@ -691,63 +590,6 @@ public class RoleDataPriNpoi
         file.Close();
         fileStream.Close();
         workbook.Close();
-
-        //应该foreach遍历statRoleGroup，通过roleID查找数据，所以导进来的数据，应该是【roleID，数据1，数据2……】
-        //for (int i = 0; i < Math.Min(statRole - 5, roleData.Count); i++)
-        //{
-        //    var statRoleIndex = statRoleGroup.Find(roleData[i][4], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-        //        XlSearchOrder.xlByRows, XlSearchDirection.xlNext, false, false, false).Row;
-        //    for (int j = 0; j < roleDataCol - 1; j++)
-        //    {
-        //        var statKeyIndex = statKeyGroup.Find(stateKeys[j], Missing, XlFindLookIn.xlValues,
-        //            XlLookAt.xlPart,
-        //            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
-        //        Ws2.Cells[statRoleIndex, statKeyIndex] = roleData[i][j];
-        //    }
-        //}
-
-        //foreach (var rng in statRoleGroup)
-        //{
-        //    var ccd = rng.Row;
-
-        //    var atkSpeedIndex = statKeyGroup.Find(stateKeys[0], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-        //        XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
-        //    var atkIndex = statKeyGroup.Find(stateKeys[1], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-        //        XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
-        //    var defIndex = statKeyGroup.Find(stateKeys[2], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-        //        XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
-        //    var hpIndex = statKeyGroup.Find(stateKeys[3], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-        //        XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
-        //    var cc3d = rng.Value;
-        //    if (cc3d != null)
-        //    {
-        //        var result = roleData.Find(x => x.Contains(cc3d));
-
-        //        if (result != null)
-        //        {
-        //            var rowIndex = roleData.IndexOf(result);
-        //            ws2.Cells[ccd, atkSpeedIndex].Value = Math.Round(roleData[rowIndex][0] * 100, 0);
-        //            ws2.Cells[ccd, atkIndex].Value = Math.Round(roleData[rowIndex][1] * 100, 0);
-        //            ws2.Cells[ccd, defIndex].Value = Math.Round(roleData[rowIndex][2] * 100, 0);
-        //            ws2.Cells[ccd, hpIndex].Value = Math.Round(roleData[rowIndex][3] * 100, 0);
-        //        }
-        //        //Console.WriteLine("未找到值 {0}", valueToFind);
-        //    }
-        //}
-        //App.DisplayAlerts = true;
-        //App.ScreenUpdating = true;
-        //book.Save();
-        //book.Close(false);
-        //List<ExcelReference> ranges2 = new List<ExcelReference>();
-        //ExcelReference arr = new ExcelReference(1, 1);
-        //ranges2.Add(arr);
-        // ReSharper disable once CommentTypo
-        //ranges2[0].SetValue("asdb");
-        //for (int i = 0; i < ranges.Count; i++)
-        //{
-        //    ranges[i].Value2 = "abc";
-        //}
-        //  range3.Value2 = 1;
     }
 
     private static int FindColValueNp(ISheet ws2, int rowNum, string stateKeys)
@@ -792,32 +634,6 @@ public class RoleDataPriNpoi
 
         return rowIndex;
     }
-    //写入模式？1、愣写（选一个cell，填一个） 2、批量写（range）；行列不连续如何更效率的填写数据：把所有所要填的cell汇集为1个List，这个List的顺序跟数据源的List一一对应，然后for循环写入数据，看情况是否多线程for
-
-    //List<ExcelReference> ranges = new List<ExcelReference>();
-    //    foreach (string rangeAddress in rangeAddresses)
-    //{
-    // ReSharper disable once CommentTypo
-    //    ExcelReference range = (ExcelReference)XlCall.Excel(XlCall.xlfTextref, rangeAddress);
-    //    ranges.Add(range);
-    //}
-    //ExcelReference range3 = new ExcelReference(2, 3);
-    //ExcelAsyncUtil.Run("WriteToExcel", () =>
-    //{
-    //    int rowCount = data.Length / ranges.Count;
-    //    object[,] dataValues = new object[rowCount, ranges.Count];
-    //    for (int i = 0; i<data.Length; i++)
-    //    {
-    //        int row = i / ranges.Count;
-    //        int column = i % ranges.Count;
-    //        dataValues[row, column] = data[i];
-    //    }
-
-    //    for (int i = 0; i < ranges.Count; i++)
-    //    {
-    //        ranges[i].Value2 = dataValues;
-    //    }
-    //});
 }
 
 #endregion
