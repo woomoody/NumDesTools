@@ -10,30 +10,12 @@ namespace NumDesTools;
 /// </summary>
 public class SearchEngine
 {
-    //excel中实现搜索功能，会按照google、bing、baidu的顺序检测是否能ping，否则检查下一个网站
     [ExcelFunction(IsHidden = true)]
     public static string GoogleSearch(string query)
     {
-        //if (PingWebsite(google))
-        //{
-        //    url = google + seachIndex1 + query;
-        //}
-        //else if(PingWebsite(bingChina))
-        //{
-        //    url = bingChina + seachIndex1 + query;
-        //}
-        //else if (PingWebsite(bingInternational))
-        //{
-        //    url = bingInternational + seachIndex1 + query;
-        //}
-        //else
-        //{
-        //    url = baidu + seachIndex2 + query;
-        //}
         var result = new StringBuilder();
         try
         {
-            //Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
             result.Append("Search successful!");
         }
         catch (Exception ex)
@@ -50,7 +32,6 @@ public class SearchEngine
         var result = new StringBuilder();
         try
         {
-            //Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
             result.Append("Search successful!");
         }
         catch (Exception ex)

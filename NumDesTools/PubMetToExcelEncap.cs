@@ -3,8 +3,6 @@ using System.Dynamic;
 
 #pragma warning disable CA1416
 
-// ReSharper disable All
-
 namespace NumDesTools;
 
 /// <summary>
@@ -25,7 +23,6 @@ public class ExcelDataByEpplus
         var errorList = new List<(string, string, string)>();
         string path;
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
-        //兼容多表格的工作簿
         string sheetRealName = "Sheet1";
         string excelRealName = excelName;
         if (excelName.Contains("##"))
@@ -93,7 +90,6 @@ public class ExcelDataByEpplus
         return true;
     }
 
-    //数据读取
     public List<dynamic> Read(ExcelWorksheet sheet, int rowFirst, int rowEnd, int colFirst = 1, int indexRow = 4)
     {
         var list = new List<dynamic>();
@@ -103,7 +99,6 @@ public class ExcelDataByEpplus
             var expando = new ExpandoObject() as IDictionary<string, object>;
             for (int col = colFirst; col <= colCount; col++)
             {
-                //索引在第几行
                 string columnName = sheet.Cells[indexRow, col].Value?.ToString() ?? string.Empty;
                 expando[columnName] = sheet.Cells[row, col].Value;
             }
@@ -114,7 +109,6 @@ public class ExcelDataByEpplus
         return list;
     }
 
-    //数据读取
     public Dictionary<string, List<object>> ReadToDic(ExcelWorksheet sheet, int rowFirst, int colFirst,
         List<int> usedData, int rowEnd = 1)
     {
@@ -131,9 +125,7 @@ public class ExcelDataByEpplus
             string mainTable = sheet.Cells[i, colFirst].Text;
             if (!string.IsNullOrEmpty(mainTable))
             {
-                // 如果"主表"列有值，记住这个值
                 lastMainTable = mainTable;
-                // 同时为这个主表在字典中创建一个新的内部字典
                 if (!dataDict.ContainsKey(lastMainTable))
                 {
                     dataDict[lastMainTable] = new List<object>();
@@ -161,8 +153,7 @@ public class ExcelDataByEpplus
         Dictionary<string, List<object>> dataDict = new Dictionary<string, List<object>>();
         using (ExcelPackage package = new ExcelPackage(new FileInfo(path)))
         {
-            //ExcelWorksheet worksheet = package.Workbook.Worksheets[0]; // 获取第一个工作表
-            ExcelWorksheet worksheet = package.Workbook.Worksheets[sheetName]; // 获取指定工作表
+            ExcelWorksheet worksheet = package.Workbook.Worksheets[sheetName];
             var colCount = usedData.Count();
             string lastMainTable = null;
             for (int i = startRow; i <= worksheet.Dimension.End.Row; i++)
@@ -170,9 +161,7 @@ public class ExcelDataByEpplus
                 string mainTable = worksheet.Cells[i, startCol].Text;
                 if (!string.IsNullOrEmpty(mainTable))
                 {
-                    // 如果"主表"列有值，记住这个值
                     lastMainTable = mainTable;
-                    // 同时为这个主表在字典中创建一个新的内部字典
                     if (!dataDict.ContainsKey(lastMainTable))
                     {
                         dataDict[lastMainTable] = new List<object>();
@@ -194,10 +183,8 @@ public class ExcelDataByEpplus
         return dataDict;
     }
 
-    //数据写入
     public void Write(ExcelWorksheet sheet, ExcelPackage Excel, List<dynamic> data, int rowFirst)
     {
-        // 更新 Excel 数据
         for (int row = 0; row < data.Count; row++)
         {
             var dataRow = (IDictionary<string, object>)data[row];
@@ -216,13 +203,10 @@ public class ExcelDataByEpplus
     {
         for (var row = 2; row <= sheet.Dimension.End.Row; row++)
         {
-            // 获取当前行的单元格数据
             var cellValue = sheet.Cells[row, col].Value;
 
-            // 如果找到了匹配的值
             if (cellValue != null && cellValue.ToString() == searchValue)
             {
-                // 返回该单元格的行地址
                 var cellAddress = new ExcelCellAddress(row, col);
                 var rowAddress = cellAddress.Row;
                 return rowAddress;
@@ -236,13 +220,10 @@ public class ExcelDataByEpplus
     {
         for (var col = 2; col <= sheet.Dimension.End.Column; col++)
         {
-            // 获取当前行的单元格数据
             var cellValue = sheet.Cells[row, col].Value;
 
-            // 如果找到了匹配的值
             if (cellValue != null && cellValue.ToString() == searchValue)
             {
-                // 返回该单元格的行地址
                 var cellAddress = new ExcelCellAddress(row, col);
                 var rowAddress = cellAddress.Column;
                 return rowAddress;
@@ -259,7 +240,6 @@ public class ExcelDataByVsto
     public dynamic ActiveSheet { get; set; }
     public string ActiveWorkbookPath { get; set; }
 
-    //创建对象获取基本信息
     public void GetExcelObj()
     {
         dynamic app = NumDesAddIn.App;
@@ -272,18 +252,13 @@ public class ExcelDataByVsto
         ActiveWorkbookPath = activeWorkbookPath;
     }
 
-    //数据读取
     public (List<object> sheetHeaderCol, List<List<object>> sheetData) Read(Range rangeData, Range rangeHeader,
         int headRow)
     {
-        // 读取数据到一个二维数组中
         object[,] rangeValue = rangeData.Value;
-        // 读取数据到一个二维数组中
         object[,] headRangeValue = rangeHeader.Value;
-        // 定义工作表数据数组和表头数组
         var sheetData = new List<List<object>>();
         var sheetHeaderCol = new List<object>();
-        // 读取数据
         for (var row = 1; row <= rangeValue.GetLength(0); row++)
         {
             var rowList = new List<object>();
@@ -296,7 +271,6 @@ public class ExcelDataByVsto
             sheetData.Add(rowList);
         }
 
-        //读取表头
         for (var column = 1; column <= rangeValue.GetLength(1); column++)
         {
             var value = headRangeValue[headRow, column];
@@ -307,7 +281,6 @@ public class ExcelDataByVsto
         return excelData;
     }
 
-    //通过C-API的方式写入打开当前活动Excel表格各个Sheet的数据
     public void Write(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast,
         object[,] rangeValue)
     {
@@ -316,20 +289,15 @@ public class ExcelDataByVsto
         ExcelAsyncUtil.QueueAsMacro(() => { range.SetValue(rangeValue); });
     }
 
-    //VSTO内置在Range内查找特定值(第一个)的方法
     public (int row, int column) FindValue(Range searchRange, object valueToFind)
     {
-        // 使用 Find 方法在指定范围内查找特定值
         Range foundRange = searchRange.Find(valueToFind);
-        // 如果找到了特定值
         if (foundRange != null)
         {
-            // 返回找到的单元格的行号和列号
             return (foundRange.Row, foundRange.Column);
         }
         else
         {
-            // 如果没有找到特定值，返回 (-1, -1)
             return (-1, -1);
         }
     }

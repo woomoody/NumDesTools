@@ -33,13 +33,10 @@ public class ExcelDataAutoInsert
     {
         for (var col = 2; col <= sheet.Dimension.End.Column; col++)
         {
-            // 获取当前行的单元格数据
             var cellValue = sheet.Cells[row, col].Value;
 
-            // 如果找到了匹配的值
             if (cellValue != null && cellValue.ToString() == searchValue)
             {
-                // 返回该单元格的行地址
                 var cellAddress = new ExcelCellAddress(row, col);
                 var rowAddress = cellAddress.Column;
                 return rowAddress;
@@ -53,13 +50,10 @@ public class ExcelDataAutoInsert
     {
         for (var row = 2; row <= sheet.Dimension.End.Row; row++)
         {
-            // 获取当前行的单元格数据
             var cellValue = sheet.Cells[row, col].Value;
 
-            // 如果找到了匹配的值
             if (cellValue != null && cellValue.ToString() == searchValue)
             {
-                // 返回该单元格的行地址
                 var cellAddress = new ExcelCellAddress(row, col);
                 var rowAddress = cellAddress.Row;
                 return rowAddress;
@@ -80,15 +74,6 @@ public class ExcelDataAutoInsert
             var cell = sheet.Cells[errorExcelList[i][0].Item1, 1];
             cell.Value = "git checkout -- Excels/Tables/" + errorExcelList[i][0].Item3;
             cell.Font.Color = Color.Red;
-            //cell.Font.Size = 9;
-            //cell.Font.Name = "微软雅黑";
-            //cell.HorizontalAlignment = XlHAlign.xlHAlignCenter;
-            //cell.VerticalAlignment = XlHAlign.xlHAlignCenter;
-            //cell.ColumnWidth = 8.38;
-            //cell.RowHeight = 14.25;
-            //cell.ShrinkToFit = true;
-            //cell.Borders.LineStyle = XlLineStyle.xlDash;
-            //cell.Borders.Weight = XlBorderWeight.xlHairline;
         }
 
         var errorLog = strBuild.ToString();
@@ -107,27 +92,19 @@ public class ExcelDataAutoInsert
             var match2 = matches2[matchCount];
             var numStr = match2.Value;
             var index = match2.Index;
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
             var num = long.Parse(numStr);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
             if (digit.Any(item => item.Item1 == matchCount + 1))
             {
-                //数字累加
                 var addDigit = (long)Math.Pow(10, digit[digitCount].Item2 - 1) * addValue;
-                //if (addDigit >= num)
-                //{
-                //    str = "^error^";
-                //    return str;
-                //}
                 var newNum = num + addDigit;
-                //字符替换
                 var numCount = numStr.Length;
                 str = str.Substring(0, index) + newNum + str.Substring(index + numCount);
                 digitCount++;
             }
-            else if (digit.Count == 1 && digit[0].Item1 == 0)
+            else if (digit is [{ Item1: 0 } _])
             {
-                //数字累加
                 if (digit[0].Item2 > 1000)
                 {
                     str = "^error^";
@@ -142,7 +119,6 @@ public class ExcelDataAutoInsert
                 }
 
                 var newNum = num + addDigit;
-                //字符替换
                 var numCount = numStr.Length;
                 str = str.Substring(0, index) + newNum + str.Substring(index + numCount);
             }
@@ -158,7 +134,6 @@ public class ExcelDataAutoInsert
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         for (var i = 2; i <= 500; i++)
         {
-            //找到模板表所在行
             var modeCol = FindTitle(sheet, 1, "实际模板(上一期)");
             var excelName = FindTitle(sheet, 1, "表名");
             string findValue = sheet.Cells[i, modeCol].Value?.ToString();
@@ -207,13 +182,7 @@ public class ExcelDataAutoInsert
                 _ => excelPath + @"\" + cell.value
             };
 
-            //var excel = new ExcelPackage(new FileInfo(path));
-            //var workbook = excel.Workbook;
-            //var sheetTemp = workbook.Worksheets["Sheet1"] ?? workbook.Worksheets[0];
-
-            //var sheetName = sheetTemp.Name;
             var links = path + "#" + "Sheet1!A1";
-            //excel.Dispose();
             cell.Hyperlinks.Add(cell, links);
             cell.Font.Size = 9;
             cell.Font.Name = "微软雅黑";
@@ -233,22 +202,21 @@ public class ExcelDataAutoInsert
                 if (pair.Contains('#'))
                 {
                     var parts = pair.Split('#');
-                    if (!int.TryParse(parts[0], out var key)) // 尝试将值解析为整数，如果解析失败就将值设为 0
+                    if (!int.TryParse(parts[0], out var key))
                     {
                         MessageBox.Show($@"{str}#前必须有数值");
                         Environment.Exit(0);
                     }
 
-                    if (!int.TryParse(parts[1], out var value)) // 尝试将值解析为整数，如果解析失败就将值设为 0
-                        value = 1;
+                    if (!int.TryParse(parts[1], out var value)) value = 1;
 
                     monkeyList.Add((key, value));
                 }
                 else
                 {
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     monkeyList.Add((int.Parse(pair), 1));
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                 }
         }
         else
@@ -256,12 +224,12 @@ public class ExcelDataAutoInsert
             if (str.Contains('#'))
             {
                 var parts = str.Split('#');
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                 var key = Convert.ToInt32(parts[0]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
+#pragma warning disable CA1305
                 var value = Convert.ToInt32(parts[1]);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                 monkeyList.Add((key, value));
             }
             else
@@ -274,9 +242,9 @@ public class ExcelDataAutoInsert
                 }
                 else
                 {
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     strTemp = int.Parse(str);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     monkeyList.Add((0, strTemp));
                 }
             }
@@ -331,7 +299,6 @@ public class ExcelDataAutoInsertLanguage
 
         if (error.Count != 0) errorExcelList.Add(error);
 
-        //出错表格处理
         string errorLog = ExcelDataAutoInsert.ErrorExcelMark(errorExcelList, fixSheet);
         if (errorLog != "")
         {
@@ -339,11 +306,6 @@ public class ExcelDataAutoInsertLanguage
             ErrorLogCtp.CreateCtpNormal(errorLog);
         }
 
-        //else
-        //{
-        //    fixSheet.Range["A2:A1000"].Value = "";
-        //}
-        //app.Dispose();
         Marshal.ReleaseComObject(sourceSheet);
         Marshal.ReleaseComObject(fixSheet);
         Marshal.ReleaseComObject(classSheet);
@@ -382,7 +344,6 @@ public class ExcelDataAutoInsertLanguage
         for (var i = 0; i < fixDataList.Count; i++)
         {
             if (fixDataList[i][fileIndex] == null) continue;
-            //整理要修改的表格和原表格数据字段映射
             var sourceKeyList = new List<string>();
             var fixKeyList = new List<string>();
             for (int j = keyIndex; j < fixTitle.Count; j++)
@@ -400,7 +361,6 @@ public class ExcelDataAutoInsertLanguage
                 }
             }
 
-            //遍历要修改的表格写入数据
             var fixFileName = fixDataList[i][fileIndex].ToString();
             var fixFileModeId = fixDataList[i][modelIdIndex].ToString();
 
@@ -433,7 +393,6 @@ public class ExcelDataAutoInsertLanguage
                 continue;
             }
 
-            //数据查重
             var c = 0;
             if (fixFileName == "GuideDialogDetail.xlsx")
                 c = 1;
@@ -449,7 +408,6 @@ public class ExcelDataAutoInsertLanguage
 
             var newIdList = idList.Distinct().ToList();
 
-            // 定义要删除的行的列表
             var rowsToDelete = new List<int>();
             foreach (var id in newIdList)
             {
@@ -457,23 +415,8 @@ public class ExcelDataAutoInsertLanguage
                 if (reDd != -1) rowsToDelete.Add(reDd);
             }
 
-            //int endRow = targetSheet.Dimension.End.Row;
-            //// 遍历行并找到具有相同第一列值的行
-            //for (var row = 4; row <= endRow; row++)
-            //{
-            //    var cellValue = targetSheet.Cells[row, 2].Value?.ToString() ?? "";
-            //    if (idSet.Contains(cellValue))
-            //    {
-            //        // 如果发现第一列值相同的行，则删除该行
-            //        targetSheet.DeleteRow(row);
-            //        // 调整删除后的行号
-            //        row--;
-            //        endRow--;
-            //    }
-            //}
             rowsToDelete.Sort();
             rowsToDelete.Reverse();
-            // 逐行删除
             foreach (var rowToDelete in rowsToDelete)
                 try
                 {
@@ -486,7 +429,6 @@ public class ExcelDataAutoInsertLanguage
                     errorList.Add((errorExcel, errorExcelLog, fixFileName));
                 }
 
-            //根据模板插入对应数据行，并复制
             var endRowSource = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, fixFileModeId);
             if (endRowSource == -1)
             {
@@ -506,7 +448,6 @@ public class ExcelDataAutoInsertLanguage
                 cellSource.CopyStyles(cellTarget);
             }
 
-            //修改数据
             for (var m = 0; m < sourceDataList.Count; m++)
             {
                 var errorCell = sourceDataList[m][0];
@@ -545,23 +486,23 @@ public class ExcelDataAutoInsertLanguage
                             realCol = "GroupID";
                         else if (fixFileName == "GuideDialogBranch.xlsx") realCol = "BranchID";
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf(realCol)];
-#pragma warning disable CS0252 // 可能非有意的引用比较；左侧需要强制转换
+#pragma warning disable CS0252
                         if (sourceValue == "" || sourceValue == null) continue;
-#pragma warning restore CS0252 // 可能非有意的引用比较；左侧需要强制转换
+#pragma warning restore CS0252
                         var str = sourceValue.ToString();
                         var digit = Math.Pow(10, e);
                         var repeatCount = 0;
                         for (var k = 0; k < sourceDataList.Count; k++)
                         {
                             var repeatValue = sourceDataList[k][sourceTitle.IndexOf(realCol)];
-#pragma warning disable CS0252 // 可能非有意的引用比较；左侧需要强制转换
+#pragma warning disable CS0252
                             if (repeatValue == "" || repeatValue == null) continue;
-#pragma warning restore CS0252 // 可能非有意的引用比较；左侧需要强制转换
+#pragma warning restore CS0252
                             if (repeatValue == sourceValue)
                             {
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                                 var newNum = long.Parse(str) * digit + repeatCount + 1;
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                                 newStr = newStr + newNum + ",";
                                 repeatCount++;
                             }
@@ -688,7 +629,6 @@ public class ExcelDataAutoInsertLanguage
                     }
                     else
                     {
-                        //GroupID不连续
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)];
                         cellTarget.Value = sourceValue;
                     }
@@ -697,30 +637,19 @@ public class ExcelDataAutoInsertLanguage
                 }
             }
 
-            //数据合并
             if (errorExcel != 0) continue;
             int startRow = endRowSource + 1;
             int endRow2 = startRow + sourceDataList.Count - 1;
-            //int endRow2 = targetSheet.Dimension.End.Row;
-            //if (hasCopy == 2)
-            //{
-            //    var dataCount = int.Parse(fixDataList[i][dataRows]);
-            //    var start = endRow2 + 1;
-            //    targetSheet.DeleteRow(start, dataCount);
-            //}
             if (fixFileName == "GuideDialogBranch.xlsx" || fixFileName == "GuideDialogGroup.xlsx")
             {
                 var uniqueValues = new HashSet<string>();
-                // 遍历行并找到具有相同第一列值的行
                 for (var row = 4; row <= endRow2; row++)
                 {
                     var cellValue = targetSheet.Cells[row, 2].Value?.ToString() ?? "";
 
                     if (uniqueValues.Contains(cellValue) || cellValue == "")
                     {
-                        // 如果发现第一列值相同的行，则删除该行
                         targetSheet.DeleteRow(row);
-                        // 调整删除后的行号
                         row--;
                         endRow2--;
                     }
@@ -759,7 +688,6 @@ public class ExcelDataAutoInsertLanguage
 
         if (error.Count != 0) errorExcelList.Add(error);
 
-        //出错表格处理
         string errorLog = ExcelDataAutoInsert.ErrorExcelMark(errorExcelList, fixSheet);
         if (errorLog != "")
         {
@@ -768,11 +696,6 @@ public class ExcelDataAutoInsertLanguage
         }
 
         NumDesAddIn.App.StatusBar = "导出完成";
-        //else
-        //{
-        //    fixSheet.Range["A2:A1000"].Value = "";
-        //}
-        //app.Dispose();
         Marshal.ReleaseComObject(sourceSheet);
         Marshal.ReleaseComObject(fixSheet);
         Marshal.ReleaseComObject(classSheet);
@@ -785,7 +708,6 @@ public class ExcelDataAutoInsertLanguage
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-        //确定行，不确定列
         var sourceData = PubMetToExcel.ExcelDataToListBySelfToEnd(sourceSheet, 0, 1, 1);
         var sourceTitle = sourceData.Item1;
         var sourceDataList = sourceData.Item2;
@@ -810,7 +732,6 @@ public class ExcelDataAutoInsertLanguage
         for (var i = 0; i < fixDataList.Count; i++)
         {
             if (fixDataList[i][fileIndex] == null) continue;
-            //整理要修改的表格和原表格数据字段映射
             var sourceKeyList = new List<string>();
             var fixKeyList = new List<string>();
             for (int j = keyIndex; j < fixTitle.Count; j++)
@@ -828,7 +749,6 @@ public class ExcelDataAutoInsertLanguage
                 }
             }
 
-            //遍历要修改的表格写入数据
             var fixFileName = fixDataList[i][fileIndex].ToString();
 
             string path = ExcelDataAutoInsert.ExcelPathIgnore(excelPath, fixFileName);
@@ -860,7 +780,6 @@ public class ExcelDataAutoInsertLanguage
                 continue;
             }
 
-            //数据查重
             var c = 0;
             if (fixFileName == "GuideDialogDetail.xlsx")
                 c = 1;
@@ -876,7 +795,6 @@ public class ExcelDataAutoInsertLanguage
 
             var newIdList = idList.Distinct().ToList();
 
-            // 定义要删除的行的列表
             var rowsToDelete = new List<int>();
             foreach (var id in newIdList)
             {
@@ -884,23 +802,8 @@ public class ExcelDataAutoInsertLanguage
                 if (reDd != -1) rowsToDelete.Add(reDd);
             }
 
-            //int endRow = targetSheet.Dimension.End.Row;
-            //// 遍历行并找到具有相同第一列值的行
-            //for (var row = 4; row <= endRow; row++)
-            //{
-            //    var cellValue = targetSheet.Cells[row, 2].Value?.ToString() ?? "";
-            //    if (idSet.Contains(cellValue))
-            //    {
-            //        // 如果发现第一列值相同的行，则删除该行
-            //        targetSheet.DeleteRow(row);
-            //        // 调整删除后的行号
-            //        row--;
-            //        endRow--;
-            //    }
-            //}
             rowsToDelete.Sort();
             rowsToDelete.Reverse();
-            // 逐行删除
             foreach (var rowToDelete in rowsToDelete)
                 try
                 {
@@ -913,15 +816,6 @@ public class ExcelDataAutoInsertLanguage
                     errorList.Add((errorExcel, errorExcelLog, fixFileName));
                 }
 
-            //根据模板插入对应数据行，并复制
-            //var endRowSource1 = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, fixFileModeId);
-            //if (endRowSource == -1)
-            //{
-            //    MessageBox.Show(fixFileModeId + @"目标表中不存在");
-            //    continue;
-            //}
-
-            //统一在最后一行插入
             var endRowSource = targetSheet.Dimension.End.Row;
 
             targetSheet.InsertRow(endRowSource + 1, sourceDataList.Count);
@@ -936,7 +830,6 @@ public class ExcelDataAutoInsertLanguage
                 cellSource.CopyStyles(cellTarget);
             }
 
-            //修改数据
             for (var m = 0; m < sourceDataList.Count; m++)
             {
                 var errorCell = sourceDataList[m][0];
@@ -975,23 +868,23 @@ public class ExcelDataAutoInsertLanguage
                             realCol = "GroupID";
                         else if (fixFileName == "GuideDialogBranch.xlsx") realCol = "BranchID";
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf(realCol)];
-#pragma warning disable CS0252 // 可能非有意的引用比较；左侧需要强制转换
+#pragma warning disable CS0252
                         if (sourceValue == "" || sourceValue == null) continue;
-#pragma warning restore CS0252 // 可能非有意的引用比较；左侧需要强制转换
+#pragma warning restore CS0252
                         var str = sourceValue.ToString();
                         var digit = Math.Pow(10, e);
                         var repeatCount = 0;
                         for (var k = 0; k < sourceDataList.Count; k++)
                         {
                             var repeatValue = sourceDataList[k][sourceTitle.IndexOf(realCol)];
-#pragma warning disable CS0252 // 可能非有意的引用比较；左侧需要强制转换
+#pragma warning disable CS0252
                             if (repeatValue == "" || repeatValue == null) continue;
-#pragma warning restore CS0252 // 可能非有意的引用比较；左侧需要强制转换
+#pragma warning restore CS0252
                             if (repeatValue == sourceValue)
                             {
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                                 var newNum = long.Parse(str) * digit + repeatCount + 1;
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                                 newStr = newStr + newNum + ",";
                                 repeatCount++;
                             }
@@ -1118,7 +1011,6 @@ public class ExcelDataAutoInsertLanguage
                     }
                     else
                     {
-                        //GroupID不连续
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)];
                         cellTarget.Value = sourceValue;
                     }
@@ -1127,30 +1019,19 @@ public class ExcelDataAutoInsertLanguage
                 }
             }
 
-            //数据合并
             if (errorExcel != 0) continue;
             var startRow = endRowSource + 1;
             int endRow2 = startRow + sourceDataList.Count - 1;
-            //int endRow2 = targetSheet.Dimension.End.Row;
-            //if (hasCopy == 2)
-            //{
-            //    var dataCount = int.Parse(fixDataList[i][dataRows]);
-            //    var start = endRow2 + 1;
-            //    targetSheet.DeleteRow(start, dataCount);
-            //}
             if (fixFileName == "GuideDialogBranch.xlsx" || fixFileName == "GuideDialogGroup.xlsx")
             {
                 var uniqueValues = new HashSet<string>();
-                // 遍历行并找到具有相同第一列值的行
                 for (var row = 4; row <= endRow2; row++)
                 {
                     var cellValue = targetSheet.Cells[row, 2].Value?.ToString() ?? "";
 
                     if (uniqueValues.Contains(cellValue) || cellValue == "")
                     {
-                        // 如果发现第一列值相同的行，则删除该行
                         targetSheet.DeleteRow(row);
-                        // 调整删除后的行号
                         row--;
                         endRow2--;
                     }
@@ -1175,7 +1056,6 @@ public class ExcelDataAutoInsertMulti
 {
     public static void InsertData(dynamic isMulti)
     {
-        //dynamic app = ExcelDnaUtil.Application;
         var indexWk = NumDesAddIn.App.ActiveWorkbook;
         var sheet = NumDesAddIn.App.ActiveSheet;
         var excelPath = indexWk.Path;
@@ -1190,30 +1070,22 @@ public class ExcelDataAutoInsertMulti
         var baseIdCol = title.IndexOf("模板期号");
         var creatIdCol = title.IndexOf("创建期号");
         var commentValue = data[2][baseIdCol];
-        //var cellBackColor = data[4][baseIdCol];
         var writeMode = data[2][creatIdCol];
         ErrorLogCtp.DisposeCtp();
-        //获取单元格颜色
         var colorCell = sheet.Cells[6, 1];
         var cellColor = PubMetToExcel.GetCellBackgroundColor(colorCell);
-        //ID自增跨度
         var addValue = (int)data[0][creatIdCol] - (int)data[0][baseIdCol];
-        //字典Value跨度（行）
         var rowCount = 2;
-        //获取字典
         var colFixKeyCount = colsCount - fixKeyCol;
         var modelId = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modelIdCol, rowCount);
         var modelIdNew = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modelIdNewCol, rowCount);
         var fixKey = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, fixKeyCol, rowCount, colFixKeyCount);
         var ignoreExcel = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, creatIdCol, rowCount);
-        //遍历文件写入
         var errorExcelList = new List<List<(string, string, string)>>();
         var excelCount = 1;
         foreach (var key in modelId)
         {
-            //写入算法
             var excelName = key.Key;
-            //过滤不导出的表格
             var ignore = ignoreExcel[excelName][0].Item1[0, 0];
             if (ignore != null)
             {
@@ -1234,11 +1106,9 @@ public class ExcelDataAutoInsertMulti
             excelCount++;
         }
 
-        //错误日志处理
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
-            //sheet.Range["B4"].Value = "否";
             NumDesAddIn.App.StatusBar = "完成写入";
             return;
         }
@@ -1252,7 +1122,6 @@ public class ExcelDataAutoInsertMulti
         var sw = new Stopwatch();
         sw.Start();
 
-        //dynamic app = ExcelDnaUtil.Application;
         var indexWk = NumDesAddIn.App.ActiveWorkbook;
         var sheet = NumDesAddIn.App.ActiveSheet;
         var excelPath = indexWk.Path;
@@ -1267,40 +1136,31 @@ public class ExcelDataAutoInsertMulti
         var baseIdCol = title.IndexOf("模板期号");
         var creatIdCol = title.IndexOf("创建期号");
         var commentValue = data[2][baseIdCol];
-        //var cellBackColor = data[4][baseIdCol];
         var writeMode = data[2][creatIdCol];
         ErrorLogCtp.DisposeCtp();
-        //获取单元格颜色
         var colorCell = sheet.Cells[6, 1];
         var cellColor = PubMetToExcel.GetCellBackgroundColor(colorCell);
-        //ID自增跨度
         var addValue = (int)data[0][creatIdCol] - (int)data[0][baseIdCol];
-        //字典Value跨度（行）
         var rowCount = 2;
-        //获取字典
         var colFixKeyCount = colsCount - fixKeyCol;
         var modelId = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modelIdCol, rowCount);
         var modelIdNew = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modelIdNewCol, rowCount);
         var fixKey = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, fixKeyCol, rowCount, colFixKeyCount);
-        //遍历文件写入
         var errorExcelList = new List<List<(string, string, string)>>();
         var cell = NumDesAddIn.App.Selection;
         var rowStart = cell.Row;
         var rowCountNew = cell.Rows.Count;
         var rowEnd = rowStart + rowCountNew - 1;
         var excelList = new List<string>();
-        //获得一导出文件集合
         for (int i = rowStart; i <= rowEnd; i++)
         {
             var excelName = data[i - 2][sheetNameCol];
             excelList.Add((string)excelName);
         }
 
-        //去重
         var newExcelList = excelList.Where(excelName => !string.IsNullOrEmpty(excelName)).Distinct().ToList();
         for (var i = 0; i < newExcelList.Count; i++)
         {
-            //写入算法
             var excelName = newExcelList[i];
             if (excelName == null) continue;
             List<(string, string, string)> error =
@@ -1310,11 +1170,9 @@ public class ExcelDataAutoInsertMulti
             errorExcelList.Add(error);
         }
 
-        //错误日志处理
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
-            //sheet.Range["B4"].Value = "否";
             sw.Stop();
             var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
             NumDesAddIn.App.StatusBar = "完成写入，用时：" + ts2.ToString(CultureInfo.InvariantCulture);
@@ -1337,7 +1195,6 @@ public class ExcelDataAutoInsertMulti
         var errorList = new List<(string, string, string)>();
         string path;
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
-        //兼容多表格的工作簿
         var sheetRealName = "Sheet1";
         string excelRealName = excelName;
         if (excelName.Contains("#"))
@@ -1397,21 +1254,16 @@ public class ExcelDataAutoInsertMulti
         }
 
         sheet ??= workBook.Worksheets[0];
-        //检查公式
         foreach (var cell in sheet.Cells)
-            // 检查单元格是否包含公式
             if (cell.Formula is { Length: > 0 })
             {
                 errorList.Add((excelRealName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
                 return errorList;
             }
 
-        //获取要查重的ID
         var writeIdList = ExcelDataWriteIdGroup(excelName, addValue, sheet, fixKey, modelId);
-        //执行查重删除
         PubMetToExcel.RepeatValue2(sheet, 4, 2, writeIdList.Item1);
         var colCount = sheet.Dimension.Columns;
-        //第一次写入插入行的位置，因为可能删除导致行数变化，需要重新获取一次
         writeIdList = ExcelDataWriteIdGroup(excelName, addValue, sheet, fixKey, modelId);
         var writeRow = writeIdList.Item2;
         if (writeRow == -1)
@@ -1421,12 +1273,10 @@ public class ExcelDataAutoInsertMulti
             return errorList;
         }
 
-        //执行写入操作
         for (var excelMulti = 0; excelMulti < modelId[excelName].Count; excelMulti++)
         {
             var startValue = modelId[excelName][excelMulti].Item1[0, 0].ToString();
             var endValue = modelId[excelName][excelMulti].Item1[1, 0].ToString();
-            //var writeRow = sheet.Dimension.End.Row;
 
             var startRowSource = ExcelDataAutoInsert.FindSourceRow(sheet, 2, startValue);
             if (startRowSource == -1)
@@ -1451,21 +1301,17 @@ public class ExcelDataAutoInsertMulti
                 return errorList;
             }
 
-            //数据复制
             var count = endRowSource - startRowSource + 1;
             sheet.InsertRow(writeRow + 1, count);
             var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
             var cellTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, colCount];
             cellTarget.Value = cellSource.Value;
-            //设置背景色
             cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
             cellTarget.Style.Fill.BackgroundColor.SetColor(cellBackColor);
 
-            //尽量和源数据格式一致，宋体的格式会歪？不知道为什么
             cellTarget.Style.Font.Name = "微软雅黑";
             cellTarget.Style.Font.Size = 10;
             cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
-            //数据修改
             var fixItem = fixKey[excelName][excelMulti].Item1;
             errorList = modeThread
                 ? (List<(string, string, string)>)MultiWrite(excelName, addValue, fixItem, sheet, count, startRowSource,
@@ -1499,7 +1345,6 @@ public class ExcelDataAutoInsertMulti
             }
 
             string excelKeyMethod = fixItem[1, colMulti]?.ToString();
-            //修改字段字典中的字段值，各自方法不一
             for (var i = 0; i < count; i++)
             {
                 var cellSource = sheet.Cells[startRowSource + i, excelFileFixKey];
@@ -1509,7 +1354,6 @@ public class ExcelDataAutoInsertMulti
                 if (cellSource.Value == null) continue;
 
                 if (cellSource.Value.ToString() == "" || cellSource.Value.ToString() == "0") continue;
-                //默认备注
                 if (cellCol != null && cellCol.Contains("#") && commentValue != null)
                 {
                     string[] baseParts = commentValue.Split("#");
@@ -1524,12 +1368,9 @@ public class ExcelDataAutoInsertMulti
 
                     cellFix.Value = cellValue;
                 }
-                //特殊字段需要CopyAlice
                 else
                 {
-                    //字段值改写方法
                     var temp1 = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
-                    //修改字符串
                     var cellFixValue = ExcelDataAutoInsert.StringRegPlace(cellSource.Value.ToString(), temp1, addValue);
                     if (cellFixValue == "^error^")
                     {
@@ -1551,16 +1392,15 @@ public class ExcelDataAutoInsertMulti
         dynamic commentValue, int writeRow)
     {
         var colCoinMulti = fixItem.GetLength(1);
-        var colThreadCount = 8; // 线程数
-        int colBatchSize = colCoinMulti / colThreadCount; // 每个线程处理的数据量
+        var colThreadCount = 8;
+        int colBatchSize = colCoinMulti / colThreadCount;
         Parallel.For(0, colThreadCount, e =>
         {
             var startRow = e * colBatchSize;
             var endRow = (e + 1) * colBatchSize;
-            if (e == colThreadCount - 1) endRow = colCoinMulti; // 最后一个线程处理剩余的数据
+            if (e == colThreadCount - 1) endRow = colCoinMulti;
             for (var k = startRow; k < endRow; k++)
             {
-                //查找字段所在列
                 string excelKey = fixItem[0, k];
                 if (excelKey == null) continue;
                 var excelFileFixKey = ExcelDataAutoInsert.FindSourceCol(sheet, 2, excelKey);
@@ -1573,14 +1413,13 @@ public class ExcelDataAutoInsertMulti
 
                 string excelKeyMethod = fixItem[1, k]?.ToString();
 
-                var rowThreadCount = 4; // 线程数
-                int rowBatchSize = count / rowThreadCount; // 每个线程处理的数据量
-                // 并发执行任务
+                var rowThreadCount = 4;
+                int rowBatchSize = count / rowThreadCount;
                 Parallel.For(0, rowThreadCount, i =>
                 {
                     var startCol = i * rowBatchSize;
                     var endCol = (i + 1) * rowBatchSize;
-                    if (i == rowThreadCount - 1) endCol = count; // 最后一个线程处理剩余的数据
+                    if (i == rowThreadCount - 1) endCol = count;
 
                     for (var j = startCol; j < endCol; j++)
                     {
@@ -1598,9 +1437,7 @@ public class ExcelDataAutoInsertMulti
                         }
                         else
                         {
-                            //字段值改写方法
                             var temp1 = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
-                            //修改字符串
                             var cellFixValue =
                                 ExcelDataAutoInsert.StringRegPlace(cellSource.Value.ToString(), temp1, addValue);
                             if (cellFixValue == "^error^")
@@ -1619,7 +1456,6 @@ public class ExcelDataAutoInsertMulti
         return errorList;
     }
 
-    //[ExcelFunction(IsHidden = true)]
     public static (List<string>, int) ExcelDataWriteIdGroup(dynamic excelName, dynamic addValue, ExcelWorksheet sheet,
         dynamic fixKey, dynamic modelId)
     {
@@ -1633,7 +1469,6 @@ public class ExcelDataAutoInsertMulti
             var endValue = modelId[excelName][excelMulti].Item1[1, 0].ToString();
             var startRowSource = ExcelDataAutoInsert.FindSourceRow(sheet, 2, startValue);
             var endRowSource = ExcelDataAutoInsert.FindSourceRow(sheet, 2, endValue);
-            //查错
             if (startRowSource == -1 || endRowSource == -1)
             {
                 var writeIdList2 = new List<string> { startValue + "#" + endValue };
@@ -1641,21 +1476,17 @@ public class ExcelDataAutoInsertMulti
             }
 
             string excelKeyMethod = fixKey[excelName][excelMulti].Item1[1, 0]?.ToString();
-            //获取要写入的ID
             var count = endRowSource - startRowSource + 1;
             for (var i = 0; i < count; i++)
             {
                 var cellSource = sheet.Cells[startRowSource + i, excelFileFixKey];
                 if (cellSource.Value == null) continue;
                 if (cellSource.Value.ToString() == "" || cellSource.Value.ToString() == "0") continue;
-                //字段值改写方法
                 var temp1 = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
-                //修改字符串
                 var cellFixValue = ExcelDataAutoInsert.StringRegPlace(cellSource.Value.ToString(), temp1, addValue);
                 writeIdList.Add(cellFixValue);
             }
 
-            //获取最后一行
             if (lastRow < endRowSource) lastRow = endRowSource;
         }
 
@@ -1667,7 +1498,6 @@ public class ExcelDataAutoInsertCopyMulti
 {
     public static void SearchData(dynamic isMulti)
     {
-        //dynamic app = ExcelDnaUtil.Application;
         var indexWk = NumDesAddIn.App.ActiveWorkbook;
         var sheet = NumDesAddIn.App.ActiveSheet;
         var excelPath = indexWk.Path;
@@ -1676,44 +1506,33 @@ public class ExcelDataAutoInsertCopyMulti
         var data = sheetData.Item2;
         var sheetNameCol = title.IndexOf("表名");
         var modelIdNewCol = title.IndexOf("实际模板(上一期)");
-        //获取单元格颜色
         var colorCell = sheet.Cells[6, 1];
         PubMetToExcel.GetCellBackgroundColor(colorCell);
         ErrorLogCtp.DisposeCtp();
-        //字典Value跨度（行）
         var rowCount = 2;
-        //获取字典
         var modelIdNew = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modelIdNewCol, rowCount);
-        //遍历文件写入
         var errorExcelList = new List<List<(string, string, string)>>();
         var excelCount = 1;
-        //统计写入的内容
         var diffList = new List<(string, string, string)>();
-        //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
         var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
         foreach (var key in modelIdNew)
         {
-            //写入算法
             var excelName = key.Key;
             var targetExcelPath = excelPath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
-            //创建excel对象
             List<(string, string, string)> errorList = PubMetToExcel.SetExcelObjectEpPlus(targetExcelPath, excelName,
                 out ExcelWorksheet targetSheet, out ExcelPackage _);
             if (errorList.Count != 0)
             {
-                //return errorList;
             }
 
             errorList = PubMetToExcel.SetExcelObjectEpPlus(excelPath, excelName, out ExcelWorksheet sourceSheet,
                 out ExcelPackage _);
             if (errorList.Count != 0)
             {
-                //return errorList;
             }
 
-            //执行写入操作
             for (var excelMulti = 0; excelMulti < modelIdNew[excelName].Count; excelMulti++)
             {
                 var startValue = modelIdNew[excelName][excelMulti].Item1[0, 0].ToString();
@@ -1734,9 +1553,9 @@ public class ExcelDataAutoInsertCopyMulti
                             if (cellSourceValue != cellTargetValue)
                             {
                                 resultValue = cellTargetValue;
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                                 resultRow = j.ToString();
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                             }
                         }
 
@@ -1754,9 +1573,9 @@ public class ExcelDataAutoInsertCopyMulti
                             if (cellSourceValue != cellTargetValue)
                             {
                                 resultValue = cellSourceValue;
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                                 resultRow = j.ToString();
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                             }
                         }
 
@@ -1770,13 +1589,10 @@ public class ExcelDataAutoInsertCopyMulti
             excelCount++;
         }
 
-        //List去重
         diffList = diffList.Distinct().ToList().ToList();
-        //错误日志处理
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
-            //人工查询所需要的数据，可以打开表格，可以删除和手动增加数据，专用表格进行操作
             dynamic tempWorkbook;
             try
             {
@@ -1789,10 +1605,8 @@ public class ExcelDataAutoInsertCopyMulti
             }
 
             var tempSheet = tempWorkbook.Sheets["Sheet1"];
-            // 清除数据（将单元格内容设置为空字符串）
             Range usedRange = tempSheet.UsedRange;
             usedRange.ClearContents();
-            //数据转数组
             var tempDataArray = new string[diffList.Count, 4];
             for (var i = 0; i < diffList.Count; i++)
             {
@@ -1804,29 +1618,9 @@ public class ExcelDataAutoInsertCopyMulti
 
             var tempDataRange = tempSheet.Range[tempSheet.Cells[2, 2],
                 tempSheet.Cells[2 + tempDataArray.GetLength(0) - 1, 2 + tempDataArray.GetLength(1) - 1]];
-            //数据转range
             tempDataRange.Value = tempDataArray;
             tempWorkbook.Save();
             NumDesAddIn.App.Visible = true;
-            //if (!File.Exists(outFilePath))
-            //{
-            //    // 创建新的文本文件
-            //    using (StreamWriter writer = File.CreateText(outFilePath))
-            //    {
-            //        writer.Write(writeRow);
-            //        writer.Close();
-            //    }
-            //}
-            //else
-            //{
-            //    // 覆写已存在的文本文件
-            //    using (StreamWriter reader = new StreamWriter(outFilePath, false))
-            //    {
-            //        reader.Write(writeRow);
-            //        reader.Close();
-            //    }
-            //}
-            //Process.Start(outFilePath);
             NumDesAddIn.App.StatusBar = "完成统计";
             return;
         }
@@ -1837,7 +1631,6 @@ public class ExcelDataAutoInsertCopyMulti
 
     public static void MergeData(dynamic isMulti)
     {
-        //dynamic app = ExcelDnaUtil.Application;
         var indexWk = NumDesAddIn.App.ActiveWorkbook;
         var sheet = NumDesAddIn.App.ActiveSheet;
         var excelPath = indexWk.Path;
@@ -1846,20 +1639,15 @@ public class ExcelDataAutoInsertCopyMulti
         var data = sheetData.Item2;
         var sheetNameCol = title.IndexOf("表名");
         var modelIdNewCol = title.IndexOf("实际模板(上一期)");
-        //获取单元格颜色
         var colorCell = sheet.Cells[6, 1];
         var cellColor = PubMetToExcel.GetCellBackgroundColor(colorCell);
         ErrorLogCtp.DisposeCtp();
-        //字典Value跨度（行）
         var rowCount = 2;
-        //获取字典
         var modelIdNew = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modelIdNewCol, rowCount);
-        //遍历文件写入
         var errorExcelList = new List<List<(string, string, string)>>();
         var excelCount = 1;
         foreach (var key in modelIdNew)
         {
-            //写入算法
             var excelName = key.Key;
             List<(string, string, string)> error = AutoCopyData(modelIdNew, excelName, excelPath, cellColor);
             NumDesAddIn.App.StatusBar = "写入数据" + "<" + excelCount + "/" + modelIdNew.Count + ">" + excelName;
@@ -1867,11 +1655,9 @@ public class ExcelDataAutoInsertCopyMulti
             excelCount++;
         }
 
-        //错误日志处理
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
-            //sheet.Range["B4"].Value = "否";
             NumDesAddIn.App.StatusBar = "完成写入";
             return;
         }
@@ -1886,15 +1672,12 @@ public class ExcelDataAutoInsertCopyMulti
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var errorList = new List<(string, string, string)>();
         var targetExcelPath = "";
-        //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
         var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
-        //第一行Alice，第二行Cove
         if (mergePathList.Count <= 1)
         {
             MessageBox.Show(@"找不到目标表格路径，填写其他工程根目录，1行Alice，2行Cove");
-            //打开文本文件
             Process.Start(filePath);
             return errorList;
         }
@@ -1902,7 +1685,6 @@ public class ExcelDataAutoInsertCopyMulti
         if (mergePathList[0] == "" || mergePathList[1] == "" || mergePathList[1] == mergePathList[0])
         {
             MessageBox.Show(@"找不到目标表格路径，填写其他工程根目录，1行Alice，2行Cove");
-            //打开文本文件
             Process.Start(filePath);
         }
         else
@@ -1910,26 +1692,21 @@ public class ExcelDataAutoInsertCopyMulti
             targetExcelPath = excelPath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
         }
 
-        //获取目标、源表格对象
         if (targetExcelPath == "") return errorList;
 
-        //创建excel对象
         errorList = PubMetToExcel.SetExcelObjectEpPlus(targetExcelPath, excelName, out ExcelWorksheet targetSheet,
             out ExcelPackage targetExcel);
         if (errorList.Count != 0) return errorList;
         errorList = PubMetToExcel.SetExcelObjectEpPlus(excelPath, excelName, out ExcelWorksheet sourceSheet,
             out ExcelPackage _);
         if (errorList.Count != 0) return errorList;
-        //检查公式
         foreach (var cell in targetSheet.Cells)
         {
-            // 检查单元格是否包含公式
             if (cell.Formula is not { Length: > 0 }) continue;
             errorList.Add((excelName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
             return errorList;
         }
 
-        //执行写入操作
         for (var excelMulti = 0; excelMulti < modelIdNew[excelName].Count; excelMulti++)
         {
             var startValue = modelIdNew[excelName][excelMulti].Item1[0, 0].ToString();
@@ -1958,24 +1735,19 @@ public class ExcelDataAutoInsertCopyMulti
                 return errorList;
             }
 
-            //获取目标、源数据表列，以目标表格的行、列为准复制源数据
             var targetMaxCol = targetSheet.Dimension.Columns;
             var sourceMaxCol = sourceSheet.Dimension.Columns;
             var targetRangeTitle = (object[,])targetSheet.Cells[2, 1, 2, targetMaxCol].Value;
             var sourceRangeTitle = (object[,])sourceSheet.Cells[2, 1, 2, sourceMaxCol].Value;
             var sourceRangeValue = (object[,])sourceSheet.Cells[startRowSource, 1, endRowSource, sourceMaxCol].Value;
-            //合并数据
             var targetRowList =
                 PubMetToExcel.MergeExcel(sourceRangeValue, targetSheet, targetRangeTitle, sourceRangeTitle);
-            // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < targetRowList.Count; i++)
             {
                 var cellTarget = targetSheet.Cells[targetRowList[i], 1, targetRowList[i], targetMaxCol];
                 var isColorCell = targetSheet.Cells[targetRowList[i], 2];
-                // 有填充色就不重新上色了
                 if (isColorCell.Style.Fill.BackgroundColor.Rgb == null)
                 {
-                    //上色
                     cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
                     cellTarget.Style.Fill.BackgroundColor.SetColor(cellColor);
                 }
@@ -1992,7 +1764,6 @@ public class ExcelDataAutoInsertCopyMulti
         var sw = new Stopwatch();
         sw.Start();
 
-        //dynamic app = ExcelDnaUtil.Application;
         var indexWk = NumDesAddIn.App.ActiveWorkbook;
         var sheet = NumDesAddIn.App.ActiveSheet;
         var excelPath = indexWk.Path;
@@ -2001,11 +1772,9 @@ public class ExcelDataAutoInsertCopyMulti
         var errorExcelList = new List<List<(string, string, string)>>();
         List<(string, string, string)> error = AutoCopyDataRight(NumDesAddIn.App, excelPath, excelName, sheet);
         errorExcelList.Add(error);
-        //错误日志处理
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
-            //sheet.Range["B4"].Value = "否";
             sw.Stop();
             var ts1 = sw.Elapsed;
             NumDesAddIn.App.StatusBar = "完成写入：" + ts1;
@@ -2027,11 +1796,9 @@ public class ExcelDataAutoInsertCopyMulti
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var errorList = new List<(string, string, string)>();
-        //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
         var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
-        //第一行Alice，第二行Cove
 
         if (mergePathList.Count <= 1 || mergePathList[0] == "" || mergePathList[1] == "" ||
             mergePathList[1] == mergePathList[0] || !mergePathList[0].Contains("Tables") ||
@@ -2043,26 +1810,21 @@ public class ExcelDataAutoInsertCopyMulti
         }
 
         var targetExcelPath = excelPath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
-        //获取目标表格对象
         if (targetExcelPath == "") return errorList;
 
-        //创建excel对象
         errorList = PubMetToExcel.SetExcelObjectEpPlus(targetExcelPath, excelName, out ExcelWorksheet targetSheet,
             out ExcelPackage targetExcel);
         if (errorList.Count != 0) return errorList;
         errorList = PubMetToExcel.SetExcelObjectEpPlus(excelPath, excelName, out ExcelWorksheet sourceSheet,
             out ExcelPackage _);
         if (errorList.Count != 0) return errorList;
-        //检查公式
         foreach (var cell in targetSheet.Cells)
-            // 检查单元格是否包含公式
             if (cell.Formula is { Length: > 0 })
             {
                 errorList.Add((excelName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
                 return errorList;
             }
 
-        //复制source表格数据
         var targetMaxCol = targetSheet.Dimension.Columns;
         var sourceMaxCol = sourceSheet.Dimension.Columns;
         var sourceRangeTitle = sourceSheet.Cells[2, 1, 2, sourceMaxCol];
@@ -2077,21 +1839,16 @@ public class ExcelDataAutoInsertCopyMulti
             var sourceRangeValue = (object[,])sourceSheet.Cells[minRow, 1, maxRow, sourceMaxCol].Value;
             var sourceRangeValueTitle = (object[,])sourceRangeTitle.Value;
             var targetRangeValueTitle = (object[,])targetRangeTitle.Value;
-            //获取target字段，匹配source的数据进行过滤，并填充数据
             var targetRowList = PubMetToExcel.MergeExcel(sourceRangeValue, targetSheet, targetRangeValueTitle,
                 sourceRangeValueTitle);
-            //获取单元格颜色
             var colorCell = sheet.Cells[minRow, 2];
             var cellColor = PubMetToExcel.GetCellBackgroundColor(colorCell);
-            // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < targetRowList.Count; i++)
             {
                 var cellTarget = targetSheet.Cells[targetRowList[i], 1, targetRowList[i], targetMaxCol];
                 var isColorCell = targetSheet.Cells[targetRowList[i], 2];
-                // 有填充色就不重新上色了
                 if (isColorCell.Style.Fill.BackgroundColor.Rgb == null)
                 {
-                    //上色
                     cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
                     cellTarget.Style.Fill.BackgroundColor.SetColor(cellColor);
                 }
@@ -2108,7 +1865,6 @@ public class ExcelDataAutoInsertCopyMulti
         var sw = new Stopwatch();
         sw.Start();
 
-        //dynamic app = ExcelDnaUtil.Application;
         var indexWk = NumDesAddIn.App.ActiveWorkbook;
         var sheet = NumDesAddIn.App.ActiveSheet;
         var excelPath = indexWk.Path;
@@ -2117,11 +1873,9 @@ public class ExcelDataAutoInsertCopyMulti
         var errorExcelList = new List<List<(string, string, string)>>();
         var error = AutoCopyDataRightCol(NumDesAddIn.App, excelPath, excelName);
         errorExcelList.Add(error);
-        //错误日志处理
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
-            //sheet.Range["B4"].Value = "否";
             sw.Stop();
             var ts1 = sw.Elapsed;
             NumDesAddIn.App.StatusBar = "完成写入：" + ts1;
@@ -2141,11 +1895,9 @@ public class ExcelDataAutoInsertCopyMulti
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var errorList = new List<(string, string, string)>();
-        //数据源路径txt
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
         var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
-        //第一行Alice，第二行Cove
 
         if (mergePathList.Count <= 1 || mergePathList[0] == "" || mergePathList[1] == "" ||
             mergePathList[1] == mergePathList[0] || !mergePathList[0].Contains("Tables") ||
@@ -2157,26 +1909,21 @@ public class ExcelDataAutoInsertCopyMulti
         }
 
         var targetExcelPath = excelPath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
-        //获取目标表格对象
         if (targetExcelPath == "") return errorList;
 
-        //创建excel对象
         errorList = PubMetToExcel.SetExcelObjectEpPlus(targetExcelPath, excelName, out ExcelWorksheet targetSheet,
             out ExcelPackage targetExcel);
         if (errorList.Count != 0) return errorList;
         errorList = PubMetToExcel.SetExcelObjectEpPlus(excelPath, excelName, out ExcelWorksheet sourceSheet,
             out ExcelPackage _);
         if (errorList.Count != 0) return errorList;
-        //检查公式
         foreach (var cell in targetSheet.Cells)
-            // 检查单元格是否包含公式
             if (cell.Formula is { Length: > 0 })
             {
                 errorList.Add((excelName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
                 return errorList;
             }
 
-        //复制source表格数据
         var targetMaxRow = targetSheet.Dimension.Rows;
         var sourceMaxRow = sourceSheet.Dimension.Rows;
         var sourceRangeTitle = sourceSheet.Cells[2, 2, targetMaxRow, 2];
@@ -2191,25 +1938,7 @@ public class ExcelDataAutoInsertCopyMulti
             var sourceRangeValue = (object[,])sourceSheet.Cells[1, minCol, sourceMaxRow, maxCol].Value;
             var sourceRangeValueTitle = (object[,])sourceRangeTitle.Value;
             var targetRangeValueTitle = (object[,])targetRangeTitle.Value;
-            //获取target字段，匹配source的数据进行过滤，并填充数据
             PubMetToExcel.MergeExcelCol(sourceRangeValue, targetSheet, targetRangeValueTitle, sourceRangeValueTitle);
-
-            //for (int i = 0; i < targetRowList.Count; i++)
-            //{
-            //    //获取单元格颜色
-            //    var colorCell = sheet.Cells[i+1, 2];
-            //    var cellColor = PubMetToExcel.GetCellBackgroundColor(colorCell);
-
-            //    var cellTarget = targetSheet.Cells[targetRowList[i], 1, targetRowList[i], targetMaxCol];
-            //    var isColorCell = targetSheet.Cells[targetRowList[i], 2];
-            //    // 有填充色就不重新上色了
-            //    if (isColorCell.Style.Fill.BackgroundColor.Rgb == null)
-            //    {
-            //        //上色
-            //        cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            //        cellTarget.Style.Fill.BackgroundColor.SetColor(cellColor);
-            //    }
-            //}
         }
 
         targetExcel.Save();
@@ -2222,7 +1951,6 @@ public class ExcelDataAutoInsertActivityServer
 {
     public static void Source()
     {
-        //dynamic app = ExcelDnaUtil.Application;
         var indexWk = NumDesAddIn.App.ActiveWorkbook;
 
         var sourceSheet = indexWk.Worksheets["运营排期"];
@@ -2234,7 +1962,6 @@ public class ExcelDataAutoInsertActivityServer
         var fixDataList = fixData.Item2;
         var fixNames = fixTitle.IndexOf("活动名称");
         var fixIds = fixTitle.IndexOf("活动id");
-        // ReSharper disable once IdentifierTypo
         var fixPushs = fixTitle.IndexOf("前端可获取活动时间");
         var fixPushEnds = fixTitle.IndexOf("停止向前端发送活动时间");
         var fixPreHeats = fixTitle.IndexOf("预热期开始时间");
@@ -2247,13 +1974,10 @@ public class ExcelDataAutoInsertActivityServer
         var sourceRange = sourceSheet.Range[sourceSheet.Cells[5, 3], sourceSheet.Cells[sourceMaxRow, sourceMaxCol]];
         var sourceDateRange = sourceSheet.Range[sourceSheet.Cells[2, 1], sourceSheet.Cells[2, sourceMaxCol]];
         Array sourceDataArr = sourceDateRange.Value2;
-        //获取目标活动的时间数据
         var sourceData = new List<(string, double, double, int, int, int)>();
         foreach (var cell in sourceRange)
-            // 检查单元格是否是合并单元格
             if (cell.MergeCells)
             {
-                // 获取合并的行列范围
                 var mergeRange = cell.MergeArea;
                 if (cell.Address == mergeRange.Cells[1, 1].Address)
                 {
@@ -2261,12 +1985,6 @@ public class ExcelDataAutoInsertActivityServer
                     sourceData.Add((mergeValue, sourceDataArr.GetValue(1, mergeRange.Column),
                         sourceDataArr.GetValue(1, mergeRange.Column + mergeRange.Columns.Count - 1), mergeRange.Row,
                         mergeRange.Column, mergeRange.Column + mergeRange.Columns.Count - 1));
-                    //// 打印合并范围的行列信息
-                    //Debug.Print($"合并范围：{mergedRange.Address}");
-                    // ReSharper disable once CommentTypo
-                    //Debug.Print($"合并范围内值：{tempvalue}");
-                    //Debug.Print($"合并范围的起始行列：{mergedRange.Row},{mergedRange.Column}");
-                    //Debug.Print($"合并范围的结束行列：{mergedRange.Row + mergedRange.Rows.Count - 1},{mergedRange.Column + mergedRange.Columns.Count - 1}");
                 }
             }
             else if (cell.Value != null)
@@ -2276,7 +1994,6 @@ public class ExcelDataAutoInsertActivityServer
                     cell.Column + cell.Columns.Count - 1));
             }
 
-        //对比活动的索引抓取修正时间数据
         var targetDataList = new List<List<string>>();
         var errorLog = "";
         var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -2287,7 +2004,7 @@ public class ExcelDataAutoInsertActivityServer
             for (var i = 0; i < fixDataList.Count; i++)
             {
                 var fixName = fixDataList[i][fixNames];
-#pragma warning disable CS0252 // 可能非有意的引用比较；左侧需要强制转换
+#pragma warning disable CS0252
                 if (fixName != sourceName && !sourceName.Contains("#"))
                 {
                 }
@@ -2308,67 +2025,65 @@ public class ExcelDataAutoInsertActivityServer
 
                     var targetId = fixDataList[i][fixIds];
                     var targetName = sourceName;
-                    //时间计算规则
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     var targetPushTimeString = DateTime.FromOADate(sourceData[j].Item2)
                         .AddHours((long)fixDataList[i][fixPushs] * 24 + 8).ToString(CultureInfo.InvariantCulture);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     var targetPushTimeLong = sourceStartTimeLong + (long)fixDataList[i][fixPushs] * 24 * 3600;
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     var targetPushEndTimeString = DateTime.FromOADate(sourceData[j].Item2)
                         .AddHours((long)fixDataList[i][fixPushEnds] * 24 + 8).ToString(CultureInfo.InvariantCulture);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     var targetPushEndTimeLong = sourceStartTimeLong + (long)fixDataList[i][fixPushEnds] * 24 * 3600;
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     var targetPreHeatTimeString = DateTime.FromOADate(sourceData[j].Item2)
                         .AddHours((long)fixDataList[i][fixPreHeats] * 24 + 8).ToString(CultureInfo.InvariantCulture);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     var targetPreHeatTimeLong = sourceStartTimeLong + (long)fixDataList[i][fixPreHeats] * 24 * 3600;
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     var targetOpenTimeString = DateTime.FromOADate(sourceData[j].Item2)
                         .AddHours((long)fixDataList[i][fixOpens] * 24 + 8).ToString(CultureInfo.InvariantCulture);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     var targetOpenTimeLong = sourceStartTimeLong + (long)fixDataList[i][fixOpens] * 24 * 3600;
-                    //结束时间开始默认+1，因为表格里记录的是时间点不是段
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     var targetEndTimeString = DateTime.FromOADate(sourceData[j].Item3)
                         .AddHours(((long)fixDataList[i][fixEnds] + 1) * 24 + 8).ToString(CultureInfo.InvariantCulture);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     var targetEndTimeLong = sourceEndTimeLong + (long)fixDataList[i][fixEnds] * 24 * 3600;
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     var targetCloseTimeString = DateTime.FromOADate(sourceData[j].Item3)
                         .AddHours(((long)fixDataList[i][fixCloses] + 1) * 24 + 8).ToString(CultureInfo.InvariantCulture);
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     var targetCloseTimeLong = sourceEndTimeLong + (long)fixDataList[i][fixCloses] * 24 * 3600;
                     targetData.Add(targetId.ToString());
                     targetData.Add(targetName);
                     targetData.Add(targetPushTimeString);
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     targetData.Add(targetPushTimeLong.ToString());
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     targetData.Add(targetPushEndTimeString);
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     targetData.Add(targetPushEndTimeLong.ToString());
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     targetData.Add(targetPreHeatTimeString);
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     targetData.Add(targetPreHeatTimeLong.ToString());
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     targetData.Add(targetOpenTimeString);
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     targetData.Add(targetOpenTimeLong.ToString());
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     targetData.Add(targetEndTimeString);
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     targetData.Add(targetEndTimeLong.ToString());
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     targetData.Add(targetCloseTimeString);
-#pragma warning disable CA1305 // 指定 IFormatProvider
+#pragma warning disable CA1305
                     targetData.Add(targetCloseTimeLong.ToString());
-#pragma warning restore CA1305 // 指定 IFormatProvider
+#pragma warning restore CA1305
                     targetDataList.Add(targetData);
                 }
-#pragma warning restore CS0252 // 可能非有意的引用比较；左侧需要强制转换
+#pragma warning restore CS0252
             }
 
             if (exit == false)
@@ -2376,12 +2091,10 @@ public class ExcelDataAutoInsertActivityServer
                             "\r\n";
         }
 
-        //写入新数据
         var targetStartCol = 2;
         var targetStartRow = 5;
         if (errorLog == "")
         {
-            //清除老数据
             var targetRangeOld = targetSheet.Range[targetSheet.Cells[targetStartRow, targetStartCol],
                 targetSheet.Cells[targetSheet.UsedRange.Rows.Count, targetSheet.UsedRange.Columns.Count]];
             targetRangeOld.Value = null;
@@ -2401,13 +2114,11 @@ public class ExcelDataAutoInsertActivityServer
         {
             ErrorLogCtp.DisposeCtp();
             ErrorLogCtp.CreateCtp(errorLog);
-            //写入错误日志并提示
             MessageBox.Show(@"有活动找不到，查看错误日志");
         }
     }
 }
 
-//适应"【*】数值.xlsx"这类表需求频繁更新奖励数据的自动化工具
 public class ExcelDataAutoInsertNumChanges
 {
     public string ExcelPath;
@@ -2456,7 +2167,6 @@ public class ExcelDataAutoInsertNumChanges
             excelObj.GetExcelObj(ExcelPath, workBookName);
             if (excelObj.ErrorList.Count > 0) return;
 
-            //读取数据
             var sheetTarget = excelObj.Sheet;
             var excelTarget = excelObj.Excel;
             var keyIndex = eachExcelData.Value.Item1[0].ToString();
@@ -2481,7 +2191,6 @@ public class ExcelDataAutoInsertNumChanges
                 {
                     var keyIndexRow = excelObj.FindFromRow(sheetTarget, keyIndexCol, keyIndexValue);
                     var baseValue = sheetTarget.Cells[keyIndexRow, keyTargetCol].Value;
-                    //统计重复值，但凡有一个不重复表名此次写入有新增内容，需要保存文件
                     if ((string)baseValue != keyTargetValue)
                         sheetTarget.Cells[keyIndexRow, keyTargetCol].Value = keyTargetValue;
                     else
