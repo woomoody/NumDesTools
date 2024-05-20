@@ -161,9 +161,9 @@ public class CellSelectChangeTip : ClickThroughForm
 
 public class ClickThroughForm : Form
 {
-    private const int WM_NCHITTEST = 0x84;
+    private const int WmNchittest = 0x84;
 
-    private const int HTTRANSPARENT = -1;
+    private const int Httransparent = -1;
 
     public ClickThroughForm()
     {
@@ -173,9 +173,9 @@ public class ClickThroughForm : Form
 
     protected override void WndProc(ref Message m)
     {
-        if (m.Msg == WM_NCHITTEST)
+        if (m.Msg == WmNchittest)
         {
-            m.Result = (IntPtr)HTTRANSPARENT;
+            m.Result = (IntPtr)Httransparent;
             return;
         }
 

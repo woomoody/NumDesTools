@@ -1,5 +1,4 @@
-﻿using NumDesTools.UI;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Windows.Forms.Integration;
 using UserControl = System.Windows.Forms.UserControl;
 
@@ -20,17 +19,18 @@ public class SelfControl : UserControl, ISelfControl;
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 public class NumDesCTP
 {
-    private static CustomTaskPane ctpWF;
-    private static CustomTaskPane ctpWPF;
+    private static Dictionary<string, CustomTaskPane> ctpsWF = new Dictionary<string, CustomTaskPane>();
+    private static Dictionary<string, CustomTaskPane> ctpsWPF = new Dictionary<string, CustomTaskPane>();
     private static SelfControl LableControlWF;
     private static SelfControl LableControlWPF;
-    public static object  ShowCTP(int width , string name , bool isWPF , string eleTag)
+    public static object  ShowCTP(int width , string name , bool isWPF , string eleTag, System.Windows.Controls.UserControl controlWPF , MsoCTPDockPosition dockPosition)
     {
-        SheetListControl controlWPF = new();
+        CustomTaskPane ctpWF;
+        CustomTaskPane ctpWPF;
         if (!isWPF)
         {
             var excelApp = NumDesAddIn.App;
-            if (ctpWF == null)
+            if (!ctpsWF.TryGetValue(name, out ctpWF))
             {
                 ExcelAsyncUtil.QueueAsMacro(() =>
                     {
@@ -97,11 +97,12 @@ public class NumDesCTP
                         };
                         LableControlWF.Controls.Add(listBoxSheet);
                         ctpWF = CustomTaskPaneFactory.CreateCustomTaskPane(LableControlWF, name);
-                        ctpWF.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
+                        ctpWF.DockPosition = dockPosition;
                         ctpWF.Width = width;
                         ctpWF.Visible = true;
                         listBoxSheet.Dock = DockStyle.Fill;
                     });
+                ctpsWF[name] = ctpWF;
             }
             else
             {
@@ -111,7 +112,7 @@ public class NumDesCTP
         }
         else
         {
-            if (ctpWPF == null)
+            if (!ctpsWPF.TryGetValue(name, out ctpWPF))
             {
                 LableControlWPF = new SelfControl();
                 var elementHost = new ElementHost
@@ -123,9 +124,11 @@ public class NumDesCTP
                 LableControlWPF.Controls.Add(elementHost);
 
                 ctpWPF = CustomTaskPaneFactory.CreateCustomTaskPane(LableControlWPF, name);
-                ctpWPF.DockPosition = MsoCTPDockPosition.msoCTPDockPositionLeft;
+                ctpWPF.DockPosition = dockPosition;
                 ctpWPF.Width = width;
                 ctpWPF.Visible = true;
+
+                ctpsWPF[name] = ctpWPF;
             }
             else
             {
@@ -147,19 +150,25 @@ public class NumDesCTP
             return controlWPF;
         }
     }
-    public static void DeleteCTP(bool isWPF)
+    public static void DeleteCTP(bool isWPF , string name)
     {
+        CustomTaskPane ctpWF;
+        CustomTaskPane ctpWPF;
         if (!isWPF)
         {
-            if (ctpWF == null) return;
-            ctpWF.Delete();
-            ctpWF = null;
+            if (ctpsWF.TryGetValue(name, out ctpWF))
+            {
+                ctpWF.Delete();
+                ctpsWF.Remove(name);
+            }
         }
         else
         {
-            if (ctpWPF == null) return;
-            ctpWPF.Delete();
-            ctpWPF = null;
+            if (ctpsWPF.TryGetValue(name, out ctpWPF))
+            {
+                ctpWPF.Delete();
+                ctpsWPF.Remove(name);
+            }
         }
     }
 }

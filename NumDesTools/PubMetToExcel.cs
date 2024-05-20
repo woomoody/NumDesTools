@@ -626,6 +626,15 @@ public class PubMetToExcel
         var files3 = Directory.EnumerateFiles(uiPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
+        var kelangPath = newPath + @"\Excels\Tables\克朗代克\";
+        //此路径有可能不存在
+        string[] files4 = null;
+        if (Directory.Exists(kelangPath))
+        {
+            files4 = Directory.EnumerateFiles(kelangPath, "*.xlsx")
+                .Where(file => !Path.GetFileName(file).Contains("#"))
+                .ToArray();
+        }
         var files = files1.Concat(files2).Concat(files3).ToArray();
 
         var targetList = new List<(string, string, int, int)>();
@@ -639,9 +648,9 @@ public class PubMetToExcel
             {
                 using (var package = new ExcelPackage(new FileInfo(file)))
                 {
-                    var wk = package.Workbook;
                     try
                     {
+                        var wk = package.Workbook;
                         var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
                         for (var col = 2; col <= sheet.Dimension.End.Column; col++)
                         for (var row = 4; row <= sheet.Dimension.End.Row; row++)
@@ -704,9 +713,23 @@ public class PubMetToExcel
         var files3 = Directory.EnumerateFiles(uiPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
+        var kelangPath = newPath + @"\Excels\Tables\克朗代克\";
+        //此路径有可能不存在
+        string[] files4 = null;
+        if (Directory.Exists(kelangPath))
+        {
+            files4 = Directory.EnumerateFiles(kelangPath, "*.xlsx")
+                .Where(file => !Path.GetFileName(file).Contains("#"))
+                .ToArray();
+        }
         var files = files1.Concat(files2).Concat(files3).ToArray();
+        if (files4 != null)
+        {
+            files = files.Concat(files4).ToArray();
+        }
 
         var targetList = new List<(string, string, int, int)>();
+        var isAll = errorValue.Contains("*");
         var options = new ParallelOptions
             { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
@@ -724,14 +747,27 @@ public class PubMetToExcel
                         for (var row = 4; row <= sheet.Dimension.End.Row; row++)
                         {
                             var cellValue = sheet.Cells[row, col].Value;
-                            if (!(cellValue == null || !cellValue.ToString().Contains(errorValue)))
+                            if (!isAll)
                             {
-                                var cellAddress = new ExcelCellAddress(row, col);
-                                var cellCol = cellAddress.Column;
-                                var cellRow = cellAddress.Row;
-                                targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                if (cellValue != null && cellValue.ToString() == errorValue)
+                                {
+                                    var cellAddress = new ExcelCellAddress(row, col);
+                                    var cellCol = cellAddress.Column;
+                                    var cellRow = cellAddress.Row;
+                                    targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                }
                             }
-                        }
+                            else
+                            {
+                                if (cellValue != null && cellValue.ToString().Contains(errorValue))
+                                {
+                                    var cellAddress = new ExcelCellAddress(row, col);
+                                    var cellCol = cellAddress.Column;
+                                    var cellRow = cellAddress.Row;
+                                    targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                }
+                            }
+                            }
                     }
                     catch
                     {
@@ -766,6 +802,15 @@ public class PubMetToExcel
         var files3 = Directory.EnumerateFiles(uiPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
+        var kelangPath = newPath + @"\Excels\Tables\克朗代克\";
+        //此路径有可能不存在
+        string[] files4 = null;
+        if (Directory.Exists(kelangPath))
+        {
+            files4 = Directory.EnumerateFiles(kelangPath, "*.xlsx")
+                .Where(file => !Path.GetFileName(file).Contains("#"))
+                .ToArray();
+        }
         var files = files1.Concat(files2).Concat(files3).ToArray();
 
         var currentCount = 0;
