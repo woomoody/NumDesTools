@@ -7,21 +7,20 @@ using ListBox = System.Windows.Controls.ListBox;
 using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
 using Style = System.Windows.Style;
-using UserControl = System.Windows.Controls.UserControl;
 
 namespace NumDesTools.UI
 {
     /// <summary>
     /// SheetListControl.xaml 的交互逻辑
     /// </summary>
-    public partial class SheetListControl : UserControl
+    public partial class SheetListControl
     {
-        public static Application excelApp = NumDesAddIn.App;
+        public static Application ExcelApp = NumDesAddIn.App;
         public ObservableCollection<SelfComSheetCollect> Sheets { get; } = new ObservableCollection<SelfComSheetCollect>();
         public SheetListControl()
         {
             InitializeComponent();
-            var worksheets = excelApp.ActiveWorkbook.Sheets.Cast<Worksheet>()
+            var worksheets = ExcelApp.ActiveWorkbook.Sheets.Cast<Worksheet>()
                 .Select(x => new SelfComSheetCollect { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden });
             foreach (var worksheet in worksheets)
             {
@@ -51,20 +50,20 @@ namespace NumDesTools.UI
 
             var contextMenu = new ContextMenu();
             var showItem = new MenuItem { Header = "显示" };
-            showItem.Click += (s, args) =>
+            showItem.Click += (_, _) =>
             {
                 foreach (SelfComSheetCollect item in ListBoxSheet.SelectedItems)
                 {
-                    var sheet = excelApp.ActiveWorkbook.Sheets[item.Name];
+                    var sheet = ExcelApp.ActiveWorkbook.Sheets[item.Name];
                     sheet.Visible = XlSheetVisibility.xlSheetVisible;
                     item.IsHidden = false;
                 }
             };
             var hideItem = new MenuItem { Header = "隐藏" };
-            hideItem.Click += (s, args) =>
+            hideItem.Click += (_, _) =>
             {
                 int visibleSheetsCount = 0;
-                foreach (Worksheet sheet in excelApp.ActiveWorkbook.Sheets)
+                foreach (Worksheet sheet in ExcelApp.ActiveWorkbook.Sheets)
                 {
                     if (sheet.Visible == XlSheetVisibility.xlSheetVisible) visibleSheetsCount++;
                 }
@@ -77,7 +76,7 @@ namespace NumDesTools.UI
 
                 foreach (SelfComSheetCollect item in ListBoxSheet.SelectedItems)
                 {
-                    var sheet = excelApp.ActiveWorkbook.Sheets[item.Name];
+                    var sheet = ExcelApp.ActiveWorkbook.Sheets[item.Name];
                     sheet.Visible = XlSheetVisibility.xlSheetHidden;
                     item.IsHidden = true;
                 }
@@ -97,7 +96,7 @@ namespace NumDesTools.UI
             if (listBox.SelectedItem != null)
             {
                 var selectedSheetName = ((SelfComSheetCollect)listBox.SelectedItem).Name;
-                var selectedSheet = excelApp.ActiveWorkbook.Sheets[selectedSheetName];
+                var selectedSheet = ExcelApp.ActiveWorkbook.Sheets[selectedSheetName];
                 selectedSheet.Activate();
             }
         }

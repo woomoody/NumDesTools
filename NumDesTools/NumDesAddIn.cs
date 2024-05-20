@@ -58,7 +58,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private string _currentTargetText;
     private TabControl _tabControl = new();
 
-    private SheetListControl SheetMenuCTP;
+    private SheetListControl _sheetMenuCtp;
 
     #region 释放COM
 
@@ -80,7 +80,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private void ReleaseComObjects()
     {
+        // ReSharper disable RedundantCheckBeforeAssignment
         if (App != null) App = null;
+        // ReSharper restore RedundantCheckBeforeAssignment
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
@@ -200,6 +202,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
             catch
             {
+                // ignored
             }
 
         if (sh is not Worksheet sheet) return;
@@ -298,34 +301,26 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private void ExcelApp_WorkbookActivate(Workbook wb)
     {
         App.StatusBar = wb.FullName;
+
+        var ctpName = "表格目录";
         if (SheetMenuText == "表格目录：开启")
         {
-            NumDesCTP.DeleteCTP(true);
-            SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "表格目录", true, "表格目录");
+            NumDesCTP.DeleteCTP(true , ctpName);
+            _sheetMenuCtp = (SheetListControl)NumDesCTP.ShowCTP(250, ctpName, true, ctpName, new SheetListControl() , MsoCTPDockPosition.msoCTPDockPositionLeft);
         }
         else
         {
-            NumDesCTP.DeleteCTP(true);
+            NumDesCTP.DeleteCTP(true , ctpName);
         }
     }
 
     private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
     {
+        var ctpName = "表格目录";
         if (SheetMenuText == "表格目录：开启")
         {
-            NumDesCTP.DeleteCTP(true);
-            SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "表格目录", true, "表格目录");
-        }
-    }
-
-    private void Excel_CtpUpdate()
-    {
-        var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
-            .Select(x => new SelfComSheetCollect { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();
-        SheetMenuCTP.Sheets.Clear();
-        foreach (var worksheet in worksheets)
-        {
-            SheetMenuCTP.Sheets.Add(worksheet);
+            NumDesCTP.DeleteCTP(true , ctpName);
+            _sheetMenuCtp = (SheetListControl)NumDesCTP.ShowCTP(250, ctpName, true, ctpName, new SheetListControl() , MsoCTPDockPosition.msoCTPDockPositionLeft);
         }
     }
 
@@ -872,12 +867,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
         else
         {
-            ErrorLogCtp.DisposeCtp();
-            var log = "";
-            for (var i = 0; i < targetList.Count; i++)
-                log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
-                       targetList[i].Item4 + "\n";
-            ErrorLogCtp.CreateCtpNormal(log);
+            //ErrorLogCtp.DisposeCtp();
+            //var log = "";
+            //for (var i = 0; i < targetList.Count; i++)
+            //    log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
+            //           targetList[i].Item4 + "\n";
+            //ErrorLogCtp.CreateCtpNormal(log);
+            var ctpName = "表格查询结果";
+            NumDesCTP.DeleteCTP(true , ctpName);
+            var tupleList = targetList.Select(t => (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))).ToList();
+            _ = (SheetSeachResult)NumDesCTP.ShowCTP(320, ctpName, true, ctpName, new SheetSeachResult(tupleList) , MsoCTPDockPosition.msoCTPDockPositionRight);
+
+
             sw.Stop();
         }
 
@@ -902,12 +903,17 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
         else
         {
-            ErrorLogCtp.DisposeCtp();
-            var log = "";
-            for (var i = 0; i < targetList.Count; i++)
-                log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
-                       targetList[i].Item4 + "\n";
-            ErrorLogCtp.CreateCtpNormal(log);
+            //ErrorLogCtp.DisposeCtp();
+            //var log = "";
+            //for (var i = 0; i < targetList.Count; i++)
+            //    log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
+            //           targetList[i].Item4 + "\n";
+            //ErrorLogCtp.CreateCtpNormal(log);
+            var ctpName = "表格查询结果";
+            NumDesCTP.DeleteCTP(true , ctpName);
+            var tupleList = targetList.Select(t => (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))).ToList();
+            _ = (SheetSeachResult)NumDesCTP.ShowCTP(320, ctpName ,true, ctpName, new SheetSeachResult(tupleList) , MsoCTPDockPosition.msoCTPDockPositionRight);
+
             sw.Stop();
         }
 
@@ -1155,8 +1161,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //{
         //    SheetMenuCTP.Sheets.Add(worksheet);
         //}
-        var window = new SheetLinksWindow();
-        window.Show();
+        //var window = new SheetLinksWindow();
+        //window.Show();
+
+        //var tuple = new Tuple<string, string , int , int>("h1", "h2" ,3,4);
+        //var lisssad = new List<Tuple<string,string,int,int>>();
+        //lisssad.Add(tuple);
+        
+        //var tupleList = lisssad.Select(t => (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))).ToList();
+        //var aasd = (SheetSeachResult)NumDesCTP.ShowCTP(250, "asd" , true , "asd" , new SheetSeachResult(tupleList) , MsoCTPDockPosition.msoCTPDockPositionRight);
+
 
         sw.Stop();
         var ts2 = sw.Elapsed;
@@ -1262,14 +1276,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (control == null) throw new ArgumentNullException(nameof(control));
         SheetMenuText = SheetMenuText == "表格目录：开启" ? "表格目录：关闭" : "表格目录：开启";
         CustomRibbon.InvalidateControl("SheetMenu");
+
+        var ctpName = "表格目录";
         if (SheetMenuText == "表格目录：开启")
         {
-            NumDesCTP.DeleteCTP(true);
-            SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "表格目录", true, "表格目录");
+            NumDesCTP.DeleteCTP(true , ctpName);
+            _sheetMenuCtp = (SheetListControl)NumDesCTP.ShowCTP(250, ctpName, true, ctpName, new SheetListControl() , MsoCTPDockPosition.msoCTPDockPositionLeft);
         }
         else
         {
-            NumDesCTP.DeleteCTP(true);
+            NumDesCTP.DeleteCTP(true , ctpName);
         }
         _globalValue.SaveValue("SheetMenuText", SheetMenuText);
     }
@@ -1289,6 +1305,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 }
                 catch
                 {
+                    // ignored
                 }
         }
 
@@ -1319,7 +1336,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 comButton1.Click += IndexSheetOpen_Click;
             }
 
-        Excel_CtpUpdate();
     }
 
     private void ExcelApp_SheetSelectionChange1(object sh, Range target)
@@ -1343,6 +1359,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 }
                 catch
                 {
+                    // ignored
                 }
             }
         }

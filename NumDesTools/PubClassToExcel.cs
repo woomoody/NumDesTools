@@ -1,9 +1,8 @@
 ﻿using GraphX.Common.Models;
-using GraphX.Controls;
-using QuickGraph;
 using System.ComponentModel;
-using System.Windows.Controls;
-using System.Windows.Input;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using System.Windows.Data;
 
 namespace NumDesTools;
 
@@ -48,6 +47,52 @@ public class SelfComSheetCollect : INotifyPropertyChanged
     protected virtual void OnPropertyChanged(string propertyName)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+}
+
+//自定义Com工作簿信息容器类
+public class WorkBookSearchCollect
+{
+    public string FilePath { get; set; }
+    public string SheetName { get; set; }
+    public int CellRow { get; set; }
+    public string CellCol { get; set; }
+
+    public WorkBookSearchCollect((string, string, int, string) tuple)
+    {
+        FilePath = tuple.Item1;
+        SheetName = tuple.Item2;
+        CellRow = tuple.Item3;
+        CellCol = tuple.Item4;
+    }
+}
+//字符串正则转换
+public class StringRegexConverter : IValueConverter
+{
+    public string RegexPattern { get; set; }
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var inputString = value as string;
+        if (inputString == null)
+            return null;
+
+        var regex = new Regex(RegexPattern);
+        var match = regex.Match(inputString);
+
+        // 返回第一个匹配的结果
+        if (match.Success)
+        {
+            return match.Value;
+        }
+
+        // 如果没有匹配的结果，返回null或者其他适当的值
+        return null;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
     }
 }
 

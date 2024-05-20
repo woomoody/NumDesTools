@@ -1,26 +1,16 @@
 ﻿using GraphX.Common.Enums;
-using GraphX.Common.Interfaces;
 using GraphX.Controls;
-using GraphX.Controls.Models;
 using GraphX.Logic.Models;
-using Microsoft.Msagl.Drawing;
-using Microsoft.Msagl.GraphmapsWithMesh;
 using QuickGraph;
-using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
-using System.Xml.Serialization;
-using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
-using Style = Microsoft.Msagl.Drawing.Style;
-using Window = System.Windows.Window;
 
 namespace NumDesTools.UI
 {
     /// <summary>
     /// SheetLinksWindow.xaml 的交互逻辑
     /// </summary>
-    public partial class SheetLinksWindow : Window
+    public partial class SheetLinksWindow
     {
         public SheetLinksWindow()
         {
@@ -49,7 +39,7 @@ namespace NumDesTools.UI
 
             // 布局和渲染图形
             graphArea.LogicCore.DefaultLayoutAlgorithm = LayoutAlgorithmTypeEnum.KK;
-            graphArea.GenerateGraph(true);
+            graphArea.GenerateGraph();
 
             // 为顶点和边添加交互事件，并设置顶点的标签
             foreach (var vc in graphArea.VertexList)
@@ -63,23 +53,6 @@ namespace NumDesTools.UI
                 ec.Value.MouseLeftButtonDown += EdgeControl_MouseLeftButtonDown;
                 ec.Value.MouseRightButtonDown += EdgeControl_MouseRightButtonDown;
             }
-
-            // 创建一个 XmlSerializer
-            var serializer = new XmlSerializer(typeof(BidirectionalGraph<SelfGraphXVertex, SelfGraphXEdge>));
-
-            // 存储：序列化图形数据到文件
-            using (var writer = new StreamWriter(@"C:\\Users\\cent\\Documents\\graphData.xml"))
-            {
-                serializer.Serialize(writer, graphArea.LogicCore.Graph as BidirectionalGraph<SelfGraphXVertex, SelfGraphXEdge>);
-            }
-
-            // 读取：在需要时从文件反序列化图形数据
-            BidirectionalGraph<SelfGraphXVertex, SelfGraphXEdge> loadedGraph;
-            using (var reader = new StreamReader(@"C:\\Users\\cent\\Documents\\graphData.xml"))
-            {
-                loadedGraph = (BidirectionalGraph<SelfGraphXVertex, SelfGraphXEdge>)serializer.Deserialize(reader);
-            }
-            graphArea.LogicCore.Graph = loadedGraph;
 
 
             // 创建一个ZoomControl并将GraphArea添加到其中

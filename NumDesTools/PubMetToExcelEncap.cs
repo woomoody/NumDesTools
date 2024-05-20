@@ -183,7 +183,7 @@ public class ExcelDataByEpplus
         return dataDict;
     }
 
-    public void Write(ExcelWorksheet sheet, ExcelPackage Excel, List<dynamic> data, int rowFirst)
+    public void Write(ExcelWorksheet sheet, ExcelPackage excel, List<dynamic> data, int rowFirst)
     {
         for (int row = 0; row < data.Count; row++)
         {
@@ -196,7 +196,7 @@ public class ExcelDataByEpplus
             }
         }
 
-        Excel.Save();
+        excel.Save();
     }
 
     public int FindFromRow(ExcelWorksheet sheet, int col, string searchValue)
