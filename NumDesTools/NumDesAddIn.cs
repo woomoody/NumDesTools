@@ -1122,7 +1122,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
         var excelData = new ExcelDataAutoInsertNumChanges();
-        excelData.OutDataIsAll(12);
+        excelData.OutDataIsAll();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
         App.StatusBar = "数据写入完成，用时：" + ts2;
@@ -1161,13 +1161,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //{
         //    SheetMenuCTP.Sheets.Add(worksheet);
         //}
-        //var window = new SheetLinksWindow();
-        //window.Show();
+        var window = new SheetLinksWindow();
+        window.Show();
 
         //var tuple = new Tuple<string, string , int , int>("h1", "h2" ,3,4);
         //var lisssad = new List<Tuple<string,string,int,int>>();
         //lisssad.Add(tuple);
-        
+
         //var tupleList = lisssad.Select(t => (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))).ToList();
         //var aasd = (SheetSeachResult)NumDesCTP.ShowCTP(250, "asd" , true , "asd" , new SheetSeachResult(tupleList) , MsoCTPDockPosition.msoCTPDockPositionRight);
 
