@@ -2149,9 +2149,9 @@ public class ExcelDataAutoInsertNumChanges
                 var data = workBook.Read(dataRange, headRange, 1);
 
                 var targetBookRange = indexSheet.Cells[startRow, col];
-                var targetBookRangeName = targetBookRange.Value.ToString();
+                var targetBookRangeName = targetBookRange.Value?.ToString();
 
-                dataList.Add(targetBookRangeName, data);
+                if (targetBookRangeName != null) dataList.Add(targetBookRangeName, data);
             }
         }
 
@@ -2202,13 +2202,14 @@ public class ExcelDataAutoInsertNumChanges
         }
     }
 
-    public void OutDataIsAll(int startRow)
+    public void OutDataIsAll()
     {
         var workBook = new ExcelDataByVsto();
         workBook.GetExcelObj();
         var indexSheet = workBook.ActiveSheet;
-        var indexRange = indexSheet.Rows[startRow];
+        var indexRange = indexSheet.UsedRange;
         var startValue = workBook.FindValue(indexRange, "*自动填表*");
+        int startRow = startValue.Item1;
         var activityRankRange = indexSheet.Cells[startRow - 1, startValue.Item2 + 1];
         var activityRankCountRange = indexSheet.Cells[startRow - 2, startValue.Item2 + 1];
         var activityRank = (int)activityRankRange.Value;

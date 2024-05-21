@@ -115,4 +115,4 @@ public class SelfGraphXEdge : EdgeBase<SelfGraphXVertex>
         return $"{Source.Name} -> {Target.Name}";
     }
 }
-//
+
