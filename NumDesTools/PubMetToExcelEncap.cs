@@ -255,8 +255,8 @@ public class ExcelDataByVsto
     public (List<object> sheetHeaderCol, List<List<object>> sheetData) Read(Range rangeData, Range rangeHeader,
         int headRow)
     {
-        object[,] rangeValue = rangeData.Value;
-        object[,] headRangeValue = rangeHeader.Value;
+        object[,] rangeValue = rangeData.Value2;
+        object[,] headRangeValue = rangeHeader.Value2;
         var sheetData = new List<List<object>>();
         var sheetHeaderCol = new List<object>();
         for (var row = 1; row <= rangeValue.GetLength(0); row++)

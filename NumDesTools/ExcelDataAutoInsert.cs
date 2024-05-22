@@ -2190,9 +2190,9 @@ public class ExcelDataAutoInsertNumChanges
                 if (keyIndexValue != null && keyTargetValue != null)
                 {
                     var keyIndexRow = excelObj.FindFromRow(sheetTarget, keyIndexCol, keyIndexValue);
-                    var baseValue = sheetTarget.Cells[keyIndexRow, keyTargetCol].Value;
-                    if ((string)baseValue != keyTargetValue)
-                        sheetTarget.Cells[keyIndexRow, keyTargetCol].Value = keyTargetValue;
+                    var baseValue = sheetTarget.Cells[keyIndexRow, keyTargetCol].Value?.ToString();
+                    if (baseValue != keyTargetValue)
+                        sheetTarget.Cells[keyIndexRow, keyTargetCol].Value = double.TryParse(keyTargetValue, out double number) ? number : keyTargetValue;
                     else
                         repeatValueCount++;
                 }

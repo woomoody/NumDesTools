@@ -2,7 +2,6 @@
 using GraphX.Controls;
 using GraphX.Logic.Algorithms.LayoutAlgorithms;
 using GraphX.Logic.Models;
-using QuickGraph;
 using System.Windows.Input;
 using MessageBox = System.Windows.MessageBox;
 
@@ -73,7 +72,7 @@ namespace NumDesTools.UI
             graphArea.LogicCore = logicCore;
 
             // 布局和渲染图形
-            graphArea.LogicCore.DefaultLayoutAlgorithm = LayoutAlgorithmTypeEnum.ISOM;
+            graphArea.LogicCore.DefaultLayoutAlgorithm = LayoutAlgorithmTypeEnum.KK;
             graphArea.GenerateGraph();
 
 
@@ -101,6 +100,7 @@ namespace NumDesTools.UI
         {
             VertexControl vc = (VertexControl)sender;
             SelfGraphXVertex vertex = (SelfGraphXVertex)vc.Vertex;
+
             MessageBox.Show($"点击了顶点：{vertex.Name}");
         }
 
