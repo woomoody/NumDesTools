@@ -25,6 +25,6 @@
                     Background="#FF1C1A1A" 
                     Margin="0,0,10,10" 
                     BorderBrush="#FFA3B0D6" 
-                    Foreground="#FFFFFEFE"/>
+                    Foreground="#FFFFFEFE" Cursor="Pen"/>
     </Grid>
 </UserControl>
