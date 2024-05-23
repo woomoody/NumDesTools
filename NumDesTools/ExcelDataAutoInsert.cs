@@ -398,7 +398,10 @@ public class ExcelDataAutoInsertLanguage
                 c = 1;
             else if (fixFileName == "Localizations.xlsx")
                 c = 2;
-            else if (fixFileName == "GuideDialogBranch.xlsx") c = 3;
+            else if (fixFileName == "GuideDialogBranch.xlsx")
+                c = 3;
+            else if (fixFileName == "GuideDialogDetailSpecialSetting.xlsx")
+                c = 4;
             var idList = new List<string>();
             for (var r = 0; r < sourceDataList.Count; r++)
             {
@@ -640,7 +643,7 @@ public class ExcelDataAutoInsertLanguage
             if (errorExcel != 0) continue;
             int startRow = endRowSource + 1;
             int endRow2 = startRow + sourceDataList.Count - 1;
-            if (fixFileName == "GuideDialogBranch.xlsx" || fixFileName == "GuideDialogGroup.xlsx")
+            if (fixFileName == "GuideDialogBranch.xlsx" || fixFileName == "GuideDialogGroup.xlsx" || fixFileName == "GuideDialogDetailSpecialSetting.xlsx")
             {
                 var uniqueValues = new HashSet<string>();
                 for (var row = 4; row <= endRow2; row++)
@@ -785,7 +788,10 @@ public class ExcelDataAutoInsertLanguage
                 c = 1;
             else if (fixFileName == "Localizations.xlsx")
                 c = 2;
-            else if (fixFileName == "GuideDialogBranch.xlsx") c = 3;
+            else if (fixFileName == "GuideDialogBranch.xlsx") 
+                c = 3;
+            else if (fixFileName == "GuideDialogDetailSpecialSetting.xlsx")
+                c = 4;
             var idList = new List<string>();
             for (var r = 0; r < sourceDataList.Count; r++)
             {
@@ -1022,7 +1028,7 @@ public class ExcelDataAutoInsertLanguage
             if (errorExcel != 0) continue;
             var startRow = endRowSource + 1;
             int endRow2 = startRow + sourceDataList.Count - 1;
-            if (fixFileName == "GuideDialogBranch.xlsx" || fixFileName == "GuideDialogGroup.xlsx")
+            if (fixFileName == "GuideDialogBranch.xlsx" || fixFileName == "GuideDialogGroup.xlsx" || fixFileName == "GuideDialogDetailSpecialSetting.xlsx")
             {
                 var uniqueValues = new HashSet<string>();
                 for (var row = 4; row <= endRow2; row++)
