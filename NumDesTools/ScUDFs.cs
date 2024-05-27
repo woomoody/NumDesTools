@@ -192,6 +192,19 @@ public class ExcelUdf
         return "Error未找到";
     }
 
+    [ExcelFunction(Category = "UDF-查找值", IsVolatile = true, IsMacroType = true,
+        Description = "替换正则到的数据为指定值")]
+    public static string ReplaceKey(
+        [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "单元格")] string inputRange,
+        [ExcelArgument(AllowReference = true, Description = "正则方案：%d", Name = "正则方案")] string regexMethod,
+        [ExcelArgument(AllowReference = true, Description = "替换值：abc", Name = "替换值")] string replaceValue
+        )
+    {
+        string result  = Regex.Replace(inputRange, regexMethod, replaceValue);
+        
+        return result;
+    }
+
     [ExcelFunction(Category = "UDF-获取表格信息", IsVolatile = true, IsMacroType = true, Description = "获取单元格背景色")]
     public static string GetCellColor(
         [ExcelArgument(AllowReference = true, Name = "单元格地址", Description = "引用Range&Cell地址,eg:A1")] object address)
