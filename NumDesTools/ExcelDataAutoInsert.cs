@@ -540,13 +540,17 @@ public class ExcelDataAutoInsertLanguage
                     }
                     else if (source == "角色表情")
                     {
-                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)].ToString();
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)]?.ToString();
                         for (var k = 0; k < emoDataList.Count; k++)
                         {
                             var targetValue = emoDataList[k][0].ToString();
                             if (targetValue == sourceValue)
                             {
                                 var emoId = emoDataList[k][2];
+                                if (emoId == null)
+                                {
+                                    emoId = "idle";
+                                }
                                 cellTarget.Value = emoId;
                                 break;
                             }
@@ -643,14 +647,14 @@ public class ExcelDataAutoInsertLanguage
             if (errorExcel != 0) continue;
             int startRow = endRowSource + 1;
             int endRow2 = startRow + sourceDataList.Count - 1;
-            if (fixFileName == "GuideDialogBranch.xlsx" || fixFileName == "GuideDialogGroup.xlsx" || fixFileName == "GuideDialogDetailSpecialSetting.xlsx")
+            if (fixFileName == "GuideDialogBranch.xlsx" || fixFileName == "GuideDialogGroup.xlsx" || fixFileName == "GuideDialogDetailSpecialSetting.xlsx" || fixFileName == "Localizations.xlsx")
             {
                 var uniqueValues = new HashSet<string>();
                 for (var row = 4; row <= endRow2; row++)
                 {
                     var cellValue = targetSheet.Cells[row, 2].Value?.ToString() ?? "";
 
-                    if (uniqueValues.Contains(cellValue) || cellValue == "")
+                    if (uniqueValues.Contains(cellValue) || string.IsNullOrWhiteSpace(cellValue))
                     {
                         targetSheet.DeleteRow(row);
                         row--;
@@ -925,13 +929,17 @@ public class ExcelDataAutoInsertLanguage
                     }
                     else if (source == "角色表情")
                     {
-                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)].ToString();
+                        var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)]?.ToString();
                         for (var k = 0; k < emoDataList.Count; k++)
                         {
                             var targetValue = emoDataList[k][0].ToString();
                             if (targetValue == sourceValue)
                             {
                                 var emoId = emoDataList[k][2];
+                                if (emoId == null)
+                                {
+                                    emoId = "idle";
+                                }
                                 cellTarget.Value = emoId;
                                 break;
                             }
@@ -1028,14 +1036,14 @@ public class ExcelDataAutoInsertLanguage
             if (errorExcel != 0) continue;
             var startRow = endRowSource + 1;
             int endRow2 = startRow + sourceDataList.Count - 1;
-            if (fixFileName == "GuideDialogBranch.xlsx" || fixFileName == "GuideDialogGroup.xlsx" || fixFileName == "GuideDialogDetailSpecialSetting.xlsx")
+            if (fixFileName == "GuideDialogBranch.xlsx" || fixFileName == "GuideDialogGroup.xlsx" || fixFileName == "GuideDialogDetailSpecialSetting.xlsx" || fixFileName == "Localizations.xlsx")
             {
                 var uniqueValues = new HashSet<string>();
                 for (var row = 4; row <= endRow2; row++)
                 {
                     var cellValue = targetSheet.Cells[row, 2].Value?.ToString() ?? "";
 
-                    if (uniqueValues.Contains(cellValue) || cellValue == "")
+                    if (uniqueValues.Contains(cellValue) || string.IsNullOrWhiteSpace(cellValue))
                     {
                         targetSheet.DeleteRow(row);
                         row--;

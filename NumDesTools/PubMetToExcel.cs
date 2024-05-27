@@ -730,6 +730,7 @@ public class PubMetToExcel
 
         var targetList = new List<(string, string, int, int)>();
         var isAll = errorValue.Contains("*");
+        errorValue = errorValue.Replace("*", "");
         var options = new ParallelOptions
             { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
