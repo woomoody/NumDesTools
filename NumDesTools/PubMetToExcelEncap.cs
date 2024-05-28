@@ -1,5 +1,5 @@
-﻿using OfficeOpenXml;
-using System.Dynamic;
+﻿using System.Dynamic;
+using OfficeOpenXml;
 
 #pragma warning disable CA1416
 
@@ -90,7 +90,13 @@ public class ExcelDataByEpplus
         return true;
     }
 
-    public List<dynamic> Read(ExcelWorksheet sheet, int rowFirst, int rowEnd, int colFirst = 1, int indexRow = 4)
+    public List<dynamic> Read(
+        ExcelWorksheet sheet,
+        int rowFirst,
+        int rowEnd,
+        int colFirst = 1,
+        int indexRow = 4
+    )
     {
         var list = new List<dynamic>();
         int colCount = sheet.Dimension.Columns;
@@ -109,8 +115,13 @@ public class ExcelDataByEpplus
         return list;
     }
 
-    public Dictionary<string, List<object>> ReadToDic(ExcelWorksheet sheet, int rowFirst, int colFirst,
-        List<int> usedData, int rowEnd = 1)
+    public Dictionary<string, List<object>> ReadToDic(
+        ExcelWorksheet sheet,
+        int rowFirst,
+        int colFirst,
+        List<int> usedData,
+        int rowEnd = 1
+    )
     {
         Dictionary<string, List<object>> dataDict = new Dictionary<string, List<object>>();
         var colCount = usedData.Count();
@@ -146,8 +157,13 @@ public class ExcelDataByEpplus
         return dataDict;
     }
 
-    public static Dictionary<string, List<object>> ReadExcelDataToDicByEpplus(string path, string sheetName,
-        int startRow, int startCol, List<int> usedData)
+    public static Dictionary<string, List<object>> ReadExcelDataToDicByEpplus(
+        string path,
+        string sheetName,
+        int startRow,
+        int startCol,
+        List<int> usedData
+    )
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         Dictionary<string, List<object>> dataDict = new Dictionary<string, List<object>>();
@@ -252,8 +268,11 @@ public class ExcelDataByVsto
         ActiveWorkbookPath = activeWorkbookPath;
     }
 
-    public (List<object> sheetHeaderCol, List<List<object>> sheetData) Read(Range rangeData, Range rangeHeader,
-        int headRow)
+    public (List<object> sheetHeaderCol, List<List<object>> sheetData) Read(
+        Range rangeData,
+        Range rangeHeader,
+        int headRow
+    )
     {
         object[,] rangeValue = rangeData.Value2;
         object[,] headRangeValue = rangeHeader.Value2;
@@ -281,12 +300,21 @@ public class ExcelDataByVsto
         return excelData;
     }
 
-    public void Write(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast,
-        object[,] rangeValue)
+    public void Write(
+        string sheetName,
+        int rowFirst,
+        int rowLast,
+        int colFirst,
+        int colLast,
+        object[,] rangeValue
+    )
     {
         var sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
         var range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
-        ExcelAsyncUtil.QueueAsMacro(() => { range.SetValue(rangeValue); });
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            range.SetValue(rangeValue);
+        });
     }
 
     public (int row, int column) FindValue(Range searchRange, object valueToFind)

@@ -16,15 +16,18 @@ public class ExcelLinksGraphic
             var linkExcel = new List<string>();
             var mainCell = usedRange.Cells[row, 1].Value;
             var mainValue = "";
-            if (mainCell != null) mainValue = mainCell.ToString();
+            if (mainCell != null)
+                mainValue = mainCell.ToString();
             if (mainValue != "")
             {
                 for (var col = 2; col <= usedRange.Columns.Count; col++)
                 {
                     var linkCell = usedRange.Cells[row, col].Value;
                     var linkValue = "";
-                    if (linkCell != null) linkValue = linkCell.ToString() + @".xlsx";
-                    if (linkValue != "") linkExcel.Add(linkValue);
+                    if (linkCell != null)
+                        linkValue = linkCell.ToString() + @".xlsx";
+                    if (linkValue != "")
+                        linkExcel.Add(linkValue);
                 }
 
                 mainExcel[mainValue] = linkExcel;

@@ -1,8 +1,8 @@
-﻿using GraphX.Common.Enums;
+﻿using System.Windows.Input;
+using GraphX.Common.Enums;
 using GraphX.Controls;
 using GraphX.Logic.Algorithms.LayoutAlgorithms;
 using GraphX.Logic.Models;
-using System.Windows.Input;
 using MessageBox = System.Windows.MessageBox;
 
 namespace NumDesTools.UI
@@ -15,7 +15,6 @@ namespace NumDesTools.UI
         public SheetLinksWindow()
         {
             InitializeComponent();
-
 
             //// 创建图形
             //var graph = new CompoundGraph<SelfGraphXVertex, SelfGraphXEdge>();
@@ -63,18 +62,26 @@ namespace NumDesTools.UI
             var edge = new SelfGraphXEdge(childA2, childB1);
             graph.AddEdge(edge);
 
-
             // 创建图形控件
-            var graphArea = new GraphArea<SelfGraphXVertex, SelfGraphXEdge, CompoundGraph<SelfGraphXVertex, SelfGraphXEdge>>();
+            var graphArea =
+                new GraphArea<
+                    SelfGraphXVertex,
+                    SelfGraphXEdge,
+                    CompoundGraph<SelfGraphXVertex, SelfGraphXEdge>
+                >();
             // 创建并设置LogicCore
-            var logicCore = new GXLogicCore<SelfGraphXVertex, SelfGraphXEdge, CompoundGraph<SelfGraphXVertex, SelfGraphXEdge>>();
+            var logicCore =
+                new GXLogicCore<
+                    SelfGraphXVertex,
+                    SelfGraphXEdge,
+                    CompoundGraph<SelfGraphXVertex, SelfGraphXEdge>
+                >();
             logicCore.Graph = graph;
             graphArea.LogicCore = logicCore;
 
             // 布局和渲染图形
             graphArea.LogicCore.DefaultLayoutAlgorithm = LayoutAlgorithmTypeEnum.KK;
             graphArea.GenerateGraph();
-
 
             // 为顶点和边添加交互事件，并设置顶点的标签
             foreach (var vc in graphArea.VertexList)
@@ -89,13 +96,13 @@ namespace NumDesTools.UI
                 ec.Value.MouseRightButtonDown += EdgeControl_MouseRightButtonDown;
             }
 
-
             // 创建一个ZoomControl并将GraphArea添加到其中
             ZoomControl zoomControl = new ZoomControl();
             zoomControl.Content = graphArea;
 
             BaseGrid.Children.Add(zoomControl);
         }
+
         private void VertexControl_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             VertexControl vc = (VertexControl)sender;
@@ -125,5 +132,4 @@ namespace NumDesTools.UI
             MessageBox.Show($"右击了边：{edge.Source.Name} -> {edge.Target.Name}");
         }
     }
-
 }
