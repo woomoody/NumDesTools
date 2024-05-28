@@ -17,14 +17,29 @@
         </Style>
     </UserControl.Resources>
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
         <ListBox x:Name="ListBoxSheet" 
-                    ItemContainerStyle="{StaticResource SheetListBoxItemStyle}"
-                    SelectionMode="Extended" 
-                    SelectionChanged="ListBoxSheet_SelectionChanged" 
-                    PreviewMouseRightButtonDown="ListBoxSheet_PreviewMouseRightButtonDown" 
-                    Background="#FF1C1A1A" 
-                    Margin="0,0,10,10" 
-                    BorderBrush="#FFA3B0D6" 
-                    Foreground="#FFFFFEFE" Cursor="Pen"/>
+                 Grid.Row="0"
+                 ItemContainerStyle="{StaticResource SheetListBoxItemStyle}"
+                 SelectionMode="Extended" 
+                 SelectionChanged="ListBoxSheet_SelectionChanged" 
+                 PreviewMouseRightButtonDown="ListBoxSheet_PreviewMouseRightButtonDown" 
+                 Background="#FF1C1A1A" 
+                 Margin="10,10,0,10" 
+                 BorderBrush="#FFA3B0D6" 
+                 Foreground="#FFFFFEFE" 
+                 Cursor="Pen">
+        </ListBox>
+        <StatusBar x:Name="StatusBar" 
+                   Grid.Row="1"
+                   Height="22" 
+                   Margin="10,0,0,0" 
+                   VerticalAlignment="Bottom" 
+                   Background="Black" 
+                   Foreground="White" 
+                   />
     </Grid>
 </UserControl>

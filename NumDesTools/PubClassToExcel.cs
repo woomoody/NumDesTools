@@ -16,6 +16,8 @@ public class SelfComSheetCollect : INotifyPropertyChanged
 {
     private string _name;
     private bool _isHidden;
+    private string _detailInfo;
+    private Tuple<int, int> _usedRangeSize;
 
     public string Name
     {
@@ -42,7 +44,30 @@ public class SelfComSheetCollect : INotifyPropertyChanged
             }
         }
     }
-
+    public string DetailInfo
+    {
+        get { return _detailInfo; }
+        set
+        {
+            if (_detailInfo != value)
+            {
+                _detailInfo = value;
+                OnPropertyChanged(nameof(DetailInfo));
+            }
+        }
+    }
+    public Tuple<int,int> UsedRangeSize
+    {
+        get { return _usedRangeSize; }
+        set
+        {
+            if (_usedRangeSize != value)
+            {
+                _usedRangeSize = value;
+                OnPropertyChanged(nameof(UsedRangeSize));
+            }
+        }
+    }
     public event PropertyChangedEventHandler PropertyChanged;
 
     protected virtual void OnPropertyChanged(string propertyName)
