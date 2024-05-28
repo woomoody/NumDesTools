@@ -138,7 +138,7 @@ namespace NumDesTools.UI
             StatusBar.Items.Clear();
             var statusBarItem = new StatusBarItem
             {
-                Content = 
+                Content =
                     "区域：" + item.UsedRangeSize.Item1 + "行 ," + item.UsedRangeSize.Item2 + "列"
             };
             statusBarItem.ToolTip = statusBarItem.Content; // 设置 ToolTip
