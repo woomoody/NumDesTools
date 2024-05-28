@@ -33,7 +33,7 @@
                  Foreground="#FFFFFEFE" 
                  Cursor="Pen">
         </ListBox>
-        <StatusBar x:Name="StatusBar" 
+        <StatusBar x:Name="statusBar" 
                    Grid.Row="1"
                    Height="22" 
                    Margin="10,0,0,0" 
