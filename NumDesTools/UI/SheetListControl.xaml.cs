@@ -26,7 +26,7 @@ namespace NumDesTools.UI
                 {
                     Name = x.Name,
                     IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden,
-                    DetailInfo = (x.Cells[1, 2] as Range)?.Value2?.ToString(),
+                    DetailInfo = (x.Cells[1, 2] as Range).Value2?.ToString(),
                     UsedRangeSize = new Tuple<int, int>(x.UsedRange.Rows.Count, x.UsedRange.Columns.Count)
                 });
 
@@ -131,20 +131,6 @@ namespace NumDesTools.UI
 
             listBox.ItemContainerStyle = itemContainerStyle;
         }
-
-        // 更新 StatusBar 的方法
-        private void UpdateStatusBar(SelfComSheetCollect item)
-        {
-            StatusBar.Items.Clear();
-            var statusBarItem = new StatusBarItem
-            {
-                Content = 
-                    "区域：" + item.UsedRangeSize.Item1 + "行 ," + item.UsedRangeSize.Item2 + "列"
-            };
-            statusBarItem.ToolTip = statusBarItem.Content; // 设置 ToolTip
-            StatusBar.Items.Add(statusBarItem);
-        }
-
     }
 
 }
