@@ -15,8 +15,9 @@ namespace NumDesTools.UI
         {
             InitializeComponent();
             this.DataContext = this;
-            TargetSheetList =
-                new ObservableCollection<WorkBookSearchCollect>(list.Select(t => new WorkBookSearchCollect(t)));
+            TargetSheetList = new ObservableCollection<WorkBookSearchCollect>(
+                list.Select(t => new WorkBookSearchCollect(t))
+            );
         }
 
         private void ListBoxWorkBook_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -25,7 +26,11 @@ namespace NumDesTools.UI
             if (listBox.SelectedItem != null)
             {
                 var selectedWorkBook = (WorkBookSearchCollect)listBox.SelectedItem;
-                PubMetToExcel.OpenExcelAndSelectCell(selectedWorkBook.FilePath , selectedWorkBook.SheetName , selectedWorkBook.CellCol + selectedWorkBook.CellRow);
+                PubMetToExcel.OpenExcelAndSelectCell(
+                    selectedWorkBook.FilePath,
+                    selectedWorkBook.SheetName,
+                    selectedWorkBook.CellCol + selectedWorkBook.CellRow
+                );
             }
         }
     }

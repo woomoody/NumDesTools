@@ -17,17 +17,23 @@ namespace NumDesTools.UI
     public partial class SheetListControl
     {
         public static Application ExcelApp = NumDesAddIn.App;
-        public ObservableCollection<SelfComSheetCollect> Sheets { get; } = new ObservableCollection<SelfComSheetCollect>();
+        public ObservableCollection<SelfComSheetCollect> Sheets { get; } =
+            new ObservableCollection<SelfComSheetCollect>();
+
         public SheetListControl()
         {
             InitializeComponent();
-            var worksheets = ExcelApp.ActiveWorkbook.Sheets.Cast<Worksheet>()
+            var worksheets = ExcelApp
+                .ActiveWorkbook.Sheets.Cast<Worksheet>()
                 .Select(x => new SelfComSheetCollect
                 {
                     Name = x.Name,
                     IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden,
                     DetailInfo = (x.Cells[1, 2] as Range)?.Value2?.ToString(),
-                    UsedRangeSize = new Tuple<int, int>(x.UsedRange.Rows.Count, x.UsedRange.Columns.Count)
+                    UsedRangeSize = new Tuple<int, int>(
+                        x.UsedRange.Rows.Count,
+                        x.UsedRange.Columns.Count
+                    )
                 });
 
             foreach (var worksheet in worksheets)
@@ -38,7 +44,6 @@ namespace NumDesTools.UI
             ListBoxSheet.DisplayMemberPath = "Name";
 
             SetListBoxItemStyle(ListBoxSheet);
-
         }
 
         private void ListBoxSheet_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -73,7 +78,8 @@ namespace NumDesTools.UI
                 int visibleSheetsCount = 0;
                 foreach (Worksheet sheet in ExcelApp.ActiveWorkbook.Sheets)
                 {
-                    if (sheet.Visible == XlSheetVisibility.xlSheetVisible) visibleSheetsCount++;
+                    if (sheet.Visible == XlSheetVisibility.xlSheetVisible)
+                        visibleSheetsCount++;
                 }
 
                 if (ListBoxSheet.SelectedItems.Count >= visibleSheetsCount)
@@ -122,12 +128,16 @@ namespace NumDesTools.UI
             };
 
             trigger.Setters.Add(new Setter(FontStyleProperty, FontStyles.Italic));
-            trigger.Setters.Add(new Setter(ForegroundProperty, System.Windows.Media.Brushes.PapayaWhip));
+            trigger.Setters.Add(
+                new Setter(ForegroundProperty, System.Windows.Media.Brushes.PapayaWhip)
+            );
 
             itemContainerStyle.Triggers.Add(trigger);
 
             // 添加 ToolTip
-            itemContainerStyle.Setters.Add(new Setter(ToolTipProperty, new System.Windows.Data.Binding("DetailInfo")));
+            itemContainerStyle.Setters.Add(
+                new Setter(ToolTipProperty, new System.Windows.Data.Binding("DetailInfo"))
+            );
 
             listBox.ItemContainerStyle = itemContainerStyle;
         }
@@ -138,13 +148,10 @@ namespace NumDesTools.UI
             StatusBar.Items.Clear();
             var statusBarItem = new StatusBarItem
             {
-                Content = 
-                    "区域：" + item.UsedRangeSize.Item1 + "行 ," + item.UsedRangeSize.Item2 + "列"
+                Content = "区域：" + item.UsedRangeSize.Item1 + "行 ," + item.UsedRangeSize.Item2 + "列"
             };
             statusBarItem.ToolTip = statusBarItem.Content; // 设置 ToolTip
             StatusBar.Items.Add(statusBarItem);
         }
-
     }
-
 }

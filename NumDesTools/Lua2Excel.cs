@@ -1,8 +1,7 @@
-﻿using NLua;
-using OfficeOpenXml;
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
-
+using NLua;
+using OfficeOpenXml;
 
 namespace NumDesTools;
 
@@ -20,7 +19,12 @@ public class Lua2Excel
             var excelName = Path.GetFileNameWithoutExtension(filePath);
             excelName = excelName.Substring(0, excelName.Length - 4);
             excelName = excelName.Replace("Table", "");
-            PubMetToExcel.OpenOrCreatExcelByEpPlus(excelFilePath, excelName, out var sheet, out var excel);
+            PubMetToExcel.OpenOrCreatExcelByEpPlus(
+                excelFilePath,
+                excelName,
+                out var sheet,
+                out var excel
+            );
             errorLogLua += LuaDataExportToExcel(filePath, sheet);
             excel.Save();
             excel.Dispose();
@@ -49,7 +53,8 @@ public class Lua2Excel
         {
             var newLines = new string[lines.Length + 1];
             newLines[0] = targetContent;
-            for (var i = 0; i < lines.Length; i++) newLines[i + 1] = lines[i];
+            for (var i = 0; i < lines.Length; i++)
+                newLines[i + 1] = lines[i];
             File.WriteAllLines(luaPath, newLines);
         }
 
@@ -107,14 +112,16 @@ public class Lua2Excel
                     var cellTitle = sheet.Cells[1, j].Value;
                     var value = luaData[cellTitle];
                     var cellValue = value;
-                    if (value is LuaTable) cellValue = ProcessLuaTable((LuaTable)value);
+                    if (value is LuaTable)
+                        cellValue = ProcessLuaTable((LuaTable)value);
                     sheet.Cells[row, j].Value = cellValue;
                 }
 
                 row++;
             }
 
-            for (var col = 1; col <= sheet.Dimension.End.Column; col++) sheet.Column(col).AutoFit();
+            for (var col = 1; col <= sheet.Dimension.End.Column; col++)
+                sheet.Column(col).AutoFit();
         }
         catch
         {
@@ -150,7 +157,8 @@ public class Lua2Excel
 #pragma warning disable IDE0056
             var lastCharacter = cellValue[cellValue.Length - 1].ToString();
 #pragma warning restore IDE0056
-            if (lastCharacter == ",") cellValue = cellValue.Substring(0, cellValue.Length - 1);
+            if (lastCharacter == ",")
+                cellValue = cellValue.Substring(0, cellValue.Length - 1);
             cellValue = "{" + cellValue + "}";
         }
         else

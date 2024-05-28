@@ -1,10 +1,10 @@
-﻿using OfficeOpenXml;
-using System.Threading.Tasks;
-using System.Data;
-using DataTable = System.Data.DataTable;
+﻿using System.Data;
 using System.Data.OleDb;
-using ExcelReference = ExcelDna.Integration.ExcelReference;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using OfficeOpenXml;
+using DataTable = System.Data.DataTable;
+using ExcelReference = ExcelDna.Integration.ExcelReference;
 // ReSharper disable All
 
 #pragma warning disable CA1416
@@ -18,8 +18,12 @@ public class PubMetToExcel
 {
     #region EPPlus与Excel
 
-    public static List<(string, string, string)> OpenOrCreatExcelByEpPlus(string excelFilePath, string excelName,
-        out ExcelWorksheet sheet, out ExcelPackage excel)
+    public static List<(string, string, string)> OpenOrCreatExcelByEpPlus(
+        string excelFilePath,
+        string excelName,
+        out ExcelWorksheet sheet,
+        out ExcelPackage excel
+    )
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         sheet = null;
@@ -34,12 +38,21 @@ public class PubMetToExcel
                 sheetCreat.Dispose();
             }
 
-        var errorList = SetExcelObjectEpPlus(excelFilePath, excelName + @".xlsx", out sheet, out excel);
+        var errorList = SetExcelObjectEpPlus(
+            excelFilePath,
+            excelName + @".xlsx",
+            out sheet,
+            out excel
+        );
         return errorList;
     }
 
-    public static List<(string, string, string)> SetExcelObjectEpPlus(dynamic excelPath, dynamic excelName,
-        out ExcelWorksheet sheet, out ExcelPackage excel)
+    public static List<(string, string, string)> SetExcelObjectEpPlus(
+        dynamic excelPath,
+        dynamic excelName,
+        out ExcelWorksheet sheet,
+        out ExcelPackage excel
+    )
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         sheet = null;
@@ -109,8 +122,12 @@ public class PubMetToExcel
         return errorList;
     }
 
-    public static List<int> MergeExcelCol(object[,] sourceRangeValue, ExcelWorksheet targetSheet,
-        object[,] targetRangeTitle, object[,] sourceRangeTitle)
+    public static List<int> MergeExcelCol(
+        object[,] sourceRangeValue,
+        ExcelWorksheet targetSheet,
+        object[,] targetRangeTitle,
+        object[,] sourceRangeTitle
+    )
     {
         var targetColList = new List<int>();
         var defaultCol = targetSheet.Dimension.End.Column;
@@ -118,7 +135,8 @@ public class PubMetToExcel
         for (var c = 0; c < sourceRangeValue.GetLength(1); c++)
         {
             var sourceCol = sourceRangeValue[1, c];
-            if (sourceCol == null) sourceCol = "";
+            if (sourceCol == null)
+                sourceCol = "";
 
             var targetCol = ExcelDataAutoInsert.FindSourceCol(targetSheet, 2, sourceCol.ToString());
             if (targetCol == -1)
@@ -131,17 +149,20 @@ public class PubMetToExcel
             for (var i = 0; i < targetRangeTitle.GetLength(0); i++)
             {
                 var targetTitle = targetRangeTitle[i, 0];
-                if (targetTitle == null) targetTitle = "";
+                if (targetTitle == null)
+                    targetTitle = "";
 
                 for (var j = 0; j < sourceRangeTitle.GetLength(0); j++)
                 {
                     var sourceTitle = sourceRangeTitle[j, 0];
-                    if (sourceTitle == null) sourceTitle = "";
+                    if (sourceTitle == null)
+                        sourceTitle = "";
 
                     if (targetTitle.ToString() == sourceTitle.ToString())
                     {
                         var sourceValue = sourceRangeValue[c, j];
-                        if (sourceValue == null) sourceValue = "";
+                        if (sourceValue == null)
+                            sourceValue = "";
 
                         var targetCell = targetSheet.Cells[targetCol, i + 1];
                         targetCell.Value = sourceValue;
@@ -155,8 +176,12 @@ public class PubMetToExcel
         return targetColList;
     }
 
-    public static List<int> MergeExcel(object[,] sourceRangeValue, ExcelWorksheet targetSheet,
-        object[,] targetRangeTitle, object[,] sourceRangeTitle)
+    public static List<int> MergeExcel(
+        object[,] sourceRangeValue,
+        ExcelWorksheet targetSheet,
+        object[,] targetRangeTitle,
+        object[,] sourceRangeTitle
+    )
     {
         var targetRowList = new List<int>();
         var defaultRow = targetSheet.Dimension.End.Row;
@@ -164,7 +189,8 @@ public class PubMetToExcel
         for (var r = 0; r < sourceRangeValue.GetLength(0); r++)
         {
             var sourceRow = sourceRangeValue[r, 1];
-            if (sourceRow == null) sourceRow = "";
+            if (sourceRow == null)
+                sourceRow = "";
 
             var targetRow = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, sourceRow.ToString());
             if (targetRow == -1)
@@ -177,17 +203,20 @@ public class PubMetToExcel
             for (var i = 0; i < targetRangeTitle.GetLength(1); i++)
             {
                 var targetTitle = targetRangeTitle[0, i];
-                if (targetTitle == null) targetTitle = "";
+                if (targetTitle == null)
+                    targetTitle = "";
 
                 for (var j = 0; j < sourceRangeTitle.GetLength(1); j++)
                 {
                     var sourceTitle = sourceRangeTitle[0, j];
-                    if (sourceTitle == null) sourceTitle = "";
+                    if (sourceTitle == null)
+                        sourceTitle = "";
 
                     if (targetTitle.ToString() == sourceTitle.ToString())
                     {
                         var sourceValue = sourceRangeValue[r, j];
-                        if (sourceValue == null) sourceValue = "";
+                        if (sourceValue == null)
+                            sourceValue = "";
 
                         var targetCell = targetSheet.Cells[targetRow, i + 1];
                         targetCell.Value = sourceValue;
@@ -206,7 +235,13 @@ public class PubMetToExcel
     #region C-API与Excel
 
     [ExcelFunction(IsHidden = true)]
-    public static object[,] ReadExcelDataC(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast)
+    public static object[,] ReadExcelDataC(
+        string sheetName,
+        int rowFirst,
+        int rowLast,
+        int colFirst,
+        int colLast
+    )
     {
         var sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
         var range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
@@ -225,17 +260,35 @@ public class PubMetToExcel
         return rangeValues;
     }
 
-    public static void WriteExcelDataC(string sheetName, int rowFirst, int rowLast, int colFirst, int colLast,
-        object[,] rangeValue)
+    public static void WriteExcelDataC(
+        string sheetName,
+        int rowFirst,
+        int rowLast,
+        int colFirst,
+        int colLast,
+        object[,] rangeValue
+    )
     {
         var sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
         var range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
-        ExcelAsyncUtil.QueueAsMacro(() => { range.SetValue(rangeValue); });
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            range.SetValue(rangeValue);
+        });
     }
 
-    public static Task<(ExcelReference currentRange, string sheetName, string sheetPath)> GetCurrentExcelObjectC()
+    public static Task<(
+        ExcelReference currentRange,
+        string sheetName,
+        string sheetPath
+    )> GetCurrentExcelObjectC()
     {
-        var tcs = new TaskCompletionSource<(ExcelReference currentRange, string sheetName, string sheetPath)>();
+        var tcs =
+            new TaskCompletionSource<(
+                ExcelReference currentRange,
+                string sheetName,
+                string sheetPath
+            )>();
         ExcelAsyncUtil.QueueAsMacro(() =>
         {
             try
@@ -278,7 +331,9 @@ public class PubMetToExcel
 
     #endregion
 
-    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToList(dynamic workSheet)
+    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToList(
+        dynamic workSheet
+    )
     {
         Range dataRange = workSheet.UsedRange;
         object[,] rangeValue = dataRange.Value;
@@ -298,15 +353,21 @@ public class PubMetToExcel
                     rowList.Add(value);
             }
 
-            if (row > 1) sheetData.Add(rowList);
+            if (row > 1)
+                sheetData.Add(rowList);
         }
 
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
 
-    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelf(dynamic workSheet,
-        int dataRow, int dataCol, int headerRow, int headerCol)
+    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelf(
+        dynamic workSheet,
+        int dataRow,
+        int dataCol,
+        int headerRow,
+        int headerCol
+    )
     {
         Range dataRange = workSheet.UsedRange;
         object[,] rangeValue = dataRange.Value;
@@ -326,7 +387,8 @@ public class PubMetToExcel
                     rowList.Add(value);
             }
 
-            if (row > 1) sheetData.Add(rowList);
+            if (row > 1)
+                sheetData.Add(rowList);
         }
 
         for (var column = headerCol; column <= columns; column++)
@@ -339,9 +401,10 @@ public class PubMetToExcel
         return excelData;
     }
 
-    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelfToEnd(
-        dynamic workSheet,
-        int dataRow, int dataCol, int headRow)
+    public static (
+        List<object> sheetHeaderCol,
+        List<List<object>> sheetData
+    ) ExcelDataToListBySelfToEnd(dynamic workSheet, int dataRow, int dataCol, int headRow)
     {
         Range selectRange = NumDesAddIn.App.Selection;
         Range usedRange = workSheet.UsedRange;
@@ -388,7 +451,8 @@ public class PubMetToExcel
             var dataTable = new DataTable();
             var worksheet = package.Workbook.Worksheets["Sheet1"] ?? package.Workbook.Worksheets[0];
             dataTable.TableName = worksheet.Name;
-            for (var col = 1; col <= worksheet.Dimension.End.Column; col++) dataTable.Columns.Add();
+            for (var col = 1; col <= worksheet.Dimension.End.Column; col++)
+                dataTable.Columns.Add();
 
             for (var row = 1; row <= worksheet.Dimension.End.Row; row++)
             {
@@ -421,7 +485,7 @@ public class PubMetToExcel
                     {
                         // ReSharper disable ConditionIsAlwaysTrueOrFalse
                         if (row is not null && row["TABLE_NAME"].ToString().Equals("Sheet1"))
-                            // ReSharper restore ConditionIsAlwaysTrueOrFalse
+                        // ReSharper restore ConditionIsAlwaysTrueOrFalse
                         {
                             sheetName = "Sheet1";
                             break;
@@ -438,7 +502,8 @@ public class PubMetToExcel
                     }
                 }
 
-                if (sheetName != null) dataTable.TableName = sheetName;
+                if (sheetName != null)
+                    dataTable.TableName = sheetName;
                 return dataTable;
             }
             catch (Exception ex)
@@ -449,8 +514,11 @@ public class PubMetToExcel
         }
     }
 
-    public static List<(string, string, int, int, string, string)> FindDataInDataTable(string fileFullName,
-        dynamic dataTable, string findValue)
+    public static List<(string, string, int, int, string, string)> FindDataInDataTable(
+        string fileFullName,
+        dynamic dataTable,
+        string findValue
+    )
     {
         var findValueList = new List<(string, string, int, int, string, string)>();
         var isAll = findValue.Contains("*");
@@ -461,21 +529,41 @@ public class PubMetToExcel
             if (isAll)
             {
                 if (row is not null && row[column].ToString().Contains(findValue))
-                    findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2,
-                        row.Table.Columns.IndexOf(column) + 1, row[1].ToString(), row[2].ToString()));
+                    findValueList.Add(
+                        (
+                            fileFullName,
+                            sheetName,
+                            row.Table.Rows.IndexOf(row) + 2,
+                            row.Table.Columns.IndexOf(column) + 1,
+                            row[1].ToString(),
+                            row[2].ToString()
+                        )
+                    );
             }
             else
             {
                 if (row[column].ToString() == findValue)
-                    findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2,
-                        row.Table.Columns.IndexOf(column) + 1, row[1].ToString(), row[2].ToString()));
+                    findValueList.Add(
+                        (
+                            fileFullName,
+                            sheetName,
+                            row.Table.Rows.IndexOf(row) + 2,
+                            row.Table.Columns.IndexOf(column) + 1,
+                            row[1].ToString(),
+                            row[2].ToString()
+                        )
+                    );
             }
 
         return findValueList;
     }
 
-    public static List<(string, string, int, int, string, string)> FindDataInDataTableKey(string fileFullName,
-        dynamic dataTable, string findValue, int key)
+    public static List<(string, string, int, int, string, string)> FindDataInDataTableKey(
+        string fileFullName,
+        dynamic dataTable,
+        string findValue,
+        int key
+    )
     {
         var findValueList = new List<(string, string, int, int, string, string)>();
         var isAll = findValue.Contains("*");
@@ -485,26 +573,49 @@ public class PubMetToExcel
             if (isAll)
             {
                 if (row is not null && row[key - 1].ToString().Contains(findValue))
-                    findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, key, row[1].ToString(),
-                        row[2].ToString()));
+                    findValueList.Add(
+                        (
+                            fileFullName,
+                            sheetName,
+                            row.Table.Rows.IndexOf(row) + 2,
+                            key,
+                            row[1].ToString(),
+                            row[2].ToString()
+                        )
+                    );
             }
             else
             {
                 if (row[key - 1].ToString() == findValue)
-                    findValueList.Add((fileFullName, sheetName, row.Table.Rows.IndexOf(row) + 2, key, row[1].ToString(),
-                        row[2].ToString()));
+                    findValueList.Add(
+                        (
+                            fileFullName,
+                            sheetName,
+                            row.Table.Rows.IndexOf(row) + 2,
+                            key,
+                            row[1].ToString(),
+                            row[2].ToString()
+                        )
+                    );
             }
 
         return findValueList;
     }
 
-    public static string[] PathExcelFileCollect(List<string> pathList, string fileSuffixName, string[] ignoreFileNames)
+    public static string[] PathExcelFileCollect(
+        List<string> pathList,
+        string fileSuffixName,
+        string[] ignoreFileNames
+    )
     {
         var files = new string[] { };
         foreach (var path in pathList)
         {
-            var file = Directory.EnumerateFiles(path, fileSuffixName)
-                .Where(file => !ignoreFileNames.Any(ignore => Path.GetFileName(file).Contains(ignore)))
+            var file = Directory
+                .EnumerateFiles(path, fileSuffixName)
+                .Where(file =>
+                    !ignoreFileNames.Any(ignore => Path.GetFileName(file).Contains(ignore))
+                )
                 .ToArray();
             files = files.Concat(file).ToArray();
         }
@@ -512,8 +623,13 @@ public class PubMetToExcel
         return files;
     }
 
-    public static Dictionary<string, List<Tuple<object[,]>>> ExcelDataToDictionary(dynamic data, dynamic dicKeyCol,
-        dynamic dicValueCol, int valueRowCount, int valueColCount = 1)
+    public static Dictionary<string, List<Tuple<object[,]>>> ExcelDataToDictionary(
+        dynamic data,
+        dynamic dicKeyCol,
+        dynamic dicValueCol,
+        int valueRowCount,
+        int valueColCount = 1
+    )
     {
         var dic = new Dictionary<string, List<Tuple<object[,]>>>();
 
@@ -521,7 +637,8 @@ public class PubMetToExcel
         {
             var value = data[i][dicKeyCol];
 
-            if (value == null) continue;
+            if (value == null)
+                continue;
 
             var values = new object[valueRowCount, valueColCount];
             for (var k = 0; k < valueRowCount; k++)
@@ -566,16 +683,25 @@ public class PubMetToExcel
         return errorLog;
     }
 
-    public static string RepeatValue2(ExcelWorksheet sheet, int row, int col, List<string> repeatValue)
+    public static string RepeatValue2(
+        ExcelWorksheet sheet,
+        int row,
+        int col,
+        List<string> repeatValue
+    )
     {
         var errorLog = "";
-        var sourceValues = sheet.Cells[row, col, sheet.Dimension.End.Row, col].Select(c => c.Value.ToString()).ToList();
+        var sourceValues = sheet
+            .Cells[row, col, sheet.Dimension.End.Row, col]
+            .Select(c => c.Value.ToString())
+            .ToList();
 
         var indexList = new List<int>();
         foreach (var repeat in repeatValue)
         {
             var rowIndex = sourceValues.FindIndex(c => c == repeat);
-            if (rowIndex == -1) continue;
+            if (rowIndex == -1)
+                continue;
             rowIndex += row;
             indexList.Add(rowIndex);
         }
@@ -609,21 +735,27 @@ public class PubMetToExcel
         return errorLog;
     }
 
-    public static List<(string, string, int, int)> ErrorKeyFromExcelAll(string rootPath, string errorValue)
+    public static List<(string, string, int, int)> ErrorKeyFromExcelAll(
+        string rootPath,
+        string errorValue
+    )
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
         var mainPath = newPath + @"\Excels\Tables\";
-        var files1 = Directory.EnumerateFiles(mainPath, "*.xlsx")
+        var files1 = Directory
+            .EnumerateFiles(mainPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var langPath = newPath + @"\Excels\Localizations\";
-        var files2 = Directory.EnumerateFiles(langPath, "*.xlsx")
+        var files2 = Directory
+            .EnumerateFiles(langPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var uiPath = newPath + @"\Excels\UIs\";
-        var files3 = Directory.EnumerateFiles(uiPath, "*.xlsx")
+        var files3 = Directory
+            .EnumerateFiles(uiPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var kelangPath = newPath + @"\Excels\Tables\克朗代克\";
@@ -631,7 +763,8 @@ public class PubMetToExcel
         string[] files4 = null;
         if (Directory.Exists(kelangPath))
         {
-            files4 = Directory.EnumerateFiles(kelangPath, "*.xlsx")
+            files4 = Directory
+                .EnumerateFiles(kelangPath, "*.xlsx")
                 .Where(file => !Path.GetFileName(file).Contains("#"))
                 .ToArray();
         }
@@ -696,21 +829,27 @@ public class PubMetToExcel
         return targetList;
     }
 
-    public static List<(string, string, int, int)> ErrorKeyFromExcelAllMultiThread(string rootPath, string errorValue)
+    public static List<(string, string, int, int)> ErrorKeyFromExcelAllMultiThread(
+        string rootPath,
+        string errorValue
+    )
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
         var mainPath = newPath + @"\Excels\Tables\";
-        var files1 = Directory.EnumerateFiles(mainPath, "*.xlsx")
+        var files1 = Directory
+            .EnumerateFiles(mainPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var langPath = newPath + @"\Excels\Localizations\";
-        var files2 = Directory.EnumerateFiles(langPath, "*.xlsx")
+        var files2 = Directory
+            .EnumerateFiles(langPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var uiPath = newPath + @"\Excels\UIs\";
-        var files3 = Directory.EnumerateFiles(uiPath, "*.xlsx")
+        var files3 = Directory
+            .EnumerateFiles(uiPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var kelangPath = newPath + @"\Excels\Tables\克朗代克\";
@@ -718,7 +857,8 @@ public class PubMetToExcel
         string[] files4 = null;
         if (Directory.Exists(kelangPath))
         {
-            files4 = Directory.EnumerateFiles(kelangPath, "*.xlsx")
+            files4 = Directory
+                .EnumerateFiles(kelangPath, "*.xlsx")
                 .Where(file => !Path.GetFileName(file).Contains("#"))
                 .ToArray();
         }
@@ -731,76 +871,87 @@ public class PubMetToExcel
         var targetList = new List<(string, string, int, int)>();
         var isAll = errorValue.Contains("*");
         errorValue = errorValue.Replace("*", "");
-        var options = new ParallelOptions
-            { MaxDegreeOfParallelism = Environment.ProcessorCount };
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
-        Parallel.ForEach(files, options, file =>
-        {
-            try
+        Parallel.ForEach(
+            files,
+            options,
+            file =>
             {
-                using (var package = new ExcelPackage(new FileInfo(file)))
+                try
                 {
-                    try
+                    using (var package = new ExcelPackage(new FileInfo(file)))
                     {
-                        var wk = package.Workbook;
-                        var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
-                        for (var col = 2; col <= sheet.Dimension.End.Column; col++)
-                        for (var row = 4; row <= sheet.Dimension.End.Row; row++)
+                        try
                         {
-                            var cellValue = sheet.Cells[row, col].Value;
-                            if (!isAll)
+                            var wk = package.Workbook;
+                            var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
+                            for (var col = 2; col <= sheet.Dimension.End.Column; col++)
+                            for (var row = 4; row <= sheet.Dimension.End.Row; row++)
                             {
-                                if (cellValue != null && cellValue.ToString() == errorValue)
+                                var cellValue = sheet.Cells[row, col].Value;
+                                if (!isAll)
                                 {
-                                    var cellAddress = new ExcelCellAddress(row, col);
-                                    var cellCol = cellAddress.Column;
-                                    var cellRow = cellAddress.Row;
-                                    targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                    if (cellValue != null && cellValue.ToString() == errorValue)
+                                    {
+                                        var cellAddress = new ExcelCellAddress(row, col);
+                                        var cellCol = cellAddress.Column;
+                                        var cellRow = cellAddress.Row;
+                                        targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                    }
+                                }
+                                else
+                                {
+                                    if (
+                                        cellValue != null
+                                        && cellValue.ToString().Contains(errorValue)
+                                    )
+                                    {
+                                        var cellAddress = new ExcelCellAddress(row, col);
+                                        var cellCol = cellAddress.Column;
+                                        var cellRow = cellAddress.Row;
+                                        targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                    }
                                 }
                             }
-                            else
-                            {
-                                if (cellValue != null && cellValue.ToString().Contains(errorValue))
-                                {
-                                    var cellAddress = new ExcelCellAddress(row, col);
-                                    var cellCol = cellAddress.Column;
-                                    var cellRow = cellAddress.Row;
-                                    targetList.Add((file, sheet.Name, cellRow, cellCol));
-                                }
-                            }
-                            }
-                    }
-                    catch
-                    {
-                        // ignored
+                        }
+                        catch
+                        {
+                            // ignored
+                        }
                     }
                 }
+                catch
+                {
+                    // ignored
+                }
             }
-            catch
-            {
-                // ignored
-            }
-        });
+        );
 
         return targetList;
     }
 
-    public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelId(string rootPath,
-        string errorValue)
+    public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelId(
+        string rootPath,
+        string errorValue
+    )
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
         var mainPath = newPath + @"\Excels\Tables\";
-        var files1 = Directory.EnumerateFiles(mainPath, "*.xlsx")
+        var files1 = Directory
+            .EnumerateFiles(mainPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var langPath = newPath + @"\Excels\Localizations\";
-        var files2 = Directory.EnumerateFiles(langPath, "*.xlsx")
+        var files2 = Directory
+            .EnumerateFiles(langPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var uiPath = newPath + @"\Excels\UIs\";
-        var files3 = Directory.EnumerateFiles(uiPath, "*.xlsx")
+        var files3 = Directory
+            .EnumerateFiles(uiPath, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"))
             .ToArray();
         var kelangPath = newPath + @"\Excels\Tables\克朗代克\";
@@ -808,7 +959,8 @@ public class PubMetToExcel
         string[] files4 = null;
         if (Directory.Exists(kelangPath))
         {
-            files4 = Directory.EnumerateFiles(kelangPath, "*.xlsx")
+            files4 = Directory
+                .EnumerateFiles(kelangPath, "*.xlsx")
                 .Where(file => !Path.GetFileName(file).Contains("#"))
                 .ToArray();
         }
@@ -819,7 +971,8 @@ public class PubMetToExcel
         foreach (var file in files)
         {
             var fileName = Path.GetFileName(file);
-            if (fileName.Contains("#")) continue;
+            if (fileName.Contains("#"))
+                continue;
             using (var package = new ExcelPackage(new FileInfo(file)))
             {
                 try
@@ -882,7 +1035,8 @@ public class PubMetToExcel
         var a = col / 26;
         var b = col % 26;
 
-        if (a > 0) return ChangeExcelColChar(a - 1) + (char)(b + 65);
+        if (a > 0)
+            return ChangeExcelColChar(a - 1) + (char)(b + 65);
 
         return ((char)(b + 65)).ToString();
     }
@@ -903,7 +1057,8 @@ public class PubMetToExcel
         else
         {
             using var reader = new StreamReader(filePath);
-            while (reader.ReadLine() is { } line) textLineList.Add(line);
+            while (reader.ReadLine() is { } line)
+                textLineList.Add(line);
         }
 
         return textLineList;
@@ -919,8 +1074,10 @@ public class PubMetToExcel
             var errorCell = errorList[i][j].Item1;
             var errorExcelLog = errorList[i][j].Item2;
             var errorExcelName = errorList[i][j].Item3;
-            if (errorCell == "-1") continue;
-            errorLog = errorLog + "【" + errorCell + "】" + errorExcelName + "#" + errorExcelLog + "\r\n";
+            if (errorCell == "-1")
+                continue;
+            errorLog =
+                errorLog + "【" + errorCell + "】" + errorExcelName + "#" + errorExcelLog + "\r\n";
         }
 
         return errorLog;
@@ -966,14 +1123,18 @@ public class PubMetToExcel
         }
         // ReSharper disable EmptyGeneralCatchClause
         catch (Exception)
-            // ReSharper restore EmptyGeneralCatchClause
-        {
-        }
+        // ReSharper restore EmptyGeneralCatchClause
+        { }
 
         GC.Collect();
     }
 
-    public static void ListToArrayToRange(List<List<object>> targetList, dynamic workSheet, int startRow, int startCol)
+    public static void ListToArrayToRange(
+        List<List<object>> targetList,
+        dynamic workSheet,
+        int startRow,
+        int startCol
+    )
     {
         var rowCount = targetList.Count;
         var columnCount = 0;
@@ -987,8 +1148,10 @@ public class PubMetToExcel
         for (var i = 0; i < rowCount; i++)
         for (var j = 0; j < targetList[i].Count; j++)
             targetDataArr[i, j] = targetList[i][j];
-        var targetRange = workSheet.Range[workSheet.Cells[startRow, startCol],
-            workSheet.Cells[startRow + rowCount - 1, startCol + columnCount - 1]];
+        var targetRange = workSheet.Range[
+            workSheet.Cells[startRow, startCol],
+            workSheet.Cells[startRow + rowCount - 1, startCol + columnCount - 1]
+        ];
         targetRange.Value = targetDataArr;
     }
 
@@ -1016,7 +1179,8 @@ public class PubMetToExcel
     {
         var list = new List<int>();
 
-        for (var i = minValue; i <= maxValue; i++) list.Add(i + baseValue);
+        for (var i = minValue; i <= maxValue; i++)
+            list.Add(i + baseValue);
 
         var random = new Random();
         var n = list.Count;
@@ -1042,13 +1206,17 @@ public class PubMetToExcel
         {
             var innerList = listOfLists[i];
 
-            for (var j = 0; j < colCount; j++) twoDArray[i, j] = innerList[j];
+            for (var j = 0; j < colCount; j++)
+                twoDArray[i, j] = innerList[j];
         }
 
         return twoDArray;
     }
 
-    public static (int row, int column) FindValueInRangeByVsto(Range searchRange, object valueToFind)
+    public static (int row, int column) FindValueInRangeByVsto(
+        Range searchRange,
+        object valueToFind
+    )
     {
         Range foundRange = searchRange.Find(valueToFind);
         if (foundRange != null)
@@ -1061,8 +1229,11 @@ public class PubMetToExcel
         }
     }
 
-    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) RangeToListByVsto(Range rangeData,
-        Range rangeHeader, int headRow)
+    public static (List<object> sheetHeaderCol, List<List<object>> sheetData) RangeToListByVsto(
+        Range rangeData,
+        Range rangeHeader,
+        int headRow
+    )
     {
         object[,] rangeValue = rangeData.Value;
         object[,] headRangeValue = rangeHeader.Value;
@@ -1090,7 +1261,5 @@ public class PubMetToExcel
         return excelData;
     }
 
-    public static void TestEpPlus()
-    {
-    }
+    public static void TestEpPlus() { }
 }

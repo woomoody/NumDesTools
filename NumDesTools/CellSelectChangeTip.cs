@@ -70,9 +70,11 @@ public class CellSelectChangeTip : ClickThroughForm
         var targetHeightPixels = Convert.ToInt32(target.Height * 1.67 * zoom);
         _currentLeft = targetLeftPixels + targetWidthPixels;
         _currentTop = targetTopPixels + targetHeightPixels;
-        if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth) _currentLeft = targetLeftPixels - tipWidth;
+        if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth)
+            _currentLeft = targetLeftPixels - tipWidth;
 
-        if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight) _currentTop = targetTopPixels - tipHeight;
+        if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight)
+            _currentTop = targetTopPixels - tipHeight;
         Location = new Point(_currentLeft, _currentTop);
         ClientSize = new Size(tipWidth, tipHeight);
         Paint += TargetStrWrite;
@@ -88,11 +90,7 @@ public class CellSelectChangeTip : ClickThroughForm
 
     private class Win32Window : IWin32Window
     {
-        public IntPtr Handle
-        {
-            get;
-            private set;
-        }
+        public IntPtr Handle { get; private set; }
 #pragma warning disable IDE0290
         public Win32Window(IntPtr handle)
 #pragma warning restore IDE0290
@@ -115,7 +113,8 @@ public class CellSelectChangeTip : ClickThroughForm
             if (isArray)
                 for (var i = 1; i <= arr.GetLength(0); i++)
                 {
-                    for (var j = 1; j <= arr.GetLength(1); j++) cellStr += arr[i, j] + "#";
+                    for (var j = 1; j <= arr.GetLength(1); j++)
+                        cellStr += arr[i, j] + "#";
                     cellStr += "\r\n";
                 }
             else
@@ -151,9 +150,11 @@ public class CellSelectChangeTip : ClickThroughForm
         _currentLeft = targetLeftPixels + targetWidthPixels;
         _currentTop = targetTopPixels + targetHeightPixels;
 
-        if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth) _currentLeft = targetLeftPixels - tipWidth;
+        if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth)
+            _currentLeft = targetLeftPixels - tipWidth;
 
-        if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight) _currentTop = targetTopPixels - tipHeight;
+        if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight)
+            _currentTop = targetTopPixels - tipHeight;
         Location = new Point(_currentLeft, _currentTop);
         ClientSize = new Size(tipWidth, tipHeight);
     }

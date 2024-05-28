@@ -1,9 +1,9 @@
-﻿using GraphX.Common.Models;
-using QuickGraph;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Windows.Data;
+using GraphX.Common.Models;
+using QuickGraph;
 
 namespace NumDesTools;
 
@@ -56,7 +56,7 @@ public class SelfComSheetCollect : INotifyPropertyChanged
             }
         }
     }
-    public Tuple<int,int> UsedRangeSize
+    public Tuple<int, int> UsedRangeSize
     {
         get { return _usedRangeSize; }
         set
@@ -92,6 +92,7 @@ public class WorkBookSearchCollect
         CellCol = tuple.Item4;
     }
 }
+
 //字符串正则转换
 public class StringRegexConverter : IValueConverter
 {
@@ -126,6 +127,7 @@ public class StringRegexConverter : IValueConverter
 public class SelfGraphXVertex : VertexBase
 {
     public string Name { get; set; }
+
     public override string ToString()
     {
         return Name;
@@ -135,10 +137,11 @@ public class SelfGraphXVertex : VertexBase
 // 自定义GraphX边数据类
 public class SelfGraphXEdge : EdgeBase<SelfGraphXVertex>
 {
-    public SelfGraphXEdge(SelfGraphXVertex source, SelfGraphXVertex target) : base(source, target) { }
+    public SelfGraphXEdge(SelfGraphXVertex source, SelfGraphXVertex target)
+        : base(source, target) { }
+
     public override string ToString()
     {
         return $"{Source.Name} -> {Target.Name}";
     }
 }
-

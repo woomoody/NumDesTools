@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
+
 // ReSharper disable All
 
 namespace NumDesTools;
@@ -21,7 +22,8 @@ public class CellSelectChangePro
         var name = ws2.Name;
         if (name == "角色基础")
         {
-            if (NumDesAddIn.LabelTextRoleDataPreview != "角色数据预览：开启") return;
+            if (NumDesAddIn.LabelTextRoleDataPreview != "角色数据预览：开启")
+                return;
             if (range.Row < 16 || range.Column is < 5 or > 21)
             {
                 NumDesAddIn.App.StatusBar = "当前行不是角色数据行，另选一行";
@@ -32,7 +34,8 @@ public class CellSelectChangePro
                 if (roleName != null)
                 {
                     ws2.Range["X1"].Value2 = roleName;
-                    NumDesAddIn.App.StatusBar = "角色：【" + roleName + "】数据已经更新，右侧查看~！~→→→→→→→→→→→→→→→~！~";
+                    NumDesAddIn.App.StatusBar =
+                        "角色：【" + roleName + "】数据已经更新，右侧查看~！~→→→→→→→→→→→→→→→~！~";
                 }
                 else
                 {
@@ -55,7 +58,8 @@ public class CellSelectChangePro
 
 public class RoleDataPro
 {
-    private const string FilePath = @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
+    private const string FilePath =
+        @"D:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\NumDesTools\doc\角色表.xlsx";
     private const string CacColStart = "E";
     private const string CacColEnd = "U";
 #pragma warning disable CA1416
@@ -78,8 +82,23 @@ public class RoleDataPro
         roleDataSheetName.Add(roleData[0][roleIndex][3]);
         roleDataRoleName.Add(roleData[0][roleIndex][0]);
         var erroLog = CreatDataTable(FilePath, Missing, roleDataSheetName, roleDataRoleName);
-        Workbook book = App.Workbooks.Open(FilePath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
-            Missing, Missing, Missing, Missing, Missing, Missing, Missing);
+        Workbook book = App.Workbooks.Open(
+            FilePath,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing
+        );
         ExpData(roleIndex, book);
         if (erroLog != "")
         {
@@ -120,10 +139,27 @@ public class RoleDataPro
         }
 
         var errorLog = CreatDataTable(FilePath, Missing, roleDataSheetName, roleDataRoleName);
-        if (errorLog != "") errorLog += @"\";
-        Workbook book = App.Workbooks.Open(FilePath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
-            Missing, Missing, Missing, Missing, Missing, Missing, Missing);
-        for (var i = 0; i < roleCount - 1; i++) ExpData(i, book);
+        if (errorLog != "")
+            errorLog += @"\";
+        Workbook book = App.Workbooks.Open(
+            FilePath,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing
+        );
+        for (var i = 0; i < roleCount - 1; i++)
+            ExpData(i, book);
         if (errorLog != "")
         {
             errorLog += @":DataTable列为空，无法导出数据";
@@ -149,7 +185,8 @@ public class RoleDataPro
     {
         var roleData = StateCalculate();
         var roleDataSheetName = roleData[0][roleId][3];
-        if (roleDataSheetName == "") return;
+        if (roleDataSheetName == "")
+            return;
         var oldArr = roleData[roleId + 1];
         var newArr = new double[100, 6];
         for (var i = 0; i < 6; i++)
@@ -161,14 +198,33 @@ public class RoleDataPro
         usherette.Range["A3:F102"].Value = newArr;
     }
 
-    private static string CreatDataTable(string filePath, object missing, dynamic roleDataSheetName,
-        dynamic roleDataRoleName)
+    private static string CreatDataTable(
+        string filePath,
+        object missing,
+        dynamic roleDataSheetName,
+        dynamic roleDataRoleName
+    )
     {
         var errorLog = "";
         if (File.Exists(filePath))
         {
-            Workbook book = App.Workbooks.Open(filePath, missing, missing, missing, missing, missing, missing, missing,
-                missing, missing, missing, missing, missing, missing, missing);
+            Workbook book = App.Workbooks.Open(
+                filePath,
+                missing,
+                missing,
+                missing,
+                missing,
+                missing,
+                missing,
+                missing,
+                missing,
+                missing,
+                missing,
+                missing,
+                missing,
+                missing,
+                missing
+            );
             var sheetCount = book.Worksheets.Count;
             var allSheetName = new List<string>();
             for (var i = 1; i <= sheetCount; i++)
@@ -178,14 +234,17 @@ public class RoleDataPro
             }
 
             for (var i = 0; i < roleDataSheetName.Count; i++)
-                if (allSheetName.Contains(roleDataSheetName[i]))
-                {
-                }
+                if (allSheetName.Contains(roleDataSheetName[i])) { }
                 else
                 {
                     if (roleDataSheetName[i] != "")
                     {
-                        var nbb = book.Worksheets.Add(missing, book.Worksheets[book.Worksheets.Count], 1, missing);
+                        var nbb = book.Worksheets.Add(
+                            missing,
+                            book.Worksheets[book.Worksheets.Count],
+                            1,
+                            missing
+                        );
                         nbb.Name = roleDataSheetName[i];
                     }
                     else
@@ -203,7 +262,12 @@ public class RoleDataPro
             for (var i = 0; i < roleDataSheetName.Count; i++)
                 if (roleDataSheetName[i] != "")
                 {
-                    var nbb = book.Worksheets.Add(missing, book.Worksheets[book.Worksheets.Count], 1, missing);
+                    var nbb = book.Worksheets.Add(
+                        missing,
+                        book.Worksheets[book.Worksheets.Count],
+                        1,
+                        missing
+                    );
                     nbb.Name = roleDataSheetName[i];
                 }
                 else
@@ -324,22 +388,43 @@ public class RoleDataPro
             var roleDataLevel = new List<List<string>>();
             for (var j = 1; j < 101; j++)
             {
-                var roleAtk =
-                    Convert.ToString(Math.Round(roleDouble[atk] * Math.Pow(attrLvRatio, j - 1) * levelRatio * realQua,
-                        0), CultureInfo.InvariantCulture);
+                var roleAtk = Convert.ToString(
+                    Math.Round(
+                        roleDouble[atk] * Math.Pow(attrLvRatio, j - 1) * levelRatio * realQua,
+                        0
+                    ),
+                    CultureInfo.InvariantCulture
+                );
                 roleAtkLevel.Add(roleAtk);
-                var roleDef =
-                    Convert.ToString(Math.Round(roleDouble[def] * Math.Pow(attrLvRatio, j - 1) * levelRatio * realQua,
-                        0), CultureInfo.InvariantCulture);
+                var roleDef = Convert.ToString(
+                    Math.Round(
+                        roleDouble[def] * Math.Pow(attrLvRatio, j - 1) * levelRatio * realQua,
+                        0
+                    ),
+                    CultureInfo.InvariantCulture
+                );
                 roleDefLevel.Add(roleDef);
-                var tempDef = baseArmour * Math.Pow(attrLvRatio, j - 1) * roleDouble[defOffset] * attrZoom;
-                var roleHp = Convert.ToString(Math.Round(
-                    roleDouble[takenDmg] * Math.Pow(attrLvRatio, j - 1) * attrZoom * roleDouble[hpOffset] /
-                    (1 + tempDef / armourExchange) * levelRatio * realQua, 0), CultureInfo.InvariantCulture);
+                var tempDef =
+                    baseArmour * Math.Pow(attrLvRatio, j - 1) * roleDouble[defOffset] * attrZoom;
+                var roleHp = Convert.ToString(
+                    Math.Round(
+                        roleDouble[takenDmg]
+                            * Math.Pow(attrLvRatio, j - 1)
+                            * attrZoom
+                            * roleDouble[hpOffset]
+                            / (1 + tempDef / armourExchange)
+                            * levelRatio
+                            * realQua,
+                        0
+                    ),
+                    CultureInfo.InvariantCulture
+                );
                 roleHpLevel.Add(roleHp);
                 roleCriticLevel.Add(Convert.ToString(0.05, CultureInfo.InvariantCulture));
                 roleCriticMultiLevel.Add(Convert.ToString(1.5, CultureInfo.InvariantCulture));
-                roleAtkSpeedLevel.Add(Convert.ToString(roleDouble[atkSpeed], CultureInfo.InvariantCulture));
+                roleAtkSpeedLevel.Add(
+                    Convert.ToString(roleDouble[atkSpeed], CultureInfo.InvariantCulture)
+                );
             }
 
             roleDataLevel.Add(roleAtkLevel);
@@ -379,21 +464,87 @@ public class RoleDataPri
         var totalRow = roleDataRng.Rows.Count;
         var totalCol = roleDataRng.Columns.Count;
         var allRoleDataDoubleList = new List<List<double>>();
-        var atkIndex = Ws.Range["E15:U15"].Find("攻击力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
-        var defIndex = Ws.Range["E15:U15"].Find("防御力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
-        var hpIndex = Ws.Range["E15:U15"].Find("生命上限", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
-        var atkSpeedIndex = Ws.Range["E15:U15"].Find("攻速", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
-        var roleIdIndex = Ws.Range["E15:U15"].Find("DataTable", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
+        var atkIndex =
+            Ws.Range["E15:U15"]
+                .Find(
+                    "攻击力",
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column - 4;
+        var defIndex =
+            Ws.Range["E15:U15"]
+                .Find(
+                    "防御力",
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column - 4;
+        var hpIndex =
+            Ws.Range["E15:U15"]
+                .Find(
+                    "生命上限",
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column - 4;
+        var atkSpeedIndex =
+            Ws.Range["E15:U15"]
+                .Find(
+                    "攻速",
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column - 4;
+        var roleIdIndex =
+            Ws.Range["E15:U15"]
+                .Find(
+                    "DataTable",
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column - 4;
         for (var i = 1; i < totalRow + 1; i++)
         {
             var oneRoleDataDoubleList = new List<double>();
             for (var j = 1; j < totalCol + 1; j++)
-                if (j == atkIndex || j == defIndex || j == hpIndex || j == atkSpeedIndex || j == roleIdIndex)
+                if (
+                    j == atkIndex
+                    || j == defIndex
+                    || j == hpIndex
+                    || j == atkSpeedIndex
+                    || j == roleIdIndex
+                )
                 {
 #pragma warning disable CA1305
                     var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
@@ -407,8 +558,11 @@ public class RoleDataPri
                     }
                     catch
                     {
-                        MessageBox.Show(@"第" + i + CacRowStart - 1 + @"行数据不是数值类型", @"数值类型错误",
-                            MessageBoxButtons.OKCancel);
+                        MessageBox.Show(
+                            @"第" + i + CacRowStart - 1 + @"行数据不是数值类型",
+                            @"数值类型错误",
+                            MessageBoxButtons.OKCancel
+                        );
                     }
                 }
 
@@ -426,33 +580,86 @@ public class RoleDataPri
         string workPath = App.ActiveWorkbook.Path;
         Directory.SetCurrentDirectory(Directory.GetParent(workPath)?.FullName ?? string.Empty);
         workPath = Directory.GetCurrentDirectory() + filePath;
-        Workbook book = App.Workbooks.Open(workPath, Missing, Missing, Missing, Missing, Missing, Missing, Missing,
-            Missing, Missing, Missing, Missing, Missing, Missing, Missing);
+        Workbook book = App.Workbooks.Open(
+            workPath,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing,
+            Missing
+        );
         var ws2 = book.Worksheets["CharacterBaseAttribute"];
         var statKey = ws2.Range["ZZ2"].End[XlDirection.xlToLeft].Column;
         var statRole = ws2.Range["B65534"].End[XlDirection.xlUp].Row;
         var statKeyGroup = ws2.Range[ws2.Cells[2, 1], ws2.Cells[2, statKey]];
         var statRoleGroup = ws2.Range[ws2.Cells[6, 2], ws2.Cells[statRole, 2]];
-        var stateKeys = new List<string>
-        {
-            "atkSpeed",
-            "atk",
-            "def",
-            "hp"
-        };
+        var stateKeys = new List<string> { "atkSpeed", "atk", "def", "hp" };
 
         foreach (var rng in statRoleGroup)
         {
             var ccd = rng.Row;
 
-            var atkSpeedIndex = statKeyGroup.Find(stateKeys[0], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-                XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
-            var atkIndex = statKeyGroup.Find(stateKeys[1], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-                XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
-            var defIndex = statKeyGroup.Find(stateKeys[2], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-                XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
-            var hpIndex = statKeyGroup.Find(stateKeys[3], Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-                XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column;
+            var atkSpeedIndex = statKeyGroup
+                .Find(
+                    stateKeys[0],
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column;
+            var atkIndex = statKeyGroup
+                .Find(
+                    stateKeys[1],
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column;
+            var defIndex = statKeyGroup
+                .Find(
+                    stateKeys[2],
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column;
+            var hpIndex = statKeyGroup
+                .Find(
+                    stateKeys[3],
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column;
             var cc3d = rng.Value;
             if (cc3d != null)
             {
@@ -461,7 +668,10 @@ public class RoleDataPri
                 if (result != null)
                 {
                     var rowIndex = roleData.IndexOf(result);
-                    ws2.Cells[ccd, atkSpeedIndex].Value = Math.Round(roleData[rowIndex][0] * 100, 0);
+                    ws2.Cells[ccd, atkSpeedIndex].Value = Math.Round(
+                        roleData[rowIndex][0] * 100,
+                        0
+                    );
                     ws2.Cells[ccd, atkIndex].Value = Math.Round(roleData[rowIndex][1] * 100, 0);
                     ws2.Cells[ccd, defIndex].Value = Math.Round(roleData[rowIndex][2] * 100, 0);
                     ws2.Cells[ccd, hpIndex].Value = Math.Round(roleData[rowIndex][3] * 100, 0);
@@ -500,21 +710,87 @@ public class RoleDataPriNpoi
         var totalRow = roleDataRng.Rows.Count;
         var totalCol = roleDataRng.Columns.Count;
         var allRoleDataDoubleList = new List<List<double>>();
-        var atkIndex = Ws.Range["E15:U15"].Find("攻击力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
-        var defIndex = Ws.Range["E15:U15"].Find("防御力", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
-        var hpIndex = Ws.Range["E15:U15"].Find("生命上限", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
-        var atkSpeedIndex = Ws.Range["E15:U15"].Find("攻速", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
-        var roleIdIndex = Ws.Range["E15:U15"].Find("DataTable", Missing, XlFindLookIn.xlValues, XlLookAt.xlPart,
-            XlSearchOrder.xlByColumns, XlSearchDirection.xlNext, false, false, false).Column - 4;
+        var atkIndex =
+            Ws.Range["E15:U15"]
+                .Find(
+                    "攻击力",
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column - 4;
+        var defIndex =
+            Ws.Range["E15:U15"]
+                .Find(
+                    "防御力",
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column - 4;
+        var hpIndex =
+            Ws.Range["E15:U15"]
+                .Find(
+                    "生命上限",
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column - 4;
+        var atkSpeedIndex =
+            Ws.Range["E15:U15"]
+                .Find(
+                    "攻速",
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column - 4;
+        var roleIdIndex =
+            Ws.Range["E15:U15"]
+                .Find(
+                    "DataTable",
+                    Missing,
+                    XlFindLookIn.xlValues,
+                    XlLookAt.xlPart,
+                    XlSearchOrder.xlByColumns,
+                    XlSearchDirection.xlNext,
+                    false,
+                    false,
+                    false
+                )
+                .Column - 4;
         for (var i = 1; i < totalRow + 1; i++)
         {
             var oneRoleDataDoubleList = new List<double>();
             for (var j = 1; j < totalCol + 1; j++)
-                if (j == atkIndex || j == defIndex || j == hpIndex || j == atkSpeedIndex || j == roleIdIndex)
+                if (
+                    j == atkIndex
+                    || j == defIndex
+                    || j == hpIndex
+                    || j == atkSpeedIndex
+                    || j == roleIdIndex
+                )
                 {
 #pragma warning disable CA1305
                     var tempData = Convert.ToString(roleDataArr.GetValue(i, j));
@@ -528,8 +804,11 @@ public class RoleDataPriNpoi
                     }
                     catch
                     {
-                        MessageBox.Show(@"第" + i + CacRowStart - 1 + @"行数据不是数值类型", @"数值类型错误",
-                            MessageBoxButtons.OKCancel);
+                        MessageBox.Show(
+                            @"第" + i + CacRowStart - 1 + @"行数据不是数值类型",
+                            @"数值类型错误",
+                            MessageBoxButtons.OKCancel
+                        );
                     }
                 }
 
@@ -554,13 +833,7 @@ public class RoleDataPriNpoi
 
         var rowNum = 1;
         var colNum = 1;
-        var stateKeys = new List<string>
-        {
-            "atkSpeed",
-            "atk",
-            "def",
-            "hp"
-        };
+        var stateKeys = new List<string> { "atkSpeed", "atk", "def", "hp" };
         var atkSpeedIndex = FindColValueNp(ws2, rowNum, stateKeys[0]);
         var atkIndex = FindColValueNp(ws2, rowNum, stateKeys[1]);
         var defIndex = FindColValueNp(ws2, rowNum, stateKeys[2]);
@@ -568,9 +841,7 @@ public class RoleDataPriNpoi
         foreach (var t in roleData)
         {
             var rowIndex = FindRowValueNp(ws2, colNum, t[4].ToString(CultureInfo.InvariantCulture));
-            if (rowIndex < 0)
-            {
-            }
+            if (rowIndex < 0) { }
             else
             {
                 var row = ws2.GetRow(rowIndex) ?? ws2.CreateRow(rowIndex);
