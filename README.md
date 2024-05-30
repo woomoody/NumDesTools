@@ -18,4 +18,32 @@ https://blog.csdn.net/weixin_43650637/article/details/114318408<br>
 `update-package -reinstall`
 # 打包与使用
   pack文件夹中点击packtool会生成两个.XLL的Pack，与XllConfig文件一起放入到任意路径中，Excel中引用适合自己电脑位数的.XLL即可，pack\libs的dll需要手动复制更新，没找到更合适的批处理代码
-
+## 依赖项
+本项目使用了以下外部库：
+| 库名称 | 版本 | 许可证 |
+| ------ | ---- | ------ |
+| BouncyCastle.Cryptography | 1.8.9 | MIT |
+| Enums.NET | 5.0.0 | MIT |
+| EPPlus | 7.0.4 | Polyform Noncommercial |
+| EPPlus.Interfaces | 6.1.1 | Polyform Noncommercial |
+| ExcelDna.AddIn | 1.8.0 | MIT |
+| ExcelDna.Integration | 1.8.0 | MIT |
+| ExcelDna.IntelliSense | 1.8.0 | MIT |
+| ExcelDna.Interop | 15.0.1 | MIT |
+| GraphX | 3.0.0 | MIT |
+| KeraLua | 1.4.1 | MIT |
+| MathNet.Numerics.Signed | 4.15.0 | MIT |
+| Microsoft.CSharp | 4.7.0 | MIT |
+| Microsoft.IO.RecyclableMemoryStream | 2.1.3 | MIT |
+| NLua | 1.7.2 | MIT |
+| NPOI | 2.6.2 | Apache 2.0 |
+| SharpZipLib | 1.4.2 | GPL |
+| SixLabors.Fonts | 2.0.3 | Apache 2.0 |
+| SixLabors.ImageSharp | 3.1.0 | Apache 2.0 |
+| stdole | 17.9.37000 | MIT |
+| System.Configuration.ConfigurationManager | 4.7.0 | MIT |
+| System.Data.OleDb | 6.0.0 | MIT |
+| System.Runtime.CompilerServices.Unsafe | 6.0.0 | MIT |
+| System.Runtime.Handles | 4.3.0 | MIT |
+## 许可证
+本项目采用 [Creative Commons Attribution-NonCommercial 4.0 International License](https://creativecommons.org/licenses/by-nc/4.0/deed.zh) 进行许可。
