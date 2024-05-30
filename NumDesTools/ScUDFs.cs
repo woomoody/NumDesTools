@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Diagnostics.Metrics;
+using System.Text.RegularExpressions;
 using NPOI.XSSF.UserModel;
 
 #pragma warning disable CA1416
@@ -248,6 +249,59 @@ public class ExcelUdf
         return result;
     }
 
+    [ExcelFunction(
+        Category = "UDF-查找值",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "替换指定位置匹配到的值为指定值"
+    )]
+    public static string ReplaceKeyByIndex(
+        [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "单元格")]
+        string inputRange,
+        [ExcelArgument(AllowReference = true, Description = "匹配位置", Name = "匹配位置信息")]
+        object[,] matchIndex,
+        [ExcelArgument(AllowReference = true, Description = "替换值", Name = "替换值信息")]
+        object[,] replaceValue,
+        [ExcelArgument(AllowReference = true, Description = "正则方案", Name = "正则方案")]
+        string regexMethod
+    )
+    {
+        var result = string.Empty;
+        var rows = matchIndex.GetLength(0);
+        var cols = matchIndex.GetLength(1);
+
+        Dictionary<int, string> replacements = new Dictionary<int, string>();
+
+        for (var row = 0; row < rows; row++)
+        for (var col = 0; col < cols; col++)
+        {
+            
+
+            if (matchIndex[row, col] is ExcelEmpty)
+            {
+                    continue;
+            }
+            int matchKey = Convert.ToInt32(matchIndex[row, col]);
+
+            string matchValue = replaceValue[row, col]?.ToString();
+
+            replacements.Add(matchKey, matchValue);
+        }
+
+        int counter = 0;
+
+        result = Regex.Replace(inputRange, regexMethod, m =>
+        {
+            counter++;
+            if (replacements.ContainsKey(counter))
+            {
+                return replacements[counter];
+            }
+            return m.Value;
+        });
+
+        return result;
+    }
     [ExcelFunction(
         Category = "UDF-获取表格信息",
         IsVolatile = true,
