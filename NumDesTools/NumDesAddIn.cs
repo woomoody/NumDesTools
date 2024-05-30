@@ -1283,8 +1283,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //{
         //    SheetMenuCTP.Sheets.Add(worksheet);
         //}
-        var window = new SheetLinksWindow();
-        window.Show();
+        //var window = new SheetLinksWindow();
+        //window.Show();
 
         //var tuple = new Tuple<string, string , int , int>("h1", "h2" ,3,4);
         //var lisssad = new List<Tuple<string,string,int,int>>();

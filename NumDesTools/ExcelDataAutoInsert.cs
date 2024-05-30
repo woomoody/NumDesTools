@@ -2581,9 +2581,9 @@ public class ExcelDataAutoInsertActivityServer
 
 public class ExcelDataAutoInsertNumChanges
 {
-    public string ExcelPath;
+    private string _excelPath;
 
-    public Dictionary<string, (List<object>, List<List<object>>)> GetNumChangesData(
+    private Dictionary<string, (List<object>, List<List<object>>)> GetNumChangesData(
         int startRow,
         dynamic indexSheet,
         dynamic startValue,
@@ -2622,13 +2622,13 @@ public class ExcelDataAutoInsertNumChanges
         return dataList;
     }
 
-    public void SetNumChangesData(Dictionary<string, (List<object>, List<List<object>>)> data)
+    private void SetNumChangesData(Dictionary<string, (List<object>, List<List<object>>)> data)
     {
         foreach (var eachExcelData in data)
         {
             var workBookName = eachExcelData.Key;
             var excelObj = new ExcelDataByEpplus();
-            excelObj.GetExcelObj(ExcelPath, workBookName);
+            excelObj.GetExcelObj(_excelPath, workBookName);
             if (excelObj.ErrorList.Count > 0)
                 return;
 
@@ -2652,7 +2652,7 @@ public class ExcelDataAutoInsertNumChanges
             {
                 var keyIndexValue = eachExcelData.Value.Item2[i][0]?.ToString();
                 var keyTargetValue = eachExcelData.Value.Item2[i][1]?.ToString();
-                if (keyIndexValue != null && keyTargetValue != null)
+                if (keyIndexValue != null && keyTargetValue != null && keyIndexValue != "")
                 {
                     var keyIndexRow = excelObj.FindFromRow(sheetTarget, keyIndexCol, keyIndexValue);
                     var baseValue = sheetTarget.Cells[keyIndexRow, keyTargetCol].Value?.ToString();
@@ -2685,7 +2685,7 @@ public class ExcelDataAutoInsertNumChanges
         var activityRankCountRange = indexSheet.Cells[startRow - 2, startValue.Item2 + 1];
         var activityRank = (int)activityRankRange.Value;
         var activityRankCount = (int)activityRankCountRange.Value;
-        ExcelPath = workBook.ActiveWorkbookPath;
+        _excelPath = workBook.ActiveWorkbookPath;
 
         var tips = MessageBox.Show(
             "是否导出全部活动数据（Y：全部；N：当前）",
