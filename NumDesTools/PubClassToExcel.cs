@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Windows.Data;
 using GraphX.Common.Models;
-using QuickGraph;
 
 namespace NumDesTools;
 
@@ -61,7 +60,7 @@ public class SelfComSheetCollect : INotifyPropertyChanged
         get { return _usedRangeSize; }
         set
         {
-            if (_usedRangeSize != value)
+            if (!Equals(_usedRangeSize, value))
             {
                 _usedRangeSize = value;
                 OnPropertyChanged(nameof(UsedRangeSize));
