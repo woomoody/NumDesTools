@@ -125,6 +125,7 @@
         <PackageReference Include="KeraLua" Version="1.4.1" />
         <PackageReference Include="MathNet.Numerics.Signed" Version="5.0.0" />
         <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="2.3.2" />
+        <PackageReference Include="MiniExcel" Version="1.32.1" />
         <PackageReference Include="NLua" Version="1.7.2" />
         <PackageReference Include="NPOI" Version="2.6.2" />
         <PackageReference Include="SharpZipLib" Version="1.4.2" />
