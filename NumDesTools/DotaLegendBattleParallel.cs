@@ -20,11 +20,15 @@ internal class ExcelData
 
     public static dynamic GroupBColMaxPvp = Convert.ToInt32(Ws.Range["C23"].Value);
 
-    public static Range RangeApvp = Ws.Range[Ws.Cells[GroupARowMinPvp, GroupAColMinPvp],
-        Ws.Cells[GroupARowMaxPvp, GroupAColMaxPvp]];
+    public static Range RangeApvp = Ws.Range[
+        Ws.Cells[GroupARowMinPvp, GroupAColMinPvp],
+        Ws.Cells[GroupARowMaxPvp, GroupAColMaxPvp]
+    ];
 
-    public static Range RangeBpvp = Ws.Range[Ws.Cells[GroupBRowMinPvp, GroupBColMinPvp],
-        Ws.Cells[GroupBRowMaxPvp, GroupBColMaxPvp]];
+    public static Range RangeBpvp = Ws.Range[
+        Ws.Cells[GroupBRowMinPvp, GroupBColMinPvp],
+        Ws.Cells[GroupBRowMaxPvp, GroupBColMaxPvp]
+    ];
 
     public static dynamic GroupARowMinPve = Convert.ToInt32(Ws.Range["C41"].Value);
     public static dynamic GroupAColMinPve = Convert.ToInt32(Ws.Range["C42"].Value);
@@ -36,11 +40,15 @@ internal class ExcelData
 
     public static dynamic GroupBColMaxPve = Convert.ToInt32(Ws.Range["C55"].Value);
 
-    public static Range RangeApve = Ws.Range[Ws.Cells[GroupARowMinPve, GroupAColMinPve],
-        Ws.Cells[GroupARowMaxPve, GroupAColMaxPve]];
+    public static Range RangeApve = Ws.Range[
+        Ws.Cells[GroupARowMinPve, GroupAColMinPve],
+        Ws.Cells[GroupARowMaxPve, GroupAColMaxPve]
+    ];
 
-    public static Range RangeBpve = Ws.Range[Ws.Cells[GroupBRowMinPve, GroupBColMinPve],
-        Ws.Cells[GroupBRowMaxPve, GroupBColMaxPve]];
+    public static Range RangeBpve = Ws.Range[
+        Ws.Cells[GroupBRowMinPve, GroupBColMinPve],
+        Ws.Cells[GroupBRowMaxPve, GroupBColMaxPve]
+    ];
 }
 
 internal class DotaLegendBattleParallel
@@ -73,9 +81,20 @@ internal class DotaLegendBattleParallel
             var groupBRowMaxPvp = ExcelData.GroupBRowMaxPvp;
             Array arrApvp = ExcelData.RangeApvp.Value2;
             Array arrBpvp = ExcelData.RangeBpvp.Value2;
-            Parallel.For(0, testBattleMaxPvp,
-                _ => BattleCaculate(groupARowMinPvp, groupARowMaxPvp, groupBRowMinPvp, groupBRowMaxPvp, arrApvp,
-                    arrBpvp, true));
+            Parallel.For(
+                0,
+                testBattleMaxPvp,
+                _ =>
+                    BattleCaculate(
+                        groupARowMinPvp,
+                        groupARowMaxPvp,
+                        groupBRowMinPvp,
+                        groupBRowMaxPvp,
+                        arrApvp,
+                        arrBpvp,
+                        true
+                    )
+            );
             Ws.Range["D3"].Value2 = _avpvp;
             Ws.Range["J3"].Value2 = _bvpvp;
             Ws.Range["G3"].Value2 = _abvpvp;
@@ -98,9 +117,20 @@ internal class DotaLegendBattleParallel
             var groupBRowMaxPve = ExcelData.GroupBRowMaxPve;
             Array arrApve = ExcelData.RangeApve.Value2;
             Array arrBpve = ExcelData.RangeBpve.Value2;
-            Parallel.For(0, testBattleMaxPve,
-                _ => BattleCaculate(groupARowMinPve, groupARowMaxPve, groupBRowMinPve, groupBRowMaxPve, arrApve,
-                    arrBpve, false));
+            Parallel.For(
+                0,
+                testBattleMaxPve,
+                _ =>
+                    BattleCaculate(
+                        groupARowMinPve,
+                        groupARowMaxPve,
+                        groupBRowMinPve,
+                        groupBRowMaxPve,
+                        arrApve,
+                        arrBpve,
+                        false
+                    )
+            );
             Ws.Range["D35"].Value2 = _avpve;
             Ws.Range["J35"].Value2 = _bvpve;
             Ws.Range["G35"].Value2 = _abvpve;
@@ -116,8 +146,15 @@ internal class DotaLegendBattleParallel
         }
     }
 
-    public static void BattleCaculate(dynamic groupARowMin, dynamic groupARowMax, dynamic groupBRowMin,
-        dynamic groupBRowMax, dynamic arrA, dynamic arrB, bool mode)
+    public static void BattleCaculate(
+        dynamic groupARowMin,
+        dynamic groupARowMax,
+        dynamic groupBRowMin,
+        dynamic groupBRowMax,
+        dynamic arrA,
+        dynamic arrB,
+        bool mode
+    )
     {
         var groupARowNum = groupARowMax - groupARowMin + 1;
         var groupBRowNum = groupBRowMax - groupBRowMin + 1;
@@ -185,13 +222,47 @@ internal class DotaLegendBattleParallel
         do
         {
             var aTar = Target(numA, numB, posRowA, posRowB, posColA, posColB);
-            var bTakeDam = DamageCaculate(numA, numB, countSkillA, skillCda, skillCDstartA, turn, defB, critA, atkA,
-                critMultiA, skillDamageA, aTar, countAtka, atkSpeedA, skillHealUseAllHpA, hpA, skillHealUseSelfAtkA,
-                skillHealUseSelfHpA);
+            var bTakeDam = DamageCaculate(
+                numA,
+                numB,
+                countSkillA,
+                skillCda,
+                skillCDstartA,
+                turn,
+                defB,
+                critA,
+                atkA,
+                critMultiA,
+                skillDamageA,
+                aTar,
+                countAtka,
+                atkSpeedA,
+                skillHealUseAllHpA,
+                hpA,
+                skillHealUseSelfAtkA,
+                skillHealUseSelfHpA
+            );
             var bTar = Target(numB, numA, posRowB, posRowA, posColB, posColA);
-            var aTakeDam = DamageCaculate(numB, numA, countSkillB, skillCdb, skillCDstartB, turn, defA, critB, atkB,
-                critMultiB, skillDamageB, bTar, countAtkb, atkSpeedB, skillHealUseAllHpB, hpB, skillHealUseSelfAtkB,
-                skillHealUseSelfHpB);
+            var aTakeDam = DamageCaculate(
+                numB,
+                numA,
+                countSkillB,
+                skillCdb,
+                skillCDstartB,
+                turn,
+                defA,
+                critB,
+                atkB,
+                critMultiB,
+                skillDamageB,
+                bTar,
+                countAtkb,
+                atkSpeedB,
+                skillHealUseAllHpB,
+                hpB,
+                skillHealUseSelfAtkB,
+                skillHealUseSelfHpB
+            );
             for (var i = 0; i < numA; i++)
             {
                 hpA[i] -= aTakeDam.Item1[i];
@@ -259,9 +330,12 @@ internal class DotaLegendBattleParallel
 
         if (mode)
         {
-            if (numB == 0 && numA > 0) _avpvp += 1;
-            if (numA == 0 && numB > 0) _bvpvp += 1;
-            if (numA == 0 && numB == 0) _abvpvp += 1;
+            if (numB == 0 && numA > 0)
+                _avpvp += 1;
+            if (numA == 0 && numB > 0)
+                _bvpvp += 1;
+            if (numA == 0 && numB == 0)
+                _abvpvp += 1;
             var aahPlist = new List<double>(hpA);
             var bahPlist = new List<double>(hpB);
             _aahppvp += aahPlist.Sum();
@@ -270,9 +344,12 @@ internal class DotaLegendBattleParallel
         }
         else
         {
-            if (numB == 0 && numA > 0) _avpve += 1;
-            if (numA == 0 && numB > 0) _bvpve += 1;
-            if (numA == 0 && numB == 0) _abvpve += 1;
+            if (numB == 0 && numA > 0)
+                _avpve += 1;
+            if (numA == 0 && numB > 0)
+                _bvpve += 1;
+            if (numA == 0 && numB == 0)
+                _abvpve += 1;
             var aahPlist = new List<double>(hpA);
             var bahPlist = new List<double>(hpB);
             _aahppve += aahPlist.Sum();
@@ -281,11 +358,26 @@ internal class DotaLegendBattleParallel
         }
     }
 
-    private static (List<double>, List<double>) DamageCaculate(int num1, int num2, dynamic countSkill1,
-        dynamic skillCd1, dynamic skillCDstart1, int turn, dynamic def2, dynamic crit1, dynamic atk1,
+    private static (List<double>, List<double>) DamageCaculate(
+        int num1,
+        int num2,
+        dynamic countSkill1,
+        dynamic skillCd1,
+        dynamic skillCDstart1,
+        int turn,
+        dynamic def2,
+        dynamic crit1,
+        dynamic atk1,
         dynamic critMulti1,
-        dynamic skillDamge1, dynamic target1, dynamic countAtk1, dynamic atkSpeed1, dynamic skillHealUseAllHp1,
-        dynamic hp1, dynamic skillHealUseSelfAtk1, dynamic skillHealUseSelfHp1)
+        dynamic skillDamge1,
+        dynamic target1,
+        dynamic countAtk1,
+        dynamic atkSpeed1,
+        dynamic skillHealUseAllHp1,
+        dynamic hp1,
+        dynamic skillHealUseSelfAtk1,
+        dynamic skillHealUseSelfHp1
+    )
     {
         double Dmg(int i)
         {
@@ -300,9 +392,11 @@ internal class DotaLegendBattleParallel
         }
 
         var takeDmg2 = new List<double>();
-        for (var i = 0; i < num2; i++) takeDmg2.Add(0);
+        for (var i = 0; i < num2; i++)
+            takeDmg2.Add(0);
         var heal1 = new List<double>();
-        for (var i = 0; i < num1; i++) heal1.Add(0);
+        for (var i = 0; i < num1; i++)
+            heal1.Add(0);
         for (var i = 0; i < num1; i++)
         {
             double redmg = def2[target1[i]] / 100000 + 1;
@@ -313,9 +407,11 @@ internal class DotaLegendBattleParallel
             {
                 takeDmg2[target1[i]] += Dmg(i) / redmg * skillDamge1[i];
                 countSkill1[i]++;
-                for (var j = 0; j < num1; j++) heal1[i] += skillHealUseAllHp1[j] * hp1[i];
+                for (var j = 0; j < num1; j++)
+                    heal1[i] += skillHealUseAllHp1[j] * hp1[i];
                 heal1[i] += skillHealUseSelfAtk1[i] * atk1[i] + skillHealUseSelfHp1[i] * hp1[i];
-                if (cc == turn) countAtk1[i]++;
+                if (cc == turn)
+                    countAtk1[i]++;
             }
             else if (cc == turn)
             {
@@ -327,8 +423,14 @@ internal class DotaLegendBattleParallel
         return (takeDmg2, heal1);
     }
 
-    public static List<int> Target(int num1, int num2, dynamic posRow1, dynamic posRow2, dynamic posCol1,
-        dynamic posCol2)
+    public static List<int> Target(
+        int num1,
+        int num2,
+        dynamic posRow1,
+        dynamic posRow2,
+        dynamic posCol1,
+        dynamic posCol2
+    )
     {
         var tarAll = new List<int>();
         for (var item1 = 0; item1 < num1; item1++)
@@ -372,7 +474,8 @@ internal class DotaLegendBattleParallel
 #pragma warning disable CA1305
             var sss = string.IsNullOrWhiteSpace(Convert.ToString(arr.GetValue(i, col)));
 #pragma warning restore CA1305
-            if (sss) continue;
+            if (sss)
+                continue;
             if (mode == 1)
 #pragma warning disable CA1305
                 data.Add(Convert.ToDouble(arr.GetValue(i, col)));
@@ -392,7 +495,8 @@ internal class DotaLegendBattleParallel
 #pragma warning disable CA1305
             var sss = string.IsNullOrWhiteSpace(Convert.ToString(arr.GetValue(i, col)));
 #pragma warning restore CA1305
-            if (sss) continue;
+            if (sss)
+                continue;
             if (mode == 1)
 #pragma warning disable CA1305
                 data.Add(Convert.ToString(arr.GetValue(i, col)));

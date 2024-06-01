@@ -7,7 +7,5 @@ public partial class DataExportForm : Form
         InitializeComponent();
     }
 
-    private void DataExportForm_Load(object sender, EventArgs e)
-    {
-    }
+    private void DataExportForm_Load(object sender, EventArgs e) { }
 }

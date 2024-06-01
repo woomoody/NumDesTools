@@ -1,5 +1,4 @@
-﻿
-namespace NumDesTools;
+﻿namespace NumDesTools;
 
 public class TmCaculate
 {
@@ -27,7 +26,8 @@ public class TmCaculate
                     var ele = t[j].ToString();
                     if (ele != null && eleCount.ContainsKey(ele))
                         eleCount[ele]++;
-                    else if (ele != null) eleCount[ele] = 1;
+                    else if (ele != null)
+                        eleCount[ele] = 1;
                     foreach (var t1 in targetEleMaxValueList)
                         if (ele == t1[0].ToString())
                         {
@@ -90,11 +90,13 @@ public class TmCaculate
             for (var j = 0; j < loopTimes * eleMax; j++)
             {
                 var loopId = (j + 1) % eleMax;
-                if (loopId == 0) loopId = eleMax;
+                if (loopId == 0)
+                    loopId = eleMax;
                 loopIdList.Add(eleBaseId + loopId);
             }
 
-            if (eleTheme != null) eleIdLoop[eleTheme] = loopIdList;
+            if (eleTheme != null)
+                eleIdLoop[eleTheme] = loopIdList;
         }
 
         for (var i = 0; i < modelRangeValueList.Count; i++)
@@ -106,7 +108,8 @@ public class TmCaculate
                     var ele = modelRangeValueList[i][j].ToString();
                     if (ele != null && eleCount.ContainsKey(ele))
                         eleCount[ele]++;
-                    else if (ele != null) eleCount[ele] = 1;
+                    else if (ele != null)
+                        eleCount[ele] = 1;
                     if (ele != null)
                     {
                         var eleId = eleIdLoop[ele][eleCount[ele] - 1];

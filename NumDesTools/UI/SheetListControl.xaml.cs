@@ -1,28 +1,41 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using ListBox = System.Windows.Controls.ListBox;
 using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
 using Style = System.Windows.Style;
-using UserControl = System.Windows.Controls.UserControl;
 
 namespace NumDesTools.UI
 {
     /// <summary>
     /// SheetListControl.xaml 的交互逻辑
     /// </summary>
-    public partial class SheetListControl : UserControl
+    public partial class SheetListControl
     {
-        public static Application excelApp = NumDesAddIn.App;
-        public ObservableCollection<WorksheetWrapper> Sheets { get; } = new ObservableCollection<WorksheetWrapper>();
+        public static Application ExcelApp = NumDesAddIn.App;
+        public ObservableCollection<SelfComSheetCollect> Sheets { get; } =
+            new ObservableCollection<SelfComSheetCollect>();
+
         public SheetListControl()
         {
             InitializeComponent();
-            var worksheets = excelApp.ActiveWorkbook.Sheets.Cast<Worksheet>()
-                .Select(x => new WorksheetWrapper { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden });
+            var worksheets = ExcelApp
+                .ActiveWorkbook.Sheets.Cast<Worksheet>()
+                .Select(x => new SelfComSheetCollect
+                {
+                    Name = x.Name,
+                    IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden,
+                    DetailInfo = (x.Cells[1, 2] as Range)?.Value2?.ToString(),
+                    UsedRangeSize = new Tuple<int, int>(
+                        x.UsedRange.Rows.Count,
+                        x.UsedRange.Columns.Count
+                    )
+                });
+
             foreach (var worksheet in worksheets)
             {
                 Sheets.Add(worksheet);
@@ -31,7 +44,6 @@ namespace NumDesTools.UI
             ListBoxSheet.DisplayMemberPath = "Name";
 
             SetListBoxItemStyle(ListBoxSheet);
-
         }
 
         private void ListBoxSheet_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -51,22 +63,23 @@ namespace NumDesTools.UI
 
             var contextMenu = new ContextMenu();
             var showItem = new MenuItem { Header = "显示" };
-            showItem.Click += (s, args) =>
+            showItem.Click += (_, _) =>
             {
-                foreach (WorksheetWrapper item in ListBoxSheet.SelectedItems)
+                foreach (SelfComSheetCollect item in ListBoxSheet.SelectedItems)
                 {
-                    var sheet = excelApp.ActiveWorkbook.Sheets[item.Name];
+                    var sheet = ExcelApp.ActiveWorkbook.Sheets[item.Name];
                     sheet.Visible = XlSheetVisibility.xlSheetVisible;
                     item.IsHidden = false;
                 }
             };
             var hideItem = new MenuItem { Header = "隐藏" };
-            hideItem.Click += (s, args) =>
+            hideItem.Click += (_, _) =>
             {
                 int visibleSheetsCount = 0;
-                foreach (Worksheet sheet in excelApp.ActiveWorkbook.Sheets)
+                foreach (Worksheet sheet in ExcelApp.ActiveWorkbook.Sheets)
                 {
-                    if (sheet.Visible == XlSheetVisibility.xlSheetVisible) visibleSheetsCount++;
+                    if (sheet.Visible == XlSheetVisibility.xlSheetVisible)
+                        visibleSheetsCount++;
                 }
 
                 if (ListBoxSheet.SelectedItems.Count >= visibleSheetsCount)
@@ -75,9 +88,9 @@ namespace NumDesTools.UI
                     return;
                 }
 
-                foreach (WorksheetWrapper item in ListBoxSheet.SelectedItems)
+                foreach (SelfComSheetCollect item in ListBoxSheet.SelectedItems)
                 {
-                    var sheet = excelApp.ActiveWorkbook.Sheets[item.Name];
+                    var sheet = ExcelApp.ActiveWorkbook.Sheets[item.Name];
                     sheet.Visible = XlSheetVisibility.xlSheetHidden;
                     item.IsHidden = true;
                 }
@@ -96,9 +109,11 @@ namespace NumDesTools.UI
             var listBox = (ListBox)sender;
             if (listBox.SelectedItem != null)
             {
-                var selectedSheetName = ((WorksheetWrapper)listBox.SelectedItem).Name;
-                var selectedSheet = excelApp.ActiveWorkbook.Sheets[selectedSheetName];
+                var selectedSheetName = ((SelfComSheetCollect)listBox.SelectedItem).Name;
+                var selectedSheet = ExcelApp.ActiveWorkbook.Sheets[selectedSheetName];
                 selectedSheet.Activate();
+                // 更新 StatusBar
+                UpdateStatusBar((SelfComSheetCollect)listBox.SelectedItem);
             }
         }
 
@@ -113,12 +128,30 @@ namespace NumDesTools.UI
             };
 
             trigger.Setters.Add(new Setter(FontStyleProperty, FontStyles.Italic));
-            trigger.Setters.Add(new Setter(ForegroundProperty, System.Windows.Media.Brushes.PapayaWhip));
+            trigger.Setters.Add(
+                new Setter(ForegroundProperty, System.Windows.Media.Brushes.PapayaWhip)
+            );
 
             itemContainerStyle.Triggers.Add(trigger);
 
+            // 添加 ToolTip
+            itemContainerStyle.Setters.Add(
+                new Setter(ToolTipProperty, new System.Windows.Data.Binding("DetailInfo"))
+            );
+
             listBox.ItemContainerStyle = itemContainerStyle;
         }
-    }
 
+        // 更新 StatusBar 的方法
+        private void UpdateStatusBar(SelfComSheetCollect item)
+        {
+            StatusBar.Items.Clear();
+            var statusBarItem = new StatusBarItem
+            {
+                Content = "区域：" + item.UsedRangeSize.Item1 + "行 ," + item.UsedRangeSize.Item2 + "列"
+            };
+            statusBarItem.ToolTip = statusBarItem.Content; // 设置 ToolTip
+            StatusBar.Items.Add(statusBarItem);
+        }
+    }
 }
