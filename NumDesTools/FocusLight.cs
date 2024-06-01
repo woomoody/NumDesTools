@@ -22,8 +22,11 @@
 
             if (formatCount == 0)
             {
-                var formatCondition =
-                    formatConditions.Add(XlFormatConditionType.xlExpression, Type.Missing, Formula);
+                var formatCondition = formatConditions.Add(
+                    XlFormatConditionType.xlExpression,
+                    Type.Missing,
+                    Formula
+                );
                 formatCondition.Interior.Color = XlRgbColor.rgbOrange;
             }
         }

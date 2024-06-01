@@ -1,8 +1,4 @@
 ﻿global using System;
-global using ExcelDna.Integration;
-global using ExcelDna.Integration.CustomUI;
-global using ExcelDna.IntelliSense;
-global using Microsoft.Office.Interop.Excel;
 global using System.Collections.Generic;
 global using System.Diagnostics;
 global using System.Drawing;
@@ -11,6 +7,10 @@ global using System.Linq;
 global using System.Reflection;
 global using System.Runtime.InteropServices;
 global using System.Windows.Forms;
+global using ExcelDna.Integration;
+global using ExcelDna.Integration.CustomUI;
+global using ExcelDna.IntelliSense;
+global using Microsoft.Office.Interop.Excel;
 global using Application = Microsoft.Office.Interop.Excel.Application;
 global using Button = System.Windows.Forms.Button;
 global using CheckBox = System.Windows.Forms.CheckBox;
@@ -51,14 +51,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private string _excelSeachStr = string.Empty;
     public static IRibbonUI CustomRibbon;
 
-    private string _defaultFilePath =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "mergePath.txt");
+    private string _defaultFilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        "mergePath.txt"
+    );
 
     private string _currentBaseText;
     private string _currentTargetText;
     private TabControl _tabControl = new();
 
-    private SheetListControl SheetMenuCTP;
+    private SheetListControl _sheetMenuCtp;
 
     #region 释放COM
 
@@ -75,12 +77,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     protected virtual void Dispose(bool disposing)
     {
-        if (disposing) ReleaseComObjects();
+        if (disposing)
+            ReleaseComObjects();
     }
 
     private void ReleaseComObjects()
     {
-        if (App != null) App = null;
+        // ReSharper disable RedundantCheckBeforeAssignment
+        if (App != null)
+            App = null;
+        // ReSharper restore RedundantCheckBeforeAssignment
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
@@ -104,8 +110,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             ribbonXml = GetRibbonXml("RibbonUI.xml");
 #if DEBUG
-            ribbonXml =
- ribbonXml.Replace("<tab id='Tab1' label='NumDesTools' insertBeforeMso='TabHome'>", "<tab id='Tab1' label='N*D*T*Debug' insertBeforeMso='TabHome'>");
+            ribbonXml = ribbonXml.Replace(
+                "<tab id='Tab1' label='NumDesTools' insertBeforeMso='TabHome'>",
+                "<tab id='Tab1' label='N*D*T*Debug' insertBeforeMso='TabHome'>"
+            );
 #endif
         }
         catch (Exception ex)
@@ -123,7 +131,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var resources = assn.GetManifestResourceNames();
         foreach (var resource in resources)
         {
-            if (!resource.EndsWith(resourceName)) continue;
+            if (!resource.EndsWith(resourceName))
+                continue;
             var streamText = assn.GetManifestResourceStream(resource);
             if (streamText != null)
             {
@@ -189,31 +198,46 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         currentBar.Reset();
         var currentBars = currentBar.Controls;
         var missing = Type.Missing;
-        foreach (var selfControl in from CommandBarControl tempControl in currentBars
-                 let t = tempControl.Tag
-                 where
-                     t is "自选表格写入" or "当前项目Lan" or "合并项目Lan" or "合并表格Row" or "合并表格Col" or "打开表格" or "对话写入" or "打开关联表格"
-                 select tempControl)
+        foreach (
+            var selfControl in from CommandBarControl tempControl in currentBars
+            let t = tempControl.Tag
+            where
+                t
+                    is "自选表格写入"
+                        or "当前项目Lan"
+                        or "合并项目Lan"
+                        or "合并表格Row"
+                        or "合并表格Col"
+                        or "打开表格"
+                        or "对话写入"
+                        or "打开关联表格"
+            select tempControl
+        )
             try
             {
                 selfControl.Delete();
             }
             catch
             {
+                // ignored
             }
 
-        if (sh is not Worksheet sheet) return;
+        if (sh is not Worksheet sheet)
+            return;
         var sheetName = sheet.Name;
         Workbook book = sheet.Parent;
         var bookName = book.Name;
         var bookPath = book.Path;
         var targetNull = target.Value;
-        if (targetNull == null) return;
+        if (targetNull == null)
+            return;
         var targetValue = target.Value2.ToString();
 
         if (sheetName.Contains("【模板】"))
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton2)
+            if (
+                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
+                is CommandBarButton comButton2
+            )
             {
                 comButton2.Tag = "自选表格写入";
                 comButton2.Caption = "自选表格写入";
@@ -223,8 +247,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         if (bookName.Contains("#【自动填表】多语言对话"))
         {
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton3)
+            if (
+                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
+                is CommandBarButton comButton3
+            )
             {
                 comButton3.Tag = "当前项目Lan";
                 comButton3.Caption = "当前项目Lan";
@@ -232,8 +258,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 comButton3.Click += PubMetToExcelFunc.OpenBaseLanExcel;
             }
 
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton4)
+            if (
+                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
+                is CommandBarButton comButton4
+            )
             {
                 comButton4.Tag = "合并项目Lan";
                 comButton4.Caption = "合并项目Lan";
@@ -242,11 +270,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
         }
 
-        if ((!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables")) ||
-            bookPath.Contains(@"Public\Excels\Localizations"))
+        if (
+            (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables"))
+            || bookPath.Contains(@"Public\Excels\Localizations")
+        )
         {
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton5)
+            if (
+                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
+                is CommandBarButton comButton5
+            )
             {
                 comButton5.Tag = "合并表格Row";
                 comButton5.Caption = "合并表格Row";
@@ -254,8 +286,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 comButton5.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeData;
             }
 
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton6)
+            if (
+                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
+                is CommandBarButton comButton6
+            )
             {
                 comButton6.Tag = "合并表格Col";
                 comButton6.Caption = "合并表格Col";
@@ -265,8 +299,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
 
         if (targetValue.Contains(".xlsx"))
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton7)
+            if (
+                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
+                is CommandBarButton comButton7
+            )
             {
                 comButton7.Tag = "打开表格";
                 comButton7.Caption = "打开表格";
@@ -275,8 +311,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
 
         if (sheetName == "多语言对话【模板】")
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton8)
+            if (
+                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
+                is CommandBarButton comButton8
+            )
             {
                 comButton8.Tag = "对话写入";
                 comButton8.Caption = "对话写入(末尾)";
@@ -285,8 +323,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
 
         if (!bookName.Contains("#") && target.Column > 2)
-            if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton
-                comButton9)
+            if (
+                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
+                is CommandBarButton comButton9
+            )
             {
                 comButton9.Tag = "打开关联表格";
                 comButton9.Caption = "打开关联表格";
@@ -298,40 +338,49 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private void ExcelApp_WorkbookActivate(Workbook wb)
     {
         App.StatusBar = wb.FullName;
+
+        var ctpName = "表格目录";
         if (SheetMenuText == "表格目录：开启")
         {
-            NumDesCTP.DeleteCTP(true);
-            SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "表格目录", true, "表格目录");
+            NumDesCTP.DeleteCTP(true, ctpName);
+            _sheetMenuCtp = (SheetListControl)
+                NumDesCTP.ShowCTP(
+                    250,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new SheetListControl(),
+                    MsoCTPDockPosition.msoCTPDockPositionLeft
+                );
         }
         else
         {
-            NumDesCTP.DeleteCTP(true);
+            NumDesCTP.DeleteCTP(true, ctpName);
         }
     }
 
     private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
     {
+        var ctpName = "表格目录";
         if (SheetMenuText == "表格目录：开启")
         {
-            NumDesCTP.DeleteCTP(true);
-            SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "表格目录", true, "表格目录");
-        }
-    }
-
-    private void Excel_CtpUpdate()
-    {
-        var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
-            .Select(x => new WorksheetWrapper { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();
-        SheetMenuCTP.Sheets.Clear();
-        foreach (var worksheet in worksheets)
-        {
-            SheetMenuCTP.Sheets.Add(worksheet);
+            NumDesCTP.DeleteCTP(true, ctpName);
+            _sheetMenuCtp = (SheetListControl)
+                NumDesCTP.ShowCTP(
+                    250,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new SheetListControl(),
+                    MsoCTPDockPosition.msoCTPDockPositionLeft
+                );
         }
     }
 
     public void AllWorkbookOutPut_Click(IRibbonControl control)
     {
-        if (control == null) throw new ArgumentNullException(nameof(control));
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
         var filesName = "";
         if (App.ActiveSheet != null)
         {
@@ -367,7 +416,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             #endregion 生成窗口和基础控件
 
             var outFilePath = App.ActiveWorkbook.Path;
-            Directory.SetCurrentDirectory(Directory.GetParent(outFilePath)?.FullName ?? string.Empty);
+            Directory.SetCurrentDirectory(
+                Directory.GetParent(outFilePath)?.FullName ?? string.Empty
+            );
             outFilePath = Directory.GetCurrentDirectory() + TempPath;
 
             #region 动态加载复选框
@@ -382,7 +433,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 const string fileKey = "_cfg";
                 var isRealFile = fileName.ToLower().Contains(fileKey.ToLower());
                 var isHidden = file.Attributes & FileAttributes.Hidden;
-                if (!isRealFile || isHidden == FileAttributes.Hidden) continue;
+                if (!isRealFile || isHidden == FileAttributes.Hidden)
+                    continue;
                 var cb = new CheckBox
                 {
                     Text = fileName,
@@ -407,7 +459,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             };
             f.Controls.Add(checkBox1);
             checkBox1.Click += CheckBox1Click;
-            foreach (CheckBox ck in gb.Controls) ck.CheckedChanged += CkCheckedChanged;
+            foreach (CheckBox ck in gb.Controls)
+                ck.CheckedChanged += CkCheckedChanged;
 
             void CheckBox1Click(object sender, EventArgs e)
             {
@@ -429,7 +482,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             {
                 if (sender is CheckBox { Checked: true })
                 {
-                    if (gb.Controls.Cast<CheckBox>().Any(ch => ch.Checked == false)) return;
+                    if (gb.Controls.Cast<CheckBox>().Any(ch => ch.Checked == false))
+                        return;
                     checkBox1.Checked = true;
                     checkBox1.Text = @"反选";
                 }
@@ -458,9 +512,23 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     {
                         var file2Name = cd.Text;
                         var missing = Type.Missing;
-                        var book = App.Workbooks.Open(filePath + "\\" + file2Name, missing,
-                            missing, missing, missing, missing, missing, missing, missing,
-                            missing, missing, missing, missing, missing, missing);
+                        var book = App.Workbooks.Open(
+                            filePath + "\\" + file2Name,
+                            missing,
+                            missing,
+                            missing,
+                            missing,
+                            missing,
+                            missing,
+                            missing,
+                            missing,
+                            missing,
+                            missing,
+                            missing,
+                            missing,
+                            missing,
+                            missing
+                        );
                         App.Visible = false;
                         var sheetCount = App.Worksheets.Count;
                         for (var i = 1; i <= sheetCount; i++)
@@ -470,13 +538,19 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                             var isRealSheet = sheetName.ToLower().Contains(key.ToLower());
                             if (isRealSheet)
                             {
-                                var errorLog = ExcelSheetDataIsError.GetData(sheetName, file2Name, filePath);
-                                if (errorLog == "") ExcelSheetData.GetDataToTxt(sheetName, outFilePath);
+                                var errorLog = ExcelSheetDataIsError.GetData(
+                                    sheetName,
+                                    file2Name,
+                                    filePath
+                                );
+                                if (errorLog == "")
+                                    ExcelSheetData.GetDataToTxt(sheetName, outFilePath);
                             }
                         }
 
                         var isCurFile = fileName.ToLower().Contains(file2Name.ToLower());
-                        if (isCurFile != true) book.Close();
+                        if (isCurFile != true)
+                            book.Close();
                         filesName += file2Name + "\n";
                     }
 
@@ -492,8 +566,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 }
                 else
                 {
-                    MessageBox.Show(filesName + @"导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + @"秒" + @"\n" +
-                                    @"转完建议重启Excel！");
+                    MessageBox.Show(
+                        filesName
+                            + @"导出完成!用时:"
+                            + Math.Round(milliseconds / 1000, 2)
+                            + @"秒"
+                            + @"\n"
+                            + @"转完建议重启Excel！"
+                    );
                 }
 
                 App.ScreenUpdating = true;
@@ -512,13 +592,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void CleanCellFormat_Click(IRibbonControl control)
     {
-        if (control == null) throw new ArgumentNullException(nameof(control));
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
         ExcelSheetData.CellFormat();
     }
 
     public void FormularCheck_Click(IRibbonControl control)
     {
-        if (control == null) throw new ArgumentNullException(nameof(control));
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
         var stopwatch = new Stopwatch();
         stopwatch.Start();
 
@@ -545,9 +627,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         cellAdress = cellAdress.Substring(0, cellAdress.LastIndexOf("$") + 1) + "7";
         if (fileTemp != null)
         {
-            if (fileTemp.Contains("@"))
-            {
-            }
+            if (fileTemp.Contains("@")) { }
             else
             {
                 MessageBox.Show(@"没有找到关联表格" + cellAdress + @"是[" + fileTemp + @"]格式不对：xxx@xxx");
@@ -589,7 +669,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void MutiSheetOutPut_Click(IRibbonControl control)
     {
-        if (control == null) throw new ArgumentNullException(nameof(control));
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
         if (App.ActiveSheet != null)
         {
             #region 生成窗口和基础控件
@@ -621,7 +702,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             #endregion 生成窗口和基础控件
 
             var outFilePath = App.ActiveWorkbook.Path;
-            Directory.SetCurrentDirectory(Directory.GetParent(outFilePath)?.FullName ?? string.Empty);
+            Directory.SetCurrentDirectory(
+                Directory.GetParent(outFilePath)?.FullName ?? string.Empty
+            );
             outFilePath = Directory.GetCurrentDirectory() + TempPath;
 
             #region 动态加载复选框
@@ -632,7 +715,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 var sheetName = sheet.Name;
                 const string key = "_cfg";
                 var isRealSheet = sheetName.ToLower().Contains(key.ToLower());
-                if (!isRealSheet) continue;
+                if (!isRealSheet)
+                    continue;
                 i++;
                 var cb = new CheckBox
                 {
@@ -657,7 +741,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             };
             f.Controls.Add(checkBox1);
             checkBox1.Click += CheckBox1Click;
-            foreach (CheckBox ck in gb.Controls) ck.CheckedChanged += CkCheckedChanged;
+            foreach (CheckBox ck in gb.Controls)
+                ck.CheckedChanged += CkCheckedChanged;
 
             void CheckBox1Click(object sender, EventArgs e)
             {
@@ -707,10 +792,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 stopwatch.Start();
                 foreach (CheckBox cd in gb.Controls)
                 {
-                    if (!cd.Checked) continue;
+                    if (!cd.Checked)
+                        continue;
                     var sheetName = cd.Text;
                     errorLog += ExcelSheetDataIsError2.GetData2(sheetName);
-                    if (errorLog != "") continue;
+                    if (errorLog != "")
+                        continue;
                     ExcelSheetData.GetDataToTxt(sheetName, outFilePath);
                     sheetsName += sheetName + "\n";
                 }
@@ -722,7 +809,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 f.Close();
                 if (errorLog == "" && sheetsName != "")
                 {
-                    MessageBox.Show(sheetsName + @"导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + @"秒");
+                    MessageBox.Show(
+                        sheetsName + @"导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + @"秒"
+                    );
                 }
                 else
                 {
@@ -750,10 +839,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             stopwatch.Start();
             string sheetName = App.ActiveSheet.Name;
             var outFilePath = App.ActiveWorkbook.Path;
-            Directory.SetCurrentDirectory(Directory.GetParent(outFilePath)?.FullName ?? string.Empty);
+            Directory.SetCurrentDirectory(
+                Directory.GetParent(outFilePath)?.FullName ?? string.Empty
+            );
             outFilePath = Directory.GetCurrentDirectory() + TempPath;
             var errorLog = ExcelSheetDataIsError2.GetData2(sheetName);
-            if (errorLog == "") ExcelSheetData.GetDataToTxt(sheetName, outFilePath);
+            if (errorLog == "")
+                ExcelSheetData.GetDataToTxt(sheetName, outFilePath);
             App.Visible = true;
             stopwatch.Stop();
             var timespan = stopwatch.Elapsed;
@@ -776,14 +868,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
     }
 
-    public void SvnCommitExcel_Click(IRibbonControl control)
-    {
-    }
+    public void SvnCommitExcel_Click(IRibbonControl control) { }
 
     public void SvnCommitTxt_Click(IRibbonControl control)
     {
         var path = App.ActiveWorkbook.Path;
-        Directory.SetCurrentDirectory(Directory.GetParent(path)?.FullName ?? throw new InvalidOperationException());
+        Directory.SetCurrentDirectory(
+            Directory.GetParent(path)?.FullName ?? throw new InvalidOperationException()
+        );
     }
 
     public void PVP_H_Click(IRibbonControl control)
@@ -824,8 +916,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         Worksheet ws = App.ActiveSheet;
         if (ws.Name == "角色基础")
         {
-            if (control == null) throw new ArgumentNullException(nameof(control));
-            LabelTextRoleDataPreview = LabelTextRoleDataPreview == "角色数据预览：开启" ? "角色数据预览：关闭" : "角色数据预览：开启";
+            if (control == null)
+                throw new ArgumentNullException(nameof(control));
+            LabelTextRoleDataPreview =
+                LabelTextRoleDataPreview == "角色数据预览：开启" ? "角色数据预览：关闭" : "角色数据预览：开启";
             CustomRibbon.InvalidateControl("Button14");
             _ = new CellSelectChangePro();
             App.StatusBar = false;
@@ -864,7 +958,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcel.ErrorKeyFromExcelAll(path, _excelSeachStr);
+        var targetList = PubMetToExcel.SearchKeyFromExcelMiniExcel(path, _excelSeachStr);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -872,12 +966,23 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
         else
         {
-            ErrorLogCtp.DisposeCtp();
-            var log = "";
-            for (var i = 0; i < targetList.Count; i++)
-                log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
-                       targetList[i].Item4 + "\n";
-            ErrorLogCtp.CreateCtpNormal(log);
+            var ctpName = "表格查询结果";
+            NumDesCTP.DeleteCTP(true, ctpName);
+            var tupleList = targetList
+                .Select(t =>
+                    (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
+                )
+                .ToList();
+            _ = (SheetSeachResult)
+                NumDesCTP.ShowCTP(
+                    320,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new SheetSeachResult(tupleList),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+
             sw.Stop();
         }
 
@@ -894,7 +999,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcel.ErrorKeyFromExcelAllMultiThread(path, _excelSeachStr);
+        var targetList = PubMetToExcel.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -902,12 +1007,23 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
         else
         {
-            ErrorLogCtp.DisposeCtp();
-            var log = "";
-            for (var i = 0; i < targetList.Count; i++)
-                log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
-                       targetList[i].Item4 + "\n";
-            ErrorLogCtp.CreateCtpNormal(log);
+            var ctpName = "表格查询结果";
+            NumDesCTP.DeleteCTP(true, ctpName);
+            var tupleList = targetList
+                .Select(t =>
+                    (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
+                )
+                .ToList();
+            _ = (SheetSeachResult)
+                NumDesCTP.ShowCTP(
+                    320,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new SheetSeachResult(tupleList),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+
             sw.Stop();
         }
 
@@ -924,19 +1040,31 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var tuple = PubMetToExcel.ErrorKeyFromExcelId(path, _excelSeachStr);
-        if (tuple.Item1 == "")
+        var targetList = PubMetToExcel.SearchKeyFromExcelIDMultiMiniExcel(path, _excelSeachStr);
+        if (targetList.Count == 0)
         {
             sw.Stop();
             MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
         }
         else
         {
-            var targetWk = App.Workbooks.Open(tuple.Item1);
-            var targetSh = targetWk.Worksheets[tuple.Item2];
-            targetSh.Activate();
-            var cell = targetSh.Cells[tuple.Item3, tuple.Item4];
-            cell.Select();
+            var ctpName = "表格查询结果";
+            NumDesCTP.DeleteCTP(true, ctpName);
+            var tupleList = targetList
+                .Select(t =>
+                    (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
+                )
+                .ToList();
+            _ = (SheetSeachResult)
+                NumDesCTP.ShowCTP(
+                    320,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new SheetSeachResult(tupleList),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+
             sw.Stop();
         }
 
@@ -1116,7 +1244,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
         var excelData = new ExcelDataAutoInsertNumChanges();
-        excelData.OutDataIsAll(12);
+        excelData.OutDataIsAll();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
         App.StatusBar = "数据写入完成，用时：" + ts2;
@@ -1147,14 +1275,61 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-        SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "SheetMenu", true , "SheetMenu");
-        var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
-            .Select(x => new WorksheetWrapper { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();
-        SheetMenuCTP.Sheets.Clear();
-        foreach (var worksheet in worksheets)
+        //SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "SheetMenu", true , "SheetMenu");
+        //var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
+        //    .Select(x => new SelfComSheetCollect { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();
+        //SheetMenuCTP.Sheets.Clear();
+        //foreach (var worksheet in worksheets)
+        //{
+        //    SheetMenuCTP.Sheets.Add(worksheet);
+        //}
+        //var window = new SheetLinksWindow();
+        //window.Show();
+
+        //var tuple = new Tuple<string, string , int , int>("h1", "h2" ,3,4);
+        //var lisssad = new List<Tuple<string,string,int,int>>();
+        //lisssad.Add(tuple);
+
+        //var tupleList = lisssad.Select(t => (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))).ToList();
+        //var aasd = (SheetSeachResult)NumDesCTP.ShowCTP(250, "asd" , true , "asd" , new SheetSeachResult(tupleList) , MsoCTPDockPosition.msoCTPDockPositionRight);
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+
+        var targetList = PubMetToExcel.SearchKeyFromExcelMiniExcel(path, _excelSeachStr);
+        if (targetList.Count == 0)
         {
-            SheetMenuCTP.Sheets.Add(worksheet);
+            sw.Stop();
+            MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
         }
+        else
+        {
+            //ErrorLogCtp.DisposeCtp();
+            //var log = "";
+            //for (var i = 0; i < targetList.Count; i++)
+            //    log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
+            //           targetList[i].Item4 + "\n";
+            //ErrorLogCtp.CreateCtpNormal(log);
+            var ctpName = "表格查询结果";
+            NumDesCTP.DeleteCTP(true, ctpName);
+            var tupleList = targetList
+                .Select(t =>
+                    (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
+                )
+                .ToList();
+            _ = (SheetSeachResult)
+                NumDesCTP.ShowCTP(
+                    320,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new SheetSeachResult(tupleList),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+
+            sw.Stop();
+        }
+
+
 
         sw.Stop();
         var ts2 = sw.Elapsed;
@@ -1167,6 +1342,42 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+
+        var targetList = PubMetToExcel.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
+        if (targetList.Count == 0)
+        {
+            sw.Stop();
+            MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
+        }
+        else
+        {
+            //ErrorLogCtp.DisposeCtp();
+            //var log = "";
+            //for (var i = 0; i < targetList.Count; i++)
+            //    log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
+            //           targetList[i].Item4 + "\n";
+            //ErrorLogCtp.CreateCtpNormal(log);
+            var ctpName = "表格查询结果";
+            NumDesCTP.DeleteCTP(true, ctpName);
+            var tupleList = targetList
+                .Select(t =>
+                    (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
+                )
+                .ToList();
+            _ = (SheetSeachResult)
+                NumDesCTP.ShowCTP(
+                    320,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new SheetSeachResult(tupleList),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+
+            sw.Stop();
+        }
 
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
@@ -1177,8 +1388,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         if (!File.Exists(_defaultFilePath))
         {
-            var defaultContent = @"C:\M1Work\Public\Excels\Tables\" + Environment.NewLine +
-                                 @"C:\M2Work\Public\Excels\Tables\";
+            var defaultContent =
+                @"C:\M1Work\Public\Excels\Tables\"
+                + Environment.NewLine
+                + @"C:\M2Work\Public\Excels\Tables\";
 
             File.WriteAllText(_defaultFilePath, defaultContent);
         }
@@ -1187,7 +1400,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var line2 = File.ReadLines(_defaultFilePath).Skip(2 - 1).FirstOrDefault();
         if (control.Id == "BasePathEdit")
             return line1;
-        else if (control.Id == "TargetPathEdit") return line2;
+        else if (control.Id == "TargetPathEdit")
+            return line2;
 
         return @"..\Public\Excels\Tables\";
     }
@@ -1212,7 +1426,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void ZoomInOut_Click(IRibbonControl control)
     {
-        if (control == null) throw new ArgumentNullException(nameof(control));
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
         LabelText = LabelText == "放大镜：开启" ? "放大镜：关闭" : "放大镜：开启";
         CustomRibbon.InvalidateControl("Button5");
         var rangeValueTip = new CellSelectChangeTip();
@@ -1235,7 +1450,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void FocusLight_Click(IRibbonControl control)
     {
-        if (control == null) throw new ArgumentNullException(nameof(control));
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
         FocusLabelText = FocusLabelText == "聚光灯：开启" ? "聚光灯：关闭" : "聚光灯：开启";
         CustomRibbon.InvalidateControl("FocusLightButton");
         if (FocusLabelText == "聚光灯：开启")
@@ -1258,17 +1474,28 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void SheetMenu_Click(IRibbonControl control)
     {
-        if (control == null) throw new ArgumentNullException(nameof(control));
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
         SheetMenuText = SheetMenuText == "表格目录：开启" ? "表格目录：关闭" : "表格目录：开启";
         CustomRibbon.InvalidateControl("SheetMenu");
+
+        var ctpName = "表格目录";
         if (SheetMenuText == "表格目录：开启")
         {
-            NumDesCTP.DeleteCTP(true);
-            SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "表格目录", true, "表格目录");
+            NumDesCTP.DeleteCTP(true, ctpName);
+            _sheetMenuCtp = (SheetListControl)
+                NumDesCTP.ShowCTP(
+                    250,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new SheetListControl(),
+                    MsoCTPDockPosition.msoCTPDockPositionLeft
+                );
         }
         else
         {
-            NumDesCTP.DeleteCTP(true);
+            NumDesCTP.DeleteCTP(true, ctpName);
         }
         _globalValue.SaveValue("SheetMenuText", SheetMenuText);
     }
@@ -1288,14 +1515,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 }
                 catch
                 {
+                    // ignored
                 }
         }
 
         GC.Collect();
         GC.WaitForPendingFinalizers();
         var missing = Type.Missing;
-        var comControl = bars.Add(MsoControlType.msoControlButton,
-            missing, missing, 1, true);
+        var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
         var comButton = comControl as CommandBarButton;
         if (comControl != null)
             if (comButton != null)
@@ -1306,8 +1533,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 comButton.Click += IndexSheetUnOpen_Click;
             }
 
-        var comControl1 = bars.Add(MsoControlType.msoControlButton,
-            missing, missing, 2, true);
+        var comControl1 = bars.Add(MsoControlType.msoControlButton, missing, missing, 2, true);
         var comButton1 = comControl1 as CommandBarButton;
         if (comControl1 != null)
             if (comButton1 != null)
@@ -1317,8 +1543,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton1.Click += IndexSheetOpen_Click;
             }
-
-        Excel_CtpUpdate();
     }
 
     private void ExcelApp_SheetSelectionChange1(object sh, Range target)
@@ -1342,6 +1566,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 }
                 catch
                 {
+                    // ignored
                 }
             }
         }

@@ -23,6 +23,7 @@ namespace NumDesTools;
 #region 升级net6后带来的问题，UserControl需要一个显示的“默认接口”
 
 public interface IMyUserControl { }
+
 [Guid("6305c139-c70f-4c61-aa2e-462641bdd029")]
 [ComDefaultInterface(typeof(IMyUserControl))]
 public class LabelControl : UserControl, IMyUserControl;
@@ -63,7 +64,10 @@ public static class ErrorLogCtp
             i++;
         }
 
-        Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(LinkControl, i < 46 ? "单元格错误集合" : "部分错误：错误大于45个");
+        Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(
+            LinkControl,
+            i < 46 ? "单元格错误集合" : "部分错误：错误大于45个"
+        );
         Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
         Ctp.Width = 350;
         Ctp.Visible = true;
@@ -94,7 +98,8 @@ public static class ErrorLogCtp
 
     public static void DisposeCtp()
     {
-        if (Ctp is not { Title: "表格目录" }) return;
+        if (Ctp is not { Title: "表格目录" })
+            return;
         Ctp.Delete();
         Ctp = null;
     }
@@ -110,7 +115,8 @@ public static class ErrorLogCtp
         app.Worksheets[sheetName].Activate();
         app.ActiveSheet.Range[cellName].Select();
         var isSharp = errorLineStr.Contains("@");
-        if (isSharp) errorLineStr = errorLineStr.Substring(0, errorLineStr.IndexOf('@'));
+        if (isSharp)
+            errorLineStr = errorLineStr.Substring(0, errorLineStr.IndexOf('@'));
         errorLine.Text = errorLineStr + @"@已点过";
         app.Dispose();
     }
@@ -138,9 +144,12 @@ public static class ExcelSheetDataIsError
     [ExcelFunction(IsHidden = true)]
     public static string GetData(string sheetName, string fileName, string filePath)
     {
-        if (sheetName == null) throw new ArgumentNullException(nameof(sheetName));
-        if (fileName == null) throw new ArgumentNullException(nameof(fileName));
-        if (filePath == null) throw new ArgumentNullException(nameof(filePath));
+        if (sheetName == null)
+            throw new ArgumentNullException(nameof(sheetName));
+        if (fileName == null)
+            throw new ArgumentNullException(nameof(fileName));
+        if (filePath == null)
+            throw new ArgumentNullException(nameof(filePath));
         dynamic app = ExcelDnaUtil.Application;
         Worksheet ws = app.Worksheets[sheetName];
         var rowCnt = ws.UsedRange.Rows.Count;
@@ -166,12 +175,20 @@ public static class ExcelSheetDataIsError
             if (indexTxt != "" && isChinese != true)
             {
                 var filePath1 = app.ActiveWorkbook.Path;
-                Directory.SetCurrentDirectory(Directory.GetParent(filePath1)?.FullName ?? string.Empty);
-                filePath1 = Directory.GetCurrentDirectory() + NumDesAddIn.TempPath + @"\" + indexTxt + @".txt";
+                Directory.SetCurrentDirectory(
+                    Directory.GetParent(filePath1)?.FullName ?? string.Empty
+                );
+                filePath1 =
+                    Directory.GetCurrentDirectory()
+                    + NumDesAddIn.TempPath
+                    + @"\"
+                    + indexTxt
+                    + @".txt";
                 if (File.Exists(filePath1))
                     fileStr = ExcelIndexDataIsWrong.FileToStr(filePath1);
                 else
-                    isError = sheetName + "/" + colEng + 6 + "→" + indexTxt + ":不存在" + "\r\n" + isError;
+                    isError =
+                        sheetName + "/" + colEng + 6 + "→" + indexTxt + ":不存在" + "\r\n" + isError;
             }
 
             if (isCol == "*" || isCol2 == "cn")
@@ -183,50 +200,68 @@ public static class ExcelSheetDataIsError
 #pragma warning disable CA1305
                     var isRow = Convert.ToString(arr.GetValue(i, 1));
 #pragma warning restore CA1305
-                    if (isRow != "*") continue;
+                    if (isRow != "*")
+                        continue;
                     string errorTag;
                     switch (cellString)
                     {
                         case "-2146826259":
                             errorTag = "#NAME?";
-                            isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                            isError =
+                                sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
                             break;
 
                         case "-2146826246":
                             errorTag = "#N/A";
-                            isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                            isError =
+                                sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
                             break;
 
                         case "-2146826281":
                             errorTag = "#DIV/0!";
-                            isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                            isError =
+                                sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
                             break;
 
                         case "-2146826273":
                             errorTag = "#VALUE!";
-                            isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                            isError =
+                                sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
                             break;
 
                         case "-2146826252":
                             errorTag = "#NUM?";
-                            isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                            isError =
+                                sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
                             break;
 
                         case "-2146826265":
                             errorTag = "#REF!";
-                            isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                            isError =
+                                sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
                             break;
 
                         case "-2146826288":
                             errorTag = "#NULL!";
-                            isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                            isError =
+                                sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
                             break;
                     }
 
-                    if (fileStr == "" || i <= 8) continue;
+                    if (fileStr == "" || i <= 8)
+                        continue;
                     var isIndexWrong = cellString != null && fileStr.Contains(cellString);
                     if (isIndexWrong != true)
-                        isError = sheetName + "/" + colEng + i + "→" + indexTxt + ":不存在值" + "\r\n" + isError;
+                        isError =
+                            sheetName
+                            + "/"
+                            + colEng
+                            + i
+                            + "→"
+                            + indexTxt
+                            + ":不存在值"
+                            + "\r\n"
+                            + isError;
                 }
 
             isErrors += isError;
@@ -260,7 +295,8 @@ public static class ExcelSheetDataIsError
         var a = col / 26;
         var b = col % 26;
 
-        if (a > 0) return GetColumnChar(a - 1) + (char)(b + 65);
+        if (a > 0)
+            return GetColumnChar(a - 1) + (char)(b + 65);
 
         return ((char)(b + 65)).ToString();
     }
@@ -296,12 +332,20 @@ public static class ExcelSheetDataIsError2
             if (indexTxt != "" && isChinese != true)
             {
                 string filePath = app.ActiveWorkbook.Path;
-                Directory.SetCurrentDirectory(Directory.GetParent(filePath)?.FullName ?? string.Empty);
-                filePath = Directory.GetCurrentDirectory() + NumDesAddIn.TempPath + @"\" + indexTxt + @".txt";
+                Directory.SetCurrentDirectory(
+                    Directory.GetParent(filePath)?.FullName ?? string.Empty
+                );
+                filePath =
+                    Directory.GetCurrentDirectory()
+                    + NumDesAddIn.TempPath
+                    + @"\"
+                    + indexTxt
+                    + @".txt";
                 if (File.Exists(filePath))
                     fileStr = ExcelIndexDataIsWrong.FileToStr(filePath);
                 else
-                    isError = sheetName + "/" + colEng + 6 + "→" + indexTxt + ":不存在" + "\r\n" + isError;
+                    isError =
+                        sheetName + "/" + colEng + 6 + "→" + indexTxt + ":不存在" + "\r\n" + isError;
             }
 
             if (isCol == "*" || isCol2 == "cn")
@@ -320,44 +364,110 @@ public static class ExcelSheetDataIsError2
                         {
                             case "-2146826259":
                                 errorTag = "#NAME?";
-                                isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                                isError =
+                                    sheetName
+                                    + "/"
+                                    + colEng
+                                    + i
+                                    + "→"
+                                    + errorTag
+                                    + "\r\n"
+                                    + isError;
                                 break;
 
                             case "-2146826246":
                                 errorTag = "#N/A";
-                                isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                                isError =
+                                    sheetName
+                                    + "/"
+                                    + colEng
+                                    + i
+                                    + "→"
+                                    + errorTag
+                                    + "\r\n"
+                                    + isError;
                                 break;
 
                             case "-2146826281":
                                 errorTag = "#DIV/0!";
-                                isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                                isError =
+                                    sheetName
+                                    + "/"
+                                    + colEng
+                                    + i
+                                    + "→"
+                                    + errorTag
+                                    + "\r\n"
+                                    + isError;
                                 break;
 
                             case "-2146826273":
                                 errorTag = "#VALUE!";
-                                isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                                isError =
+                                    sheetName
+                                    + "/"
+                                    + colEng
+                                    + i
+                                    + "→"
+                                    + errorTag
+                                    + "\r\n"
+                                    + isError;
                                 break;
 
                             case "-2146826252":
                                 errorTag = "#NUM?";
-                                isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                                isError =
+                                    sheetName
+                                    + "/"
+                                    + colEng
+                                    + i
+                                    + "→"
+                                    + errorTag
+                                    + "\r\n"
+                                    + isError;
                                 break;
 
                             case "-2146826265":
                                 errorTag = "#REF!";
-                                isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                                isError =
+                                    sheetName
+                                    + "/"
+                                    + colEng
+                                    + i
+                                    + "→"
+                                    + errorTag
+                                    + "\r\n"
+                                    + isError;
                                 break;
 
                             case "-2146826288":
                                 errorTag = "#NULL!";
-                                isError = sheetName + "/" + colEng + i + "→" + errorTag + "\r\n" + isError;
+                                isError =
+                                    sheetName
+                                    + "/"
+                                    + colEng
+                                    + i
+                                    + "→"
+                                    + errorTag
+                                    + "\r\n"
+                                    + isError;
                                 break;
                         }
 
-                        if (fileStr == "" || i <= 8) continue;
+                        if (fileStr == "" || i <= 8)
+                            continue;
                         var isIndexWrong = fileStr.Split(',').Contains(cellString);
                         if (isIndexWrong != true)
-                            isError = sheetName + "/" + colEng + i + "→" + indexTxt + ":不存在值" + "\r\n" + isError;
+                            isError =
+                                sheetName
+                                + "/"
+                                + colEng
+                                + i
+                                + "→"
+                                + indexTxt
+                                + ":不存在值"
+                                + "\r\n"
+                                + isError;
                     }
                 }
 
@@ -374,7 +484,8 @@ public static class ExcelSheetDataIsError2
         var a = col / 26;
         var b = col % 26;
 
-        if (a > 0) return GetColumnChar(a - 1) + (char)(b + 65);
+        if (a > 0)
+            return GetColumnChar(a - 1) + (char)(b + 65);
 
         return ((char)(b + 65)).ToString();
     }
@@ -384,8 +495,10 @@ public static class ExcelToDataGridView
 {
     public static DataTable SheetDataToDataGridView(string filePath, string sheetName)
     {
-        var strConn = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source = " + filePath +
-                      ";Extended Properties ='Excel 8.0;HDR=NO;IMEX=1'";
+        var strConn =
+            "Provider=Microsoft.ACE.OLEDB.12.0;Data Source = "
+            + filePath
+            + ";Extended Properties ='Excel 8.0;HDR=NO;IMEX=1'";
         var conn = new OleDbConnection(strConn);
         conn.Open();
         var strExcel = "select  * from   [" + sheetName + "$]";
@@ -441,26 +554,45 @@ public static class FormularCheck
                             var indexA = errorFormulaStr.IndexOf(strStar, StringComparison.Ordinal);
                             var indexB = errorFormulaStr.IndexOf(strEnd, StringComparison.Ordinal);
                             if (indexA >= 0 && indexB >= 0)
-                                fileName = errorFormulaStr.Substring(indexA + strStar.Length,
-                                    indexB - indexA - strEnd.Length);
-                            var indexRealA = fileName.IndexOf(strRealStar, StringComparison.Ordinal);
+                                fileName = errorFormulaStr.Substring(
+                                    indexA + strStar.Length,
+                                    indexB - indexA - strEnd.Length
+                                );
+                            var indexRealA = fileName.IndexOf(
+                                strRealStar,
+                                StringComparison.Ordinal
+                            );
                             var indexRealB = fileName.IndexOf(strRealEnd, StringComparison.Ordinal);
                             if ((indexA >= 0 && indexB >= 0) || fileName != "")
                             {
-                                var errorStr = fileName.Substring(indexRealA + strRealStar.Length,
-                                    indexRealB - indexRealA - strRealEnd.Length - 2);
-                                if (errorStr != "") fileRealName = fileName.Replace(errorStr, "");
+                                var errorStr = fileName.Substring(
+                                    indexRealA + strRealStar.Length,
+                                    indexRealB - indexRealA - strRealEnd.Length - 2
+                                );
+                                if (errorStr != "")
+                                    fileRealName = fileName.Replace(errorStr, "");
                             }
 
-                            var indexFullA = errorFormulaStr.IndexOf(strFullStar, StringComparison.Ordinal);
-                            var indexFullB = errorFormulaStr.IndexOf(strFullEnd, StringComparison.Ordinal);
+                            var indexFullA = errorFormulaStr.IndexOf(
+                                strFullStar,
+                                StringComparison.Ordinal
+                            );
+                            var indexFullB = errorFormulaStr.IndexOf(
+                                strFullEnd,
+                                StringComparison.Ordinal
+                            );
                             if (indexFullA >= 0 && indexFullB >= 0)
-                                fileFullName = errorFormulaStr.Substring(indexFullA + strFullStar.Length,
-                                    indexFullB - indexFullA - strFullEnd.Length);
+                                fileFullName = errorFormulaStr.Substring(
+                                    indexFullA + strFullStar.Length,
+                                    indexFullB - indexFullA - strFullEnd.Length
+                                );
                             if (fileFullName != "" && fileRealName != "")
                             {
                                 var filePath = actFilePath + "\\[" + fileRealName;
-                                currentFormulaStr = currentFormulaStr.Replace(fileFullName, filePath);
+                                currentFormulaStr = currentFormulaStr.Replace(
+                                    fileFullName,
+                                    filePath
+                                );
                             }
 
                             fileFullName = "";
@@ -513,9 +645,11 @@ public static class ExcelSheetData
         for (var i = 0; i <= asd; i++)
         {
             var row = (XSSFRow)sheet.GetRow(i);
-            if (row == null) continue;
+            if (row == null)
+                continue;
             var cell = (XSSFCell)row.GetCell(1, MissingCellPolicy.CREATE_NULL_AS_BLANK);
-            if (cell.CellType == CellType.Blank) continue;
+            if (cell.CellType == CellType.Blank)
+                continue;
 
             var asd123 = cell.ToString();
             Debug.Print(asd123);
@@ -564,7 +698,6 @@ public static class ExcelSheetData
         }
     }
 
-
     public static void GetDataToTxt(string sheetName, string outFilePath)
     {
         Worksheet ws = NumDesAddIn.App.Worksheets[sheetName];
@@ -607,7 +740,8 @@ public static class ExcelSheetData
             Array arr2 = isLanRange.Value2;
             var arr3 = new string[colCnt + 1];
 #pragma warning disable CA1305
-            for (var kk = 1; kk < colCnt + 1; kk++) arr3[kk] = Convert.ToString(arr2.GetValue(1, kk));
+            for (var kk = 1; kk < colCnt + 1; kk++)
+                arr3[kk] = Convert.ToString(arr2.GetValue(1, kk));
 #pragma warning restore CA1305
             var isLan = Array.IndexOf(arr3, langTag);
             if (isLan == -1)
@@ -617,7 +751,8 @@ public static class ExcelSheetData
 #pragma warning disable CA1305
                 var cellsRowIsOut = Convert.ToString(arr.GetValue(i, 1));
 #pragma warning restore CA1305
-                if (cellsRowIsOut != "*") continue;
+                if (cellsRowIsOut != "*")
+                    continue;
 #pragma warning disable CA1305
                 var dataValueStr = Convert.ToString(arr.GetValue(i, 2));
 #pragma warning restore CA1305
@@ -632,8 +767,10 @@ public static class ExcelSheetData
 #pragma warning disable CA1305
                     var cellsColIsOut = Convert.ToString(arr.GetValue(dataOrder, j));
 #pragma warning restore CA1305
-                    if (cellsColIsOut != langTag) continue;
-                    if (cellsValue == "") cellsValue = cellsValueDefault;
+                    if (cellsColIsOut != langTag)
+                        continue;
+                    if (cellsValue == "")
+                        cellsValue = cellsValueDefault;
                     dataValueStr = dataValueStr + "\t" + cellsValue;
                 }
 
@@ -676,9 +813,8 @@ public static class ExcelSheetData
 
 internal class GetImageByStdole : AxHost
 {
-    private GetImageByStdole() : base(null)
-    {
-    }
+    private GetImageByStdole()
+        : base(null) { }
 
     public static IPictureDisp ImageToPictureDisp(Image image)
     {

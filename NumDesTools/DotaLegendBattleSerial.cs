@@ -22,21 +22,19 @@ public class DotaLegendBattleTem
         sw.Start();
 
         var taskA = Task.Run(() =>
-            {
-                _hpB -= Test134(a);
-                _hpB = Math.Min(_hpB, 1000);
-                Debug.Print(_hpB + "taskA");
-            }
-        );
+        {
+            _hpB -= Test134(a);
+            _hpB = Math.Min(_hpB, 1000);
+            Debug.Print(_hpB + "taskA");
+        });
         taskA.Wait();
         var taskB = Task.Run(() =>
-            {
-                _hpB += Test134(a);
-                _hpB += 1000;
-                _hpB = Math.Min(_hpB, 1000);
-                Debug.Print(_hpB + "taskB");
-            }
-        );
+        {
+            _hpB += Test134(a);
+            _hpB += 1000;
+            _hpB = Math.Min(_hpB, 1000);
+            Debug.Print(_hpB + "taskB");
+        });
         taskB.Wait();
 
         sw.Stop();
@@ -63,7 +61,8 @@ public class DotaLegendBattleTem
     public static int Test134(int a)
     {
         var cad = 0;
-        for (var i = 0; i < 10; i++) cad++;
+        for (var i = 0; i < 10; i++)
+            cad++;
         return cad;
     }
 
@@ -128,13 +127,17 @@ internal class DotaLegendBattleSerial
 
     private static readonly int SkillHealUseAllHp = 21;
 
-    private static readonly Range RangeA = Ws.Range[Ws.Cells[ARowMin, AColMin],
-        Ws.Cells[ARowMax, AColMax]];
+    private static readonly Range RangeA = Ws.Range[
+        Ws.Cells[ARowMin, AColMin],
+        Ws.Cells[ARowMax, AColMax]
+    ];
 
     private static readonly Array ArrA = RangeA.Value2;
 
-    private static readonly Range RangeB = Ws.Range[Ws.Cells[BRowMin, BColMin],
-        Ws.Cells[BRowMax, BColMax]];
+    private static readonly Range RangeB = Ws.Range[
+        Ws.Cells[BRowMin, BColMin],
+        Ws.Cells[BRowMax, BColMax]
+    ];
 
     private static readonly Array ArrB = RangeB.Value2;
     public int AutoRatio = 15;
@@ -216,56 +219,174 @@ internal class DotaLegendBattleSerial
             if (BattleFirst == "A")
             {
                 numA = posRowA.Count;
-                BattleMethod(numA, posRowA, posRowB, posColA, posColB, countSkillA, skillCda, skillCDstartA,
-                    turn, defB,
-                    critA, atkA, critMultiA, skillDamageA, hpB, hpA, skillHealUseAllHpA, hpAMax,
-                    skillHealUseSelfAtkA,
-                    skillHealUseSelfHpA, countAtka, atkSpeedA,
-                    atkB, critB, critMultiB, atkSpeedB, skillCdb, skillCDstartB, skillDamageB,
-                    skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB,
-                    countSkillB,
-                    countAtkb, true, hpBMax);
-                numB = posRowB.Count;
-                BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCdb, skillCDstartB,
-                    turn, defA,
-                    critB, atkB, critMultiB, skillDamageB, hpA, hpB, skillHealUseAllHpB, hpBMax,
-                    skillHealUseSelfAtkB,
-                    skillHealUseSelfHpB, countAtkb, atkSpeedB,
-                    atkA, critA, critMultiA, atkSpeedA, skillCda, skillCDstartA, skillDamageA,
-                    skillHealUseSelfAtkA, skillHealUseSelfHpA, skillHealUseAllHpA,
+                BattleMethod(
+                    numA,
+                    posRowA,
+                    posRowB,
+                    posColA,
+                    posColB,
                     countSkillA,
-                    countAtka, false, hpAMax);
+                    skillCda,
+                    skillCDstartA,
+                    turn,
+                    defB,
+                    critA,
+                    atkA,
+                    critMultiA,
+                    skillDamageA,
+                    hpB,
+                    hpA,
+                    skillHealUseAllHpA,
+                    hpAMax,
+                    skillHealUseSelfAtkA,
+                    skillHealUseSelfHpA,
+                    countAtka,
+                    atkSpeedA,
+                    atkB,
+                    critB,
+                    critMultiB,
+                    atkSpeedB,
+                    skillCdb,
+                    skillCDstartB,
+                    skillDamageB,
+                    skillHealUseSelfAtkB,
+                    skillHealUseSelfHpB,
+                    skillHealUseAllHpB,
+                    countSkillB,
+                    countAtkb,
+                    true,
+                    hpBMax
+                );
+                numB = posRowB.Count;
+                BattleMethod(
+                    numB,
+                    posRowB,
+                    posRowA,
+                    posColB,
+                    posColA,
+                    countSkillB,
+                    skillCdb,
+                    skillCDstartB,
+                    turn,
+                    defA,
+                    critB,
+                    atkB,
+                    critMultiB,
+                    skillDamageB,
+                    hpA,
+                    hpB,
+                    skillHealUseAllHpB,
+                    hpBMax,
+                    skillHealUseSelfAtkB,
+                    skillHealUseSelfHpB,
+                    countAtkb,
+                    atkSpeedB,
+                    atkA,
+                    critA,
+                    critMultiA,
+                    atkSpeedA,
+                    skillCda,
+                    skillCDstartA,
+                    skillDamageA,
+                    skillHealUseSelfAtkA,
+                    skillHealUseSelfHpA,
+                    skillHealUseAllHpA,
+                    countSkillA,
+                    countAtka,
+                    false,
+                    hpAMax
+                );
             }
             else
             {
                 numB = posRowB.Count;
-                BattleMethod(numB, posRowB, posRowA, posColB, posColA, countSkillB, skillCdb, skillCDstartB,
+                BattleMethod(
+                    numB,
+                    posRowB,
+                    posRowA,
+                    posColB,
+                    posColA,
+                    countSkillB,
+                    skillCdb,
+                    skillCDstartB,
                     turn,
                     defA,
-                    critB, atkB, critMultiB, skillDamageB, hpA, hpB, skillHealUseAllHpB, hpBMax,
+                    critB,
+                    atkB,
+                    critMultiB,
+                    skillDamageB,
+                    hpA,
+                    hpB,
+                    skillHealUseAllHpB,
+                    hpBMax,
                     skillHealUseSelfAtkB,
-                    skillHealUseSelfHpB, countAtkb, atkSpeedB,
-                    atkA, critA, critMultiA, atkSpeedA, skillCda, skillCDstartA, skillDamageA,
-                    skillHealUseSelfAtkA, skillHealUseSelfHpA, skillHealUseAllHpA, countSkillA,
-                    countAtka, false, hpAMax);
+                    skillHealUseSelfHpB,
+                    countAtkb,
+                    atkSpeedB,
+                    atkA,
+                    critA,
+                    critMultiA,
+                    atkSpeedA,
+                    skillCda,
+                    skillCDstartA,
+                    skillDamageA,
+                    skillHealUseSelfAtkA,
+                    skillHealUseSelfHpA,
+                    skillHealUseAllHpA,
+                    countSkillA,
+                    countAtka,
+                    false,
+                    hpAMax
+                );
 
                 numA = posRowA.Count;
-                BattleMethod(numA, posRowA, posRowB, posColA, posColB, countSkillA, skillCda, skillCDstartA,
+                BattleMethod(
+                    numA,
+                    posRowA,
+                    posRowB,
+                    posColA,
+                    posColB,
+                    countSkillA,
+                    skillCda,
+                    skillCDstartA,
                     turn,
                     defB,
-                    critA, atkA, critMultiA, skillDamageA, hpB, hpA, skillHealUseAllHpA, hpAMax,
+                    critA,
+                    atkA,
+                    critMultiA,
+                    skillDamageA,
+                    hpB,
+                    hpA,
+                    skillHealUseAllHpA,
+                    hpAMax,
                     skillHealUseSelfAtkA,
-                    skillHealUseSelfHpA, countAtka, atkSpeedA,
-                    atkB, critB, critMultiB, atkSpeedB, skillCdb, skillCDstartB, skillDamageB,
-                    skillHealUseSelfAtkB, skillHealUseSelfHpB, skillHealUseAllHpB, countSkillB,
-                    countAtkb, true, hpBMax);
+                    skillHealUseSelfHpA,
+                    countAtka,
+                    atkSpeedA,
+                    atkB,
+                    critB,
+                    critMultiB,
+                    atkSpeedB,
+                    skillCdb,
+                    skillCDstartB,
+                    skillDamageB,
+                    skillHealUseSelfAtkB,
+                    skillHealUseSelfHpB,
+                    skillHealUseAllHpB,
+                    countSkillB,
+                    countAtkb,
+                    true,
+                    hpBMax
+                );
             }
 
             turn++;
         } while (numA > 0 && numB > 0 && turn < 901);
 
-        if (numB == 0 && numA > 0) _av += 1;
-        if (numA == 0 && numB > 0) _bv += 1;
+        if (numB == 0 && numA > 0)
+            _av += 1;
+        if (numA == 0 && numB > 0)
+            _bv += 1;
         var aahPlist = new List<double>(hpA);
         var bahPlist = new List<double>(hpB);
         _aahp += aahPlist.Sum();
@@ -273,15 +394,44 @@ internal class DotaLegendBattleSerial
         _totalTurn += turn;
     }
 
-    private static void BattleMethod(dynamic num1, dynamic posRow1, dynamic posRow2, dynamic posCol1, dynamic posCol2,
-        dynamic countSkill1, dynamic skillCd1, dynamic skillCDstart1, int turn, dynamic def2, dynamic crit1,
+    private static void BattleMethod(
+        dynamic num1,
+        dynamic posRow1,
+        dynamic posRow2,
+        dynamic posCol1,
+        dynamic posCol2,
+        dynamic countSkill1,
+        dynamic skillCd1,
+        dynamic skillCDstart1,
+        int turn,
+        dynamic def2,
+        dynamic crit1,
         dynamic atk1,
-        dynamic critMulti1, dynamic skillDamge1, dynamic hp2, dynamic hp1, dynamic skillHealUseAllHp1, dynamic hp1Max,
-        dynamic skillHealUseSelfAtk1, dynamic skillHealUseSelfHp1, dynamic countAtk1, dynamic atkSpeed1,
-        dynamic atk2, dynamic crit2, dynamic critMulti2, dynamic atkSpeed2, dynamic skillCd2,
-        dynamic skillCDstart2, dynamic skillDamge2, dynamic skillHealUseSelfAtk2, dynamic skillHealUseSelfHp2,
-        dynamic skillHealUseAllHp2, dynamic countSkill2, dynamic countAtk2, bool isAb,
-        dynamic hp2Max)
+        dynamic critMulti1,
+        dynamic skillDamge1,
+        dynamic hp2,
+        dynamic hp1,
+        dynamic skillHealUseAllHp1,
+        dynamic hp1Max,
+        dynamic skillHealUseSelfAtk1,
+        dynamic skillHealUseSelfHp1,
+        dynamic countAtk1,
+        dynamic atkSpeed1,
+        dynamic atk2,
+        dynamic crit2,
+        dynamic critMulti2,
+        dynamic atkSpeed2,
+        dynamic skillCd2,
+        dynamic skillCDstart2,
+        dynamic skillDamge2,
+        dynamic skillHealUseSelfAtk2,
+        dynamic skillHealUseSelfHp2,
+        dynamic skillHealUseAllHp2,
+        dynamic countSkill2,
+        dynamic countAtk2,
+        bool isAb,
+        dynamic hp2Max
+    )
     {
         var atkDamgeA = new List<double>();
         for (var i = 0; i < num1; i++)
@@ -295,17 +445,46 @@ internal class DotaLegendBattleSerial
                 var cc = countAtk1[i] * Convert.ToInt32(1 / atkSpeed1[i] * 10);
                 if (aa + bb == turn)
                 {
-                    DamageCaculate(def2, i, crit1, atk1, critMulti1, skillDamge1, hp2, targetA,
-                        hp1, skillHealUseAllHp1, hp1Max, skillHealUseSelfAtk1, skillHealUseSelfHp1, true,
-                        isAb);
+                    DamageCaculate(
+                        def2,
+                        i,
+                        crit1,
+                        atk1,
+                        critMulti1,
+                        skillDamge1,
+                        hp2,
+                        targetA,
+                        hp1,
+                        skillHealUseAllHp1,
+                        hp1Max,
+                        skillHealUseSelfAtk1,
+                        skillHealUseSelfHp1,
+                        true,
+                        isAb
+                    );
                     countSkill1[i]++;
-                    if (cc == turn) countAtk1[i]++;
+                    if (cc == turn)
+                        countAtk1[i]++;
                 }
                 else if (cc == turn)
                 {
-                    DamageCaculate(def2, i, crit1, atk1, critMulti1, atkDamgeA, hp2, targetA,
-                        hp1, skillHealUseAllHp1, hp1Max, skillHealUseSelfAtk1, skillHealUseSelfHp1, false,
-                        isAb);
+                    DamageCaculate(
+                        def2,
+                        i,
+                        crit1,
+                        atk1,
+                        critMulti1,
+                        atkDamgeA,
+                        hp2,
+                        targetA,
+                        hp1,
+                        skillHealUseAllHp1,
+                        hp1Max,
+                        skillHealUseSelfAtk1,
+                        skillHealUseSelfHp1,
+                        false,
+                        isAb
+                    );
                     countAtk1[i]++;
                 }
 
@@ -333,11 +512,23 @@ internal class DotaLegendBattleSerial
         }
     }
 
-    private static void DamageCaculate(dynamic def2Dam, int i, dynamic crit1Dam, dynamic atk1Dam, dynamic critMulti1Dam,
-        dynamic skillDamge1Dam, dynamic hp2Dam, dynamic targetADam, dynamic hp1Dam,
+    private static void DamageCaculate(
+        dynamic def2Dam,
+        int i,
+        dynamic crit1Dam,
+        dynamic atk1Dam,
+        dynamic critMulti1Dam,
+        dynamic skillDamge1Dam,
+        dynamic hp2Dam,
+        dynamic targetADam,
+        dynamic hp1Dam,
         dynamic skillHealUseAllHp1Dam,
-        dynamic hp1MaxDam, dynamic skillHealUseSelfAtk1Dam, dynamic skillHealUseSelfHp1Dam, bool isSkillDam,
-        dynamic isAb)
+        dynamic hp1MaxDam,
+        dynamic skillHealUseSelfAtk1Dam,
+        dynamic skillHealUseSelfHp1Dam,
+        bool isSkillDam,
+        dynamic isAb
+    )
     {
         var rndCrit = new Random();
         var rSeed = rndCrit.Next(10000);
@@ -349,9 +540,7 @@ internal class DotaLegendBattleSerial
             dmg = atk1Dam[i];
         dmg = dmg / redmg * skillDamge1Dam[i];
         hp2Dam[targetADam] -= dmg;
-        if (isAb)
-        {
-        }
+        if (isAb) { }
 
         if (isSkillDam)
         {
@@ -361,13 +550,20 @@ internal class DotaLegendBattleSerial
                 hp1Dam[j] = Math.Min(hp1Dam[j], hp1MaxDam[j]);
             }
 
-            hp1Dam[i] += skillHealUseSelfAtk1Dam[i] * atk1Dam[i] + skillHealUseSelfHp1Dam[i] * hp1Dam[i];
+            hp1Dam[i] +=
+                skillHealUseSelfAtk1Dam[i] * atk1Dam[i] + skillHealUseSelfHp1Dam[i] * hp1Dam[i];
             hp1Dam[i] = Math.Min(hp1Dam[i], hp1MaxDam[i]);
         }
     }
 
-    public static int Target(int item1Tar, dynamic posRow1Tar, dynamic posRow2Tar, dynamic posCol1Tar,
-        dynamic posCol2Tar, dynamic nnnm)
+    public static int Target(
+        int item1Tar,
+        dynamic posRow1Tar,
+        dynamic posRow2Tar,
+        dynamic posCol1Tar,
+        dynamic posCol2Tar,
+        dynamic nnnm
+    )
     {
         var countEle = posRow2Tar.Count;
         if (countEle > 0)

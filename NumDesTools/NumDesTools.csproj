@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net6.0-windows</TargetFramework>
+        <TargetFrameworks>net6.0-windows</TargetFrameworks>
         <RollForward>LatestMajor</RollForward>
         <OutputType>Library</OutputType>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -112,19 +112,22 @@
         </COMReference>
     </ItemGroup>
     <ItemGroup>
+        <PackageReference Include="BouncyCastle.Cryptography" Version="2.3.1" />
         <PackageReference Include="Enums.NET" Version="5.0.0" />
-        <PackageReference Include="EPPlus" Version="7.1.2" />
+        <PackageReference Include="EPPlus" Version="7.0.4" />
         <PackageReference Include="EPPlus.Interfaces" Version="6.1.1" />
         <PackageReference Include="EPPlus.System.Drawing" Version="6.1.1" />
-        <PackageReference Include="ExcelDna.AddIn" Version="1.7.0" />
-        <PackageReference Include="ExcelDna.Integration" Version="1.7.0" />
-        <PackageReference Include="ExcelDna.IntelliSense" Version="1.7.0" />
+        <PackageReference Include="ExcelDna.AddIn" Version="1.8.0" />
+        <PackageReference Include="ExcelDna.Integration" Version="1.8.0" />
+        <PackageReference Include="ExcelDna.IntelliSense" Version="1.8.0" />
         <PackageReference Include="ExcelDna.Interop" Version="15.0.1" />
+        <PackageReference Include="GraphX" Version="3.0.0" />
         <PackageReference Include="KeraLua" Version="1.4.1" />
         <PackageReference Include="MathNet.Numerics.Signed" Version="5.0.0" />
-        <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.0" />
+        <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="2.3.2" />
+        <PackageReference Include="MiniExcel" Version="1.32.1" />
         <PackageReference Include="NLua" Version="1.7.2" />
-        <PackageReference Include="NPOI" Version="2.7.0" />
+        <PackageReference Include="NPOI" Version="2.6.2" />
         <PackageReference Include="SharpZipLib" Version="1.4.2" />
         <PackageReference Include="SixLabors.Fonts" Version="2.0.3" />
         <PackageReference Include="SixLabors.ImageSharp" Version="3.1.4" />
@@ -142,4 +145,71 @@
         <PostBuildEvent>call "C:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesToolsCode\packFromBin\ReNamePack.bat" /y </PostBuildEvent>
         <PostBuildEvent>call "C:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\packFromBin\ReNamePack.bat" /y </PostBuildEvent>
     </PropertyGroup>
+      <PropertyGroup>
+      <!--
+    Enable/Disable setting the debug options when building the project
+  -->
+      <RunExcelDnaSetDebuggerOptions Condition="'$(RunExcelDnaSetDebuggerOptions)' == ''">true</RunExcelDnaSetDebuggerOptions>
+
+      <!--
+    Override the path of EXCEL.EXE used for debugging the project, if you need
+    By default, it will use the latest version of Excel it can find on the machine
+  -->
+      <ExcelDnaExcelExePath Condition="'$(ExcelDnaExcelExePath)' == ''"></ExcelDnaExcelExePath>
+
+      <!--
+    Override the name of the .XLL add-in to use when debugging the project, if you need
+    By default, it will use the first unpacked .xll add-in that matches the bitness of EXCEL.EXE
+  -->
+      <ExcelDnaAddInForDebugging Condition="'$(ExcelDnaAddInForDebugging)' == ''"></ExcelDnaAddInForDebugging>
+  </PropertyGroup>
+
+  <!--
+  Configuration properties for building .dna files
+-->
+  <PropertyGroup>
+      <!--
+    Enable/Disable automatic generation of platform-specific versions of .dna files
+  -->
+      <ExcelDnaCreate32BitAddIn Condition="'$(ExcelDnaCreate32BitAddIn)' == ''">true</ExcelDnaCreate32BitAddIn>
+      <ExcelDnaCreate64BitAddIn Condition="'$(ExcelDnaCreate64BitAddIn)' == ''">true</ExcelDnaCreate64BitAddIn>
+
+      <!--
+    Define the suffix used for each platform-specific file e.g. MyAddIn64.dna
+  -->
+      <ExcelDna32BitAddInSuffix Condition="'$(ExcelDna32BitAddInSuffix)' == ''"></ExcelDna32BitAddInSuffix>
+      <ExcelDna64BitAddInSuffix Condition="'$(ExcelDna64BitAddInSuffix)' == ''">64</ExcelDna64BitAddInSuffix>
+  </PropertyGroup>
+
+  <PropertyGroup>
+      <!--
+    Enable/Disable using Excel-DNA with PackageReference projects (not officially supported)
+  -->
+      <ExcelDnaAllowPackageReferenceProjectStyle Condition="'$(ExcelDnaAllowPackageReferenceProjectStyle)' == ''">false</ExcelDnaAllowPackageReferenceProjectStyle>
+  </PropertyGroup>
+
+  <!--
+  Configuration properties for packing .dna files
+-->
+  <PropertyGroup>
+      <!--
+    Enable/Disable packing of .dna files
+  -->
+      <RunExcelDnaPack Condition="'$(RunExcelDnaPack)' == ''">true</RunExcelDnaPack>
+
+      <!--
+    Suffix used for packed .xll files e.g. MyAddIn-packed.xll
+  -->
+      <ExcelDnaPackXllSuffix Condition="'$(ExcelDnaPackXllSuffix)' == ''">-packed</ExcelDnaPackXllSuffix>
+
+      <!--
+    Options used when packing .xll files.
+    When in trouble with your virus scanner, try uncommenting at least the resource compression properties.
+    The default is true for both compression and multithreaded runs when not specified.
+  -->
+      <!--<ExcelDnaPackCompressResources Condition="'$(ConfigurationName)' == 'Debug'">false</ExcelDnaPackCompressResources>-->
+      <!--<ExcelDnaPackRunMultithreaded  Condition="'$(ConfigurationName)' == 'Debug'">false</ExcelDnaPackRunMultithreaded>-->
+      <!--<ExcelDnaPackCompressResources Condition="'$(ConfigurationName)' == 'Release'">false</ExcelDnaPackCompressResources>-->
+      <!--<ExcelDnaPackRunMultithreaded  Condition="'$(ConfigurationName)' == 'Release'">false</ExcelDnaPackRunMultithreaded>-->
+  </PropertyGroup>
 </Project>
