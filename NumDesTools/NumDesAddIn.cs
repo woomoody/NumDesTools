@@ -958,7 +958,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcel.ErrorKeyFromExcelAll(path, _excelSeachStr);
+        var targetList = PubMetToExcel.SearchKeyFromExcelMiniExcel(path, _excelSeachStr);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1005,7 +1005,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcel.ErrorKeyFromExcelAllMultiThread(path, _excelSeachStr);
+        var targetList = PubMetToExcel.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1292,6 +1292,43 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         //var tupleList = lisssad.Select(t => (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))).ToList();
         //var aasd = (SheetSeachResult)NumDesCTP.ShowCTP(250, "asd" , true , "asd" , new SheetSeachResult(tupleList) , MsoCTPDockPosition.msoCTPDockPositionRight);
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+
+        var targetList = PubMetToExcel.SearchKeyFromExcelMiniExcel(path, _excelSeachStr);
+        if (targetList.Count == 0)
+        {
+            sw.Stop();
+            MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
+        }
+        else
+        {
+            //ErrorLogCtp.DisposeCtp();
+            //var log = "";
+            //for (var i = 0; i < targetList.Count; i++)
+            //    log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
+            //           targetList[i].Item4 + "\n";
+            //ErrorLogCtp.CreateCtpNormal(log);
+            var ctpName = "表格查询结果";
+            NumDesCTP.DeleteCTP(true, ctpName);
+            var tupleList = targetList
+                .Select(t =>
+                    (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
+                )
+                .ToList();
+            _ = (SheetSeachResult)
+                NumDesCTP.ShowCTP(
+                    320,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new SheetSeachResult(tupleList),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+
+            sw.Stop();
+        }
+
 
 
         sw.Stop();
@@ -1304,6 +1341,43 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
+
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+
+        var targetList = PubMetToExcel.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
+        if (targetList.Count == 0)
+        {
+            sw.Stop();
+            MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
+        }
+        else
+        {
+            //ErrorLogCtp.DisposeCtp();
+            //var log = "";
+            //for (var i = 0; i < targetList.Count; i++)
+            //    log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
+            //           targetList[i].Item4 + "\n";
+            //ErrorLogCtp.CreateCtpNormal(log);
+            var ctpName = "表格查询结果";
+            NumDesCTP.DeleteCTP(true, ctpName);
+            var tupleList = targetList
+                .Select(t =>
+                    (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
+                )
+                .ToList();
+            _ = (SheetSeachResult)
+                NumDesCTP.ShowCTP(
+                    320,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new SheetSeachResult(tupleList),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+
+            sw.Stop();
+        }
 
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());

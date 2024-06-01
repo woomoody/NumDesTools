@@ -1,7 +1,10 @@
-﻿using System.Data;
+﻿using System.Collections.Concurrent;
+using System.Data;
 using System.Data.OleDb;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using MiniExcelLibs;
+using NPOI.SS.Formula.Functions;
 using OfficeOpenXml;
 using DataTable = System.Data.DataTable;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
@@ -735,7 +738,7 @@ public class PubMetToExcel
         return errorLog;
     }
 
-    public static List<(string, string, int, int)> ErrorKeyFromExcelAll(
+    public static List<(string, string, int, int)> SearchKeyFromExcel(
         string rootPath,
         string errorValue
     )
@@ -743,32 +746,16 @@ public class PubMetToExcel
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
-        var mainPath = newPath + @"\Excels\Tables\";
-        var files1 = Directory
-            .EnumerateFiles(mainPath, "*.xlsx")
-            .Where(file => !Path.GetFileName(file).Contains("#"))
+        var mainPath = Path.Combine(newPath, "Excels", "Tables");
+        var langPath = Path.Combine(newPath, "Excels", "Localizations");
+        var uiPath = Path.Combine(newPath, "Excels", "UIs");
+        var kelangPath = Path.Combine(newPath, "Excels", "Tables", "克朗代克");
+
+        var files = GetExcelFiles(mainPath)
+            .Concat(GetExcelFiles(langPath))
+            .Concat(GetExcelFiles(uiPath))
+            .Concat(Directory.Exists(kelangPath) ? GetExcelFiles(kelangPath) : Enumerable.Empty<string>())
             .ToArray();
-        var langPath = newPath + @"\Excels\Localizations\";
-        var files2 = Directory
-            .EnumerateFiles(langPath, "*.xlsx")
-            .Where(file => !Path.GetFileName(file).Contains("#"))
-            .ToArray();
-        var uiPath = newPath + @"\Excels\UIs\";
-        var files3 = Directory
-            .EnumerateFiles(uiPath, "*.xlsx")
-            .Where(file => !Path.GetFileName(file).Contains("#"))
-            .ToArray();
-        var kelangPath = newPath + @"\Excels\Tables\克朗代克\";
-        //此路径有可能不存在
-        string[] files4 = null;
-        if (Directory.Exists(kelangPath))
-        {
-            files4 = Directory
-                .EnumerateFiles(kelangPath, "*.xlsx")
-                .Where(file => !Path.GetFileName(file).Contains("#"))
-                .ToArray();
-        }
-        var files = files1.Concat(files2).Concat(files3).ToArray();
 
         var targetList = new List<(string, string, int, int)>();
         var currentCount = 0;
@@ -784,28 +771,22 @@ public class PubMetToExcel
                     try
                     {
                         var wk = package.Workbook;
-                        var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
-                        for (var col = 2; col <= sheet.Dimension.End.Column; col++)
-                        for (var row = 4; row <= sheet.Dimension.End.Row; row++)
+                        for (var sheetIndex = 0; sheetIndex < wk.Worksheets.Count; sheetIndex++)
                         {
-                            var cellValue = sheet.Cells[row, col].Value;
-                            if (!isAll)
+                            var sheet = wk.Worksheets[sheetIndex];
+                            if(sheet.Name.Contains("#") || sheet.Name.Contains("Sheet") && sheet.Name != "Sheet1") continue;
+                            int rowMax = Math.Max(sheet.Dimension.End.Row , 4);
+                            int colMax = Math.Max(sheet.Dimension.End.Column , 2);
+                            for (var col = 2; col <= colMax; col++)
+                            for (var row = 4; row <= rowMax; row++)
                             {
-                                if (cellValue != null && cellValue.ToString() == errorValue)
+                                var cellValue = sheet.Cells[row, col].Value?.ToString();
+                                var cellAddress = new ExcelCellAddress(row, col);
+                                var cellCol = cellAddress.Column;
+                                var cellRow = cellAddress.Row;
+
+                                if (cellValue != null && (isAll ? cellValue.Contains(errorValue) : cellValue == errorValue))
                                 {
-                                    var cellAddress = new ExcelCellAddress(row, col);
-                                    var cellCol = cellAddress.Column;
-                                    var cellRow = cellAddress.Row;
-                                    targetList.Add((file, sheet.Name, cellRow, cellCol));
-                                }
-                            }
-                            else
-                            {
-                                if (cellValue != null && cellValue.ToString().Contains(errorValue))
-                                {
-                                    var cellAddress = new ExcelCellAddress(row, col);
-                                    var cellCol = cellAddress.Column;
-                                    var cellRow = cellAddress.Row;
                                     targetList.Add((file, sheet.Name, cellRow, cellCol));
                                 }
                             }
@@ -813,13 +794,15 @@ public class PubMetToExcel
                     }
                     catch
                     {
-                        continue;
+                        // 记录异常信息，继续处理下一个文件
+
                     }
                 }
             }
             catch
             {
-                continue;
+                // 记录异常信息，继续处理下一个文件
+
             }
 
             currentCount++;
@@ -829,7 +812,7 @@ public class PubMetToExcel
         return targetList;
     }
 
-    public static List<(string, string, int, int)> ErrorKeyFromExcelAllMultiThread(
+    public static List<(string, string, int, int)> SearchKeyFromExcelMulti(
         string rootPath,
         string errorValue
     )
@@ -837,36 +820,16 @@ public class PubMetToExcel
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
-        var mainPath = newPath + @"\Excels\Tables\";
-        var files1 = Directory
-            .EnumerateFiles(mainPath, "*.xlsx")
-            .Where(file => !Path.GetFileName(file).Contains("#"))
+        var mainPath = Path.Combine(newPath, "Excels", "Tables");
+        var langPath = Path.Combine(newPath, "Excels", "Localizations");
+        var uiPath = Path.Combine(newPath, "Excels", "UIs");
+        var kelangPath = Path.Combine(newPath, "Excels", "Tables", "克朗代克");
+
+        var files = GetExcelFiles(mainPath)
+            .Concat(GetExcelFiles(langPath))
+            .Concat(GetExcelFiles(uiPath))
+            .Concat(Directory.Exists(kelangPath) ? GetExcelFiles(kelangPath) : Enumerable.Empty<string>())
             .ToArray();
-        var langPath = newPath + @"\Excels\Localizations\";
-        var files2 = Directory
-            .EnumerateFiles(langPath, "*.xlsx")
-            .Where(file => !Path.GetFileName(file).Contains("#"))
-            .ToArray();
-        var uiPath = newPath + @"\Excels\UIs\";
-        var files3 = Directory
-            .EnumerateFiles(uiPath, "*.xlsx")
-            .Where(file => !Path.GetFileName(file).Contains("#"))
-            .ToArray();
-        var kelangPath = newPath + @"\Excels\Tables\克朗代克\";
-        //此路径有可能不存在
-        string[] files4 = null;
-        if (Directory.Exists(kelangPath))
-        {
-            files4 = Directory
-                .EnumerateFiles(kelangPath, "*.xlsx")
-                .Where(file => !Path.GetFileName(file).Contains("#"))
-                .ToArray();
-        }
-        var files = files1.Concat(files2).Concat(files3).ToArray();
-        if (files4 != null)
-        {
-            files = files.Concat(files4).ToArray();
-        }
 
         var targetList = new List<(string, string, int, int)>();
         var isAll = errorValue.Contains("*");
@@ -885,31 +848,22 @@ public class PubMetToExcel
                         try
                         {
                             var wk = package.Workbook;
-                            var sheet = wk.Worksheets["Sheet1"] ?? wk.Worksheets[0];
-                            for (var col = 2; col <= sheet.Dimension.End.Column; col++)
-                            for (var row = 4; row <= sheet.Dimension.End.Row; row++)
+                            for (var sheetIndex = 0; sheetIndex < wk.Worksheets.Count; sheetIndex++)
                             {
-                                var cellValue = sheet.Cells[row, col].Value;
-                                if (!isAll)
+                                var sheet = wk.Worksheets[sheetIndex];
+                                if (sheet.Name.Contains("#") || sheet.Name.Contains("Sheet") && sheet.Name != "Sheet1") continue;
+                                int rowMax = Math.Max(sheet.Dimension.End.Row, 4);
+                                int colMax = Math.Max(sheet.Dimension.End.Column, 2);
+                                for (var col = 2; col <= colMax; col++)
+                                for (var row = 4; row <= rowMax; row++)
                                 {
-                                    if (cellValue != null && cellValue.ToString() == errorValue)
+                                    var cellValue = sheet.Cells[row, col].Value?.ToString();
+                                    var cellAddress = new ExcelCellAddress(row, col);
+                                    var cellCol = cellAddress.Column;
+                                    var cellRow = cellAddress.Row;
+                          
+                                    if (cellValue != null && (isAll ? cellValue.Contains(errorValue) : cellValue == errorValue))
                                     {
-                                        var cellAddress = new ExcelCellAddress(row, col);
-                                        var cellCol = cellAddress.Column;
-                                        var cellRow = cellAddress.Row;
-                                        targetList.Add((file, sheet.Name, cellRow, cellCol));
-                                    }
-                                }
-                                else
-                                {
-                                    if (
-                                        cellValue != null
-                                        && cellValue.ToString().Contains(errorValue)
-                                    )
-                                    {
-                                        var cellAddress = new ExcelCellAddress(row, col);
-                                        var cellCol = cellAddress.Column;
-                                        var cellRow = cellAddress.Row;
                                         targetList.Add((file, sheet.Name, cellRow, cellCol));
                                     }
                                 }
@@ -917,18 +871,160 @@ public class PubMetToExcel
                         }
                         catch
                         {
-                            // ignored
+                            // 记录异常信息，继续处理下一个文件
+    
                         }
                     }
                 }
-                catch
+                catch 
                 {
-                    // ignored
+                    // 记录异常信息，继续处理下一个文件
+
                 }
             }
         );
 
         return targetList;
+    }
+
+    public static List<(string, string, int, int)> SearchKeyFromExcelMiniExcel(string rootPath, string errorValue)
+    {
+        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
+        var mainPath = Path.Combine(newPath, "Excels", "Tables");
+        var langPath = Path.Combine(newPath, "Excels", "Localizations");
+        var uiPath = Path.Combine(newPath, "Excels", "UIs");
+        var kelangPath = Path.Combine(newPath, "Excels", "Tables", "克朗代克");
+
+        var files = GetExcelFiles(mainPath)
+            .Concat(GetExcelFiles(langPath))
+            .Concat(GetExcelFiles(uiPath))
+            .Concat(Directory.Exists(kelangPath) ? GetExcelFiles(kelangPath) : Enumerable.Empty<string>())
+            .ToArray();
+
+        var targetList = new List<(string, string, int, int)>();
+        var currentCount = 0;
+        var count = files.Length;
+        var isAll = errorValue.Contains("*");
+        errorValue = errorValue.Replace("*", "");
+
+        foreach (var file in files)
+        {
+            try
+            {
+                var sheetNames = MiniExcel.GetSheetNames(file);
+                foreach (var sheetName in sheetNames)
+                {
+                    if (sheetName.Contains("#")) continue;
+
+                    var rows = MiniExcel.Query(file, sheetName: sheetName);
+                    int rowIndex = 1;
+                    foreach (var row in rows)
+                    {
+                        int colIndex = 1;
+                        foreach (var cell in row)
+                        {
+                            var cellValue = cell.Value?.ToString();
+                            if (cellValue != null && (isAll ? cellValue.Contains(errorValue) : cellValue == errorValue))
+                            {
+                                targetList.Add((file, sheetName, rowIndex, colIndex));
+                            }
+                            colIndex++;
+                        }
+                        rowIndex++;
+                    }
+                }
+            }
+            catch 
+            {
+                // 记录异常信息，继续处理下一个文件
+            }
+
+            currentCount++;
+            NumDesAddIn.App.StatusBar = $"正在检查第 {currentCount}/{count} 个文件: {file}";
+        }
+
+        return targetList;
+    }
+
+    public static List<(string, string, int, int)> SearchKeyFromExcelMultiMiniExcel(string rootPath, string errorValue)
+    {
+        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
+        var mainPath = Path.Combine(newPath, "Excels", "Tables");
+        var langPath = Path.Combine(newPath, "Excels", "Localizations");
+        var uiPath = Path.Combine(newPath, "Excels", "UIs");
+        var kelangPath = Path.Combine(newPath, "Excels", "Tables", "克朗代克");
+
+        var files = GetExcelFiles(mainPath)
+            .Concat(GetExcelFiles(langPath))
+            .Concat(GetExcelFiles(uiPath))
+            .Concat(Directory.Exists(kelangPath) ? GetExcelFiles(kelangPath) : Enumerable.Empty<string>())
+            .ToArray();
+
+        var targetList = new ConcurrentBag<(string, string, int, int)>();
+        var isAll = errorValue.Contains("*");
+        errorValue = errorValue.Replace("*", "");
+
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+        Parallel.ForEach(files, options, file =>
+        {
+            try
+            {
+                var sheetNames = MiniExcel.GetSheetNames(file);
+                Parallel.ForEach(sheetNames, sheetName =>
+                {
+                    if (sheetName.Contains("#")) return;
+
+                    var rows = MiniExcel.Query(file, sheetName: sheetName);
+                    int rowIndex = 1;
+                    foreach (var row in rows)
+                    {
+                        int colIndex = 1;
+                        foreach (var cell in row)
+                        {
+                            var cellValue = cell.Value?.ToString();
+                            if (cellValue != null &&
+                                (isAll ? cellValue.Contains(errorValue) : cellValue == errorValue))
+                            {
+                                targetList.Add((file, sheetName, rowIndex, colIndex));
+                            }
+
+                            colIndex++;
+                        }
+
+                        rowIndex++;
+                    }
+
+                });
+            }
+            catch
+            {
+                // 记录异常信息，继续处理下一个文件
+            }
+        });
+
+        return targetList.ToList();
+    }
+
+    private static void ProcessRow(IEnumerable<KeyValuePair<string, object>> row, int rowIndex, int colCount, string errorValue, bool isAll, string file, string sheetName, ConcurrentBag<(string, string, int, int)> targetList)
+    {
+        for (int colIndex = 0; colIndex < colCount; colIndex++)
+        {
+            var cell = row.ElementAt(colIndex);
+            var cellValue = cell.Value?.ToString();
+            if (cellValue != null &&
+                (isAll ? cellValue.Contains(errorValue) : cellValue == errorValue))
+            {
+                targetList.Add((file, sheetName, rowIndex + 1, colIndex + 1));
+            }
+        }
+    }
+
+    public static IEnumerable<string> GetExcelFiles(string path)
+    {
+        return Directory
+            .EnumerateFiles(path, "*.xlsx")
+            .Where(file => !Path.GetFileName(file).Contains("#"));
     }
 
     public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelId(
