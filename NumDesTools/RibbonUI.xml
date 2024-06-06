@@ -13,7 +13,7 @@
             < ribbon startFromScratch = 'false' >//表示加载时excel原有的选项卡隐藏否
             -->
                 <group id='Group2' label='格式整理'>
-                    <button id='Button4' size='large' label='标准格式' image='verilog' onAction='CleanCellFormat_Click'
+                    <button id='Button4' size='large' label='标准格式&#13;' image='verilog' onAction='CleanCellFormat_Click'
                             screentip='点击整理当前sheet格式，标准化文本和单元格大小' />
                     <button id='Button5' size='large' getLabel='GetLableText' image='redux-reducer'
                             onAction='ZoomInOut_Click'
