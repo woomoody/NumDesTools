@@ -160,124 +160,215 @@ public class PubMetToExcelFunc
             if (result != null)
             {
                 var indexCellValue = result[1];
-                var isMatch = indexCellValue.Contains(".xls");
-                if (isMatch)
-                {
-                    string openSheetName;
-                    var selectCellValue = selectCell.Value.ToString();
-                    if (indexCellValue.Contains("##"))
-                    {
-                        var excelSplit = indexCellValue.Split("##");
-                        indexCellValue = workbookPath + @"\Tables\" + excelSplit[0];
-                        openSheetName = excelSplit[1];
-                    }
-                    else
-                    {
-                        switch (indexCellValue)
-                        {
-                            case "Localizations.xlsx":
-                                indexCellValue =
-                                    workbookPath + @"\Localizations\Localizations.xlsx";
-                                break;
-                            case "UIConfigs.xlsx":
-                                indexCellValue = workbookPath + @"\UIs\UIConfigs.xlsx";
-                                break;
-                            case "UIItemConfigs.xlsx":
-                                indexCellValue = workbookPath + @"\UIs\UIItemConfigs.xlsx";
-                                break;
-                            default:
-                                indexCellValue = workbookPath + @"\Tables\" + indexCellValue;
-                                break;
-                        }
-
-                        openSheetName = "Sheet1";
-                    }
-
-                    var excelLinkObjOpen = new ExcelDataByEpplus();
-                    excelLinkObjOpen.GetExcelObj(excelPath, excelName);
-                    if (excelLinkObjOpen.ErrorList.Count > 0)
-                        return;
-                    var sheetLinkOpen = excelLinkObjOpen.Sheet;
-                    var valueLinkIndex = excelLinkObjOpen.FindFromRow(
-                        sheetLinkOpen,
-                        5,
-                        workBookName
-                    );
-                    var cellLinkAddress = "A1";
-                    if (valueLinkIndex != -1)
-                        cellLinkAddress = "A" + valueLinkIndex;
-                    if (!File.Exists(indexCellValue))
-                    {
-                        var tips = MessageBox.Show(
-                            "文件[" + indexCellValue + "]不存在，是否打开字段表格编辑？",
-                            "确认",
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Question
-                        );
-                        if (tips == MessageBoxResult.Yes)
-                            PubMetToExcel.OpenExcelAndSelectCell(
-                                excelPath + @"\#表格关联.xlsx",
-                                "主副表关联",
-                                cellLinkAddress
-                            );
-                        return;
-                    }
-
-                    var pattern = @"\d+";
-                    MatchCollection matches = Regex.Matches(selectCellValue, pattern);
-                    var cellAddress = "A1";
-                    var excelObjOpen = new ExcelDataByEpplus();
-                    var excelNameOpen = result[1] + "##Sheet1";
-                    if (result[1].Contains("##"))
-                        excelNameOpen = result[1];
-                    excelObjOpen.GetExcelObj(workbookPath + @"\Tables", excelNameOpen);
-                    if (excelObjOpen.ErrorList.Count > 0)
-                        return;
-                    var sheetTargetOpen = excelObjOpen.Sheet;
-                    foreach (var item in matches)
-                    {
-                        var valueIndex = excelObjOpen.FindFromRow(
-                            sheetTargetOpen,
-                            2,
-                            item.ToString()
-                        );
-                        if (valueIndex != -1)
-                        {
-                            cellAddress = "A" + valueIndex;
-                            break;
-                        }
-                    }
-
-                    PubMetToExcel.OpenExcelAndSelectCell(
-                        indexCellValue,
-                        openSheetName,
-                        cellAddress
-                    );
-                }
+                OpenTargetExcel(indexCellValue, selectCell, workbookPath, excelPath, excelName, workBookName);
             }
             else
             {
                 var tips = MessageBox.Show(
-                    "字段未关联或没有表格索引,是否打开字段表格编辑？",
+                    "字段未关联或没有表格索引,是否打开字段表格编辑？是：打开表编辑；否：模糊查找相似度最高的关联表，可能找不到",
                     "确认",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question
                 );
                 if (tips == MessageBoxResult.Yes)
+                {
                     PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", "A1");
+                }
+                //尝试选择最相似的字段关联表
+                else
+                {
+                    var blurData = data.Values.SelectMany(list => list).ToList();
+                    // 查找最相似的键并返回对应的值
+                    string blurResult = FindClosestMatch(blurData, keyCell.Value.ToString(),2);
+                    if(blurResult == null) return;
+                    OpenTargetExcel(blurResult, selectCell, workbookPath, excelPath, excelName, workBookName);
+                }
             }
         }
         else
         {
             var tips = MessageBox.Show(
-                "字段未关联或没有表格索引,是否打开字段表格编辑？",
+                "字段未关联或没有表格索引,是否打开字段表格编辑？是：打开表编辑；否：模糊查找相似度最高的关联表，可能找不到",
                 "确认",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question
             );
             if (tips == MessageBoxResult.Yes)
+            {
                 PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", "A1");
+            }
+            //尝试选择最相似的字段关联表
+            else
+            {
+                var blurData = data.Values.SelectMany(list => list).ToList();
+                // 查找最相似的键并返回对应的值
+                string blurResult = FindClosestMatch(blurData, keyCell.Value.ToString() ,2);
+                if (blurResult == null) return;
+                OpenTargetExcel(blurResult, selectCell, workbookPath, excelPath, excelName, workBookName);
+            }
         }
+    }
+
+    private static void OpenTargetExcel(string indexCellValue, Range selectCell, string workbookPath, string excelPath,
+        string excelName, string workBookName)
+    {
+        var isMatch = indexCellValue.Contains(".xls");
+        var wkName = indexCellValue;
+        if (isMatch)
+        {
+            string openSheetName;
+            var selectCellValue = selectCell.Value.ToString();
+            if (indexCellValue.Contains("##"))
+            {
+                var excelSplit = indexCellValue.Split("##");
+                indexCellValue = workbookPath + @"\Tables\" + excelSplit[0];
+                openSheetName = excelSplit[1];
+            }
+            else
+            {
+                switch (indexCellValue)
+                {
+                    case "Localizations.xlsx":
+                        indexCellValue =
+                            workbookPath + @"\Localizations\Localizations.xlsx";
+                        break;
+                    case "UIConfigs.xlsx":
+                        indexCellValue = workbookPath + @"\UIs\UIConfigs.xlsx";
+                        break;
+                    case "UIItemConfigs.xlsx":
+                        indexCellValue = workbookPath + @"\UIs\UIItemConfigs.xlsx";
+                        break;
+                    default:
+                        indexCellValue = workbookPath + @"\Tables\" + indexCellValue;
+                        break;
+                }
+
+                openSheetName = "Sheet1";
+            }
+
+            var excelLinkObjOpen = new ExcelDataByEpplus();
+            excelLinkObjOpen.GetExcelObj(excelPath, excelName);
+            if (excelLinkObjOpen.ErrorList.Count > 0)
+                return;
+            var sheetLinkOpen = excelLinkObjOpen.Sheet;
+            var valueLinkIndex = excelLinkObjOpen.FindFromRow(
+                sheetLinkOpen,
+                5,
+                workBookName
+            );
+            var cellLinkAddress = "A1";
+            if (valueLinkIndex != -1)
+                cellLinkAddress = "A" + valueLinkIndex;
+            if (!File.Exists(indexCellValue))
+            {
+                var tips = MessageBox.Show(
+                    "文件[" + indexCellValue + "]不存在，是否打开字段表格编辑？",
+                    "确认",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question
+                );
+                if (tips == MessageBoxResult.Yes){}
+                    PubMetToExcel.OpenExcelAndSelectCell(
+                        excelPath + @"\#表格关联.xlsx",
+                        "主副表关联",
+                        cellLinkAddress
+                    );
+                return;
+            }
+
+            var pattern = @"\d+";
+            MatchCollection matches = Regex.Matches(selectCellValue, pattern);
+            var cellAddress = "A1";
+            var excelObjOpen = new ExcelDataByEpplus();
+            var excelNameOpen = wkName + "##Sheet1";
+            if (indexCellValue.Contains("##"))
+                excelNameOpen = wkName;
+            excelObjOpen.GetExcelObj(workbookPath + @"\Tables", excelNameOpen);
+            if (excelObjOpen.ErrorList.Count > 0)
+                return;
+            var sheetTargetOpen = excelObjOpen.Sheet;
+            foreach (var item in matches)
+            {
+                var valueIndex = excelObjOpen.FindFromRow(
+                    sheetTargetOpen,
+                    2,
+                    item.ToString()
+                );
+                if (valueIndex != -1)
+                {
+                    cellAddress = "A" + valueIndex;
+                    break;
+                }
+            }
+
+            PubMetToExcel.OpenExcelAndSelectCell(
+                indexCellValue,
+                openSheetName,
+                cellAddress
+            );
+        }
+    }
+
+    private static string FindClosestMatch(List<object> listOfObjects, string input , int threshold)
+    {
+        List<List<string>> listOfLists = new List<List<string>>();
+
+        // 将 List<object> 转换为 List<List<string>>
+        foreach (var obj in listOfObjects)
+        {
+            if (obj is List<string> list && list.Count == 2)
+            {
+                listOfLists.Add(list);
+            }
+            else
+            {
+                throw new InvalidCastException("The object is not of type List<string> with exactly two elements.");
+            }
+        }
+
+        // 查找最相似的键
+        int closestDistance = int.MaxValue;
+        string closestValue = null;
+
+        foreach (var list in listOfLists)
+        {
+            string key = list[0];
+            int distance = LevenshteinDistance(input, key);
+            if (distance < closestDistance && distance <= threshold)
+            {
+                closestDistance = distance;
+                closestValue = list[1];
+            }
+        }
+        // 返回最相似键对应的值
+        return closestValue;
+    }
+
+    // 计算两个字符串之间的 Levenshtein 距离
+    static int LevenshteinDistance(string s, string t)
+    {
+        int n = s.Length;
+        int m = t.Length;
+        int[,] d = new int[n + 1, m + 1];
+
+        if (n == 0) return m;
+        if (m == 0) return n;
+
+        for (int i = 0; i <= n; d[i, 0] = i++) { }
+        for (int j = 0; j <= m; d[0, j] = j++) { }
+
+        for (int i = 1; i <= n; i++)
+        {
+            for (int j = 1; j <= m; j++)
+            {
+                int cost = (t[j - 1] == s[i - 1]) ? 0 : 1;
+                d[i, j] = Math.Min(
+                    Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
+                    d[i - 1, j - 1] + cost);
+            }
+        }
+
+        return d[n, m];
     }
 
     public static void OpenBaseLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
