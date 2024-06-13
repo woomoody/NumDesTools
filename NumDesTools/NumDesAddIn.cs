@@ -26,6 +26,7 @@ global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
 global using TabControl = System.Windows.Forms.TabControl;
 using NumDesTools.UI;
+using Org.BouncyCastle.Ocsp;
 
 #pragma warning disable CA1416
 
@@ -51,7 +52,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private string _excelSeachStr = string.Empty;
     public static IRibbonUI CustomRibbon;
 
-    private string _defaultFilePath = Path.Combine(
+    public string _defaultFilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
         "mergePath.txt"
     );
@@ -1341,7 +1342,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //{
         //    resultlist.AddRange(localList);
         //}
+        var lines = File.ReadAllLines(_defaultFilePath);
 
+        CompareExcel.Main(lines);
 
         sw.Stop();
         var ts2 = sw.Elapsed;
