@@ -1703,13 +1703,20 @@ public class ExcelDataAutoInsertMulti
                                 )
                                     continue;
 
-                                if (
-                                    cellCol != null
-                                    && cellCol.Contains("#")
-                                    && commentValue != null
-                                )
+                                if (cellCol != null && cellCol.Contains("#") && commentValue != null)
                                 {
-                                    cellFix.Value = commentValue + "-" + cellFix.Value.ToString();
+                                    string[] baseParts = commentValue.Split("#");
+                                    var cellValue = cellFix.Value.ToString();
+                                    foreach (var item in baseParts)
+                                    {
+                                        var parts = item.Split("-");
+                                        var replaceValue = parts[0];
+                                        var pattern = parts[1];
+                                        if (cellValue != null)
+                                            cellValue = Regex.Replace(cellValue, pattern, replaceValue);
+                                    }
+
+                                    cellFix.Value = cellValue;
                                 }
                                 else
                                 {

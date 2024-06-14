@@ -91,8 +91,6 @@ public class CompareExcel
                     sheetNames = [sheetNames[0]];
                 }
             }
-            Debug.Print(baseFileName);
-
             foreach (var sheetName in sheetNames)
             {
                 if (!sheetName.Contains("#"))
@@ -128,7 +126,7 @@ public class CompareExcel
                             targetSheet,
                             keyColumn,
                             compareData,
-                            baseFileName,
+                            targetFile,
                             sheetName
                         );
                     }
@@ -157,7 +155,7 @@ public class CompareExcel
         List<dynamic> targetSheet,
         string keyColumn,
         List<Dictionary<string, object>> compareData,
-        string baseFileName,
+        string targetFile,
         string sheetName
     )
     {
@@ -195,7 +193,7 @@ public class CompareExcel
                     baseValue.Index,
                     targetValue.Index,
                     compareData,
-                    baseFileName,
+                    targetFile,
                     sheetName
                 );
             }
@@ -204,7 +202,7 @@ public class CompareExcel
                 compareData.Add(
                     new Dictionary<string, object>
                     {
-                        { "文件名", baseFileName },
+                        { "文件名", targetFile },
                         { "表名", sheetName },
                         { "动作", "删除行" },
                         { "键值", key },
@@ -226,7 +224,7 @@ public class CompareExcel
                 compareData.Add(
                     new Dictionary<string, object>
                     {
-                        { "文件名", baseFileName },
+                        { "文件名", targetFile },
                         { "表名", sheetName },
                         { "动作", "新增行" },
                         { "键值", key },
@@ -249,7 +247,7 @@ public class CompareExcel
         int baseIndex,
         int targetIndex,
         List<Dictionary<string, object>> compareData,
-        string baseFileName,
+        string targetFile,
         string sheetName
     )
     {
@@ -272,7 +270,7 @@ public class CompareExcel
                     compareData.Add(
                         new Dictionary<string, object>
                         {
-                            { "文件名", baseFileName },
+                            { "文件名", targetFile },
                             { "表名", sheetName },
                             { "动作", "修改" },
                             { "键值", key },
@@ -290,7 +288,7 @@ public class CompareExcel
                 compareData.Add(
                     new Dictionary<string, object>
                     {
-                        { "文件名", baseFileName },
+                        { "文件名", targetFile },
                         { "表名", sheetName },
                         { "动作", "修改" },
                         { "键值", key },
