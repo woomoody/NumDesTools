@@ -19,7 +19,8 @@ namespace NumDesTools.UI
                 list.Select(t => new WorkBookSearchCollect(t))
             );
         }
-
+        //这个事件的问题是打开新的再关闭后，再次打开无法点击ListBox
+        //但是如果采用单击listbox事件会导致打开的Excel文件不在前景，暂时没想到更好的办法
         private void ListBoxWorkBook_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var listBox = (ListBox)sender;
