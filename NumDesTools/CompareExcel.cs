@@ -14,7 +14,7 @@ public class CompareExcel
     {
         var compareData = new List<Dictionary<string, object>>();
         var compareLog = new List<Dictionary<string, object>>();
-        var outFile = @"C:\Users\cent\Desktop\CompareResult.xlsx";
+        var outFile = @"C:\Users\cent\Desktop\#CompareResult.xlsx";
 
         var baseFolder = folder[0];
         var targetFolder = folder[1];
