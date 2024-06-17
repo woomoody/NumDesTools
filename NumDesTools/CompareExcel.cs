@@ -1,10 +1,5 @@
-﻿using System.Linq;
-using System.Security.Cryptography;
-using System.Threading.Tasks;
-using Microsoft.VisualBasic.Logging;
+﻿using System.Security.Cryptography;
 using MiniExcelLibs;
-using NPOI.SS.Formula.Functions;
-using NPOI.XSSF.Streaming.Values;
 
 namespace NumDesTools;
 
@@ -20,119 +15,123 @@ public class CompareExcel
         var targetFolder = folder[1];
 
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(baseFolder));
-        var mainPath = Path.Combine(newPath, "Excels", "Tables");
-        var langPath = Path.Combine(newPath, "Excels", "Localizations");
-        var uiPath = Path.Combine(newPath, "Excels", "UIs");
-        var kelangPath = Path.Combine(newPath, "Excels", "Tables", "克朗代克");
-
-        var baseFiles = PubMetToExcel
-            .GetExcelFiles(mainPath)
-            .Concat(PubMetToExcel.GetExcelFiles(langPath))
-            .Concat(PubMetToExcel.GetExcelFiles(uiPath))
-            .Concat(
-                Directory.Exists(kelangPath)
-                    ? PubMetToExcel.GetExcelFiles(kelangPath)
-                    : Enumerable.Empty<string>()
-            )
-            .ToArray();
-
-        var newPathTarget = Path.GetDirectoryName(Path.GetDirectoryName(targetFolder));
-
-        foreach (var baseFile in baseFiles)
+        if (newPath != null)
         {
-            var baseFileName = Path.GetFileName(baseFile);
-            var basePath = Path.GetDirectoryName(baseFile);
-            string targetFile;
-            string targetFileName = baseFileName;
-            if (basePath.Contains("Localizations"))
-            {
-                targetFile = newPathTarget + @"\Excels\Localizations\" + targetFileName;
-            }
-            else if (basePath.Contains("UIs"))
-            {
-                targetFile = newPathTarget + @"\Excels\UIs\" + targetFileName;
-            }
-            else if (basePath.Contains("克朗代克"))
-            {
-                targetFile = newPathTarget + @"\Excels\Tables\克朗代克\" + targetFileName;
-            }
-            else
-            {
-                targetFile = newPathTarget + @"\Tables\" + targetFileName;
-            }
-            //目标文件夹不存在基础文件夹的文件
-            if (!File.Exists(targetFile))
-            {
-                continue;
-            }
-            //var baseFile = @"C:\Users\cent\Desktop\$活动弹球.xlsx";
-            //var targetFile = @"C:\Users\cent\Desktop\$活动弹球 - 副本.xlsx";
-            //var baseFileName = Path.GetFileName(baseFile);
-            //var targetFileName = Path.GetFileName(targetFile);
+            var mainPath = Path.Combine(newPath, "Excels", "Tables");
+            var langPath = Path.Combine(newPath, "Excels", "Localizations");
+            var uiPath = Path.Combine(newPath, "Excels", "UIs");
+            var kelangPath = Path.Combine(newPath, "Excels", "Tables", "克朗代克");
 
-            //MD5对比
-            var baseFileMd5 = GetMd5HashFromFile(baseFile);
-            var targetFileMd5 = GetMd5HashFromFile(targetFile);
-            if (baseFileMd5 == targetFileMd5)
-            {
-                continue;
-            }
+            var baseFiles = PubMetToExcel
+                .GetExcelFiles(mainPath)
+                .Concat(PubMetToExcel.GetExcelFiles(langPath))
+                .Concat(PubMetToExcel.GetExcelFiles(uiPath))
+                .Concat(
+                    Directory.Exists(kelangPath)
+                        ? PubMetToExcel.GetExcelFiles(kelangPath)
+                        : Enumerable.Empty<string>()
+                )
+                .ToArray();
 
-            //遍历对比
-            var sheetNames = MiniExcel.GetSheetNames(baseFile);
-            if (!baseFileName.Contains("$"))
+            var newPathTarget = Path.GetDirectoryName(Path.GetDirectoryName(targetFolder));
+
+            foreach (var baseFile in baseFiles)
             {
-                if (sheetNames.Contains("Sheet1"))
+                var baseFileName = Path.GetFileName(baseFile);
+                var basePath = Path.GetDirectoryName(baseFile);
+                string targetFile;
+                string targetFileName = baseFileName;
+                if (basePath != null && basePath.Contains("Localizations"))
                 {
-                    sheetNames = ["Sheet1"];
+                    targetFile = newPathTarget + @"\Excels\Localizations\" + targetFileName;
+                }
+                else if (basePath != null && basePath.Contains("UIs"))
+                {
+                    targetFile = newPathTarget + @"\Excels\UIs\" + targetFileName;
+                }
+                else if (basePath != null && basePath.Contains("克朗代克"))
+                {
+                    targetFile = newPathTarget + @"\Excels\Tables\克朗代克\" + targetFileName;
                 }
                 else
                 {
-                    sheetNames = [sheetNames[0]];
+                    targetFile = newPathTarget + @"\Tables\" + targetFileName;
                 }
-            }
-            foreach (var sheetName in sheetNames)
-            {
-                if (!sheetName.Contains("#"))
+                //目标文件夹不存在基础文件夹的文件
+                if (!File.Exists(targetFile))
                 {
-                    var baseSheet = MiniExcel
-                        .Query(baseFile, useHeaderRow: true, startCell: "A2", sheetName: sheetName)
-                        .ToList();
+                    continue;
+                }
+                //var baseFile = @"C:\Users\cent\Desktop\$活动弹球.xlsx";
+                //var targetFile = @"C:\Users\cent\Desktop\$活动弹球 - 副本.xlsx";
+                //var baseFileName = Path.GetFileName(baseFile);
+                //var targetFileName = Path.GetFileName(targetFile);
 
-                    var targetSheet = MiniExcel
-                        .Query(
-                            targetFile,
-                            useHeaderRow: true,
-                            startCell: "A2",
-                            sheetName: sheetName
-                        )
-                        .ToList();
+                //MD5对比
+                var baseFileMd5 = GetMd5HashFromFile(baseFile);
+                var targetFileMd5 = GetMd5HashFromFile(targetFile);
+                if (baseFileMd5 == targetFileMd5)
+                {
+                    continue;
+                }
 
-                    CheckAndLogSheetChanges(
-                        baseSheet,
-                        targetSheet,
-                        baseFileName,
-                        targetFileName,
-                        sheetName,
-                        compareLog
-                    );
-
-                    if (baseSheet.Count > 0)
+                //遍历对比
+                var sheetNames = MiniExcel.GetSheetNames(baseFile);
+                if (!baseFileName.Contains("$"))
+                {
+                    if (sheetNames.Contains("Sheet1"))
                     {
-                        var baseRowDict = (IDictionary<string, object>)baseSheet[0];
-                        string keyColumn = baseRowDict.Keys.ElementAt(1); // 获取第2列的列名
-                        CompareSheets(
+                        sheetNames = ["Sheet1"];
+                    }
+                    else
+                    {
+                        sheetNames = [sheetNames[0]];
+                    }
+                }
+                foreach (var sheetName in sheetNames)
+                {
+                    if (!sheetName.Contains("#"))
+                    {
+                        var baseSheet = MiniExcel
+                            .Query(baseFile, useHeaderRow: true, startCell: "A2", sheetName: sheetName)
+                            .ToList();
+
+                        var targetSheet = MiniExcel
+                            .Query(
+                                targetFile,
+                                useHeaderRow: true,
+                                startCell: "A2",
+                                sheetName: sheetName
+                            )
+                            .ToList();
+
+                        CheckAndLogSheetChanges(
                             baseSheet,
                             targetSheet,
-                            keyColumn,
-                            compareData,
-                            targetFile,
-                            sheetName
+                            baseFileName,
+                            targetFileName,
+                            sheetName,
+                            compareLog
                         );
+
+                        if (baseSheet.Count > 0)
+                        {
+                            var baseRowDict = (IDictionary<string, object>)baseSheet[0];
+                            string keyColumn = baseRowDict.Keys.ElementAt(1); // 获取第2列的列名
+                            CompareSheets(
+                                baseSheet,
+                                targetSheet,
+                                keyColumn,
+                                compareData,
+                                targetFile,
+                                sheetName
+                            );
+                        }
                     }
                 }
             }
         }
+
         //输出对比结果
         // 创建一个字典，键是 Sheet 名称，值是要写入的数据列表
         var sheets = new Dictionary<string, object>
@@ -164,7 +163,7 @@ public class CompareExcel
         foreach (var item in baseSheet.Select((row, index) => new { Row = row, Index = index }))
         {
             var key = ((IDictionary<string, object>)item.Row)[keyColumn].ToString();
-            if (!baseDict.ContainsKey(key))
+            if (key != null && !baseDict.ContainsKey(key))
             {
                 baseDict[key] = ((IDictionary<string, object>)item.Row, item.Index);
             }
@@ -174,7 +173,7 @@ public class CompareExcel
         foreach (var item in targetSheet.Select((row, index) => new { Row = row, Index = index }))
         {
             var key = ((IDictionary<string, object>)item.Row)[keyColumn].ToString();
-            if (!targetDict.ContainsKey(key))
+            if (key != null && !targetDict.ContainsKey(key))
             {
                 targetDict[key] = ((IDictionary<string, object>)item.Row, item.Index);
             }
@@ -351,7 +350,6 @@ public class CompareExcel
         if (baseSheet.Count == 0 && targetSheet.Count != 0)
         {
             AddLog(compareLog, targetFile, sheetName, "新增");
-            return;
         }
     }
 
