@@ -39,7 +39,7 @@ namespace NumDesTools
                 {
                     lastMainTable = mainTable;
                 }
- 
+
                 // 如果字段或副表为空，跳过该行
                 if (string.IsNullOrEmpty(field) || string.IsNullOrEmpty(subTable))
                 {
@@ -63,7 +63,7 @@ namespace NumDesTools
 
             // 将JSON字符串写入文件
             File.WriteAllText(@"C:\Users\cent\Desktop\relations.json", json);
-            
+
             // 溯源
             Main();
         }
@@ -113,9 +113,15 @@ namespace NumDesTools
 
         static void Main()
         {
+            // 设置初始副表ID和初始表名
+            string initialSubId = "10010021";
+            string initialSubKey = "kkk";
+            string initialTable = @"C:\Users\cent\Desktop\Excels\Tables\RewardGroup.xlsx";
+
             // 读取关联关系配置文件
             var relationsPath = @"C:\Users\cent\Desktop\relations.json";
             var relations = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(File.ReadAllText(relationsPath));
+
             // 日志文件路径
             var logFilePath = @"C:\Users\cent\Desktop\溯源日志.txt";
 
@@ -175,10 +181,10 @@ namespace NumDesTools
                     {
                         initialTable += "#" + rowDict["表名"];
                     }
-                    // 用于记录溯源过程的列表
-                    var traceLog = new List<string>();
+            // 用于记录溯源过程的列表
+            var traceLog = new List<string>();
                     traceLog.Add( $"<Start>表 {initialTableName} 字段 {initialSubKey} ID: {initialSubId}" );
-                    // 开始溯源
+            // 开始溯源
                     TraceBack(initialSubId, initialTable, relations, traceLog ,0 , allTablesData);
                     //间隔
                     traceLog.Add($"<End>");
@@ -200,7 +206,7 @@ namespace NumDesTools
             const int maxDepth = 100; // 设置最大递归深度
 
             if (depth > maxDepth)
-            {
+        {
                 return;
             }
 
@@ -234,6 +240,8 @@ namespace NumDesTools
                         {
                             continue;
                         }
+
+                 
 
                         if (rowDict[field].ToString().Contains(subId))
                         {
