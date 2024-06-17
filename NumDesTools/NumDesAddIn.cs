@@ -26,7 +26,6 @@ global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
 global using TabControl = System.Windows.Forms.TabControl;
 using NumDesTools.UI;
-using Org.BouncyCastle.Ocsp;
 
 #pragma warning disable CA1416
 
@@ -52,7 +51,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private string _excelSeachStr = string.Empty;
     public static IRibbonUI CustomRibbon;
 
-    public string _defaultFilePath = Path.Combine(
+    public string DefaultFilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
         "mergePath.txt"
     );
@@ -1358,7 +1357,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-        var lines = File.ReadAllLines(_defaultFilePath);
+        var lines = File.ReadAllLines(DefaultFilePath);
         CompareExcel.Main(lines);
 
         //var wk = App.ActiveWorkbook;
@@ -1405,18 +1404,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public string GetFileInfo(IRibbonControl control)
     {
-        if (!File.Exists(_defaultFilePath))
+        if (!File.Exists(DefaultFilePath))
         {
             var defaultContent =
                 @"C:\M1Work\Public\Excels\Tables\"
                 + Environment.NewLine
                 + @"C:\M2Work\Public\Excels\Tables\";
 
-            File.WriteAllText(_defaultFilePath, defaultContent);
+            File.WriteAllText(DefaultFilePath, defaultContent);
         }
 
-        var line1 = File.ReadLines(_defaultFilePath).Skip(1 - 1).FirstOrDefault();
-        var line2 = File.ReadLines(_defaultFilePath).Skip(2 - 1).FirstOrDefault();
+        var line1 = File.ReadLines(DefaultFilePath).Skip(1 - 1).FirstOrDefault();
+        var line2 = File.ReadLines(DefaultFilePath).Skip(2 - 1).FirstOrDefault();
         if (control.Id == "BasePathEdit")
             return line1;
         else if (control.Id == "TargetPathEdit")
@@ -1428,17 +1427,17 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public void BaseFileInfoChanged(IRibbonControl control, string text)
     {
         _currentBaseText = text;
-        var lines = File.ReadAllLines(_defaultFilePath);
+        var lines = File.ReadAllLines(DefaultFilePath);
         lines[1 - 1] = _currentBaseText;
-        File.WriteAllLines(_defaultFilePath, lines);
+        File.WriteAllLines(DefaultFilePath, lines);
     }
 
     public void TargetFileInfoChanged(IRibbonControl control, string text)
     {
         _currentTargetText = text;
-        var lines = File.ReadAllLines(_defaultFilePath);
+        var lines = File.ReadAllLines(DefaultFilePath);
         lines[2 - 1] = _currentTargetText;
-        File.WriteAllLines(_defaultFilePath, lines);
+        File.WriteAllLines(DefaultFilePath, lines);
     }
 
     private List<CellSelectChangeTip> _customZoomForms = [];
