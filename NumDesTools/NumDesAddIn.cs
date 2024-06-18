@@ -51,7 +51,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private string _excelSeachStr = string.Empty;
     public static IRibbonUI CustomRibbon;
 
-    private string _defaultFilePath = Path.Combine(
+    public string DefaultFilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
         "mergePath.txt"
     );
@@ -1292,44 +1292,59 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         //var tupleList = lisssad.Select(t => (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))).ToList();
         //var aasd = (SheetSeachResult)NumDesCTP.ShowCTP(250, "asd" , true , "asd" , new SheetSeachResult(tupleList) , MsoCTPDockPosition.msoCTPDockPositionRight);
-        var wk = App.ActiveWorkbook;
-        var path = wk.Path;
+        //var wk = App.ActiveWorkbook;
+        //var path = wk.FullName;
 
-        var targetList = PubMetToExcel.SearchKeyFromExcelMiniExcel(path, _excelSeachStr);
-        if (targetList.Count == 0)
-        {
-            sw.Stop();
-            MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
-        }
-        else
-        {
-            //ErrorLogCtp.DisposeCtp();
-            //var log = "";
-            //for (var i = 0; i < targetList.Count; i++)
-            //    log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
-            //           targetList[i].Item4 + "\n";
-            //ErrorLogCtp.CreateCtpNormal(log);
-            var ctpName = "表格查询结果";
-            NumDesCTP.DeleteCTP(true, ctpName);
-            var tupleList = targetList
-                .Select(t =>
-                    (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
-                )
-                .ToList();
-            _ = (SheetSeachResult)
-                NumDesCTP.ShowCTP(
-                    320,
-                    ctpName,
-                    true,
-                    ctpName,
-                    new SheetSeachResult(tupleList),
-                    MsoCTPDockPosition.msoCTPDockPositionRight
-                );
+        //var rows = MiniExcel.Query(path).ToList();
+        //var resultlist = new List<(string, string, int, string)>();
+        //// 查找特定值
+        //string lookupValue = "Alice"; // 你要查找的整数值
 
-            sw.Stop();
-        }
+        ////hash
+        //var targetList = PubMetToExcel.ExcelDataToHash(rows);
+        //if (targetList.TryGetValue(lookupValue.ToString(), out var results))
+        //{
+        //    foreach (var result in results)
+        //    {
+        //        resultlist.Add(("wkName", " sheetName ", result.row, result.column));
+        //    }
+        //}
+        //else
+        //{
+        //    Debug.Print("NoValue");
+        //}
 
 
+        //// 使用线性多线程查找
+        //var partitioner = Partitioner.Create(0, rows.Count);
+        //var localResults = new ConcurrentBag<List<(string, string, int, string)>>();
+
+        //Parallel.ForEach(partitioner, range =>
+        //{
+        //    var localList = new List<(string, string, int, string)>();
+        //    for (int row = range.Item1; row < range.Item2; row++)
+        //    {
+        //        var columns = rows[row];
+        //        foreach (var col in columns)
+        //        {
+        //            if (col.Value != null && col.Value.ToString() == lookupValue)
+        //            {
+        //                localList.Add(("wkName", "sheetName", row + 1, col.Key));
+        //            }
+        //        }
+        //    }
+        //    localResults.Add(localList);
+        //});
+
+        //// 合并所有线程的结果
+        //foreach (var localList in localResults)
+        //{
+        //    resultlist.AddRange(localList);
+        //}
+        //var lines = File.ReadAllLines(_defaultFilePath);
+
+        //CompareExcel.Main(lines);
+        MapExcel.ExcelToJson();
 
         sw.Stop();
         var ts2 = sw.Elapsed;
@@ -1342,42 +1357,45 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-        var wk = App.ActiveWorkbook;
-        var path = wk.Path;
+        var lines = File.ReadAllLines(DefaultFilePath);
+        CompareExcel.Main(lines);
 
-        var targetList = PubMetToExcel.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
-        if (targetList.Count == 0)
-        {
-            sw.Stop();
-            MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
-        }
-        else
-        {
-            //ErrorLogCtp.DisposeCtp();
-            //var log = "";
-            //for (var i = 0; i < targetList.Count; i++)
-            //    log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
-            //           targetList[i].Item4 + "\n";
-            //ErrorLogCtp.CreateCtpNormal(log);
-            var ctpName = "表格查询结果";
-            NumDesCTP.DeleteCTP(true, ctpName);
-            var tupleList = targetList
-                .Select(t =>
-                    (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
-                )
-                .ToList();
-            _ = (SheetSeachResult)
-                NumDesCTP.ShowCTP(
-                    320,
-                    ctpName,
-                    true,
-                    ctpName,
-                    new SheetSeachResult(tupleList),
-                    MsoCTPDockPosition.msoCTPDockPositionRight
-                );
+        //var wk = App.ActiveWorkbook;
+        //var path = wk.Path;
 
-            sw.Stop();
-        }
+        //var targetList = PubMetToExcel.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
+        //if (targetList.Count == 0)
+        //{
+        //    sw.Stop();
+        //    MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
+        //}
+        //else
+        //{
+        //    //ErrorLogCtp.DisposeCtp();
+        //    //var log = "";
+        //    //for (var i = 0; i < targetList.Count; i++)
+        //    //    log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
+        //    //           targetList[i].Item4 + "\n";
+        //    //ErrorLogCtp.CreateCtpNormal(log);
+        //    var ctpName = "表格查询结果";
+        //    NumDesCTP.DeleteCTP(true, ctpName);
+        //    var tupleList = targetList
+        //        .Select(t =>
+        //            (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
+        //        )
+        //        .ToList();
+        //    _ = (SheetSeachResult)
+        //        NumDesCTP.ShowCTP(
+        //            320,
+        //            ctpName,
+        //            true,
+        //            ctpName,
+        //            new SheetSeachResult(tupleList),
+        //            MsoCTPDockPosition.msoCTPDockPositionRight
+        //        );
+
+        //    sw.Stop();
+        //}
 
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
@@ -1386,18 +1404,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public string GetFileInfo(IRibbonControl control)
     {
-        if (!File.Exists(_defaultFilePath))
+        if (!File.Exists(DefaultFilePath))
         {
             var defaultContent =
                 @"C:\M1Work\Public\Excels\Tables\"
                 + Environment.NewLine
                 + @"C:\M2Work\Public\Excels\Tables\";
 
-            File.WriteAllText(_defaultFilePath, defaultContent);
+            File.WriteAllText(DefaultFilePath, defaultContent);
         }
 
-        var line1 = File.ReadLines(_defaultFilePath).Skip(1 - 1).FirstOrDefault();
-        var line2 = File.ReadLines(_defaultFilePath).Skip(2 - 1).FirstOrDefault();
+        var line1 = File.ReadLines(DefaultFilePath).Skip(1 - 1).FirstOrDefault();
+        var line2 = File.ReadLines(DefaultFilePath).Skip(2 - 1).FirstOrDefault();
         if (control.Id == "BasePathEdit")
             return line1;
         else if (control.Id == "TargetPathEdit")
@@ -1409,17 +1427,17 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public void BaseFileInfoChanged(IRibbonControl control, string text)
     {
         _currentBaseText = text;
-        var lines = File.ReadAllLines(_defaultFilePath);
+        var lines = File.ReadAllLines(DefaultFilePath);
         lines[1 - 1] = _currentBaseText;
-        File.WriteAllLines(_defaultFilePath, lines);
+        File.WriteAllLines(DefaultFilePath, lines);
     }
 
     public void TargetFileInfoChanged(IRibbonControl control, string text)
     {
         _currentTargetText = text;
-        var lines = File.ReadAllLines(_defaultFilePath);
+        var lines = File.ReadAllLines(DefaultFilePath);
         lines[2 - 1] = _currentTargetText;
-        File.WriteAllLines(_defaultFilePath, lines);
+        File.WriteAllLines(DefaultFilePath, lines);
     }
 
     private List<CellSelectChangeTip> _customZoomForms = [];

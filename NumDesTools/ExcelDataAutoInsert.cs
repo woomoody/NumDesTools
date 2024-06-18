@@ -461,6 +461,11 @@ public class ExcelDataAutoInsertLanguage
 
             targetSheet.InsertRow(endRowSource + 1, sourceDataList.Count);
             var colCount = targetSheet.Dimension.Columns;
+            //多语言表不需要复制全部列
+            if (fixFileName == "Localizations.xlsx")
+            {
+                colCount = 7;
+            }
             var cellSource = targetSheet.Cells[endRowSource, 1, endRowSource, colCount];
             for (var m = 0; m < sourceDataList.Count; m++)
             {
@@ -910,6 +915,11 @@ public class ExcelDataAutoInsertLanguage
 
             targetSheet.InsertRow(endRowSource + 1, sourceDataList.Count);
             var colCount = targetSheet.Dimension.Columns;
+            //多语言表不需要复制全部列
+            if (fixFileName == "Localizations.xlsx")
+            {
+                colCount = 7;
+            }
             var cellSource = targetSheet.Cells[endRowSource, 1, endRowSource, colCount];
             for (var m = 0; m < sourceDataList.Count; m++)
             {
@@ -1462,6 +1472,11 @@ public class ExcelDataAutoInsertMulti
         var writeIdList = ExcelDataWriteIdGroup(excelName, addValue, sheet, fixKey, modelId);
         PubMetToExcel.RepeatValue2(sheet, 4, 2, writeIdList.Item1);
         var colCount = sheet.Dimension.Columns;
+        //多语言表不需要复制全部列
+        if (excelRealName == "Localizations.xlsx")
+        {
+            colCount = 7;
+        }
         writeIdList = ExcelDataWriteIdGroup(excelName, addValue, sheet, fixKey, modelId);
         var writeRow = writeIdList.Item2;
         if (writeRow == -1)
@@ -1498,7 +1513,7 @@ public class ExcelDataAutoInsertMulti
                 errorList.Add((endValue, errorExcelLog, excelName));
                 return errorList;
             }
-
+            //复制数据
             var count = endRowSource - startRowSource + 1;
             sheet.InsertRow(writeRow + 1, count);
             var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
@@ -1688,13 +1703,20 @@ public class ExcelDataAutoInsertMulti
                                 )
                                     continue;
 
-                                if (
-                                    cellCol != null
-                                    && cellCol.Contains("#")
-                                    && commentValue != null
-                                )
+                                if (cellCol != null && cellCol.Contains("#") && commentValue != null)
                                 {
-                                    cellFix.Value = commentValue + "-" + cellFix.Value.ToString();
+                                    string[] baseParts = commentValue.Split("#");
+                                    var cellValue = cellFix.Value.ToString();
+                                    foreach (var item in baseParts)
+                                    {
+                                        var parts = item.Split("-");
+                                        var replaceValue = parts[0];
+                                        var pattern = parts[1];
+                                        if (cellValue != null)
+                                            cellValue = Regex.Replace(cellValue, pattern, replaceValue);
+                                    }
+
+                                    cellFix.Value = cellValue;
                                 }
                                 else
                                 {
