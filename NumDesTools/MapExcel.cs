@@ -9,18 +9,47 @@ namespace NumDesTools
         {
             // 读取Excel文件
             var filePath = @"C:\M1Work\Public\Excels\Tables\#表格关联.xlsx";
-            var table = MiniExcel
+            var linkTable = MiniExcel
                 .Query(filePath, useHeaderRow: true, startCell: "A5", sheetName: "主副表关联")
                 .ToList();
+            var typeTable = MiniExcel
+                .Query(filePath, useHeaderRow: true, startCell: "A5", sheetName: "活动类型枚举")
+                .ToList();
+            //创建一个字典来存储枚举表格
+            var typeDic = new Dictionary<string, List<string>>();
+            foreach (var row in typeTable)
+            {
+                var rowDict = (IDictionary<string, object>)row;
+                // 获取字段值
+                string isOut =
+                    rowDict.ContainsKey("导出") && rowDict["导出"] != null
+                        ? rowDict["导出"].ToString()
+                        : null;
+                string typeIndex =
+                    rowDict.ContainsKey("type") && rowDict["type"] != null
+                        ? rowDict["type"].ToString()
+                        : null;
+                string activityId =
+                    rowDict.ContainsKey("activityID") && rowDict["activityID"] != null
+                        ? rowDict["activityID"].ToString()
+                        : null;
+                if (isOut != "#")
+                {
+                    if (!typeDic.ContainsKey(activityId))
+                    {
+                        typeDic[activityId] = new List<string>();
+                    }
+                    typeDic[activityId].Add(typeIndex);
+                }
+            }
 
             // 创建一个字典来存储表格关系
             var relations = new Dictionary<string, Dictionary<string, string>>();
-
             // 保存上一个非空的主表值
             string lastMainTable = null;
 
             // 遍历每一行，构建关系字典
-            foreach (var row in table)
+            foreach (var row in linkTable)
             {
                 var rowDict = (IDictionary<string, object>)row;
 
@@ -56,14 +85,31 @@ namespace NumDesTools
 
                 var workbookPath = @"C:\M1Work\Public\Excels";
                 mainTable = TablePathFix(mainTable, workbookPath);
-                subTable = TablePathFix(subTable, workbookPath);
-
-                if (!relations.ContainsKey(subTable))
+                //活动表类型枚举判断
+                if (subTable == "活动编号")
                 {
-                    relations[subTable] = new Dictionary<string, string>();
+                    var fieldActivityId = "activityID";
+                    foreach (var type in typeDic.Keys)
+                    {
+                        subTable = TablePathFix(type, workbookPath);
+                        if (!relations.ContainsKey(subTable))
+                        {
+                            relations[subTable] = new Dictionary<string, string>();
+                        }
+                        relations[subTable][fieldActivityId] = mainTable;
+                    }
                 }
+                else
+                {
+                    subTable = TablePathFix(subTable, workbookPath);
 
-                relations[subTable][field] = mainTable;
+                    if (!relations.ContainsKey(subTable))
+                    {
+                        relations[subTable] = new Dictionary<string, string>();
+                    }
+
+                    relations[subTable][field] = mainTable;
+                }
             }
 
             // 将关系字典转换为JSON字符串
@@ -73,54 +119,54 @@ namespace NumDesTools
             File.WriteAllText(@"C:\Users\cent\Desktop\relations.json", json);
 
             // 溯源
-            Main();
+            Main(typeDic);
         }
 
-        private static string TablePathFix(string mainTable, string workbookPath)
+        private static string TablePathFix(string table, string workbookPath)
         {
-            if (mainTable != null && mainTable.Contains("克朗代克##"))
+            if (table != null && table.Contains("克朗代克##"))
             {
-                var excelSplit = mainTable.Split("##");
+                var excelSplit = table.Split("##");
                 //克朗代克复合表
-                if (mainTable.Contains("$"))
+                if (table.Contains("$"))
                 {
-                    mainTable =
+                    table =
                         workbookPath + @"\Tables\克朗代克\" + excelSplit[1] + "#" + excelSplit[2];
                 }
                 //克朗代克单表
                 else
                 {
-                    mainTable = workbookPath + @"\Tables\克朗代克\" + excelSplit[1];
+                    table = workbookPath + @"\Tables\克朗代克\" + excelSplit[1];
                 }
             }
-            else if (mainTable != null && mainTable.Contains("##"))
+            else if (table != null && table.Contains("##"))
             {
-                var excelSplit = mainTable.Split("##");
-                mainTable = workbookPath + @"\Tables\" + excelSplit[0] + "#" + excelSplit[1];
+                var excelSplit = table.Split("##");
+                table = workbookPath + @"\Tables\" + excelSplit[0] + "#" + excelSplit[1];
             }
             else
             {
-                switch (mainTable)
+                switch (table)
                 {
                     case "Localizations.xlsx":
-                        mainTable = workbookPath + @"\Localizations\Localizations.xlsx";
+                        table = workbookPath + @"\Localizations\Localizations.xlsx";
                         break;
                     case "UIConfigs.xlsx":
-                        mainTable = workbookPath + @"\UIs\UIConfigs.xlsx";
+                        table = workbookPath + @"\UIs\UIConfigs.xlsx";
                         break;
                     case "UIItemConfigs.xlsx":
-                        mainTable = workbookPath + @"\UIs\UIItemConfigs.xlsx";
+                        table = workbookPath + @"\UIs\UIItemConfigs.xlsx";
                         break;
                     default:
-                        mainTable = workbookPath + @"\Tables\" + mainTable;
+                        table = workbookPath + @"\Tables\" + table;
                         break;
                 }
             }
 
-            return mainTable;
+            return table;
         }
 
-        static void Main()
+        static void Main(Dictionary<string, List<string>> typeDictionary)
         {
             // 读取关联关系配置文件
             var relationsPath = @"C:\Users\cent\Desktop\relations.json";
@@ -215,7 +261,7 @@ namespace NumDesTools
                         $"<Start>表 {initialTableName} 字段 {initialSubKey} ID: {initialSubId}"
                     );
                     // 开始溯源
-                    TraceBack(initialSubId, initialTable, relations, traceLog, 0, allTablesData);
+                    TraceBack(initialSubId, initialTable, relations, traceLog, 0, allTablesData , typeDictionary);
                     //间隔
                     traceLog.Add($"<End>");
                     // 将溯源过程加入总日志列表
@@ -235,7 +281,8 @@ namespace NumDesTools
             Dictionary<string, Dictionary<string, string>> relations,
             List<string> traceLog,
             int depth,
-            Dictionary<string, Dictionary<string, List<IDictionary<string, object>>>> allTablesData
+            Dictionary<string, Dictionary<string, List<IDictionary<string, object>>>> allTablesData, 
+            Dictionary<string, List<string>> typeDictionary
         )
         {
             const int maxDepth = 100; // 设置最大递归深度
@@ -295,6 +342,16 @@ namespace NumDesTools
 
                             string nextId = rowDict[keyColumn].ToString();
 
+                            //活动表单独处理
+                            if (initialTableName == "ActivityClientData.xlsx" && field == "activityID" && typeDictionary.Keys.Contains(currentTable))
+                            {
+                                string typeId = rowDict["activityID"].ToString();
+                                if (typeDictionary[currentTable].Contains(typeId))
+                                {
+                                    traceLog.Add($"表 {initialTableName} 字段 {field} ID: {nextId}");
+                                }
+                            }
+
                             // 递归地继续溯源，直到没有新的ID
                             TraceBack(
                                 nextId,
@@ -302,7 +359,8 @@ namespace NumDesTools
                                 relations,
                                 traceLog,
                                 depth + 1,
-                                allTablesData
+                                allTablesData,
+                                typeDictionary
                             );
                             return;
                         }
