@@ -120,7 +120,7 @@ namespace NumDesTools
             File.WriteAllText(@"C:\Users\cent\Desktop\relations.json", json);
 
             // 溯源
-            Main(typeDic);
+            Main();
         }
 
         private static string TablePathFix(string table, string workbookPath)
@@ -166,7 +166,7 @@ namespace NumDesTools
             return table;
         }
 
-        static void Main(Dictionary<string, List<string>> typeDictionary)
+        static void Main()
         {
             // 读取关联关系配置文件
             var relationsPath = @"C:\Users\cent\Desktop\relations.json";
@@ -267,8 +267,7 @@ namespace NumDesTools
                         relations,
                         traceLog,
                         0,
-                        allTablesData,
-                        typeDictionary
+                        allTablesData
                     );
                     //间隔
                     traceLog.Add($"<End>");
@@ -289,8 +288,7 @@ namespace NumDesTools
             Dictionary<string, Dictionary<string, string>> relations,
             List<string> traceLog,
             int depth,
-            Dictionary<string, Dictionary<string, List<IDictionary<string, object>>>> allTablesData,
-            Dictionary<string, List<string>> typeDictionary
+            Dictionary<string, Dictionary<string, List<IDictionary<string, object>>>> allTablesData
         )
         {
             const int maxDepth = 100; // 设置最大递归深度
@@ -350,19 +348,19 @@ namespace NumDesTools
 
                             string nextId = rowDict[keyColumn].ToString();
 
-                            //活动表单独处理
-                            if (
-                                initialTableName == "ActivityClientData.xlsx"
-                                && field == "activityID"
-                                && typeDictionary.Keys.Contains(currentTable)
-                            )
-                            {
-                                string typeId = rowDict["activityID"].ToString();
-                                if (typeDictionary[currentTable].Contains(typeId))
-                                {
-                                    traceLog.Add($"表 {initialTableName} 字段 {field} ID: {nextId}");
-                                }
-                            }
+                            ////活动表单独处理
+                            //if (
+                            //    initialTableName == "ActivityClientData.xlsx"
+                            //    && field == "activityID"
+                            //    && typeDictionary.Keys.Contains(currentTable)
+                            //)
+                            //{
+                            //    string typeId = rowDict["activityID"].ToString();
+                            //    if (typeDictionary[currentTable].Contains(typeId))
+                            //    {
+                            //        traceLog.Add($"表 {initialTableName} ID: {nextId}");
+                            //    }
+                            //}
 
                             // 递归地继续溯源，直到没有新的ID
                             TraceBack(
@@ -371,8 +369,7 @@ namespace NumDesTools
                                 relations,
                                 traceLog,
                                 depth + 1,
-                                allTablesData,
-                                typeDictionary
+                                allTablesData
                             );
                             return;
                         }
