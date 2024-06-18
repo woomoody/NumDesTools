@@ -1,7 +1,7 @@
 # NumDesTools简介
 游戏数值计算过程中，需要用到的一些小工具
 # 工程引用缺失
-https://blog.csdn.net/weixin_43650637/article/details/114318408<br>
+https://blog.csdn.net/weixin_43650637/article/details/114318408<br> <备注>工程升级到dotnet6之后应该不存在这个问题了<br>
 步骤1：将.csproj文件中的类似下列代码删除
 ~~~ Html
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
@@ -17,7 +17,7 @@ https://blog.csdn.net/weixin_43650637/article/details/114318408<br>
 步骤2：工具\Nuget包管理器\程序包管理器控制台<br>
 `update-package -reinstall`
 # 打包与使用
-  pack文件夹中点击packtool会生成两个.XLL的Pack，与XllConfig文件一起放入到任意路径中，Excel中引用适合自己电脑位数的.XLL即可，pack\libs的dll需要手动复制更新，没找到更合适的批处理代码
+  packFromBin文件夹中.xll引用到Excel中即可
 ## 依赖项
 本项目使用了以下外部库：
 | 库名称 | 版本 | 许可证 |
