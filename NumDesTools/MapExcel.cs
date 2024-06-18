@@ -35,11 +35,12 @@ namespace NumDesTools
                         : null;
                 if (isOut != "#")
                 {
-                    if (!typeDic.ContainsKey(activityId))
+                    if (activityId != null && !typeDic.ContainsKey(activityId))
                     {
                         typeDic[activityId] = new List<string>();
                     }
-                    typeDic[activityId].Add(typeIndex);
+
+                    if (activityId != null) typeDic[activityId].Add(typeIndex);
                 }
             }
 
@@ -130,8 +131,7 @@ namespace NumDesTools
                 //克朗代克复合表
                 if (table.Contains("$"))
                 {
-                    table =
-                        workbookPath + @"\Tables\克朗代克\" + excelSplit[1] + "#" + excelSplit[2];
+                    table = workbookPath + @"\Tables\克朗代克\" + excelSplit[1] + "#" + excelSplit[2];
                 }
                 //克朗代克单表
                 else
@@ -261,7 +261,15 @@ namespace NumDesTools
                         $"<Start>表 {initialTableName} 字段 {initialSubKey} ID: {initialSubId}"
                     );
                     // 开始溯源
-                    TraceBack(initialSubId, initialTable, relations, traceLog, 0, allTablesData , typeDictionary);
+                    TraceBack(
+                        initialSubId,
+                        initialTable,
+                        relations,
+                        traceLog,
+                        0,
+                        allTablesData,
+                        typeDictionary
+                    );
                     //间隔
                     traceLog.Add($"<End>");
                     // 将溯源过程加入总日志列表
@@ -281,7 +289,7 @@ namespace NumDesTools
             Dictionary<string, Dictionary<string, string>> relations,
             List<string> traceLog,
             int depth,
-            Dictionary<string, Dictionary<string, List<IDictionary<string, object>>>> allTablesData, 
+            Dictionary<string, Dictionary<string, List<IDictionary<string, object>>>> allTablesData,
             Dictionary<string, List<string>> typeDictionary
         )
         {
@@ -343,7 +351,11 @@ namespace NumDesTools
                             string nextId = rowDict[keyColumn].ToString();
 
                             //活动表单独处理
-                            if (initialTableName == "ActivityClientData.xlsx" && field == "activityID" && typeDictionary.Keys.Contains(currentTable))
+                            if (
+                                initialTableName == "ActivityClientData.xlsx"
+                                && field == "activityID"
+                                && typeDictionary.Keys.Contains(currentTable)
+                            )
                             {
                                 string typeId = rowDict["activityID"].ToString();
                                 if (typeDictionary[currentTable].Contains(typeId))
