@@ -1269,6 +1269,33 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             Clipboard.SetText(excelPath);
         }
     }
+    public void MapExcel_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        var lines = File.ReadAllLines(DefaultFilePath);
+
+        MapExcel.ExcelToJson(lines);
+
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
+
+    public void CompareExcel_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        var lines = File.ReadAllLines(DefaultFilePath);
+        CompareExcel.CompareMain(lines);
+
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
 
     public void TestBar1_Click(IRibbonControl control)
     {
@@ -1341,10 +1368,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //{
         //    resultlist.AddRange(localList);
         //}
-        //var lines = File.ReadAllLines(_defaultFilePath);
+        //var lines = File.ReadAllLines(DefaultFilePath);
 
-        //CompareExcel.Main(lines);
-        MapExcel.ExcelToJson();
+        ////CompareExcel.CompareMain(lines);
+        //MapExcel.ExcelToJson(lines);
 
         sw.Stop();
         var ts2 = sw.Elapsed;
@@ -1357,8 +1384,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-        var lines = File.ReadAllLines(DefaultFilePath);
-        CompareExcel.Main(lines);
+        //var lines = File.ReadAllLines(DefaultFilePath);
+        //CompareExcel.CompareMain(lines);
 
         //var wk = App.ActiveWorkbook;
         //var path = wk.Path;

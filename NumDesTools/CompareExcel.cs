@@ -5,11 +5,12 @@ namespace NumDesTools;
 
 public class CompareExcel
 {
-    public static void Main(string[] folder)
+    public static void CompareMain(string[] folder)
     {
         var compareData = new List<Dictionary<string, object>>();
         var compareLog = new List<Dictionary<string, object>>();
-        var outFile = @"C:\Users\cent\Desktop\#CompareResult.xlsx";
+        var myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var outFile = myDocumentsPath + @"\#表格比对结果.xlsx";
 
         var baseFolder = folder[0];
         var targetFolder = folder[1];
@@ -149,7 +150,7 @@ public class CompareExcel
         MiniExcel.SaveAs(outFile, sheets);
     }
 
-    static void CompareSheets(
+    private static void CompareSheets(
         List<dynamic> baseSheet,
         List<dynamic> targetSheet,
         string keyColumn,
@@ -239,7 +240,7 @@ public class CompareExcel
         }
     }
 
-    static void CompareRows(
+    private static void CompareRows(
         IDictionary<string, object> baseRow,
         IDictionary<string, object> targetRow,
         string key,
@@ -320,7 +321,7 @@ public class CompareExcel
         //}
     }
 
-    static string GetMd5HashFromFile(string filePath)
+    private static string GetMd5HashFromFile(string filePath)
     {
         using (var md5 = MD5.Create())
         {
@@ -332,7 +333,7 @@ public class CompareExcel
         }
     }
 
-    static void CheckAndLogSheetChanges(
+    private static void CheckAndLogSheetChanges(
         List<object> baseSheet,
         List<object> targetSheet,
         string baseFile,
@@ -353,7 +354,7 @@ public class CompareExcel
         }
     }
 
-    static void AddLog(
+    private static void AddLog(
         List<Dictionary<string, object>> compareLog,
         string file,
         string sheetName,
