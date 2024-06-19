@@ -5,10 +5,12 @@ namespace NumDesTools
 {
     class MapExcel
     {
-        public static void ExcelToJson()
+        public static void ExcelToJson(string[] folder)
         {
+            var myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var basePath = folder[1];
             // 读取Excel文件
-            var filePath = @"C:\M1Work\Public\Excels\Tables\#表格关联.xlsx";
+            var filePath = basePath + @"#表格关联.xlsx";
             var linkTable = MiniExcel
                 .Query(filePath, useHeaderRow: true, startCell: "A5", sheetName: "主副表关联")
                 .ToList();
@@ -40,7 +42,8 @@ namespace NumDesTools
                         typeDic[activityId] = new List<string>();
                     }
 
-                    if (activityId != null) typeDic[activityId].Add(typeIndex);
+                    if (activityId != null)
+                        typeDic[activityId].Add(typeIndex);
                 }
             }
 
@@ -84,7 +87,7 @@ namespace NumDesTools
                     continue;
                 }
 
-                var workbookPath = @"C:\M1Work\Public\Excels";
+                var workbookPath = Path.GetDirectoryName(Path.GetDirectoryName(basePath));
                 mainTable = TablePathFix(mainTable, workbookPath);
                 //活动表类型枚举判断
                 if (subTable == "活动编号")
@@ -117,10 +120,10 @@ namespace NumDesTools
             string json = JsonConvert.SerializeObject(relations, Formatting.Indented);
 
             // 将JSON字符串写入文件
-            File.WriteAllText(@"C:\Users\cent\Desktop\relations.json", json);
+            File.WriteAllText(myDocumentsPath+ @"\表格关系.json", json);
 
             // 溯源
-            Main();
+            TraceMain( @"\表格关系.json" , myDocumentsPath);
         }
 
         private static string TablePathFix(string table, string workbookPath)
@@ -166,24 +169,23 @@ namespace NumDesTools
             return table;
         }
 
-        static void Main()
+        private static void TraceMain(string relationsPath , string myDocumentsPath)
         {
             // 读取关联关系配置文件
-            var relationsPath = @"C:\Users\cent\Desktop\relations.json";
             var relations = JsonConvert.DeserializeObject<
                 Dictionary<string, Dictionary<string, string>>
-            >(File.ReadAllText(relationsPath));
+            >(File.ReadAllText(myDocumentsPath + relationsPath));
 
             // 日志文件路径
-            var logFilePath = @"C:\Users\cent\Desktop\溯源日志.txt";
+            var logFilePath = myDocumentsPath+ @"\#溯源结果.xlsx";
 
             // 设置初始副表ID和初始表名
-            var initialPath = @"C:\Users\cent\Desktop\#CompareResult.xlsx";
-            var table = MiniExcel.Query(initialPath, useHeaderRow: true, sheetName: "对比结果");
+            var initialPath = myDocumentsPath + @"\#表格比对结果.xlsx";
+            var compareTable = MiniExcel.Query(initialPath, useHeaderRow: true, sheetName: "对比结果");
 
             // 清空文件内容
-            File.WriteAllText(logFilePath, string.Empty);
-            var allTraceLogs = new List<string>();
+            //File.WriteAllText(logFilePath, string.Empty);
+            var allTraceLogs = new List<Dictionary<string, object>>();
 
             // 用于存储所有表格数据的字典
             var allTablesData =
@@ -237,56 +239,88 @@ namespace NumDesTools
                 }
             }
 
-            //int count = 0;
-            //int maxCount = table.Count();
-
-            foreach (var row in table)
+            //读取对比结果表格数据
+            foreach (var row in compareTable)
             {
                 var rowDict = (IDictionary<string, object>)row;
                 var filterAction = rowDict["动作"].ToString();
-                var filterColName = rowDict["列名"].ToString();
-                if (filterColName != null && filterAction != "新增行" && !filterColName.Contains("#"))
+
+
+                var traceLog = new List<Dictionary<string, object>>();
+
+                if (filterAction == "修改")
                 {
+                    var filterColName = rowDict["列名"].ToString();
+                    if (filterColName != null && filterColName.Contains("#"))
+                    {
+                        continue;
+                    }
                     var initialSubId = rowDict["键值"].ToString();
                     var initialSubKey = rowDict["列名"].ToString();
                     var initialTable = rowDict["文件名"].ToString();
+                    var oldValue = rowDict["旧值"]?.ToString() ?? "";
+                    var newValue = rowDict["新值"]?.ToString() ?? "";
+
                     var initialTableName = Path.GetFileName(initialTable);
                     if (initialTable != null && initialTable.Contains("$"))
                     {
                         initialTable += "#" + rowDict["表名"];
                     }
                     // 用于记录溯源过程的列表
-                    var traceLog = new List<string>();
                     traceLog.Add(
-                        $"<Start>表 {initialTableName} 字段 {initialSubKey} ID: {initialSubId}"
+                        new Dictionary<string, object>
+                        {
+                            { "表名", initialTableName + "#" + rowDict["表名"] },
+                            { "字段", initialSubKey },
+                            { "ID索引", initialSubId },
+                            { "旧值", oldValue },
+                            { "新值", newValue },
+                            { "备注", "" }
+                        }
                     );
                     // 开始溯源
-                    TraceBack(
-                        initialSubId,
-                        initialTable,
-                        relations,
-                        traceLog,
-                        0,
-                        allTablesData
-                    );
-                    //间隔
-                    traceLog.Add($"<End>");
+                    TraceBack(initialSubId, initialTable, relations, traceLog, 0, allTablesData);
                     // 将溯源过程加入总日志列表
-                    allTraceLogs.AddRange(traceLog);
+                    traceLog.Reverse();
+                    var maxCount = traceLog.Count;
+                    allTraceLogs.Add(
+                        new Dictionary<string, object>
+                        {
+                            { "主表名", traceLog[0]["表名"] },
+                            { "主表字段", traceLog[0]["字段"] },
+                            { "主表ID", traceLog[0]["ID索引"] },
+                            { "主表备注", traceLog[0]["备注"] },
+                            { "主表旧值", traceLog[0]["旧值"] },
+                            { "主表新值", traceLog[0]["新值"] },
+                            { "副表名", maxCount > 1 ? traceLog[maxCount - 1]["表名"] : "" },
+                            { "副表字段", maxCount > 1 ? traceLog[maxCount - 1]["字段"] : "" },
+                            { "副表ID", maxCount > 1 ? traceLog[maxCount - 1]["ID索引"] : "" },
+                            { "副表备注", maxCount > 1 ? traceLog[maxCount - 1]["备注"] : "" },
+                            { "副表旧值", maxCount > 1 ? traceLog[maxCount - 1]["旧值"] : "" },
+                            { "副表新值", maxCount > 1 ? traceLog[maxCount - 1]["新值"] : "" }
+                        }
+                    );
                 }
 
-                //count++;
-                //Debug.Print(count +"<>" + maxCount);
             }
-            // 将所有溯源过程写入日志文件
-            File.AppendAllLines(logFilePath, allTraceLogs);
+
+            // 创建一个字典，键是 Sheet 名称，值是要写入的数据列表
+            var sheets = new Dictionary<string, object> { { "溯源结果", allTraceLogs } };
+            // 删除已存在的输出文件
+            if (File.Exists(logFilePath))
+            {
+                File.Delete(logFilePath);
+            }
+
+            // 将数据写入指定的 Sheet
+            MiniExcel.SaveAs(logFilePath, sheets);
         }
 
-        static void TraceBack(
+        private static void TraceBack(
             string subId,
             string currentTable,
             Dictionary<string, Dictionary<string, string>> relations,
-            List<string> traceLog,
+            List<Dictionary<string, object>> traceLog,
             int depth,
             Dictionary<string, Dictionary<string, List<IDictionary<string, object>>>> allTablesData
         )
@@ -317,7 +351,17 @@ namespace NumDesTools
                         || !allTablesData[filePath].ContainsKey(sheetName)
                     )
                     {
-                        traceLog.Add($"未找到表 {filePath} 的数据");
+                        traceLog.Add(
+                            new Dictionary<string, object>
+                            {
+                                { "表名", $"未找到表 {filePath} 的数据" },
+                                { "字段", "" },
+                                { "ID索引", "" },
+                                { "旧值", "" },
+                                { "新值", "" },
+                                { "备注", "" }
+                            }
+                        );
                         continue;
                     }
 
@@ -325,6 +369,7 @@ namespace NumDesTools
 
                     var tableRowDict = table[0];
                     string keyColumn = tableRowDict.Keys.ElementAt(1); // 获取第2列的列名
+                    string noteColumn = tableRowDict.Keys.ElementAt(2); // 获取第3列的列名
 
                     // 遍历当前表的每一行
                     foreach (var row in table)
@@ -343,25 +388,20 @@ namespace NumDesTools
                         if (rowDict != null && rowDict[field].ToString()!.Contains(subId))
                         {
                             var initialTableName = Path.GetFileName(upExcelPath);
+                            string note = rowDict[noteColumn]?.ToString() ?? "";
                             // 记录当前溯源信息到列表
-                            traceLog.Add($"表 {initialTableName} 字段 {field} ID: {subId}");
-
+                            traceLog.Add(
+                                new Dictionary<string, object>
+                                {
+                                    { "表名", initialTableName + "#" + sheetName },
+                                    { "字段", field },
+                                    { "ID索引", subId },
+                                    { "旧值", "" },
+                                    { "新值", "" },
+                                    { "备注", note }
+                                }
+                            );
                             string nextId = rowDict[keyColumn].ToString();
-
-                            ////活动表单独处理
-                            //if (
-                            //    initialTableName == "ActivityClientData.xlsx"
-                            //    && field == "activityID"
-                            //    && typeDictionary.Keys.Contains(currentTable)
-                            //)
-                            //{
-                            //    string typeId = rowDict["activityID"].ToString();
-                            //    if (typeDictionary[currentTable].Contains(typeId))
-                            //    {
-                            //        traceLog.Add($"表 {initialTableName} ID: {nextId}");
-                            //    }
-                            //}
-
                             // 递归地继续溯源，直到没有新的ID
                             TraceBack(
                                 nextId,
