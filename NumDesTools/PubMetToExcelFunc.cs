@@ -94,9 +94,15 @@ public class PubMetToExcelFunc
                 sheetName = sheet.Cells[selectRow, selectCol + 1].Value;
                 cellAddress = sheet.Cells[selectRow, selectCol + 2].Value;
             }
-            else if (selectCellValue.Contains("#"))
+            else if (selectCellValue.Contains("#") && !selectCellValue.Contains("##"))
             {
                 var excelSplit = selectCellValue.Split("#");
+                selectCellValue = workbookPath + @"\Tables\" + excelSplit[0];
+                sheetName = excelSplit[1];
+            }
+            else if (selectCellValue.Contains("##"))
+            {
+                var excelSplit = selectCellValue.Split("##");
                 selectCellValue = workbookPath + @"\Tables\" + excelSplit[0];
                 sheetName = excelSplit[1];
             }
