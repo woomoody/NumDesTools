@@ -1261,13 +1261,16 @@ public class PubMetToExcel
             var workbook = NumDesAddIn.App.Workbooks.Open(filePath);
             var worksheet = workbook.Sheets[sheetName];
             var regex = new Regex(@"^[A-Za-z]+\d+$");
-            var cellAddressDefault = "A1";
+            var cellAddressDefault = "1";
             if (cellAddress != null)
-                if (regex.IsMatch(cellAddress))
-                    cellAddressDefault = cellAddress;
-            var cellRange = worksheet.Range[cellAddressDefault];
-            worksheet.Select();
-            cellRange.Select();
+            {
+                MatchCollection matches = Regex.Matches(cellAddress, @"\d+");
+                cellAddressDefault = matches[0].ToString();
+                var realCellAddress = $"A{cellAddressDefault}:Z{cellAddressDefault}";
+                var cellRange = worksheet.Range[realCellAddress] ;
+                worksheet.Activate();
+                cellRange.Select();
+            }
         }
         // ReSharper disable EmptyGeneralCatchClause
         catch (Exception)

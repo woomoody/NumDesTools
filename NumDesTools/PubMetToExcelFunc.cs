@@ -13,12 +13,12 @@ public class PubMetToExcelFunc
 {
     private static readonly dynamic Wk = NumDesAddIn.App.ActiveWorkbook;
 
-    private static readonly string Path = Wk.Path;
+    private static readonly string WkPath = Wk.Path;
 
     public static void ExcelDataSearchAndMerge(string searchValue)
     {
         string[] ignoreFileNames = ["#", "副本"];
-        var rootPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(Path));
+        var rootPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(WkPath));
         var fileList = new List<string>()
         {
             rootPath + @"\Excels\Tables\",
@@ -253,7 +253,7 @@ public class PubMetToExcelFunc
             var sheetLinkOpen = excelLinkObjOpen.Sheet;
             var valueLinkIndex = excelLinkObjOpen.FindFromRow(
                 sheetLinkOpen,
-                5,
+                2,
                 workBookName
             );
             var cellLinkAddress = "A1";
@@ -277,13 +277,19 @@ public class PubMetToExcelFunc
             }
 
             var pattern = @"\d+";
+            if (indexCellValue.Contains("Localizations.xlsx") || indexCellValue.Contains("UIConfigs.xlsx") || indexCellValue.Contains("UIItemConfigs.xlsx"))
+            {
+                pattern = @".*";
+            }
             MatchCollection matches = Regex.Matches(selectCellValue, pattern);
             var cellAddress = "A1";
             var excelObjOpen = new ExcelDataByEpplus();
             var excelNameOpen = wkName + "##Sheet1";
             if (indexCellValue.Contains("##"))
                 excelNameOpen = wkName;
-            excelObjOpen.GetExcelObj(workbookPath + @"\Tables", excelNameOpen);
+
+            excelObjOpen.GetExcelObj(Path.GetDirectoryName(indexCellValue), excelNameOpen);
+
             if (excelObjOpen.ErrorList.Count > 0)
                 return;
             var sheetTargetOpen = excelObjOpen.Sheet;
