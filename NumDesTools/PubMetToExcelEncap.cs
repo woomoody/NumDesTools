@@ -28,8 +28,16 @@ public class ExcelDataByEpplus
         if (excelName.Contains("##"))
         {
             var excelRealNameGroup = excelName.Split("##");
-            excelRealName = excelRealNameGroup[0];
-            sheetRealName = excelRealNameGroup[1];
+            if (excelRealNameGroup.Length == 3)
+            {
+                excelRealName = excelRealNameGroup[1];
+                sheetRealName = excelRealNameGroup[2];
+            }
+            else
+            {
+                excelRealName = excelRealNameGroup[0];
+                sheetRealName = excelRealNameGroup[1];
+            }
         }
 
         switch (excelName)

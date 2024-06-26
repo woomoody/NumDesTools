@@ -1,6 +1,9 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Documents;
+using MiniExcelLibs;
 using OfficeOpenXml;
 using MessageBox = System.Windows.MessageBox;
 
@@ -103,8 +106,17 @@ public class PubMetToExcelFunc
             else if (selectCellValue.Contains("##"))
             {
                 var excelSplit = selectCellValue.Split("##");
-                selectCellValue = workbookPath + @"\Tables\" + excelSplit[0];
-                sheetName = excelSplit[1];
+                var sharpCount = excelSplit.Length;
+                if (selectCellValue.Contains("克朗代克"))
+                {
+                    selectCellValue = workbookPath + @"\Tables\" + excelSplit[0] + @"\" + excelSplit[1];
+                    sheetName = sharpCount == 3 ? excelSplit[2] : "Sheet1";
+                }
+                else
+                {
+                    selectCellValue = workbookPath + @"\Tables\" + excelSplit[0];
+                    sheetName = excelSplit[1];
+                }
             }
             else
             {
@@ -139,7 +151,13 @@ public class PubMetToExcelFunc
         var workBookName = workBook.Name;
         var workbookPath = workBook.Path;
         var sheetName = sheet.Name;
-        workbookPath = System.IO.Path.GetDirectoryName(workbookPath);
+
+        if (workbookPath!.Contains("克朗代克"))
+        {
+            workBookName = "克朗代克##" + workBookName;
+        }
+
+        workbookPath = Path.GetDirectoryName(workbookPath);
 
         var selectCellCol = selectCell.Column;
         var keyCell = sheet.Cells[2, selectCellCol];
@@ -153,6 +171,7 @@ public class PubMetToExcelFunc
         var data = excelObj.ReadToDic(sheetTarget, 6, 5, [7, 9], 2);
 
         string keyName;
+
         if (sheetName.Contains("Sheet"))
             keyName = workBookName;
         else
@@ -166,7 +185,14 @@ public class PubMetToExcelFunc
             if (result != null)
             {
                 var indexCellValue = result[1];
-                OpenTargetExcel(indexCellValue, selectCell, workbookPath, excelPath, excelName, workBookName);
+                OpenTargetExcel(
+                    indexCellValue,
+                    selectCell,
+                    workbookPath,
+                    excelPath,
+                    excelName,
+                    workBookName
+                );
             }
             else
             {
@@ -185,9 +211,17 @@ public class PubMetToExcelFunc
                 {
                     var blurData = data.Values.SelectMany(list => list).ToList();
                     // 查找最相似的键并返回对应的值
-                    string blurResult = FindClosestMatch(blurData, keyCell.Value.ToString(),2);
-                    if(blurResult == null) return;
-                    OpenTargetExcel(blurResult, selectCell, workbookPath, excelPath, excelName, workBookName);
+                    string blurResult = FindClosestMatch(blurData, keyCell.Value.ToString(), 2);
+                    if (blurResult == null)
+                        return;
+                    OpenTargetExcel(
+                        blurResult,
+                        selectCell,
+                        workbookPath,
+                        excelPath,
+                        excelName,
+                        workBookName
+                    );
                 }
             }
         }
@@ -208,15 +242,29 @@ public class PubMetToExcelFunc
             {
                 var blurData = data.Values.SelectMany(list => list).ToList();
                 // 查找最相似的键并返回对应的值
-                string blurResult = FindClosestMatch(blurData, keyCell.Value.ToString() ,2);
-                if (blurResult == null) return;
-                OpenTargetExcel(blurResult, selectCell, workbookPath, excelPath, excelName, workBookName);
+                string blurResult = FindClosestMatch(blurData, keyCell.Value.ToString(), 2);
+                if (blurResult == null)
+                    return;
+                OpenTargetExcel(
+                    blurResult,
+                    selectCell,
+                    workbookPath,
+                    excelPath,
+                    excelName,
+                    workBookName
+                );
             }
         }
     }
 
-    private static void OpenTargetExcel(string indexCellValue, Range selectCell, string workbookPath, string excelPath,
-        string excelName, string workBookName)
+    private static void OpenTargetExcel(
+        string indexCellValue,
+        Range selectCell,
+        string workbookPath,
+        string excelPath,
+        string excelName,
+        string workBookName
+    )
     {
         var isMatch = indexCellValue.Contains(".xls");
         var wkName = indexCellValue;
@@ -227,16 +275,24 @@ public class PubMetToExcelFunc
             if (indexCellValue.Contains("##"))
             {
                 var excelSplit = indexCellValue.Split("##");
-                indexCellValue = workbookPath + @"\Tables\" + excelSplit[0];
-                openSheetName = excelSplit[1];
+                var sharpCount = excelSplit.Length;
+                if (indexCellValue.Contains("克朗代克"))
+                {
+                    indexCellValue = workbookPath + @"\" + excelSplit[0] + @"\" + excelSplit[1];
+                    openSheetName = sharpCount == 3 ? excelSplit[2] : "Sheet1";
+                }
+                else
+                {
+                    indexCellValue = workbookPath + @"\" + excelSplit[0];
+                    openSheetName = excelSplit[1];
+                }
             }
             else
             {
                 switch (indexCellValue)
                 {
                     case "Localizations.xlsx":
-                        indexCellValue =
-                            workbookPath + @"\Localizations\Localizations.xlsx";
+                        indexCellValue = workbookPath + @"\Localizations\Localizations.xlsx";
                         break;
                     case "UIConfigs.xlsx":
                         indexCellValue = workbookPath + @"\UIs\UIConfigs.xlsx";
@@ -257,11 +313,7 @@ public class PubMetToExcelFunc
             if (excelLinkObjOpen.ErrorList.Count > 0)
                 return;
             var sheetLinkOpen = excelLinkObjOpen.Sheet;
-            var valueLinkIndex = excelLinkObjOpen.FindFromRow(
-                sheetLinkOpen,
-                2,
-                workBookName
-            );
+            var valueLinkIndex = excelLinkObjOpen.FindFromRow(sheetLinkOpen, 2, workBookName);
             var cellLinkAddress = "A1";
             if (valueLinkIndex != -1)
                 cellLinkAddress = "A" + valueLinkIndex;
@@ -273,17 +325,21 @@ public class PubMetToExcelFunc
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question
                 );
-                if (tips == MessageBoxResult.Yes){}
-                    PubMetToExcel.OpenExcelAndSelectCell(
-                        excelPath + @"\#表格关联.xlsx",
-                        "主副表关联",
-                        cellLinkAddress
-                    );
+                if (tips == MessageBoxResult.Yes) { }
+                PubMetToExcel.OpenExcelAndSelectCell(
+                    excelPath + @"\#表格关联.xlsx",
+                    "主副表关联",
+                    cellLinkAddress
+                );
                 return;
             }
 
             var pattern = @"\d+";
-            if (indexCellValue.Contains("Localizations.xlsx") || indexCellValue.Contains("UIConfigs.xlsx") || indexCellValue.Contains("UIItemConfigs.xlsx"))
+            if (
+                indexCellValue.Contains("Localizations.xlsx")
+                || indexCellValue.Contains("UIConfigs.xlsx")
+                || indexCellValue.Contains("UIItemConfigs.xlsx")
+            )
             {
                 pattern = @".*";
             }
@@ -301,11 +357,7 @@ public class PubMetToExcelFunc
             var sheetTargetOpen = excelObjOpen.Sheet;
             foreach (var item in matches)
             {
-                var valueIndex = excelObjOpen.FindFromRow(
-                    sheetTargetOpen,
-                    2,
-                    item.ToString()
-                );
+                var valueIndex = excelObjOpen.FindFromRow(sheetTargetOpen, 2, item.ToString());
                 if (valueIndex != -1)
                 {
                     cellAddress = "A" + valueIndex;
@@ -313,15 +365,11 @@ public class PubMetToExcelFunc
                 }
             }
 
-            PubMetToExcel.OpenExcelAndSelectCell(
-                indexCellValue,
-                openSheetName,
-                cellAddress
-            );
+            PubMetToExcel.OpenExcelAndSelectCell(indexCellValue, openSheetName, cellAddress);
         }
     }
 
-    private static string FindClosestMatch(List<object> listOfObjects, string input , int threshold)
+    private static string FindClosestMatch(List<object> listOfObjects, string input, int threshold)
     {
         List<List<string>> listOfLists = new List<List<string>>();
 
@@ -334,7 +382,9 @@ public class PubMetToExcelFunc
             }
             else
             {
-                throw new InvalidCastException("The object is not of type List<string> with exactly two elements.");
+                throw new InvalidCastException(
+                    "The object is not of type List<string> with exactly two elements."
+                );
             }
         }
 
@@ -363,8 +413,10 @@ public class PubMetToExcelFunc
         int m = t.Length;
         int[,] d = new int[n + 1, m + 1];
 
-        if (n == 0) return m;
-        if (m == 0) return n;
+        if (n == 0)
+            return m;
+        if (m == 0)
+            return n;
 
         for (int i = 0; i <= n; d[i, 0] = i++) { }
         for (int j = 0; j <= m; d[0, j] = j++) { }
@@ -376,7 +428,8 @@ public class PubMetToExcelFunc
                 int cost = (t[j - 1] == s[i - 1]) ? 0 : 1;
                 d[i, j] = Math.Min(
                     Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
-                    d[i - 1, j - 1] + cost);
+                    d[i - 1, j - 1] + cost
+                );
             }
         }
 
@@ -717,6 +770,80 @@ public class PubMetToExcelFunc
                 22,
                 PubMetToExcel.ConvertListToArray(filterEleCountMaxObj)
             );
+        }
+    }
+
+    public static void ExcelFolderPath(string[] folder)
+    {
+        var baseFolder = folder[1];
+        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(baseFolder)));
+        if (newPath != null)
+        {
+            var mainPath = Path.Combine(newPath, "Excels", "Tables");
+            var langPath = Path.Combine(newPath, "Excels", "Localizations");
+            var uiPath = Path.Combine(newPath, "Excels", "UIs");
+            var keLangPath = Path.Combine(newPath, "Excels", "Tables", "克朗代克");
+            var baseFiles = PubMetToExcel
+                .GetExcelFiles(mainPath)
+                .Concat(PubMetToExcel.GetExcelFiles(langPath))
+                .Concat(PubMetToExcel.GetExcelFiles(uiPath))
+                .Concat(
+                    Directory.Exists(keLangPath)
+                        ? PubMetToExcel.GetExcelFiles(keLangPath)
+                        : Enumerable.Empty<string>()
+                )
+                .ToArray();
+
+            var sheetIndex = new List<string>();
+
+            foreach (var baseFile in baseFiles)
+            {
+                var baseFileName = Path.GetFileName(baseFile);
+                var basePath = Path.GetDirectoryName(baseFile);
+
+                 if (basePath != null && basePath.Contains("克朗代克"))
+                {
+                    baseFileName = "克朗代克##" + baseFileName;
+                }
+          
+                //遍历Sheet
+                var sheetNames = MiniExcel.GetSheetNames(baseFile);
+                if (baseFileName.Contains("$"))
+                {
+                    //sheetNames = sheetNames.Where(name => !name.Contains("#")).ToList();
+                    foreach (var name in sheetNames)
+                    {
+                        if (!name.Contains("#"))
+                        {
+                            sheetIndex.Add(baseFileName + "##" + name);
+                        }
+                    }
+                }
+                else
+                {
+                    sheetIndex.Add(baseFileName);
+                }
+            }
+            var rowCount = sheetIndex.Count;
+            // 创建一个二维数组，行数为list的长度，列数为1
+            object[,] result = new object[sheetIndex.Count, 1];
+
+            for (int i = 0; i < sheetIndex.Count; i++)
+            {
+                result[i, 0] = sheetIndex[i];
+            }
+
+            var workSheet = NumDesAddIn.App.ActiveSheet;
+            if (workSheet.Name.Contains("文件目录"))
+            {
+                var targetRange = workSheet.Range["E6:E" + (rowCount + 5)];
+                targetRange.Value = "";
+                targetRange.Value = result;
+            }
+            else
+            {
+                MessageBox.Show("当前表格不是“#表格关联##文件目录，请切换");
+            }
         }
     }
 }
