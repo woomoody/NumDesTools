@@ -2674,6 +2674,7 @@ public class ExcelDataAutoInsertNumChanges
             {
                 var keyIndexValue = eachExcelData.Value.Item2[i][0]?.ToString();
                 var keyTargetValue = eachExcelData.Value.Item2[i][1]?.ToString();
+                Debug.Print(keyIndexValue);
                 if (keyIndexValue != null && keyTargetValue != null && keyIndexValue != "")
                 {
                     var keyIndexRow = excelObj.FindFromRow(sheetTarget, keyIndexCol, keyIndexValue);
@@ -2703,6 +2704,10 @@ public class ExcelDataAutoInsertNumChanges
         var indexRange = indexSheet.UsedRange;
         var startValue = workBook.FindValue(indexRange, "*自动填表*");
         int startRow = startValue.Item1;
+        if (startRow == -1)
+        {
+            MessageBox.Show("表格中找不到【*自动填表*】");
+        }
         var activityRankRange = indexSheet.Cells[startRow - 1, startValue.Item2 + 1];
         var activityRankCountRange = indexSheet.Cells[startRow - 2, startValue.Item2 + 1];
         var activityRank = (int)activityRankRange.Value;

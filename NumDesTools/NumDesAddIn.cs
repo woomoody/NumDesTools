@@ -1368,8 +1368,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //{
         //    resultlist.AddRange(localList);
         //}
-        //var lines = File.ReadAllLines(DefaultFilePath);
-
+        var lines = File.ReadAllLines(DefaultFilePath);
+        PubMetToExcelFunc.ExcelFolderPath(lines);
         ////CompareExcel.CompareMain(lines);
         //MapExcel.ExcelToJson(lines);
 
