@@ -260,8 +260,8 @@ public class CompareExcel
                 continue;
             }
 
-            var baseValue = baseRow[column];
-            var targetValue = targetRow[column];
+            var baseValue = baseRow[column]?.ToString();
+            var targetValue = targetRow[column]?.ToString();
 
             if (baseValue == null || targetValue == null)
             {
