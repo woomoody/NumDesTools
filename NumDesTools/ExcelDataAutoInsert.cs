@@ -2624,11 +2624,11 @@ public class ExcelDataAutoInsertNumChanges
             if (isCurrentCol == 2)
             {
                 var startCell = indexSheet.Cells[startRow + 2, col];
-                var endCell = indexSheet.Cells[rowMax, col + 1];
+                var endCell = indexSheet.Cells[rowMax, col + 3];
                 var dataRange = indexSheet.Range[startCell, endCell];
 
                 var startHeadCell = indexSheet.Cells[startRow + 1, col];
-                var endHeadCell = indexSheet.Cells[startRow + 1, col + 1];
+                var endHeadCell = indexSheet.Cells[startRow + 1, col + 3];
                 var headRange = indexSheet.Range[startHeadCell, endHeadCell];
 
                 var data = workBook.Read(dataRange, headRange, 1);
@@ -2654,44 +2654,53 @@ public class ExcelDataAutoInsertNumChanges
             if (excelObj.ErrorList.Count > 0)
                 return;
 
+            var changeValueCount = 0;
+
             var sheetTarget = excelObj.Sheet;
             var excelTarget = excelObj.Excel;
             var keyIndex = eachExcelData.Value.Item1[0].ToString();
-            var keyTarget = eachExcelData.Value.Item1[1].ToString();
             var keyIndexRowCount = eachExcelData.Value.Item2.Count;
-
             var keyIndexCol = excelObj.FindFromCol(sheetTarget, 2, keyIndex);
-            var keyTargetCol = excelObj.FindFromCol(sheetTarget, 2, keyTarget);
 
-            if (keyIndexCol == -1 || keyTargetCol == -1)
+            for (int j = 1; j < 4; j++)
             {
-                MessageBox.Show(workBookName + "*找不到字段");
-                return;
-            }
 
-            var repeatValueCount = 0;
-            for (var i = 0; i < keyIndexRowCount; i++)
-            {
-                var keyIndexValue = eachExcelData.Value.Item2[i][0]?.ToString();
-                var keyTargetValue = eachExcelData.Value.Item2[i][1]?.ToString();
-                Debug.Print(keyIndexValue);
-                if (keyIndexValue != null && keyTargetValue != null && keyIndexValue != "")
+                var keyTarget = eachExcelData.Value.Item1[j].ToString();
+                if (keyTarget != null && keyTarget.Contains("#"))
                 {
-                    var keyIndexRow = excelObj.FindFromRow(sheetTarget, keyIndexCol, keyIndexValue);
-                    var baseValue = sheetTarget.Cells[keyIndexRow, keyTargetCol].Value?.ToString();
-                    if (baseValue != keyTargetValue)
-                        sheetTarget.Cells[keyIndexRow, keyTargetCol].Value = double.TryParse(
-                            keyTargetValue,
-                            out double number
-                        )
-                            ? number
-                            : keyTargetValue;
-                    else
-                        repeatValueCount++;
+                    continue;
+                }
+                var keyTargetCol = excelObj.FindFromCol(sheetTarget, 2, keyTarget);
+                if (keyIndexCol == -1 || keyTargetCol == -1)
+                {
+                    MessageBox.Show(workBookName + "*找不到字段");
+                    return;
+                }
+
+                for (var i = 0; i < keyIndexRowCount; i++)
+                {
+                    var keyIndexValue = eachExcelData.Value.Item2[i][0]?.ToString();
+                    var keyTargetValue = eachExcelData.Value.Item2[i][j]?.ToString();
+                    if (keyIndexValue != null && keyTargetValue != null && keyIndexValue != "")
+                    {
+                        var keyIndexRow = excelObj.FindFromRow(sheetTarget, keyIndexCol, keyIndexValue);
+                        var baseValue = sheetTarget.Cells[keyIndexRow, keyTargetCol].Value?.ToString();
+
+                        if (baseValue != keyTargetValue)
+                        {
+                            sheetTarget.Cells[keyIndexRow, keyTargetCol].Value = double.TryParse(
+                                keyTargetValue,
+                                out double number
+                            )
+                                ? number
+                                : keyTargetValue;
+                            changeValueCount++;
+                        }
+                    }
                 }
             }
 
-            if (keyIndexRowCount - repeatValueCount > 0)
+            if (changeValueCount > 0)
                 excelTarget.Save();
         }
     }
