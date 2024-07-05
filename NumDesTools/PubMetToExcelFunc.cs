@@ -1,8 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Documents;
 using MiniExcelLibs;
 using OfficeOpenXml;
 using MessageBox = System.Windows.MessageBox;
@@ -21,7 +19,7 @@ public class PubMetToExcelFunc
     public static void ExcelDataSearchAndMerge(string searchValue)
     {
         string[] ignoreFileNames = ["#", "副本"];
-        var rootPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(WkPath));
+        var rootPath = Path.GetDirectoryName(Path.GetDirectoryName(WkPath));
         var fileList = new List<string>()
         {
             rootPath + @"\Excels\Tables\",
@@ -80,7 +78,7 @@ public class PubMetToExcelFunc
         var workBook = NumDesAddIn.App.ActiveWorkbook;
         var workBookName = workBook.Name;
         var workbookPath = workBook.Path;
-        workbookPath = System.IO.Path.GetDirectoryName(workbookPath);
+        workbookPath = Path.GetDirectoryName(workbookPath);
 
         var selectCellValue = "";
         if (selectCell.Value != null)
@@ -441,7 +439,7 @@ public class PubMetToExcelFunc
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var selectCell = NumDesAddIn.App.ActiveCell;
         var basePath = NumDesAddIn.App.ActiveWorkbook.Path;
-        var newPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(basePath));
+        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(basePath));
         newPath = newPath + @"\Excels\Localizations\Localizations.xlsx";
         var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(newPath);
         var findValue = PubMetToExcel.FindDataInDataTable(
@@ -461,7 +459,7 @@ public class PubMetToExcelFunc
         var basePath = NumDesAddIn.App.ActiveWorkbook.Path;
         var mergePath = "";
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        var filePath = System.IO.Path.Combine(documentsFolder, "mergePath.txt");
+        var filePath = Path.Combine(documentsFolder, "mergePath.txt");
         var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
         if (mergePathList.Count <= 1)
             Process.Start(filePath);
@@ -473,7 +471,7 @@ public class PubMetToExcelFunc
             Process.Start(filePath);
         else
             mergePath = basePath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
-        var newPath = System.IO.Path.GetDirectoryName(System.IO.Path.GetDirectoryName(mergePath));
+        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(mergePath));
         newPath = newPath + @"\Localizations\Localizations.xlsx";
         var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(newPath);
         var findValue = PubMetToExcel.FindDataInDataTable(

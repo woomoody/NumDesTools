@@ -1514,6 +1514,10 @@ public class ExcelDataAutoInsertMulti
                 return errorList;
             }
             //复制数据
+            if (excelRealName.Contains("Recharge"))
+            {
+                writeRow = sheet.Dimension.End.Row;
+            }
             var count = endRowSource - startRowSource + 1;
             sheet.InsertRow(writeRow + 1, count);
             var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
