@@ -265,7 +265,6 @@ public class ExcelUdf
         string regexMethod
     )
     {
-        var result = string.Empty;
         var rows = matchIndex.GetLength(0);
         var cols = matchIndex.GetLength(1);
 
@@ -289,12 +288,12 @@ public class ExcelUdf
 
         int counter = 0;
 
-        result = Regex.Replace(inputRange, regexMethod, m =>
+        var result = Regex.Replace(inputRange, regexMethod, m =>
         {
             counter++;
-            if (replacements.ContainsKey(counter))
+            if (replacements.TryGetValue(counter, out var expression))
             {
-                return replacements[counter];
+                return expression;
             }
             return m.Value;
         });
@@ -696,5 +695,48 @@ public class ExcelUdf
         }
 
         return result;
+    }
+    [ExcelFunction(
+        Category = "UDF-Excel函数增强",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "针对原生Excel函数SUMPRODUCT功能的拓展，输出数组",
+        Name = "UXSUMPRODUCT"
+    )]
+    public static double[] UxSumProduct(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")]
+        object[,] rangeObj1,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")]
+        object[,] rangeObj2,
+        [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false", Name = "过滤空值")]
+        bool ignoreEmpty
+    )
+    {
+        List<double> sumProductValueList = [];
+        double sumProductValue = 0;
+
+        var rowCount = rangeObj1.GetLength(0);
+        var colCount = rangeObj1.GetLength(1);
+
+        for (var col = 0; col < colCount; col++)
+        for (var row = 0; row < rowCount; row++)
+        {
+
+            if (ignoreEmpty)
+            {
+                var value1 = rangeObj1[row, col];
+                var value2 = rangeObj2[row, col];
+                if (double.TryParse(value1.ToString(), out double result1))
+                {
+                    if (double.TryParse(value2.ToString(), out double result2))
+                    {
+                        sumProductValue += result1 * result2;
+                        sumProductValueList.Add(sumProductValue);
+                    }
+                }
+            }
+        }
+
+        return sumProductValueList.ToArray();
     }
 }
