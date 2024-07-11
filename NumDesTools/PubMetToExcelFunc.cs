@@ -1,9 +1,15 @@
 ﻿using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media.Animation;
+using EnvDTE;
+using Microsoft.Office.Interop.Excel;
 using MiniExcelLibs;
+using NPOI.SS.UserModel;
+using NumDesTools.UI;
 using OfficeOpenXml;
 using MessageBox = System.Windows.MessageBox;
+using Process = System.Diagnostics.Process;
 
 namespace NumDesTools;
 
@@ -107,7 +113,8 @@ public class PubMetToExcelFunc
                 var sharpCount = excelSplit.Length;
                 if (selectCellValue.Contains("克朗代克"))
                 {
-                    selectCellValue = workbookPath + @"\Tables\" + excelSplit[0] + @"\" + excelSplit[1];
+                    selectCellValue =
+                        workbookPath + @"\Tables\" + excelSplit[0] + @"\" + excelSplit[1];
                     sheetName = sharpCount == 3 ? excelSplit[2] : "Sheet1";
                 }
                 else
@@ -159,7 +166,7 @@ public class PubMetToExcelFunc
 
         var selectCellCol = selectCell.Column;
         var keyCell = sheet.Cells[2, selectCellCol];
-        var excelPath = @"C:\M1Work\Public\Excels\Tables";
+        var excelPath = workbookPath + @"\Tables";
         var excelName = "#表格关联.xlsx##主副表关联";
         var excelObj = new ExcelDataByEpplus();
         excelObj.GetExcelObj(excelPath, excelName);
@@ -177,14 +184,15 @@ public class PubMetToExcelFunc
 
         if (data.TryGetValue(keyName, out var valueList))
         {
+            //改查找所有满足条件的值，然后按顺序遍历文件，找到第一个存在查找ID的表
             var result = valueList
                 .Cast<List<string>>()
-                .FirstOrDefault(list => list[0] == keyCell.Value.ToString());
-            if (result != null)
+                .Where(list => list[0] == keyCell.Value.ToString())
+                .ToList();
+            if (result.Count != 0)
             {
-                var indexCellValue = result[1];
                 OpenTargetExcel(
-                    indexCellValue,
+                    result,
                     selectCell,
                     workbookPath,
                     excelPath,
@@ -209,8 +217,12 @@ public class PubMetToExcelFunc
                 {
                     var blurData = data.Values.SelectMany(list => list).ToList();
                     // 查找最相似的键并返回对应的值
-                    string blurResult = FindClosestMatch(blurData, keyCell.Value.ToString(), 2);
-                    if (blurResult == null)
+                    string blurResultText = FindClosestMatch(blurData, keyCell.Value.ToString(), 2);
+                    List<List<string>> blurResult =
+                    [
+                        ["", blurResultText]
+                    ];
+                    if (blurResultText == null)
                         return;
                     OpenTargetExcel(
                         blurResult,
@@ -240,8 +252,12 @@ public class PubMetToExcelFunc
             {
                 var blurData = data.Values.SelectMany(list => list).ToList();
                 // 查找最相似的键并返回对应的值
-                string blurResult = FindClosestMatch(blurData, keyCell.Value.ToString(), 2);
-                if (blurResult == null)
+                string blurResultText = FindClosestMatch(blurData, keyCell.Value.ToString(), 2);
+                List<List<string>> blurResult =
+                [
+                    ["", blurResultText]
+                ];
+                if (blurResultText == null)
                     return;
                 OpenTargetExcel(
                     blurResult,
@@ -256,7 +272,7 @@ public class PubMetToExcelFunc
     }
 
     private static void OpenTargetExcel(
-        string indexCellValue,
+        List<List<string>> indexCellValueList,
         Range selectCell,
         string workbookPath,
         string excelPath,
@@ -264,106 +280,176 @@ public class PubMetToExcelFunc
         string workBookName
     )
     {
-        var isMatch = indexCellValue.Contains(".xls");
-        var wkName = indexCellValue;
-        if (isMatch)
+        foreach (var wkNameList in indexCellValueList)
         {
-            string openSheetName;
-            var selectCellValue = selectCell.Value.ToString();
-            if (indexCellValue.Contains("##"))
+            var indexCellValue = wkNameList[1];
+            //活动主表ActivityID特殊处理
+            if (indexCellValue == "活动编号")
             {
-                var excelSplit = indexCellValue.Split("##");
-                var sharpCount = excelSplit.Length;
-                if (indexCellValue.Contains("克朗代克"))
+                var excelObj = new ExcelDataByEpplus();
+                excelObj.GetExcelObj(excelPath, "#表格关联.xlsx##活动类型枚举");
+                if (excelObj.ErrorList.Count > 0)
+                    return;
+                var sheetTarget = excelObj.Sheet;
+                var data = excelObj.ReadToDic(sheetTarget, 6, 7, [7, 8], 2);
+                var selectCellCol = selectCell.Column;
+                var selectCellRow = selectCell.Row;
+                var sheet = NumDesAddIn.App.ActiveSheet;
+                var typeCell = sheet.Cells[selectCellRow, selectCellCol - 1];
+                string typeValue = typeCell.Value.ToString();
+                if (data.TryGetValue(typeValue, out var valueList))
                 {
-                    indexCellValue = workbookPath + @"\" + excelSplit[0] + @"\" + excelSplit[1];
-                    openSheetName = sharpCount == 3 ? excelSplit[2] : "Sheet1";
+                    var result = valueList
+                        .Cast<List<string>>()
+                        .FirstOrDefault(list => list[0] == typeValue);
+
+                    if (result != null)
+                        indexCellValue = result[1];
+                }
+            }
+            var isMatch = indexCellValue.Contains(".xls");
+            var wkName = indexCellValue;
+            if (isMatch)
+            {
+                string openSheetName;
+                var selectCellValue = selectCell.Value.ToString();
+                if (indexCellValue.Contains("##"))
+                {
+                    var excelSplit = indexCellValue.Split("##");
+                    var sharpCount = excelSplit.Length;
+                    if (indexCellValue.Contains("克朗代克"))
+                    {
+                        indexCellValue =
+                            workbookPath + @"\Tables\" + excelSplit[0] + @"\" + excelSplit[1];
+                        openSheetName = sharpCount == 3 ? excelSplit[2] : "Sheet1";
+                    }
+                    else
+                    {
+                        indexCellValue = workbookPath + @"\Tables\" + excelSplit[0];
+                        openSheetName = excelSplit[1];
+                    }
                 }
                 else
                 {
-                    indexCellValue = workbookPath + @"\" + excelSplit[0];
-                    openSheetName = excelSplit[1];
+                    switch (indexCellValue)
+                    {
+                        case "Localizations.xlsx":
+                            indexCellValue = workbookPath + @"\Localizations\Localizations.xlsx";
+                            break;
+                        case "UIConfigs.xlsx":
+                            indexCellValue = workbookPath + @"\UIs\UIConfigs.xlsx";
+                            break;
+                        case "UIItemConfigs.xlsx":
+                            indexCellValue = workbookPath + @"\UIs\UIItemConfigs.xlsx";
+                            break;
+                        default:
+                            indexCellValue = workbookPath + @"\Tables\" + indexCellValue;
+                            break;
+                    }
+
+                    openSheetName = "Sheet1";
                 }
-            }
-            else
-            {
-                switch (indexCellValue)
+
+                var excelLinkObjOpen = new ExcelDataByEpplus();
+                excelLinkObjOpen.GetExcelObj(excelPath, excelName);
+                if (excelLinkObjOpen.ErrorList.Count > 0)
+                    return;
+                var sheetLinkOpen = excelLinkObjOpen.Sheet;
+                var valueLinkIndex = excelLinkObjOpen.FindFromRow(sheetLinkOpen, 2, workBookName);
+                var cellLinkAddress = "A1";
+                if (valueLinkIndex != -1)
+                    cellLinkAddress = "A" + valueLinkIndex;
+                if (!File.Exists(indexCellValue))
                 {
-                    case "Localizations.xlsx":
-                        indexCellValue = workbookPath + @"\Localizations\Localizations.xlsx";
-                        break;
-                    case "UIConfigs.xlsx":
-                        indexCellValue = workbookPath + @"\UIs\UIConfigs.xlsx";
-                        break;
-                    case "UIItemConfigs.xlsx":
-                        indexCellValue = workbookPath + @"\UIs\UIItemConfigs.xlsx";
-                        break;
-                    default:
-                        indexCellValue = workbookPath + @"\Tables\" + indexCellValue;
-                        break;
+                    var tips = MessageBox.Show(
+                        "文件[" + indexCellValue + "]不存在，是否打开字段表格编辑？",
+                        "确认",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question
+                    );
+                    if (tips == MessageBoxResult.Yes) { }
+
+                    PubMetToExcel.OpenExcelAndSelectCell(
+                        excelPath + @"\#表格关联.xlsx",
+                        "主副表关联",
+                        cellLinkAddress
+                    );
+                    return;
                 }
 
-                openSheetName = "Sheet1";
-            }
-
-            var excelLinkObjOpen = new ExcelDataByEpplus();
-            excelLinkObjOpen.GetExcelObj(excelPath, excelName);
-            if (excelLinkObjOpen.ErrorList.Count > 0)
-                return;
-            var sheetLinkOpen = excelLinkObjOpen.Sheet;
-            var valueLinkIndex = excelLinkObjOpen.FindFromRow(sheetLinkOpen, 2, workBookName);
-            var cellLinkAddress = "A1";
-            if (valueLinkIndex != -1)
-                cellLinkAddress = "A" + valueLinkIndex;
-            if (!File.Exists(indexCellValue))
-            {
-                var tips = MessageBox.Show(
-                    "文件[" + indexCellValue + "]不存在，是否打开字段表格编辑？",
-                    "确认",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question
-                );
-                if (tips == MessageBoxResult.Yes) { }
-                PubMetToExcel.OpenExcelAndSelectCell(
-                    excelPath + @"\#表格关联.xlsx",
-                    "主副表关联",
-                    cellLinkAddress
-                );
-                return;
-            }
-
-            var pattern = @"\d+";
-            if (
-                indexCellValue.Contains("Localizations.xlsx")
-                || indexCellValue.Contains("UIConfigs.xlsx")
-                || indexCellValue.Contains("UIItemConfigs.xlsx")
-            )
-            {
-                pattern = @".*";
-            }
-            MatchCollection matches = Regex.Matches(selectCellValue, pattern);
-            var cellAddress = "A1";
-            var excelObjOpen = new ExcelDataByEpplus();
-            var excelNameOpen = wkName + "##Sheet1";
-            if (indexCellValue.Contains("##"))
-                excelNameOpen = wkName;
-
-            excelObjOpen.GetExcelObj(Path.GetDirectoryName(indexCellValue), excelNameOpen);
-
-            if (excelObjOpen.ErrorList.Count > 0)
-                return;
-            var sheetTargetOpen = excelObjOpen.Sheet;
-            foreach (var item in matches)
-            {
-                var valueIndex = excelObjOpen.FindFromRow(sheetTargetOpen, 2, item.ToString());
-                if (valueIndex != -1)
+                var pattern = @"\d+";
+                if (
+                    indexCellValue.Contains("Localizations.xlsx")
+                    || indexCellValue.Contains("UIConfigs.xlsx")
+                    || indexCellValue.Contains("UIItemConfigs.xlsx")
+                )
                 {
-                    cellAddress = "A" + valueIndex;
-                    break;
+                    pattern = @".*";
                 }
-            }
 
-            PubMetToExcel.OpenExcelAndSelectCell(indexCellValue, openSheetName, cellAddress);
+                MatchCollection matches = Regex.Matches(selectCellValue, pattern);
+                var cellAddress = "A1";
+                var excelObjOpen = new ExcelDataByEpplus();
+
+                string excelNameOpen;
+                if (wkName.Contains("##"))
+                {
+                    var isKol = wkName.Substring(wkName.Length - 4, 4);
+                    if (isKol == "xlsx")
+                    {
+                        var excelSplit = wkName.Split("##");
+                        wkName = excelSplit[1];
+                        excelNameOpen = wkName + "##Sheet1";
+                    }
+                    else
+                    {
+                        excelNameOpen = wkName;
+                    }
+                }
+                else
+                {
+                    excelNameOpen = wkName + "##Sheet1";
+                }
+
+                if (indexCellValue.Contains("##"))
+                    excelNameOpen = wkName;
+
+                excelObjOpen.GetExcelObj(Path.GetDirectoryName(indexCellValue), excelNameOpen);
+
+                if (excelObjOpen.ErrorList.Count > 0)
+                    return;
+                var sheetTargetOpen = excelObjOpen.Sheet;
+                foreach (var item in matches)
+                {
+                    var valueIndex = excelObjOpen.FindFromRow(sheetTargetOpen, 2, item.ToString());
+                    if (valueIndex != -1)
+                    {
+                        cellAddress = "A" + valueIndex;
+                        break;
+                    }
+                }
+
+                if (cellAddress == "A1")
+                {
+                    var tips = MessageBox.Show(
+                        "文件[" + indexCellValue + "]不存在查找字段，是否继续",
+                        "确认",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question
+                    );
+                    if (tips == MessageBoxResult.Yes)
+                    {
+                        continue;
+                    }
+                    PubMetToExcel.OpenExcelAndSelectCell(
+                        indexCellValue,
+                        openSheetName,
+                        cellAddress
+                    );
+                    continue;
+                }
+                PubMetToExcel.OpenExcelAndSelectCell(indexCellValue, openSheetName, cellAddress);
+            }
         }
     }
 
@@ -774,7 +860,9 @@ public class PubMetToExcelFunc
     public static void ExcelFolderPath(string[] folder)
     {
         var baseFolder = folder[1];
-        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(baseFolder)));
+        var newPath = Path.GetDirectoryName(
+            Path.GetDirectoryName(Path.GetDirectoryName(baseFolder))
+        );
         if (newPath != null)
         {
             var mainPath = Path.Combine(newPath, "Excels", "Tables");
@@ -799,11 +887,11 @@ public class PubMetToExcelFunc
                 var baseFileName = Path.GetFileName(baseFile);
                 var basePath = Path.GetDirectoryName(baseFile);
 
-                 if (basePath != null && basePath.Contains("克朗代克"))
+                if (basePath != null && basePath.Contains("克朗代克"))
                 {
                     baseFileName = "克朗代克##" + baseFileName;
                 }
-          
+
                 //遍历Sheet
                 var sheetNames = MiniExcel.GetSheetNames(baseFile);
                 if (baseFileName.Contains("$"))
@@ -841,6 +929,99 @@ public class PubMetToExcelFunc
             else
             {
                 MessageBox.Show("当前表格不是“#表格关联##文件目录，请切换");
+            }
+        }
+    }
+
+    public static void FormularBaseCheck()
+    {
+        var app = NumDesAddIn.App;
+        var wk = app.ActiveWorkbook;
+        var basePath = wk.Path;
+
+        if (basePath.Contains("克朗代克"))
+        {
+            basePath = Path.GetDirectoryName(Path.GetDirectoryName(basePath));
+        }
+        basePath = Path.GetDirectoryName(basePath);
+        var baseFilePathList = new List<string>();
+
+        // 指定文件类型（扩展名）
+        string[] fileTypes = { "*.xlsx", "*.xlsm" }; // 例如，获取 .txt, .csv 和 .xml 文件
+
+        // 遍历每种文件类型
+        foreach (string fileType in fileTypes)
+        {
+            // 获取指定目录及其子目录中的所有指定类型的文件
+            string[] files = Directory.GetFiles(basePath, fileType, SearchOption.AllDirectories);
+
+            // 将文件路径添加到集合中
+            foreach (string file in files)
+            {
+                baseFilePathList.Add(file);
+            }
+        }
+
+        //var ws = app.ActiveSheet;
+
+        //var testRange = ws.Range["AC71"];
+        //string cellfor = testRange.Formula;
+        //var basefor =
+        //    @"=IFERROR(IF(LEFT(U71,4)<>""季节宝箱"",INDEX('C:\M1Work\Public\Excels\Tables\[#【A创新活动】数值 - 副本 - 副本.xlsx]道具价值表'!$B:$B,MATCH(U71,'C:\M1Work\Public\Excels\Tables\[#【A创新活动】数值 - 副本 - 副本.xlsx]道具价值表'!$C:$C,0)),VLOOKUP(U71,'C:\M1Work\Public\Excels\Tables\[#【A创新活动】数值 - 副本 - 副本.xlsx]特殊物品'!$B$2:$D$5,2,0)),"""")";
+        //testRange.Formula = cellfor.Replace(@"C:\M1Work\Public\Excels\Tables\[#【A创新活动】数值 - 副本 - 副本.xlsx",
+        //    @"C:\M1Work\Public\Excels\Tables\[#【A创新活动】数值.xlsx");
+        var links = wk.LinkSources(XlLink.xlExcelLinks);
+
+        var needFixLinks = new List<string>();
+        foreach (string link in links)
+        {
+            if (!baseFilePathList.Contains(link))
+            {
+                var fileName = Path.GetFileName(link);
+                var filePath = Path.GetDirectoryName(link);
+                var newLink = filePath + @"\[" + fileName + @"]";
+                needFixLinks.Add(newLink);
+            }
+        }
+
+        if (needFixLinks != null)
+        {
+            var replaceFixLinks = new List<string>();
+            InputFormularWindow inputDialog = new InputFormularWindow(needFixLinks);
+            if (inputDialog.ShowDialog() == true)
+            {
+                replaceFixLinks = inputDialog.UserInputs;
+            }
+
+            if (replaceFixLinks != null)
+            {
+                // 遍历所有工作表
+                foreach (Worksheet worksheet in wk.Worksheets)
+                {
+                    // 遍历工作表中的所有单元格
+                    Range usedRange = worksheet.UsedRange;
+                    foreach (Range cell in usedRange)
+                    {
+                        if (cell.HasFormula)
+                        {
+                            // 获取原始公式
+                            string originalFormula = cell.Formula;
+                            string newFormula = originalFormula;
+                            for (int indexFor = 0; indexFor < needFixLinks.Count; indexFor++)
+                            {
+                                var oldFor = needFixLinks[indexFor];
+                                var newFor = replaceFixLinks[indexFor];
+                                // 替换公式样式
+                                newFormula = newFormula.Replace(oldFor, newFor);
+                            }
+                            if (originalFormula != newFormula)
+                            {
+                                // 设置新的公式
+                                cell.Formula = newFormula;
+                            }
+                        }
+                    }
+                }
             }
         }
     }

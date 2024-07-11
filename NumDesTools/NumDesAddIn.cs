@@ -617,7 +617,21 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         MessageBox.Show(@"检查公式完毕！" + Math.Round(milliseconds / 1000, 2) + @"秒");
     }
+    public void FormularBaseCheck_Click(IRibbonControl control)
+    {
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
+        var stopwatch = new Stopwatch();
+        stopwatch.Start();
 
+        PubMetToExcelFunc.FormularBaseCheck();
+        
+        stopwatch.Stop();
+        var timespan = stopwatch.Elapsed;
+        var milliseconds = timespan.TotalMilliseconds;
+
+        MessageBox.Show(@"检查公式完毕！" + Math.Round(milliseconds / 1000, 2) + @"秒");
+    }
     public void IndexSheetOpen_Click(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var ws = App.ActiveSheet;
@@ -1301,7 +1315,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-
+        PubMetToExcelFunc.FormularBaseCheck();
         //SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "SheetMenu", true , "SheetMenu");
         //var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
         //    .Select(x => new SelfComSheetCollect { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();
@@ -1368,8 +1382,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //{
         //    resultlist.AddRange(localList);
         //}
-        var lines = File.ReadAllLines(DefaultFilePath);
-        PubMetToExcelFunc.ExcelFolderPath(lines);
+        //var lines = File.ReadAllLines(DefaultFilePath);
+        //PubMetToExcelFunc.ExcelFolderPath(lines);
         ////CompareExcel.CompareMain(lines);
         //MapExcel.ExcelToJson(lines);
 
