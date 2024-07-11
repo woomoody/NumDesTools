@@ -21,7 +21,7 @@
                     <button id='FocusLightButton' size='large' getLabel='GetLableText' image='email'
                             onAction='FocusLight_Click'
                             screentip='聚光灯效果！配置路径：\Documents\NumDesGlobalKey.txt' />
-                    <button id='Button8' size='large' label='公式检查' image='asciidoc' onAction='FormularCheck_Click'
+                    <button id='Button8' size='large' label='公式检查' image='asciidoc' onAction='FormularBaseCheck_Click'
                             screentip='点击检查当前工作簿所有sheet中的公式，看是否有错误的连接，推荐合完表后进行检查' />
                     <button id='SheetMenu' size='large' getLabel='GetLableText' image='reason'
                             onAction='SheetMenu_Click'
