@@ -1,11 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Media.Animation;
-using EnvDTE;
-using Microsoft.Office.Interop.Excel;
 using MiniExcelLibs;
-using NPOI.SS.UserModel;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using MessageBox = System.Windows.MessageBox;
@@ -953,12 +949,15 @@ public class PubMetToExcelFunc
         foreach (string fileType in fileTypes)
         {
             // 获取指定目录及其子目录中的所有指定类型的文件
-            string[] files = Directory.GetFiles(basePath, fileType, SearchOption.AllDirectories);
-
-            // 将文件路径添加到集合中
-            foreach (string file in files)
+            if (basePath != null)
             {
-                baseFilePathList.Add(file);
+                string[] files = Directory.GetFiles(basePath, fileType, SearchOption.AllDirectories);
+
+                // 将文件路径添加到集合中
+                foreach (string file in files)
+                {
+                    baseFilePathList.Add(file);
+                }
             }
         }
 
@@ -971,7 +970,10 @@ public class PubMetToExcelFunc
         //testRange.Formula = cellfor.Replace(@"C:\M1Work\Public\Excels\Tables\[#【A创新活动】数值 - 副本 - 副本.xlsx",
         //    @"C:\M1Work\Public\Excels\Tables\[#【A创新活动】数值.xlsx");
         var links = wk.LinkSources(XlLink.xlExcelLinks);
-
+        if (links.Count == 0)
+        {
+            MessageBox.Show("没有检测到有外链公式");
+        }
         var needFixLinks = new List<string>();
         foreach (string link in links)
         {
@@ -983,8 +985,7 @@ public class PubMetToExcelFunc
                 needFixLinks.Add(newLink);
             }
         }
-
-        if (needFixLinks != null)
+        if (needFixLinks.Count !=0)
         {
             var replaceFixLinks = new List<string>();
             InputFormularWindow inputDialog = new InputFormularWindow(needFixLinks);
@@ -998,6 +999,12 @@ public class PubMetToExcelFunc
                 // 遍历所有工作表
                 foreach (Worksheet worksheet in wk.Worksheets)
                 {
+                    var wsName = worksheet.Name;
+                    //跳过外链数据表
+                    if (wsName.Contains("【外源数据】"))
+                    {
+                        continue;
+                    }
                     // 遍历工作表中的所有单元格
                     Range usedRange = worksheet.UsedRange;
                     foreach (Range cell in usedRange)
