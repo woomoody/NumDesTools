@@ -1618,12 +1618,23 @@ public class ExcelDataAutoInsertMulti
                 }
                 else
                 {
-                    var temp1 = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
-                    var cellFixValue = ExcelDataAutoInsert.StringRegPlace(
-                        cellSource.Value.ToString(),
-                        temp1,
-                        addValue
-                    );
+                    string cellFixValue;
+                    //自增值
+                    string baseValue = excelKeyMethod ??  "";
+                    if (baseValue.Contains("***"))
+                    {
+                        cellFixValue = baseValue;
+                    }
+                    //固定值
+                    else
+                    {
+                        var fixValueList = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
+                        cellFixValue = ExcelDataAutoInsert.StringRegPlace(
+                            cellSource.Value.ToString(),
+                            fixValueList,
+                            addValue
+                        );
+                    }
                     if (cellFixValue == "^error^")
                     {
                         string errorExcelLog =
@@ -1724,14 +1735,23 @@ public class ExcelDataAutoInsertMulti
                                 }
                                 else
                                 {
-                                    var temp1 = ExcelDataAutoInsert.CellFixValueKeyList(
-                                        excelKeyMethod
-                                    );
-                                    var cellFixValue = ExcelDataAutoInsert.StringRegPlace(
-                                        cellSource.Value.ToString(),
-                                        temp1,
-                                        addValue
-                                    );
+                                    string cellFixValue;
+                                    //自增值
+                                    string baseValue = excelKeyMethod ?? "";
+                                    if (baseValue.Contains("***"))
+                                    {
+                                        cellFixValue = baseValue;
+                                    }
+                                    //固定值
+                                    else
+                                    {
+                                        var fixValueList = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
+                                        cellFixValue = ExcelDataAutoInsert.StringRegPlace(
+                                            cellSource.Value.ToString(),
+                                            fixValueList,
+                                            addValue
+                                        );
+                                    }
                                     if (cellFixValue == "^error^")
                                     {
                                         string errorExcelLog =

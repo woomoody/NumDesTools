@@ -590,7 +590,7 @@ public class PubMetToExcelFunc
 #pragma warning disable CA1305
         var maxRankValue = Convert.ToInt32(maxRankCell[0, 0]);
 #pragma warning restore CA1305
-        var permutations = GenerateUniqueSchemes(maxRoll, maxRoll * 100000);
+        var permutations = PubMetToExcel.UniqueRandomMethod(maxRoll, maxRoll * 100000, 6);
         var targetProcess = new Dictionary<int, List<int>>();
         var bpProcess = new Dictionary<int, List<int>>();
         var targetGift = new Dictionary<int, List<int>>();
@@ -735,30 +735,6 @@ public class PubMetToExcelFunc
                 PubMetToExcel.ConvertListToArray(filteredDataMethod)
             );
         }
-    }
-
-    private static List<List<int>> GenerateUniqueSchemes(int numberOfRolls, int numberOfSchemes)
-    {
-        var result = new List<List<int>>();
-        var seenSchemes = new HashSet<string>();
-        var random = new Random();
-
-        for (var i = 0; i < numberOfSchemes; i++)
-        {
-            var scheme = new List<int>();
-
-            for (var j = 0; j < numberOfRolls; j++)
-            {
-                var randomNumber = random.Next(1, 7);
-                scheme.Add(randomNumber);
-            }
-
-            var schemeString = string.Join(",", scheme);
-            if (seenSchemes.Add(schemeString))
-                result.Add([.. scheme]);
-        }
-
-        return result;
     }
 
     public static void MagicBottleCostSimulate(string sheetName)
@@ -951,7 +927,11 @@ public class PubMetToExcelFunc
             // 获取指定目录及其子目录中的所有指定类型的文件
             if (basePath != null)
             {
-                string[] files = Directory.GetFiles(basePath, fileType, SearchOption.AllDirectories);
+                string[] files = Directory.GetFiles(
+                    basePath,
+                    fileType,
+                    SearchOption.AllDirectories
+                );
 
                 // 将文件路径添加到集合中
                 foreach (string file in files)
@@ -985,7 +965,7 @@ public class PubMetToExcelFunc
                 needFixLinks.Add(newLink);
             }
         }
-        if (needFixLinks.Count !=0)
+        if (needFixLinks.Count != 0)
         {
             var replaceFixLinks = new List<string>();
             InputFormularWindow inputDialog = new InputFormularWindow(needFixLinks);
@@ -1029,6 +1009,118 @@ public class PubMetToExcelFunc
                         }
                     }
                 }
+            }
+        }
+    }
+
+    public static void LoopRunCac(string sheetName)
+    {
+        var baseName = "转盘奔跑";
+        if (!sheetName.Contains(baseName))
+            MessageBox.Show("当前表格不是【转盘奔跑**】,无法使用转盘奔跑功能");
+        var pointFunc = PubMetToExcel.ReadExcelDataC(sheetName, 29, 40, 2, 4);
+        var checkInfo = PubMetToExcel.ReadExcelDataC(sheetName, 29, 33, 5, 5);
+        var checkInfo2List = PubMetToExcel.Array2DDataToList(checkInfo);
+        var checkInfoList = PubMetToExcel.List2DToListRowOrCol(checkInfo2List, true);
+
+        LoopRunCheckBoxWindow checkWindow = new LoopRunCheckBoxWindow(checkInfoList);
+        checkWindow.ShowDialog();
+        var checkCurrent = checkWindow.SelectedList;
+        if (checkCurrent == null)
+        {
+            return;
+        }
+        if (checkCurrent.Count != 0)
+        {
+            int multipleRank = 1;
+            foreach (var multipleRanks in checkCurrent)
+            {
+                var averageRange = PubMetToExcel.ReadExcelDataC(
+                    sheetName,
+                    42 + (multipleRank - 1) * 21,
+                    42 + (multipleRank - 1) * 21,
+                    6,
+                    7
+                );
+                var maxRollCell = PubMetToExcel.ReadExcelDataC(
+                    sheetName,
+                    42 + (multipleRank - 1) * 21,
+                    42 + (multipleRank - 1) * 21,
+                    9,
+                    9
+                );
+                var average = Convert.ToDouble(pointFunc[0, 2]);
+                var averageRangeMin = (Convert.ToDouble(averageRange[0, 0]) + 1) * average;
+                var averageRangeMax = (Convert.ToDouble(averageRange[0, 1]) + 1) * average;
+#pragma warning disable CA1305
+                var maxRoll = Convert.ToInt32(maxRollCell[0, 0]);
+#pragma warning restore CA1305
+
+                var randFunList = PubMetToExcel.UniqueRandomMethod(maxRoll, maxRoll * 100000, 12);
+
+                //二维数据字典化方便查找
+                var pointFuncDic = PubMetToExcel.TwoDArrayToDictionary(pointFunc);
+
+                Dictionary<int, List<int>> pointTotalList = new Dictionary<int, List<int>>();
+                for (int i = 0; i < randFunList.Count; i++)
+                {
+                    var randFun = randFunList[i];
+                    List<int> pointTotal = new List<int>();
+                    var randMax = randFun.Count;
+                    double pointCount = 0;
+                    for (int j = 0; j < randMax; j++)
+                    {
+                        var randFunSeed = randFun[j];
+                        pointCount += Convert.ToDouble(pointFuncDic[randFunSeed][1]);
+                        pointTotal.Add(randFunSeed);
+                    }
+                    var pointAverage = pointCount / randMax;
+                    if (
+                        pointAverage >= averageRangeMin
+                        && pointAverage <= averageRangeMax
+                        && pointCount % 12 == 0
+                    )
+                    {
+                        pointTotalList[i] = pointTotal;
+                    }
+                }
+                //过滤至少包含某个值n次
+                pointTotalList = pointTotalList
+                    .Where(kvp => kvp.Value.Count(x => x == 1) >= 1)
+                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                pointTotalList = pointTotalList
+                    .Where(kvp => kvp.Value.Count(x => x == 6) >= 1)
+                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                //随机获取字典中最多10个数据
+                pointTotalList = PubMetToExcel.RandChooseDataFormDictionary(pointTotalList, 10);
+
+                var pointArray = PubMetToExcel.DictionaryTo2DArray(
+                    pointTotalList,
+                    maxRows: 10,
+                    maxCols: maxRoll
+                );
+                var pointArrayStr = PubMetToExcel.ConvertToCommaSeparatedArray(pointArray);
+
+                //清除老数据
+                var emptyData = new object[10, 1];
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    44 + (multipleRank - 1) * 21,
+                    53 + (multipleRank - 1) * 21,
+                    3,
+                    3,
+                    emptyData
+                );
+                //填写新数据
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    44 + (multipleRank - 1) * 21,
+                    53 + (multipleRank - 1) * 21,
+                    3,
+                    3,
+                    pointArrayStr
+                );
+                multipleRank++;
             }
         }
     }

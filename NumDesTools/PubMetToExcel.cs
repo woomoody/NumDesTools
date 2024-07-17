@@ -754,7 +754,11 @@ public class PubMetToExcel
         var files = GetExcelFiles(mainPath)
             .Concat(GetExcelFiles(langPath))
             .Concat(GetExcelFiles(uiPath))
-            .Concat(Directory.Exists(kelangPath) ? GetExcelFiles(kelangPath) : Enumerable.Empty<string>())
+            .Concat(
+                Directory.Exists(kelangPath)
+                    ? GetExcelFiles(kelangPath)
+                    : Enumerable.Empty<string>()
+            )
             .ToArray();
 
         var targetList = new List<(string, string, int, int)>();
@@ -774,9 +778,13 @@ public class PubMetToExcel
                         for (var sheetIndex = 0; sheetIndex < wk.Worksheets.Count; sheetIndex++)
                         {
                             var sheet = wk.Worksheets[sheetIndex];
-                            if(sheet.Name.Contains("#") || sheet.Name.Contains("Sheet") && sheet.Name != "Sheet1") continue;
-                            int rowMax = Math.Max(sheet.Dimension.End.Row , 4);
-                            int colMax = Math.Max(sheet.Dimension.End.Column , 2);
+                            if (
+                                sheet.Name.Contains("#")
+                                || sheet.Name.Contains("Sheet") && sheet.Name != "Sheet1"
+                            )
+                                continue;
+                            int rowMax = Math.Max(sheet.Dimension.End.Row, 4);
+                            int colMax = Math.Max(sheet.Dimension.End.Column, 2);
                             for (var col = 2; col <= colMax; col++)
                             for (var row = 4; row <= rowMax; row++)
                             {
@@ -785,7 +793,14 @@ public class PubMetToExcel
                                 var cellCol = cellAddress.Column;
                                 var cellRow = cellAddress.Row;
 
-                                if (cellValue != null && (isAll ? cellValue.Contains(errorValue) : cellValue == errorValue))
+                                if (
+                                    cellValue != null
+                                    && (
+                                        isAll
+                                            ? cellValue.Contains(errorValue)
+                                            : cellValue == errorValue
+                                    )
+                                )
                                 {
                                     targetList.Add((file, sheet.Name, cellRow, cellCol));
                                 }
@@ -795,14 +810,12 @@ public class PubMetToExcel
                     catch
                     {
                         // 记录异常信息，继续处理下一个文件
-
                     }
                 }
             }
             catch
             {
                 // 记录异常信息，继续处理下一个文件
-
             }
 
             currentCount++;
@@ -828,7 +841,11 @@ public class PubMetToExcel
         var files = GetExcelFiles(mainPath)
             .Concat(GetExcelFiles(langPath))
             .Concat(GetExcelFiles(uiPath))
-            .Concat(Directory.Exists(kelangPath) ? GetExcelFiles(kelangPath) : Enumerable.Empty<string>())
+            .Concat(
+                Directory.Exists(kelangPath)
+                    ? GetExcelFiles(kelangPath)
+                    : Enumerable.Empty<string>()
+            )
             .ToArray();
 
         var targetList = new List<(string, string, int, int)>();
@@ -851,7 +868,11 @@ public class PubMetToExcel
                             for (var sheetIndex = 0; sheetIndex < wk.Worksheets.Count; sheetIndex++)
                             {
                                 var sheet = wk.Worksheets[sheetIndex];
-                                if (sheet.Name.Contains("#") || sheet.Name.Contains("Sheet") && sheet.Name != "Sheet1") continue;
+                                if (
+                                    sheet.Name.Contains("#")
+                                    || sheet.Name.Contains("Sheet") && sheet.Name != "Sheet1"
+                                )
+                                    continue;
                                 int rowMax = Math.Max(sheet.Dimension.End.Row, 4);
                                 int colMax = Math.Max(sheet.Dimension.End.Column, 2);
                                 for (var col = 2; col <= colMax; col++)
@@ -861,8 +882,15 @@ public class PubMetToExcel
                                     var cellAddress = new ExcelCellAddress(row, col);
                                     var cellCol = cellAddress.Column;
                                     var cellRow = cellAddress.Row;
-                          
-                                    if (cellValue != null && (isAll ? cellValue.Contains(errorValue) : cellValue == errorValue))
+
+                                    if (
+                                        cellValue != null
+                                        && (
+                                            isAll
+                                                ? cellValue.Contains(errorValue)
+                                                : cellValue == errorValue
+                                        )
+                                    )
                                     {
                                         targetList.Add((file, sheet.Name, cellRow, cellCol));
                                     }
@@ -872,21 +900,22 @@ public class PubMetToExcel
                         catch
                         {
                             // 记录异常信息，继续处理下一个文件
-    
                         }
                     }
                 }
-                catch 
+                catch
                 {
                     // 记录异常信息，继续处理下一个文件
-
                 }
             }
         );
         return targetList;
     }
 
-    public static List<(string, string, int, int)> SearchKeyFromExcelMiniExcel(string rootPath, string errorValue)
+    public static List<(string, string, int, int)> SearchKeyFromExcelMiniExcel(
+        string rootPath,
+        string errorValue
+    )
     {
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
         var mainPath = Path.Combine(newPath, "Excels", "Tables");
@@ -897,7 +926,11 @@ public class PubMetToExcel
         var files = GetExcelFiles(mainPath)
             .Concat(GetExcelFiles(langPath))
             .Concat(GetExcelFiles(uiPath))
-            .Concat(Directory.Exists(kelangPath) ? GetExcelFiles(kelangPath) : Enumerable.Empty<string>())
+            .Concat(
+                Directory.Exists(kelangPath)
+                    ? GetExcelFiles(kelangPath)
+                    : Enumerable.Empty<string>()
+            )
             .ToArray();
 
         var targetList = new List<(string, string, int, int)>();
@@ -913,7 +946,8 @@ public class PubMetToExcel
                 var sheetNames = MiniExcel.GetSheetNames(file);
                 foreach (var sheetName in sheetNames)
                 {
-                    if (sheetName.Contains("#")) continue;
+                    if (sheetName.Contains("#"))
+                        continue;
 
                     var rows = MiniExcel.Query(file, sheetName: sheetName);
                     int rowIndex = 1;
@@ -923,7 +957,12 @@ public class PubMetToExcel
                         foreach (var cell in row)
                         {
                             var cellValue = cell.Value?.ToString();
-                            if (cellValue != null && (isAll ? cellValue.Contains(errorValue) : cellValue == errorValue))
+                            if (
+                                cellValue != null
+                                && (
+                                    isAll ? cellValue.Contains(errorValue) : cellValue == errorValue
+                                )
+                            )
                             {
                                 targetList.Add((file, sheetName, rowIndex, colIndex));
                             }
@@ -933,7 +972,7 @@ public class PubMetToExcel
                     }
                 }
             }
-            catch 
+            catch
             {
                 // 记录异常信息，继续处理下一个文件
             }
@@ -945,7 +984,10 @@ public class PubMetToExcel
         return targetList;
     }
 
-    public static List<(string, string, int, int)> SearchKeyFromExcelMultiMiniExcel(string rootPath, string errorValue)
+    public static List<(string, string, int, int)> SearchKeyFromExcelMultiMiniExcel(
+        string rootPath,
+        string errorValue
+    )
     {
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
         var mainPath = Path.Combine(newPath, "Excels", "Tables");
@@ -956,7 +998,11 @@ public class PubMetToExcel
         var files = GetExcelFiles(mainPath)
             .Concat(GetExcelFiles(langPath))
             .Concat(GetExcelFiles(uiPath))
-            .Concat(Directory.Exists(kelangPath) ? GetExcelFiles(kelangPath) : Enumerable.Empty<string>())
+            .Concat(
+                Directory.Exists(kelangPath)
+                    ? GetExcelFiles(kelangPath)
+                    : Enumerable.Empty<string>()
+            )
             .ToArray();
 
         var targetList = new ConcurrentBag<(string, string, int, int)>();
@@ -965,50 +1011,63 @@ public class PubMetToExcel
 
         var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
-        Parallel.ForEach(files, options, file =>
-        {
-            try
+        Parallel.ForEach(
+            files,
+            options,
+            file =>
             {
-                var sheetNames = MiniExcel.GetSheetNames(file);
-                Parallel.ForEach(sheetNames, sheetName =>
+                try
                 {
-                    if (sheetName.Contains("#")) return;
-
-                    var rows = MiniExcel.Query(file, sheetName: sheetName);
-                    int rowIndex = 1;
-                    foreach (var row in rows)
-                    {
-                        int colIndex = 1;
-                        foreach (var cell in row)
+                    var sheetNames = MiniExcel.GetSheetNames(file);
+                    Parallel.ForEach(
+                        sheetNames,
+                        sheetName =>
                         {
-                            var cellValue = cell.Value?.ToString();
-                            if (cellValue != null &&
-                                (isAll ? cellValue.Contains(errorValue) : cellValue == errorValue))
+                            if (sheetName.Contains("#"))
+                                return;
+
+                            var rows = MiniExcel.Query(file, sheetName: sheetName);
+                            int rowIndex = 1;
+                            foreach (var row in rows)
                             {
-                                targetList.Add((file, sheetName, rowIndex, colIndex));
+                                int colIndex = 1;
+                                foreach (var cell in row)
+                                {
+                                    var cellValue = cell.Value?.ToString();
+                                    if (
+                                        cellValue != null
+                                        && (
+                                            isAll
+                                                ? cellValue.Contains(errorValue)
+                                                : cellValue == errorValue
+                                        )
+                                    )
+                                    {
+                                        targetList.Add((file, sheetName, rowIndex, colIndex));
+                                    }
+
+                                    colIndex++;
+                                }
+
+                                rowIndex++;
                             }
-
-                            colIndex++;
                         }
-
-                        rowIndex++;
-                    }
-
-                });
+                    );
+                }
+                catch
+                {
+                    // 记录异常信息，继续处理下一个文件
+                }
             }
-            catch
-            {
-                // 记录异常信息，继续处理下一个文件
-            }
-        });
+        );
 
         return targetList.ToList();
     }
 
     public static List<(string, string, int, int)> SearchKeyFromExcelIDMultiMiniExcel(
-    string rootPath,
-    string errorValue
-)
+        string rootPath,
+        string errorValue
+    )
     {
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
         var mainPath = Path.Combine(newPath, "Excels", "Tables");
@@ -1019,7 +1078,11 @@ public class PubMetToExcel
         var files = GetExcelFiles(mainPath)
             .Concat(GetExcelFiles(langPath))
             .Concat(GetExcelFiles(uiPath))
-            .Concat(Directory.Exists(kelangPath) ? GetExcelFiles(kelangPath) : Enumerable.Empty<string>())
+            .Concat(
+                Directory.Exists(kelangPath)
+                    ? GetExcelFiles(kelangPath)
+                    : Enumerable.Empty<string>()
+            )
             .ToArray();
 
         var targetList = new ConcurrentBag<(string, string, int, int)>();
@@ -1028,46 +1091,59 @@ public class PubMetToExcel
 
         var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
-        Parallel.ForEach(files, options, file =>
-        {
-            try
+        Parallel.ForEach(
+            files,
+            options,
+            file =>
             {
-                var sheetNames = MiniExcel.GetSheetNames(file);
-                Parallel.ForEach(sheetNames, sheetName =>
+                try
                 {
-                    if (sheetName.Contains("#")) return;
-
-                    var rows = MiniExcel.Query(file, sheetName: sheetName);
-                    int rowIndex = 1;
-                    foreach (var row in rows)
-                    {
-                        int colIndex = 1;
-                        foreach (var cell in row)
+                    var sheetNames = MiniExcel.GetSheetNames(file);
+                    Parallel.ForEach(
+                        sheetNames,
+                        sheetName =>
                         {
-                            // 只搜索第2列
-                            if (colIndex == 2)
+                            if (sheetName.Contains("#"))
+                                return;
+
+                            var rows = MiniExcel.Query(file, sheetName: sheetName);
+                            int rowIndex = 1;
+                            foreach (var row in rows)
                             {
-                                var cellValue = cell.Value?.ToString();
-                                if (cellValue != null &&
-                                    (isAll ? cellValue.Contains(errorValue) : cellValue == errorValue))
+                                int colIndex = 1;
+                                foreach (var cell in row)
                                 {
-                                    targetList.Add((file, sheetName, rowIndex, colIndex));
+                                    // 只搜索第2列
+                                    if (colIndex == 2)
+                                    {
+                                        var cellValue = cell.Value?.ToString();
+                                        if (
+                                            cellValue != null
+                                            && (
+                                                isAll
+                                                    ? cellValue.Contains(errorValue)
+                                                    : cellValue == errorValue
+                                            )
+                                        )
+                                        {
+                                            targetList.Add((file, sheetName, rowIndex, colIndex));
+                                        }
+                                        break;
+                                    }
+                                    colIndex++;
                                 }
-                                break;
+
+                                rowIndex++;
                             }
-                            colIndex++;
                         }
-
-                        rowIndex++;
-                    }
-
-                });
+                    );
+                }
+                catch
+                {
+                    // 记录异常信息，继续处理下一个文件
+                }
             }
-            catch
-            {
-                // 记录异常信息，继续处理下一个文件
-            }
-        });
+        );
 
         return targetList.ToList();
     }
@@ -1267,7 +1343,7 @@ public class PubMetToExcel
                 MatchCollection matches = Regex.Matches(cellAddress, @"\d+");
                 cellAddressDefault = matches[0].ToString();
                 var realCellAddress = $"A{cellAddressDefault}:Z{cellAddressDefault}";
-                var cellRange = worksheet.Range[realCellAddress] ;
+                var cellRange = worksheet.Range[realCellAddress];
                 worksheet.Activate();
                 cellRange.Select();
             }
@@ -1306,6 +1382,7 @@ public class PubMetToExcel
         targetRange.Value = targetDataArr;
     }
 
+    //Range二维数组List化
     public static List<List<object>> RangeDataToList(object[,] rangeValue)
     {
         var rows = rangeValue.GetLength(0);
@@ -1324,6 +1401,51 @@ public class PubMetToExcel
         }
 
         return sheetData;
+    }
+    //二维数组List化
+    public static List<List<object>> Array2DDataToList(object[,] rangeValue)
+    {
+        var rows = rangeValue.GetLength(0);
+        var columns = rangeValue.GetLength(1);
+        var sheetData = new List<List<object>>();
+        for (var row = 0; row < rows; row++)
+        {
+            var rowList = new List<object>();
+            for (var column = 0; column < columns; column++)
+            {
+                var value = rangeValue[row, column];
+                rowList.Add(value);
+            }
+
+            sheetData.Add(rowList);
+        }
+
+        return sheetData;
+    }
+    //二维List一维化
+    public static List<object> List2DToListRowOrCol(List<List<object>> twoDimensionalList, bool byRow)
+    {
+        List<object> flattenedList = new List<object>();
+
+        if (byRow)
+        {
+            foreach (var row in twoDimensionalList)
+            {
+                flattenedList.AddRange(row);
+            }
+        }
+        else
+        {
+            int columnCount = twoDimensionalList[0].Count;
+            for (int col = 0; col < columnCount; col++)
+            {
+                foreach (var row in twoDimensionalList)
+                {
+                    flattenedList.Add(row[col]);
+                }
+            }
+        }
+        return flattenedList;
     }
 
     public static List<int> GenerateUniqueRandomList(int minValue, int maxValue, int baseValue)
@@ -1410,6 +1532,122 @@ public class PubMetToExcel
 
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
+    }
+
+    //随机数列表唯一方案
+    public static List<List<int>> UniqueRandomMethod(
+        int numberOfRolls,
+        int numberOfSchemes,
+        int maxRand
+    )
+    {
+        var result = new List<List<int>>();
+        var seenSchemes = new HashSet<string>();
+        var random = new Random();
+
+        for (var i = 0; i < numberOfSchemes; i++)
+        {
+            var scheme = new List<int>();
+
+            for (var j = 0; j < numberOfRolls; j++)
+            {
+                var randomNumber = random.Next(1, maxRand + 1);
+                scheme.Add(randomNumber);
+            }
+
+            var schemeString = string.Join(",", scheme);
+            if (seenSchemes.Add(schemeString))
+                result.Add([.. scheme]);
+        }
+
+        return result;
+    }
+
+    //二维数组字典化
+    public static Dictionary<int, List<object>> TwoDArrayToDictionary(object[,] array)
+    {
+        Dictionary<int, List<object>> dictionary = new Dictionary<int, List<object>>();
+
+        int rows = array.GetLength(0);
+        int cols = array.GetLength(1);
+
+        for (int i = 0; i < rows; i++)
+        {
+            List<object> rowArray = new List<object>();
+            for (int j = 0; j < cols; j++)
+            {
+                rowArray.Add(array[i, j]);
+            }
+            dictionary[i + 1] = rowArray;
+        }
+        return dictionary;
+    }
+
+    //字典二维数组化
+    public static object[,] DictionaryTo2DArray(
+        Dictionary<int, List<int>> dictionary,
+        int? maxRows = null,
+        int? maxCols = null
+    )
+    {
+        int rows = maxRows ?? dictionary.Count;
+        int cols = maxCols ?? (dictionary.Values.Max(list => list.Count) + 1);
+
+        object[,] array2D = new object[rows, cols];
+
+        int row = 0;
+        foreach (var kvp in dictionary)
+        {
+            if (row >= rows)
+                break;
+
+            for (int col = 0; col < Math.Min(kvp.Value.Count, cols); col++)
+            {
+                array2D[row, col] = kvp.Value[col];
+            }
+            row++;
+        }
+
+        return array2D;
+    }
+
+    //二维数据字符串连接化缩短列数
+    public static string[,] ConvertToCommaSeparatedArray(object[,] array2D)
+    {
+        int rows = array2D.GetLength(0);
+        int cols = array2D.GetLength(1);
+
+        string[,] newArray2D = new string[rows, 1];
+
+        for (int i = 0; i < rows; i++)
+        {
+            List<string> rowElements = new List<string>();
+            for (int j = 0; j < cols; j++)
+            {
+                rowElements.Add(array2D[i, j]?.ToString() ?? "null");
+            }
+            newArray2D[i, 0] = string.Join(",", rowElements);
+        }
+
+        return newArray2D;
+    }
+    //字典里随机选择若干条数据
+    public static Dictionary<int, List<int>> RandChooseDataFormDictionary(Dictionary<int, List<int>> sourceDic ,int chooseCount)
+    {
+        // 将字典的键转换为列表
+        List<int> keys = sourceDic.Keys.ToList();
+        //不够则有多少取多少
+        chooseCount = Math.Min(chooseCount, keys.Count);
+        // 使用随机数生成器随机选择 N个键
+        Random random = new Random();
+        List<int> selectedKeys = keys.OrderBy(x => random.Next()).Take(chooseCount).ToList();
+        // 使用选中的键从字典中获取对应的值
+        Dictionary<int, List<int>> selectedData = new Dictionary<int, List<int>>();
+        foreach (int key in selectedKeys)
+        {
+            selectedData[key] = sourceDic[key];
+        }
+        return selectedData;
     }
     public static void TestEpPlus() { }
 }
