@@ -110,6 +110,8 @@
                             onAction='TmNormalEle_Click' />
                     <button id='Button_MagicBottle' size='large' label='移动魔瓶' image='cpp' screentip='移动魔瓶消耗模拟计算'
                             onAction='MagicBottle_Click' />
+                    <button id='Button_LoopRun' size='large' label='移动转盘' image='key' screentip='移动转盘随机方案机选'
+                            onAction='LoopRun_Click' />
                 </group>
                 <group id='Group9999' label='测试功能区'>
                     <button id='Button99991' size='large' label='不要点击红色按钮' image='sofa' onAction='TestBar1_Click' />

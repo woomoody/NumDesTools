@@ -12,20 +12,20 @@ global using ExcelDna.Integration.CustomUI;
 global using ExcelDna.IntelliSense;
 global using Microsoft.Office.Interop.Excel;
 global using Application = Microsoft.Office.Interop.Excel.Application;
-global using Button = System.Windows.Forms.Button;
-global using CheckBox = System.Windows.Forms.CheckBox;
 global using Color = System.Drawing.Color;
 global using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
 global using CommandBarControl = Microsoft.Office.Core.CommandBarControl;
 global using Exception = System.Exception;
 global using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
 global using MsoControlType = Microsoft.Office.Core.MsoControlType;
-global using Panel = System.Windows.Forms.Panel;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
-global using TabControl = System.Windows.Forms.TabControl;
 using NumDesTools.UI;
+using Button = System.Windows.Forms.Button;
+using CheckBox = System.Windows.Forms.CheckBox;
+using Panel = System.Windows.Forms.Panel;
+using TabControl = System.Windows.Forms.TabControl;
 
 #pragma warning disable CA1416
 
@@ -617,6 +617,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         MessageBox.Show(@"检查公式完毕！" + Math.Round(milliseconds / 1000, 2) + @"秒");
     }
+
     public void FormularBaseCheck_Click(IRibbonControl control)
     {
         if (control == null)
@@ -625,13 +626,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         stopwatch.Start();
 
         PubMetToExcelFunc.FormularBaseCheck();
-        
+
         stopwatch.Stop();
         var timespan = stopwatch.Elapsed;
         var milliseconds = timespan.TotalMilliseconds;
 
         MessageBox.Show(@"检查公式完毕！" + Math.Round(milliseconds / 1000, 2) + @"秒");
     }
+
     public void IndexSheetOpen_Click(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var ws = App.ActiveSheet;
@@ -1283,6 +1285,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             Clipboard.SetText(excelPath);
         }
     }
+
     public void MapExcel_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1310,12 +1313,26 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
+    public void LoopRun_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var ws = App.ActiveSheet;
+        var sheetName = ws.Name;
 
+        PubMetToExcelFunc.LoopRunCac(sheetName);
+
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
     public void TestBar1_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
-        PubMetToExcelFunc.FormularBaseCheck();
+        var ws = App.ActiveSheet;
+        var sheetName = ws.Name;
+        PubMetToExcelFunc.LoopRunCac(sheetName);
         //SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "SheetMenu", true , "SheetMenu");
         //var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
         //    .Select(x => new SelfComSheetCollect { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();
