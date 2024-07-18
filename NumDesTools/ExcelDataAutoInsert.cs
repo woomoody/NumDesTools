@@ -1623,6 +1623,7 @@ public class ExcelDataAutoInsertMulti
                     string baseValue = excelKeyMethod ??  "";
                     if (baseValue.Contains("***"))
                     {
+                        baseValue = baseValue.Replace("***", "");
                         cellFixValue = baseValue;
                     }
                     //固定值
@@ -1740,6 +1741,7 @@ public class ExcelDataAutoInsertMulti
                                     string baseValue = excelKeyMethod ?? "";
                                     if (baseValue.Contains("***"))
                                     {
+                                        baseValue = baseValue.Replace("***", "");
                                         cellFixValue = baseValue;
                                     }
                                     //固定值

@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using NPOI.XSSF.UserModel;
+using static System.String;
 
 #pragma warning disable CA1416
 
@@ -256,13 +257,13 @@ public class ExcelUdf
     )]
     public static string ReplaceKeyByIndex(
         [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "单元格")]
-        string inputRange,
+            string inputRange,
         [ExcelArgument(AllowReference = true, Description = "匹配位置", Name = "匹配位置信息")]
-        object[,] matchIndex,
+            object[,] matchIndex,
         [ExcelArgument(AllowReference = true, Description = "替换值", Name = "替换值信息")]
-        object[,] replaceValue,
+            object[,] replaceValue,
         [ExcelArgument(AllowReference = true, Description = "正则方案", Name = "正则方案")]
-        string regexMethod
+            string regexMethod
     )
     {
         var rows = matchIndex.GetLength(0);
@@ -273,11 +274,9 @@ public class ExcelUdf
         for (var row = 0; row < rows; row++)
         for (var col = 0; col < cols; col++)
         {
-            
-
             if (matchIndex[row, col] is ExcelEmpty)
             {
-                    continue;
+                continue;
             }
             int matchKey = Convert.ToInt32(matchIndex[row, col]);
 
@@ -288,18 +287,23 @@ public class ExcelUdf
 
         int counter = 0;
 
-        var result = Regex.Replace(inputRange, regexMethod, m =>
-        {
-            counter++;
-            if (replacements.TryGetValue(counter, out var expression))
+        var result = Regex.Replace(
+            inputRange,
+            regexMethod,
+            m =>
             {
-                return expression;
+                counter++;
+                if (replacements.TryGetValue(counter, out var expression))
+                {
+                    return expression;
+                }
+                return m.Value;
             }
-            return m.Value;
-        });
+        );
 
         return result;
     }
+
     [ExcelFunction(
         Category = "UDF-获取表格信息",
         IsVolatile = true,
@@ -417,7 +421,7 @@ public class ExcelUdf
         Category = "UDF-组装字符串",
         IsVolatile = true,
         IsMacroType = true,
-        Description = "拼接Range，不需要默认值的直接用TEXT JOIN，这个支持默认值"
+        Description = "拼接Range，不需要默认值的直接用TEXT JOIN，这个支持默认值，并支持多字符串：首、中、尾拼接"
     )]
     public static string CreatValueToArray(
         [ExcelArgument(AllowReference = true, Name = "单元格范围", Description = "Range&Cell,eg:A1:A2")]
@@ -425,18 +429,32 @@ public class ExcelUdf
         [ExcelArgument(
             AllowReference = true,
             Name = "默认值单元格范围",
-            Description = "Range&Cell,eg:A1:A2"
+            Description = "Range&Cell,eg:A1:A2，不填表示没有默认值"
         )]
             object[,] rangeObjDef,
-        [ExcelArgument(AllowReference = true, Name = "分隔符", Description = "分隔符,eg:,")]
+        [ExcelArgument(AllowReference = true, Name = "分隔符", Description = "分隔符,eg:[,]表示：首-中-尾符")]
             string delimiter,
-        [ExcelArgument(AllowReference = true, Name = "过滤值", Description = "一般为空值.eg:空格")]
-            string ignoreValue,
-        [ExcelArgument(AllowReference = true, Name = "返回值类型", Description = "0指使用默认值模式，非0为一般模式")]
-            int returnType
+        [ExcelArgument(AllowReference = true, Name = "过滤值", Description = "一般为空值")]
+            string ignoreValue
     )
     {
-        var result = string.Empty;
+        var result = Empty;
+        var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
+        string startDelimiter;
+        string midDelimiter;
+        string endDelimiter;
+        if (delimiterList.Length == 3)
+        {
+            startDelimiter = delimiterList[0];
+            midDelimiter = delimiterList[1];
+            endDelimiter = delimiterList[2];
+        }
+        else
+        {
+            startDelimiter = Empty;
+            midDelimiter = delimiterList[0];
+            endDelimiter = Empty;
+        }
         var rows = rangeObj.GetLength(0);
         var cols = rangeObj.GetLength(1);
         for (var row = 0; row < rows; row++)
@@ -446,20 +464,20 @@ public class ExcelUdf
             if (item is ExcelEmpty || item.ToString() == ignoreValue) { }
             else
             {
-                if (returnType != 0)
+                if (!(rangeObjDef[0 , 0] is ExcelMissing))
                 {
                     var itemDef = rangeObjDef[row, col];
-                    result += itemDef + delimiter;
+                    result += itemDef + midDelimiter;
                 }
                 else
                 {
-                    result += item + delimiter;
+                    result += item + midDelimiter;
                 }
             }
         }
 
         if (result != "")
-            result = result.Substring(0, result.Length - 1);
+            result = startDelimiter + result.Substring(0, result.Length - 1) + endDelimiter;
         return result;
     }
 
@@ -484,7 +502,7 @@ public class ExcelUdf
             string ignoreValue
     )
     {
-        var result = string.Empty;
+        var result = Empty;
         var rows = rangeObj.GetLength(0);
         var cols = rangeObj.GetLength(1);
         for (var row = 0; row < rows; row++)
@@ -535,7 +553,7 @@ public class ExcelUdf
         var values1Objects = rangeObj1.Cast<object>().ToArray();
         var values2Objects = rangeObj2.Cast<object>().ToArray();
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
-        var result = string.Empty;
+        var result = Empty;
         var count = 0;
         if (values1Objects.Length > 0 && values2Objects.Length > 0 && delimiterList.Length > 0)
         {
@@ -611,7 +629,7 @@ public class ExcelUdf
         var valuesFilterObjects = filterObj.Cast<object>().ToArray();
 
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
-        var result = string.Empty;
+        var result = Empty;
         var count = 0;
         if (values1Objects.Length > 0 && values2Objects.Length > 0 && delimiterList.Length > 0)
         {
@@ -637,7 +655,7 @@ public class ExcelUdf
                     count++;
                 }
 
-            if (!string.IsNullOrEmpty(result))
+            if (!IsNullOrEmpty(result))
                 result = result.Substring(0, result.Length - 1);
             result = delimiterList[0] + result + delimiterList[2];
         }
@@ -696,6 +714,7 @@ public class ExcelUdf
 
         return result;
     }
+
     [ExcelFunction(
         Category = "UDF-Excel函数增强",
         IsVolatile = true,
@@ -705,11 +724,11 @@ public class ExcelUdf
     )]
     public static double[] UxSumProduct(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")]
-        object[,] rangeObj1,
+            object[,] rangeObj1,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")]
-        object[,] rangeObj2,
+            object[,] rangeObj2,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false", Name = "过滤空值")]
-        bool ignoreEmpty
+            bool ignoreEmpty
     )
     {
         List<double> sumProductValueList = [];
@@ -721,7 +740,6 @@ public class ExcelUdf
         for (var col = 0; col < colCount; col++)
         for (var row = 0; row < rowCount; row++)
         {
-
             if (ignoreEmpty)
             {
                 var value1 = rangeObj1[row, col];
