@@ -62,11 +62,14 @@
                 </group>
                 -->
                 <group id='Group7' label='自动填表'>
-                    <button id='AutoInsertExcelData' size='large' label='自动数据LTE' image='database'
-                            onAction='AutoInsertExcelData_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI' />
-                    <button id='AutoInsertExcelDataThread' size='large' label='自动数据LTE(多线程)' image='lacrosse'
-                            onAction='AutoInsertExcelDataThread_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI，多线程更快速' />
-                    <button id='AutoInsertExcelDialog' size='large' label='自动数据(对话类)' image='ejs'
+                    <menu  id ='AutoInsertExcelDataMenu' label ='自动数据&#13;' image ='database' size='large' >
+                        <!--Menu中的Button自定义图标不会根据底色自动反色，显示会很奇怪，所以一律用Office内部Icon-->
+                        <button id='AutoInsertExcelData'  label='自动数据LTE' imageMso='ConnectedToolSyncMenu'
+                                onAction='AutoInsertExcelData_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI' />
+                        <button id='AutoInsertExcelDataThread'  label='自动数据LTE(多线程)' imageMso='ConnectionPoints'
+                                onAction='AutoInsertExcelDataThread_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI，多线程更快速' />
+                    </menu>
+                        <button id='AutoInsertExcelDialog' size='large' label='自动数据(对话类)' image='ejs'
                             onAction='AutoInsertExcelDataDialog_Click' screentip='根据模板数据覆写对话数据表格：EPPlusI' />
                     <button id='AutoMergeExcel' size='large' label='合并Excel(Alice-Cove)' image='dart'
                             onAction='AutoMergeExcel_Click' screentip='Alice与Cove表格数据互相拷贝：EPPlusI' />
@@ -84,14 +87,16 @@
                 <group id="Group8" label="Excel搜索">
                     <labelControl id="SearchLab" label="搜索编号/关键字" />
                     <editBox id="ExcelSearchBoxEdit" onChange="ExcelOnEditBoxTextChanged" sizeString="……………………" screentip='需要模糊搜索时关键词前加：*'/>
-                    <button id="ExcelSearchBoxButton1" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件'
-                            onAction='ExcelSearchAll_Click' image="key" />
-                    <button id="ExcelSearchBoxButton3" label="全局搜索(多线程)" screentip='全列，按照A-Z的顺序遍历文件'
-                            onAction='ExcelSearchAllMultiThread_Click' image="autohotkey" />
-                    <button id="ExcelSearchBoxButton2" label="编号搜索(多线程)" screentip='二列，按照A-Z的顺序遍历文件'
-                            onAction='ExcelSearchID_Click' image="log" />
-                    <button id="ExcelSearchBoxButton4" label="合并数据-关键词" screentip='合并Excel(Alice-Cove)当前关键词'
-                            onAction='ExcelSearchAllToExcel_Click' image="redux-reducer" />
+                    <menu  id ='ExcelSearchBoxMenu' label ='全局搜索&#13;' image ='key' size='large' >
+                        <button id="ExcelSearchBoxButton1" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件'
+                                onAction='ExcelSearchAll_Click' imageMso="RulesInspector" />
+                        <button id="ExcelSearchBoxButton3" label="全局搜索(多线程)" screentip='全列，按照A-Z的顺序遍历文件'
+                                onAction='ExcelSearchAllMultiThread_Click' imageMso="RulesManageAndCreate" />
+                        <button id="ExcelSearchBoxButton2" label="编号搜索(多线程)" screentip='二列，按照A-Z的顺序遍历文件'
+                                onAction='ExcelSearchID_Click' imageMso="RulesOnLoad" />
+                        <button id="ExcelSearchBoxButton4" label="合并数据-关键词" screentip='合并Excel(Alice-Cove)当前关键词'
+                                onAction='ExcelSearchAllToExcel_Click' imageMso="SelectAll" />
+                    </menu>
                 </group>
                 <group id="Group9" label="运营工具">
                     <button id="ActivityServerDataButton1" size='large' label="生成活动" screentip='根据运营排期自动生成活动配置'
