@@ -8,13 +8,15 @@ using ListBox = System.Windows.Controls.ListBox;
 using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
 using Style = System.Windows.Style;
+using UserControl = System.Windows.Controls.UserControl;
 
 namespace NumDesTools.UI
 {
     /// <summary>
     /// SheetListControl.xaml 的交互逻辑
     /// </summary>
-    public partial class SheetListControl
+    // ReSharper disable once RedundantExtendsListEntry
+    public partial class SheetListControl:UserControl
     {
         public static Application ExcelApp = NumDesAddIn.App;
         public ObservableCollection<SelfComSheetCollect> Sheets { get; } =

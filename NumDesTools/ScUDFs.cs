@@ -432,13 +432,18 @@ public class ExcelUdf
             Description = "Range&Cell,eg:A1:A2，不填表示没有默认值"
         )]
             object[,] rangeObjDef,
-        [ExcelArgument(AllowReference = true, Name = "分隔符", Description = "分隔符,eg:[,]表示：首-中-尾符")]
+        [ExcelArgument(AllowReference = true, Name = "分隔符", Description = "分隔符,默认:[,]表示：首-中-尾符")]
             string delimiter,
         [ExcelArgument(AllowReference = true, Name = "过滤值", Description = "一般为空值")]
             string ignoreValue
     )
     {
         var result = Empty;
+        //设定默认值
+        if (delimiter == "")
+        {
+            delimiter = "[,]";
+        }
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
         string startDelimiter;
         string midDelimiter;

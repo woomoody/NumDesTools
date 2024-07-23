@@ -1,13 +1,15 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows.Controls;
 using ListBox = System.Windows.Controls.ListBox;
+using UserControl = System.Windows.Controls.UserControl;
 
 namespace NumDesTools.UI
 {
     /// <summary>
     /// SheetSeachResult.xaml 的交互逻辑
     /// </summary>
-    public partial class SheetSeachResult
+    // ReSharper disable once RedundantExtendsListEntry
+    public partial class SheetSeachResult:UserControl
     {
         public ObservableCollection<WorkBookSearchCollect> TargetSheetList { get; set; }
 
