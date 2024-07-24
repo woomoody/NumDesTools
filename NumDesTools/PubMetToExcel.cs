@@ -363,7 +363,36 @@ public class PubMetToExcel
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
+    //public static (List<object> sheetHeaderCol, List<List<object>> sheetStrikethrough) ExcelStrikethroughToList(
+    //    dynamic workSheet
+    //)
+    //{
+    //    Range dataRange = workSheet.UsedRange;
+    //    object[,] rangeValue = dataRange.Value;
+    //    var rows = rangeValue.GetLength(0);
+    //    var columns = rangeValue.GetLength(1);
+    //    var sheetStrikethrough = new List<List<object>>();
+    //    var sheetHeaderCol = new List<object>();
+    //    for (var row = 1; row <= rows; row++)
+    //    {
+    //        var strikethroughList = new List<object>();
+    //        for (var column = 1; column <= columns; column++)
+    //        {
+    //            var value = rangeValue[row, column];
+    //            var strikethrough = dataRange[row, column].Font.Strikethrough;
+    //            if (row == 1)
+    //                sheetHeaderCol.Add(value);
+    //            else
+    //                strikethroughList.Add(strikethrough);
+    //        }
 
+    //        if (row > 1)
+    //            sheetStrikethrough.Add(strikethroughList);
+    //    }
+
+    //    var excelData = (sheetHeaderCol, sheetStrikethrough: sheetStrikethrough);
+    //    return excelData;
+    //}
     public static (List<object> sheetHeaderCol, List<List<object>> sheetData) ExcelDataToListBySelf(
         dynamic workSheet,
         int dataRow,
