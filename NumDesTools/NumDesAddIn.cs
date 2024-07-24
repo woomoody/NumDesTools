@@ -1191,13 +1191,22 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-        ExcelDataAutoInsertActivityServer.Source();
+        ExcelDataAutoInsertActivityServer.Source(true);
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
         App.StatusBar = "完成，用时：" + ts2;
     }
-
+    public void ActivityServerData2_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        ExcelDataAutoInsertActivityServer.Source(false);
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "完成，用时：" + ts2;
+    }
     public void AutoMergeExcel_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();

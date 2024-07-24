@@ -2412,13 +2412,14 @@ public class ExcelDataAutoInsertCopyMulti
 
 public class ExcelDataAutoInsertActivityServer
 {
-    public static void Source()
+    public static void Source(bool isNames)
     {
         var indexWk = NumDesAddIn.App.ActiveWorkbook;
 
         var sourceSheet = indexWk.Worksheets["运营排期"];
         var targetSheet = indexWk.Worksheets["Sheet1"];
         var fixSheet = indexWk.Worksheets["活动模板"];
+        var lifeTypeSheet = indexWk.Worksheets["生命周期"];
 
         var fixData = PubMetToExcel.ExcelDataToList(fixSheet);
         var fixTitle = fixData.Item1;
@@ -2431,6 +2432,15 @@ public class ExcelDataAutoInsertActivityServer
         var fixOpens = fixTitle.IndexOf("活动开启时间");
         var fixEnds = fixTitle.IndexOf("活动结束时间");
         var fixCloses = fixTitle.IndexOf("活动关闭时间");
+        var isActGroup = fixTitle.IndexOf("是否活动组");
+        var openCondition = fixTitle.IndexOf("活动开启条件");
+        var lifeType = fixTitle.IndexOf("生命周期类型");
+
+        var lifeTypeData = PubMetToExcel.ExcelDataToList(lifeTypeSheet);
+        var lifeTypeTitle = lifeTypeData.Item1;
+        List<List<object>> lifeTypeDataList = lifeTypeData.Item2;
+        var lifeTypeIndex = lifeTypeTitle.IndexOf("类型");
+        var lifeTypeValue = lifeTypeTitle.IndexOf("内容");
 
         var sourceMaxCol = sourceSheet.UsedRange.Columns.Count;
         var sourceMaxRow = sourceSheet.UsedRange.Rows.Count;
@@ -2442,6 +2452,22 @@ public class ExcelDataAutoInsertActivityServer
             sourceSheet.Cells[3, 3],
             sourceSheet.Cells[sourceMaxRow, 3]
         ];
+        var sourceOutRange = sourceSheet.Range[sourceSheet.Cells[2, 5],
+            sourceSheet.Cells[2, sourceMaxCol]
+        ];
+        //判断使用Name还是Id进行匹配
+        int nameOrId;
+        string nameOrIdString;
+        if (isNames)
+        {
+            nameOrId = fixNames;
+            nameOrIdString = "活动名";
+        }
+        else
+        {
+            nameOrId = fixIds;
+            nameOrIdString = "活动ID";
+        }
         //获取排期数据
         Array sourceDataArr = sourceDateRange.Value2;
         var sourceData = new List<(string, double, double, int, int, int)>();
@@ -2450,6 +2476,12 @@ public class ExcelDataAutoInsertActivityServer
             for (int row = 1; row <= sourceMaxRow - 3 + 1; row++)
             {
                 var cell = sourceRange[row, col];
+                var cellOutValue = sourceOutRange[1, col].Value2;
+                cellOutValue = cellOutValue?.ToString() ?? "";
+                if (cellOutValue != "#导出")
+                {
+                    continue;
+                }
                 if (cell.MergeCells)
                 {
                     var mergeRange = cell.MergeArea;
@@ -2498,11 +2530,11 @@ public class ExcelDataAutoInsertActivityServer
         var targetData = sourceData
             .Select(a =>
             {
-                var fixDataMatch = fixDataList.FirstOrDefault(b => (string)b[fixNames] == a.Item1);
+                var fixDataMatch = fixDataList.FirstOrDefault(b => b[nameOrId].ToString() == a.Item1);
                 if (fixDataMatch == null)
                 {
                     errorLog +=
-                        "运营排期/" + PubMetToExcel.ChangeExcelColChar(a.Item4 - 1) + a.Item5 + @"\r\n";
+                        "运营排期-未找到-活动模版【" + nameOrIdString +"】："+ a.Item1 + "\r\n";
                     return new List<string>
                     {
                         "targetId",
@@ -2518,7 +2550,10 @@ public class ExcelDataAutoInsertActivityServer
                         "targetEndTimeString",
                         "targetEndTimeLong",
                         "targetCloseTimeString",
-                        "targetCloseTimeLong"
+                        "targetCloseTimeLong",
+                        "targetActGroup",
+                        "targetOpenCondition",
+                        "targetLifeType"
                     };
                 }
                 else
@@ -2573,9 +2608,37 @@ public class ExcelDataAutoInsertActivityServer
                         .FromOADate(a.Item3 - (double)60 / 86400)
                         .AddHours(((long)fixDataMatch[fixCloses] + 1) * 24)
                         .ToString(CultureInfo.InvariantCulture);
-
                     var targetCloseTimeLong =
                         sourceEndTimeLong + (long)fixDataMatch[fixCloses] * 24 * 3600;
+                    //#是否活动组
+                    var targetActGroup = fixDataMatch[isActGroup];
+                    //活动开启条件
+                    var targetOpenCondition = fixDataMatch[openCondition];
+                    //生命周期类型
+                    string targetLifeType = fixDataMatch[lifeType];
+                    string targetLifeValue;
+                    if (targetLifeType == null)
+                    {
+                         targetLifeValue = "targetLifeValue";
+                    }
+                    else
+                    {
+                        var lifeTypeMatch =
+                            lifeTypeDataList.FirstOrDefault(l => l[lifeTypeIndex].ToString() == targetLifeType);
+                        if (lifeTypeMatch == null)
+                        {
+                            errorLog +=
+                                "运营排期-活动模版【" + nameOrIdString + "】：" + a.Item1 +"**生命周期类型错误["+ targetLifeType + "]，搜索不到\r\n";
+                            return new List<string>
+                            {
+                                "targetLifeValue"
+                            };
+                        }
+                        else
+                        {
+                            targetLifeValue = lifeTypeMatch[lifeTypeValue];
+                        }
+                    }
 
                     return new List<string>
                     {
@@ -2592,7 +2655,10 @@ public class ExcelDataAutoInsertActivityServer
                         targetEndTimeString,
                         targetEndTimeLong.ToString(CultureInfo.InvariantCulture),
                         targetCloseTimeString,
-                        targetCloseTimeLong.ToString(CultureInfo.InvariantCulture)
+                        targetCloseTimeLong.ToString(CultureInfo.InvariantCulture),
+                        targetActGroup,
+                        targetOpenCondition,
+                        targetLifeValue
                     };
                 }
             })
@@ -2607,6 +2673,7 @@ public class ExcelDataAutoInsertActivityServer
             ErrorLogCtp.DisposeCtp();
             ErrorLogCtp.CreateCtp(errorLog);
             MessageBox.Show(@"有活动找不到，查看错误日志");
+            sourceSheet.Select();
         }
 
         var targetRangeOld = targetSheet.Range[
