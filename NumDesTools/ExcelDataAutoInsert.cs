@@ -1620,7 +1620,7 @@ public class ExcelDataAutoInsertMulti
                 {
                     string cellFixValue;
                     //自增值
-                    string baseValue = excelKeyMethod ??  "";
+                    string baseValue = excelKeyMethod ?? "";
                     if (baseValue.Contains("***"))
                     {
                         baseValue = baseValue.Replace("***", "");
@@ -1719,7 +1719,11 @@ public class ExcelDataAutoInsertMulti
                                 )
                                     continue;
 
-                                if (cellCol != null && cellCol.Contains("#") && commentValue != null)
+                                if (
+                                    cellCol != null
+                                    && cellCol.Contains("#")
+                                    && commentValue != null
+                                )
                                 {
                                     string[] baseParts = commentValue.Split("#");
                                     var cellValue = cellFix.Value.ToString();
@@ -1729,7 +1733,11 @@ public class ExcelDataAutoInsertMulti
                                         var replaceValue = parts[0];
                                         var pattern = parts[1];
                                         if (cellValue != null)
-                                            cellValue = Regex.Replace(cellValue, pattern, replaceValue);
+                                            cellValue = Regex.Replace(
+                                                cellValue,
+                                                pattern,
+                                                replaceValue
+                                            );
                                     }
 
                                     cellFix.Value = cellValue;
@@ -1747,7 +1755,9 @@ public class ExcelDataAutoInsertMulti
                                     //固定值
                                     else
                                     {
-                                        var fixValueList = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
+                                        var fixValueList = ExcelDataAutoInsert.CellFixValueKeyList(
+                                            excelKeyMethod
+                                        );
                                         cellFixValue = ExcelDataAutoInsert.StringRegPlace(
                                             cellSource.Value.ToString(),
                                             fixValueList,
@@ -2432,334 +2442,164 @@ public class ExcelDataAutoInsertActivityServer
             sourceSheet.Cells[3, 3],
             sourceSheet.Cells[sourceMaxRow, 3]
         ];
+        //获取排期数据
         Array sourceDataArr = sourceDateRange.Value2;
         var sourceData = new List<(string, double, double, int, int, int)>();
-        foreach (var cell in sourceRange)
-            if (cell.MergeCells)
+        for (int col = 1; col <= sourceMaxCol - 3 + 1; col++)
+        {
+            for (int row = 1; row <= sourceMaxRow - 3 + 1; row++)
             {
-                var mergeRange = cell.MergeArea;
-                if (cell.Address == mergeRange.Cells[1, 1].Address)
+                var cell = sourceRange[row, col];
+                if (cell.MergeCells)
                 {
-                    var mergeValue = mergeRange.Cells[1, 1].Value2;
-                    if (mergeValue == null)
+                    var mergeRange = cell.MergeArea;
+                    if (cell.Address == mergeRange.Cells[1, 1].Address)
                     {
-                        continue;
-                    }
+                        var mergeValue = mergeRange.Cells[1, 1].Value2;
+                        if (mergeValue == null)
+                        {
+                            continue;
+                        }
 
+                        sourceData.Add(
+                            (
+                                mergeValue,
+                                sourceDataArr.GetValue(mergeRange.Row - 2, 1),
+                                sourceDataArr.GetValue(
+                                    mergeRange.Row + mergeRange.Rows.Count - 3,
+                                    1
+                                ),
+                                mergeRange.Column,
+                                mergeRange.Row,
+                                mergeRange.Row + mergeRange.Rows.Count - 1
+                            )
+                        );
+                    }
+                }
+                else if (cell.Value != null)
+                {
                     sourceData.Add(
                         (
-                            mergeValue,
-                            sourceDataArr.GetValue(mergeRange.Row, 1),
-                            sourceDataArr.GetValue(
-                                mergeRange.Column + mergeRange.Rows.Count - 1, 1),
-                            mergeRange.Column,
-                            mergeRange.Row,
-                            mergeRange.Row + mergeRange.Rows.Count - 1
+                            cell.Value.ToString(),
+                            sourceDataArr.GetValue(cell.Row - 2, 1),
+                            sourceDataArr.GetValue(cell.Row + cell.Rows.Count - 3, 1),
+                            cell.Column,
+                            cell.Row,
+                            cell.Row + cell.Rows.Count - 1
                         )
                     );
                 }
             }
-            else if (cell.Value != null)
-            {
-                sourceData.Add(
-                    (
-                        cell.Value.ToString(),
-                        sourceDataArr.GetValue(cell.Row, 1),
-                        sourceDataArr.GetValue(cell.Row + cell.Rows.Count - 1, 1),
-                        cell.Column,
-                        cell.Row,
-                        cell.Row + cell.Rows.Count - 1
-                    )
-                );
-            }
-
+        }
+        //排期数据筛选模版数据
         var targetDataList = new List<List<string>>();
         var errorLog = "";
         var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
-
-
-        var targetData = sourceData.Select(a =>
-        {
-            var fixDataMatch = fixDataList.FirstOrDefault(b => (string)b[fixNames] == a.Item1);
-            if (fixDataMatch == null)
+        var targetData = sourceData
+            .Select(a =>
             {
-                errorLog +=
-                    "运营排期/"
-                    + PubMetToExcel.ChangeExcelColChar(a.Item4 - 1)
-                    + a.Item5
-                    + @"\r\n";
-                return new List<string>
+                var fixDataMatch = fixDataList.FirstOrDefault(b => (string)b[fixNames] == a.Item1);
+                if (fixDataMatch == null)
                 {
-                    "targetId",
-                    a.Item1,
-                    "targetPushTimeString",
-                    "targetPushTimeLong",
-                    "targetPushEndTimeString",
-                    "targetPushEndTimeLong",
-                    "targetPreHeatTimeString",
-                    "targetPreHeatTimeLong",
-                    "targetOpenTimeString",
-                    "targetOpenTimeLong",
-                    "targetEndTimeString",
-                    "targetEndTimeLong",
-                    "targetCloseTimeString",
-                    "targetCloseTimeLong"
-                };
-            }
-            else
-            {
-                var sourceStartTimeLong = (long)
-                (
-                    DateTime.FromOADate(a.Item2).ToUniversalTime()
-                    - unixEpoch
-                ).TotalSeconds;
-                var sourceEndTimeLong = (long)
-                (
-                    DateTime.FromOADate(a.Item3).ToUniversalTime()
-                    - unixEpoch
-                ).TotalSeconds;
-
-//                var targetPushTimeString = DateTime
-//                     .FromOADate(sourceData[j].Item2)
-//                     .AddHours((long)fixDataList[i][fixPushs] * 24 + 8)
-//                     .ToString(CultureInfo.InvariantCulture);
-//#pragma warning restore CA1305
-//                var targetPushTimeLong =
-//                    sourceStartTimeLong + (long)fixDataList[i][fixPushs] * 24 * 3600;
-//#pragma warning disable CA1305
-//                var targetPushEndTimeString = DateTime
-//                    .FromOADate(sourceData[j].Item2)
-//                    .AddHours((long)fixDataList[i][fixPushEnds] * 24 + 8)
-//                    .ToString(CultureInfo.InvariantCulture);
-//#pragma warning restore CA1305
-//                var targetPushEndTimeLong =
-//                    sourceStartTimeLong + (long)fixDataList[i][fixPushEnds] * 24 * 3600;
-//#pragma warning disable CA1305
-//                var targetPreHeatTimeString = DateTime
-//                    .FromOADate(sourceData[j].Item2)
-//                    .AddHours((long)fixDataList[i][fixPreHeats] * 24 + 8)
-//                    .ToString(CultureInfo.InvariantCulture);
-//#pragma warning restore CA1305
-//                var targetPreHeatTimeLong =
-//                    sourceStartTimeLong + (long)fixDataList[i][fixPreHeats] * 24 * 3600;
-//#pragma warning disable CA1305
-//                var targetOpenTimeString = DateTime
-//                    .FromOADate(sourceData[j].Item2)
-//                    .AddHours((long)fixDataList[i][fixOpens] * 24 + 8)
-//                    .ToString(CultureInfo.InvariantCulture);
-//#pragma warning restore CA1305
-//                var targetOpenTimeLong =
-//                    sourceStartTimeLong + (long)fixDataList[i][fixOpens] * 24 * 3600;
-//#pragma warning disable CA1305
-//                var targetEndTimeString = DateTime
-//                    .FromOADate(sourceData[j].Item3)
-//                    .AddHours(((long)fixDataList[i][fixEnds] + 1) * 24 + 8)
-//                    .ToString(CultureInfo.InvariantCulture);
-//#pragma warning restore CA1305
-//                var targetEndTimeLong =
-//                    sourceEndTimeLong + (long)fixDataList[i][fixEnds] * 24 * 3600;
-//#pragma warning disable CA1305
-//                var targetCloseTimeString = DateTime
-//                    .FromOADate(sourceData[j].Item3)
-//                    .AddHours(((long)fixDataList[i][fixCloses] + 1) * 24 + 8)
-//                    .ToString(CultureInfo.InvariantCulture);
-
-                var targetId = fixDataMatch[fixIds];
-                var targetName = a.Item1;
-                var targetPushTimeString = DateTime
-                    .FromOADate(a.Item2)
-                    .AddHours((long)fixDataMatch[fixPush] * 24 + 8)
-                    .ToString(CultureInfo.InvariantCulture);
-                var targetPushTimeLong =
-                    sourceStartTimeLong + (long)fixDataMatch[fixPush] * 24 * 3600;
-                var targetPushEndTimeString = DateTime
-                    .FromOADate(a.Item2)
-                    .AddHours((long)fixDataMatch[fixPushEnds] * 24 + 8)
-                    .ToString(CultureInfo.InvariantCulture);
-                var targetPushEndTimeLong =
-                    sourceStartTimeLong + (long)fixDataMatch[fixPushEnds] * 24 * 3600;
-                var targetPreHeatTimeString = DateTime
-                    .FromOADate(a.Item2)
-                    .AddHours((long)fixDataMatch[fixPreHeats] * 24 + 8)
-                    .ToString(CultureInfo.InvariantCulture);
-                var targetPreHeatTimeLong =
-                    sourceStartTimeLong + (long)fixDataMatch[fixPreHeats] * 24 * 3600;
-                var targetOpenTimeString = DateTime
-                    .FromOADate(a.Item2)
-                    .AddHours((long)fixDataMatch[fixOpens] * 24 + 8)
-                    .ToString(CultureInfo.InvariantCulture);
-                var targetOpenTimeLong =
-                    sourceStartTimeLong + (long)fixDataMatch[fixOpens] * 24 * 3600;
-                var targetEndTimeString = DateTime
-                    .FromOADate(a.Item3)
-                    .AddHours(((long)fixDataMatch[fixEnds] + 1) * 24 + 8)
-                    .ToString(CultureInfo.InvariantCulture);
-                var targetEndTimeLong =
-                    sourceEndTimeLong + (long)fixDataMatch[fixEnds] * 24 * 3600;
-                var targetCloseTimeString = DateTime
-                    .FromOADate(a.Item3)
-                    .AddHours(((long)fixDataMatch[fixCloses] + 1) * 24 + 8)
-                    .ToString(CultureInfo.InvariantCulture);
-                var targetCloseTimeLong =
-                    sourceEndTimeLong + (long)fixDataMatch[fixCloses] * 24 * 3600;
-
-                return new List<string>
+                    errorLog +=
+                        "运营排期/" + PubMetToExcel.ChangeExcelColChar(a.Item4 - 1) + a.Item5 + @"\r\n";
+                    return new List<string>
+                    {
+                        "targetId",
+                        a.Item1,
+                        "targetPushTimeString",
+                        "targetPushTimeLong",
+                        "targetPushEndTimeString",
+                        "targetPushEndTimeLong",
+                        "targetPreHeatTimeString",
+                        "targetPreHeatTimeLong",
+                        "targetOpenTimeString",
+                        "targetOpenTimeLong",
+                        "targetEndTimeString",
+                        "targetEndTimeLong",
+                        "targetCloseTimeString",
+                        "targetCloseTimeLong"
+                    };
+                }
+                else
                 {
-                    targetId.ToString(),
-                    targetName,
-                    targetPushTimeString,
-                    targetPushTimeLong.ToString(),
-                    targetPushEndTimeString,
-                    targetPushEndTimeLong.ToString(),
-                    targetPreHeatTimeString,
-                    targetPreHeatTimeLong.ToString(),
-                    targetOpenTimeString,
-                    targetOpenTimeLong.ToString(),
-                    targetEndTimeString,
-                    targetEndTimeLong.ToString(),
-                    targetCloseTimeString,
-                    targetCloseTimeLong.ToString()
-                };
-            }
-        }).ToList();
+                    var sourceStartTimeLong = (long)
+                        (DateTime.FromOADate(a.Item2).ToUniversalTime() - unixEpoch).TotalSeconds;
+                    var sourceEndTimeLong = (long)
+                        (
+                            DateTime
+                                .FromOADate(a.Item2 + a.Item6 - a.Item5 + 1 - (double)60 / 86400)
+                                .ToUniversalTime() - unixEpoch
+                        ).TotalSeconds;
+                    var targetId = fixDataMatch[fixIds];
+                    var targetName = a.Item1;
+                    //#前端可获取活动时间
+                    var targetPushTimeString = DateTime
+                        .FromOADate(a.Item2)
+                        .AddHours((long)fixDataMatch[fixPush] * 24)
+                        .ToString(CultureInfo.InvariantCulture);
+                    var targetPushTimeLong =
+                        sourceStartTimeLong + (long)fixDataMatch[fixPush] * 24 * 3600;
+                    //#停止向前端发送活动时间
+                    var targetPushEndTimeString = DateTime
+                        .FromOADate(a.Item2 + a.Item6 - a.Item5 + 1 - (double)60 / 86400)
+                        .AddHours((long)fixDataMatch[fixPushEnds] * 24)
+                        .ToString(CultureInfo.InvariantCulture);
+                    var targetPushEndTimeLong =
+                        sourceEndTimeLong + (long)fixDataMatch[fixPushEnds] * 24 * 3600;
+                    //#预热开始时间
+                    var targetPreHeatTimeString = DateTime
+                        .FromOADate(a.Item2)
+                        .AddHours((long)fixDataMatch[fixPreHeats] * 24)
+                        .ToString(CultureInfo.InvariantCulture);
+                    var targetPreHeatTimeLong =
+                        sourceStartTimeLong + (long)fixDataMatch[fixPreHeats] * 24 * 3600;
+                    //#活动开启时间
+                    var targetOpenTimeString = DateTime
+                        .FromOADate(a.Item2)
+                        .AddHours((long)fixDataMatch[fixOpens] * 24)
+                        .ToString(CultureInfo.InvariantCulture);
+                    var targetOpenTimeLong =
+                        sourceStartTimeLong + (long)fixDataMatch[fixOpens] * 24 * 3600;
+                    //#活动结束时间
+                    var targetEndTimeString = DateTime
+                        .FromOADate(a.Item3 - (double)60 / 86400)
+                        .AddHours(((long)fixDataMatch[fixEnds] + 1) * 24)
+                        .ToString(CultureInfo.InvariantCulture);
+                    var targetEndTimeLong =
+                        sourceEndTimeLong + (long)fixDataMatch[fixEnds] * 24 * 3600;
+                    //#活动关闭时间
+                    var targetCloseTimeString = DateTime
+                        .FromOADate(a.Item3 - (double)60 / 86400)
+                        .AddHours(((long)fixDataMatch[fixCloses] + 1) * 24)
+                        .ToString(CultureInfo.InvariantCulture);
 
+                    var targetCloseTimeLong =
+                        sourceEndTimeLong + (long)fixDataMatch[fixCloses] * 24 * 3600;
+
+                    return new List<string>
+                    {
+                        targetId.ToString(),
+                        targetName,
+                        targetPushTimeString,
+                        targetPushTimeLong.ToString(),
+                        targetPushEndTimeString,
+                        targetPushEndTimeLong.ToString(CultureInfo.InvariantCulture),
+                        targetPreHeatTimeString,
+                        targetPreHeatTimeLong.ToString(),
+                        targetOpenTimeString,
+                        targetOpenTimeLong.ToString(),
+                        targetEndTimeString,
+                        targetEndTimeLong.ToString(CultureInfo.InvariantCulture),
+                        targetCloseTimeString,
+                        targetCloseTimeLong.ToString(CultureInfo.InvariantCulture)
+                    };
+                }
+            })
+            .ToList();
         targetDataList.AddRange(targetData);
 
-
-        //        for (var j = 0; j < sourceData.Count; j++)
-        //        {
-        //            var sourceName = sourceData[j].Item1;
-
-        //            for (var i = 0; i < fixDataList.Count; i++)
-        //            {
-        //                var targetData = new List<string>();
-        //                var fixName = fixDataList[i][fixNames];
-        //#pragma warning disable CS0252
-        //                if (fixName != sourceName)
-        //                {
-        //                    targetData.Add("targetId");
-        //                    targetData.Add(sourceName);
-        //                    targetData.Add("targetPushTimeString");
-        //#pragma warning disable CA1305
-        //                    targetData.Add("targetPushTimeLong");
-        //#pragma warning restore CA1305
-        //                    targetData.Add("targetPushEndTimeString");
-        //#pragma warning disable CA1305
-        //                    targetData.Add("targetPushEndTimeLong");
-        //#pragma warning restore CA1305
-        //                    targetData.Add("targetPreHeatTimeString");
-        //#pragma warning disable CA1305
-        //                    targetData.Add("targetPreHeatTimeLong");
-        //#pragma warning restore CA1305
-        //                    targetData.Add("targetOpenTimeString");
-        //#pragma warning disable CA1305
-        //                    targetData.Add("targetOpenTimeLong");
-        //#pragma warning restore CA1305
-        //                    targetData.Add("targetEndTimeString");
-        //#pragma warning disable CA1305
-        //                    targetData.Add("targetEndTimeLong");
-        //#pragma warning restore CA1305
-        //                    targetData.Add("targetCloseTimeString");
-        //#pragma warning disable CA1305
-        //                    targetData.Add("targetCloseTimeLong");
-        //#pragma warning restore CA1305
-        //                    targetDataList.Add(targetData);
-        //                    errorLog +=
-        //                        "运营排期/"
-        //                        + PubMetToExcel.ChangeExcelColChar(sourceData[j].Item4 - 1)
-        //                        + sourceData[j].Item5
-        //                        + @"\r\n";
-        //                }
-        //                else
-        //                {
-        //                    var sourceStartTimeLong = (long)
-        //                    (
-        //                        DateTime.FromOADate(sourceData[j].Item2).ToUniversalTime()
-        //                        - unixEpoch
-        //                    ).TotalSeconds;
-        //                    var sourceEndTimeLong = (long)
-        //                    (
-        //                        DateTime.FromOADate(sourceData[j].Item3).ToUniversalTime()
-        //                        - unixEpoch
-        //                    ).TotalSeconds;
-
-        //                    var targetId = fixDataList[i][fixIds];
-        //                    var targetName = sourceName;
-        //#pragma warning disable CA1305
-        //                    var targetPushTimeString = DateTime
-        //                        .FromOADate(sourceData[j].Item2)
-        //                        .ToString(CultureInfo.InvariantCulture);
-        //#pragma warning restore CA1305
-        //                    var targetPushTimeLong =
-        //                        sourceStartTimeLong + (long)fixDataList[i][fixPush] * 24 * 3600;
-        //#pragma warning disable CA1305
-        //                    var targetPushEndTimeString = DateTime
-        //                        .FromOADate(sourceData[j].Item2)
-        //                        .ToString(CultureInfo.InvariantCulture);
-        //#pragma warning restore CA1305
-        //                    var targetPushEndTimeLong =
-        //                        sourceStartTimeLong + (long)fixDataList[i][fixPushEnds] * 24 * 3600;
-        //#pragma warning disable CA1305
-        //                    var targetPreHeatTimeString = DateTime
-        //                        .FromOADate(sourceData[j].Item2)
-        //                        .ToString(CultureInfo.InvariantCulture);
-        //#pragma warning restore CA1305
-        //                    var targetPreHeatTimeLong =
-        //                        sourceStartTimeLong + (long)fixDataList[i][fixPreHeats] * 24 * 3600;
-        //#pragma warning disable CA1305
-        //                    var targetOpenTimeString = DateTime
-        //                        .FromOADate(sourceData[j].Item2)
-        //                        .ToString(CultureInfo.InvariantCulture);
-        //#pragma warning restore CA1305
-        //                    var targetOpenTimeLong =
-        //                        sourceStartTimeLong + (long)fixDataList[i][fixOpens] * 24 * 3600;
-        //#pragma warning disable CA1305
-        //                    var targetEndTimeString = DateTime
-        //                        .FromOADate(sourceData[j].Item3)
-        //                        .ToString(CultureInfo.InvariantCulture);
-        //#pragma warning restore CA1305
-        //                    var targetEndTimeLong =
-        //                        sourceEndTimeLong + (long)fixDataList[i][fixEnds] * 24 * 3600;
-        //#pragma warning disable CA1305
-        //                    var targetCloseTimeString = DateTime
-        //                        .FromOADate(sourceData[j].Item3)
-        //                        .ToString(CultureInfo.InvariantCulture);
-        //#pragma warning restore CA1305
-        //                    var targetCloseTimeLong =
-        //                        sourceEndTimeLong + (long)fixDataList[i][fixCloses] * 24 * 3600;
-        //                    targetData.Add(targetId.ToString());
-        //                    targetData.Add(targetName);
-        //                    targetData.Add(targetPushTimeString);
-        //#pragma warning disable CA1305
-        //                    targetData.Add(targetPushTimeLong.ToString());
-        //#pragma warning restore CA1305
-        //                    targetData.Add(targetPushEndTimeString);
-        //#pragma warning disable CA1305
-        //                    targetData.Add(targetPushEndTimeLong.ToString());
-        //#pragma warning restore CA1305
-        //                    targetData.Add(targetPreHeatTimeString);
-        //#pragma warning disable CA1305
-        //                    targetData.Add(targetPreHeatTimeLong.ToString());
-        //#pragma warning restore CA1305
-        //                    targetData.Add(targetOpenTimeString);
-        //#pragma warning disable CA1305
-        //                    targetData.Add(targetOpenTimeLong.ToString());
-        //#pragma warning restore CA1305
-        //                    targetData.Add(targetEndTimeString);
-        //#pragma warning disable CA1305
-        //                    targetData.Add(targetEndTimeLong.ToString());
-        //#pragma warning restore CA1305
-        //                    targetData.Add(targetCloseTimeString);
-        //#pragma warning disable CA1305
-        //                    targetData.Add(targetCloseTimeLong.ToString());
-        //#pragma warning restore CA1305
-        //                    targetDataList.Add(targetData);
-        //                }
-        //#pragma warning restore CS0252
-        //            }
-        //        }
-
+        //写入筛选后的数据
         var targetStartCol = 2;
         var targetStartRow = 5;
         if (errorLog != "")
@@ -2771,10 +2611,7 @@ public class ExcelDataAutoInsertActivityServer
 
         var targetRangeOld = targetSheet.Range[
             targetSheet.Cells[targetStartRow, targetStartCol],
-            targetSheet.Cells[
-                targetSheet.UsedRange.Rows.Count,
-                targetSheet.UsedRange.Columns.Count
-            ]
+            targetSheet.Cells[targetSheet.UsedRange.Rows.Count, targetSheet.UsedRange.Columns.Count]
         ];
         targetRangeOld.Value = null;
 
@@ -2794,7 +2631,6 @@ public class ExcelDataAutoInsertActivityServer
 
         targetRange.Value = targetDataArr;
     }
-
 }
 
 public class ExcelDataAutoInsertNumChanges
@@ -2860,7 +2696,6 @@ public class ExcelDataAutoInsertNumChanges
 
             for (int j = 1; j < 4; j++)
             {
-
                 var keyTarget = eachExcelData.Value.Item1[j].ToString();
                 if (keyTarget != null && keyTarget.Contains("#"))
                 {
@@ -2879,8 +2714,14 @@ public class ExcelDataAutoInsertNumChanges
                     var keyTargetValue = eachExcelData.Value.Item2[i][j]?.ToString();
                     if (keyIndexValue != null && keyTargetValue != null && keyIndexValue != "")
                     {
-                        var keyIndexRow = excelObj.FindFromRow(sheetTarget, keyIndexCol, keyIndexValue);
-                        var baseValue = sheetTarget.Cells[keyIndexRow, keyTargetCol].Value?.ToString();
+                        var keyIndexRow = excelObj.FindFromRow(
+                            sheetTarget,
+                            keyIndexCol,
+                            keyIndexValue
+                        );
+                        var baseValue = sheetTarget
+                            .Cells[keyIndexRow, keyTargetCol]
+                            .Value?.ToString();
 
                         if (baseValue != keyTargetValue)
                         {
