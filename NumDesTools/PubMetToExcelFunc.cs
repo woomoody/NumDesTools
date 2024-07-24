@@ -1033,7 +1033,7 @@ public class PubMetToExcelFunc
         if (checkCurrent.Count != 0)
         {
             int multipleRank = 1;
-            foreach (var multipleRanks in checkCurrent)
+            foreach (var unused in checkCurrent)
             {
                 var averageRange = PubMetToExcel.ReadExcelDataC(
                     sheetName,
