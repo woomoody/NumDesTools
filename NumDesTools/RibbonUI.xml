@@ -99,8 +99,10 @@
                     </menu>
                 </group>
                 <group id="Group9" label="运营工具">
-                    <button id="ActivityServerDataButton1" size='large' label="生成活动" screentip='根据运营排期自动生成活动配置'
+                    <button id="ActivityServerDataButton1" size='large' label="生成活动(活动名)" screentip='根据运营排期自动生成活动配置'
                             onAction='ActivityServerData_Click' image="csharp" />
+                    <button id="ActivityServerDataButton2" size='large' label="生成活动(活动ID)" screentip='根据运营排期自动生成活动配置'
+                            onAction='ActivityServerData2_Click' image="csharp" />
                     <button id="CompareExcelButton" size='large' label="对比Excel" screentip='对比不同版本同路径下的非#Excel文件，输出至【文档\#表格比对结果.xlsx】'
                             onAction='CompareExcel_Click' image="console" />
                     <button id="MapExcelButton" size='large' label="溯源改动" screentip='根据对比结果和【文档\表格关系.json】溯源每条改动最终影响的表格，一般为ActivityClientData.xlsx，输出至【文档\#溯源结果.xlsx】'
