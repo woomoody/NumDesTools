@@ -172,15 +172,15 @@ public class PubMetToExcelFunc
         var data = excelObj.ReadToDic(sheetTarget, 6, 5, [7, 9], 2);
 
         string keyName;
-
-        if (sheetName.Contains("Sheet"))
+        //过滤单Sheet工作簿
+        if (sheetName.Contains("Sheet") || sheetName.Contains("map_proto"))
             keyName = workBookName;
         else
             keyName = workBookName + "##" + sheetName;
 
         if (data.TryGetValue(keyName, out var valueList))
         {
-            //改查找所有满足条件的值，然后按顺序遍历文件，找到第一个存在查找ID的表
+            //查找所有满足条件的值，然后按顺序遍历文件，找到第一个存在查找ID的表
             var result = valueList
                 .Cast<List<string>>()
                 .Where(list => list[0] == keyCell.Value.ToString())
@@ -1099,7 +1099,7 @@ public class PubMetToExcelFunc
                     maxRows: 10,
                     maxCols: maxRoll
                 );
-                var pointArrayStr = PubMetToExcel.ConvertToCommaSeparatedArray(pointArray);
+                object[,] pointArrayStr = PubMetToExcel.ConvertToCommaSeparatedArray(pointArray);
 
                 //清除老数据
                 var emptyData = new object[10, 1];

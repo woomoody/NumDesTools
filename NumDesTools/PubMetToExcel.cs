@@ -1371,7 +1371,7 @@ public class PubMetToExcel
             {
                 MatchCollection matches = Regex.Matches(cellAddress, @"\d+");
                 cellAddressDefault = matches[0].ToString();
-                var realCellAddress = $"A{cellAddressDefault}:Z{cellAddressDefault}";
+                var realCellAddress = $"B{cellAddressDefault}:Z{cellAddressDefault}";
                 var cellRange = worksheet.Range[realCellAddress];
                 worksheet.Activate();
                 cellRange.Select();
@@ -1641,7 +1641,7 @@ public class PubMetToExcel
     }
 
     //二维数据字符串连接化缩短列数
-    public static string[,] ConvertToCommaSeparatedArray(object[,] array2D)
+    public static object[,] ConvertToCommaSeparatedArray(object[,] array2D)
     {
         int rows = array2D.GetLength(0);
         int cols = array2D.GetLength(1);
