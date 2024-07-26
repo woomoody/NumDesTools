@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Windows.Data;
 using GraphX.Common.Models;
+using static NPOI.HSSF.Util.HSSFColor;
 
 namespace NumDesTools;
 
@@ -89,6 +90,20 @@ public class WorkBookSearchCollect
         SheetName = tuple.Item2;
         CellRow = tuple.Item3;
         CellCol = tuple.Item4;
+    }
+}
+
+//自定义Com单元格类
+public class CellData
+{
+    public int Row { get; set; }
+    public int Column { get; set; }
+    public string Value { get; set; }
+    public CellData((string, int, int) tuple)
+    {
+        Value = tuple.Item1;
+        Row = tuple.Item2;
+        Column = tuple.Item3;
     }
 }
 

@@ -1,7 +1,9 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using MiniExcelLibs;
+using NPOI.OpenXmlFormats.Dml.Diagram;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using MessageBox = System.Windows.MessageBox;
@@ -1121,6 +1123,61 @@ public class PubMetToExcelFunc
                     pointArrayStr
                 );
                 multipleRank++;
+            }
+        }
+    }
+
+    public class ExcelDataFormatCheck
+    {
+        public static void CheckValueFormat(string specialCharsStr)
+        {
+            var indexWk = NumDesAddIn.App.ActiveWorkbook;
+
+            var sourceSheet = indexWk.Worksheets["Sheet1"];
+
+            var sourceMaxCol = sourceSheet.UsedRange.Columns.Count;
+            var sourceMaxRow = sourceSheet.UsedRange.Rows.Count;
+            var sourceRange = sourceSheet.Range[
+                sourceSheet.Cells[5, 7],
+                sourceSheet.Cells[sourceMaxRow, sourceMaxCol]
+            ];
+            var sourceData = new List<(string, int, int)>();
+            // 将 specialCharsStr 中的转义字符转换为实际字符
+            var specialChars = specialCharsStr.Split('#').Select(Regex.Unescape).ToArray();
+            for (int col = 1; col <= sourceMaxCol - 7 + 1; col++)
+            {
+                for (int row = 1; row <= sourceMaxRow - 5 + 1; row++)
+                {
+                    var cell = sourceRange[row, col];
+
+                    // 检查单元格的字符串中是否有换行符
+                    string cellValue = cell.Value2?.ToString() ?? "";
+                    bool hasNewChar = specialChars.Any(cellValue.Contains);
+                    if (!hasNewChar)
+                        continue;
+                    int cellRow = cell.Row;
+                    int cellCol = cell.Column;
+
+                    sourceData.Add((cellValue, cellRow, cellCol));
+                }
+            }
+            if (sourceRange.Count == 0)
+            {
+                MessageBox.Show("未找到匹配值");
+            }
+            else
+            {
+                var ctpName = "表格查询结果";
+                NumDesCTP.DeleteCTP(true, ctpName);
+                _ = (CellSeachResult)
+                    NumDesCTP.ShowCTP(
+                        550,
+                        ctpName,
+                        true,
+                        ctpName,
+                        new CellSeachResult(sourceData),
+                        MsoCTPDockPosition.msoCTPDockPositionRight
+                    );
             }
         }
     }

@@ -2427,6 +2427,9 @@ public class ExcelDataAutoInsertActivityServer
         var fixData = PubMetToExcel.ExcelDataToList(fixSheet);
         var fixTitle = fixData.Item1;
         List<List<object>> fixDataList = fixData.Item2;
+        //删除活动名或者活动id列为空的数据
+        fixDataList = fixDataList.Where(row => row[0] != null && row[1] != null).ToList();
+
         var fixNames = fixTitle.IndexOf("活动名称");
         var fixIds = fixTitle.IndexOf("活动id");
         var fixPush = fixTitle.IndexOf("前端可获取活动时间");
