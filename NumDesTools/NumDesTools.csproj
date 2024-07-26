@@ -142,6 +142,11 @@
     <ItemGroup>
         <Folder Include="Resources\" />
     </ItemGroup>
+    <ItemGroup>
+      <Page Update="UI\LoopRunCheckBoxWindow.xaml">
+        <Generator>MSBuild:Compile</Generator>
+      </Page>
+    </ItemGroup>
     <PropertyGroup>
         <PostBuildEvent>call "C:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesToolsCode\packFromBin\ReNamePack.bat" /y </PostBuildEvent>
         <PostBuildEvent>call "C:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\packFromBin\ReNamePack.bat" /y </PostBuildEvent>
