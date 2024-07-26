@@ -22,6 +22,7 @@ global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
 using NumDesTools.UI;
+using static NumDesTools.PubMetToExcelFunc;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
 using Panel = System.Windows.Forms.Panel;
@@ -1197,6 +1198,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "完成，用时：" + ts2;
     }
+
     public void ActivityServerData2_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1207,6 +1209,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "完成，用时：" + ts2;
     }
+
     public void AutoMergeExcel_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1322,6 +1325,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
+
     public void LoopRun_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1335,13 +1339,21 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var ts2 = sw.Elapsed;
         App.StatusBar = "导出完成，用时：" + ts2;
     }
+    public void CellDataSearch_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        ExcelDataFormatCheck.CheckValueFormat(_excelSeachStr);
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
     public void TestBar1_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
-        var ws = App.ActiveSheet;
-        var sheetName = ws.Name;
-        PubMetToExcelFunc.LoopRunCac(sheetName);
+        ExcelDataFormatCheck.CheckValueFormat(_excelSeachStr);
         //SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "SheetMenu", true , "SheetMenu");
         //var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
         //    .Select(x => new SelfComSheetCollect { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();
@@ -1476,17 +1488,22 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var defaultContent =
                 @"C:\M1Work\Public\Excels\Tables\"
                 + Environment.NewLine
-                + @"C:\M2Work\Public\Excels\Tables\";
+                + @"C:\M2Work\Public\Excels\Tables\"
+                + Environment.NewLine
+                + @"\n";
 
             File.WriteAllText(DefaultFilePath, defaultContent);
         }
 
         var line1 = File.ReadLines(DefaultFilePath).Skip(1 - 1).FirstOrDefault();
         var line2 = File.ReadLines(DefaultFilePath).Skip(2 - 1).FirstOrDefault();
+        var line3 = File.ReadLines(DefaultFilePath).Skip(3 - 1).FirstOrDefault();
         if (control.Id == "BasePathEdit")
             return line1;
-        else if (control.Id == "TargetPathEdit")
+        if (control.Id == "TargetPathEdit")
             return line2;
+        if (control.Id == "ExcelSearchBoxEdit")
+            return line3;
 
         return @"..\Public\Excels\Tables\";
     }
