@@ -363,6 +363,7 @@ public class PubMetToExcel
         var excelData = (sheetHeaderCol, sheetData);
         return excelData;
     }
+
     //public static (List<object> sheetHeaderCol, List<List<object>> sheetStrikethrough) ExcelStrikethroughToList(
     //    dynamic workSheet
     //)
@@ -1363,8 +1364,20 @@ public class PubMetToExcel
                 return;
             }
 
+            NumDesAddIn.App.ScreenUpdating = false;
             var workbook = NumDesAddIn.App.Workbooks.Open(filePath);
-            var worksheet = workbook.Sheets[sheetName];
+
+            Worksheet worksheet = null;
+            try
+            {
+                // 尝试获取工作表
+                worksheet = (Worksheet)workbook.Sheets[sheetName];
+            }
+            catch (System.Runtime.InteropServices.COMException)
+            {
+                // 如果工作表不存在，则选择第一个工作表
+                worksheet = (Worksheet)workbook.Sheets[1];
+            }
             var regex = new Regex(@"^[A-Za-z]+\d+$");
             var cellAddressDefault = "1";
             if (cellAddress != null)
@@ -1373,9 +1386,12 @@ public class PubMetToExcel
                 cellAddressDefault = matches[0].ToString();
                 var realCellAddress = $"B{cellAddressDefault}:Z{cellAddressDefault}";
                 var cellRange = worksheet.Range[realCellAddress];
+                
+                NumDesAddIn.App.ScreenUpdating = true;
                 worksheet.Activate();
                 cellRange.Select();
             }
+            NumDesAddIn.App.ScreenUpdating = true;
         }
         // ReSharper disable EmptyGeneralCatchClause
         catch (Exception)
@@ -1431,6 +1447,7 @@ public class PubMetToExcel
 
         return sheetData;
     }
+
     //二维数组List化
     public static List<List<object>> Array2DDataToList(object[,] rangeValue)
     {
@@ -1451,8 +1468,12 @@ public class PubMetToExcel
 
         return sheetData;
     }
+
     //二维List一维化
-    public static List<object> List2DToListRowOrCol(List<List<object>> twoDimensionalList, bool byRow)
+    public static List<object> List2DToListRowOrCol(
+        List<List<object>> twoDimensionalList,
+        bool byRow
+    )
     {
         List<object> flattenedList = new List<object>();
 
@@ -1660,8 +1681,12 @@ public class PubMetToExcel
 
         return newArray2D;
     }
+
     //字典里随机选择若干条数据
-    public static Dictionary<int, List<int>> RandChooseDataFormDictionary(Dictionary<int, List<int>> sourceDic ,int chooseCount)
+    public static Dictionary<int, List<int>> RandChooseDataFormDictionary(
+        Dictionary<int, List<int>> sourceDic,
+        int chooseCount
+    )
     {
         // 将字典的键转换为列表
         List<int> keys = sourceDic.Keys.ToList();
@@ -1678,5 +1703,6 @@ public class PubMetToExcel
         }
         return selectedData;
     }
+
     public static void TestEpPlus() { }
 }
