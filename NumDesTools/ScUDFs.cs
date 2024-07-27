@@ -416,7 +416,37 @@ public class ExcelUdf
         numCount = Math.Min(maxNumCount, numCount);
         return strGroup[numCount - 1];
     }
-
+    [ExcelFunction(
+        Category = "UDF-字符串提取数字",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "分割字符串为特定结构的若干字符串"
+    )]
+    public static string GetStrStructFromStr(
+        [ExcelArgument(AllowReference = true, Name = "单元格索引", Description = "输入字符串")]
+        string inputValue,
+        [ExcelArgument(AllowReference = true, Name = "正则方法", Description = @"正则方法,eg:\[(.*?)\]")]
+        string regexStr,
+        [ExcelArgument(
+            AllowReference = true,
+            Name = "序号",
+            Description = "选择提取字符串中的第几个字符串，如果值很大，表示提取最末尾字符"
+        )]
+        int numCount
+    )
+    {
+        if (regexStr == "")
+        {
+            regexStr = @"\[(\d+.*?)]";
+        }
+        // 正则表达式匹配内部数组
+        var matches = Regex.Matches(inputValue, regexStr);
+        if (numCount > matches.Count)
+        {
+            numCount = matches.Count;
+        }
+        return matches[numCount - 1].ToString();
+    }
     [ExcelFunction(
         Category = "UDF-组装字符串",
         IsVolatile = true,
