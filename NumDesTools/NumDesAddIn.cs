@@ -60,7 +60,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private string _currentBaseText;
     private string _currentTargetText;
     private TabControl _tabControl = new();
-
+    
     private SheetListControl _sheetMenuCtp;
 
     #region 释放COM

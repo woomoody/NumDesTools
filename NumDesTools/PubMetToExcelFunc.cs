@@ -1,9 +1,7 @@
-﻿using System.Globalization;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using MiniExcelLibs;
-using NPOI.OpenXmlFormats.Dml.Diagram;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using MessageBox = System.Windows.MessageBox;
