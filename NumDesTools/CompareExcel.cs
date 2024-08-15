@@ -18,21 +18,8 @@ public class CompareExcel
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(baseFolder));
         if (newPath != null)
         {
-            var mainPath = Path.Combine(newPath, "Excels", "Tables");
-            var langPath = Path.Combine(newPath, "Excels", "Localizations");
-            var uiPath = Path.Combine(newPath, "Excels", "UIs");
-            var kelangPath = Path.Combine(newPath, "Excels", "Tables", "克朗代克");
-
-            var baseFiles = PubMetToExcel
-                .GetExcelFiles(mainPath)
-                .Concat(PubMetToExcel.GetExcelFiles(langPath))
-                .Concat(PubMetToExcel.GetExcelFiles(uiPath))
-                .Concat(
-                    Directory.Exists(kelangPath)
-                        ? PubMetToExcel.GetExcelFiles(kelangPath)
-                        : Enumerable.Empty<string>()
-                )
-                .ToArray();
+            var filesCollection = new SelfExcelFileCollector(newPath, 2);
+            var baseFiles = filesCollection.GetAllExcelFilesPath();
 
             var newPathTarget = Path.GetDirectoryName(Path.GetDirectoryName(targetFolder));
 
