@@ -2433,10 +2433,10 @@ public class ExcelDataAutoInsertActivityServer
         var fixNames = fixTitle.IndexOf("活动名称");
         var fixIds = fixTitle.IndexOf("活动id");
         var fixPush = fixTitle.IndexOf("前端可获取活动时间");
-        var fixPushEnds = fixTitle.IndexOf("停止向前端发送活动时间");
-        var fixPreHeats = fixTitle.IndexOf("预热期开始时间");
-        var fixOpens = fixTitle.IndexOf("活动开启时间");
-        var fixEnds = fixTitle.IndexOf("活动结束时间");
+        //var fixPushEnds = fixTitle.IndexOf("停止向前端发送活动时间");
+        //var fixPreHeats = fixTitle.IndexOf("预热期开始时间");
+        //var fixOpens = fixTitle.IndexOf("活动开启时间");
+        //var fixEnds = fixTitle.IndexOf("活动结束时间");
         var fixCloses = fixTitle.IndexOf("活动关闭时间");
         var isActGroup = fixTitle.IndexOf("是否活动组");
         var openCondition = fixTitle.IndexOf("活动开启条件");
@@ -2611,25 +2611,25 @@ public class ExcelDataAutoInsertActivityServer
             var targetPushTimeString = ConvertToDateString(a.Item2, fixDataMatch[fixPush]);
             var targetPushTimeLong = ConvertToUnixTime(sourceStartTimeLong, fixDataMatch[fixPush]);
             var targetPushEndTimeString = ConvertToDateString(
-                a.Item2 + a.Item6 - a.Item5 + 1 - OneMinuteInDays,
-                fixDataMatch[fixPushEnds]
+                a.Item2 + a.Item6 - a.Item5 + 1 - OneMinuteInDays,0
+                //fixDataMatch[fixPushEnds]
             );
             var targetPushEndTimeLong = ConvertToUnixTime(
-                sourceEndTimeLong,
-                fixDataMatch[fixPushEnds]
+                sourceEndTimeLong,0
+                //fixDataMatch[fixPushEnds]
             );
-            var targetPreHeatTimeString = ConvertToDateString(a.Item2, fixDataMatch[fixPreHeats]);
+            var targetPreHeatTimeString = ConvertToDateString(a.Item2, 0/*fixDataMatch[fixPreHeats]*/);
             var targetPreHeatTimeLong = ConvertToUnixTime(
-                sourceStartTimeLong,
-                fixDataMatch[fixPreHeats]
+                sourceStartTimeLong,0
+                //fixDataMatch[fixPreHeats]
             );
-            var targetOpenTimeString = ConvertToDateString(a.Item2, fixDataMatch[fixOpens]);
-            var targetOpenTimeLong = ConvertToUnixTime(sourceStartTimeLong, fixDataMatch[fixOpens]);
+            var targetOpenTimeString = ConvertToDateString(a.Item2, 0/*fixDataMatch[fixOpens]*/);
+            var targetOpenTimeLong = ConvertToUnixTime(sourceStartTimeLong, 0/*fixDataMatch[fixOpens]*/);
             var targetEndTimeString = ConvertToDateString(
-                a.Item3 - OneMinuteInDays,
-                fixDataMatch[fixEnds] + 1
+                a.Item3 - OneMinuteInDays,0
+                /*fixDataMatch[fixEnds] */+ 1
             );
-            var targetEndTimeLong = ConvertToUnixTime(sourceEndTimeLong, fixDataMatch[fixEnds]);
+            var targetEndTimeLong = ConvertToUnixTime(sourceEndTimeLong,0 /*fixDataMatch[fixEnds]*/);
             var targetCloseTimeString = ConvertToDateString(
                 a.Item3 - OneMinuteInDays,
                 fixDataMatch[fixCloses] + 1

@@ -416,6 +416,7 @@ public class ExcelUdf
         numCount = Math.Min(maxNumCount, numCount);
         return strGroup[numCount - 1];
     }
+
     [ExcelFunction(
         Category = "UDF-字符串提取数字",
         IsVolatile = true,
@@ -424,15 +425,15 @@ public class ExcelUdf
     )]
     public static string GetStrStructFromStr(
         [ExcelArgument(AllowReference = true, Name = "单元格索引", Description = "输入字符串")]
-        string inputValue,
+            string inputValue,
         [ExcelArgument(AllowReference = true, Name = "正则方法", Description = @"正则方法,eg:\[(.*?)\]")]
-        string regexStr,
+            string regexStr,
         [ExcelArgument(
             AllowReference = true,
             Name = "序号",
             Description = "选择提取字符串中的第几个字符串，如果值很大，表示提取最末尾字符"
         )]
-        int numCount
+            int numCount
     )
     {
         if (regexStr == "")
@@ -447,6 +448,7 @@ public class ExcelUdf
         }
         return matches[numCount - 1].ToString();
     }
+
     [ExcelFunction(
         Category = "UDF-组装字符串",
         IsVolatile = true,
@@ -499,7 +501,7 @@ public class ExcelUdf
             if (item is ExcelEmpty || item.ToString() == ignoreValue) { }
             else
             {
-                if (!(rangeObjDef[0 , 0] is ExcelMissing))
+                if (!(rangeObjDef[0, 0] is ExcelMissing))
                 {
                     var itemDef = rangeObjDef[row, col];
                     result += itemDef + midDelimiter;
@@ -708,7 +710,9 @@ public class ExcelUdf
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")]
             object[,] rangeObj,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false", Name = "过滤空值")]
-            bool ignoreEmpty
+            bool ignoreEmpty,
+        [ExcelArgument(AllowReference = true, Description = "行优先还是列优先：0行1列", Name = "行列优先")]
+            int rowOrCol
     )
     {
         List<object> rangeValueList = [];
@@ -717,25 +721,54 @@ public class ExcelUdf
         var rowCount = rangeObj.GetLength(0);
         var colCount = rangeObj.GetLength(1);
 
-        for (var col = 0; col < colCount; col++)
-        for (var row = 0; row < rowCount; row++)
+        if (rowOrCol == 0)
         {
-            var value = rangeObj[row, col];
-
-            if (ignoreEmpty)
+            //按行
+            for (var col = 0; col < colCount; col++)
+            for (var row = 0; row < rowCount; row++)
             {
-                var excelNull = value is ExcelEmpty;
-                var stringNull = ReferenceEquals(value.ToString(), "");
-                if (!excelNull && !stringNull)
+                var value = rangeObj[row, col];
+
+                if (ignoreEmpty)
+                {
+                    var excelNull = value is ExcelEmpty;
+                    var stringNull = ReferenceEquals(value.ToString(), "");
+                    if (!excelNull && !stringNull)
+                    {
+                        rangeValueList.Add(value);
+                        rangeColIndexList.Add(col + 1);
+                    }
+                }
+                else
                 {
                     rangeValueList.Add(value);
                     rangeColIndexList.Add(col + 1);
                 }
             }
-            else
+        }
+        else if (rowOrCol == 1)
+        {
+            //按行
+            for (var row = 0; row < rowCount; row++)
+            for (var col = 0; col < colCount; col++)
             {
-                rangeValueList.Add(value);
-                rangeColIndexList.Add(col + 1);
+                var value = rangeObj[row, col];
+
+                if (ignoreEmpty)
+                {
+                    var excelNull = value is ExcelEmpty;
+                    var stringNull = ReferenceEquals(value.ToString(), "");
+                    if (!excelNull && !stringNull)
+                    {
+                        rangeValueList.Add(value);
+                        rangeColIndexList.Add(col + 1);
+                    }
+                }
+                else
+                {
+                    rangeValueList.Add(value);
+                    rangeColIndexList.Add(col + 1);
+                }
             }
         }
 
@@ -791,5 +824,193 @@ public class ExcelUdf
         }
 
         return sumProductValueList.ToArray();
+    }
+
+    [ExcelFunction(
+        Category = "UDF-Alice专属函数",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "针对Alice项目特制的自定义函数",
+        Name = "AliceCountBuildLinks"
+    )]
+    public static double[] AliceCountBuildLinks(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "链等级范围")]
+            object[,] rangeObj1,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "链数量范围")]
+            object[,] rangeObj2,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "矿数量范围")]
+            object[,] rangeObj3,
+        [ExcelArgument(AllowReference = true, Description = "链最大级别,默认为：8", Name = "数量范围")]
+            int linkMax,
+        [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,0/其他数组，不填为0", Name = "过滤空值")]
+            int ignoreEmpty
+    )
+    {
+        if (linkMax == 0)
+        {
+            linkMax = 8;
+        }
+        double[] linkTotalCount = new double[linkMax];
+
+        var rowCount = rangeObj1.GetLength(0);
+        var colCount = rangeObj1.GetLength(1);
+
+        var buildRowCount = rangeObj3.GetLength(0);
+        var buildColCount = rangeObj3.GetLength(1);
+
+        for (var col = 0; col < colCount; col++)
+        {
+            object buildNumResult = null;
+            if (buildRowCount == 1 && col < buildColCount)
+            {
+                buildNumResult = rangeObj3[0, col];
+            }
+            else if (buildColCount == 1 && col < buildRowCount)
+            {
+                buildNumResult = rangeObj3[col, 0];
+            }
+
+            if (
+                buildNumResult != null
+                && double.TryParse(buildNumResult.ToString(), out double buildNum)
+            )
+            {
+                for (var row = 0; row < rowCount; row++)
+                {
+                    if (ignoreEmpty == 0)
+                    {
+                        var linkLevelResult = rangeObj1[row, col];
+                        var linkNumResult = rangeObj2[row, col];
+                        if (
+                            linkLevelResult != null
+                            && linkNumResult != null
+                            && int.TryParse(linkLevelResult.ToString(), out int linkLevel)
+                            && double.TryParse(linkNumResult.ToString(), out double linkNum)
+                        )
+                        {
+                            if (linkLevel > 0 && linkLevel <= linkMax)
+                            {
+                                linkTotalCount[linkLevel - 1] += linkNum * buildNum;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return linkTotalCount;
+    }
+
+    [ExcelFunction(
+        Category = "UDF-Alice专属函数",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "针对Alice项目特制的自定义函数",
+        Name = "AliceCountBuilds"
+    )]
+    public static double[] AliceCountBuilds(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "矿数量范围")]
+            object[,] rangeObj1,
+        [ExcelArgument(AllowReference = true, Description = "矿最大级别,默认为：3", Name = "矿最大等级")]
+            int buildMax,
+        [ExcelArgument(AllowReference = true, Description = "数据按列还是按行：默认按列：0，1为按行", Name = "按行按列")]
+            int rowOrCol,
+        [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,0/其他数组，不填为0", Name = "过滤空值")]
+            int ignoreEmpty
+    )
+    {
+        if (buildMax == 0)
+        {
+            buildMax = 3;
+        }
+        double[] buildTotalCount = new double[buildMax];
+
+        var rowCount = rangeObj1.GetLength(0);
+        var colCount = rangeObj1.GetLength(1);
+
+        bool processRows = rowOrCol == 0;
+        int outerLoopCount = processRows ? rowCount : colCount;
+        //int innerLoopCount = processRows ? colCount : rowCount;
+
+        for (var outer = 0; outer < outerLoopCount; outer++)
+        {
+            object buildLevelResult = processRows ? rangeObj1[outer, 0] : rangeObj1[0, outer];
+            object buildNumResult = processRows ? rangeObj1[outer, 1] : rangeObj1[1, outer];
+
+            if (ignoreEmpty == 0 && buildLevelResult != null && buildNumResult != null)
+            {
+                if (
+                    int.TryParse(buildLevelResult.ToString(), out int buildLevel)
+                    && double.TryParse(buildNumResult.ToString(), out double buildNum)
+                )
+                {
+                    if (buildLevel > 0 && buildLevel <= buildMax)
+                    {
+                        buildTotalCount[buildLevel - 1] += buildNum;
+                    }
+                }
+            }
+        }
+
+        return buildTotalCount;
+    }
+
+    [ExcelFunction(
+        Category = "UDF-Alice专属函数",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "针对Alice项目特制的自定义函数",
+        Name = "AliceCountMergeLinks"
+    )]
+    public static double AliceCountMergeLinks(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "链数量范围")]
+            object[,] rangeObj1,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "链积分范围")]
+            object[,] rangeObj2,
+        [ExcelArgument(AllowReference = true, Description = "链最大级别,默认为：8", Name = "链最大等级")]
+            int linksMax,
+        [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,0/其他数组，不填为0", Name = "过滤空值")]
+            int ignoreEmpty
+    )
+    {
+        if (linksMax == 0)
+        {
+            linksMax = 8;
+        }
+
+        double mergeScoreTotalCount = 0;
+
+        var rowCount = rangeObj1.GetLength(0);
+        var colCount = rangeObj1.GetLength(1);
+
+        int addLinksNum = 0;
+
+        for (var row = 0; row < rowCount - 1; row++)
+        {
+     
+            for (var col = 0; col < colCount; col++)
+            {
+                object linksNumResult = rangeObj1[row, col];
+                object linksScoreResult = rangeObj2[row, col];
+
+                if (ignoreEmpty == 0 && linksNumResult != null && linksScoreResult != null)
+                {
+                    if (
+                        int.TryParse(linksNumResult.ToString(), out int linksNum)
+                        && double.TryParse(linksScoreResult.ToString(), out double linksScore)
+                    )
+                    {
+                        linksNum += addLinksNum;
+                        addLinksNum = (int)(linksNum / 2.5);
+                        //倒数第2链或者大于等于5时才合成的积分
+                        if (row >= linksMax - 3 || linksNum >=5)
+                        {
+                            mergeScoreTotalCount += addLinksNum * linksScore;
+                        }
+                    }
+                }
+            }
+        }
+
+        return mergeScoreTotalCount;
     }
 }

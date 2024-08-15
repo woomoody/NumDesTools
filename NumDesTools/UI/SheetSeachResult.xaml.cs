@@ -11,14 +11,14 @@ namespace NumDesTools.UI
     // ReSharper disable once RedundantExtendsListEntry
     public partial class SheetSeachResult:UserControl
     {
-        public ObservableCollection<WorkBookSearchCollect> TargetSheetList { get; set; }
+        public ObservableCollection<SelfWorkBookSearchCollect> TargetSheetList { get; set; }
 
         public SheetSeachResult(List<(string, string, int, string)> list)
         {
             InitializeComponent();
             this.DataContext = this;
-            TargetSheetList = new ObservableCollection<WorkBookSearchCollect>(
-                list.Select(t => new WorkBookSearchCollect(t))
+            TargetSheetList = new ObservableCollection<SelfWorkBookSearchCollect>(
+                list.Select(t => new SelfWorkBookSearchCollect(t))
             );
         }
         //这个事件的问题是打开新的再关闭后，再次打开无法点击ListBox
@@ -28,7 +28,7 @@ namespace NumDesTools.UI
             var listBox = (ListBox)sender;
             if (listBox.SelectedItem != null)
             {
-                var selectedWorkBook = (WorkBookSearchCollect)listBox.SelectedItem;
+                var selectedWorkBook = (SelfWorkBookSearchCollect)listBox.SelectedItem;
                 PubMetToExcel.OpenExcelAndSelectCell(
                     selectedWorkBook.FilePath,
                     selectedWorkBook.SheetName,

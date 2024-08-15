@@ -22,7 +22,6 @@ global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
 using NumDesTools.UI;
-using static NumDesTools.PubMetToExcelFunc;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
 using Panel = System.Windows.Forms.Panel;
@@ -975,7 +974,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcel.SearchKeyFromExcelMiniExcel(path, _excelSeachStr);
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcelMiniExcel(path, _excelSeachStr);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1016,7 +1015,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcel.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1057,7 +1056,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcel.SearchKeyFromExcelIDMultiMiniExcel(path, _excelSeachStr);
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcelIDMultiMiniExcel(path, _excelSeachStr);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1343,7 +1342,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-        ExcelDataFormatCheck.CheckValueFormat(_excelSeachStr);
+        PubMetToExcelFunc.ExcelDataFormatCheck.CheckValueFormat(_excelSeachStr);
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
@@ -1353,7 +1352,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-        ExcelDataFormatCheck.CheckValueFormat(_excelSeachStr);
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+
+        PubMetToExcelFunc.CheckDataLegitimacy(path);
+
         //SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "SheetMenu", true , "SheetMenu");
         //var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
         //    .Select(x => new SelfComSheetCollect { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();
