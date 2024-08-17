@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 using NPOI.XSSF.UserModel;
 using static System.String;
 
@@ -448,6 +449,41 @@ public class ExcelUdf
         }
         return matches[numCount - 1].ToString();
     }
+    [ExcelFunction(
+        Category = "UDF-字符串提取数字",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "分割字符串为特定结构的若干字符串-返回数组"
+    )]
+    public static object[] GetStrStructFromStrArray(
+        [ExcelArgument(AllowReference = true, Name = "单元格索引", Description = "输入字符串")]
+        object[,] inputValue,
+        [ExcelArgument(AllowReference = true, Name = "分割符", Description = @"默认为逗号")]
+        string delimiter
+    )
+    {
+
+        if (delimiter == "")
+        {
+            delimiter = ",";
+        }
+        
+        var matchesList = new List<string>();
+        foreach (var value in inputValue)
+        {
+            // 正则表达式匹配内部数组
+            var numbers = Regex
+                .Split(value.ToString(), delimiter)
+                .SelectMany(s => Regex.Matches(s, @"\d+").Select(m => m.Value))
+                .ToArray();
+            foreach (var num in numbers)
+            {
+                matchesList.Add(num);
+            }
+        }
+      
+        return matchesList.ToArray();
+    }
 
     [ExcelFunction(
         Category = "UDF-组装字符串",
@@ -700,6 +736,54 @@ public class ExcelUdf
         return result;
     }
 
+    [ExcelFunction(
+    Category = "UDF-组装字符串",
+    IsVolatile = true,
+    IsMacroType = true,
+    Description = "拼接Range：Range数据转为Json"
+)]
+    public static string CreatRangeToJson(
+    [ExcelArgument(
+            AllowReference = true,
+            Description = "Range&Cell,eg:A1:A2",
+            Name = "第一单元格范围"
+        )]
+            object[,] rangeObj1,
+    [ExcelArgument(
+            AllowReference = true,
+            Description = "Range&Cell,eg:A1:A2",
+            Name = "第二单元格范围"
+        )]
+            object[,] rangeObj2
+)
+    {
+        // 创建一个包含两个数组的对象
+        var gridDataList = new object[rangeObj1.GetLength(0) * rangeObj1.GetLength(1)];
+        int index = 0;
+        for (int i = 0; i < rangeObj1.GetLength(0); i++)
+        {
+            for (int j = 0; j < rangeObj1.GetLength(1); j++)
+            {
+                gridDataList[index++] = new
+                {
+                    ConfigId = Convert.ToInt32(rangeObj1[i, j]),
+                    ObstacleConfigId = Convert.ToInt32(rangeObj2[i, j])
+                };
+            }
+        }
+
+        var combinedData = new
+        {
+            GridDataList = gridDataList,
+            Row = rangeObj1.GetLength(0),
+            Col = rangeObj2.GetLength(1)
+        };
+
+        // 将对象转换为 JSON 格式
+        string json = JsonConvert.SerializeObject(combinedData, Formatting.None);
+
+        return json;
+    }
     [ExcelFunction(
         Category = "UDF-数组转置",
         IsVolatile = true,
