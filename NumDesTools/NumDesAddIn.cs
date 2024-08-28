@@ -43,6 +43,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public static string FocusLabelText = _globalValue.Value["FocusLabelText"];
     public static string LabelTextRoleDataPreview = _globalValue.Value["LabelTextRoleDataPreview"];
     public static string SheetMenuText = _globalValue.Value["SheetMenuText"];
+    public static string CellHiLightText = _globalValue.Value["CellHiLightText"];
     public static string TempPath = _globalValue.Value["TempPath"];
 
     public static CommandBarButton Btn;
@@ -59,7 +60,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private string _currentBaseText;
     private string _currentTargetText;
     private TabControl _tabControl = new();
-    
+
     private SheetListControl _sheetMenuCtp;
 
     #region 释放COM
@@ -161,6 +162,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "Button14" => LabelTextRoleDataPreview,
             "FocusLightButton" => FocusLabelText,
             "SheetMenu" => SheetMenuText,
+            "CellHiLight" => CellHiLightText,
             _ => ""
         };
         return latext;
@@ -1338,6 +1340,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var ts2 = sw.Elapsed;
         App.StatusBar = "导出完成，用时：" + ts2;
     }
+
     public void CellDataSearch_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1348,6 +1351,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
+
     public void TestBar1_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1605,81 +1609,73 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         _globalValue.SaveValue("SheetMenuText", SheetMenuText);
     }
 
+    public void CellHiLight_Click(IRibbonControl control)
+    {
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
+        CellHiLightText = CellHiLightText == "高亮单元格：开启" ? "高亮单元格：关闭" : "高亮单元格：开启";
+        CustomRibbon.InvalidateControl("CellHiLight");
+
+        var wk = App.ActiveWorkbook;
+        var ws = wk.ActiveSheet;
+
+        if (wk.Name == "#【A大型活动】数值.xlsx")
+        {
+            if (ws.Name.Contains("【设计】"))
+            {
+                var uesedRange = ws.UsedRange;
+                App.ScreenUpdating = false;
+                foreach (Range cell in uesedRange)
+                {
+                    cell.Interior.ColorIndex = XlColorIndex.xlColorIndexNone; // 清除高亮
+                }
+                App.ScreenUpdating = true;
+            }
+        }
+
+        _globalValue.SaveValue("CellHiLightText", CellHiLightText);
+    }
+
     private void ExcelApp_SheetSelectionChange(object sh, Range target)
     {
-        var mzBar = App.CommandBars["cell"];
-        mzBar.Reset();
-        var bars = mzBar.Controls;
-        foreach (CommandBarControl tempContrl in bars)
+        if (CellHiLightText != "高亮单元格：开启")
+            return;
+        //指定工作簿、工作表、工作区域选中单元格高亮显示同值
+        var wk = App.ActiveWorkbook;
+        var ws = wk.ActiveSheet;
+
+        if (wk.Name == "#【A大型活动】数值.xlsx")
         {
-            var t = tempContrl.Tag;
-            if (t is "Test" or "Test1")
-                try
-                {
-                    tempContrl.Delete();
-                }
-                catch
-                {
-                    // ignored
-                }
-        }
-
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        var missing = Type.Missing;
-        var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-        var comButton = comControl as CommandBarButton;
-        if (comControl != null)
-            if (comButton != null)
+            if (ws.Name.Contains("【设计】"))
             {
-                comButton.Tag = "Test";
-                comButton.Caption = "索表：右侧预览";
-                comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton.Click += IndexSheetUnOpen_Click;
-            }
-
-        var comControl1 = bars.Add(MsoControlType.msoControlButton, missing, missing, 2, true);
-        var comButton1 = comControl1 as CommandBarButton;
-        if (comControl1 != null)
-            if (comButton1 != null)
-            {
-                comButton1.Tag = "Test1";
-                comButton1.Caption = "索表：打开表格";
-                comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton1.Click += IndexSheetOpen_Click;
-            }
-    }
-
-    private void ExcelApp_SheetSelectionChange1(object sh, Range target)
-    {
-        var currentMenuBar = App.CommandBars["cell"];
-        var bars = currentMenuBar.Controls;
-        foreach (CommandBarControl tempContrl in bars)
-        {
-            var t = tempContrl.Tag;
-            if (t is "Test" or "Test1")
-            {
-                tempContrl.Delete();
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-            }
-            else
-            {
-                try
+                if (target != null && !string.IsNullOrWhiteSpace(target.Value2))
                 {
-                    tempContrl.Delete();
-                }
-                catch
-                {
-                    // ignored
+                    string selectedText = target.Value2.ToString();
+                    //只找10行10列的数据
+                    var firstRow = Math.Max(target.Row - 20, 1);
+                    var firstCol = Math.Max(target.Column - 20, 1);
+                    var lastRow = target.Row + 30;
+                    var lastCol = target.Column + 30;
+                    var searchRange = ws.Range[
+                        ws.Cells[firstRow, firstCol],
+                        ws.Cells[lastRow, lastCol]
+                    ];
+                    App.ScreenUpdating = false;
+                    foreach (Range cell in searchRange)
+                    {
+                        if (cell.Value2?.ToString() == selectedText)
+                        {
+                            cell.Interior.Color = XlRgbColor.rgbYellow; // 高亮显示
+                        }
+                        else
+                        {
+                            cell.Interior.ColorIndex = XlColorIndex.xlColorIndexNone; // 清除高亮
+                        }
+                    }
+                    App.ScreenUpdating = true;
                 }
             }
         }
-
-        Btn = null;
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
     }
-
     #endregion
 }

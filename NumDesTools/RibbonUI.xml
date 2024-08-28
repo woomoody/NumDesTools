@@ -17,15 +17,18 @@
                             screentip='点击整理当前sheet格式，标准化文本和单元格大小' />
                     <button id='Button5' size='large' getLabel='GetLableText' image='redux-reducer'
                             onAction='ZoomInOut_Click'
-                            screentip='点击开启单元格内容放大功能，再次点击关闭放大功能(创建Form机制)！配置路径：\Documents\NumDesGlobalKey.txt' />
+                            screentip='点击开启单元格内容放大功能，再次点击关闭放大功能(创建Form机制)！报错请删除！配置路径：\Documents\NumDesGlobalKey.txt' />
                     <button id='FocusLightButton' size='large' getLabel='GetLableText' image='email'
                             onAction='FocusLight_Click'
-                            screentip='聚光灯效果！配置路径：\Documents\NumDesGlobalKey.txt' />
+                            screentip='聚光灯效果！报错请删除！配置路径：\Documents\NumDesGlobalKey.txt' />
                     <button id='Button8' size='large' label='公式检查' image='asciidoc' onAction='FormularBaseCheck_Click'
                             screentip='点击检查当前工作簿所有sheet中的公式，看是否有错误的连接，推荐合完表后进行检查' />
                     <button id='SheetMenu' size='large' getLabel='GetLableText' image='reason'
                             onAction='SheetMenu_Click'
-                            screentip='点击创建表格目录，再次点击关闭! 配置路径：\Documents\NumDesGlobalKey.txt' />
+                            screentip='点击创建表格目录，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.txt' />
+                    <button id='CellHiLight' size='large' getLabel='GetLableText' image='reason'
+                            onAction='CellHiLight_Click'
+                            screentip='点击高亮显示一定范围内同值内容，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.txt' />
                 </group>
                 <!--
                 <group id='Group3' label='SVN功能'>
@@ -33,6 +36,9 @@
                           screentip='点击更新当前目录所有Excel表格' />
                   <button id='Button10' size='large' label='更新Txt表' image='log' onAction='SvnCommitTxt_Click'
                           screentip='点击更新当前目录所有Txt表格' />
+                            <button id='CellHiLight' size='large' getLabel='GetLableText' image='reason'
+                            onAction='CellHiLight_Click'
+                            screentip='点击高亮显示一定范围内同值内容，再次点击关闭! 配置路径：\Documents\NumDesGlobalKey.txt' />
                 </group>        
                 -->
                 <!--
