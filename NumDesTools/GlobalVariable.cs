@@ -12,7 +12,8 @@ public class GlobalVariable
             { "FocusLabelText", "聚光灯：关闭" },
             { "LabelTextRoleDataPreview", "角色数据预览：关闭" },
             { "SheetMenuText", "表格目录：开启" },
-            { "TempPath", @"\Client\Assets\Resources\Table" }
+            { "TempPath", @"\Client\Assets\Resources\Table" },
+            { "CellHiLightText", "高亮单元格：开启" }
         };
 
     private readonly string _filePath = Path.Combine(
