@@ -1214,7 +1214,27 @@ public class PubMetToExcel
         }
         return dictionary;
     }
-
+    //二维数组转二维字典
+    public static  Dictionary<(object, object), string>  Array2DToDic2D(int rowCount, int colCount, dynamic modelRangeValue)
+    {
+        var modelValue = new Dictionary<(object, object), string>();
+        for (int row = 2; row <= rowCount; row++)
+        {
+            for (int col = 2; col <= colCount; col++)
+            {
+                string rowIndex = modelRangeValue[row, 1];
+                string colIndex = modelRangeValue[1, col];
+                if (rowIndex == null || colIndex == null)
+                {
+                    MessageBox.Show("模版表中表头有空值，请检查模版数据是否正确！");
+                    return null ;
+                }
+                string value = modelRangeValue[row, col]?.ToString() ?? "";
+                modelValue[(rowIndex, colIndex)] = value;
+            }
+        }
+        return modelValue;
+    }
     //字典二维数组化
     public static object[,] DictionaryTo2DArray(
         Dictionary<int, List<int>> dictionary,
