@@ -140,7 +140,7 @@ public class PubMetToExcel
             if (sourceCol == null)
                 sourceCol = "";
 
-            var targetCol = ExcelDataAutoInsert.FindSourceCol(targetSheet, 2, sourceCol.ToString());
+            var targetCol = FindSourceCol(targetSheet, 2, sourceCol.ToString());
             if (targetCol == -1)
             {
                 targetSheet.InsertColumn(beforTargetCol + 1, 1);
@@ -194,7 +194,7 @@ public class PubMetToExcel
             if (sourceRow == null)
                 sourceRow = "";
 
-            var targetRow = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, sourceRow.ToString());
+            var targetRow = FindSourceRow(targetSheet, 2, sourceRow.ToString());
             if (targetRow == -1)
             {
                 targetSheet.InsertRow(beforTargetRow + 1, 1);
@@ -230,6 +230,40 @@ public class PubMetToExcel
         }
 
         return targetRowList;
+    }
+
+    public static int FindSourceCol(ExcelWorksheet sheet, int row, string searchValue)
+    {
+        for (var col = 2; col <= sheet.Dimension.End.Column; col++)
+        {
+            var cellValue = sheet.Cells[row, col].Value;
+
+            if (cellValue != null && cellValue.ToString() == searchValue)
+            {
+                var cellAddress = new ExcelCellAddress(row, col);
+                var rowAddress = cellAddress.Column;
+                return rowAddress;
+            }
+        }
+
+        return -1;
+    }
+
+    public static int FindSourceRow(ExcelWorksheet sheet, int col, string searchValue)
+    {
+        for (var row = 2; row <= sheet.Dimension.End.Row; row++)
+        {
+            var cellValue = sheet.Cells[row, col].Value;
+
+            if (cellValue != null && cellValue.ToString() == searchValue)
+            {
+                var cellAddress = new ExcelCellAddress(row, col);
+                var rowAddress = cellAddress.Row;
+                return rowAddress;
+            }
+        }
+
+        return -1;
     }
 
     #endregion
@@ -1214,7 +1248,27 @@ public class PubMetToExcel
         }
         return dictionary;
     }
-
+    //二维数组转二维字典
+    public static  Dictionary<(object, object), string>  Array2DToDic2D(int rowCount, int colCount, dynamic modelRangeValue)
+    {
+        var modelValue = new Dictionary<(object, object), string>();
+        for (int row = 2; row <= rowCount; row++)
+        {
+            for (int col = 2; col <= colCount; col++)
+            {
+                string rowIndex = modelRangeValue[row, 1];
+                string colIndex = modelRangeValue[1, col];
+                if (rowIndex == null || colIndex == null)
+                {
+                    MessageBox.Show("模版表中表头有空值，请检查模版数据是否正确！");
+                    return null ;
+                }
+                string value = modelRangeValue[row, col]?.ToString() ?? "";
+                modelValue[(rowIndex, colIndex)] = value;
+            }
+        }
+        return modelValue;
+    }
     //字典二维数组化
     public static object[,] DictionaryTo2DArray(
         Dictionary<int, List<int>> dictionary,
