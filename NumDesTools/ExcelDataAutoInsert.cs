@@ -29,40 +29,6 @@ public class ExcelDataAutoInsert
         return -1;
     }
 
-    public static int FindSourceCol(ExcelWorksheet sheet, int row, string searchValue)
-    {
-        for (var col = 2; col <= sheet.Dimension.End.Column; col++)
-        {
-            var cellValue = sheet.Cells[row, col].Value;
-
-            if (cellValue != null && cellValue.ToString() == searchValue)
-            {
-                var cellAddress = new ExcelCellAddress(row, col);
-                var rowAddress = cellAddress.Column;
-                return rowAddress;
-            }
-        }
-
-        return -1;
-    }
-
-    public static int FindSourceRow(ExcelWorksheet sheet, int col, string searchValue)
-    {
-        for (var row = 2; row <= sheet.Dimension.End.Row; row++)
-        {
-            var cellValue = sheet.Cells[row, col].Value;
-
-            if (cellValue != null && cellValue.ToString() == searchValue)
-            {
-                var cellAddress = new ExcelCellAddress(row, col);
-                var rowAddress = cellAddress.Row;
-                return rowAddress;
-            }
-        }
-
-        return -1;
-    }
-
     [ExcelFunction(IsHidden = true)]
     public static string ErrorExcelMark(dynamic errorExcelList, dynamic sheet)
     {
@@ -153,7 +119,7 @@ public class ExcelDataAutoInsert
             var excel = new ExcelPackage(new FileInfo(path));
             var workbook = excel.Workbook;
             var sheetTemp = workbook.Worksheets["Sheet1"] ?? workbook.Worksheets[0];
-            var row = FindSourceRow(sheetTemp, 2, findValue);
+            var row = PubMetToExcel.FindSourceRow(sheetTemp, 2, findValue);
             if (row != 0)
             {
                 var newRow = "A" + row;
@@ -433,7 +399,7 @@ public class ExcelDataAutoInsertLanguage
             var rowsToDelete = new List<int>();
             foreach (var id in newIdList)
             {
-                var reDd = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, id);
+                var reDd = PubMetToExcel.FindSourceRow(targetSheet, 2, id);
                 if (reDd != -1)
                     rowsToDelete.Add(reDd);
             }
@@ -452,7 +418,7 @@ public class ExcelDataAutoInsertLanguage
                     errorList.Add((errorExcel, errorExcelLog, fixFileName));
                 }
 
-            var endRowSource = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, fixFileModeId);
+            var endRowSource = PubMetToExcel.FindSourceRow(targetSheet, 2, fixFileModeId);
             if (endRowSource == -1)
             {
                 MessageBox.Show(fixFileModeId + @"目标表中不存在");
@@ -496,7 +462,7 @@ public class ExcelDataAutoInsertLanguage
                 var sourceCount = 0;
                 foreach (var source in sourceKeyList)
                 {
-                    var cellCol = ExcelDataAutoInsert.FindSourceCol(
+                    var cellCol = PubMetToExcel.FindSourceCol(
                         targetSheet,
                         2,
                         fixKeyList[sourceCount]
@@ -892,7 +858,7 @@ public class ExcelDataAutoInsertLanguage
             var rowsToDelete = new List<int>();
             foreach (var id in newIdList)
             {
-                var reDd = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, id);
+                var reDd = PubMetToExcel.FindSourceRow(targetSheet, 2, id);
                 if (reDd != -1)
                     rowsToDelete.Add(reDd);
             }
@@ -950,7 +916,7 @@ public class ExcelDataAutoInsertLanguage
                 var sourceCount = 0;
                 foreach (var source in sourceKeyList)
                 {
-                    var cellCol = ExcelDataAutoInsert.FindSourceCol(
+                    var cellCol = PubMetToExcel.FindSourceCol(
                         targetSheet,
                         2,
                         fixKeyList[sourceCount]
@@ -1491,7 +1457,7 @@ public class ExcelDataAutoInsertMulti
             var startValue = modelId[excelName][excelMulti].Item1[0, 0].ToString();
             var endValue = modelId[excelName][excelMulti].Item1[1, 0].ToString();
 
-            var startRowSource = ExcelDataAutoInsert.FindSourceRow(sheet, 2, startValue);
+            var startRowSource = PubMetToExcel.FindSourceRow(sheet, 2, startValue);
             if (startRowSource == -1)
             {
                 errorExcelLog = excelName + "#【初始模板】#[" + startValue + "]未找到(序号出错)";
@@ -1499,7 +1465,7 @@ public class ExcelDataAutoInsertMulti
                 return errorList;
             }
 
-            var endRowSource = ExcelDataAutoInsert.FindSourceRow(sheet, 2, endValue);
+            var endRowSource = PubMetToExcel.FindSourceRow(sheet, 2, endValue);
             if (endRowSource == -1)
             {
                 errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]未找到(序号出错)";
@@ -1581,7 +1547,7 @@ public class ExcelDataAutoInsertMulti
             string excelKey = fixItem[0, colMulti];
             if (excelKey == null)
                 continue;
-            var excelFileFixKey = ExcelDataAutoInsert.FindSourceCol(sheet, 2, excelKey);
+            var excelFileFixKey = PubMetToExcel.FindSourceCol(sheet, 2, excelKey);
             if (excelFileFixKey == -1)
             {
                 var errorExcelLog = excelName + "#【初始模板】#[" + excelKey + "]未找到(字段出错)";
@@ -1682,7 +1648,7 @@ public class ExcelDataAutoInsertMulti
                     string excelKey = fixItem[0, k];
                     if (excelKey == null)
                         continue;
-                    var excelFileFixKey = ExcelDataAutoInsert.FindSourceCol(sheet, 2, excelKey);
+                    var excelFileFixKey = PubMetToExcel.FindSourceCol(sheet, 2, excelKey);
                     if (excelFileFixKey == -1)
                     {
                         var errorExcelLog = excelName + "#【初始模板】#[" + excelKey + "]未找到(字段出错)";
@@ -1805,8 +1771,8 @@ public class ExcelDataAutoInsertMulti
         {
             var startValue = modelId[excelName][excelMulti].Item1[0, 0].ToString();
             var endValue = modelId[excelName][excelMulti].Item1[1, 0].ToString();
-            var startRowSource = ExcelDataAutoInsert.FindSourceRow(sheet, 2, startValue);
-            var endRowSource = ExcelDataAutoInsert.FindSourceRow(sheet, 2, endValue);
+            var startRowSource = PubMetToExcel.FindSourceRow(sheet, 2, startValue);
+            var endRowSource = PubMetToExcel.FindSourceRow(sheet, 2, endValue);
             if (startRowSource == -1 || endRowSource == -1)
             {
                 var writeIdList2 = new List<string> { startValue + "#" + endValue };
@@ -1892,10 +1858,10 @@ public class ExcelDataAutoInsertCopyMulti
             {
                 var startValue = modelIdNew[excelName][excelMulti].Item1[0, 0].ToString();
                 var endValue = modelIdNew[excelName][excelMulti].Item1[1, 0].ToString();
-                var startRowSource = ExcelDataAutoInsert.FindSourceRow(sourceSheet, 2, startValue);
-                var endRowSource = ExcelDataAutoInsert.FindSourceRow(sourceSheet, 2, endValue);
-                var startRowTarget = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, startValue);
-                var endRowTarget = ExcelDataAutoInsert.FindSourceRow(targetSheet, 2, endValue);
+                var startRowSource = PubMetToExcel.FindSourceRow(sourceSheet, 2, startValue);
+                var endRowSource = PubMetToExcel.FindSourceRow(sourceSheet, 2, endValue);
+                var startRowTarget = PubMetToExcel.FindSourceRow(targetSheet, 2, startValue);
+                var endRowTarget = PubMetToExcel.FindSourceRow(targetSheet, 2, endValue);
                 if (endRowSource - startRowSource > endRowTarget - startRowTarget)
                     for (int i = startRowSource; i <= endRowSource; i++)
                     {
@@ -2106,7 +2072,7 @@ public class ExcelDataAutoInsertCopyMulti
         {
             var startValue = modelIdNew[excelName][excelMulti].Item1[0, 0].ToString();
             var endValue = modelIdNew[excelName][excelMulti].Item1[1, 0].ToString();
-            var startRowSource = ExcelDataAutoInsert.FindSourceRow(sourceSheet, 2, startValue);
+            var startRowSource = PubMetToExcel.FindSourceRow(sourceSheet, 2, startValue);
             string errorExcelLog;
             if (startRowSource == -1)
             {
@@ -2115,7 +2081,7 @@ public class ExcelDataAutoInsertCopyMulti
                 return errorList;
             }
 
-            var endRowSource = ExcelDataAutoInsert.FindSourceRow(sourceSheet, 2, endValue);
+            var endRowSource = PubMetToExcel.FindSourceRow(sourceSheet, 2, endValue);
             if (endRowSource == -1)
             {
                 errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]未找到(序号出错)";

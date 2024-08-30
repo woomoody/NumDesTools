@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using Microsoft.Office.Interop.Excel;
 using MiniExcelLibs;
 using NLua;
 using NumDesTools.UI;
@@ -1302,7 +1303,7 @@ public class PubMetToExcelFunc
         }
 
         var links = wk.LinkSources(XlLink.xlExcelLinks);
-        if (links.Count == 0)
+        if (links == null || links.Length == 0)
         {
             MessageBox.Show("没有检测到有外链公式");
         }
@@ -1330,6 +1331,7 @@ public class PubMetToExcelFunc
 
             if (replaceFixLinks != null)
             {
+                NumDesAddIn.App.ScreenUpdating = false;
                 // 遍历所有工作表
                 foreach (Worksheet worksheet in wk.Worksheets)
                 {
@@ -1364,7 +1366,31 @@ public class PubMetToExcelFunc
                             }
                         }
                     }
+                    // 遍历嵌入在工作表中的图表
+                    foreach (ChartObject chartObject in worksheet.ChartObjects())
+                    {
+                        var chart = chartObject.Chart;
+                        foreach (Series series in chart.SeriesCollection())
+                        {
+                            string formula = series.Formula;
+                            string newFormula = formula;
+                            for (int indexFor = 0; indexFor < needFixLinks.Count; indexFor++)
+                            {
+                                var oldFor = needFixLinks[indexFor];
+                                var newFor = replaceFixLinks[indexFor];
+                                // 替换公式样式
+                                newFormula = newFormula.Replace(oldFor, newFor);
+                            }
+
+                            if (formula != newFormula)
+                            {
+                                // 设置新的公式
+                                series.Formula = newFormula;
+                            }
+                        }
+                    }
                 }
+                NumDesAddIn.App.ScreenUpdating = true;
             }
         }
     }
@@ -1372,10 +1398,17 @@ public class PubMetToExcelFunc
     public static void LoopRunCac(string sheetName)
     {
         var baseName = "转盘奔跑";
+        var a1Row = 42;
+        var a2Row = 66;
+        var startRow = a1Row;
+        if (sheetName == "转盘奔跑 【非大矿】")
+        {
+            startRow = a2Row;
+        }
         if (!sheetName.Contains(baseName))
             MessageBox.Show("当前表格不是【转盘奔跑**】,无法使用转盘奔跑功能");
-        var pointFunc = PubMetToExcel.ReadExcelDataC(sheetName, 29, 40, 2, 4);
-        var checkInfo = PubMetToExcel.ReadExcelDataC(sheetName, 29, 33, 5, 5);
+        var pointFunc = PubMetToExcel.ReadExcelDataC(sheetName, startRow - 13, startRow - 2, 2, 4);
+        var checkInfo = PubMetToExcel.ReadExcelDataC(sheetName, startRow - 13, startRow - 9, 5, 5);
         var checkInfo2List = PubMetToExcel.Array2DDataToList(checkInfo);
         var checkInfoList = PubMetToExcel.List2DToListRowOrCol(checkInfo2List, true);
 
@@ -1394,15 +1427,15 @@ public class PubMetToExcelFunc
             {
                 var averageRange = PubMetToExcel.ReadExcelDataC(
                     sheetName,
-                    42 + (multipleRank - 1) * 21,
-                    42 + (multipleRank - 1) * 21,
+                    startRow + (multipleRank - 1) * 21,
+                    startRow + (multipleRank - 1) * 21,
                     6,
                     7
                 );
                 var maxRollCell = PubMetToExcel.ReadExcelDataC(
                     sheetName,
-                    42 + (multipleRank - 1) * 21,
-                    42 + (multipleRank - 1) * 21,
+                    startRow + (multipleRank - 1) * 21,
+                    startRow + (multipleRank - 1) * 21,
                     9,
                     9
                 );
@@ -1464,8 +1497,8 @@ public class PubMetToExcelFunc
                 var emptyData = new object[10, 1];
                 PubMetToExcel.WriteExcelDataC(
                     sheetName,
-                    44 + (multipleRank - 1) * 21,
-                    53 + (multipleRank - 1) * 21,
+                    startRow + 2 + (multipleRank - 1) * 21,
+                    startRow + 11 + (multipleRank - 1) * 21,
                     3,
                     3,
                     emptyData
@@ -1473,8 +1506,8 @@ public class PubMetToExcelFunc
                 //填写新数据
                 PubMetToExcel.WriteExcelDataC(
                     sheetName,
-                    44 + (multipleRank - 1) * 21,
-                    53 + (multipleRank - 1) * 21,
+                    startRow + 2 + (multipleRank - 1) * 21,
+                    startRow + 11 + (multipleRank - 1) * 21,
                     3,
                     3,
                     pointArrayStr
@@ -1547,7 +1580,7 @@ public class PubMetToExcelFunc
             {
                 if (sheetName.Contains("#"))
                     continue;
-        
+
                 var rows = MiniExcel.Query(changedFile, sheetName: sheetName).ToList();
 
                 var keyRow = rows[1] as IDictionary<string, object>;
@@ -1585,7 +1618,7 @@ public class PubMetToExcelFunc
 
                             var typeCellData = new SelfCellData((typeCell.ToString(), 2, colIndex));
                             var cellData = new SelfCellData((cell, rowIndex + 1, colIndex));
-                            
+
                             //object[]就是：number[](double[])和string[]；如果值里面没有[],默认加上，[]无脑换成{}；
                             //object[][]和table都是table
                             //判断类型是否不是一维数组

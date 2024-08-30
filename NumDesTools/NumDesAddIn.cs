@@ -213,6 +213,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         or "打开表格"
                         or "对话写入"
                         or "打开关联表格"
+                        or "LTE配置导出"
             select tempControl
         )
             try
@@ -334,6 +335,17 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 comButton9.Caption = "打开关联表格";
                 comButton9.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton9.Click += PubMetToExcelFunc.RightOpenLinkExcelByActiveCell;
+            }
+        if (sheetName == "LTE配置【导出】" && target.Column == 2)
+            if (
+                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
+                is CommandBarButton comButton10
+            )
+            {
+                comButton10.Tag = "LTE配置导出";
+                comButton10.Caption = "LTE配置导出";
+                comButton10.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                comButton10.Click += LteData.ExportLteDataConfig;
             }
     }
 
@@ -1621,7 +1633,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         if (wk.Name == "#【A大型活动】数值.xlsx")
         {
-            if (ws.Name.Contains("【设计】"))
+            if (ws.Name.Contains("【基础】"))
             {
                 var uesedRange = ws.UsedRange;
                 App.ScreenUpdating = false;
@@ -1646,7 +1658,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         if (wk.Name == "#【A大型活动】数值.xlsx")
         {
-            if (ws.Name.Contains("【设计】"))
+            if (ws.Name.Contains("【基础】"))
             {
                 if (target != null && !string.IsNullOrWhiteSpace(target.Value2))
                 {
