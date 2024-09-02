@@ -119,7 +119,6 @@ public class LteData
             var nameList = baseData["当前包装"];
             var typeList = baseData["类型"];
             //走【基础】表逻辑
-            LteBaseSheet(idList, nameList, typeList, exportWildcardData, modelValueAll);
         }
         else if (baseSheetName.Contains("【任务】"))
         {
@@ -141,7 +140,6 @@ public class LteData
     {
         Dictionary<string, Dictionary<(object, object), string>> realValueAll;
 
-        Dictionary<(object, object), string> realValue;
 
         //替换通配符生成数据
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
