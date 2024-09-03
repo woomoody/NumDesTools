@@ -57,14 +57,14 @@ public class LteData
         var wildcardCount = (int)ws.Cells[selectRow + 1, selectCol].Value2;
         var wildcardRangeValue = ws.Range[
             ws.Cells[selectRow, selectCol + 13],
-            ws.Cells[selectRow + wildcardCount, selectCol + 14]
+            ws.Cells[selectRow + wildcardCount - 1, selectCol + 14]
         ].Value2;
         for (int row = 1; row <= wildcardCount; row++)
         {
             var wildcardName = wildcardRangeValue[row, 1]?.ToString() ?? "";
             if (wildcardName != "")
             {
-                var wildcardValue = wildcardRangeValue[row, 2].ToString();
+                var wildcardValue = wildcardRangeValue[row, 2]?.ToString() ?? "";
                 exportWildcardData[wildcardName] = wildcardValue;
             }
         }
@@ -119,6 +119,7 @@ public class LteData
             var nameList = baseData["当前包装"];
             var typeList = baseData["类型"];
             //走【基础】表逻辑
+            LteBaseSheet(idList, nameList, typeList, exportWildcardData, modelValueAll);
         }
         else if (baseSheetName.Contains("【任务】"))
         {
@@ -139,13 +140,14 @@ public class LteData
     )
     {
         Dictionary<string, Dictionary<(object, object), string>> realValueAll;
+        var strDictionary = new Dictionary<string, Dictionary<string, List<string>>>();
 
 
         //替换通配符生成数据
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         List<(string, string, string)> errorList = PubMetToExcel.SetExcelObjectEpPlus(
             WkPath,
-            "Type.xlsx",
+            "Item.xlsx",
             out ExcelWorksheet targetSheet,
             out ExcelPackage targetExcel);
 
@@ -159,7 +161,7 @@ public class LteData
             string itemType = typeList[i].ToString();
             string itemName = nameList[i].ToString();
 
-            var defaultIndex = new List<string> { itemIndex, itemName };
+            var defaultItem = new List<string> { itemIndex , itemName , itemType };
             
             var writeRow = targetSheet.Dimension.End.Row;
             var writeCol = targetSheet.Dimension.End.Column;
@@ -169,17 +171,18 @@ public class LteData
                 if (cellTitle == "")
                     continue;
                 // 使用 LINQ 查询判断字典中是否包含指定的值
-                bool containsValue = modelValueAll["Type.xlsx"]
+                bool containsValue = modelValueAll["Item.xlsx"]
                     .Keys.Any(key => key.Item1.Equals(itemType) && key.Item2.Equals(cellTitle));
 
                 if (containsValue)
                 {
-                    var cellModelValue = modelValueAll["Type.xlsx"][(itemType, cellTitle)];
+                    var cellModelValue = modelValueAll["Item.xlsx"][(itemType, cellTitle)];
                     //分析cellModelValue中的通配符
                     var cellRealValue = AnalyzeWildcard(
                         cellModelValue,
                         exportWildcardData,
-                        defaultIndex);
+                        defaultItem,
+                        strDictionary);
 
                     var cell = targetSheet.Cells[writeRow + 1, j];
                     cell.Value = cellRealValue;
@@ -197,8 +200,8 @@ public class LteData
     private static string AnalyzeWildcard(
         string cellModelValue,
         Dictionary<string, string> exportWildcardData,
-        List<string> defaultIndex
-    )
+        List<string> defaultItem,
+        Dictionary<string , Dictionary<string , List<string>>> strDictionary)
     {
         string fixWildcardValue = "";
         string cellRealValue = cellModelValue;
@@ -219,12 +222,34 @@ public class LteData
                     fixWildcardValue = SetString(exportWildcardData, "物品名称编号");
                     cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
                     break;
+                case "物品图鉴组编号":
+                    var valueDic = SetStringDic(exportWildcardData, "物品图鉴组编号");
+                    fixWildcardValue = valueDic.Item1;
+                    var fixWildcardValue2 = valueDic.Item2;
+                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
+                    //初始化字典
+                    InitializeDictionary(strDictionary, "物品图鉴组编号", fixWildcardValue);
+                    //添加值
+                    strDictionary["物品图鉴组编号"][fixWildcardValue].Add(fixWildcardValue2);
+                    break;
                 case "物品编号":
-                    fixWildcardValue = GetString(exportWildcardData, "物品编号", defaultIndex);
+                    fixWildcardValue = GetString(exportWildcardData, "物品编号", defaultItem);
                     cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
                     break;
                 case "物品备注":
-                    fixWildcardValue = GetString(exportWildcardData, "物品名称", defaultIndex);
+                    fixWildcardValue = GetString(exportWildcardData, "物品名称", defaultItem);
+                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
+                    break;
+                case "物品类型":
+                    fixWildcardValue = GetString(exportWildcardData, "物品类型", defaultItem);
+                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
+                    break;
+                case "合成结果编号":
+                    fixWildcardValue = MergeString(exportWildcardData, "合成结果编号", defaultItem);
+                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
+                    break;
+                case "合成返还编号":
+                    fixWildcardValue = MergeReturnString(exportWildcardData, "合成返还编号", defaultItem);
                     cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
                     break;
                 default:
@@ -236,6 +261,22 @@ public class LteData
             }
         }
         return cellRealValue;
+    }
+    //自定义字典初始化
+    private static void InitializeDictionary(
+        Dictionary<string, Dictionary<string, List<string>>> strDictionary,
+        string outerKey,
+        string innerKey)
+    {
+        if (!strDictionary.ContainsKey(outerKey))
+        {
+            strDictionary[outerKey] = new Dictionary<string, List<string>>();
+        }
+
+        if (!strDictionary[outerKey].ContainsKey(innerKey))
+        {
+            strDictionary[outerKey][innerKey] = new List<string>();
+        }
     }
 
     //截取字符串
@@ -309,7 +350,42 @@ public class LteData
         }
         return result;
     }
+    //重置字符串，并生成字典
+    private static Tuple<string , string> SetStringDic(
+        Dictionary<string, string> exportWildcardData,
+        string targetType)
+    {
+        var pattern = exportWildcardData[targetType];
+        var splitResult = Regex.Split(pattern, "#");
+        //设置默认值
+        int setLength;
+        string setText;
+        string setDepend = splitResult[1];
+        if (splitResult.Length == 2)
+        {
+            setLength = 2;
+            setText = "00";
+        }
+        else if (splitResult.Length == 3)
+        {
+            setLength = int.Parse(splitResult[2]);
+            setText = "00";
+        }
+        else
+        {
+            setLength = int.Parse(splitResult[2]);
+            setText = splitResult[3];
+        }
 
+        var result = exportWildcardData[setDepend];
+        if (splitResult[0] == "Set")
+        {
+            result = result.Substring(0, result.Length - setLength);
+            result += setText;
+        }
+        var resultTuple = new Tuple<string, string>(result , exportWildcardData[setDepend] );
+        return resultTuple;
+    }
     //获取字符串
     private static string GetString(
         Dictionary<string, string> exportWildcardData,
@@ -325,7 +401,101 @@ public class LteData
         {
             exportWildcardData[targetType] = defaultIndex[1];
         }
+        else if (targetType == "物品类型")
+        {
+            exportWildcardData[targetType] = defaultIndex[2];
+        }
         string result = exportWildcardData[targetType];
         return result;
+    }
+    //合并字符串
+    private static string MerString(
+        Dictionary<string, string> exportWildcardData,
+        string targetType
+    )
+    {
+        var pattern = exportWildcardData[targetType];
+        var splitResult = Regex.Split(pattern, "#");
+        //设置默认值
+        int mergeAdd;
+        string mergeDepend = splitResult[1];
+        if (splitResult.Length == 2)
+        {
+            mergeAdd = 1;
+
+        }
+        else
+        {
+            mergeAdd = int.Parse(splitResult[2]);
+        }
+
+        var result = long.Parse(exportWildcardData[mergeDepend]);
+        if (splitResult[0] == "Mer")
+        {
+            result  += mergeAdd;
+        }
+        return result.ToString();
+    }
+    //合并蛛网字符串
+    private static string MerSpiString(
+        Dictionary<string, string> exportWildcardData,
+        string targetType
+    )
+    {
+        var pattern = exportWildcardData[targetType];
+        var splitResult = Regex.Split(pattern, "#");
+        //设置默认值
+        int mergeAdd;
+        int mergeFix;
+        string mergeDepend = splitResult[1];
+        if (splitResult.Length == 2)
+        {
+            mergeAdd = 1;
+            mergeFix = 30;
+        }
+        else if (splitResult.Length == 3)
+        {
+            mergeAdd = int.Parse(splitResult[2]);
+            mergeFix = 30;
+        }
+        else
+        {
+            mergeAdd = int.Parse(splitResult[2]);
+            mergeFix = int.Parse(splitResult[3]);
+        }
+
+        var result = long.Parse(exportWildcardData[mergeDepend]);
+        if (splitResult[0] == "MerPri")
+        {
+            result = result + mergeAdd - mergeFix;
+        }
+        return result.ToString();
+    }
+    //合并返回字符串
+    private static string MerReString(
+        Dictionary<string, string> exportWildcardData,
+        string targetType
+    )
+    {
+        var pattern = exportWildcardData[targetType];
+        var splitResult = Regex.Split(pattern, "#");
+        //设置默认值
+        int mergeFix;
+        string mergeDepend = splitResult[1];
+        if (splitResult.Length == 2)
+        {
+            mergeFix = 30;
+        }
+        else
+        {
+            mergeFix = int.Parse(splitResult[2]);
+        }
+
+        var result = long.Parse(exportWildcardData[mergeDepend]);
+        if (splitResult[0] == "MerRe")
+        {
+            result = result - mergeFix;
+        }
+        return result.ToString();
     }
 }
