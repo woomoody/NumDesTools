@@ -57,14 +57,14 @@ public class LteData
         var wildcardCount = (int)ws.Cells[selectRow + 1, selectCol].Value2;
         var wildcardRangeValue = ws.Range[
             ws.Cells[selectRow, selectCol + 13],
-            ws.Cells[selectRow + wildcardCount - 1, selectCol + 14]
+            ws.Cells[selectRow + wildcardCount, selectCol + 14]
         ].Value2;
         for (int row = 1; row <= wildcardCount; row++)
         {
             var wildcardName = wildcardRangeValue[row, 1]?.ToString() ?? "";
             if (wildcardName != "")
             {
-                var wildcardValue = wildcardRangeValue[row, 2]?.ToString() ?? "";
+                var wildcardValue = wildcardRangeValue[row, 2].ToString();
                 exportWildcardData[wildcardName] = wildcardValue;
             }
         }
@@ -151,7 +151,7 @@ public class LteData
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         List<(string, string, string)> errorList = PubMetToExcel.SetExcelObjectEpPlus(
             WkPath,
-            "Item.xlsx",
+            "Type.xlsx",
             out ExcelWorksheet targetSheet,
             out ExcelPackage targetExcel
         );
