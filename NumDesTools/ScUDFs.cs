@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using System.Windows.Documents;
 using Newtonsoft.Json;
 using NPOI.XSSF.UserModel;
 using static System.String;
@@ -452,6 +453,7 @@ public class ExcelUdf
         // 如果匹配项存在，则返回其值，否则返回空字符串
         return match?.Value ?? string.Empty;
     }
+
     [ExcelFunction(
         Category = "UDF-字符串提取数字",
         IsVolatile = true,
@@ -460,17 +462,16 @@ public class ExcelUdf
     )]
     public static object[] GetStrStructFromStrArray(
         [ExcelArgument(AllowReference = true, Name = "单元格索引", Description = "输入字符串")]
-        object[,] inputValue,
+            object[,] inputValue,
         [ExcelArgument(AllowReference = true, Name = "分割符", Description = @"默认为逗号")]
-        string delimiter
+            string delimiter
     )
     {
-
         if (delimiter == "")
         {
             delimiter = ",";
         }
-        
+
         var matchesList = new List<string>();
         foreach (var value in inputValue)
         {
@@ -484,7 +485,7 @@ public class ExcelUdf
                 matchesList.Add(num);
             }
         }
-      
+
         return matchesList.ToArray();
     }
 
@@ -740,25 +741,25 @@ public class ExcelUdf
     }
 
     [ExcelFunction(
-    Category = "UDF-组装字符串",
-    IsVolatile = true,
-    IsMacroType = true,
-    Description = "拼接Range：Range数据转为Json"
-)]
+        Category = "UDF-组装字符串",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "拼接Range：Range数据转为Json"
+    )]
     public static string CreatRangeToJson(
-    [ExcelArgument(
+        [ExcelArgument(
             AllowReference = true,
             Description = "Range&Cell,eg:A1:A2",
             Name = "第一单元格范围"
         )]
             object[,] rangeObj1,
-    [ExcelArgument(
+        [ExcelArgument(
             AllowReference = true,
             Description = "Range&Cell,eg:A1:A2",
             Name = "第二单元格范围"
         )]
             object[,] rangeObj2
-)
+    )
     {
         // 创建一个包含两个数组的对象
         var gridDataList = new object[rangeObj1.GetLength(0) * rangeObj1.GetLength(1)];
@@ -787,6 +788,7 @@ public class ExcelUdf
 
         return json;
     }
+
     [ExcelFunction(
         Category = "UDF-数组转置",
         IsVolatile = true,
@@ -1073,7 +1075,6 @@ public class ExcelUdf
 
         for (var row = 0; row < rowCount - 1; row++)
         {
-     
             for (var col = 0; col < colCount; col++)
             {
                 object linksNumResult = rangeObj1[row, col];
@@ -1089,7 +1090,7 @@ public class ExcelUdf
                         linksNum += addLinksNum;
                         addLinksNum = (int)(linksNum / 2.5);
                         //倒数第2链或者大于等于5时才合成的积分
-                        if (row >= linksMax - 3 || linksNum >=5)
+                        if (row >= linksMax - 3 || linksNum >= 5)
                         {
                             mergeScoreTotalCount += addLinksNum * linksScore;
                         }
@@ -1099,5 +1100,47 @@ public class ExcelUdf
         }
 
         return mergeScoreTotalCount;
+    }
+
+    [ExcelFunction(
+        Category = "UDF-Alice专属函数",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "针对Alice项目特制的自定义函数-计算合成N个M阶链消耗",
+        Name = "AliceCountLinksMax"
+    )]
+    public static double AliceCountLinksMax(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "链最大等级")]
+            int rangeObjMax,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "链最大等级需要数量")]
+            int rangeObjMaxCount,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "合成类型")]
+            double mergeType,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "链1已有数量")]
+            double rangeObj1,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "链2已有数量")]
+            double rangeObj2,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "链3已有数量")]
+            double rangeObj3,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "链4已有数量")]
+            double rangeObj4
+    )
+    {
+        double baseLinkCount = rangeObjMaxCount;
+        var hasLinks = new List<double> { rangeObj4, rangeObj3, rangeObj2, rangeObj1 };
+
+        for (var row = 1; row < rangeObjMax; row++)
+        {
+            if (row >= rangeObjMax - 3)
+            {
+                baseLinkCount = Math.Ceiling(baseLinkCount  * mergeType) - hasLinks[row - (rangeObjMax - 4)];
+            }
+            else
+            {
+                baseLinkCount = Math.Ceiling(baseLinkCount  * mergeType);
+            }
+        }
+
+        return baseLinkCount;
     }
 }

@@ -3,8 +3,10 @@ using System.Reflection.Metadata.Ecma335;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using NPOI.OpenXmlFormats.Dml.Diagram;
+using NPOI.SS.Formula.Functions;
 using OfficeOpenXml;
 using OfficeOpenXml.DataValidation;
+using Match = System.Text.RegularExpressions.Match;
 
 namespace NumDesTools;
 
@@ -157,6 +159,7 @@ public class LteData
 
             var exportWildcardDyData = new Dictionary<string, string>(exportWildcardData);
 
+
             for (int idCount = 0; idCount < idList.Count; idCount++)
             {
                 string itemId = idList[idCount]?.ToString() ?? "";
@@ -165,6 +168,11 @@ public class LteData
                 string itemType = typeList[idCount]?.ToString() ?? "";
 
                 var writeRow = targetSheet.Dimension.End.Row + 1;
+                //更新动态值
+                foreach (var wildcardDy in exportWildcardData)
+                {
+                    GetDyWildcardValue(baseData, exportWildcardDyData, wildcardDy.Key, wildcardDy.Value, idCount);
+                }
 
                 for (int j = 2; j <= writeCol; j++)
                 {
@@ -236,6 +244,7 @@ public class LteData
 
             string fixWildcardValue = funName switch
             {
+                //根据动态或静态值计算值
                 "Left" => Left(exportWildcardDyData, funDepends, funDy1),
                 "Right" => Right(exportWildcardDyData, funDepends, funDy1),
                 "Set" => Set(exportWildcardDyData, funDepends, funDy1, funDy2),
@@ -250,7 +259,10 @@ public class LteData
                     ),
                 "Mer" => Mer(exportWildcardDyData, funDepends, funDy1),
                 "MerB" => MerB(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3),
-                "Var" => Var(baseData, exportWildcardDyData, wildcard, funDepends, idCount),
+                "Ads" => Ads(exportWildcardDyData, funDepends, funDy1 ,baseData , idCount),
+                //获取动态值
+                "Var" => exportWildcardDyData[wildcard],
+                //获取静态值
                 _ => exportWildcardData[wildcard]
             };
 
@@ -349,19 +361,49 @@ public class LteData
         }
         return result;
     }
-    private static string Var(
-        Dictionary<string, List<object>> baseData,
+    private static string Ads(
         Dictionary<string, string> exportWildcardDyData,
-        string wildcard,
         string funDepends,
+        string funDy1,
+        Dictionary<string, List<object>> baseData,
         int idCount
     )
     {
-        string fixWildcardValue = baseData[funDepends][idCount].ToString();
-        exportWildcardDyData[wildcard] = fixWildcardValue;
-        return fixWildcardValue;
-    }
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "链类最大值" : funDy1;
+        string rootNum = exportWildcardDyData[funDepends].Substring(0 , exportWildcardDyData[funDepends].Length - 2) + "00";
+        int baseValue = int.Parse(exportWildcardDyData[funDepends].Substring(exportWildcardDyData[funDepends].Length - 1 , 1));
+        int baseMax = int.Parse(exportWildcardDyData[funDy1]);
+        if (baseMax == 0)
+        {
+            MessageBox.Show($"{rootNum}物品应该不属于链");
+        }
+        var loopNum = LoopNumber(baseValue, baseMax);
+        string result = "";
+        foreach (var num in loopNum)
+        {
+            var digNum = (long.Parse(rootNum) + num).ToString();
+            result += digNum + ",";
+        }
 
+        result = result.Substring(0, result.Length - 1);
+        result = $"{result}";
+
+        return result;
+    }
+    //获取动态值
+    private static void GetDyWildcardValue(Dictionary<string, List<object>> baseData,
+        Dictionary<string, string> exportWildcardDyData,
+        string wildcard,
+        string funDepends,
+        int idCount)
+    {
+        if (funDepends.Contains("Var"))
+        {
+            var wildcardValueSplit = Regex.Split(funDepends, "#");
+            string fixWildcardValue = baseData[wildcardValueSplit[1]][idCount].ToString();
+            exportWildcardDyData[wildcard] = fixWildcardValue;
+        }
+    }
     //自定义字典初始化
     private static void InitializeDictionary(
         Dictionary<string, Dictionary<string, List<string>>> strDictionary,
@@ -377,5 +419,20 @@ public class LteData
         {
             strDictionary[key][subKey] = new List<string>();
         }
+    }
+    //循环数字
+    private static List<int> LoopNumber(int start, int max)
+    {
+        List<int> sequence = new List<int>();
+
+
+        for (int i = 1; i <= max; i++)
+        {
+            var modValue = ((start - 1) % max) + 1;
+            start++; 
+            sequence.Add(modValue);
+        }
+
+        return sequence;
     }
 }
