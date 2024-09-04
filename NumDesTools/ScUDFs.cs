@@ -447,10 +447,7 @@ public class ExcelUdf
         {
             numCount = matches.Count;
         }
-        // 使用 ElementAtOrDefault 安全地获取匹配项
-        var match = matches.ElementAtOrDefault(numCount - 1);
-        // 如果匹配项存在，则返回其值，否则返回空字符串
-        return match?.Value ?? string.Empty;
+        return matches[numCount - 1].ToString();
     }
     [ExcelFunction(
         Category = "UDF-字符串提取数字",
