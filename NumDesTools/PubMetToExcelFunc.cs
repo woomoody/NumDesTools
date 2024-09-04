@@ -1724,6 +1724,14 @@ public class PubMetToExcelFunc
                     int cellCol = cell.Column;
 
                     sourceData.Add((cellValue, cellRow, cellCol));
+
+                    //替换字符串
+                    var replaceedValue = "";
+                    for (int i = 0 ; i < specialChars.Length; i++) 
+                    {
+                        cellValue = cellValue.Replace(specialChars[i], replaceedValue);
+                    }
+                    cell.Value2 = cellValue;
                 }
             }
             if (sourceRange.Count == 0)
