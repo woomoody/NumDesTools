@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Reflection.Metadata.Ecma335;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using NPOI.OpenXmlFormats.Dml.Diagram;
@@ -115,14 +116,8 @@ public class LteData
         //分功能处理导出
         if (baseSheetName.Contains("【基础】"))
         {
-            var idList = baseData["ID"];
-            var nameList = baseData["当前包装"];
-            var typeList = baseData["类型"];
-            var linkMaxList = baseData["链长"];
-            var areaList = baseData["首次出现"];
-
             //走【基础】表逻辑
-            LteBaseSheet(idList, nameList, typeList, linkMaxList , areaList , exportWildcardData, modelValueAll) ;
+            BaseSheet(baseData, exportWildcardData, modelValueAll);
         }
         else if (baseSheetName.Contains("【任务】"))
         {
@@ -134,12 +129,8 @@ public class LteData
         NumDesAddIn.App.StatusBar = "导出完成，用时：" + ts2;
     }
 
-    private static void LteBaseSheet(
-        List<object> idList,
-        List<object> nameList,
-        List<object> typeList,
-        List<object> linkMaxList,
-        List<object> areaList,
+    private static void BaseSheet(
+        Dictionary<string, List<object>> baseData,
         Dictionary<string, string> exportWildcardData,
         Dictionary<string, Dictionary<(object, object), string>> modelValueAll
     )
@@ -149,54 +140,65 @@ public class LteData
 
         //替换通配符生成数据
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-        List<(string, string, string)> errorList = PubMetToExcel.SetExcelObjectEpPlus(
-            WkPath,
-            "Type.xlsx",
-            out ExcelWorksheet targetSheet,
-            out ExcelPackage targetExcel
-        );
-
-        for (int i = 0; i < idList.Count; i++)
+        foreach (var modelSheet in modelValueAll)
         {
-            string itemIndex = idList[i]?.ToString() ?? "";
-            if (itemIndex == "")
-                continue;
+            string modelSheetName = modelSheet.Key;
 
-            string itemType = typeList[i].ToString();
-            string itemName = nameList[i].ToString();
-            int itemLinkMax = (int)linkMaxList[i];
+            List<(string, string, string)> errorList = PubMetToExcel.SetExcelObjectEpPlus(
+                WkPath,
+                modelSheetName,
+                out ExcelWorksheet targetSheet,
+                out ExcelPackage targetExcel
+            );
+            var idList = baseData["ID"];
+            var typeList = baseData["类型"];
 
-            var defaultItem = new List<string> { itemIndex, itemName, itemType };
-
-            var writeRow = targetSheet.Dimension.End.Row;
             var writeCol = targetSheet.Dimension.End.Column;
-            for (int j = 2; j <= writeCol; j++)
-            {
-                var cellTitle = targetSheet.Cells[2, j].Value?.ToString() ?? "";
-                if (cellTitle == "")
-                    continue;
-                // 使用 LINQ 查询判断字典中是否包含指定的值
-                bool containsValue = modelValueAll["Item.xlsx"]
-                    .Keys.Any(key => key.Item1.Equals(itemType) && key.Item2.Equals(cellTitle));
 
-                if (containsValue)
+            var exportWildcardDyData = new Dictionary<string, string>(exportWildcardData);
+
+            for (int idCount = 0; idCount < idList.Count; idCount++)
+            {
+                string itemId = idList[idCount]?.ToString() ?? "";
+                if (itemId == "")
+                    continue;
+                string itemType = typeList[idCount]?.ToString() ?? "";
+
+                var writeRow = targetSheet.Dimension.End.Row + 1;
+
+                for (int j = 2; j <= writeCol; j++)
                 {
-                    var cellModelValue = modelValueAll["Item.xlsx"][(itemType, cellTitle)];
-                    //分析cellModelValue中的通配符
-                    var cellRealValue = AnalyzeWildcard(
-                        cellModelValue,
-                        exportWildcardData,
-                        defaultItem,
-                        strDictionary
+                    var cellTitle = targetSheet.Cells[2, j].Value?.ToString() ?? "";
+                    if (cellTitle == "")
+                        continue;
+                    // 使用 LINQ 查询判断字典中是否包含指定的值
+                    bool containsValue = modelSheet.Value.Keys.Any(key =>
+                        key.Item1.Equals(itemType) && key.Item2.Equals(cellTitle)
                     );
 
-                    var cell = targetSheet.Cells[writeRow + 1, j];
-                    cell.Value = cellRealValue;
+                    if (containsValue)
+                    {
+                        var cellModelValue = modelSheet.Value[(itemType, cellTitle)];
+                        //分析cellModelValue中的通配符
+                        var cellRealValue = AnalyzeWildcard(
+                            cellModelValue,
+                            exportWildcardData,
+                            exportWildcardDyData,
+                            baseData,
+                            idCount,
+                            strDictionary
+                        );
+
+                        var cell = targetSheet.Cells[writeRow, j];
+                        cell.Value = cellRealValue;
+                    }
                 }
             }
+            targetExcel.Save();
+            targetSheet.Dispose();
+
+            NumDesAddIn.App.StatusBar = $"导出：{modelSheetName}";
         }
-        targetExcel.Save();
-        targetSheet.Dispose();
     }
 
     private static void TaskSheet(string specialCharsStr) { }
@@ -205,266 +207,175 @@ public class LteData
     private static string AnalyzeWildcard(
         string cellModelValue,
         Dictionary<string, string> exportWildcardData,
-        List<string> defaultItem,
+        Dictionary<string, string> exportWildcardDyData,
+        Dictionary<string, List<object>> baseData,
+        int idCount,
         Dictionary<string, Dictionary<string, List<string>>> strDictionary
     )
     {
-        string fixWildcardValue = "";
         string cellRealValue = cellModelValue;
-        string pattern = "#(.*?)#";
+        string wildcardPattern = "#(.*?)#";
+        string wildcardValuePattern = "#";
 
-        MatchCollection matches = Regex.Matches(cellModelValue, pattern);
+        MatchCollection matches = Regex.Matches(cellModelValue, wildcardPattern);
 
         foreach (Match match in matches)
         {
             var wildcard = match.Groups[1].Value;
-            switch (wildcard)
+            if (!exportWildcardData.TryGetValue(wildcard, out var wildcardValue))
             {
-                //动态值基础上计算值
-                case "物品详细类型":
-                    fixWildcardValue = CutString(exportWildcardData, "物品详细类型");
-                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
-                    break;
-                case "物品名称编号":
-                    fixWildcardValue = SetString(exportWildcardData, "物品名称编号");
-                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
-                    break;
-                case "物品图鉴组编号":
-                    var valueDic = SetStringDic(exportWildcardData, "物品图鉴组编号");
-                    fixWildcardValue = valueDic.Item1;
-                    var fixWildcardValue2 = valueDic.Item2;
-                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
-                    //初始化字典
-                    InitializeDictionary(strDictionary, "物品图鉴组编号", fixWildcardValue);
-                    //添加值
-                    strDictionary["物品图鉴组编号"][fixWildcardValue].Add(fixWildcardValue2);
-                    break;
-                case "合成结果编号":
-                    fixWildcardValue = MerString(exportWildcardData, "合成结果编号");
-                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
-                    break;
-                case "合成结果编号（蛛网）":
-                    fixWildcardValue = MerSpiString(exportWildcardData, "合成结果编号（蛛网）");
-                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
-                    break;
-                case "合成返还编号":
-                    fixWildcardValue = MerReString(exportWildcardData, "合成返还编号");
-                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
-                    break;
-                case "建造转换编号":
-                    fixWildcardValue = BuildString(exportWildcardData, "建造转换编号");
-                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
-                    break;
-                case "物品吸附":
-                    fixWildcardValue = AdsString(exportWildcardData, "物品吸附");
-                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
-                    break;
-
-                //获取动态值
-                case "物品编号":
-                    fixWildcardValue = GetString(exportWildcardData, "物品编号", defaultItem);
-                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
-                    break;
-                case "物品备注":
-                    fixWildcardValue = GetString(exportWildcardData, "物品名称", defaultItem);
-                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
-                    break;
-                case "物品类型":
-                    fixWildcardValue = GetString(exportWildcardData, "物品类型", defaultItem);
-                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
-                    break;
-                case "链类最大值":
-                    fixWildcardValue = GetString(exportWildcardData, "链类最大值", defaultItem);
-                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
-                    break;
-                case "物品区域":
-                    fixWildcardValue = GetString(exportWildcardData, "物品区域", defaultItem);
-                    cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
-                    break;
-
-                //获取静态默认值
-                default:
-                    cellRealValue = cellRealValue.Replace(
-                        $"#{wildcard}#",
-                        exportWildcardData[wildcard]
-                    );
-                    break;
+                continue;
             }
+
+            var wildcardValueSplit = Regex.Split(wildcardValue, wildcardValuePattern);
+            string funName = wildcardValueSplit.ElementAtOrDefault(0) ?? "";
+            string funDepends = wildcardValueSplit.ElementAtOrDefault(1) ?? "物品编号";
+            string funDy1 = wildcardValueSplit.ElementAtOrDefault(2) ?? "";
+            string funDy2 = wildcardValueSplit.ElementAtOrDefault(3) ?? "";
+            string funDy3 = wildcardValueSplit.ElementAtOrDefault(4) ?? "";
+
+            string fixWildcardValue = funName switch
+            {
+                "Left" => Left(exportWildcardDyData, funDepends, funDy1),
+                "Right" => Right(exportWildcardDyData, funDepends, funDy1),
+                "Set" => Set(exportWildcardDyData, funDepends, funDy1, funDy2),
+                "SetDic"
+                    => SetDic(
+                        exportWildcardDyData,
+                        strDictionary,
+                        wildcard,
+                        funDepends,
+                        funDy1,
+                        funDy2
+                    ),
+                "Mer" => Mer(exportWildcardDyData, funDepends, funDy1),
+                "MerB" => MerB(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3),
+                "Var" => Var(baseData, exportWildcardDyData, wildcard, funDepends, idCount),
+                _ => exportWildcardData[wildcard]
+            };
+
+            cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
         }
+
         return cellRealValue;
+    }
+
+    private static string Left(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1
+    )
+    {
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "2" : funDy1;
+        return exportWildcardDyData[funDepends].Substring(0, int.Parse(funDy1));
+    }
+
+    private static string Right(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1
+    )
+    {
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "2" : funDy1;
+        return exportWildcardDyData[funDepends]
+            .Substring(
+                exportWildcardDyData[funDepends].Length - int.Parse(funDy1),
+                int.Parse(funDy1)
+            );
+    }
+
+    private static string Set(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1,
+        string funDy2
+    )
+    {
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "2" : funDy1;
+        funDy2 = string.IsNullOrEmpty(funDy2) ? "00" : funDy2;
+        return exportWildcardDyData[funDepends]
+                .Substring(0, exportWildcardDyData[funDepends].Length - int.Parse(funDy1)) + funDy2;
+    }
+
+    private static string SetDic(
+        Dictionary<string, string> exportWildcardDyData,
+        Dictionary<string, Dictionary<string, List<string>>> strDictionary,
+        string wildcard,
+        string funDepends,
+        string funDy1,
+        string funDy2
+    )
+    {
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "2" : funDy1;
+        funDy2 = string.IsNullOrEmpty(funDy2) ? "00" : funDy2;
+        string fixWildcardValue = Set(exportWildcardDyData, funDepends, funDy1, funDy2);
+        InitializeDictionary(strDictionary, wildcard, fixWildcardValue);
+        strDictionary[wildcard][fixWildcardValue].Add(exportWildcardDyData[funDepends]);
+        return fixWildcardValue;
+    }
+
+    private static string Mer(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1
+    )
+    {
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "1" : funDy1;
+        return (long.Parse(exportWildcardDyData[funDepends]) + int.Parse(funDy1)).ToString(); ;
+    }
+    private static string MerB(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1,
+        string funDy2,
+        string funDy3
+    )
+    {
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "1" : funDy1;
+        funDy2 = string.IsNullOrEmpty(funDy1) ? "3" : funDy2;
+        funDy3 = string.IsNullOrEmpty(funDy1) ? "10" : funDy3;
+        var baseValue = exportWildcardDyData[funDepends]
+            .Substring(exportWildcardDyData[funDepends].Length - 1, 1);
+        string result;
+        if (int.Parse(baseValue) + int.Parse(funDy1) <= int.Parse(funDy2))
+        {
+            result = (long.Parse(exportWildcardDyData[funDepends]) + int.Parse(funDy1)).ToString();
+        }
+        else
+        {
+            result = (
+                long.Parse(exportWildcardDyData[funDepends]) + int.Parse(funDy1) + int.Parse(funDy3)
+            ).ToString();
+        }
+        return result;
+    }
+    private static string Var(
+        Dictionary<string, List<object>> baseData,
+        Dictionary<string, string> exportWildcardDyData,
+        string wildcard,
+        string funDepends,
+        int idCount
+    )
+    {
+        string fixWildcardValue = baseData[funDepends][idCount].ToString();
+        exportWildcardDyData[wildcard] = fixWildcardValue;
+        return fixWildcardValue;
     }
 
     //自定义字典初始化
     private static void InitializeDictionary(
         Dictionary<string, Dictionary<string, List<string>>> strDictionary,
-        string outerKey,
-        string innerKey
+        string key,
+        string subKey
     )
     {
-        if (!strDictionary.ContainsKey(outerKey))
+        if (!strDictionary.ContainsKey(key))
         {
-            strDictionary[outerKey] = new Dictionary<string, List<string>>();
+            strDictionary[key] = new Dictionary<string, List<string>>();
         }
-
-        if (!strDictionary[outerKey].ContainsKey(innerKey))
+        if (!strDictionary[key].ContainsKey(subKey))
         {
-            strDictionary[outerKey][innerKey] = new List<string>();
+            strDictionary[key][subKey] = new List<string>();
         }
-    }
-
-    //截取字符串
-    private static string CutString(
-        Dictionary<string, string> exportWildcardData,
-        string targetType
-    )
-    {
-        return ProcessString(
-            exportWildcardData,
-            targetType,
-            (result, dynamicParam1, _) => result.Substring(0, dynamicParam1),
-            8
-        );
-    }
-
-    //重置字符串
-    private static string SetString(
-        Dictionary<string, string> exportWildcardData,
-        string targetType
-    )
-    {
-        return ProcessString(
-            exportWildcardData,
-            targetType,
-            (result, dynamicParam1, _) => result.Substring(0, result.Length - dynamicParam1) + "00",
-            2
-        );
-    }
-
-    //重置字符串（元组化）
-    private static Tuple<string, string> SetStringDic(
-        Dictionary<string, string> exportWildcardData,
-        string targetType
-    )
-    {
-        var result = SetString(exportWildcardData, targetType);
-        return new Tuple<string, string>(result, exportWildcardData[targetType]);
-    }
-    
-    //合成字符串
-    private static string MerString(
-        Dictionary<string, string> exportWildcardData,
-        string targetType
-    )
-    {
-        return ProcessString(
-            exportWildcardData,
-            targetType,
-            (result, dynamicParam1, _) => (long.Parse(result) + dynamicParam1).ToString(),
-            1
-        );
-    }
-
-    //合成蛛网字符串
-    private static string MerSpiString(
-        Dictionary<string, string> exportWildcardData,
-        string targetType
-    )
-    {
-        return ProcessString(
-            exportWildcardData,
-            targetType,
-            (result, dynamicParam1, dynamicParam2) =>
-                (long.Parse(result) + dynamicParam1 - dynamicParam2).ToString(),
-            1,
-            30
-        );
-    }
-
-    //合成返回字符串
-    private static string MerReString(
-        Dictionary<string, string> exportWildcardData,
-        string targetType
-    )
-    {
-        return ProcessString(
-            exportWildcardData,
-            targetType,
-            (result, dynamicParam1, _) => (long.Parse(result) - dynamicParam1).ToString(),
-            30
-        );
-    }
-
-    //建造字符串
-    private static string BuildString(
-        Dictionary<string, string> exportWildcardData,
-        string targetType
-    )
-    {
-        return ProcessString(
-            exportWildcardData,
-            targetType,
-            (result, dynamicParam1, _) => (long.Parse(result) - dynamicParam1).ToString(),
-            10
-        );
-    }
-
-    //建造字符串
-    private static string AdsString(
-        Dictionary<string, string> exportWildcardData,
-        string targetType
-    )
-    {
-        return ProcessString(
-            exportWildcardData,
-            targetType,
-            (result, dynamicParam1, _) => (long.Parse(result) - dynamicParam1).ToString(),
-            10
-        );
-    }
-
-    //获取动态字符串
-    private static string GetString(
-        Dictionary<string, string> exportWildcardData,
-        string targetType,
-        List<string> defaultIndex
-    )
-    {
-        if (targetType == "物品编号")
-        {
-            exportWildcardData[targetType] = defaultIndex[0];
-        }
-        else if (targetType == "物品名称")
-        {
-            exportWildcardData[targetType] = defaultIndex[1];
-        }
-        else if (targetType == "物品类型")
-        {
-            exportWildcardData[targetType] = defaultIndex[2];
-        }
-        else if (targetType == "链类最大值")
-        {
-            exportWildcardData[targetType] = defaultIndex[3];
-        }
-        else if (targetType == "物品区域")
-        {
-            exportWildcardData[targetType] = defaultIndex[4];
-        }
-        return exportWildcardData[targetType];
-    }
-    //字符串处理策略（fuc改成liststring，存储物品编号，链类最大值等信息？用来根据物品变成生成数组字符串
-    private static string ProcessString(
-        Dictionary<string, string> exportWildcardData,
-        string targetType,
-        Func<string, int, int, string> processFunc,
-        int dynamicParam1,
-        int dynamicParam2 = 0
-    )
-    {
-        var pattern = exportWildcardData[targetType];
-        var splitResult = Regex.Split(pattern, "#");
-        int param1 = splitResult.Length > 2 ? int.Parse(splitResult[2]) : dynamicParam1; //两个#后的参数
-        int param2 = splitResult.Length > 3 ? int.Parse(splitResult[3]) : dynamicParam2;
-        var result = exportWildcardData[splitResult[1]];
-        return processFunc(result, param1, param2);
     }
 }
