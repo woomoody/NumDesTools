@@ -12,20 +12,20 @@ global using ExcelDna.Integration.CustomUI;
 global using ExcelDna.IntelliSense;
 global using Microsoft.Office.Interop.Excel;
 global using Application = Microsoft.Office.Interop.Excel.Application;
-global using Button = System.Windows.Forms.Button;
-global using CheckBox = System.Windows.Forms.CheckBox;
 global using Color = System.Drawing.Color;
 global using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
 global using CommandBarControl = Microsoft.Office.Core.CommandBarControl;
 global using Exception = System.Exception;
 global using MsoButtonStyle = Microsoft.Office.Core.MsoButtonStyle;
 global using MsoControlType = Microsoft.Office.Core.MsoControlType;
-global using Panel = System.Windows.Forms.Panel;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
-global using TabControl = System.Windows.Forms.TabControl;
 using NumDesTools.UI;
+using Button = System.Windows.Forms.Button;
+using CheckBox = System.Windows.Forms.CheckBox;
+using Panel = System.Windows.Forms.Panel;
+using TabControl = System.Windows.Forms.TabControl;
 
 #pragma warning disable CA1416
 
@@ -43,6 +43,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public static string FocusLabelText = _globalValue.Value["FocusLabelText"];
     public static string LabelTextRoleDataPreview = _globalValue.Value["LabelTextRoleDataPreview"];
     public static string SheetMenuText = _globalValue.Value["SheetMenuText"];
+    public static string CellHiLightText = _globalValue.Value["CellHiLightText"];
     public static string TempPath = _globalValue.Value["TempPath"];
 
     public static CommandBarButton Btn;
@@ -161,6 +162,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "Button14" => LabelTextRoleDataPreview,
             "FocusLightButton" => FocusLabelText,
             "SheetMenu" => SheetMenuText,
+            "CellHiLight" => CellHiLightText,
             _ => ""
         };
         return latext;
@@ -211,6 +213,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         or "打开表格"
                         or "对话写入"
                         or "打开关联表格"
+                        or "LTE配置导出"
             select tempControl
         )
             try
@@ -332,6 +335,17 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 comButton9.Caption = "打开关联表格";
                 comButton9.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton9.Click += PubMetToExcelFunc.RightOpenLinkExcelByActiveCell;
+            }
+        if (sheetName == "LTE配置【导出】" && target.Column == 2)
+            if (
+                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
+                is CommandBarButton comButton10
+            )
+            {
+                comButton10.Tag = "LTE配置导出";
+                comButton10.Caption = "LTE配置导出";
+                comButton10.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                comButton10.Click += LteData.ExportLteDataConfig;
             }
     }
 
@@ -610,6 +624,22 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var sheetName = App.Worksheets[i].Name;
             FormularCheck.GetFormularToCurrent(sheetName);
         }
+
+        stopwatch.Stop();
+        var timespan = stopwatch.Elapsed;
+        var milliseconds = timespan.TotalMilliseconds;
+
+        MessageBox.Show(@"检查公式完毕！" + Math.Round(milliseconds / 1000, 2) + @"秒");
+    }
+
+    public void FormularBaseCheck_Click(IRibbonControl control)
+    {
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
+        var stopwatch = new Stopwatch();
+        stopwatch.Start();
+
+        PubMetToExcelFunc.FormularBaseCheck();
 
         stopwatch.Stop();
         var timespan = stopwatch.Elapsed;
@@ -958,7 +988,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcel.SearchKeyFromExcelMiniExcel(path, _excelSeachStr);
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcelMiniExcel(path, _excelSeachStr);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -999,7 +1029,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcel.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1040,7 +1070,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcel.SearchKeyFromExcelIDMultiMiniExcel(path, _excelSeachStr);
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcelIDMultiMiniExcel(path, _excelSeachStr);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1175,7 +1205,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-        ExcelDataAutoInsertActivityServer.Source();
+        ExcelDataAutoInsertActivityServer.Source(true);
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "完成，用时：" + ts2;
+    }
+
+    public void ActivityServerData2_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        ExcelDataAutoInsertActivityServer.Source(false);
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
@@ -1270,10 +1311,67 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
     }
 
+    public void MapExcel_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        var lines = File.ReadAllLines(DefaultFilePath);
+
+        MapExcel.ExcelToJson(lines);
+
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
+
+    public void CompareExcel_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        var lines = File.ReadAllLines(DefaultFilePath);
+        CompareExcel.CompareMain(lines);
+
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
+
+    public void LoopRun_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var ws = App.ActiveSheet;
+        var sheetName = ws.Name;
+
+        PubMetToExcelFunc.LoopRunCac(sheetName);
+
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
+
+    public void CellDataSearch_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        PubMetToExcelFunc.ExcelDataFormatCheck.CheckValueFormat(_excelSeachStr);
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
+
     public void TestBar1_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+
+        PubMetToExcelFunc.CheckDataLegitimacy(path);
 
         //SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "SheetMenu", true , "SheetMenu");
         //var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
@@ -1341,10 +1439,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //{
         //    resultlist.AddRange(localList);
         //}
-        //var lines = File.ReadAllLines(_defaultFilePath);
-
-        //CompareExcel.Main(lines);
-        MapExcel.ExcelToJson();
+        //var lines = File.ReadAllLines(DefaultFilePath);
+        //PubMetToExcelFunc.ExcelFolderPath(lines);
+        ////CompareExcel.CompareMain(lines);
+        //MapExcel.ExcelToJson(lines);
 
         sw.Stop();
         var ts2 = sw.Elapsed;
@@ -1357,8 +1455,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-        var lines = File.ReadAllLines(DefaultFilePath);
-        CompareExcel.Main(lines);
+        //var lines = File.ReadAllLines(DefaultFilePath);
+        //CompareExcel.CompareMain(lines);
 
         //var wk = App.ActiveWorkbook;
         //var path = wk.Path;
@@ -1409,17 +1507,22 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var defaultContent =
                 @"C:\M1Work\Public\Excels\Tables\"
                 + Environment.NewLine
-                + @"C:\M2Work\Public\Excels\Tables\";
+                + @"C:\M2Work\Public\Excels\Tables\"
+                + Environment.NewLine
+                + @"\n";
 
             File.WriteAllText(DefaultFilePath, defaultContent);
         }
 
         var line1 = File.ReadLines(DefaultFilePath).Skip(1 - 1).FirstOrDefault();
         var line2 = File.ReadLines(DefaultFilePath).Skip(2 - 1).FirstOrDefault();
+        var line3 = File.ReadLines(DefaultFilePath).Skip(3 - 1).FirstOrDefault();
         if (control.Id == "BasePathEdit")
             return line1;
-        else if (control.Id == "TargetPathEdit")
+        if (control.Id == "TargetPathEdit")
             return line2;
+        if (control.Id == "ExcelSearchBoxEdit")
+            return line3;
 
         return @"..\Public\Excels\Tables\";
     }
@@ -1518,81 +1621,73 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         _globalValue.SaveValue("SheetMenuText", SheetMenuText);
     }
 
+    public void CellHiLight_Click(IRibbonControl control)
+    {
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
+        CellHiLightText = CellHiLightText == "高亮单元格：开启" ? "高亮单元格：关闭" : "高亮单元格：开启";
+        CustomRibbon.InvalidateControl("CellHiLight");
+
+        var wk = App.ActiveWorkbook;
+        var ws = wk.ActiveSheet;
+
+        if (wk.Name == "#【A大型活动】数值.xlsx")
+        {
+            if (ws.Name.Contains("【基础】"))
+            {
+                var uesedRange = ws.UsedRange;
+                App.ScreenUpdating = false;
+                foreach (Range cell in uesedRange)
+                {
+                    cell.Interior.ColorIndex = XlColorIndex.xlColorIndexNone; // 清除高亮
+                }
+                App.ScreenUpdating = true;
+            }
+        }
+
+        _globalValue.SaveValue("CellHiLightText", CellHiLightText);
+    }
+
     private void ExcelApp_SheetSelectionChange(object sh, Range target)
     {
-        var mzBar = App.CommandBars["cell"];
-        mzBar.Reset();
-        var bars = mzBar.Controls;
-        foreach (CommandBarControl tempContrl in bars)
+        if (CellHiLightText != "高亮单元格：开启")
+            return;
+        //指定工作簿、工作表、工作区域选中单元格高亮显示同值
+        var wk = App.ActiveWorkbook;
+        var ws = wk.ActiveSheet;
+
+        if (wk.Name == "#【A大型活动】数值.xlsx")
         {
-            var t = tempContrl.Tag;
-            if (t is "Test" or "Test1")
-                try
-                {
-                    tempContrl.Delete();
-                }
-                catch
-                {
-                    // ignored
-                }
-        }
-
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        var missing = Type.Missing;
-        var comControl = bars.Add(MsoControlType.msoControlButton, missing, missing, 1, true);
-        var comButton = comControl as CommandBarButton;
-        if (comControl != null)
-            if (comButton != null)
+            if (ws.Name.Contains("【基础】"))
             {
-                comButton.Tag = "Test";
-                comButton.Caption = "索表：右侧预览";
-                comButton.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton.Click += IndexSheetUnOpen_Click;
-            }
-
-        var comControl1 = bars.Add(MsoControlType.msoControlButton, missing, missing, 2, true);
-        var comButton1 = comControl1 as CommandBarButton;
-        if (comControl1 != null)
-            if (comButton1 != null)
-            {
-                comButton1.Tag = "Test1";
-                comButton1.Caption = "索表：打开表格";
-                comButton1.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton1.Click += IndexSheetOpen_Click;
-            }
-    }
-
-    private void ExcelApp_SheetSelectionChange1(object sh, Range target)
-    {
-        var currentMenuBar = App.CommandBars["cell"];
-        var bars = currentMenuBar.Controls;
-        foreach (CommandBarControl tempContrl in bars)
-        {
-            var t = tempContrl.Tag;
-            if (t is "Test" or "Test1")
-            {
-                tempContrl.Delete();
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-            }
-            else
-            {
-                try
+                if (target != null && !string.IsNullOrWhiteSpace(target.Value2))
                 {
-                    tempContrl.Delete();
-                }
-                catch
-                {
-                    // ignored
+                    string selectedText = target.Value2.ToString();
+                    //只找10行10列的数据
+                    var firstRow = Math.Max(target.Row - 20, 1);
+                    var firstCol = Math.Max(target.Column - 20, 1);
+                    var lastRow = target.Row + 30;
+                    var lastCol = target.Column + 30;
+                    var searchRange = ws.Range[
+                        ws.Cells[firstRow, firstCol],
+                        ws.Cells[lastRow, lastCol]
+                    ];
+                    App.ScreenUpdating = false;
+                    foreach (Range cell in searchRange)
+                    {
+                        if (cell.Value2?.ToString() == selectedText)
+                        {
+                            cell.Interior.Color = XlRgbColor.rgbYellow; // 高亮显示
+                        }
+                        else
+                        {
+                            cell.Interior.ColorIndex = XlColorIndex.xlColorIndexNone; // 清除高亮
+                        }
+                    }
+                    App.ScreenUpdating = true;
                 }
             }
         }
-
-        Btn = null;
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
     }
-
     #endregion
 }
