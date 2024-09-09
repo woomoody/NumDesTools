@@ -5,11 +5,13 @@ using System.Text.RegularExpressions;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using stdole;
+using BorderStyle = System.Windows.Forms.BorderStyle;
 using DataTable = System.Data.DataTable;
 using Font = System.Drawing.Font;
 using Image = System.Drawing.Image;
 using RichTextBox = System.Windows.Forms.RichTextBox;
 using ScrollBars = System.Windows.Forms.ScrollBars;
+using TextBox = System.Windows.Forms.TextBox;
 using UserControl = System.Windows.Forms.UserControl;
 
 #pragma warning disable CA1416
@@ -32,12 +34,11 @@ public class LabelControl : UserControl, IMyUserControl;
 public static class ErrorLogCtp
 {
     public static CustomTaskPane Ctp;
-    public static LabelControl LinkControl;
     public static LabelControl LabelControl;
 
     public static void CreateCtp(string errorLog)
     {
-        LinkControl = new LabelControl();
+        LabelControl = new LabelControl();
         var strErrorFilter = Regex.Split(errorLog, "\r\n", RegexOptions.IgnoreCase);
         var i = 0;
         foreach (var unused in strErrorFilter)
@@ -49,15 +50,16 @@ public static class ErrorLogCtp
 #pragma warning restore CA1305
                 if (errorLine != "")
                 {
-                    var errorLinkLable = new LinkLabel
+                    var errorTextBox = new TextBox()
                     {
                         Text = errorLine,
                         Height = 20,
-                        Width = 350,
-                        Location = new Point(10, 40 + (i - 1) * 20)
+                        Width = 550,
+                        Location = new Point(10, 40 + (i - 1) * 20),
+                        ReadOnly = true, // 设置为只读
+                        BorderStyle = BorderStyle.None // 去掉边框
                     };
-                    LinkControl.Controls.Add(errorLinkLable);
-                    errorLinkLable.LinkClicked += LinkLableClick;
+                    LabelControl.Controls.Add(errorTextBox);
                 }
             }
 
@@ -65,11 +67,11 @@ public static class ErrorLogCtp
         }
 
         Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(
-            LinkControl,
+            LabelControl,
             i < 46 ? "单元格错误集合" : "部分错误：错误大于45个"
         );
         Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
-        Ctp.Width = 350;
+        Ctp.Width = 600;
         Ctp.Visible = true;
     }
 
@@ -104,22 +106,22 @@ public static class ErrorLogCtp
         Ctp = null;
     }
 
-    private static void LinkLableClick(object sender, LinkLabelLinkClickedEventArgs e)
-    {
-        var errorLine = (LinkLabel)sender;
-        var errorLineStr = errorLine.Text;
-        var errorLineStrArr = errorLineStr.Split('/', '→', '@');
-        var sheetName = errorLineStrArr[0];
-        var cellName = errorLineStrArr[1];
-        dynamic app = ExcelDnaUtil.Application;
-        app.Worksheets[sheetName].Activate();
-        app.ActiveSheet.Range[cellName].Select();
-        var isSharp = errorLineStr.Contains("@");
-        if (isSharp)
-            errorLineStr = errorLineStr.Substring(0, errorLineStr.IndexOf('@'));
-        errorLine.Text = errorLineStr + @"@已点过";
-        app.Dispose();
-    }
+    //private static void LinkLableClick(object sender, LinkLabelLinkClickedEventArgs e)
+    //{
+    //    var errorLine = (LinkLabel)sender;
+    //    var errorLineStr = errorLine.Text;
+    //    var errorLineStrArr = errorLineStr.Split('/', '→', '@');
+    //    var sheetName = errorLineStrArr[0];
+    //    var cellName = errorLineStrArr[1];
+    //    dynamic app = ExcelDnaUtil.Application;
+    //    app.Worksheets[sheetName].Activate();
+    //    app.ActiveSheet.Range[cellName].Select();
+    //    var isSharp = errorLineStr.Contains("@");
+    //    if (isSharp)
+    //        errorLineStr = errorLineStr.Substring(0, errorLineStr.IndexOf('@'));
+    //    errorLine.Text = errorLineStr + @"@已点过";
+    //    app.Dispose();
+    //}
 }
 
 public static class ExcelIndexDataIsWrong

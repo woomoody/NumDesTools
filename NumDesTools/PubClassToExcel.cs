@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Windows.Data;
 using GraphX.Common.Models;
@@ -76,14 +77,14 @@ public class SelfComSheetCollect : INotifyPropertyChanged
 }
 
 //自定义Com工作簿信息容器类
-public class WorkBookSearchCollect
+public class SelfWorkBookSearchCollect
 {
     public string FilePath { get; set; }
     public string SheetName { get; set; }
     public int CellRow { get; set; }
     public string CellCol { get; set; }
 
-    public WorkBookSearchCollect((string, string, int, string) tuple)
+    public SelfWorkBookSearchCollect((string, string, int, string) tuple)
     {
         FilePath = tuple.Item1;
         SheetName = tuple.Item2;
@@ -92,8 +93,22 @@ public class WorkBookSearchCollect
     }
 }
 
+//自定义Com单元格类
+public class SelfCellData
+{
+    public int Row { get; set; }
+    public int Column { get; set; }
+    public string Value { get; set; }
+    public SelfCellData((string, int, int) tuple)
+    {
+        Value = tuple.Item1;
+        Row = tuple.Item2;
+        Column = tuple.Item3;
+    }
+}
+
 //字符串正则转换
-public class StringRegexConverter : IValueConverter
+public class SelfStringRegexConverter : IValueConverter
 {
     public string RegexPattern { get; set; }
 
@@ -133,7 +148,7 @@ public class SelfGraphXVertex : VertexBase
     }
 }
 
-// 自定义GraphX边数据类
+//自定义GraphX边数据类
 public class SelfGraphXEdge : EdgeBase<SelfGraphXVertex>
 {
     public SelfGraphXEdge(SelfGraphXVertex source, SelfGraphXVertex target)
@@ -142,5 +157,87 @@ public class SelfGraphXEdge : EdgeBase<SelfGraphXVertex>
     public override string ToString()
     {
         return $"{Source.Name} -> {Target.Name}";
+    }
+}
+
+//自定义获取指定路径Excel文件
+public class SelfExcelFileCollector(string rootPath , int pathLevels)
+{
+    //获取指定路径Excel文件路径
+    public string[] GetAllExcelFilesPath()
+    {
+        var paths = new List<string>
+        {
+            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "Tables"),
+            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "Localizations"),
+            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "UIs"),
+            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "Tables", "克朗代克"),
+            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "Tables", "二合")
+        };
+
+        var files = paths
+            .SelectMany(path => Directory.Exists(path) ? GetExcelFiles(path) : Enumerable.Empty<string>())
+            .Where(file => !Path.GetFileName(file).Contains("~")) // 过滤掉包含 ~ 的文件
+            .ToArray();
+
+        return files;
+    }
+    //获取指定路径Excel文件路径MD5
+    public enum KeyMode
+    {
+        FullPath,//完整路径
+        FileNameWithExt,//带扩展名
+        FileNameWithoutExt//不带扩展名
+    }
+    public Dictionary<string, (string FullPath, string FileNameWithExt, string FileNameWithoutExt, string MD5)> GetAllExcelFilesMd5(KeyMode mode)
+    {
+        var files = GetAllExcelFilesPath();
+        var fileMd5Dictionary = new Dictionary<string, (string FullPath, string FileNameWithExt, string FileNameWithoutExt, string MD5)>();
+
+        foreach (var file in files)
+        {
+            string fullPath = file;
+            string fileNameWithExt = Path.GetFileName(file);
+            string fileNameWithoutExt = Path.GetFileNameWithoutExtension(file);
+            string md5 = CalculateMd5(file);
+
+            string key = mode switch
+            {
+                KeyMode.FullPath => fullPath,
+                KeyMode.FileNameWithExt => fileNameWithExt,
+                KeyMode.FileNameWithoutExt => fileNameWithoutExt,
+                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
+            };
+
+            fileMd5Dictionary[key] = (fullPath, fileNameWithExt, fileNameWithoutExt, md5);
+        }
+
+        return fileMd5Dictionary;
+    }
+
+    private string GetParentDirectory(string path, int levels)
+    {
+        for (int i = 0; i < levels; i++)
+        {
+            path = Path.GetDirectoryName(path);
+        }
+        return path;
+    }
+    private static IEnumerable<string> GetExcelFiles(string path)
+    {
+        return Directory
+            .EnumerateFiles(path, "*.xlsx")
+            .Where(file => !Path.GetFileName(file).Contains("#"));
+    }
+    private static string CalculateMd5(string filePath)
+    {
+        using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        {
+            using (var md5 = MD5.Create())
+            {
+                var hash = md5.ComputeHash(stream);
+                return BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
+            }
+        }
     }
 }

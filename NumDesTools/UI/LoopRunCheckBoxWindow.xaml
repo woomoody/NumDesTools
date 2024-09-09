@@ -1,0 +1,22 @@
+﻿<Window x:Class="NumDesTools.UI.LoopRunCheckBoxWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="计算选项" Height="500" Width="500" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0">
+            <StackPanel Name="SpecialCheckBoxContainer" Margin="5">
+                <CheckBox Tag="全选" Content="全选/取消" Margin="5" Checked="SelectAllCheckBox_Checked" Unchecked="SelectAllCheckBox_Unchecked"/>
+                <CheckBox Tag="反选" Content="反选" Margin="5" Checked="InvertSelectionCheckBox_Checked"/>
+            </StackPanel>
+            <Separator Margin="5"/>
+            <StackPanel Name="CheckBoxContainer" Margin="5"/>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
+            <Button Content="计算随机数" Click="GetCurrentCheckBox_Click" Width="100" Height="30" Margin="5"/>
+        </StackPanel>
+    </Grid>
+</Window>
