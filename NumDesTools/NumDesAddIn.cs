@@ -21,6 +21,7 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
+using System.Collections;
 using NumDesTools.UI;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
@@ -1151,6 +1152,43 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
         App.StatusBar = "完成，用时：" + ts2;
     }
+    public void AutoInsertExcelDataNew_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var indexWk = App.ActiveWorkbook;
+        var sheet = indexWk.ActiveSheet;
+        var name = sheet.Name;
+        if (!name.Contains("【模板】"))
+        {
+            MessageBox.Show(@"当前表格不是正确【模板】，不能写入数据");
+            return;
+        }
+
+        ExcelDataAutoInsertMultiNew.InsertDataNew(false);
+        sw.Stop();
+        var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
+        App.StatusBar = "完成，用时：" + ts2;
+    }
+
+    public void AutoInsertExcelDataThreadNew_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var indexWk = App.ActiveWorkbook;
+        var sheet = indexWk.ActiveSheet;
+        var name = sheet.Name;
+        if (!name.Contains("【模板】"))
+        {
+            MessageBox.Show(@"当前表格不是正确【模板】，不能写入数据");
+            return;
+        }
+
+        ExcelDataAutoInsertMultiNew.InsertDataNew(true);
+        sw.Stop();
+        var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
+        App.StatusBar = "完成，用时：" + ts2;
+    }
 
     public void AutoInsertExcelDataDialog_Click(IRibbonControl control)
     {
@@ -1364,15 +1402,76 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
-    public void TestBar1_Click(IRibbonControl control)
+    public void PowerQueryLinksUpdate_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        PubMetToExcelFunc.CheckDataLegitimacy(path);
+        PubMetToExcelFunc.UpdatePowerQueryLinks();
 
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
+
+    public void ModelDataCreat_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+        var ws = wk.ActiveSheet;
+        var sheetName = ws.Name;
+        if (!sheetName.Contains("【模板】"))
+        {
+            MessageBox.Show($"{sheetName}不是数据模板表，不能生成数据");
+            return;
+        }
+
+        var targetList = PubMetToExcelFunc.SearchModelKeyFromExcelMiniExcel(path, _excelSeachStr);
+
+        int rows = targetList.Values.Sum(list => list.Count);
+        int cols = 3; 
+
+        var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, cols);
+
+        var maxRow = targetValue.GetLength(0);
+        var maxCol = targetValue.GetLength(1);
+
+        var range = ws.Range[ws.Cells[2, 3], ws.Cells[2 + maxRow - 1, 3 + maxCol - 1]];
+
+        range.Value2 = targetValue;
+
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
+
+    public void TestBar1_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+        var ws = wk.ActiveSheet;
+
+        var targetList = PubMetToExcelFunc.SearchModelKeyFromExcelMiniExcel(path, _excelSeachStr);
+
+        int rows = targetList.Values.Sum(list => list.Count);
+        int cols = 6; //
+
+        var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, cols);
+
+        var maxRow = targetValue.GetLength(0);
+        var maxCol = targetValue.GetLength(1);
+
+        var range = ws.Range[ws.Cells[2, 3], ws.Cells[2 + maxRow - 1, 3 + maxCol - 1]];
+
+        range.Value2 = targetValue;
         //SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "SheetMenu", true , "SheetMenu");
         //var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
         //    .Select(x => new SelfComSheetCollect { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();

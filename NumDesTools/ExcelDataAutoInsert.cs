@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+using Microsoft.Office.Interop.Excel;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using LicenseContext = OfficeOpenXml.LicenseContext;
@@ -1166,6 +1167,7 @@ public class ExcelDataAutoInsertLanguage
     }
 }
 
+//模版数据写入-老方法，需要填写大量字段修改参数
 public class ExcelDataAutoInsertMulti
 {
     public static void InsertData(dynamic isMulti)
@@ -1437,6 +1439,7 @@ public class ExcelDataAutoInsertMulti
 
         var writeIdList = ExcelDataWriteIdGroup(excelName, addValue, sheet, fixKey, modelId);
         PubMetToExcel.RepeatValue2(sheet, 4, 2, writeIdList.Item1);
+
         var colCount = sheet.Dimension.Columns;
         //多语言表不需要复制全部列
         if (excelRealName == "Localizations.xlsx")
@@ -1495,6 +1498,7 @@ public class ExcelDataAutoInsertMulti
             cellTarget.Style.Font.Name = "微软雅黑";
             cellTarget.Style.Font.Size = 10;
             cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+            //修改数据
             var fixItem = fixKey[excelName][excelMulti].Item1;
             errorList = modeThread
                 ? (List<(string, string, string)>)
@@ -1545,6 +1549,7 @@ public class ExcelDataAutoInsertMulti
         for (var colMulti = 0; colMulti < fixItem.GetLength(1); colMulti++)
         {
             string excelKey = fixItem[0, colMulti];
+            //遇到excelKey这类自定义写入的，继续按规则写入，否则进入批量替换，不更改的字段需要写1#0；
             if (excelKey == null)
                 continue;
             var excelFileFixKey = PubMetToExcel.FindSourceCol(sheet, 2, excelKey);
@@ -1802,6 +1807,397 @@ public class ExcelDataAutoInsertMulti
         }
 
         return (writeIdList, lastRow);
+    }
+}
+
+//模版数据写入-新方法，只需要填写少量字段修改参数（包含不更改），其他数据进行自动匹配替换关键字
+public class ExcelDataAutoInsertMultiNew
+{
+    private static dynamic indexWk = NumDesAddIn.App.ActiveWorkbook;
+    private static dynamic sheet = NumDesAddIn.App.ActiveSheet;
+    private static dynamic excelPath = indexWk.Path;
+    private static dynamic colsCount = sheet.UsedRange.Columns.Count;
+    private static dynamic sheetData = PubMetToExcel.ExcelDataToList(sheet);
+    private static dynamic title = sheetData.Item1;
+    private static dynamic data = sheetData.Item2;
+    private static dynamic sheetNameCol = title.IndexOf("表名");
+    private static dynamic modelIdCol = title.IndexOf("初始模板");
+    private static dynamic modelIdNewCol = title.IndexOf("当前模版");
+    private static dynamic fixKeyCol = title.IndexOf("修改字段");
+    private static dynamic baseIdCol = title.IndexOf("模板期号");
+    private static dynamic creatIdCol = title.IndexOf("创建期号");
+    private static dynamic baseCommentCol = title.IndexOf("初始备注");
+    private static dynamic creatCommentCol = title.IndexOf("当前备注");
+    private static dynamic replaceValues = data[2][baseIdCol];
+
+
+    private static dynamic colorCell = sheet.Cells[6, 1];
+    private static Color cellColor = PubMetToExcel.GetCellBackgroundColor(colorCell);
+    private static dynamic addValue = (int)data[0][creatIdCol] - (int)data[0][baseIdCol];
+    private static dynamic rowCount = 2;
+    private static dynamic colFixKeyCount = colsCount - fixKeyCol;
+    private static dynamic modelId = PubMetToExcel.ExcelDataToDictionary(data, sheetNameCol, modelIdCol, rowCount);
+    private static dynamic modelIdNew = PubMetToExcel.ExcelDataToDictionary(
+        data,
+        sheetNameCol,
+        modelIdNewCol,
+        rowCount
+    );
+    private static dynamic fixKey = PubMetToExcel.ExcelDataToDictionary(
+        data,
+        sheetNameCol,
+        fixKeyCol,
+        rowCount,
+        colFixKeyCount
+    );
+    private static dynamic ignoreExcel = PubMetToExcel.ExcelDataToDictionary(
+        data,
+        sheetNameCol,
+        creatIdCol,
+        rowCount
+    );
+    private static dynamic commentValue = PubMetToExcel.ExcelDataToDictionary(
+        data,
+        baseCommentCol,
+        creatCommentCol,
+        1
+    );
+    private static dynamic errorExcelList = new List<List<(string, string, string)>>();
+    public static void InsertDataNew(dynamic isMulti)
+    {
+        ErrorLogCtp.DisposeCtp();
+        var excelCount = 1;
+        foreach (var key in modelId)
+        {
+            var excelName = key.Key;
+            var ignore = ignoreExcel[excelName][0].Item1[0, 0];
+            if (ignore != null)
+            {
+                var ignoreStr = ignore.ToString();
+                if (ignoreStr == "跳过")
+                {
+                    NumDesAddIn.App.StatusBar = "跳过" + "<" + excelName;
+                    excelCount++;
+                    continue;
+                }
+            }
+
+            List<(string, string, string)> error = CopyData(excelName);
+            NumDesAddIn.App.StatusBar =
+                "写入数据" + "<" + excelCount + "/" + modelId.Count + ">" + excelName;
+            errorExcelList.Add(error);
+            excelCount++;
+        }
+
+        var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
+        if (errorLog == "")
+        {
+            NumDesAddIn.App.StatusBar = "完成写入";
+            return;
+        }
+
+        ErrorLogCtp.DisposeCtp();
+        ErrorLogCtp.CreateCtpNormal(errorLog);
+    }
+
+    public static void RightClickInsertData(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        var cell = NumDesAddIn.App.Selection;
+        var rowStart = cell.Row;
+        var rowCountNew = cell.Rows.Count;
+        var rowEnd = rowStart + rowCountNew - 1;
+        var excelList = new List<string>();
+
+        for (int i = rowStart; i <= rowEnd; i++)
+        {
+            var excelName = data[i - 2][sheetNameCol];
+            excelList.Add((string)excelName);
+        }
+
+        var newExcelList = excelList
+            .Where(excelName => !string.IsNullOrEmpty(excelName))
+            .Distinct()
+            .ToList();
+        for (var i = 0; i < newExcelList.Count; i++)
+        {
+            var excelName = newExcelList[i];
+            if (excelName == null)
+                continue;
+            List<(string, string, string)> error = CopyData(excelName);
+            NumDesAddIn.App.StatusBar =
+                "写入数据" + "<" + i + "/" + newExcelList.Count + ">" + excelName;
+            errorExcelList.Add(error);
+        }
+
+        var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
+        if (errorLog == "")
+        {
+            sw.Stop();
+            var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
+            NumDesAddIn.App.StatusBar = "完成写入，用时：" + ts2.ToString(CultureInfo.InvariantCulture);
+            return;
+        }
+
+        ErrorLogCtp.DisposeCtp();
+        ErrorLogCtp.CreateCtpNormal(errorLog);
+        sw.Stop();
+        var ts3 = Math.Round(sw.Elapsed.TotalSeconds, 2);
+        NumDesAddIn.App.StatusBar = "完成写入:有错误，用时：" + ts3.ToString(CultureInfo.InvariantCulture);
+    }
+
+    public static List<(string, string, string)> CopyData(string excelName)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        var errorExcelLog = "";
+        List<(string, string, string)> errorList = PubMetToExcel.SetExcelObjectEpPlus(
+            excelPath,
+            excelName,
+            out ExcelWorksheet sheet,
+            out ExcelPackage excel
+        );
+
+        var excelRealName = excel.Workbook.Names.ToString();
+
+        foreach (var cell in sheet.Cells)
+            if (cell.Formula is { Length: > 0 })
+            {
+                errorList.Add(
+                    ($"{excelRealName}#{sheet.Name}", @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@")
+                );
+                return errorList;
+            }
+
+ 
+        //查找是否已经写入过新ID，如果写入过，则删除
+        var writeIdList = GetElementIdGroup(excelName, sheet, modelIdNew , true);
+
+        //多语言表不需要复制全部列
+        var colCount = sheet.Dimension.Columns;
+        if (excelRealName == "Localizations.xlsx")
+        {
+            colCount = 7;
+        }
+
+        //获取老ID所在行列信息，准备复制
+        writeIdList = GetElementIdGroup(excelName, sheet, modelId);
+
+        var writeRow = writeIdList.Item2;
+        if (writeRow == -1)
+        {
+            errorExcelLog = excelName + "#找不到" + writeIdList.Item1[0];
+            errorList.Add((excelName, errorExcelLog, excelName));
+            return errorList;
+        }
+
+        for (var excelMulti = 0; excelMulti < modelId[excelName].Count; excelMulti++)
+        {
+            var startValue = modelId[excelName][excelMulti].Item1[0, 0].ToString();
+            var endValue = modelId[excelName][excelMulti].Item1[1, 0].ToString();
+
+            var startRowSource = PubMetToExcel.FindSourceRow(sheet, 2, startValue);
+            if (startRowSource == -1)
+            {
+                errorExcelLog = excelName + "#【初始模板】#[" + startValue + "]未找到(序号出错)";
+                errorList.Add((startValue, errorExcelLog, excelName));
+                return errorList;
+            }
+
+            var endRowSource = PubMetToExcel.FindSourceRow(sheet, 2, endValue);
+            if (endRowSource == -1)
+            {
+                errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]未找到(序号出错)";
+                errorList.Add((endValue, errorExcelLog, excelName));
+                return errorList;
+            }
+
+            if (endRowSource - startRowSource < 0)
+            {
+                errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]起始、终结ID顺序反了";
+                errorList.Add((endValue, errorExcelLog, excelName));
+                return errorList;
+            }
+
+            //复制数据
+            if (excelRealName.Contains("Recharge"))
+            {
+                writeRow = sheet.Dimension.End.Row;
+            }
+            var count = endRowSource - startRowSource + 1;
+            sheet.InsertRow(writeRow + 1, count);
+            var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
+            var cellTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, colCount];
+            cellTarget.Value = cellSource.Value;
+            cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            cellTarget.Style.Fill.BackgroundColor.SetColor(cellColor);
+
+            cellTarget.Style.Font.Name = "微软雅黑";
+            cellTarget.Style.Font.Size = 10;
+            cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+
+            //修改数据
+            var fixItem = fixKey[excelName][excelMulti].Item1;
+            errorList = FixData(
+                        excelName,
+                        fixItem,
+                        sheet,
+                        count,
+                        startRowSource,
+                        writeRow,
+                        errorList);
+            writeRow += count;
+        }
+
+        excel.Save();
+        excel.Dispose();
+        errorList.Add(("-1", errorExcelLog, excelName));
+        return errorList;
+    }
+
+    private static List<(string, string, string)> FixData(
+        dynamic excelName,
+        dynamic fixItem,
+        ExcelWorksheet sheet,
+        dynamic count,
+        dynamic startRowSource,
+        int writeRow,
+        dynamic errorList
+    )
+    {
+        // 获取工作表的行数和列数
+        var colCount = sheet.Dimension.Columns;
+        //遍历自定义修改字段
+        for (var colMulti = 0; colMulti < fixItem.GetLength(1); colMulti++)
+        {
+            var excelKey = fixItem[0, colMulti];
+
+            //遍历目标表字段（区分自定义还是批量替换字段）
+            for (var cellCol = 2; cellCol <= colCount; cellCol++)
+            {
+                var cellKey = sheet.Cells[2, cellCol].Value?.ToString() ?? "";
+                //通用修改（替换）遇到excelKey这类自定义写入的，继续按规则写入，否则进入批量替换，不更改的字段需要写1#0；
+                if (cellKey != "" && cellKey != excelKey )
+                {
+                    for (var i = 0; i < count; i++)
+                    {
+                        var replaceCell = sheet.Cells[writeRow + i + 1, cellCol];
+                        string[] baseParts = replaceValues.Split("#");
+                        var cellValue = replaceCell.Value?.ToString() ?? "";
+                        foreach (var item in baseParts)
+                        {
+                            var parts = item.Split("-");
+                            var replaceValue = parts[0];
+                            var pattern = parts[1];
+                            if (cellValue != null)
+                                cellValue = Regex.Replace(cellValue, pattern, replaceValue);
+                        }
+                        replaceCell.Value = cellValue;
+                    }
+                }
+                //备注修改（替换）
+                else if (cellKey.Contains("#"))
+                {
+
+                }
+                //自定义修改（修改方法）
+                else if(cellKey != "")
+                {
+                    var excelFileFixKey = PubMetToExcel.FindSourceCol(sheet, 2, excelKey);
+                    if (excelFileFixKey == -1 && excelKey != null)
+                    {
+                        var errorExcelLog = excelName + "#【初始模板】#[" + excelKey + "]未找到(字段出错)";
+                        errorList.Add((excelKey, errorExcelLog, excelName));
+                        continue;
+                    }
+
+                    string excelKeyMethod = fixItem[1, colMulti]?.ToString();
+                    for (var i = 0; i < count; i++)
+                    {
+                        var cellSource = sheet.Cells[startRowSource + i, excelFileFixKey];
+                        var rowId = sheet.Cells[startRowSource + i, 2];
+                        var cellFix = sheet.Cells[writeRow + 1 + i, excelFileFixKey];
+                        if (cellSource.Value == null)
+                            continue;
+
+                        if (cellSource.Value.ToString() == "" || cellSource.Value.ToString() == "0")
+                            continue;
+
+                        string cellFixValue;
+                        //自增值
+                        string baseValue = excelKeyMethod ?? "";
+                        if (baseValue.Contains("***"))
+                        {
+                            baseValue = baseValue.Replace("***", "");
+                            cellFixValue = baseValue;
+                        }
+                        //固定值
+                        else
+                        {
+                            var fixValueList = ExcelDataAutoInsert.CellFixValueKeyList(
+                                excelKeyMethod
+                            );
+                            cellFixValue = ExcelDataAutoInsert.StringRegPlace(
+                                cellSource.Value.ToString(),
+                                fixValueList,
+                                addValue
+                            );
+                        }
+
+                        if (cellFixValue == "^error^")
+                        {
+                            string errorExcelLog =
+                                excelName + "#" + rowId.Value + "#【修改模式】#[" + excelKey + "]字段方法写错";
+                            errorList.Add((excelKey, errorExcelLog, excelName));
+                        }
+
+                        cellFix.Value = double.TryParse(cellFixValue, out double number)
+                            ? (object)number
+                            : cellFixValue;
+                    }
+                }
+            }
+        }
+
+        return errorList;
+    }
+
+    private static (List<string>, int) GetElementIdGroup(
+        dynamic excelName,
+        ExcelWorksheet sheet,
+        dynamic modelIdNew,
+        bool isDelete = false
+    )
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        var lastRow = 0;
+        for (var excelMulti = 0; excelMulti < modelIdNew[excelName].Count; excelMulti++)
+        {
+            var startValue = modelIdNew[excelName][excelMulti].Item1[0, 0].ToString();
+            var endValue = modelIdNew[excelName][excelMulti].Item1[1, 0].ToString();
+            var startRowSource = PubMetToExcel.FindSourceRow(sheet, 2, startValue);
+            var endRowSource = PubMetToExcel.FindSourceRow(sheet, 2, endValue);
+            if (startRowSource == -1 || endRowSource == -1)
+            {
+                if (isDelete)
+                {
+                    var writeIdList2 = new List<string> { startValue + "#" + endValue };
+                    return (writeIdList2, -1);
+                }
+            }
+
+            var count = endRowSource - startRowSource + 1;
+            if (isDelete)
+            {
+                sheet.DeleteRow(startRowSource, count);
+            }
+
+            if (lastRow < endRowSource)
+                lastRow = endRowSource;
+        }
+        return (["查询完毕：正确"], lastRow);
     }
 }
 
@@ -2433,7 +2829,7 @@ public class ExcelDataAutoInsertActivityServer
         string nameOrIdString = isNames ? "活动名" : "活动ID";
 
         Array sourceDataArr = sourceDateRange.Value2;
-        var sourceData = new List<(string, double, double, int, int, int , string)>();
+        var sourceData = new List<(string, double, double, int, int, int, string)>();
 
         for (int col = 1; col <= sourceMaxCol - 3 + 1; col++)
         {
@@ -2443,7 +2839,8 @@ public class ExcelDataAutoInsertActivityServer
 
                 // 过滤已删除活动
                 bool hasStrikethrough = cell.Font.Strikethrough;
-                if(hasStrikethrough) continue;
+                if (hasStrikethrough)
+                    continue;
 
                 var cellOutValue = sourceOutRange[1, col].Value2?.ToString() ?? "";
                 if (cellOutValue != "#导出")
@@ -2464,7 +2861,7 @@ public class ExcelDataAutoInsertActivityServer
                             activityName = mergeValue.ToString().Split("：")[1];
                             activityCondition = mergeValue.ToString().Split("：")[0];
                         }
-  
+
                         sourceData.Add(
                             (
                                 activityName,
@@ -2516,7 +2913,7 @@ public class ExcelDataAutoInsertActivityServer
             if (fixDataMatch == null)
             {
                 var activeName = a.Item1;
-                if(a.Item7 != "")
+                if (a.Item7 != "")
                 {
                     activeName = $"{a.Item7}：{a.Item1}";
                 }
@@ -2577,36 +2974,52 @@ public class ExcelDataAutoInsertActivityServer
             var targetPushTimeString = ConvertToDateString(a.Item2, fixDataMatch[fixPush]);
             var targetPushTimeLong = ConvertToUnixTime(sourceStartTimeLong, fixDataMatch[fixPush]);
             var targetPushEndTimeString = ConvertToDateString(
-                a.Item2 + a.Item6 - a.Item5 + 1 - OneMinuteInDays,0
-                //fixDataMatch[fixPushEnds]
+                a.Item2 + a.Item6 - a.Item5 + 1 - OneMinuteInDays,
+                0
+            //fixDataMatch[fixPushEnds]
             );
             var targetPushEndTimeLong = ConvertToUnixTime(
-                sourceEndTimeLong,0
-                //fixDataMatch[fixPushEnds]
+                sourceEndTimeLong,
+                0
+            //fixDataMatch[fixPushEnds]
             );
-            var targetPreHeatTimeString = ConvertToDateString(a.Item2, 0/*fixDataMatch[fixPreHeats]*/);
+            var targetPreHeatTimeString = ConvertToDateString(
+                a.Item2,
+                0 /*fixDataMatch[fixPreHeats]*/
+            );
             var targetPreHeatTimeLong = ConvertToUnixTime(
-                sourceStartTimeLong,0
-                //fixDataMatch[fixPreHeats]
+                sourceStartTimeLong,
+                0
+            //fixDataMatch[fixPreHeats]
             );
-            var targetOpenTimeString = ConvertToDateString(a.Item2, 0/*fixDataMatch[fixOpens]*/);
-            var targetOpenTimeLong = ConvertToUnixTime(sourceStartTimeLong, 0/*fixDataMatch[fixOpens]*/);
+            var targetOpenTimeString = ConvertToDateString(
+                a.Item2,
+                0 /*fixDataMatch[fixOpens]*/
+            );
+            var targetOpenTimeLong = ConvertToUnixTime(
+                sourceStartTimeLong,
+                0 /*fixDataMatch[fixOpens]*/
+            );
             var targetEndTimeString = ConvertToDateString(
-                a.Item3 - OneMinuteInDays,0
-                /*fixDataMatch[fixEnds] */+ 1
+                a.Item3 - OneMinuteInDays,
+                0
+                    /*fixDataMatch[fixEnds] */+ 1
             );
-            var targetEndTimeLong = ConvertToUnixTime(sourceEndTimeLong,0 /*fixDataMatch[fixEnds]*/);
+            var targetEndTimeLong = ConvertToUnixTime(
+                sourceEndTimeLong,
+                0 /*fixDataMatch[fixEnds]*/
+            );
             var targetCloseTimeString = ConvertToDateString(
                 a.Item3 - OneMinuteInDays,
                 fixDataMatch[fixCloses] + 1
             );
             var targetCloseTimeLong = ConvertToUnixTime(sourceEndTimeLong, fixDataMatch[fixCloses]);
             var targetActGroup = fixDataMatch[isActGroup].ToString();
-            var targetOpenCondition = fixDataMatch[openCondition]?.ToString()??"";
-            if (targetOpenCondition == "\"{}\"" || targetOpenCondition =="") 
+            var targetOpenCondition = fixDataMatch[openCondition]?.ToString() ?? "";
+            if (targetOpenCondition == "\"{}\"" || targetOpenCondition == "")
             {
-                if(a.Item7 != "")
-                { 
+                if (a.Item7 != "")
+                {
                     targetOpenCondition = "\"{{26,{" + a.Item7.Replace("、", ",") + "}}}\"";
                 }
             }

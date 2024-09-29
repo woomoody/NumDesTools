@@ -1133,7 +1133,8 @@ public class PubMetToExcel
 
         return list;
     }
-
+    
+    //二维List转二维数组
     public static object[,] ConvertListToArray(List<List<object>> listOfLists)
     {
         var rowCount = listOfLists.Count;
@@ -1147,6 +1148,20 @@ public class PubMetToExcel
 
             for (var j = 0; j < colCount; j++)
                 twoDArray[i, j] = innerList[j];
+        }
+
+        return twoDArray;
+    }
+
+    //一维List转一维数组
+    public static object[] ConvertListToArray(List<object> listOfLists )
+    {
+        var rowCount = listOfLists.Count;
+        var twoDArray = new object[rowCount];
+
+        for (var i = 0; i < rowCount; i++)
+        {
+            twoDArray[i] = listOfLists[i];
         }
 
         return twoDArray;
@@ -1270,8 +1285,8 @@ public class PubMetToExcel
         return modelValue;
     }
     //字典二维数组化
-    public static object[,] DictionaryTo2DArray(
-        Dictionary<int, List<int>> dictionary,
+    public static object[,] DictionaryTo2DArray<TKey, TValue>(
+        Dictionary<TKey, List<TValue>> dictionary,
         int? maxRows = null,
         int? maxCols = null
     )
@@ -1297,6 +1312,33 @@ public class PubMetToExcel
         return array2D;
     }
 
+    //字典二维数组化-带Key(数据模版专用）
+    public static object[,] DictionaryTo2DArrayKey<TKey, TValue>(
+        Dictionary<TKey, List<TValue>> dictionary,
+        int maxRows,
+        int maxCols 
+    )
+    {
+
+
+        object[,] array2D = new object[maxRows, maxCols];
+
+        int row = 0;
+        foreach (var kvp in dictionary)
+        {
+            bool isFirstValue = true;
+            foreach (var value in kvp.Value)
+            {
+                array2D[row, 0] = value;
+                array2D[row, 1] = null;
+                array2D[row, 2] = isFirstValue ? kvp.Key : null;
+                isFirstValue = false;
+                row++;
+            }
+        }
+
+        return array2D;
+    }
     //二维数据字符串连接化缩短列数
     public static object[,] ConvertToCommaSeparatedArray(object[,] array2D)
     {

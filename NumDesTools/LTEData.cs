@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Reflection.Metadata.Ecma335;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Text.RegularExpressions;
 using NPOI.OpenXmlFormats.Dml.Diagram;
 using NPOI.SS.Formula.Functions;
@@ -115,15 +116,29 @@ public class LteData
             }
             modelValueAll[modelName] = modelValue;
         }
-        //分功能处理导出
+
+        string id;
+        string idType;
         if (baseSheetName.Contains("【基础】"))
         {
             //走【基础】表逻辑
-            BaseSheet(baseData, exportWildcardData, modelValueAll);
+            id = "ID";
+            idType = "类型";
+            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
         }
         else if (baseSheetName.Contains("【任务】"))
         {
-            //走【任务】表逻辑
+            //走【基础】表逻辑
+            id = "任务编号";
+            idType = "类型";
+            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
+        }
+        else if (baseSheetName.Contains("【坐标】"))
+        {
+            //走【基础】表逻辑
+            id = "编号";
+            idType = "类型";
+            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
         }
 
         sw.Stop();
@@ -134,7 +149,9 @@ public class LteData
     private static void BaseSheet(
         Dictionary<string, List<object>> baseData,
         Dictionary<string, string> exportWildcardData,
-        Dictionary<string, Dictionary<(object, object), string>> modelValueAll
+        Dictionary<string, Dictionary<(object, object), string>> modelValueAll,
+        string id,
+        string idType
     )
     {
         Dictionary<string, Dictionary<(object, object), string>> realValueAll;
@@ -152,13 +169,14 @@ public class LteData
                 out ExcelWorksheet targetSheet,
                 out ExcelPackage targetExcel
             );
-            var idList = baseData["ID"];
-            var typeList = baseData["类型"];
+            var idList = baseData[id];
+            var typeList = baseData[idType];
 
             var writeCol = targetSheet.Dimension.End.Column;
 
             var exportWildcardDyData = new Dictionary<string, string>(exportWildcardData);
 
+            bool dataWritten = false; // 标志变量
 
             for (int idCount = 0; idCount < idList.Count; idCount++)
             {
@@ -171,7 +189,13 @@ public class LteData
                 //更新动态值
                 foreach (var wildcardDy in exportWildcardData)
                 {
-                    GetDyWildcardValue(baseData, exportWildcardDyData, wildcardDy.Key, wildcardDy.Value, idCount);
+                    GetDyWildcardValue(
+                        baseData,
+                        exportWildcardDyData,
+                        wildcardDy.Key,
+                        wildcardDy.Value,
+                        idCount
+                    );
                 }
 
                 for (int j = 2; j <= writeCol; j++)
@@ -199,14 +223,21 @@ public class LteData
 
                         var cell = targetSheet.Cells[writeRow, j];
                         cell.Value = cellRealValue;
+                        dataWritten = true;
                     }
                 }
             }
-            targetExcel.Save();
+            if (dataWritten) // 只有在写入数据时才保存
+            {
+                targetExcel.Save();
+                NumDesAddIn.App.StatusBar = $"导出：{modelSheetName}";
+            }
             targetSheet.Dispose();
-
-            NumDesAddIn.App.StatusBar = $"导出：{modelSheetName}";
         }
+        //输出字典数据
+        string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string filePath = Path.Combine(documentsPath, "strDic.csv");
+        SaveDictionaryToFile(strDictionary, filePath);
     }
 
     private static void TaskSheet(string specialCharsStr) { }
@@ -259,7 +290,9 @@ public class LteData
                     ),
                 "Mer" => Mer(exportWildcardDyData, funDepends, funDy1),
                 "MerB" => MerB(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3),
-                "Ads" => Ads(exportWildcardDyData, funDepends, funDy1 ,baseData , idCount),
+                "Ads" => Ads(exportWildcardDyData, funDepends, funDy1, baseData, idCount),
+                "Arr" => Arr(exportWildcardDyData, funDepends, funDy1, funDy2),
+                "Get" => Get(exportWildcardDyData, funDepends, funDy1 , funDy2),
                 //获取动态值
                 "Var" => exportWildcardDyData[wildcard],
                 //获取静态值
@@ -278,8 +311,10 @@ public class LteData
         string funDy1
     )
     {
+        
         funDy1 = string.IsNullOrEmpty(funDy1) ? "2" : funDy1;
-        return exportWildcardDyData[funDepends].Substring(0, int.Parse(funDy1));
+        var maxCount = Math.Min(exportWildcardDyData[funDepends].Length, int.Parse(funDy1));
+        return exportWildcardDyData[funDepends].Substring(0, maxCount);
     }
 
     private static string Right(
@@ -289,9 +324,10 @@ public class LteData
     )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "2" : funDy1;
+        var maxCount = Math.Min(exportWildcardDyData[funDepends].Length, int.Parse(funDy1));
         return exportWildcardDyData[funDepends]
             .Substring(
-                exportWildcardDyData[funDepends].Length - int.Parse(funDy1),
+                exportWildcardDyData[funDepends].Length - maxCount,
                 int.Parse(funDy1)
             );
     }
@@ -333,8 +369,10 @@ public class LteData
     )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "1" : funDy1;
-        return (long.Parse(exportWildcardDyData[funDepends]) + int.Parse(funDy1)).ToString(); ;
+        return (long.Parse(exportWildcardDyData[funDepends]) + int.Parse(funDy1)).ToString();
+        ;
     }
+
     private static string MerB(
         Dictionary<string, string> exportWildcardDyData,
         string funDepends,
@@ -361,6 +399,7 @@ public class LteData
         }
         return result;
     }
+
     private static string Ads(
         Dictionary<string, string> exportWildcardDyData,
         string funDepends,
@@ -370,8 +409,13 @@ public class LteData
     )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "链类最大值" : funDy1;
-        string rootNum = exportWildcardDyData[funDepends].Substring(0 , exportWildcardDyData[funDepends].Length - 2) + "00";
-        int baseValue = int.Parse(exportWildcardDyData[funDepends].Substring(exportWildcardDyData[funDepends].Length - 1 , 1));
+        string rootNum =
+            exportWildcardDyData[funDepends]
+                .Substring(0, exportWildcardDyData[funDepends].Length - 2) + "00";
+        int baseValue = int.Parse(
+            exportWildcardDyData[funDepends]
+                .Substring(exportWildcardDyData[funDepends].Length - 1, 1)
+        );
         int baseMax = int.Parse(exportWildcardDyData[funDy1]);
         if (baseMax == 0)
         {
@@ -390,20 +434,93 @@ public class LteData
 
         return result;
     }
+
+    private static string Arr(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1,
+        string funDy2
+    )
+    {
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "消耗量组" : funDy1;
+        funDy2 = string.IsNullOrEmpty(funDy2) ? "" : funDy2;
+
+        var funDy1Value = exportWildcardDyData[funDy1];
+        var funDependsValue = exportWildcardDyData[funDepends];
+
+        var funDy1ValueSplit = Regex.Split(funDy1Value, ",");
+
+        var funDependsValueSplit = Regex.Split(funDependsValue, ",");
+
+
+        string result = "";
+        if (funDy1ValueSplit.Length == funDependsValueSplit.Length)
+        {
+            for (int i = 0; i < funDy1ValueSplit.Length; i++)
+            {
+                string temp = "";
+                if (funDy2 != "")
+                {
+                    var funDy2Value = exportWildcardDyData[funDy2];
+                    if (long.TryParse(funDy2Value, out long funDy2ValueLong))
+                    {
+                        temp =
+                            $"[{funDependsValueSplit[i]},{funDy1ValueSplit[i]},{funDy2ValueLong + i}]";
+                    }
+                    else
+                    {
+                        temp =
+                            $"[{funDependsValueSplit[i]},{funDy1ValueSplit[i]},{funDy2Value}]";
+                    }
+                }
+                else
+                {
+                    temp = $"[{funDependsValueSplit[i]},{funDy1ValueSplit[i]}]";
+                }
+                result += temp + ",";
+            }
+            result = result.Substring(0, result.Length - 1);
+        }
+        return result;
+    }
+    private static string Get(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1,
+        string funDy2
+    )
+    {
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "1" : funDy1;
+        funDy2 = string.IsNullOrEmpty(funDy1) ? "," : funDy2;
+        var dependsValue = exportWildcardDyData[funDepends];
+        var dependsValueSplit = Regex.Split(dependsValue, funDy2);
+        var result = "";
+        result = dependsValueSplit[int.Parse(funDy1) - 1];
+        return result;
+    }
+
     //获取动态值
-    private static void GetDyWildcardValue(Dictionary<string, List<object>> baseData,
+    private static void GetDyWildcardValue(
+        Dictionary<string, List<object>> baseData,
         Dictionary<string, string> exportWildcardDyData,
         string wildcard,
         string funDepends,
-        int idCount)
+        int idCount
+    )
     {
         if (funDepends.Contains("Var"))
         {
             var wildcardValueSplit = Regex.Split(funDepends, "#");
-            string fixWildcardValue = baseData[wildcardValueSplit[1]][idCount].ToString();
+            string fixWildcardValue = baseData[wildcardValueSplit[1]][idCount]?.ToString() ?? "";
+            //ID组关键词替换
+            if (wildcardValueSplit.Length == 3)
+            {
+                fixWildcardValue = fixWildcardValue.Replace("#", wildcardValueSplit[2]);
+            }
             exportWildcardDyData[wildcard] = fixWildcardValue;
         }
     }
+
     //自定义字典初始化
     private static void InitializeDictionary(
         Dictionary<string, Dictionary<string, List<string>>> strDictionary,
@@ -420,19 +537,35 @@ public class LteData
             strDictionary[key][subKey] = new List<string>();
         }
     }
+
     //循环数字
     private static List<int> LoopNumber(int start, int max)
     {
         List<int> sequence = new List<int>();
 
-
         for (int i = 1; i <= max; i++)
         {
             var modValue = ((start - 1) % max) + 1;
-            start++; 
+            start++;
             sequence.Add(modValue);
         }
 
         return sequence;
+    }
+
+    //strDic输出到文件
+    private static void SaveDictionaryToFile(Dictionary<string, Dictionary<string, List<string>>> dictionary, string filePath)
+    {
+        using (StreamWriter writer = new StreamWriter(filePath, false, Encoding.UTF8))
+        {
+            foreach (var outerPair in dictionary)
+            {
+                foreach (var innerPair in outerPair.Value)
+                {
+                    var line = $"{outerPair.Key},{innerPair.Key},{string.Join(",", innerPair.Value)}";
+                    writer.WriteLine(line);
+                }
+            }
+        }
     }
 }

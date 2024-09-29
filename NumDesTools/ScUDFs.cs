@@ -364,7 +364,7 @@ public class ExcelUdf
         IsMacroType = true,
         Description = "提取字符串中数字"
     )]
-    public static int GetNumFromStr(
+    public static long GetNumFromStr(
         [ExcelArgument(AllowReference = true, Description = "输入字符串")] string inputValue,
         [ExcelArgument(AllowReference = true, Name = "分隔符", Description = "分隔符,eg:,")]
             string delimiter,
@@ -383,7 +383,7 @@ public class ExcelUdf
         var maxNumCount = numbers.Length;
         numCount = Math.Min(maxNumCount, numCount);
 #pragma warning disable CA1305
-        return Convert.ToInt32(numbers[numCount - 1]);
+        return Convert.ToInt64(numbers[numCount - 1]);
 #pragma warning restore CA1305
     }
 
@@ -1133,14 +1133,143 @@ public class ExcelUdf
         {
             if (row >= rangeObjMax - 3)
             {
-                baseLinkCount = Math.Ceiling(baseLinkCount  * mergeType) - hasLinks[row - (rangeObjMax - 4)];
+                baseLinkCount =
+                    Math.Ceiling(baseLinkCount * mergeType) - hasLinks[row - (rangeObjMax - 4)];
             }
             else
             {
-                baseLinkCount = Math.Ceiling(baseLinkCount  * mergeType);
+                baseLinkCount = Math.Ceiling(baseLinkCount * mergeType);
             }
         }
 
         return baseLinkCount;
+    }
+
+    [ExcelFunction(
+        Category = "UDF-Alice专属函数",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "针对Alice项目特制的自定义函数-计算最近坐标",
+        Name = "AliceLtePoisonNear"
+    )]
+    public static string AliceLtePoisonNear(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "基准坐标")]
+            object[,] basePos,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "目标坐标组")]
+            string targetPos,
+        [ExcelArgument(AllowReference = true, Description = "\\d+", Name = "目标坐标组正则方法")]
+            string posPattern,
+        [ExcelArgument(AllowReference = true, Description = "1/0/-1", Name = "选择：最近、最远、中值")]
+            string posType
+    )
+    {
+        var baseX = int.Parse(basePos[0, 0].ToString());
+        var baseY = int.Parse(basePos[0, 1].ToString());
+        posPattern ??= "";
+        posType ??= "1";
+        // 提取坐标
+        MatchCollection posMatches = Regex.Matches(targetPos, posPattern);
+        // 构建结果
+        var posResult = new List<(double, string)>();
+        if (posResult == null)
+            throw new ArgumentNullException(nameof(posResult));
+        foreach (Match match in posMatches)
+        {
+            int x = int.Parse(match.Groups[1].Value);
+            int y = int.Parse(match.Groups[2].Value);
+            double distance = Math.Pow(x - baseX, 2) + Math.Pow(y - baseY, 2);
+            posResult.Add((distance, $"{x},{y}"));
+        }
+
+        //选择结果
+        if (posType == "1")
+        {
+            var minValueTuple = posResult.MinBy(t => t.Item1);
+            return minValueTuple.Item2;
+        }
+        else if (posType == "0")
+        {
+            var maxValueTuple = posResult.MaxBy(t => t.Item1);
+            return maxValueTuple.Item2;
+        }
+        else
+        {
+            var sortedList = posResult.OrderBy(t => t.Item1).ToList();
+            var middleIndex = sortedList.Count / 2;
+            var medianValueTuple = sortedList[middleIndex];
+            return medianValueTuple.Item2;
+        }
+        return Empty;
+    }
+    [ExcelFunction(
+    Category = "UDF-Alice专属函数",
+    IsVolatile = true,
+    IsMacroType = true,
+    Description = "针对Alice项目特制的自定义函数-提取坐标",
+    Name = "AliceLtePoison"
+)]
+    public static string AliceLtePoison(
+    [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "目标坐标组")]
+            string targetPos,
+    [ExcelArgument(AllowReference = true, Description = "\\d+", Name = "目标坐标组正则方法")]
+            string posPattern
+)
+    {
+        // 提取坐标
+        MatchCollection posMatches = Regex.Matches(targetPos, posPattern);
+        // 构建结果
+        string posResult = string.Empty;
+        if (posResult == null)
+            throw new ArgumentNullException(nameof(posResult));
+        foreach (Match match in posMatches)
+        {
+            int x = int.Parse(match.Groups[1].Value);
+            int y = int.Parse(match.Groups[2].Value);
+            var pos = "{"+$"21,{x},{y}" +"},";
+            posResult += pos;
+        }
+        posResult = posResult.Substring(0, posResult.Length - 1);
+        return posResult;
+    }
+    [ExcelFunction(
+        Category = "UDF-Alice专属函数",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "针对Alice项目特制的自定义函数-查找指定Range文件名数据在文件夹中是否存在",
+        Name = "AliceLteSourceCheck"
+    )]
+    public static bool AliceLteSourceCheck(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "文件名")]
+            string filesName,
+            [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "目标文件夹子目录 ")]
+            string folderPath,
+        [ExcelArgument(AllowReference = true, Description = @"C:\My", Name = "目标文件夹根目录")]
+            string baseFolderPath
+    )
+    {
+        baseFolderPath = string.IsNullOrEmpty(baseFolderPath)
+            ? @"C:/M1Work/Code/"
+            : baseFolderPath;
+
+        var fileFullPath = baseFolderPath + folderPath;
+            try
+            {
+                // 获取文件夹及其子文件夹中的所有文件
+                var files = Directory.GetFiles(
+                    fileFullPath,
+                    filesName,
+                    SearchOption.AllDirectories
+                );
+                if (files.Length > 0)
+                {
+                   return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                return false;
+        }
+            
+        return false;
     }
 }
