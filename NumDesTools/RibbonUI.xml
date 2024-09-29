@@ -29,6 +29,9 @@
                     <button id='CellHiLight' size='large' getLabel='GetLableText' image='reason'
                             onAction='CellHiLight_Click'
                             screentip='点击高亮显示一定范围内同值内容，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.txt' />
+                    <button id='PowerQueryLinksUpdate' size='large' label='更新表格路径' image='verilog'
+                            onAction='PowerQueryLinksUpdate_Click'
+                            screentip='更新PowerQuery表连接路径' />
                 </group>
                 <!--
                 <group id='Group3' label='SVN功能'>
@@ -74,6 +77,10 @@
                                 onAction='AutoInsertExcelData_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI' />
                         <button id='AutoInsertExcelDataThread'  label='自动数据LTE(多线程)' imageMso='ConnectionPoints'
                                 onAction='AutoInsertExcelDataThread_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI，多线程更快速' />
+                        <button id='AutoInsertExcelDataNew'  label='自动数据LTE（New）' imageMso='ConnectedToolSyncMenu'
+                                onAction='AutoInsertExcelDataNew_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI' />
+                        <button id='AutoInsertExcelDataThreadNew'  label='自动数据LTE(多线程)（New）' imageMso='ConnectionPoints'
+                                onAction='AutoInsertExcelDataThreadNew_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI，多线程更快速' />
                     </menu>
                         <button id='AutoInsertExcelDialog' size='large' label='自动数据(对话类)' image='ejs'
                             onAction='AutoInsertExcelDataDialog_Click' screentip='根据模板数据覆写对话数据表格：EPPlusI' />
@@ -105,6 +112,8 @@
                     </menu>
                     <button id="ExcelSearchBoxButton5" size='large' label="搜索文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串'
                             onAction='CellDataSearch_Click' image="key" />
+                    <button id="ModelDataCreat" size='large' label="创建数据模版" screentip='搜索关键词，输出表格数据'
+                            onAction='ModelDataCreat_Click' image="key" />
                 </group>
                 <group id="Group9" label="运营工具">
                     <button id="ActivityServerDataButton1" size='large' label="生成活动(活动名)" screentip='根据运营排期自动生成活动配置'

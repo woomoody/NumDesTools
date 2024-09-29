@@ -1,17 +1,21 @@
 ﻿using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Office.Interop.Excel;
 using MiniExcelLibs;
 using NLua;
+using NPOI.SS.UserModel;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using LicenseContext = OfficeOpenXml.LicenseContext;
 using MessageBox = System.Windows.MessageBox;
 using Process = System.Diagnostics.Process;
+
 
 // ReSharper disable All
 
@@ -935,7 +939,120 @@ public class PubMetToExcelFunc
 
         return targetList.ToList();
     }
+    public static Dictionary<string, List<string>> SearchModelKeyFromExcelMiniExcel(
+string rootPath,
+string errorValue
+)
+    {
+        var filesCollection = new SelfExcelFileCollector(rootPath, 2);
+        var files = filesCollection.GetAllExcelFilesPath();
 
+        var targetList = new Dictionary<string, List<string>>();
+
+        var currentCount = 0;
+        var count = files.Length;
+        var isAll = errorValue.Contains("*");
+        errorValue = errorValue.Replace("*", "");
+
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+        Parallel.ForEach(
+            files,
+            options,
+            file =>
+            {
+                var fileName = Path.GetFileName(file);
+                try
+                {
+                    var sheetNames = MiniExcel.GetSheetNames(file);
+                    Parallel.ForEach(
+                        sheetNames,
+                        sheetName =>
+                        {
+                            if (sheetName.Contains("#"))
+                                return;
+
+                            var rows = MiniExcel.Query(file, sheetName: sheetName);
+                            int rowIndex = 1;
+                            foreach (var row in rows)
+                            {
+                                int colIndex = 1;
+                                foreach (var cell in row)
+                                {
+                                    // 只搜索第2列
+                                    if (colIndex == 2)
+                                    {
+                                        var cellValue = cell.Value?.ToString();
+                                        if (
+                                            cellValue != null
+                                            && (
+                                                isAll
+                                                    ? cellValue.StartsWith(errorValue)
+                                                    : cellValue == errorValue
+                                            )
+                                        )
+                                        {
+                                            if (!sheetName.Contains("#"))
+                                            {
+                                                if (sheetName.Contains("Sheet") || sheetName.Contains("map_proto"))
+                                                {
+                                                    fileName = $"{fileName}";
+                                                }
+                                                else
+                                                {
+                                                    fileName = $"{fileName}#{sheetName}";
+                                                }
+
+                                                // 确保 targetList 中存在 fileName 键
+                                                if (!targetList.ContainsKey(fileName))
+                                                {
+                                                    targetList[fileName] = new List<string>();
+                                                }
+
+                                                targetList[fileName].Add(cellValue);
+                                            }
+
+                                        }
+                                    }
+
+                                    colIndex++;
+                                }
+
+                                rowIndex++;
+                            }
+                        }
+                    );
+                }
+                catch
+                {
+                    // 记录异常信息，继续处理下一个文件
+                }
+
+                //处理List
+                if (targetList.ContainsKey(fileName))
+                {
+                    if (targetList[fileName].Count > 1)
+                    {
+                        // 只保留第一个和最后一个元素
+                        var first = targetList[fileName].First();
+                        var last = targetList[fileName].Last();
+                        targetList[fileName] = new List<string> { first, last };
+                    }
+                    else if (targetList[fileName].Count == 1)
+                    {
+                        // 复制第一个元素并添加到第二个位置
+                        var first = targetList[fileName].First();
+                        targetList[fileName].Add(first);
+                    }
+                }
+
+                currentCount++;
+                NumDesAddIn.App.StatusBar = $"正在检查第 {currentCount}/{count} 个文件: {file}";
+            }
+        );
+
+        return targetList;
+    }
     #endregion
 
     //大富翁种
@@ -1692,6 +1809,39 @@ public class PubMetToExcelFunc
         }
     }
 
+    //更新Power Query链接数据
+    public static void UpdatePowerQueryLinks()
+    {
+        var newFolderPath = WkPath+@"\";
+        dynamic queries = Wk.GetType().InvokeMember("Queries", System.Reflection.BindingFlags.GetProperty, null, Wk, null);
+        foreach (dynamic query in queries)
+        {
+            string name = query.Name;
+            string formula = query.Formula;
+            string oldFilePath = ExtractFilePathFromFormula(formula);
+            if (!string.IsNullOrEmpty(oldFilePath))
+            {
+                string fileName = System.IO.Path.GetFileName(oldFilePath);
+                string newFilePath = System.IO.Path.Combine(newFolderPath, fileName);
+                string newFormula = formula.Replace(oldFilePath, newFilePath);
+                query.GetType().InvokeMember("Formula", System.Reflection.BindingFlags.SetProperty, null, query, new object[] { newFormula });
+            }
+        }
+    }
+    private static string ExtractFilePathFromFormula(string formula)
+    {
+        // 提取文件路径的逻辑
+        // 假设文件路径在公式中以 "File.Contents(" 开头，并以 ")" 结尾
+        string startMarker = "File.Contents(\"";
+        string endMarker = "\")";
+        int startIndex = formula.IndexOf(startMarker) + startMarker.Length;
+        int endIndex = formula.IndexOf(endMarker, startIndex);
+        if (startIndex > startMarker.Length && endIndex > startIndex)
+        {
+            return formula.Substring(startIndex, endIndex - startIndex);
+        }
+        return string.Empty;
+    }
     public class ExcelDataFormatCheck
     {
         public static void CheckValueFormat(string specialCharsStr)
