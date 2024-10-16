@@ -1,12 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Reflection.Metadata.Ecma335;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
-using NPOI.OpenXmlFormats.Dml.Diagram;
-using NPOI.SS.Formula.Functions;
 using OfficeOpenXml;
-using OfficeOpenXml.DataValidation;
 using Match = System.Text.RegularExpressions.Match;
 
 namespace NumDesTools;
@@ -154,7 +148,6 @@ public class LteData
         string idType
     )
     {
-        Dictionary<string, Dictionary<(object, object), string>> realValueAll;
         var strDictionary = new Dictionary<string, Dictionary<string, List<string>>>();
 
         //替换通配符生成数据
@@ -163,7 +156,7 @@ public class LteData
         {
             string modelSheetName = modelSheet.Key;
 
-            List<(string, string, string)> errorList = PubMetToExcel.SetExcelObjectEpPlus(
+            PubMetToExcel.SetExcelObjectEpPlus(
                 WkPath,
                 modelSheetName,
                 out ExcelWorksheet targetSheet,
@@ -216,8 +209,6 @@ public class LteData
                             cellModelValue,
                             exportWildcardData,
                             exportWildcardDyData,
-                            baseData,
-                            idCount,
                             strDictionary
                         );
 
@@ -240,15 +231,11 @@ public class LteData
         SaveDictionaryToFile(strDictionary, filePath);
     }
 
-    private static void TaskSheet(string specialCharsStr) { }
-
     //分析Cell中通配符构成
     private static string AnalyzeWildcard(
         string cellModelValue,
         Dictionary<string, string> exportWildcardData,
         Dictionary<string, string> exportWildcardDyData,
-        Dictionary<string, List<object>> baseData,
-        int idCount,
         Dictionary<string, Dictionary<string, List<string>>> strDictionary
     )
     {
@@ -290,7 +277,7 @@ public class LteData
                     ),
                 "Mer" => Mer(exportWildcardDyData, funDepends, funDy1),
                 "MerB" => MerB(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3),
-                "Ads" => Ads(exportWildcardDyData, funDepends, funDy1, baseData, idCount),
+                "Ads" => Ads(exportWildcardDyData, funDepends, funDy1),
                 "Arr" => Arr(exportWildcardDyData, funDepends, funDy1, funDy2),
                 "Get" => Get(exportWildcardDyData, funDepends, funDy1 , funDy2),
                 //获取动态值
@@ -370,7 +357,6 @@ public class LteData
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "1" : funDy1;
         return (long.Parse(exportWildcardDyData[funDepends]) + int.Parse(funDy1)).ToString();
-        ;
     }
 
     private static string MerB(
@@ -403,9 +389,7 @@ public class LteData
     private static string Ads(
         Dictionary<string, string> exportWildcardDyData,
         string funDepends,
-        string funDy1,
-        Dictionary<string, List<object>> baseData,
-        int idCount
+        string funDy1
     )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "链类最大值" : funDy1;
@@ -419,7 +403,7 @@ public class LteData
         int baseMax = int.Parse(exportWildcardDyData[funDy1]);
         if (baseMax == 0)
         {
-            MessageBox.Show($"{rootNum}物品应该不属于链");
+            MessageBox.Show($@"{rootNum}物品应该不属于链");
         }
         var loopNum = LoopNumber(baseValue, baseMax);
         string result = "";
@@ -458,7 +442,7 @@ public class LteData
         {
             for (int i = 0; i < funDy1ValueSplit.Length; i++)
             {
-                string temp = "";
+                string temp;
                 if (funDy2 != "")
                 {
                     var funDy2Value = exportWildcardDyData[funDy2];
@@ -494,8 +478,7 @@ public class LteData
         funDy2 = string.IsNullOrEmpty(funDy1) ? "," : funDy2;
         var dependsValue = exportWildcardDyData[funDepends];
         var dependsValueSplit = Regex.Split(dependsValue, funDy2);
-        var result = "";
-        result = dependsValueSplit[int.Parse(funDy1) - 1];
+        var result = dependsValueSplit[int.Parse(funDy1) - 1];
         return result;
     }
 

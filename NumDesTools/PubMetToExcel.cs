@@ -2,7 +2,6 @@
 using System.Data.OleDb;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using NPOI.SS.Formula.Functions;
 using OfficeOpenXml;
 using DataTable = System.Data.DataTable;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
@@ -975,7 +974,7 @@ public class PubMetToExcel
             if (!File.Exists(filePath))
             {
                 // ReSharper disable LocalizableElement
-                MessageBox.Show("文件不存在，请检查！");
+                MessageBox.Show(@"文件不存在，请检查！");
                 // ReSharper restore LocalizableElement
                 return;
             }
@@ -1041,6 +1040,21 @@ public class PubMetToExcel
             workSheet.Cells[startRow + rowCount - 1, startCol + columnCount - 1]
         ];
         targetRange.Value = targetDataArr;
+    }
+    //二维数组搜索指定行的数据，返回指定行对应列数据
+    public static string FindValueInFirstRow(object[,] array, string value , int findIndex = 0 , int returnIndex = 1)
+    {
+        // 获取数组的列数
+        int columns = array.GetLength(1);
+        for (int col = 0; col < columns; col++)
+        {
+            if (array[findIndex, col]?.ToString() == value)
+            {
+                return array[returnIndex, col]?.ToString();
+            }
+        }
+        // 如果未找到匹配的值，返回 null
+        return string.Empty;
     }
 
     //Range二维数组List化
@@ -1275,7 +1289,7 @@ public class PubMetToExcel
                 string colIndex = modelRangeValue[1, col];
                 if (rowIndex == null || colIndex == null)
                 {
-                    MessageBox.Show("模版表中表头有空值，请检查模版数据是否正确！");
+                    MessageBox.Show(@"模版表中表头有空值，请检查模版数据是否正确！");
                     return null ;
                 }
                 string value = modelRangeValue[row, col]?.ToString() ?? "";

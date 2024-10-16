@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using System.Windows.Documents;
 using Newtonsoft.Json;
 using NPOI.XSSF.UserModel;
 using static System.String;
@@ -451,7 +450,7 @@ public class ExcelUdf
         // 使用 ElementAtOrDefault 安全地获取匹配项
         var match = matches.ElementAtOrDefault(numCount - 1);
         // 如果匹配项存在，则返回其值，否则返回空字符串
-        return match?.Value ?? string.Empty;
+        return match?.Value ?? Empty;
     }
 
     [ExcelFunction(
@@ -460,7 +459,7 @@ public class ExcelUdf
         IsMacroType = true,
         Description = "分割字符串为特定结构的若干字符串-返回数组"
     )]
-    public static object[] GetStrStructFromStrArray(
+    public static string[] GetStrStructFromStrArray(
         [ExcelArgument(AllowReference = true, Name = "单元格索引", Description = "输入字符串")]
             object[,] inputValue,
         [ExcelArgument(AllowReference = true, Name = "分割符", Description = @"默认为逗号")]
@@ -477,7 +476,7 @@ public class ExcelUdf
         {
             // 正则表达式匹配内部数组
             var numbers = Regex
-                .Split(value.ToString(), delimiter)
+                .Split(value.ToString() ?? throw new InvalidOperationException(), delimiter)
                 .SelectMany(s => Regex.Matches(s, @"\d+").Select(m => m.Value))
                 .ToArray();
             foreach (var num in numbers)
@@ -1163,8 +1162,8 @@ public class ExcelUdf
             string posType
     )
     {
-        var baseX = int.Parse(basePos[0, 0].ToString());
-        var baseY = int.Parse(basePos[0, 1].ToString());
+        var baseX = int.Parse(basePos[0, 0].ToString() ?? throw new InvalidOperationException());
+        var baseY = int.Parse(basePos[0, 1].ToString() ?? throw new InvalidOperationException());
         posPattern ??= "";
         posType ??= "1";
         // 提取坐标
@@ -1199,7 +1198,6 @@ public class ExcelUdf
             var medianValueTuple = sortedList[middleIndex];
             return medianValueTuple.Item2;
         }
-        return Empty;
     }
     [ExcelFunction(
     Category = "UDF-Alice专属函数",
@@ -1218,7 +1216,7 @@ public class ExcelUdf
         // 提取坐标
         MatchCollection posMatches = Regex.Matches(targetPos, posPattern);
         // 构建结果
-        string posResult = string.Empty;
+        string posResult = Empty;
         if (posResult == null)
             throw new ArgumentNullException(nameof(posResult));
         foreach (Match match in posMatches)
@@ -1247,7 +1245,7 @@ public class ExcelUdf
             string baseFolderPath
     )
     {
-        baseFolderPath = string.IsNullOrEmpty(baseFolderPath)
+        baseFolderPath = IsNullOrEmpty(baseFolderPath)
             ? @"C:/M1Work/Code/"
             : baseFolderPath;
 
@@ -1265,7 +1263,7 @@ public class ExcelUdf
                    return true;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return false;
         }

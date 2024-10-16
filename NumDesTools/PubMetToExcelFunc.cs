@@ -1,15 +1,9 @@
 ﻿using System.Collections.Concurrent;
-using System.ComponentModel;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Input;
-using System.Windows.Media;
-using Microsoft.Office.Interop.Excel;
 using MiniExcelLibs;
 using NLua;
-using NPOI.SS.UserModel;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using LicenseContext = OfficeOpenXml.LicenseContext;
@@ -972,7 +966,7 @@ string errorValue
                             if (sheetName.Contains("#"))
                                 return;
 
-                            var rows = MiniExcel.Query(file, sheetName: sheetName);
+                            var rows = MiniExcel.Query(file, sheetName: sheetName , startCell:"A2" , useHeaderRow:true);
                             int rowIndex = 1;
                             foreach (var row in rows)
                             {

@@ -21,7 +21,6 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
-using System.Collections;
 using NumDesTools.UI;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
@@ -215,6 +214,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         or "对话写入"
                         or "打开关联表格"
                         or "LTE配置导出"
+                        or "自选表格写入（new）"
             select tempControl
         )
             try
@@ -347,6 +347,17 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 comButton10.Caption = "LTE配置导出";
                 comButton10.Style = MsoButtonStyle.msoButtonIconAndCaption;
                 comButton10.Click += LteData.ExportLteDataConfig;
+            }
+        if (sheetName.Contains("【模板】"))
+            if (
+                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
+                is CommandBarButton comButton11
+            )
+            {
+                comButton11.Tag = "自选表格写入（new）";
+                comButton11.Caption = "自选表格写入（new）";
+                comButton11.Style = MsoButtonStyle.msoButtonIconAndCaption;
+                comButton11.Click += ExcelDataAutoInsertMultiNew.RightClickInsertDataNew;
             }
     }
 
@@ -1152,6 +1163,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
         App.StatusBar = "完成，用时：" + ts2;
     }
+
     public void AutoInsertExcelDataNew_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1406,8 +1418,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-        var wk = App.ActiveWorkbook;
-        var path = wk.Path;
 
         PubMetToExcelFunc.UpdatePowerQueryLinks();
 
@@ -1427,14 +1437,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sheetName = ws.Name;
         if (!sheetName.Contains("【模板】"))
         {
-            MessageBox.Show($"{sheetName}不是数据模板表，不能生成数据");
+            MessageBox.Show($@"{sheetName}不是数据模板表，不能生成数据");
             return;
         }
 
         var targetList = PubMetToExcelFunc.SearchModelKeyFromExcelMiniExcel(path, _excelSeachStr);
 
         int rows = targetList.Values.Sum(list => list.Count);
-        int cols = 3; 
+        int cols = 3;
 
         var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, cols);
 
