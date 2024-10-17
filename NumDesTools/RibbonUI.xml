@@ -110,10 +110,12 @@
                         <button id="ExcelSearchBoxButton4" label="合并数据-关键词" screentip='合并Excel(Alice-Cove)当前关键词'
                                 onAction='ExcelSearchAllToExcel_Click' imageMso="SelectAll" />
                     </menu>
-                    <button id="ExcelSearchBoxButton5" size='large' label="搜索文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串'
-                            onAction='CellDataSearch_Click' image="key" />
+                    <button id="ExcelSearchBoxButton5" size='large' label="替换文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串并替换'
+                            onAction='CellDataReplace_Click' image="key" />
+                    <button id="ExcelSearchBoxButton6" size='large' label="搜索文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串'
+                            onAction='CellDataSearch_Click' image="dart" />
                     <button id="ModelDataCreat" size='large' label="创建数据模版" screentip='搜索关键词，输出表格数据'
-                            onAction='ModelDataCreat_Click' image="key" />
+                            onAction='ModelDataCreat_Click' image="ejs" />
                 </group>
                 <group id="Group9" label="运营工具">
                     <button id="ActivityServerDataButton1" size='large' label="生成活动(活动名)" screentip='根据运营排期自动生成活动配置'
