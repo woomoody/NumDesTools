@@ -1403,11 +1403,21 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
+    public void CellDataReplace_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        PubMetToExcelFunc.ExcelDataFormatCheck.ReplaceValueFormat(_excelSeachStr);
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
     public void CellDataSearch_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
-        PubMetToExcelFunc.ExcelDataFormatCheck.CheckValueFormat(_excelSeachStr);
+        PubMetToExcelFunc.ExcelDataFormatCheck.SeachValueFormat(_excelSeachStr);
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
