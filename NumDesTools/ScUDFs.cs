@@ -5,7 +5,6 @@ using static System.String;
 
 #pragma warning disable CA1416
 
-
 namespace NumDesTools;
 
 /// <summary>
@@ -1199,19 +1198,20 @@ public class ExcelUdf
             return medianValueTuple.Item2;
         }
     }
+
     [ExcelFunction(
-    Category = "UDF-Alice专属函数",
-    IsVolatile = true,
-    IsMacroType = true,
-    Description = "针对Alice项目特制的自定义函数-提取坐标",
-    Name = "AliceLtePoison"
-)]
+        Category = "UDF-Alice专属函数",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "针对Alice项目特制的自定义函数-提取坐标",
+        Name = "AliceLtePoison"
+    )]
     public static string AliceLtePoison(
-    [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "目标坐标组")]
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "目标坐标组")]
             string targetPos,
-    [ExcelArgument(AllowReference = true, Description = "\\d+", Name = "目标坐标组正则方法")]
+        [ExcelArgument(AllowReference = true, Description = "\\d+", Name = "目标坐标组正则方法")]
             string posPattern
-)
+    )
     {
         // 提取坐标
         MatchCollection posMatches = Regex.Matches(targetPos, posPattern);
@@ -1223,12 +1223,13 @@ public class ExcelUdf
         {
             int x = int.Parse(match.Groups[1].Value);
             int y = int.Parse(match.Groups[2].Value);
-            var pos = "{"+$"21,{x},{y}" +"},";
+            var pos = "{" + $"21,{x},{y}" + "},";
             posResult += pos;
         }
         posResult = posResult.Substring(0, posResult.Length - 1);
         return posResult;
     }
+
     [ExcelFunction(
         Category = "UDF-Alice专属函数",
         IsVolatile = true,
@@ -1239,35 +1240,29 @@ public class ExcelUdf
     public static bool AliceLteSourceCheck(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "文件名")]
             string filesName,
-            [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "目标文件夹子目录 ")]
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "目标文件夹子目录 ")]
             string folderPath,
         [ExcelArgument(AllowReference = true, Description = @"C:\My", Name = "目标文件夹根目录")]
             string baseFolderPath
     )
     {
-        baseFolderPath = IsNullOrEmpty(baseFolderPath)
-            ? @"C:/M1Work/Code/"
-            : baseFolderPath;
+        baseFolderPath = IsNullOrEmpty(baseFolderPath) ? @"C:/M1Work/Code/" : baseFolderPath;
 
         var fileFullPath = baseFolderPath + folderPath;
-            try
+        try
+        {
+            // 获取文件夹及其子文件夹中的所有文件
+            var files = Directory.GetFiles(fileFullPath, filesName, SearchOption.AllDirectories);
+            if (files.Length > 0)
             {
-                // 获取文件夹及其子文件夹中的所有文件
-                var files = Directory.GetFiles(
-                    fileFullPath,
-                    filesName,
-                    SearchOption.AllDirectories
-                );
-                if (files.Length > 0)
-                {
-                   return true;
-                }
+                return true;
             }
-            catch (Exception)
-            {
-                return false;
         }
-            
+        catch (Exception)
+        {
+            return false;
+        }
+
         return false;
     }
 }
