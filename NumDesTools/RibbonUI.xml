@@ -5,11 +5,11 @@
         <tabs>
             <tab id='Tab1' label='NumDesTools' insertBeforeMso='TabHome'>
                 <!--
-        < group id = 'Group1' label = '导表(By:SC)' >
+        < group id = 'Group1' label = '导表(By:SC)'>
                   < button id = 'Button1' size = 'large' label = '导出本表' image = 'file' onAction = 'OneSheetOutPut_Click' screentip = '点击导出当前sheet' />
                   < button id = 'Button2' size = 'large' label = '导出本簿' image = 'document' onAction = 'MutiSheetOutPut_Click' screentip = '点击导出当前book所有的sheet，可自选sheet' />
                   < button id = 'Button3' size = 'large' label = '导出目录' image = 'database' onAction = 'AllWorkbookOutPut_Click' screentip = '点击导出当前目录所有文件，可自选book' />
-                  </ group >
+                  </ group>
             < ribbon startFromScratch = 'false' >//表示加载时excel原有的选项卡隐藏否
             -->
                 <group id='Group2' label='格式整理'>
@@ -42,7 +42,7 @@
                             <button id='CellHiLight' size='large' getLabel='GetLableText' image='reason'
                             onAction='CellHiLight_Click'
                             screentip='点击高亮显示一定范围内同值内容，再次点击关闭! 配置路径：\Documents\NumDesGlobalKey.txt' />
-                </group>        
+                </group>
                 -->
                 <!--
                 <group id='Group4' label='战斗仿真'>
@@ -71,7 +71,7 @@
                 </group>
                 -->
                 <group id='Group7' label='自动填表'>
-                    <menu  id ='AutoInsertExcelDataMenu' label ='自动数据&#13;' image ='database' size='large' >
+                    <menu  id ='AutoInsertExcelDataMenu' label ='自动数据&#13;' image ='database' size='large'>
                         <!--Menu中的Button自定义图标不会根据底色自动反色，显示会很奇怪，所以一律用Office内部Icon-->
                         <button id='AutoInsertExcelData'  label='自动数据LTE' imageMso='ConnectedToolSyncMenu'
                                 onAction='AutoInsertExcelData_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI' />
@@ -82,8 +82,8 @@
                         <button id='AutoInsertExcelDataThreadNew'  label='自动数据LTE(多线程)（New）' imageMso='ConnectionPoints'
                                 onAction='AutoInsertExcelDataThreadNew_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI，多线程更快速' />
                     </menu>
-                        <button id='AutoInsertExcelDialog' size='large' label='自动数据(对话类)' image='ejs'
-                            onAction='AutoInsertExcelDataDialog_Click' screentip='根据模板数据覆写对话数据表格：EPPlusI' />
+                    <button id='AutoInsertExcelDialog' size='large' label='自动数据(对话类)' image='ejs'
+                        onAction='AutoInsertExcelDataDialog_Click' screentip='根据模板数据覆写对话数据表格：EPPlusI' />
                     <button id='AutoMergeExcel' size='large' label='合并Excel(Alice-Cove)' image='dart'
                             onAction='AutoMergeExcel_Click' screentip='Alice与Cove表格数据互相拷贝：EPPlusI' />
                     <button id='AutoLinkExcel' size='large' label='Excel超链接' image='edge'
@@ -99,8 +99,8 @@
                 </group>
                 <group id="Group8" label="Excel搜索">
                     <labelControl id="SearchLab" label="搜索编号/关键字" />
-                    <editBox id="ExcelSearchBoxEdit" onChange="ExcelOnEditBoxTextChanged" sizeString="……………………" screentip='需要模糊搜索时关键词前加：*'/>
-                    <menu  id ='ExcelSearchBoxMenu' label ='全局搜索&#13;' image ='key' size='large' >
+                    <editBox id="ExcelSearchBoxEdit" onChange="ExcelOnEditBoxTextChanged" sizeString="……………………" screentip='需要模糊搜索时关键词前加：*' />
+                    <menu  id ='ExcelSearchBoxMenu' label ='全局搜索&#13;' image ='key' size='large'>
                         <button id="ExcelSearchBoxButton1" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件'
                                 onAction='ExcelSearchAll_Click' imageMso="RulesInspector" />
                         <button id="ExcelSearchBoxButton3" label="全局搜索(多线程)" screentip='全列，按照A-Z的顺序遍历文件'
@@ -111,8 +111,7 @@
                                 onAction='ExcelSearchAllToExcel_Click' imageMso="SelectAll" />
                     </menu>
                     <button id="ExcelSearchBoxButton5" size='large' label="替换文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串并替换'
-                            onAction='CellDataReplace_Click' image="key" />
-                    <button id="ExcelSearchBoxButton6" size='large' label="搜索文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串'
+                            onAction='CellDataReplace_Click' image="key" /> <button id="ExcelSearchBoxButton6" size='large' label="搜索文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串'
                             onAction='CellDataSearch_Click' image="dart" />
                     <button id="ModelDataCreat" size='large' label="创建数据模版" screentip='搜索关键词，输出表格数据'
                             onAction='ModelDataCreat_Click' image="ejs" />
@@ -164,7 +163,7 @@
     <!--
     <contextMenus>
         <contextMenu idMso='ContextMenuCell'>
-            <button id='UnRibbonContextMenuTips' label='更多右键菜单[Ctr+Q]' getVisible='GetVisible' screentip='使用快捷键打开自定义右键功能,点击无效' insertBeforeMso='Cut' onAction='RightClickMergeData'/>
+            <button id='UnRibbonContextMenuTips' label='更多右键菜单[Ctr+Q]' getVisible='GetVisible' screentip='使用快捷键打开自定义右键功能,点击无效' insertBeforeMso='Cut' onAction='RightClickMergeData' />
             <menu id='SubMenu' label='Sub Menu'>
                 <button id='SubMenu_Item1' label='Sub Item 1' onAction='OnMenuItemClicked' />
                 <button id='SubMenu_Item2' label='Sub Item 2' onAction='OnMenuItemClicked' />
