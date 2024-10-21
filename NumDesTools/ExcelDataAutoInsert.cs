@@ -1969,7 +1969,7 @@ public class ExcelDataAutoInsertMultiNew
             out ExcelPackage excel
         );
 
-        var excelRealName = excel.Workbook.Names.ToString();
+        var excelRealName = excel.File.Name.ToString();
 
         foreach (var cell in sheet.Cells)
             if (cell.Formula is { Length: > 0 })
@@ -1981,7 +1981,15 @@ public class ExcelDataAutoInsertMultiNew
             }
 
         //查找是否已经写入过新ID，如果写入过，则删除
-        GetElementIdGroup(excelName, sheet, _modelIdNew, true);
+        var writeIdList = GetElementIdGroup(excelName, sheet, _modelIdNew, true);
+
+        var writeRow = writeIdList.Item2;
+        if (writeRow == -1)
+        {
+            errorExcelLog = excelName + "#重复值#" + writeIdList.Item1[0];
+            errorList.Add((excelName, errorExcelLog, excelName));
+            return errorList;
+        }
 
         //多语言表不需要复制全部列
         var colCount = sheet.Dimension.Columns;
@@ -1991,9 +1999,9 @@ public class ExcelDataAutoInsertMultiNew
         }
 
         //获取老ID所在行列信息，准备复制
-        var writeIdList = GetElementIdGroup(excelName, sheet, _modelId);
+        writeIdList = GetElementIdGroup(excelName, sheet, _modelId);
 
-        var writeRow = writeIdList.Item2;
+        writeRow = writeIdList.Item2;
         if (writeRow == -1)
         {
             errorExcelLog = excelName + "#找不到" + writeIdList.Item1[0];
@@ -2206,7 +2214,10 @@ public class ExcelDataAutoInsertMultiNew
                     return (writeIdList2, -1);
                 }
             }
-
+            if(endRowSource < startRowSource)
+            {
+                return ([$"{endValue}-有重复值"], -1);
+            }
             var count = endRowSource - startRowSource + 1;
             if (isDelete)
             {
