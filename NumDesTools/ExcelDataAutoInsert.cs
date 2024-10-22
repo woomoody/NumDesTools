@@ -1984,7 +1984,7 @@ public class ExcelDataAutoInsertMultiNew
         var writeIdList = GetElementIdGroup(excelName, sheet, _modelIdNew, true);
 
         var writeRow = writeIdList.Item2;
-        if (writeRow == -1)
+        if (writeRow == -9527)
         {
             errorExcelLog = excelName + "#重复值#" + writeIdList.Item1[0];
             errorList.Add((excelName, errorExcelLog, excelName));
@@ -2216,7 +2216,7 @@ public class ExcelDataAutoInsertMultiNew
             }
             if(endRowSource < startRowSource)
             {
-                return ([$"{endValue}-有重复值"], -1);
+                return ([$"{endValue}-有重复值"], -9527);
             }
             var count = endRowSource - startRowSource + 1;
             if (isDelete)
