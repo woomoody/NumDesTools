@@ -45,6 +45,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public static string SheetMenuText = _globalValue.Value["SheetMenuText"];
     public static string CellHiLightText = _globalValue.Value["CellHiLightText"];
     public static string TempPath = _globalValue.Value["TempPath"];
+    public static string CheckSheetValueText = _globalValue.Value["CheckSheetValueText"];
 
     public static CommandBarButton Btn;
     public static Application App = (Application)ExcelDnaUtil.Application;
@@ -163,6 +164,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "FocusLightButton" => FocusLabelText,
             "SheetMenu" => SheetMenuText,
             "CellHiLight" => CellHiLightText,
+            "CheckSheetValue" => CheckSheetValueText,
             _ => ""
         };
         return latext;
@@ -387,8 +389,27 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
     {
+        //自检工作簿中第2列是否有重复值、单元格值根据2行的数据类型检测是否非法
+        var ctpCheckValueName = "错误数据";
+        var sourceData = PubMetToExcelFunc.CheckRepeatValue();
+        sourceData.AddRange(PubMetToExcelFunc.CheckValueFormat());
+        if (CheckSheetValueText == "数据自检：开启" && sourceData.Count > 0)
+        {
+            NumDesCTP.DeleteCTP(true, ctpCheckValueName);
+            _ = (SheetCellSeachResult)
+                NumDesCTP.ShowCTP(
+                    550,
+                    ctpCheckValueName,
+                    true,
+                    ctpCheckValueName,
+                    new SheetCellSeachResult(sourceData),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+            cancel = true;
+        }
+        //关闭某个工作簿时，CTP继承到新的工作簿里
         var ctpName = "表格目录";
-        if (SheetMenuText == "表格目录：开启")
+        if (SheetMenuText == "表格目录：开启" && !cancel)
         {
             NumDesCTP.DeleteCTP(true, ctpName);
             _sheetMenuCtp = (SheetListControl)
@@ -1407,7 +1428,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-        PubMetToExcelFunc.ExcelDataFormatCheck.ReplaceValueFormat(_excelSeachStr);
+        PubMetToExcelFunc.ReplaceValueFormat(_excelSeachStr);
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
@@ -1417,7 +1438,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-        PubMetToExcelFunc.ExcelDataFormatCheck.SeachValueFormat(_excelSeachStr);
+        PubMetToExcelFunc.SeachValueFormat(_excelSeachStr);
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
@@ -1475,23 +1496,24 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-        var wk = App.ActiveWorkbook;
-        var path = wk.Path;
-        var ws = wk.ActiveSheet;
+        PubMetToExcelFunc.CheckRepeatValue();
+        //var wk = App.ActiveWorkbook;
+        //var path = wk.Path;
+        //var ws = wk.ActiveSheet;
 
-        var targetList = PubMetToExcelFunc.SearchModelKeyFromExcelMiniExcel(path, _excelSeachStr);
+        //var targetList = PubMetToExcelFunc.SearchModelKeyFromExcelMiniExcel(path, _excelSeachStr);
 
-        int rows = targetList.Values.Sum(list => list.Count);
-        int cols = 6; //
+        //int rows = targetList.Values.Sum(list => list.Count);
+        //int cols = 6; //
 
-        var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, cols);
+        //var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, cols);
 
-        var maxRow = targetValue.GetLength(0);
-        var maxCol = targetValue.GetLength(1);
+        //var maxRow = targetValue.GetLength(0);
+        //var maxCol = targetValue.GetLength(1);
 
-        var range = ws.Range[ws.Cells[2, 3], ws.Cells[2 + maxRow - 1, 3 + maxCol - 1]];
+        //var range = ws.Range[ws.Cells[2, 3], ws.Cells[2 + maxRow - 1, 3 + maxCol - 1]];
 
-        range.Value2 = targetValue;
+        //range.Value2 = targetValue;
         //SheetMenuCTP = (SheetListControl)NumDesCTP.ShowCTP(250, "SheetMenu", true , "SheetMenu");
         //var worksheets = App.ActiveWorkbook.Sheets.Cast<Worksheet>()
         //    .Select(x => new SelfComSheetCollect { Name = x.Name, IsHidden = x.Visible == XlSheetVisibility.xlSheetHidden }).ToList();
@@ -1740,6 +1762,20 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         _globalValue.SaveValue("SheetMenuText", SheetMenuText);
     }
 
+    public void CheckSheetValue_Click(IRibbonControl control)
+    {
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
+        CheckSheetValueText = CheckSheetValueText == "数据自检：开启" ? "数据自检：关闭" : "数据自检：开启";
+        CustomRibbon.InvalidateControl("CheckSheetValue");
+
+        var ctpName = "错误数据";
+        if (CheckSheetValueText != "数据自检：开启")
+        {
+            NumDesCTP.DeleteCTP(true, ctpName);
+        }
+        _globalValue.SaveValue("CheckSheetValueText", CheckSheetValueText);
+    }
     public void CellHiLight_Click(IRibbonControl control)
     {
         if (control == null)
@@ -1754,9 +1790,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             if (ws.Name.Contains("【基础】"))
             {
-                var uesedRange = ws.UsedRange;
+                var usedRange = ws.UsedRange;
                 App.ScreenUpdating = false;
-                foreach (Range cell in uesedRange)
+                foreach (Range cell in usedRange)
                 {
                     cell.Interior.ColorIndex = XlColorIndex.xlColorIndexNone; // 清除高亮
                 }
