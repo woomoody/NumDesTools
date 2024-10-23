@@ -1,10 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
+using System.Text.RegularExpressions;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Media;
-using Brush = System.Drawing.Brush;
+using Brushes = System.Windows.Media.Brushes;
 
 namespace NumDesTools.UI
 {
@@ -28,57 +29,37 @@ namespace NumDesTools.UI
         {
             if (value is string text)
             {
-                var inlines = new List<Inline>();
-                int currentIndex = 0;
-                BrushConverter brushConverter = new BrushConverter();
-                Brush highlightBrush = (Brush)brushConverter.ConvertFromString("#FF0000"); // 使用十六进制颜色代码
+                var textBlock = new TextBlock();
+                string pattern = string.Join("|", Array.ConvertAll(charactersToCheck, Regex.Escape));
+                Regex regex = new Regex(pattern);
+                var matches = regex.Matches(text);
 
-                while (currentIndex < text.Length)
+                int lastIndex = 0;
+                foreach (Match match in matches)
                 {
-                    int minIndex = text.Length;
-                    string foundChar = null;
-
-                    // 找到下一个需要标色的字符及其位置
-                    foreach (var character in charactersToCheck)
+                    if (match.Index > lastIndex)
                     {
-                        int index = text.IndexOf(character, currentIndex);
-                        if (index >= 0 && index < minIndex)
-                        {
-                            minIndex = index;
-                            foundChar = character;
-                        }
+                        textBlock.Inlines.Add(new Run(text.Substring(lastIndex, match.Index - lastIndex)));
                     }
 
-                    if (foundChar != null)
+                    var highlightRun = new Run(match.Value)
                     {
-                        // 添加普通文本部分
-                        if (minIndex > currentIndex)
-                        {
-                            inlines.Add(new Run(text.Substring(currentIndex, minIndex - currentIndex)));
-                        }
+                        Foreground = Brushes.Red // 高亮颜色
+                    };
+                    textBlock.Inlines.Add(highlightRun);
 
-                        // 添加标色的字符
-                        var highlightedRun = new Run(foundChar)
-                        {
-                            //Foreground = highlightBrush // 使用 BrushConverter 转换颜色
-                        };
-                        inlines.Add(highlightedRun);
-
-                        // 更新 currentIndex
-                        currentIndex = minIndex + foundChar.Length;
-                    }
-                    else
-                    {
-                        // 添加剩余的普通文本部分
-                        inlines.Add(new Run(text.Substring(currentIndex)));
-                        break;
-                    }
+                    lastIndex = match.Index + match.Length;
                 }
 
-                return inlines;
+                if (lastIndex < text.Length)
+                {
+                    textBlock.Inlines.Add(new Run(text.Substring(lastIndex)));
+                }
+
+                return textBlock.Inlines;
             }
 
-            return null;
+            return value;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
