@@ -8,6 +8,9 @@
     d:DesignHeight="450"
     d:DesignWidth="800"
     mc:Ignorable="d">
+    <UserControl.Resources>
+        <local:TextHighlighterConverter x:Key="TextHighlighterConverter" />
+    </UserControl.Resources>
     <Grid>
         <ListBox
             x:Name="ListBoxCellData"
@@ -17,18 +20,8 @@
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <StackPanel>
-                        <TextBlock d:DataContext="{d:DesignData}" TextWrapping="Wrap">
-                            <TextBlock.Inlines>
-                                <Run Text="{Binding Value}" />
-                                <LineBreak />
-                                <Run Text="{Binding Row, StringFormat='R: {0}'}" />
-                                <Run Text=", " />
-                                <Run Text="{Binding Column, StringFormat='C: {0}'}" />
-                                <Run Text=", " />
-                                <Run Text="{Binding SheetName, StringFormat='表: {0}'}" />
-                                <Run Text=", " />
-                                <Run Text="{Binding Tips, StringFormat='错误类型: {0}'}" />
-                            </TextBlock.Inlines>
+                        <TextBlock TextWrapping="Wrap" Loaded="TextBlock_Loaded">
+                            <!-- Inlines will be set in the Loaded event -->
                         </TextBlock>
                         <Separator Margin="0,5,0,5" Background="Gray" />
                     </StackPanel>
