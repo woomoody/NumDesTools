@@ -15,7 +15,7 @@ namespace NumDesTools;
 /// <summary>
 /// 公共的Excel功能类
 /// </summary>
-public class PubMetToExcel
+public static class PubMetToExcel
 {
     #region EPPlus与Excel
 
@@ -1277,6 +1277,7 @@ public class PubMetToExcel
         }
         return dictionary;
     }
+
     //二维数组转二维字典
     public static  Dictionary<(object, object), string>  Array2DToDic2D(int rowCount, int colCount, dynamic modelRangeValue)
     {
@@ -1298,6 +1299,7 @@ public class PubMetToExcel
         }
         return modelValue;
     }
+   
     //字典二维数组化
     public static object[,] DictionaryTo2DArray<TKey, TValue>(
         Dictionary<TKey, List<TValue>> dictionary,
@@ -1353,6 +1355,7 @@ public class PubMetToExcel
 
         return array2D;
     }
+
     //二维数据字符串连接化缩短列数
     public static object[,] ConvertToCommaSeparatedArray(object[,] array2D)
     {
@@ -1396,7 +1399,7 @@ public class PubMetToExcel
         return selectedData;
     }
     #region 自定义数组类型判断
-    // 检查并解析一维数组
+    //检查并解析一维数组
     public static bool IsValidArray(string input, out object[] array)
     {
         array = null;
@@ -1409,7 +1412,7 @@ public class PubMetToExcel
         return false;
     }
 
-    // 检查并解析二维数组
+    //检查并解析二维数组
     public static bool IsValidArray(string input, out object[][] array)
     {
         array = null;
@@ -1439,7 +1442,8 @@ public class PubMetToExcel
         }
         return false;
     }
-    // 检查一维数组中的元素是否为指定类型
+
+    //检查一维数组中的元素是否为指定类型
     public static bool IsArrayOfType(object[] array, Type type)
     {
         if (array == null || type == null)
@@ -1466,7 +1470,7 @@ public class PubMetToExcel
         return true;
     }
 
-    // 检查二维数组中的元素是否为指定类型
+    //检查二维数组中的元素是否为指定类型
     public static bool IsArrayOfType(object[][] array, Type type)
     {
         if (array == null || type == null)
@@ -1498,5 +1502,5 @@ public class PubMetToExcel
         return true;
     }
     #endregion
-    public static void TestEpPlus() { }
+
 }

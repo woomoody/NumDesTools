@@ -3,7 +3,7 @@ using MiniExcelLibs;
 
 namespace NumDesTools;
 
-public class CompareExcel
+public static class CompareExcel
 {
     public static void CompareMain(string[] folder)
     {

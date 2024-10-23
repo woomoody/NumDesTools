@@ -17,7 +17,7 @@ namespace NumDesTools;
 /// <summary>
 /// Merge项目Excel文件数据自动处理类集合
 /// </summary>
-public class ExcelDataAutoInsert
+public static class ExcelDataAutoInsert
 {
     [ExcelFunction(IsHidden = true)]
     public static int FindTitle(dynamic sheet, int rows, string findValue)
@@ -248,7 +248,7 @@ public class ExcelDataAutoInsert
     }
 }
 
-public class ExcelDataAutoInsertLanguage
+public static class ExcelDataAutoInsertLanguage
 {
     public static void AutoInsertData()
     {
@@ -1167,7 +1167,7 @@ public class ExcelDataAutoInsertLanguage
 }
 
 //模版数据写入-老方法，需要填写大量字段修改参数
-public class ExcelDataAutoInsertMulti
+public static class ExcelDataAutoInsertMulti
 {
     public static void InsertData(dynamic isMulti)
     {
@@ -1810,7 +1810,7 @@ public class ExcelDataAutoInsertMulti
 }
 
 //模版数据写入-新方法，只需要填写少量字段修改参数（包含不更改），其他数据进行自动匹配替换关键字
-public class ExcelDataAutoInsertMultiNew
+public static class ExcelDataAutoInsertMultiNew
 {
     private static dynamic _indexWk;
     private static dynamic _sheet;
@@ -2231,7 +2231,7 @@ public class ExcelDataAutoInsertMultiNew
     }
 }
 
-public class ExcelDataAutoInsertCopyMulti
+public static class ExcelDataAutoInsertCopyMulti
 {
     public static void SearchData(dynamic isMulti)
     {
@@ -2802,7 +2802,7 @@ public class ExcelDataAutoInsertCopyMulti
     }
 }
 
-public class ExcelDataAutoInsertActivityServer
+public static class ExcelDataAutoInsertActivityServer
 {
     private const double SecondsInADay = 86400;
     private const double OneMinuteInDays = 60 / SecondsInADay;

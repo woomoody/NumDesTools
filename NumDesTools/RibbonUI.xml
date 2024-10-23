@@ -32,6 +32,9 @@
                     <button id='PowerQueryLinksUpdate' size='large' label='更新表格路径' image='verilog'
                             onAction='PowerQueryLinksUpdate_Click'
                             screentip='更新PowerQuery表连接路径' />
+                    <button id='CheckSheetValue' size='large' getLabel='GetLableText' image='dart'
+                            onAction='CheckSheetValue_Click'
+                            screentip='点击启动表格关闭时数据自检，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.txt' />
                 </group>
                 <!--
                 <group id='Group3' label='SVN功能'>
