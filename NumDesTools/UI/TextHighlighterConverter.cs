@@ -1,10 +1,8 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
-using System.Windows.Media;
 using Brushes = System.Windows.Media.Brushes;
 
 namespace NumDesTools.UI

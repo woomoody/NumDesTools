@@ -1984,7 +1984,17 @@ public static class PubMetToExcelFunc
             if (sheetName.Contains("#"))
                 continue;
             var rows = MiniExcel.Query(WkFullPath, sheetName: sheetName).ToList();
+
+            if (rows.Count <= 4)
+            {
+                continue;
+            }
             var dataRows = rows.Skip(3).ToList();
+
+            if (dataRows.Count == 0)
+            {
+                continue;
+            }
 
             // 检查第 1、2 列第 1 行的值是否为特定字符串，如果是则跳过该工作表
             if (
@@ -2029,6 +2039,7 @@ public static class PubMetToExcelFunc
         //有可能不需要这么复杂的判断，只判断是否包含常见的错误组合
         //比如【双逗号，中括号+逗号，大括号+逗号】
         //数组判断就通过头字符是否是{{、{、[[、[来检查末尾是否有对应的符号
+
         var charactersToCheck = new[]
         {
             ",,",
@@ -2045,9 +2056,7 @@ public static class PubMetToExcelFunc
 
         var stringPairs = new List<(string leftString, string rightString)>
         {
-            ("[[", "]]"),
             ("[", "]"),
-            ("{{", "}}"),
             ("{", "}")
         };
 
@@ -2057,6 +2066,19 @@ public static class PubMetToExcelFunc
                 continue;
 
             var rows = MiniExcel.Query(WkFullPath, sheetName: sheetName).ToList();
+
+            if (rows.Count <= 4)
+            {
+                continue;
+            }
+            // 检查第 1、2 列第 1 行的值是否为特定字符串，如果是则跳过该工作表
+            if (
+                rows.Any() && ((IDictionary<string, object>)rows[3])["A"]?.ToString() != "#"
+                || ((IDictionary<string, object>)rows[3])["B"]?.ToString() == null
+            )
+            {
+                continue;
+            }
             var keyRow = rows[1] as IDictionary<string, object>;
             var keyCols = new List<string>(keyRow.Keys);
             for (int rowIndex = 4; rowIndex < rows.Count; rowIndex++)
@@ -2065,9 +2087,9 @@ public static class PubMetToExcelFunc
 
                 for (int colIndex = 2; colIndex < keyCols.Count; colIndex++)
                 {
-                    var col = keyCols[colIndex - 1];
+                    var col = keyCols[colIndex];
                     var keyCell = keyRow[col]?.ToString() ?? "";
-                    if (keyCell == "")
+                    if (keyCell == "" || keyCell.Contains("#"))
                     {
                         continue;
                     }
@@ -2077,26 +2099,31 @@ public static class PubMetToExcelFunc
                     {
                         if (charactersToCheck.Any(c => cellValue.Contains(c)))
                         {
-                            sourceData.Add((cellValue, rowIndex + 1, colIndex, sheetName, "逗号问题"));
+                            sourceData.Add(
+                                (cellValue, rowIndex + 1, colIndex + 1, sheetName, "逗号问题")
+                            );
                         }
 
                         foreach (var (leftString, rightString) in stringPairs)
                         {
-                            if (
-                                cellValue.StartsWith(leftString) && !cellValue.EndsWith(rightString)
-                            )
+                            var leftStringCount = Regex
+                                .Matches(
+                                    cellValue,
+                                    Regex.Escape(leftString),
+                                    RegexOptions.IgnoreCase
+                                )
+                                .Count;
+                            var RightStringCount = Regex
+                                .Matches(
+                                    cellValue,
+                                    Regex.Escape(rightString),
+                                    RegexOptions.IgnoreCase
+                                )
+                                .Count;
+                            if (leftStringCount != RightStringCount)
                             {
                                 sourceData.Add(
-                                    (cellValue, rowIndex + 1, colIndex, sheetName, "反括号问题")
-                                );
-                                break;
-                            }
-                            else if (
-                                cellValue.EndsWith(rightString) && !cellValue.StartsWith(leftString)
-                            )
-                            {
-                                sourceData.Add(
-                                    (cellValue, rowIndex + 1, colIndex, sheetName, "括号问题")
+                                    (cellValue, rowIndex + 1, colIndex + 1, sheetName, "括号问题")
                                 );
                                 break;
                             }
