@@ -25,6 +25,8 @@ namespace NumDesTools.UI
             if (ListBoxCellData.SelectedItem is SelfCellData cellData)
             {
                 var sheet = NumDesAddIn.App.ActiveSheet;
+                // 关闭所有打开的备注编辑框，不隐藏角标
+                NumDesAddIn.App.DisplayCommentIndicator = XlCommentDisplayMode.xlCommentIndicatorOnly;
                 var cell = sheet.Cells[cellData.Row, cellData.Column];
                 cell.Select();
             }

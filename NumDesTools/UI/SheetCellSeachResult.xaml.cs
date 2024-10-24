@@ -58,7 +58,7 @@ namespace NumDesTools.UI
                 var sheetName = cellData.SheetName;
                 var sheet = NumDesAddIn.App.Worksheets[sheetName];
 
-                // 关闭所有打开的备注编辑框
+                // 关闭所有打开的备注编辑框，不隐藏角标
                 NumDesAddIn.App.DisplayCommentIndicator = XlCommentDisplayMode.xlCommentIndicatorOnly;
 
                 sheet.Select();

@@ -1973,9 +1973,14 @@ public static class PubMetToExcelFunc
     {
         var workBook = NumDesAddIn.App.ActiveWorkbook;
 
-        var WkFullPath = workBook.FullName;
+        var wkFullPath = workBook.FullName;
 
-        var sheetNames = MiniExcel.GetSheetNames(WkFullPath);
+        var wkFileName = workBook.Name;
+        if (wkFileName.Contains("#"))
+        {
+            return null;
+        }
+        var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
 
         var sourceData = new List<(string, int, int, string, string)>();
 
@@ -1983,7 +1988,7 @@ public static class PubMetToExcelFunc
         {
             if (sheetName.Contains("#"))
                 continue;
-            var rows = MiniExcel.Query(WkFullPath, sheetName: sheetName).ToList();
+            var rows = MiniExcel.Query(wkFullPath, sheetName: sheetName).ToList();
 
             if (rows.Count <= 4)
             {
@@ -2030,9 +2035,15 @@ public static class PubMetToExcelFunc
     {
         var workBook = NumDesAddIn.App.ActiveWorkbook;
 
-        var WkFullPath = workBook.FullName;
+        var wkFullPath = workBook.FullName;
 
-        var sheetNames = MiniExcel.GetSheetNames(WkFullPath);
+        var wkFileName = workBook.Name;
+        if (wkFileName.Contains("#"))
+        {
+            return null;
+        }
+
+        var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
 
         var sourceData = new List<(string, int, int, string, string)>();
 
@@ -2065,7 +2076,7 @@ public static class PubMetToExcelFunc
             if (sheetName.Contains("#"))
                 continue;
 
-            var rows = MiniExcel.Query(WkFullPath, sheetName: sheetName).ToList();
+            var rows = MiniExcel.Query(wkFullPath, sheetName: sheetName).ToList();
 
             if (rows.Count <= 4)
             {
