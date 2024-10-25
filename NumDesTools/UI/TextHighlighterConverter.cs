@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using NumDesTools.Config;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -9,26 +10,36 @@ namespace NumDesTools.UI
 {
     public class TextHighlighterConverter : IValueConverter
     {
-        private readonly string[] charactersToCheck = new[]
-        {
-            ",,",
-            "[,",
-            ",]",
-            "{,",
-            ",}",
-            "，，",
-            "[，",
-            "，]",
-            "{，",
-            "，}"
-        };
+        //private readonly string[] charactersToCheck = new[]
+        //{
+        //    ",,",
+        //    "[,",
+        //    ",]",
+        //    "{,",
+        //    ",}",
+        //    "，，",
+        //    "[，",
+        //    "，]",
+        //    "{，",
+        //    "，}",
+        //    "][",
+        //    "}{"
+        //};
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
+            var config = new NumDesToolsConfig();
+            var normalCharactersCheck = config.NormaKeyList;
+            var specialCharactersCheck = config.SpecialKeyList;
+            // 合并两个列表
+            List<string> charactersToCheck = [];
+            charactersToCheck.AddRange(normalCharactersCheck);
+            charactersToCheck.AddRange(specialCharactersCheck);
+
             if (value is string text)
             {
                 var textBlock = new TextBlock();
-                string pattern = string.Join("|", Array.ConvertAll(charactersToCheck, Regex.Escape));
+                string pattern = string.Join("|", charactersToCheck.ConvertAll(Regex.Escape));
                 Regex regex = new Regex(pattern);
                 var matches = regex.Matches(text);
 

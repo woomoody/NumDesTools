@@ -2949,8 +2949,7 @@ public static class ExcelDataAutoInsertActivityServer
                 }
                 errorLog += $"运营排期-未找到-活动模版【{nameOrIdString}】：{activeName}\r\n";
                 targetDataList.Add(
-                    new List<string>
-                    {
+                    [
                         "targetId",
                         a.Item1,
                         "targetPushTimeString",
@@ -2968,7 +2967,7 @@ public static class ExcelDataAutoInsertActivityServer
                         "targetActGroup",
                         "targetOpenCondition",
                         "targetLifeType"
-                    }
+                    ]
                 );
                 continue;
             }
@@ -3083,8 +3082,7 @@ public static class ExcelDataAutoInsertActivityServer
                 }
             }
             targetDataList.Add(
-                new List<string>
-                {
+                [
                     targetId,
                     targetName,
                     targetPushTimeString,
@@ -3102,7 +3100,7 @@ public static class ExcelDataAutoInsertActivityServer
                     targetActGroup,
                     targetOpenCondition,
                     targetLifeValue
-                }
+                ]
             );
         }
 

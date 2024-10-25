@@ -39,7 +39,7 @@ namespace NumDesTools
                 {
                     if (activityId != null && !typeDic.ContainsKey(activityId))
                     {
-                        typeDic[activityId] = new List<string>();
+                        typeDic[activityId] = [];
                     }
 
                     if (activityId != null)
@@ -98,7 +98,7 @@ namespace NumDesTools
                         subTable = TablePathFix(type, workbookPath);
                         if (!relations.ContainsKey(subTable))
                         {
-                            relations[subTable] = new List<Dictionary<string, string>>();
+                            relations[subTable] = [];
                         }
                         relations[subTable]
                             .Add(new Dictionary<string, string> { { fieldActivityId, mainTable } });
@@ -110,7 +110,7 @@ namespace NumDesTools
 
                     if (!relations.ContainsKey(subTable))
                     {
-                        relations[subTable] = new List<Dictionary<string, string>>();
+                        relations[subTable] = [];
                     }
 
                     relations[subTable]
@@ -213,7 +213,7 @@ namespace NumDesTools
                             //单表只选第1个表
                             if (!filePath.Contains("$"))
                             {
-                                sheetNames = new List<string> { sheetNames[0] };
+                                sheetNames = [sheetNames[0]];
                             }
                             foreach (var sheetName in sheetNames)
                             {

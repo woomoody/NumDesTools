@@ -517,14 +517,14 @@ public class LteData
         }
         if (!strDictionary[key].ContainsKey(subKey))
         {
-            strDictionary[key][subKey] = new List<string>();
+            strDictionary[key][subKey] = [];
         }
     }
 
     //循环数字
     private static List<int> LoopNumber(int start, int max)
     {
-        List<int> sequence = new List<int>();
+        List<int> sequence = [];
 
         for (int i = 1; i <= max; i++)
         {

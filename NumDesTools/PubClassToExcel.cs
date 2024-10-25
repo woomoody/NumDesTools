@@ -170,7 +170,7 @@ public class SelfExcelFileCollector(string rootPath , int pathLevels)
         };
 
         var files = paths
-            .SelectMany(path => Directory.Exists(path) ? GetExcelFiles(path) : Enumerable.Empty<string>())
+            .SelectMany(path => Directory.Exists(path) ? GetExcelFiles(path) : [])
             .Where(file => !Path.GetFileName(file).Contains("~")) // 过滤掉包含 ~ 的文件
             .ToArray();
 

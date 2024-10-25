@@ -20,7 +20,7 @@ namespace NumDesTools.UI
     {
         public static Application ExcelApp = NumDesAddIn.App;
         public ObservableCollection<SelfComSheetCollect> Sheets { get; } =
-            new ObservableCollection<SelfComSheetCollect>();
+            [];
 
         public SheetListControl()
         {
