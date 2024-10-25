@@ -15,7 +15,7 @@ namespace NumDesTools.UI
         public InputFormularWindow(List<string> strings)
         {
             InitializeComponent();
-            UserInputs = new List<string>();
+            UserInputs = [];
 
             foreach (string str in strings)
             {

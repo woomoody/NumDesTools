@@ -147,12 +147,12 @@ public class ExcelDataByEpplus
                 lastMainTable = mainTable;
                 if (!dataDict.ContainsKey(lastMainTable))
                 {
-                    dataDict[lastMainTable] = new List<object>();
+                    dataDict[lastMainTable] = [];
                 }
             }
 
             string data;
-            List<string> usedDataList = new List<string>();
+            List<string> usedDataList = [];
             for (int j = 0; j < colCount; j++)
             {
                 data = sheet.Cells[i, usedData[j]].Text;
@@ -188,12 +188,12 @@ public class ExcelDataByEpplus
                     lastMainTable = mainTable;
                     if (!dataDict.ContainsKey(lastMainTable))
                     {
-                        dataDict[lastMainTable] = new List<object>();
+                        dataDict[lastMainTable] = [];
                     }
                 }
 
                 string data;
-                List<string> usedDataList = new List<string>();
+                List<string> usedDataList = [];
                 for (int j = 0; j < colCount; j++)
                 {
                     data = worksheet.Cells[i, usedData[j]].Text;

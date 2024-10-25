@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using MiniExcelLibs;
 using NLua;
+using NumDesTools.Config;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using LicenseContext = OfficeOpenXml.LicenseContext;
@@ -2051,25 +2052,32 @@ public static class PubMetToExcelFunc
         //比如【双逗号，中括号+逗号，大括号+逗号】
         //数组判断就通过头字符是否是{{、{、[[、[来检查末尾是否有对应的符号
 
-        var charactersToCheck = new[]
-        {
-            ",,",
-            "[,",
-            ",]",
-            "{,",
-            ",}",
-            "，，",
-            "[，",
-            "，]",
-            "{，",
-            "，}"
-        };
+        //var charactersToCheck = new[]
+        //{
+        //    ",,",
+        //    "[,",
+        //    ",]",
+        //    "{,",
+        //    ",}",
+        //    "，，",
+        //    "[，",
+        //    "，]",
+        //    "{，",
+        //    "，}",
+        //    "][",
+        //    "}{"
+        //};
 
-        var stringPairs = new List<(string leftString, string rightString)>
-        {
-            ("[", "]"),
-            ("{", "}")
-        };
+        //var stringPairs = new List<(string leftString, string rightString)>
+        //{
+        //    ("[", "]"),
+        //    ("{", "}")
+        //};
+
+        var config = new NumDesToolsConfig();
+        var normalCharactersCheck = config.NormaKeyList;
+        var specialCharactersCheck = config.SpecialKeyList;
+        var coupleCharactersCheck = config.CoupleKeyList;
 
         foreach (var sheetName in sheetNames)
         {
@@ -2091,6 +2099,7 @@ public static class PubMetToExcelFunc
                 continue;
             }
             var keyRow = rows[1] as IDictionary<string, object>;
+            var keyType = rows[2] as IDictionary<string, object>;
             var keyCols = new List<string>(keyRow.Keys);
             for (int rowIndex = 4; rowIndex < rows.Count; rowIndex++)
             {
@@ -2100,6 +2109,7 @@ public static class PubMetToExcelFunc
                 {
                     var col = keyCols[colIndex];
                     var keyCell = keyRow[col]?.ToString() ?? "";
+                    var typeCell = keyType[col]?.ToString() ?? "";
                     if (keyCell == "" || keyCell.Contains("#"))
                     {
                         continue;
@@ -2108,14 +2118,21 @@ public static class PubMetToExcelFunc
                     var cellValue = row[col]?.ToString();
                     if (cellValue != null)
                     {
-                        if (charactersToCheck.Any(c => cellValue.Contains(c)))
+                        if (normalCharactersCheck.Any(c => cellValue.Contains(c)))
                         {
                             sourceData.Add(
-                                (cellValue, rowIndex + 1, colIndex + 1, sheetName, "逗号问题")
+                                (cellValue, rowIndex + 1, colIndex + 1, sheetName, "多逗号")
                             );
                         }
 
-                        foreach (var (leftString, rightString) in stringPairs)
+                        if (specialCharactersCheck.Any(c => cellValue.Contains(c)) && !typeCell.Contains("string"))
+                        {
+                            sourceData.Add(
+                                (cellValue, rowIndex + 1, colIndex + 1, sheetName, "少逗号")
+                            );
+                        }
+
+                        foreach (var (leftString, rightString) in coupleCharactersCheck)
                         {
                             var leftStringCount = Regex
                                 .Matches(
