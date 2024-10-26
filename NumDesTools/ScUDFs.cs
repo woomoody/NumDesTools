@@ -629,15 +629,17 @@ public class ExcelUdf
         var values2Objects = rangeObj2.Cast<object>().ToArray();
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
         var result = Empty;
-        var count = 0;
+
         if (values1Objects.Length > 0 && values2Objects.Length > 0 && delimiterList.Length > 0)
         {
+            var count = 0;
             foreach (var item in values1Objects)
+            {
                 if (ignoreEmpty)
                 {
                     var excelNull = item is ExcelEmpty;
                     var stringNull = ReferenceEquals(item.ToString(), "");
-                    if (!excelNull && !stringNull)
+                    if (!excelNull && !stringNull && item.ToString() != "")
                     {
                         var itemDef =
                             delimiterList[0]
@@ -646,7 +648,6 @@ public class ExcelUdf
                             + values2Objects[count]
                             + delimiterList[2];
                         result += itemDef + delimiter[1];
-                        count++;
                     }
                 }
                 else
@@ -658,8 +659,10 @@ public class ExcelUdf
                         + values2Objects[count]
                         + delimiterList[2];
                     result += itemDef + delimiter[1];
-                    count++;
                 }
+                count++;
+            }
+        
 
             result = result.Substring(0, result.Length - 1);
             result = delimiterList[0] + result + delimiterList[2];
