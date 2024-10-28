@@ -458,7 +458,7 @@ public class ExcelUdf
         IsMacroType = true,
         Description = "分割字符串为特定结构的若干字符串-返回数组"
     )]
-    public static string[] GetStrStructFromStrArray(
+    public static object GetStrStructFromStrArray(
         [ExcelArgument(AllowReference = true, Name = "单元格索引", Description = "输入字符串")]
             object[,] inputValue,
         [ExcelArgument(AllowReference = true, Name = "分割符", Description = @"默认为逗号")]

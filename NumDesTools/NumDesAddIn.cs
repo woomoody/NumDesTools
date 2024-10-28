@@ -1496,7 +1496,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-        PubMetToExcelFunc.CheckRepeatValue();
+        SelfGetRangePixels.GetRangePixels();
         //var wk = App.ActiveWorkbook;
         //var path = wk.Path;
         //var ws = wk.ActiveSheet;
