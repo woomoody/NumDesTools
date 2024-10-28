@@ -235,3 +235,14 @@ public class SelfExcelFileCollector(string rootPath , int pathLevels)
         }
     }
 }
+
+//自定义获取单元格像素坐标
+public class SelfGetRangePixels
+{
+    public static void GetRangePixels()
+    {
+
+
+
+    }
+}
