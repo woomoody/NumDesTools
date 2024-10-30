@@ -934,16 +934,13 @@ public static class PubMetToExcelFunc
         return targetList.ToList();
     }
 
-    public static Dictionary<string, List<string>> SearchModelKeyFromExcelMiniExcel(
-        string rootPath,
-        string errorValue
+    public static Dictionary<string, List<string>> SearchModelKeyMiniExcel(
+        string errorValue,
+        string[] files,
+        bool isFixList
     )
     {
-        var filesCollection = new SelfExcelFileCollector(rootPath, 2);
-        var files = filesCollection.GetAllExcelFilesPath();
-
         var targetList = new Dictionary<string, List<string>>();
-
         var currentCount = 0;
         var count = files.Length;
         var isAll = errorValue.Contains("*");
@@ -957,14 +954,16 @@ public static class PubMetToExcelFunc
             file =>
             {
                 var fileName = Path.GetFileName(file);
+                var sheetFullName = fileName;
                 try
                 {
                     var sheetNames = MiniExcel.GetSheetNames(file);
+
                     Parallel.ForEach(
                         sheetNames,
                         sheetName =>
                         {
-                            if (sheetName.Contains("#"))
+                            if (sheetName.Contains("#") || sheetName.Contains("Chart"))
                                 return;
 
                             var rows = MiniExcel.Query(
@@ -973,6 +972,19 @@ public static class PubMetToExcelFunc
                                 startCell: "A2",
                                 useHeaderRow: true
                             );
+
+                            if (!sheetName.Contains("#"))
+                            {
+                                if (!fileName.Contains("$"))
+                                {
+                                    sheetFullName = $"{fileName}";
+                                }
+                                else
+                                {
+                                    sheetFullName = $"{fileName}#{sheetName}";
+                                }
+                            }
+
                             int rowIndex = 1;
                             foreach (var row in rows)
                             {
@@ -992,28 +1004,13 @@ public static class PubMetToExcelFunc
                                             )
                                         )
                                         {
-                                            if (!sheetName.Contains("#"))
+                                            // 确保 targetList 中存在 fileName 键
+                                            if (!targetList.ContainsKey(sheetFullName))
                                             {
-                                                if (
-                                                    sheetName.Contains("Sheet")
-                                                    || sheetName.Contains("map_proto")
-                                                )
-                                                {
-                                                    fileName = $"{fileName}";
-                                                }
-                                                else
-                                                {
-                                                    fileName = $"{fileName}#{sheetName}";
-                                                }
-
-                                                // 确保 targetList 中存在 fileName 键
-                                                if (!targetList.ContainsKey(fileName))
-                                                {
-                                                    targetList[fileName] = new List<string>();
-                                                }
-
-                                                targetList[fileName].Add(cellValue);
+                                                targetList[sheetFullName] = new List<string>();
                                             }
+
+                                            targetList[sheetFullName].Add(cellValue);
                                         }
                                     }
 
@@ -1021,6 +1018,24 @@ public static class PubMetToExcelFunc
                                 }
 
                                 rowIndex++;
+                            }
+
+                            if (targetList.ContainsKey(sheetFullName) && isFixList)
+                            {
+                                //处理List
+                                if (targetList[sheetFullName].Count > 1)
+                                {
+                                    // 只保留第一个和最后一个元素
+                                    var first = targetList[sheetFullName].First();
+                                    var last = targetList[sheetFullName].Last();
+                                    targetList[sheetFullName] = new List<string> { first, last };
+                                }
+                                else if (targetList[sheetFullName].Count == 1)
+                                {
+                                    // 复制第一个元素并添加到第二个位置
+                                    var first = targetList[sheetFullName].First();
+                                    targetList[sheetFullName].Add(first);
+                                }
                             }
                         }
                     );
@@ -1030,31 +1045,13 @@ public static class PubMetToExcelFunc
                     // 记录异常信息，继续处理下一个文件
                 }
 
-                //处理List
-                if (targetList.ContainsKey(fileName))
-                {
-                    if (targetList[fileName].Count > 1)
-                    {
-                        // 只保留第一个和最后一个元素
-                        var first = targetList[fileName].First();
-                        var last = targetList[fileName].Last();
-                        targetList[fileName] = new List<string> { first, last };
-                    }
-                    else if (targetList[fileName].Count == 1)
-                    {
-                        // 复制第一个元素并添加到第二个位置
-                        var first = targetList[fileName].First();
-                        targetList[fileName].Add(first);
-                    }
-                }
-
                 currentCount++;
                 NumDesAddIn.App.StatusBar = $"正在检查第 {currentCount}/{count} 个文件: {file}";
             }
         );
-
         return targetList;
     }
+
     #endregion
 
     //大富翁种
@@ -2028,6 +2025,9 @@ public static class PubMetToExcelFunc
                 sourceData.Add((cellValue, cellRow, cellCol, sheetName, "数据重复"));
             }
         }
+
+        Marshal.ReleaseComObject(workBook);
+
         return sourceData;
     }
 
@@ -2125,7 +2125,10 @@ public static class PubMetToExcelFunc
                             );
                         }
 
-                        if (specialCharactersCheck.Any(c => cellValue.Contains(c)) && !typeCell.Contains("string"))
+                        if (
+                            specialCharactersCheck.Any(c => cellValue.Contains(c))
+                            && !typeCell.Contains("string")
+                        )
                         {
                             sourceData.Add(
                                 (cellValue, rowIndex + 1, colIndex + 1, sheetName, "少逗号")
@@ -2160,6 +2163,8 @@ public static class PubMetToExcelFunc
                 }
             }
         }
+
+        Marshal.ReleaseComObject(workBook);
 
         return sourceData;
     }
