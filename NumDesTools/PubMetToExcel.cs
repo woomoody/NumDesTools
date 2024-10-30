@@ -2,6 +2,7 @@
 using System.Data.OleDb;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.Office.Interop.Excel;
 using OfficeOpenXml;
 using DataTable = System.Data.DataTable;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
@@ -799,7 +800,7 @@ public static class PubMetToExcel
 
         return errorLog;
     }
-    
+
     public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelId(
         string rootPath,
         string errorValue
@@ -1041,8 +1042,72 @@ public static class PubMetToExcel
         ];
         targetRange.Value = targetDataArr;
     }
+
+    //Alice文件路径修正
+    public static (string filePath , string sheetName) AliceFilePathFix(string workbookPath , string selectSheetName)
+    {
+        workbookPath = Path.GetDirectoryName(workbookPath);
+
+        var isMatch = selectSheetName.Contains(".xls");
+
+        string filePath = String.Empty;
+        string sheetName = "Sheet1";
+        if (isMatch)
+        {
+            
+             if (selectSheetName.Contains("#") && !selectSheetName.Contains("##"))
+            {
+                var excelSplit = selectSheetName.Split("#");
+                filePath = workbookPath + @"\Tables\" + excelSplit[0];
+                sheetName = excelSplit[1];
+            }
+            else if (selectSheetName.Contains("##"))
+            {
+                var excelSplit = selectSheetName.Split("##");
+                var sharpCount = excelSplit.Length;
+                if (selectSheetName.Contains("克朗代克"))
+                {
+                    filePath =
+                        workbookPath + @"\Tables\" + excelSplit[0] + @"\" + excelSplit[1];
+                    sheetName = sharpCount == 3 ? excelSplit[2] : "Sheet1";
+                }
+                else
+                {
+                    selectSheetName = workbookPath + @"\Tables\" + excelSplit[0];
+                    sheetName = excelSplit[1];
+                }
+            }
+            else
+            {
+                switch (selectSheetName)
+                {
+                    case "Localizations.xlsx":
+                        filePath = workbookPath + @"\Localizations\Localizations.xlsx";
+                        break;
+                    case "UIConfigs.xlsx":
+                        filePath = workbookPath + @"\UIs\UIConfigs.xlsx";
+                        break;
+                    case "UIItemConfigs.xlsx":
+                        filePath = workbookPath + @"\UIs\UIItemConfigs.xlsx";
+                        break;
+                    default:
+                        filePath = workbookPath + @"\Tables\" + selectSheetName;
+                        break;
+                }
+                sheetName = "Sheet1";
+            }
+        }
+
+        return (filePath, sheetName);
+    }
+
     //二维数组搜索指定行的数据，返回指定行对应列数据
-    public static string FindValueInFirstRow(object[,] array, string value , int findIndex = 0 , int returnIndex = 1)
+    public static string FindValueInFirstRow(
+        object[,] array,
+        string value,
+        int findIndex = 0,
+        int returnIndex = 1
+    )
     {
         // 获取数组的列数
         int columns = array.GetLength(1);
@@ -1147,7 +1212,7 @@ public static class PubMetToExcel
 
         return list;
     }
-    
+
     //二维List转二维数组
     public static object[,] ConvertListToArray(List<List<object>> listOfLists)
     {
@@ -1168,7 +1233,7 @@ public static class PubMetToExcel
     }
 
     //一维List转一维数组
-    public static object[] ConvertListToArray(List<object> listOfLists )
+    public static object[] ConvertListToArray(List<object> listOfLists)
     {
         var rowCount = listOfLists.Count;
         var twoDArray = new object[rowCount];
@@ -1279,7 +1344,11 @@ public static class PubMetToExcel
     }
 
     //二维数组转二维字典
-    public static  Dictionary<(object, object), string>  Array2DToDic2D(int rowCount, int colCount, dynamic modelRangeValue)
+    public static Dictionary<(object, object), string> Array2DToDic2D(
+        int rowCount,
+        int colCount,
+        dynamic modelRangeValue
+    )
     {
         var modelValue = new Dictionary<(object, object), string>();
         for (int row = 2; row <= rowCount; row++)
@@ -1291,7 +1360,7 @@ public static class PubMetToExcel
                 if (rowIndex == null || colIndex == null)
                 {
                     MessageBox.Show(@"模版表中表头有空值，请检查模版数据是否正确！");
-                    return null ;
+                    return null;
                 }
                 string value = modelRangeValue[row, col]?.ToString() ?? "";
                 modelValue[(rowIndex, colIndex)] = value;
@@ -1299,7 +1368,7 @@ public static class PubMetToExcel
         }
         return modelValue;
     }
-   
+
     //字典二维数组化
     public static object[,] DictionaryTo2DArray<TKey, TValue>(
         Dictionary<TKey, List<TValue>> dictionary,
@@ -1332,11 +1401,9 @@ public static class PubMetToExcel
     public static object[,] DictionaryTo2DArrayKey<TKey, TValue>(
         Dictionary<TKey, List<TValue>> dictionary,
         int maxRows,
-        int maxCols 
+        int maxCols
     )
     {
-
-
         object[,] array2D = new object[maxRows, maxCols];
 
         int row = 0;
@@ -1398,6 +1465,7 @@ public static class PubMetToExcel
         }
         return selectedData;
     }
+
     #region 自定义数组类型判断
     //检查并解析一维数组
     public static bool IsValidArray(string input, out object[] array)
@@ -1434,9 +1502,9 @@ public static class PubMetToExcel
             rows = rows.Select(row => row.Trim('[', ']')).ToArray();
 
             // 转换为二维数组
-            array = rows.Select(row => row.Split(',')
-                    .Select(value => (object)value.Trim())
-                    .ToArray())
+            array = rows.Select(row =>
+                    row.Split(',').Select(value => (object)value.Trim()).ToArray()
+                )
                 .ToArray();
             return true;
         }
@@ -1502,5 +1570,4 @@ public static class PubMetToExcel
         return true;
     }
     #endregion
-
 }

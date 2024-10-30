@@ -1969,7 +1969,7 @@ public static class ExcelDataAutoInsertMultiNew
             out ExcelPackage excel
         );
 
-        var excelRealName = excel.File.Name.ToString();
+        var excelRealName = excel.File.Name;
 
         foreach (var cell in sheet.Cells)
             if (cell.Formula is { Length: > 0 })
@@ -2038,7 +2038,7 @@ public static class ExcelDataAutoInsertMultiNew
             }
 
             //复制数据
-            if (excelRealName != null && excelRealName.Contains("Recharge"))
+            if (excelRealName.Contains("Recharge"))
             {
                 writeRow = sheet.Dimension.End.Row;
             }
@@ -2128,14 +2128,14 @@ public static class ExcelDataAutoInsertMultiNew
                         continue;
 
                     string cellFixValue;
-                    //自增值
+                    //固定值
                     string baseValue = excelKeyFun ?? "";
                     if (baseValue.Contains("***"))
                     {
                         baseValue = baseValue.Replace("***", "");
                         cellFixValue = baseValue;
                     }
-                    //固定值
+                    //自增值
                     else
                     {
                         var fixValueList = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyFun);
@@ -3196,7 +3196,10 @@ public class ExcelDataAutoInsertNumChanges
             var excelObj = new ExcelDataByEpplus();
             excelObj.GetExcelObj(_excelPath, workBookName);
             if (excelObj.ErrorList.Count > 0)
+            {
+                MessageBox.Show($"{workBookName}不存在，不是少个#");
                 return;
+            }
 
             var changeValueCount = 0;
 

@@ -21,6 +21,7 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
+using NPOI.XSSF.Streaming.Values;
 using NumDesTools.UI;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
@@ -1472,7 +1473,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             return;
         }
 
-        var targetList = PubMetToExcelFunc.SearchModelKeyFromExcelMiniExcel(path, _excelSeachStr);
+        var filesCollection = new SelfExcelFileCollector(path, 2);
+        var files = filesCollection.GetAllExcelFilesPath();
+
+        var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(_excelSeachStr, files, true);
 
         int rows = targetList.Values.Sum(list => list.Count);
         int cols = 3;
@@ -1496,7 +1500,42 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var sw = new Stopwatch();
         sw.Start();
-        SelfGetRangePixels.GetRangePixels();
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+
+        var sheet = App.ActiveSheet;
+        var sheetData = PubMetToExcel.ExcelDataToList(sheet);
+        var title = sheetData.Item1;
+        List<List<object>> data = sheetData.Item2;
+        var sheetNameCol = title.IndexOf("表名");
+        var sheetNames = data.Select(row => row[sheetNameCol])
+            .Where(name => !string.IsNullOrEmpty(name))
+            .ToList();
+
+        var fileList = new List<string>();
+        foreach (var sheetName in sheetNames)
+        {
+            var fileInfo = PubMetToExcel.AliceFilePathFix(path, sheetName);
+            string filePath = fileInfo.Item1;
+            fileList.Add(filePath);
+        }
+
+        var files = fileList.ToArray();
+
+        //新增单线程模式，多线程模式顺序会错乱
+        var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(_excelSeachStr, files, false);
+        
+        int rows = targetList.Values.Sum(list => list.Count);
+        int cols = 3;
+
+        var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, cols);
+
+        var maxRow = targetValue.GetLength(0);
+        var maxCol = targetValue.GetLength(1);
+
+        var range = sheet.Range[sheet.Cells[3, 4], sheet.Cells[3 + maxRow - 1, 4 + maxCol - 1]];
+
+        range.Value2 = targetValue;
         //var wk = App.ActiveWorkbook;
         //var path = wk.Path;
         //var ws = wk.ActiveSheet;
