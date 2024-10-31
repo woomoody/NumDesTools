@@ -1022,7 +1022,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcelFunc.SearchKeyFromExcelMiniExcel(path, _excelSeachStr);
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr );
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1063,7 +1063,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcelFunc.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr , true  );
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1104,7 +1104,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcelFunc.SearchKeyFromExcelIDMultiMiniExcel(path, _excelSeachStr);
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr ,true , true);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1476,7 +1476,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var filesCollection = new SelfExcelFileCollector(path, 2);
         var files = filesCollection.GetAllExcelFilesPath();
 
-        var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(_excelSeachStr, files, true);
+        var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(_excelSeachStr, files, true , true);
 
         int rows = targetList.Values.Sum(list => list.Count);
         int cols = 3;
@@ -1523,7 +1523,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var files = fileList.ToArray();
 
         //新增单线程模式，多线程模式顺序会错乱
-        var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(_excelSeachStr, files, false);
+        var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(_excelSeachStr, files, false ,false);
         
         int rows = targetList.Values.Sum(list => list.Count);
         int cols = 3;
@@ -1533,7 +1533,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var maxRow = targetValue.GetLength(0);
         var maxCol = targetValue.GetLength(1);
 
-        var range = sheet.Range[sheet.Cells[3, 4], sheet.Cells[3 + maxRow - 1, 4 + maxCol - 1]];
+        var range = sheet.Range[sheet.Cells[3, 17], sheet.Cells[3 + maxRow - 1, 17+ maxCol - 1]];
 
         range.Value2 = targetValue;
         //var wk = App.ActiveWorkbook;
@@ -1635,47 +1635,64 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
+        var wk = App.ActiveWorkbook;
+        var modelSheet = wk.Worksheets["LTE【皮肤】"];
+        var modelListObjects = modelSheet.ListObjects;
+
+        List<object> abc = new List<object>
+        {
+            1,
+            2,
+            3
+        };
+
+        foreach (ListObject list in modelListObjects)
+        {
+            var modelName = list.Name;
+            PubMetToExcelFunc.UpdateExcelNameData(modelSheet, modelName, abc);
+        }
+
         //var lines = File.ReadAllLines(DefaultFilePath);
-        //CompareExcel.CompareMain(lines);
+            //CompareExcel.CompareMain(lines);
 
-        //var wk = App.ActiveWorkbook;
-        //var path = wk.Path;
+            //var wk = App.ActiveWorkbook;
+            //var path = wk.Path;
 
-        //var targetList = PubMetToExcel.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
-        //if (targetList.Count == 0)
-        //{
-        //    sw.Stop();
-        //    MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
-        //}
-        //else
-        //{
-        //    //ErrorLogCtp.DisposeCtp();
-        //    //var log = "";
-        //    //for (var i = 0; i < targetList.Count; i++)
-        //    //    log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
-        //    //           targetList[i].Item4 + "\n";
-        //    //ErrorLogCtp.CreateCtpNormal(log);
-        //    var ctpName = "表格查询结果";
-        //    NumDesCTP.DeleteCTP(true, ctpName);
-        //    var tupleList = targetList
-        //        .Select(t =>
-        //            (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
-        //        )
-        //        .ToList();
-        //    _ = (SheetSeachResult)
-        //        NumDesCTP.ShowCTP(
-        //            320,
-        //            ctpName,
-        //            true,
-        //            ctpName,
-        //            new SheetSeachResult(tupleList),
-        //            MsoCTPDockPosition.msoCTPDockPositionRight
-        //        );
+            //var targetList = PubMetToExcel.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
+            //if (targetList.Count == 0)
+            //{
+            //    sw.Stop();
+            //    MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
+            //}
+            //else
+            //{
+            //    //ErrorLogCtp.DisposeCtp();
+            //    //var log = "";
+            //    //for (var i = 0; i < targetList.Count; i++)
+            //    //    log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
+            //    //           targetList[i].Item4 + "\n";
+            //    //ErrorLogCtp.CreateCtpNormal(log);
+            //    var ctpName = "表格查询结果";
+            //    NumDesCTP.DeleteCTP(true, ctpName);
+            //    var tupleList = targetList
+            //        .Select(t =>
+            //            (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
+            //        )
+            //        .ToList();
+            //    _ = (SheetSeachResult)
+            //        NumDesCTP.ShowCTP(
+            //            320,
+            //            ctpName,
+            //            true,
+            //            ctpName,
+            //            new SheetSeachResult(tupleList),
+            //            MsoCTPDockPosition.msoCTPDockPositionRight
+            //        );
 
-        //    sw.Stop();
-        //}
+            //    sw.Stop();
+            //}
 
-        var ts2 = sw.Elapsed;
+            var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
