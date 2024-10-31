@@ -2,7 +2,6 @@
 using System.Data.OleDb;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Microsoft.Office.Interop.Excel;
 using OfficeOpenXml;
 using DataTable = System.Data.DataTable;
 using ExcelReference = ExcelDna.Integration.ExcelReference;

@@ -21,7 +21,6 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
-using NPOI.XSSF.Streaming.Values;
 using NumDesTools.UI;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;

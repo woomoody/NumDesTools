@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using MiniExcelLibs;
@@ -7,7 +8,6 @@ using NLua;
 using NumDesTools.Config;
 using NumDesTools.UI;
 using OfficeOpenXml;
-using static System.Windows.Forms.Design.AxImporter;
 using LicenseContext = OfficeOpenXml.LicenseContext;
 using MessageBox = System.Windows.MessageBox;
 using Process = System.Diagnostics.Process;
@@ -758,7 +758,8 @@ public static class PubMetToExcelFunc
                 var sheetNames = MiniExcel.GetSheetNames(file);
                 foreach (var sheetName in sheetNames)
                 {
-                    if (sheetName.Contains("#")) continue;
+                    if (sheetName.Contains("#"))
+                        continue;
 
                     var rows = MiniExcel.Query(file, sheetName: sheetName);
                     int rowIndex = 1;
@@ -774,7 +775,12 @@ public static class PubMetToExcelFunc
                             }
 
                             var cellValue = cell.Value?.ToString();
-                            if (cellValue != null && (isAll ? cellValue.Contains(errorValue) : cellValue == errorValue))
+                            if (
+                                cellValue != null
+                                && (
+                                    isAll ? cellValue.Contains(errorValue) : cellValue == errorValue
+                                )
+                            )
                             {
                                 targetList.Add((file, sheetName, rowIndex, colIndex));
                             }
@@ -805,9 +811,6 @@ public static class PubMetToExcelFunc
         return targetList.ToList();
     }
 
-
-
-
     //MiniExcel查询：全局或指定查询
     public static Dictionary<string, List<string>> SearchModelKeyMiniExcel(
         string errorValue,
@@ -816,7 +819,7 @@ public static class PubMetToExcelFunc
         bool isMulti
     )
     {
-        var targetList = new Dictionary<string, List<string>>();
+        var targetList = new ConcurrentDictionary<string, List<string>>();
         var currentCount = 0;
         var count = files.Length;
         var isAll = errorValue.Contains("*");
@@ -844,6 +847,7 @@ public static class PubMetToExcelFunc
                     );
 
                     sheetFullName = fileName.Contains("$") ? $"{fileName}#{sheetName}" : fileName;
+
                     int rowIndex = 1;
                     foreach (var row in rows)
                     {
@@ -884,7 +888,11 @@ public static class PubMetToExcelFunc
                         var list = targetList[sheetFullName];
                         if (list.Count > 1)
                         {
-                            targetList[sheetFullName] = new List<string> { list.First(), list.Last() };
+                            targetList[sheetFullName] = new List<string>
+                            {
+                                list.First(),
+                                list.Last()
+                            };
                         }
                         else if (list.Count == 1)
                         {
@@ -898,13 +906,16 @@ public static class PubMetToExcelFunc
                 // 记录异常信息，继续处理下一个文件
             }
 
-            currentCount++;
+            Interlocked.Increment(ref currentCount);
             NumDesAddIn.App.StatusBar = $"正在检查第 {currentCount}/{count} 个文件: {file}";
         };
 
         if (isMulti)
         {
-            var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+            var options = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount
+            };
             Parallel.ForEach(files, options, processFile);
         }
         else
@@ -915,9 +926,8 @@ public static class PubMetToExcelFunc
             }
         }
 
-        return targetList;
+        return new Dictionary<string, List<string>>(targetList);
     }
-
 
     #endregion
 
