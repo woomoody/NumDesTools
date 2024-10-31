@@ -819,7 +819,9 @@ public static class PubMetToExcelFunc
         bool isMulti
     )
     {
-        var targetList = new ConcurrentDictionary<string, List<string>>();
+        var targetList = isMulti
+            ? (IDictionary<string, List<string>>)new ConcurrentDictionary<string, List<string>>()
+            : new Dictionary<string, List<string>>();
         var currentCount = 0;
         var count = files.Length;
         var isAll = errorValue.Contains("*");
