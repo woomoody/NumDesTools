@@ -1021,7 +1021,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr );
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1062,7 +1062,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr , true  );
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr, true);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1103,7 +1103,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr ,true , true);
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr, true, true);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1222,7 +1222,26 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
         App.StatusBar = "完成，用时：" + ts2;
     }
+    //写入自定义度极高的数据（无法自增、批量替换）
+    public void AutoInsertExcelDataModelCreat_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+        var indexWk = App.ActiveWorkbook;
+        var sheet = indexWk.ActiveSheet;
+        var name = sheet.Name;
+        if (!name.Contains("【模板】"))
+        {
+            MessageBox.Show(@"当前表格不是正确【模板】，不能写入数据");
+            return;
+        }
 
+        AutoInsertExcelDataModelCreat.InsertModelData(indexWk);
+
+        sw.Stop();
+        var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
+        App.StatusBar = "完成，用时：" + ts2;
+    }
     public void AutoInsertExcelDataDialog_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1434,6 +1453,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
+
     public void CellDataSearch_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1475,7 +1495,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var filesCollection = new SelfExcelFileCollector(path, 2);
         var files = filesCollection.GetAllExcelFilesPath();
 
-        var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(_excelSeachStr, files, true , true);
+        var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(
+            _excelSeachStr,
+            files,
+            true,
+            true
+        );
 
         int rows = targetList.Values.Sum(list => list.Count);
         int cols = 3;
@@ -1494,16 +1519,21 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
-
-    public void TestBar1_Click(IRibbonControl control)
+    public void ModelDataCreat2_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
+        var ws = wk.ActiveSheet;
+        var wsSheetName = ws.Name;
+        if (!wsSheetName.Contains("【模板】"))
+        {
+            MessageBox.Show($@"{wsSheetName}不是数据模板表，不能生成数据");
+            return;
+        }
 
-        var sheet = App.ActiveSheet;
-        var sheetData = PubMetToExcel.ExcelDataToList(sheet);
+        var sheetData = PubMetToExcel.ExcelDataToList(ws);
         var title = sheetData.Item1;
         List<List<object>> data = sheetData.Item2;
         var sheetNameCol = title.IndexOf("表名");
@@ -1511,6 +1541,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             .Where(name => !string.IsNullOrEmpty(name))
             .ToList();
 
+        //查询值
+        var seachValue = $"*{title[1]}";
         var fileList = new List<string>();
         foreach (var sheetName in sheetNames)
         {
@@ -1518,12 +1550,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             string filePath = fileInfo.Item1;
             fileList.Add(filePath);
         }
-
         var files = fileList.ToArray();
+        var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(seachValue, files, false, false);
 
-        //新增单线程模式，多线程模式顺序会错乱
-        var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(_excelSeachStr, files, false ,false);
-        
         int rows = targetList.Values.Sum(list => list.Count);
         int cols = 3;
 
@@ -1532,9 +1561,27 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var maxRow = targetValue.GetLength(0);
         var maxCol = targetValue.GetLength(1);
 
-        var range = sheet.Range[sheet.Cells[3, 17], sheet.Cells[3 + maxRow - 1, 17+ maxCol - 1]];
+        var range = ws.Range[ws.Cells[3, 17], ws.Cells[3 + maxRow - 1, 17 + maxCol - 1]];
 
         range.Value2 = targetValue;
+
+
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
+    public void TestBar1_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        //var wk = App.ActiveWorkbook;
+        //var path = wk.Path;
+
+        //var sheet = App.ActiveSheet;
+
+
         //var wk = App.ActiveWorkbook;
         //var path = wk.Path;
         //var ws = wk.ActiveSheet;
@@ -1638,12 +1685,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var modelSheet = wk.Worksheets["LTE【皮肤】"];
         var modelListObjects = modelSheet.ListObjects;
 
-        List<object> abc = new List<object>
-        {
-            1,
-            2,
-            3
-        };
+        List<object> abc = new List<object> { 1, 2, 3 };
 
         foreach (ListObject list in modelListObjects)
         {
@@ -1652,46 +1694,46 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
 
         //var lines = File.ReadAllLines(DefaultFilePath);
-            //CompareExcel.CompareMain(lines);
+        //CompareExcel.CompareMain(lines);
 
-            //var wk = App.ActiveWorkbook;
-            //var path = wk.Path;
+        //var wk = App.ActiveWorkbook;
+        //var path = wk.Path;
 
-            //var targetList = PubMetToExcel.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
-            //if (targetList.Count == 0)
-            //{
-            //    sw.Stop();
-            //    MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
-            //}
-            //else
-            //{
-            //    //ErrorLogCtp.DisposeCtp();
-            //    //var log = "";
-            //    //for (var i = 0; i < targetList.Count; i++)
-            //    //    log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
-            //    //           targetList[i].Item4 + "\n";
-            //    //ErrorLogCtp.CreateCtpNormal(log);
-            //    var ctpName = "表格查询结果";
-            //    NumDesCTP.DeleteCTP(true, ctpName);
-            //    var tupleList = targetList
-            //        .Select(t =>
-            //            (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
-            //        )
-            //        .ToList();
-            //    _ = (SheetSeachResult)
-            //        NumDesCTP.ShowCTP(
-            //            320,
-            //            ctpName,
-            //            true,
-            //            ctpName,
-            //            new SheetSeachResult(tupleList),
-            //            MsoCTPDockPosition.msoCTPDockPositionRight
-            //        );
+        //var targetList = PubMetToExcel.SearchKeyFromExcelMultiMiniExcel(path, _excelSeachStr);
+        //if (targetList.Count == 0)
+        //{
+        //    sw.Stop();
+        //    MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
+        //}
+        //else
+        //{
+        //    //ErrorLogCtp.DisposeCtp();
+        //    //var log = "";
+        //    //for (var i = 0; i < targetList.Count; i++)
+        //    //    log += targetList[i].Item1 + "#" + targetList[i].Item2 + "#" + targetList[i].Item3 + "::" +
+        //    //           targetList[i].Item4 + "\n";
+        //    //ErrorLogCtp.CreateCtpNormal(log);
+        //    var ctpName = "表格查询结果";
+        //    NumDesCTP.DeleteCTP(true, ctpName);
+        //    var tupleList = targetList
+        //        .Select(t =>
+        //            (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
+        //        )
+        //        .ToList();
+        //    _ = (SheetSeachResult)
+        //        NumDesCTP.ShowCTP(
+        //            320,
+        //            ctpName,
+        //            true,
+        //            ctpName,
+        //            new SheetSeachResult(tupleList),
+        //            MsoCTPDockPosition.msoCTPDockPositionRight
+        //        );
 
-            //    sw.Stop();
-            //}
+        //    sw.Stop();
+        //}
 
-            var ts2 = sw.Elapsed;
+        var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
@@ -1831,6 +1873,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
         _globalValue.SaveValue("CheckSheetValueText", CheckSheetValueText);
     }
+
     public void CellHiLight_Click(IRibbonControl control)
     {
         if (control == null)
