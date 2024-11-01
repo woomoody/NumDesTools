@@ -310,14 +310,10 @@ public static class CompareExcel
 
     private static string GetMd5HashFromFile(string filePath)
     {
-        using (var md5 = MD5.Create())
-        {
-            using (var stream = File.OpenRead(filePath))
-            {
-                byte[] hash = md5.ComputeHash(stream);
-                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
-            }
-        }
+        using var md5 = MD5.Create();
+        using var stream = File.OpenRead(filePath);
+        byte[] hash = md5.ComputeHash(stream);
+        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     }
 
     private static void CheckAndLogSheetChanges(
