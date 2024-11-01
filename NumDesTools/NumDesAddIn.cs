@@ -21,7 +21,11 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
+using NPOI.SS.UserModel;
 using NumDesTools.UI;
+using OfficeOpenXml;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
 using Panel = System.Windows.Forms.Panel;
@@ -385,6 +389,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             NumDesCTP.DeleteCTP(true, ctpName);
         }
+        //取消隐藏
+        //var workBook = App.ActiveWorkbook;
+        //foreach (Worksheet sheet in workBook.Worksheets)
+        //{
+        //    sheet.Rows.Hidden = false;
+        //    sheet.Columns.Hidden = false;
+        //}
     }
 
     private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
@@ -1222,6 +1233,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
         App.StatusBar = "完成，用时：" + ts2;
     }
+
     //写入自定义度极高的数据（无法自增、批量替换）
     public void AutoInsertExcelDataModelCreat_Click(IRibbonControl control)
     {
@@ -1242,6 +1254,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
         App.StatusBar = "完成，用时：" + ts2;
     }
+
     public void AutoInsertExcelDataDialog_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1519,6 +1532,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
+
     public void ModelDataCreat2_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1565,23 +1579,146 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         range.Value2 = targetValue;
 
-
         sw.Stop();
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
+
     public void TestBar1_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
 
-        //var wk = App.ActiveWorkbook;
-        //var path = wk.Path;
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-        //var sheet = App.ActiveSheet;
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
 
+        var sheet = App.ActiveSheet;
 
+        var filesCollection = new SelfExcelFileCollector(path, 2);
+        var files = filesCollection.GetAllExcelFilesPath();
+
+        var hiddenSheets = new ConcurrentBag<string[]>();
+        // 假设 files 是一个包含所有文件路径的集合
+        Parallel.ForEach(
+            files,
+            fileInfo =>
+            {
+                using (var package = new ExcelPackage(new FileInfo(fileInfo)))
+                {
+                    foreach (var worksheet in package.Workbook.Worksheets)
+                    {
+                        if (worksheet.Name.Contains("#") || worksheet.Name.Contains("Chart"))
+                        {
+                            continue;
+                        }
+
+                        var cellA1 = worksheet.Cells[1, 1];
+                        var cellA1Value = cellA1.Value?.ToString() ?? "";
+                        if (!cellA1Value.Contains("#"))
+                        {
+                            continue;
+                        }
+
+                        bool hasHidden = false;
+
+                        // 检查隐藏的行
+                        for (int row = 1; row <= worksheet.Dimension.End.Row + 1000; row++)
+                        {
+                            if (worksheet.Row(row).Hidden)
+                            {
+                                hasHidden = true;
+                                break;
+                            }
+                        }
+
+                        // 检查隐藏的列
+                        if (!hasHidden)
+                        {
+                            for (int col = 1; col <= worksheet.Dimension.End.Column + 100; col++)
+                            {
+                                if (worksheet.Column(col).Hidden)
+                                {
+                                    hasHidden = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (hasHidden)
+                        {
+                            hiddenSheets.Add(
+                                new string[] { Path.GetFileName(fileInfo), worksheet.Name }
+                            );
+                        }
+                    }
+                }
+            }
+        );
+        var resultArray = new string[hiddenSheets.Count, 2];
+        int index = 0;
+        foreach (var sheetInfo in hiddenSheets)
+        {
+            resultArray[index, 0] = sheetInfo[0];
+            resultArray[index, 1] = sheetInfo[1];
+            index++;
+        }
+
+        var rowmax = resultArray.GetLength(0);
+        var colmax = resultArray.GetLength(1);
+        var acrange = sheet.Range[sheet.Cells[1, 1], sheet.Cells[rowmax, colmax]];
+        acrange.Value = resultArray;
+        //App.Visible = false;
+        //App.ScreenUpdating = false;
+        //App.DisplayAlerts = false;
+        //try
+        //{
+        //    foreach (var fileInfo in files)
+        //    {
+        //        Workbook workbook = null;
+        //        try
+        //        {
+        //            workbook = App.Workbooks.Open(fileInfo);
+        //            bool changesMade = false;
+
+        //            foreach (Worksheet worksheet in workbook.Sheets)
+        //            {
+        //                Range rows = worksheet.Rows;
+        //                Range columns = worksheet.Columns;
+
+        //                if (rows.Hidden || columns.Hidden)
+        //                {
+        //                    rows.Hidden = false;
+        //                    columns.Hidden = false;
+        //                    changesMade = true;
+        //                }
+        //            }
+
+        //            if (changesMade)
+        //            {
+        //                workbook.Save();
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            Debug.Print($"Error processing file {fileInfo}: {ex.Message}");
+        //        }
+        //        finally
+        //        {
+        //            workbook?.Close(false);
+        //        }
+        //    }
+        //}
+        //catch
+        //{
+
+        //}
+
+        //App.Visible = true;
+        //App.ScreenUpdating = true;
+        //App.DisplayAlerts = true;
         //var wk = App.ActiveWorkbook;
         //var path = wk.Path;
         //var ws = wk.ActiveSheet;
@@ -1681,17 +1818,67 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
         var wk = App.ActiveWorkbook;
-        var modelSheet = wk.Worksheets["LTE【皮肤】"];
-        var modelListObjects = modelSheet.ListObjects;
+        var path = wk.Path;
 
-        List<object> abc = new List<object> { 1, 2, 3 };
+        var sheet = App.ActiveSheet;
 
-        foreach (ListObject list in modelListObjects)
-        {
-            var modelName = list.Name;
-            PubMetToExcelFunc.UpdateExcelNameData(modelSheet, modelName, abc);
-        }
+        var filesCollection = new SelfExcelFileCollector(path, 2);
+        var files = filesCollection.GetAllExcelFilesPath();
+
+        // 假设 files 是一个包含所有文件路径的集合
+        Parallel.ForEach(
+            files,
+            fileInfo =>
+            {
+                using (var package = new ExcelPackage(new FileInfo(fileInfo)))
+                {
+                    var count = 0;
+                    foreach (var worksheet in package.Workbook.Worksheets)
+                    {
+                        if (worksheet.Name.Contains("#") || worksheet.Name.Contains("Chart"))
+                        {
+                            continue;
+                        }
+
+                        var cellA1 = worksheet.Cells[1, 1];
+                        var cellA1Value = cellA1.Value?.ToString() ?? "";
+                        if (!cellA1Value.Contains("#"))
+                        {
+                            continue;
+                        }
+
+                        // 检查隐藏的行
+                        for (int row = 1; row <= worksheet.Dimension.End.Row + 1000; row++)
+                        {
+                            if (worksheet.Row(row).Hidden)
+                            {
+                                worksheet.Row(row).Hidden = false;
+                                count++;
+                            }
+                        }
+
+                        // 检查隐藏的列
+
+                        for (int col = 1; col <= worksheet.Dimension.End.Column + 100; col++)
+                        {
+                            if (worksheet.Column(col).Hidden)
+                            {
+                                worksheet.Column(col).Hidden = true;
+                                count++;
+                            }
+                        }
+                    }
+
+                    if (count > 0)
+                    {
+                        package.Save();
+                    }
+                }
+            }
+        );
 
         //var lines = File.ReadAllLines(DefaultFilePath);
         //CompareExcel.CompareMain(lines);
