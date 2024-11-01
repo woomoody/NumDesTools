@@ -1589,14 +1589,14 @@ public static class ExcelDataAutoInsertMulti
                 else
                 {
                     string cellFixValue;
-                    //自增值
+                    //固定值
                     string baseValue = excelKeyMethod ?? "";
                     if (baseValue.Contains("***"))
                     {
                         baseValue = baseValue.Replace("***", "");
                         cellFixValue = baseValue;
                     }
-                    //固定值
+                    //自增值
                     else
                     {
                         var fixValueList = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
@@ -1715,14 +1715,14 @@ public static class ExcelDataAutoInsertMulti
                                 else
                                 {
                                     string cellFixValue;
-                                    //自增值
+                                    //固定值
                                     string baseValue = excelKeyMethod ?? "";
                                     if (baseValue.Contains("***"))
                                     {
                                         baseValue = baseValue.Replace("***", "");
                                         cellFixValue = baseValue;
                                     }
-                                    //固定值
+                                    //自增值
                                     else
                                     {
                                         var fixValueList = ExcelDataAutoInsert.CellFixValueKeyList(
@@ -1792,12 +1792,26 @@ public static class ExcelDataAutoInsertMulti
                     continue;
                 if (cellSource.Value.ToString() == "" || cellSource.Value.ToString() == "0")
                     continue;
-                var temp1 = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
-                var cellFixValue = ExcelDataAutoInsert.StringRegPlace(
-                    cellSource.Value.ToString(),
-                    temp1,
-                    addValue
-                );
+
+                string cellFixValue;
+                //固定值
+                string baseValue = excelKeyMethod ?? "";
+                if (baseValue.Contains("***"))
+                {
+                    baseValue = baseValue.Replace("***", "");
+                    cellFixValue = baseValue;
+                }
+                else
+                {
+
+                    var temp1 = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
+                    cellFixValue = ExcelDataAutoInsert.StringRegPlace(
+                        cellSource.Value.ToString(),
+                        temp1,
+                        addValue
+                    );
+                }
+
                 writeIdList.Add(cellFixValue);
             }
 
@@ -3217,7 +3231,7 @@ public class ExcelDataAutoInsertNumChanges
             for (int j = 1; j < eachExcelData.Value.Item1.Count; j++)
             {
                 var keyTarget = eachExcelData.Value.Item1[j].ToString();
-                if (keyTarget != null && keyTarget.Contains("#"))
+                if (keyTarget != null && keyTarget.Contains("@"))
                 {
                     continue;
                 }
