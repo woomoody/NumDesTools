@@ -3231,7 +3231,7 @@ public class ExcelDataAutoInsertNumChanges
             for (int j = 1; j < eachExcelData.Value.Item1.Count; j++)
             {
                 var keyTarget = eachExcelData.Value.Item1[j].ToString();
-                if (keyTarget != null && keyTarget.Contains("@"))
+                if (keyTarget != null && keyTarget.Contains("$"))
                 {
                     continue;
                 }
