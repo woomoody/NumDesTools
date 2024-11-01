@@ -175,33 +175,31 @@ public class ExcelDataByEpplus
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         Dictionary<string, List<object>> dataDict = new Dictionary<string, List<object>>();
-        using (ExcelPackage package = new ExcelPackage(new FileInfo(path)))
+        using ExcelPackage package = new ExcelPackage(new FileInfo(path));
+        ExcelWorksheet worksheet = package.Workbook.Worksheets[sheetName];
+        var colCount = usedData.Count();
+        string lastMainTable = null;
+        for (int i = startRow; i <= worksheet.Dimension.End.Row; i++)
         {
-            ExcelWorksheet worksheet = package.Workbook.Worksheets[sheetName];
-            var colCount = usedData.Count();
-            string lastMainTable = null;
-            for (int i = startRow; i <= worksheet.Dimension.End.Row; i++)
+            string mainTable = worksheet.Cells[i, startCol].Text;
+            if (!string.IsNullOrEmpty(mainTable))
             {
-                string mainTable = worksheet.Cells[i, startCol].Text;
-                if (!string.IsNullOrEmpty(mainTable))
+                lastMainTable = mainTable;
+                if (!dataDict.ContainsKey(lastMainTable))
                 {
-                    lastMainTable = mainTable;
-                    if (!dataDict.ContainsKey(lastMainTable))
-                    {
-                        dataDict[lastMainTable] = [];
-                    }
+                    dataDict[lastMainTable] = [];
                 }
-
-                string data;
-                List<string> usedDataList = [];
-                for (int j = 0; j < colCount; j++)
-                {
-                    data = worksheet.Cells[i, usedData[j]].Text;
-                    usedDataList.Add(data);
-                }
-
-                dataDict[lastMainTable].Add(usedDataList);
             }
+
+            string data;
+            List<string> usedDataList = [];
+            for (int j = 0; j < colCount; j++)
+            {
+                data = worksheet.Cells[i, usedData[j]].Text;
+                usedDataList.Add(data);
+            }
+
+            dataDict[lastMainTable].Add(usedDataList);
         }
 
         return dataDict;

@@ -35,6 +35,12 @@
                     <button id='CheckSheetValue' size='large' getLabel='GetLableText' image='dart'
                             onAction='CheckSheetValue_Click'
                             screentip='点击启动表格关闭时数据自检，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.txt' />
+                    <button id='CheckHiddenCellVsto' size='large' label='检查隐藏' image='reason'
+                            onAction='CheckHiddenCellVsto_Click'
+                            screentip='点击检查当前变动Excel是否有隐藏单元格，VSTO方式需要打开Excel，较慢' />
+                    <button id='CheckHiddenCellVstoAll' size='large' label='检查隐藏（全局）' image='font'
+                            onAction='CheckHiddenCellVstoAll_Click'
+                            screentip='点击检查全量Excel是否有隐藏单元格，VSTO方式需要打开Excel，较慢' />
                 </group>
                 <!--
                 <group id='Group3' label='SVN功能'>

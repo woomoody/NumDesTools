@@ -539,15 +539,13 @@ public class LteData
     //strDic输出到文件
     private static void SaveDictionaryToFile(Dictionary<string, Dictionary<string, List<string>>> dictionary, string filePath)
     {
-        using (StreamWriter writer = new StreamWriter(filePath, false, Encoding.UTF8))
+        using StreamWriter writer = new StreamWriter(filePath, false, Encoding.UTF8);
+        foreach (var outerPair in dictionary)
         {
-            foreach (var outerPair in dictionary)
+            foreach (var innerPair in outerPair.Value)
             {
-                foreach (var innerPair in outerPair.Value)
-                {
-                    var line = $"{outerPair.Key},{innerPair.Key},{string.Join(",", innerPair.Value)}";
-                    writer.WriteLine(line);
-                }
+                var line = $"{outerPair.Key},{innerPair.Key},{string.Join(",", innerPair.Value)}";
+                writer.WriteLine(line);
             }
         }
     }

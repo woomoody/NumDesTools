@@ -225,14 +225,10 @@ public class SelfExcelFileCollector(string rootPath , int pathLevels)
     }
     private static string CalculateMd5(string filePath)
     {
-        using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-        {
-            using (var md5 = MD5.Create())
-            {
-                var hash = md5.ComputeHash(stream);
-                return BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
-            }
-        }
+        using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var md5 = MD5.Create();
+        var hash = md5.ComputeHash(stream);
+        return BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
     }
 }
 

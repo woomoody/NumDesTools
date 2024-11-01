@@ -1861,18 +1861,19 @@ public static class PubMetToExcelFunc
         var wkFullPath = workBook.FullName;
 
         var wkFileName = workBook.Name;
+
+        var sourceData = new List<(string, int, int, string, string)>();
+
         if (wkFileName.Contains("#"))
         {
-            return null;
+            return sourceData;
         }
 
         var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
 
-        var sourceData = new List<(string, int, int, string, string)>();
-
         foreach (var sheetName in sheetNames)
         {
-            if (sheetName.Contains("#"))
+            if (sheetName.Contains("#") || sheetName.Contains("Chart"))
                 continue;
             var rows = MiniExcel.Query(wkFullPath, sheetName: sheetName).ToList();
 
@@ -1929,14 +1930,17 @@ public static class PubMetToExcelFunc
         var wkFullPath = workBook.FullName;
 
         var wkFileName = workBook.Name;
+
+        var sourceData = new List<(string, int, int, string, string)>();
+
         if (wkFileName.Contains("#"))
         {
-            return null;
+            return sourceData;
         }
 
         var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
 
-        var sourceData = new List<(string, int, int, string, string)>();
+
 
         //有可能不需要这么复杂的判断，只判断是否包含常见的错误组合
         //比如【双逗号，中括号+逗号，大括号+逗号】

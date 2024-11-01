@@ -123,6 +123,7 @@
         <PackageReference Include="ExcelDna.Interop" Version="15.0.1" />
         <PackageReference Include="GraphX" Version="3.0.0" />
         <PackageReference Include="KeraLua" Version="1.4.1" />
+        <PackageReference Include="LibGit2Sharp" Version="0.30.0" />
         <PackageReference Include="MathNet.Numerics.Signed" Version="5.0.0" />
         <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="2.3.2" />
         <PackageReference Include="MiniExcel" Version="1.32.1" />
@@ -141,6 +142,7 @@
     </ItemGroup>
     <ItemGroup>
         <Folder Include="Resources\" />
+        <Folder Include="Com\" />
     </ItemGroup>
     <ItemGroup>
       <Page Update="UI\LoopRunCheckBoxWindow.xaml">
