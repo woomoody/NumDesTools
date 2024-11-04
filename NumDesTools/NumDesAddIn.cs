@@ -414,15 +414,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
 
         //取消隐藏
-        var workBook = App.ActiveWorkbook;
-        var workPath = workBook.FullName;
-        bool isModified = SvnGitTools.IsFileModified(workPath);
-        if (isModified)
+        if (CheckSheetValueText == "数据自检：开启")
         {
-            foreach (Worksheet sheet in workBook.Worksheets)
+            var workBook = App.ActiveWorkbook;
+            var workPath = workBook.FullName;
+            bool isModified = SvnGitTools.IsFileModified(workPath);
+            if (isModified)
             {
-                sheet.Rows.Hidden = false;
-                sheet.Columns.Hidden = false;
+                foreach (Worksheet sheet in workBook.Worksheets)
+                {
+                    sheet.Rows.Hidden = false;
+                    sheet.Columns.Hidden = false;
+                }
             }
         }
 
@@ -1601,7 +1604,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         try
         {
             var line1 = File.ReadLines(DefaultFilePath).Skip(1 - 1).FirstOrDefault();
-            MessageBox.Show("尝试进入");
             var fileList = SvnGitTools.GitDiffFileCount(line1);
             VstoExcel.FixHiddenCellVsto(fileList.ToArray());
         }
