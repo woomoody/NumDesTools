@@ -412,6 +412,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 );
             cancel = true;
         }
+
         //取消隐藏
         var workBook = App.ActiveWorkbook;
         var workPath = workBook.FullName;
@@ -1597,10 +1598,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-        var line1 = File.ReadLines(DefaultFilePath).Skip(1 - 1).FirstOrDefault();
-        var fileList = SvnGitTools.GitDiffFileCount(line1);
-
-        VstoExcel.FixHiddenCellVsto(fileList.ToArray());
+        try
+        {
+            var line1 = File.ReadLines(DefaultFilePath).Skip(1 - 1).FirstOrDefault();
+            MessageBox.Show("尝试进入");
+            var fileList = SvnGitTools.GitDiffFileCount(line1);
+            VstoExcel.FixHiddenCellVsto(fileList.ToArray());
+        }
+        catch (COMException ex)
+        {
+            Debug.Print("COM Exception: " + ex.Message);
+            App.StatusBar = "操作失败：" + ex.Message;
+        }
 
         sw.Stop();
         var ts2 = sw.Elapsed;
