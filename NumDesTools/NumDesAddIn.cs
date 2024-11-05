@@ -23,6 +23,8 @@ global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 using NumDesTools.Com;
 using NumDesTools.UI;
 using OfficeOpenXml;
@@ -1797,7 +1799,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
@@ -1810,39 +1811,41 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             files,
             fileInfo =>
             {
-                using var package = new ExcelPackage(new FileInfo(fileInfo));
+                using var fileStream = new FileStream(fileInfo, FileMode.Open, FileAccess.ReadWrite);
+                IWorkbook workbook = new XSSFWorkbook(fileStream);
                 var count = 0;
-                foreach (var worksheet in package.Workbook.Worksheets)
+
+                foreach (ISheet sheet in workbook)
                 {
-                    if (worksheet.Name.Contains("#") || worksheet.Name.Contains("Chart"))
+                    if (sheet.SheetName.Contains("#") || sheet.SheetName.Contains("Chart"))
                     {
                         continue;
                     }
 
-                    var cellA1 = worksheet.Cells[1, 1];
-                    var cellA1Value = cellA1.Value?.ToString() ?? "";
+                    var cellA1 = sheet.GetRow(0)?.GetCell(0);
+                    var cellA1Value = cellA1?.ToString() ?? "";
                     if (!cellA1Value.Contains("#"))
                     {
                         continue;
                     }
 
                     // 检查隐藏的行
-                    for (int row = 1; row <= worksheet.Dimension.End.Row + 1000; row++)
+                    for (int row = 0; row <= sheet.LastRowNum + 1000; row++)
                     {
-                        if (worksheet.Row(row).Hidden)
+                        var currentRow = sheet.GetRow(row);
+                        if (currentRow != null && currentRow.ZeroHeight)
                         {
-                            worksheet.Row(row).Hidden = false;
+                            currentRow.ZeroHeight = false;
                             count++;
                         }
                     }
 
                     // 检查隐藏的列
-
-                    for (int col = 1; col <= worksheet.Dimension.End.Column + 100; col++)
+                    for (int col = 0; col <= sheet.GetRow(0).LastCellNum + 100; col++)
                     {
-                        if (worksheet.Column(col).Hidden)
+                        if (sheet.IsColumnHidden(col))
                         {
-                            worksheet.Column(col).Hidden = true;
+                            sheet.SetColumnHidden(col, false);
                             count++;
                         }
                     }
@@ -1850,7 +1853,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
                 if (count > 0)
                 {
-                    package.Save();
+                    using var outputStream = new FileStream(fileInfo, FileMode.Create, FileAccess.Write);
+                    workbook.Write(outputStream);
                 }
             }
         );
@@ -2049,6 +2053,76 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 if (count > 0)
                 {
                     package.Save();
+                }
+            }
+        );
+
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "导出完成，用时：" + ts2;
+    }
+
+
+    public void FixHiddenCellNPOI_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+
+        var filesCollection = new SelfExcelFileCollector(path);
+        var files = filesCollection.GetAllExcelFilesPath();
+
+        // 假设 files 是一个包含所有文件路径的集合
+        Parallel.ForEach(
+            files,
+            fileInfo =>
+            {
+                using var fileStream = new FileStream(fileInfo, FileMode.Open, FileAccess.ReadWrite);
+                IWorkbook workbook = new XSSFWorkbook(fileStream);
+                var count = 0;
+
+                foreach (ISheet sheet in workbook)
+                {
+                    if (sheet.SheetName.Contains("#") || sheet.SheetName.Contains("Chart"))
+                    {
+                        continue;
+                    }
+
+                    var cellA1 = sheet.GetRow(0)?.GetCell(0);
+                    var cellA1Value = cellA1?.ToString() ?? "";
+                    if (!cellA1Value.Contains("#"))
+                    {
+                        continue;
+                    }
+
+                    // 检查隐藏的行
+                    for (int row = 0; row <= sheet.LastRowNum + 1000; row++)
+                    {
+                        var currentRow = sheet.GetRow(row);
+                        if (currentRow != null && currentRow.ZeroHeight)
+                        {
+                            currentRow.ZeroHeight = false;
+                            count++;
+                        }
+                    }
+
+                    // 检查隐藏的列
+                    for (int col = 0; col <= sheet.GetRow(0).LastCellNum + 100; col++)
+                    {
+                        if (sheet.IsColumnHidden(col))
+                        {
+                            sheet.SetColumnHidden(col, false);
+                            count++;
+                        }
+                    }
+                }
+
+                if (count > 0)
+                {
+                    using var outputStream = new FileStream(fileInfo, FileMode.Create, FileAccess.Write);
+                    workbook.Write(outputStream);
                 }
             }
         );
