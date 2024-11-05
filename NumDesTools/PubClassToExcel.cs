@@ -155,18 +155,19 @@ public class SelfGraphXEdge(SelfGraphXVertex source, SelfGraphXVertex target)
 }
 
 //自定义获取指定路径Excel文件
-public class SelfExcelFileCollector(string rootPath , int pathLevels)
+public class SelfExcelFileCollector(string currentPath)
 {
     //获取指定路径Excel文件路径
     public string[] GetAllExcelFilesPath()
     {
+        var rootPath = FindRootDirectory(currentPath, "Excels");
         var paths = new List<string>
         {
-            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "Tables"),
-            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "Localizations"),
-            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "UIs"),
-            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "Tables", "克朗代克"),
-            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "Tables", "二合")
+            Path.Combine(GetParentDirectory(rootPath, 0), "Tables"),
+            Path.Combine(GetParentDirectory(rootPath, 0), "Localizations"),
+            Path.Combine(GetParentDirectory(rootPath, 0), "UIs"),
+            Path.Combine(GetParentDirectory(rootPath, 0), "Tables", "克朗代克"),
+            Path.Combine(GetParentDirectory(rootPath, 0), "Tables", "二合")
         };
 
         var files = paths
@@ -175,6 +176,18 @@ public class SelfExcelFileCollector(string rootPath , int pathLevels)
             .ToArray();
 
         return files;
+    }
+    //获取根目录
+    private static string FindRootDirectory(string rootPath, string rootFolderName)
+    {
+        DirectoryInfo dirInfo = new DirectoryInfo(rootPath);
+
+        while (dirInfo != null && dirInfo.Name != rootFolderName)
+        {
+            dirInfo = dirInfo.Parent;
+        }
+
+        return dirInfo?.FullName;
     }
     //获取指定路径Excel文件路径MD5
     public enum KeyMode
