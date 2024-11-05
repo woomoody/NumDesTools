@@ -1516,7 +1516,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             return;
         }
 
-        var filesCollection = new SelfExcelFileCollector(path, 2);
+        var filesCollection = new SelfExcelFileCollector(path);
         var files = filesCollection.GetAllExcelFilesPath();
 
         var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(
@@ -1626,7 +1626,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
-        var filesCollection = new SelfExcelFileCollector(path, 2);
+        var filesCollection = new SelfExcelFileCollector(path);
         var files = filesCollection.GetAllExcelFilesPath();
 
         VstoExcel.FixHiddenCellVsto(files);
@@ -1644,7 +1644,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
-        var filesCollection = new SelfExcelFileCollector(path, 2);
+        var filesCollection = new SelfExcelFileCollector(path);
         var files = filesCollection.GetAllExcelFilesPath();
 
         VstoExcel.FixHiddenCellVsto(files);
@@ -1802,7 +1802,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var filesCollection = new SelfExcelFileCollector(path, 2);
+        var filesCollection = new SelfExcelFileCollector(path);
         var files = filesCollection.GetAllExcelFilesPath();
 
         // 假设 files 是一个包含所有文件路径的集合
@@ -1912,7 +1912,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         var sheet = App.ActiveSheet;
 
-        var filesCollection = new SelfExcelFileCollector(path, 2);
+        var filesCollection = new SelfExcelFileCollector(path);
         var files = filesCollection.GetAllExcelFilesPath();
 
         var hiddenSheets = new ConcurrentBag<string[]>();
@@ -2000,7 +2000,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var filesCollection = new SelfExcelFileCollector(path, 2);
+        var filesCollection = new SelfExcelFileCollector(path);
         var files = filesCollection.GetAllExcelFilesPath();
 
         // 假设 files 是一个包含所有文件路径的集合

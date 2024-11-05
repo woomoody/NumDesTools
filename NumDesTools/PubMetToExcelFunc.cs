@@ -592,7 +592,7 @@ public static class PubMetToExcelFunc
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-        var filesCollection = new SelfExcelFileCollector(rootPath, 2);
+        var filesCollection = new SelfExcelFileCollector(rootPath);
         var files = filesCollection.GetAllExcelFilesPath();
 
         var targetList = new List<(string, string, int, int)>();
@@ -666,7 +666,7 @@ public static class PubMetToExcelFunc
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-        var filesCollection = new SelfExcelFileCollector(rootPath, 2);
+        var filesCollection = new SelfExcelFileCollector(rootPath);
         var files = filesCollection.GetAllExcelFilesPath();
 
         var targetList = new List<(string, string, int, int)>();
@@ -742,7 +742,7 @@ public static class PubMetToExcelFunc
         int specificColumnIndex = 2
     )
     {
-        var filesCollection = new SelfExcelFileCollector(rootPath, 2);
+        var filesCollection = new SelfExcelFileCollector(rootPath);
         var files = filesCollection.GetAllExcelFilesPath();
 
         var targetList = new ConcurrentBag<(string, string, int, int)>();
@@ -1203,7 +1203,7 @@ public static class PubMetToExcelFunc
         );
         if (newPath != null)
         {
-            var filesCollection = new SelfExcelFileCollector(newPath, 2);
+            var filesCollection = new SelfExcelFileCollector(newPath);
             var baseFiles = filesCollection.GetAllExcelFilesPath();
 
             var sheetIndex = new List<string>();
@@ -1519,7 +1519,7 @@ public static class PubMetToExcelFunc
     public static void CheckDataLegitimacy(string rootPath)
     {
         //获取指定目录所有文件信息
-        var filesCollector = new SelfExcelFileCollector(rootPath, 2);
+        var filesCollector = new SelfExcelFileCollector(rootPath);
         var filesMd5 = filesCollector.GetAllExcelFilesMd5(
             SelfExcelFileCollector.KeyMode.FileNameWithoutExt
         );

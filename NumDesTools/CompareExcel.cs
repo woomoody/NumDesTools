@@ -18,7 +18,7 @@ public static class CompareExcel
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(baseFolder));
         if (newPath != null)
         {
-            var filesCollection = new SelfExcelFileCollector(newPath, 2);
+            var filesCollection = new SelfExcelFileCollector(newPath);
             var baseFiles = filesCollection.GetAllExcelFilesPath();
 
             var newPathTarget = Path.GetDirectoryName(Path.GetDirectoryName(targetFolder));
