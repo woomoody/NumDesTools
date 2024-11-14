@@ -186,7 +186,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.SheetBeforeRightClick += UD_RightClickButton;
         App.WorkbookActivate += ExcelApp_WorkbookActivate;
         App.WorkbookBeforeClose += ExcelApp_WorkbookBeforeClose;
-        App.SheetSelectionChange += ExcelApp_SheetSelectionChange;
     }
 
     void IExcelAddIn.AutoClose()
@@ -195,7 +194,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.SheetBeforeRightClick -= UD_RightClickButton;
         App.WorkbookActivate -= ExcelApp_WorkbookActivate;
         App.WorkbookBeforeClose -= ExcelApp_WorkbookBeforeClose;
-        App.SheetSelectionChange -= ExcelApp_SheetSelectionChange;
     }
 
     #endregion
@@ -208,165 +206,185 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         currentBar.Reset();
         var currentBars = currentBar.Controls;
         var missing = Type.Missing;
+
+        // 删除已有的按钮
+        var tagsToDelete = new[]
+        {
+            "自选表格写入",
+            "当前项目Lan",
+            "合并项目Lan",
+            "合并表格Row",
+            "合并表格Col",
+            "打开表格",
+            "对话写入",
+            "打开关联表格",
+            "LTE配置导出",
+            "自选表格写入（new）",
+            "LTE数据复刻"
+        };
+
         foreach (
-            var selfControl in from CommandBarControl tempControl in currentBars
-            let t = tempControl.Tag
-            where
-                t
-                    is "自选表格写入"
-                        or "当前项目Lan"
-                        or "合并项目Lan"
-                        or "合并表格Row"
-                        or "合并表格Col"
-                        or "打开表格"
-                        or "对话写入"
-                        or "打开关联表格"
-                        or "LTE配置导出"
-                        or "自选表格写入（new）"
-            select tempControl
+            var control in currentBars
+                .Cast<CommandBarControl>()
+                .Where(c => tagsToDelete.Contains(c.Tag))
         )
+        {
             try
             {
-                selfControl.Delete();
+                control.Delete();
             }
             catch
-            {
-                // ignored
+            { /* ignored */
             }
+        }
 
         if (sh is not Worksheet sheet)
             return;
         var sheetName = sheet.Name;
-        Workbook book = sheet.Parent;
-        var bookName = book.Name;
-        var bookPath = book.Path;
-        var targetNull = target.Value;
-        if (targetNull == null)
-            return;
-        var targetValue = target.Value2.ToString();
-
-        if (sheetName.Contains("【模板】"))
-            if (
-                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
-                is CommandBarButton comButton2
-            )
-            {
-                comButton2.Tag = "自选表格写入";
-                comButton2.Caption = "自选表格写入";
-                comButton2.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton2.Click += ExcelDataAutoInsertMulti.RightClickInsertData;
-            }
-
-        if (bookName.Contains("#【自动填表】多语言对话"))
+        var book = sheet.Parent as Workbook;
+        if (book != null)
         {
-            if (
-                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
-                is CommandBarButton comButton3
+            var bookName = book.Name;
+            var bookPath = book.Path;
+            var targetValue = target.Value2?.ToString();
+            if (string.IsNullOrEmpty(targetValue))
+                return;
+
+            // 动态生成按钮
+            void AddDynamicButton(
+                string tag,
+                string caption,
+                MsoButtonStyle style,
+                Microsoft.Office.Core._CommandBarButtonEvents_ClickEventHandler clickHandler
             )
             {
-                comButton3.Tag = "当前项目Lan";
-                comButton3.Caption = "当前项目Lan";
-                comButton3.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton3.Click += PubMetToExcelFunc.OpenBaseLanExcel;
+                if (
+                    currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
+                    is CommandBarButton comButton
+                )
+                {
+                    comButton.Tag = tag;
+                    comButton.Caption = caption;
+                    comButton.Style = style;
+                    comButton.Click += clickHandler;
+                }
             }
 
-            if (
-                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
-                is CommandBarButton comButton4
-            )
+            // 按钮配置列表
+            var buttonConfigs = new List<(
+                string Tag,
+                string Caption,
+                MsoButtonStyle Style,
+                Microsoft.Office.Core._CommandBarButtonEvents_ClickEventHandler Handler
+                )>
             {
-                comButton4.Tag = "合并项目Lan";
-                comButton4.Caption = "合并项目Lan";
-                comButton4.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton4.Click += PubMetToExcelFunc.OpenMergeLanExcel;
+                // 根据条件添加按钮配置
+                sheetName.Contains("【模板】")
+                    ? (
+                        "自选表格写入",
+                        "自选表格写入",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        ExcelDataAutoInsertMulti.RightClickInsertData
+                    )
+                    : default,
+                bookName.Contains("#【自动填表】多语言对话")
+                    ? (
+                        "当前项目Lan",
+                        "当前项目Lan",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        PubMetToExcelFunc.OpenBaseLanExcel
+                    )
+                    : default,
+                bookName.Contains("#【自动填表】多语言对话")
+                    ? (
+                        "合并项目Lan",
+                        "合并项目Lan",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        PubMetToExcelFunc.OpenMergeLanExcel
+                    )
+                    : default,
+                (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables"))
+                || bookPath.Contains(@"Public\Excels\Localizations")
+                    ? (
+                        "合并表格Row",
+                        "合并表格Row",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        ExcelDataAutoInsertCopyMulti.RightClickMergeData
+                    )
+                    : default,
+                (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables"))
+                || bookPath.Contains(@"Public\Excels\Localizations")
+                    ? (
+                        "合并表格Col",
+                        "合并表格Col",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol
+                    )
+                    : default,
+                targetValue.Contains(".xlsx")
+                    ? (
+                        "打开表格",
+                        "打开表格",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        PubMetToExcelFunc.RightOpenExcelByActiveCell
+                    )
+                    : default,
+                sheetName == "多语言对话【模板】"
+                    ? (
+                        "对话写入",
+                        "对话写入(末尾)",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        ExcelDataAutoInsertLanguage.AutoInsertDataByUd
+                    )
+                    : default,
+                !bookName.Contains("#") && target.Column > 2
+                    ? (
+                        "打开关联表格",
+                        "打开关联表格",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        PubMetToExcelFunc.RightOpenLinkExcelByActiveCell
+                    )
+                    : default,
+                sheetName == "LTE配置【导出】" && target.Column == 2
+                    ? (
+                        "LTE配置导出",
+                        "LTE配置导出2",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        LteData.ExportLteDataConfig
+                    )
+                    : default,
+                sheetName.Contains("【模板】")
+                    ? (
+                        "自选表格写入（new）",
+                        "自选表格写入（new）",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        ExcelDataAutoInsertMultiNew.RightClickInsertDataNew
+                    )
+                    : default,
+                bookName == "#【A大型活动】数值.xlsx" && sheetName.Contains("【基础】")
+                    ? (
+                        "LTE数据复刻",
+                        $"复刻数据-{sheetName.Replace("基础", "数值")}",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        ExcelDataAutoInsertMultiNew.RightClickInsertDataNew
+                    )
+                    : default,
+                bookName == "#【A大型活动】数值.xlsx" && sheetName.Contains("【奖励】")
+                    ? (
+                        "LTE数据复刻",
+                        $"复刻数据-{sheetName.Replace("奖励", "数值")}",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        ExcelDataAutoInsertMultiNew.RightClickInsertDataNew
+                    )
+                    : default
+            };
+
+            // 生成按钮
+            foreach (var (tag, caption, style, handler) in buttonConfigs.Where(b => b != default))
+            {
+                AddDynamicButton(tag, caption, style, handler);
             }
         }
-
-        if (
-            (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables"))
-            || bookPath.Contains(@"Public\Excels\Localizations")
-        )
-        {
-            if (
-                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
-                is CommandBarButton comButton5
-            )
-            {
-                comButton5.Tag = "合并表格Row";
-                comButton5.Caption = "合并表格Row";
-                comButton5.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton5.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeData;
-            }
-
-            if (
-                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
-                is CommandBarButton comButton6
-            )
-            {
-                comButton6.Tag = "合并表格Col";
-                comButton6.Caption = "合并表格Col";
-                comButton6.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton6.Click += ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol;
-            }
-        }
-
-        if (targetValue.Contains(".xlsx"))
-            if (
-                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
-                is CommandBarButton comButton7
-            )
-            {
-                comButton7.Tag = "打开表格";
-                comButton7.Caption = "打开表格";
-                comButton7.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton7.Click += PubMetToExcelFunc.RightOpenExcelByActiveCell;
-            }
-
-        if (sheetName == "多语言对话【模板】")
-            if (
-                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
-                is CommandBarButton comButton8
-            )
-            {
-                comButton8.Tag = "对话写入";
-                comButton8.Caption = "对话写入(末尾)";
-                comButton8.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton8.Click += ExcelDataAutoInsertLanguage.AutoInsertDataByUd;
-            }
-
-        if (!bookName.Contains("#") && target.Column > 2)
-            if (
-                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
-                is CommandBarButton comButton9
-            )
-            {
-                comButton9.Tag = "打开关联表格";
-                comButton9.Caption = "打开关联表格";
-                comButton9.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton9.Click += PubMetToExcelFunc.RightOpenLinkExcelByActiveCell;
-            }
-        if (sheetName == "LTE配置【导出】" && target.Column == 2)
-            if (
-                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
-                is CommandBarButton comButton10
-            )
-            {
-                comButton10.Tag = "LTE配置导出";
-                comButton10.Caption = "LTE配置导出";
-                comButton10.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton10.Click += LteData.ExportLteDataConfig;
-            }
-        if (sheetName.Contains("【模板】"))
-            if (
-                currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true)
-                is CommandBarButton comButton11
-            )
-            {
-                comButton11.Tag = "自选表格写入（new）";
-                comButton11.Caption = "自选表格写入（new）";
-                comButton11.Style = MsoButtonStyle.msoButtonIconAndCaption;
-                comButton11.Click += ExcelDataAutoInsertMultiNew.RightClickInsertDataNew;
-            }
     }
 
     private void ExcelApp_WorkbookActivate(Workbook wb)
@@ -1645,11 +1663,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         sw.Start();
 
         var wk = App.ActiveWorkbook;
-        var path = wk.Path;
-        var filesCollection = new SelfExcelFileCollector(path);
-        var files = filesCollection.GetAllExcelFilesPath();
+        var wkPath = wk.FullName;
 
-        VstoExcel.FixHiddenCellVsto(files);
+        PubMetToExcelFunc.IceClimberCostSimulate(wkPath, wk);
 
         //App.Visible = false;
         //App.ScreenUpdating = false;
@@ -1799,7 +1815,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
@@ -1811,7 +1826,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             files,
             fileInfo =>
             {
-                using var fileStream = new FileStream(fileInfo, FileMode.Open, FileAccess.ReadWrite);
+                using var fileStream = new FileStream(
+                    fileInfo,
+                    FileMode.Open,
+                    FileAccess.ReadWrite
+                );
                 IWorkbook workbook = new XSSFWorkbook(fileStream);
                 var count = 0;
 
@@ -1853,7 +1872,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
                 if (count > 0)
                 {
-                    using var outputStream = new FileStream(fileInfo, FileMode.Create, FileAccess.Write);
+                    using var outputStream = new FileStream(
+                        fileInfo,
+                        FileMode.Create,
+                        FileAccess.Write
+                    );
                     workbook.Write(outputStream);
                 }
             }
@@ -2062,7 +2085,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
-
     public void FixHiddenCellNPOI_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -2079,7 +2101,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             files,
             fileInfo =>
             {
-                using var fileStream = new FileStream(fileInfo, FileMode.Open, FileAccess.ReadWrite);
+                using var fileStream = new FileStream(
+                    fileInfo,
+                    FileMode.Open,
+                    FileAccess.ReadWrite
+                );
                 IWorkbook workbook = new XSSFWorkbook(fileStream);
                 var count = 0;
 
@@ -2121,7 +2147,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
                 if (count > 0)
                 {
-                    using var outputStream = new FileStream(fileInfo, FileMode.Create, FileAccess.Write);
+                    using var outputStream = new FileStream(
+                        fileInfo,
+                        FileMode.Create,
+                        FileAccess.Write
+                    );
                     workbook.Write(outputStream);
                 }
             }
@@ -2209,18 +2239,19 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         CustomRibbon.InvalidateControl("FocusLightButton");
         if (FocusLabelText == "聚光灯：开启")
         {
-            App.SheetSelectionChange += ExcelSheetCalculate;
+            App.SheetSelectionChange += FocusLightCal;
         }
         else
         {
             foreach (Workbook workbook in App.Workbooks)
             foreach (Worksheet worksheet in workbook.Worksheets)
                 FocusLight.DeleteCondition(worksheet);
-            App.SheetSelectionChange -= ExcelSheetCalculate;
+            App.SheetSelectionChange -= FocusLightCal;
         }
+        _globalValue.SaveValue("FocusLabelText", FocusLabelText);
     }
 
-    private void ExcelSheetCalculate(object sh, Range target)
+    private void FocusLightCal(object sh, Range target)
     {
         FocusLight.Calculate();
     }
@@ -2277,64 +2308,44 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         var wk = App.ActiveWorkbook;
         var ws = wk.ActiveSheet;
+        var formula = "=A1=";
 
         if (wk.Name == "#【A大型活动】数值.xlsx")
         {
             if (ws.Name.Contains("【基础】"))
             {
-                var usedRange = ws.UsedRange;
-                App.ScreenUpdating = false;
-                foreach (Range cell in usedRange)
+                //var usedRange = ws.UsedRange;
+                //太破坏原有格式
+                //App.ScreenUpdating = false;
+                //foreach (Range cell in usedRange)
+                //{
+                //    cell.Interior.ColorIndex = XlColorIndex.xlColorIndexNone; // 清除高亮
+                //}
+                //App.ScreenUpdating = true;
+                if (CellHiLightText == "高亮单元格：开启")
                 {
-                    cell.Interior.ColorIndex = XlColorIndex.xlColorIndexNone; // 清除高亮
+                    App.SheetSelectionChange += RepeatValueCal;
                 }
-                App.ScreenUpdating = true;
+                else
+                {
+                    ConditionFormat.Delete(ws, formula);
+                    App.SheetSelectionChange -= RepeatValueCal;
+                }
             }
         }
 
         _globalValue.SaveValue("CellHiLightText", CellHiLightText);
     }
 
-    private void ExcelApp_SheetSelectionChange(object sh, Range target)
+    private void RepeatValueCal(object sh, Range target)
     {
-        if (CellHiLightText != "高亮单元格：开启")
-            return;
-        //指定工作簿、工作表、工作区域选中单元格高亮显示同值
         var wk = App.ActiveWorkbook;
         var ws = wk.ActiveSheet;
-
-        if (wk.Name == "#【A大型活动】数值.xlsx")
-        {
-            if (ws.Name.Contains("【基础】"))
-            {
-                if (target != null && !string.IsNullOrWhiteSpace(target.Value2))
-                {
-                    string selectedText = target.Value2.ToString();
-                    //只找10行10列的数据
-                    var firstRow = Math.Max(target.Row - 20, 1);
-                    var firstCol = Math.Max(target.Column - 20, 1);
-                    var lastRow = target.Row + 30;
-                    var lastCol = target.Column + 30;
-                    var searchRange = ws.Range[
-                        ws.Cells[firstRow, firstCol],
-                        ws.Cells[lastRow, lastCol]
-                    ];
-                    App.ScreenUpdating = false;
-                    foreach (Range cell in searchRange)
-                    {
-                        if (cell.Value2?.ToString() == selectedText)
-                        {
-                            cell.Interior.Color = XlRgbColor.rgbYellow; // 高亮显示
-                        }
-                        else
-                        {
-                            cell.Interior.ColorIndex = XlColorIndex.xlColorIndexNone; // 清除高亮
-                        }
-                    }
-                    App.ScreenUpdating = true;
-                }
-            }
-        }
+        var formula = "=A1=";
+        ConditionFormat.Delete(ws, formula);
+        var rangeAddress = target.Address;
+        ConditionFormat.Add(ws, formula + rangeAddress);
+        ws.Calculate();
     }
     #endregion
 }

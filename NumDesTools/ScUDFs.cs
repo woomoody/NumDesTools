@@ -305,6 +305,58 @@ public class ExcelUdf
     }
 
     [ExcelFunction(
+        Category = "UDF-查找值",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "二维Range查找值，返回指定查找到值的相对行、列"
+    )]
+    public static object FindValueFromRange(
+        [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "查找值")]
+        string seachValue,
+        [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "查找范围")]
+        object[,] searchRange,
+        [ExcelArgument(AllowReference = true, Description = "1：行；2：列；其他：自定义行列组{,},[,]", Name = "返回值类型")]
+        string returnType = "1",
+        [ExcelArgument(AllowReference = true, Description = "返回第几个值", Name = "返回值序号")]
+        int returnNum = 1
+    )
+    {
+        var rows = searchRange.GetLength(0);
+        var cols = searchRange.GetLength(1);
+
+        int counter = 1;
+        for (var row = 0; row < rows; row++)
+        for (var col = 0; col < cols; col++)
+        {
+            var targetCell = searchRange[row, col];
+            if (targetCell is ExcelEmpty)
+            {
+                continue;
+            }
+
+            if (targetCell.ToString() == seachValue)
+            {
+                if (counter == returnNum)
+                {
+                    if (returnType == "1")
+                    {
+                        return row + 1;
+                    }
+
+                    if (returnType == "2")
+                    {
+                        return col + 1;
+                    }
+
+                    var delimiterList = returnType.ToCharArray().Select(c => c.ToString()).ToArray();
+                    return $"{delimiterList[0]}{row + 1}{delimiterList[1]}{col + 1}{delimiterList[2]}";
+                }
+                counter++;
+            }
+        }
+        return $"不存在";
+    }
+    [ExcelFunction(
         Category = "UDF-获取表格信息",
         IsVolatile = true,
         IsMacroType = true,
@@ -662,7 +714,6 @@ public class ExcelUdf
                 }
                 count++;
             }
-        
 
             result = result.Substring(0, result.Length - 1);
             result = delimiterList[0] + result + delimiterList[2];

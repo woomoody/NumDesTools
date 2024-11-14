@@ -60,4 +60,51 @@
             sheet.Calculate();
         }
     }
+
+    public class ConditionFormat
+    {
+        public static void Add(dynamic sheet, string formula)
+        {
+            var range = sheet.UsedRange;
+            FormatConditions formatConditions = range.FormatConditions;
+            int formatCount = 0;
+            foreach (object obj in formatConditions)
+            {
+                if (obj is FormatCondition formatObj)
+                {
+                    if (formatObj.Formula1 == formula)
+                    {
+                        formatCount++;
+                    }
+                }
+            }
+
+            if (formatCount == 0)
+            {
+                var formatCondition = formatConditions.Add(
+                    XlFormatConditionType.xlExpression,
+                    Type.Missing,
+                    formula
+                );
+                formatCondition.Interior.Color = XlRgbColor.rgbOrange;
+            }
+        }
+
+        public static void Delete(dynamic sheet, string formula)
+        {
+            var range = sheet.UsedRange;
+            FormatConditions formatConditions = range.FormatConditions;
+            foreach (object obj in formatConditions)
+            {
+                if (obj is FormatCondition formatCondition)
+                {
+                    if (formatCondition.Formula1.Contains(formula))
+                    {
+                        formatCondition.Delete();
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }

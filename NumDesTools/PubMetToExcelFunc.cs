@@ -9,6 +9,7 @@ using NumDesTools.Config;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using LicenseContext = OfficeOpenXml.LicenseContext;
+using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
 using Process = System.Diagnostics.Process;
 
@@ -1940,8 +1941,6 @@ public static class PubMetToExcelFunc
 
         var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
 
-
-
         //有可能不需要这么复杂的判断，只判断是否包含常见的错误组合
         //比如【双逗号，中括号+逗号，大括号+逗号】
         //数组判断就通过头字符是否是{{、{、[[、[来检查末尾是否有对应的符号
@@ -2104,5 +2103,155 @@ public static class PubMetToExcelFunc
                 dataRange.Cells[i + 1, j].Value2 = dataRange.Cells[i + 1, j].Value2;
             }
         }
+    }
+
+    //砸冰块计算
+    public static void IceClimberCostSimulate(string wkPath, dynamic wk)
+    {
+        var modelSheetName = "#冰块模版";
+        var posSheetName = "IceClimberTargetCell";
+        var sizeSheetName = "IceClimberTargetTemp";
+
+        // 查询模版数据
+        var modelRows = MiniExcel.Query(
+            wkPath,
+            sheetName: modelSheetName,
+            startCell: "A1",
+            useHeaderRow: true
+        );
+
+        // 查询位置数据
+        var posRows = MiniExcel.Query(
+            wkPath,
+            sheetName: posSheetName,
+            startCell: "A2",
+            useHeaderRow: true
+        );
+
+        // 查询尺寸数据
+        var sizeRows = MiniExcel.Query(
+            wkPath,
+            sheetName: sizeSheetName,
+            startCell: "A2",
+            useHeaderRow: true
+        );
+
+        // 存储结果
+        var modelResults = new Dictionary<string, List<(string, string, string, string)>>();
+
+        foreach (var item in modelRows)
+        {
+            var column1 = item.模版名.ToString();
+            var column2Values = new List<string>(ExtractNumbers(item.模版目标.ToString()));
+            var column3Values = new List<string>(ExtractNumbers(item.模版尺寸.ToString()));
+
+            var resultList = new List<(string, string, string, string)>();
+
+            int maxCount = Math.Max(column2Values.Count, column3Values.Count);
+
+            for (int i = 0; i < maxCount; i++)
+            {
+                var posA = "";
+                var posB = "";
+                var sizeA = "";
+                var sizeB = "";
+
+                if (i < column2Values.Count)
+                {
+                    var matchingPosRow = posRows.FirstOrDefault(row =>
+                        row.id.ToString() == column2Values[i]
+                    );
+                    if (matchingPosRow != null)
+                    {
+                        posA = matchingPosRow.start_x.ToString();
+                        posB = matchingPosRow.start_y.ToString();
+                    }
+                }
+
+                if (i < column3Values.Count)
+                {
+                    var matchingSizeRow = sizeRows.FirstOrDefault(row =>
+                        row.id.ToString() == column3Values[i]
+                    );
+                    if (matchingSizeRow != null)
+                    {
+                        sizeB = matchingSizeRow.wide.ToString();
+                        sizeA = matchingSizeRow.high.ToString();
+                    }
+                }
+
+                resultList.Add((posA, posB, sizeA, sizeB));
+            }
+
+            if (resultList.Any())
+            {
+                modelResults[column1] = resultList;
+            }
+        }
+
+        int totalRows = 0;
+        int totalCols = 0;
+        foreach (var model in modelResults)
+        {
+            var modelValues = model.Value;
+            int modelSize = modelValues.Count;
+            totalRows += modelSize + 1;
+            totalCols = Math.Max(totalCols, modelSize);
+        }
+
+        var combinedGrid = new string[totalRows, totalCols];
+
+        int currentRow = 0;
+        foreach (var model in modelResults)
+        {
+            var modelKey = model.Key;
+            var modelValues = model.Value;
+            int modelSize = modelValues.Count;
+
+            var grid = new string[modelSize + 1, modelSize];
+
+            grid[modelSize, 0] = modelKey;
+
+            foreach (var modelValue in modelValues)
+            {
+                int startX = int.Parse(modelValue.Item1) - 1;
+                int startY = int.Parse(modelValue.Item2) - 1;
+                int width = int.Parse(modelValue.Item3);
+                int height = int.Parse(modelValue.Item4);
+
+                for (int i = startX; i < startX + width; i++)
+                {
+                    for (int j = startY; j < startY + height; j++)
+                    {
+                        grid[i, j] = "1";
+                    }
+                }
+            }
+
+            for (int i = 0; i < modelSize + 1; i++)
+            {
+                for (int j = 0; j < modelSize; j++)
+                {
+                    combinedGrid[currentRow + i, j] = grid[i, j];
+                }
+            }
+
+            currentRow += modelSize + 1;
+        }
+
+        var outSheetName = "#冰块图形";
+        var outSheet = wk.Sheets[outSheetName];
+        var outRange = outSheet.Range[
+            outSheet.Cells[2, 2],
+            outSheet.Cells[1 + combinedGrid.GetLength(0), 1 + combinedGrid.GetLength(1)]
+        ];
+        outRange.Value = combinedGrid;
+    }
+
+    static IEnumerable<string> ExtractNumbers(string input)
+    {
+        // 使用正则表达式提取数字
+        var matches = Regex.Matches(input, @"\d+");
+        return matches.Cast<Match>().Select(m => m.Value);
     }
 }

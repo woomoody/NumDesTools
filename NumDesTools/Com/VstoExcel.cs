@@ -8,7 +8,6 @@ public class VstoExcel
         NumDesAddIn.App.ScreenUpdating = false;
         NumDesAddIn.App.DisplayAlerts = false;
         NumDesAddIn.App.EnableEvents = false;
-        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
         string errorLog = "";
         //取消隐藏
         foreach (var file in files)
@@ -41,7 +40,6 @@ public class VstoExcel
         NumDesAddIn.App.ScreenUpdating = true;
         NumDesAddIn.App.DisplayAlerts = true;
         NumDesAddIn.App.EnableEvents = true;
-        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationAutomatic;
 
         ErrorLogCtp.DisposeCtp();
         ErrorLogCtp.CreateCtpNormal(errorLog);
