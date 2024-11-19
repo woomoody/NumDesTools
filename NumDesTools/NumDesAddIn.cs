@@ -202,10 +202,29 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private void UD_RightClickButton(object sh, Range target, ref bool cancel)
     {
-        var currentBar = App.CommandBars["cell"];
+        Microsoft.Office.Core.CommandBar currentBar;
+        var missing = Type.Missing;
+
+        // 判断是否是全选列或全选行
+        bool isEntireColumn = target.EntireColumn.Address == target.Address;
+        bool isEntireRow = target.EntireRow.Address == target.Address;
+
+        // 根据是否全选列/行选择不同的 CommandBar
+        if (isEntireColumn)
+        {
+            currentBar = App.CommandBars["Column"];
+        }
+        else if (isEntireRow)
+        {
+            currentBar = App.CommandBars["Row"];
+        }
+        else
+        {
+            currentBar = App.CommandBars["cell"];
+        }
+
         currentBar.Reset();
         var currentBars = currentBar.Controls;
-        var missing = Type.Missing;
 
         // 删除已有的按钮
         var tagsToDelete = new[]
@@ -220,7 +239,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "打开关联表格",
             "LTE配置导出",
             "自选表格写入（new）",
-            "LTE数据复刻"
+            "自定义复制"
         };
 
         foreach (
@@ -246,9 +265,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             var bookName = book.Name;
             var bookPath = book.Path;
+
+            // 如果是全选列或全选行，跳过 target.Value2 的检查
             var targetValue = target.Value2?.ToString();
-            if (string.IsNullOrEmpty(targetValue))
-                return;
+            if (!isEntireColumn && !isEntireRow)
+            {
+
+                if (string.IsNullOrEmpty(targetValue))
+                    return;
+            }
 
             // 动态生成按钮
             void AddDynamicButton(
@@ -276,7 +301,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 string Caption,
                 MsoButtonStyle Style,
                 Microsoft.Office.Core._CommandBarButtonEvents_ClickEventHandler Handler
-                )>
+            )>
             {
                 // 根据条件添加按钮配置
                 sheetName.Contains("【模板】")
@@ -321,7 +346,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol
                     )
                     : default,
-                targetValue.Contains(".xlsx")
+                targetValue != null && targetValue.Contains(".xlsx")
                     ? (
                         "打开表格",
                         "打开表格",
@@ -348,7 +373,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 sheetName == "LTE配置【导出】" && target.Column == 2
                     ? (
                         "LTE配置导出",
-                        "LTE配置导出2",
+                        "LTE配置导出",
                         MsoButtonStyle.msoButtonIconAndCaption,
                         LteData.ExportLteDataConfig
                     )
@@ -361,22 +386,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         ExcelDataAutoInsertMultiNew.RightClickInsertDataNew
                     )
                     : default,
-                bookName == "#【A大型活动】数值.xlsx" && sheetName.Contains("【基础】")
-                    ? (
-                        "LTE数据复刻",
-                        $"复刻数据-{sheetName.Replace("基础", "数值")}",
-                        MsoButtonStyle.msoButtonIconAndCaption,
-                        ExcelDataAutoInsertMultiNew.RightClickInsertDataNew
-                    )
-                    : default,
-                bookName == "#【A大型活动】数值.xlsx" && sheetName.Contains("【奖励】")
-                    ? (
-                        "LTE数据复刻",
-                        $"复刻数据-{sheetName.Replace("奖励", "数值")}",
-                        MsoButtonStyle.msoButtonIconAndCaption,
-                        ExcelDataAutoInsertMultiNew.RightClickInsertDataNew
-                    )
-                    : default
+                (
+                    "自定义复制",
+                    "去重复制",
+                    MsoButtonStyle.msoButtonIconAndCaption,
+                    PubMetToExcelFunc.FilterRepeatValueCopy
+                )
             };
 
             // 生成按钮
