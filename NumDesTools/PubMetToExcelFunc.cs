@@ -1302,6 +1302,7 @@ public static class PubMetToExcelFunc
         if (links == null || links.Length == 0)
         {
             MessageBox.Show("没有检测到有外链公式");
+            return;
         }
 
         var needFixLinks = new List<string>();
@@ -1695,29 +1696,68 @@ public static class PubMetToExcelFunc
     //更新Power Query链接数据
     public static void UpdatePowerQueryLinks()
     {
-        var newFolderPath = WkPath + @"\";
-        dynamic queries = Wk.GetType()
-            .InvokeMember("Queries", System.Reflection.BindingFlags.GetProperty, null, Wk, null);
-        foreach (dynamic query in queries)
+        dynamic queries = null;
+        try
         {
-            string name = query.Name;
-            string formula = query.Formula;
-            string oldFilePath = ExtractFilePathFromFormula(formula);
-            if (!string.IsNullOrEmpty(oldFilePath))
+            // 新的文件夹路径
+            var newFolderPath = WkPath + @"\";
+
+            // 获取工作簿中的所有查询
+            queries = Wk.GetType().InvokeMember("Queries", BindingFlags.GetProperty, null, Wk, null);
+
+            foreach (dynamic query in queries)
             {
-                string fileName = System.IO.Path.GetFileName(oldFilePath);
-                string newFilePath = System.IO.Path.Combine(newFolderPath, fileName);
-                string newFormula = formula.Replace(oldFilePath, newFilePath);
-                query
-                    .GetType()
-                    .InvokeMember(
+                string name = query.Name;
+                string formula = query.Formula;
+
+                // 提取旧文件路径
+                string oldFilePath = ExtractFilePathFromFormula(formula);
+                if (!string.IsNullOrEmpty(oldFilePath))
+                {
+                    // 获取文件名并生成新的文件路径
+                    string fileName = Path.GetFileName(oldFilePath);
+                    string newFilePath = Path.Combine(newFolderPath, fileName);
+
+                    // 替换旧路径为新路径
+                    string newFormula = formula.Replace(oldFilePath, newFilePath);
+
+                    // 更新查询公式
+                    query.GetType().InvokeMember(
                         "Formula",
-                        System.Reflection.BindingFlags.SetProperty,
+                        BindingFlags.SetProperty,
                         null,
                         query,
                         new object[] { newFormula }
                     );
+                }
             }
+
+            // 刷新所有查询
+            Wk.GetType().InvokeMember(
+                "RefreshAll",
+                BindingFlags.InvokeMethod,
+                null,
+                Wk,
+                null
+            );
+        }
+        catch (Exception ex)
+        {
+            // 捕获并处理异常
+            MessageBox.Show("更新 Power Query 链接时发生错误: " + ex.Message);
+        }
+        finally
+        {
+            // 释放查询对象，避免锁定外部文件
+            if (queries != null)
+            {
+                Marshal.ReleaseComObject(queries);
+                queries = null;
+            }
+
+            // 强制垃圾回收，确保释放未使用的 COM 对象
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
         }
     }
 
@@ -2253,5 +2293,48 @@ public static class PubMetToExcelFunc
         // 使用正则表达式提取数字
         var matches = Regex.Matches(input, @"\d+");
         return matches.Cast<Match>().Select(m => m.Value);
+    }
+
+    //去重复制
+    public static void FilterRepeatValueCopy(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var excel = NumDesAddIn.App;
+        var selectRange = excel.Selection;
+
+        if (selectRange == null)
+        {
+            // 如果没有选择任何内容，直接返回
+            return;
+        }
+
+        object[,] mergedArray;
+        int index = 0;
+        int baseIndex = 0;
+
+        if (selectRange.Areas.Count > 1)
+        {
+            object[] areas = new object[selectRange.Areas.Count];
+
+            // 获取每个区域的数据
+            for (int i = 1; i <= selectRange.Areas.Count; i++)
+            {
+                areas[i - 1] = selectRange.Areas[i].Value2;
+            }
+
+            // 按列合并
+            mergedArray = PubMetToExcel.MergeRanges(areas, false);
+
+        }
+        else
+        {
+            mergedArray = selectRange.Value2;
+            index = 1;
+            baseIndex = 1;
+        }
+        //去重
+        mergedArray = PubMetToExcel.FilterRepeatValue(mergedArray, index, false, baseIndex);
+        //复制
+        PubMetToExcel.CopyArrayToClipboard(mergedArray);
+
     }
 }
