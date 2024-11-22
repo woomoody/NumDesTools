@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using ExcelDna.Integration;
 using Newtonsoft.Json;
 using NPOI.XSSF.UserModel;
 using static System.String;
@@ -679,6 +680,84 @@ public class ExcelUdf
     {
         var values1Objects = rangeObj1.Cast<object>().ToArray();
         var values2Objects = rangeObj2.Cast<object>().ToArray();
+        var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
+        var result = Empty;
+
+        if (values1Objects.Length > 0 && values2Objects.Length > 0 && delimiterList.Length > 0)
+        {
+            var count = 0;
+            foreach (var item in values1Objects)
+            {
+                if (ignoreEmpty)
+                {
+                    var excelNull = item is ExcelEmpty;
+                    var stringNull = ReferenceEquals(item.ToString(), "");
+                    if (!excelNull && !stringNull && item.ToString() != "")
+                    {
+                        var itemDef =
+                            delimiterList[0]
+                            + item
+                            + delimiterList[1]
+                            + values2Objects[count]
+                            + delimiterList[2];
+                        result += itemDef + delimiter[1];
+                    }
+                }
+                else
+                {
+                    var itemDef =
+                        delimiterList[0]
+                        + item
+                        + delimiterList[1]
+                        + values2Objects[count]
+                        + delimiterList[2];
+                    result += itemDef + delimiter[1];
+                }
+                count++;
+            }
+
+            result = result.Substring(0, result.Length - 1);
+            result = delimiterList[0] + result + delimiterList[2];
+        }
+
+        return result;
+    }
+
+    public static string CreatValueToArray2Dya(
+    [ExcelArgument(
+            AllowReference = true,
+            Description = "Range&Cell,eg:A1:A2",
+            Name = "第一单元格范围"
+        )]
+            object[,] rangeObj1,
+    [ExcelArgument(
+            AllowReference = true,
+            Description = "Range&Cell,eg:A1:A2",
+            Name = "第二单元格范围"
+        )]
+            object[,] rangeObj2,
+            [ExcelArgument(
+                AllowReference = true,
+                Description = "Range&Cell,eg:A1:A2",
+                Name = "第一单元格范围"
+            )]
+            object[,] rangeObj3,
+            [ExcelArgument(
+                AllowReference = true,
+                Description = "Range&Cell,eg:A1:A2",
+                Name = "第二单元格范围"
+            )]
+            object[,] rangeObj4,
+    [ExcelArgument(AllowReference = true, Description = "分隔符,eg:,", Name = "分隔符")]
+            string delimiter,
+    [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false", Name = "过滤空值")]
+            bool ignoreEmpty
+)
+    {
+        var values1Objects = rangeObj1.Cast<object>().ToArray();
+        var values2Objects = rangeObj2.Cast<object>().ToArray();
+        var values3Objects = rangeObj3.Cast<object>().ToArray();
+        var values4Objects = rangeObj4.Cast<object>().ToArray();
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
         var result = Empty;
 
