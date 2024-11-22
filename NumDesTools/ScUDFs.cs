@@ -588,7 +588,7 @@ public class ExcelUdf
         for (var col = 0; col < cols; col++)
         {
             var item = rangeObj[row, col];
-            if (item is ExcelEmpty || item.ToString() == ignoreValue) { }
+            if (item is ExcelEmpty || item.ToString() == ignoreValue || item is ExcelError) { }
             else
             {
                 if (!(rangeObjDef[0, 0] is ExcelMissing))
@@ -721,6 +721,114 @@ public class ExcelUdf
 
         return result;
     }
+
+    [ExcelFunction(
+        Category = "UDF-组装字符串",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "拼接Range（二维）-动态参数",
+        ExplicitRegistration = true
+    )]
+
+    public static string CreatValueToArray2Dya(
+    [ExcelArgument(AllowReference = true, Description = "分隔符,eg:,", Name = "分隔符")]
+    string delimiter,
+    [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg:true/false", Name = "过滤空值")]
+    string ignoreEmpty,
+    [ExcelArgument(AllowReference = true, Description = "是否包含外围分隔符,eg:,", Name = "过滤空值")]
+    string isOutline,
+    [ExcelArgument(
+        AllowReference = false,
+        Description = "多个单元格范围，支持动态输入，eg: A1:A2, B1:B2",
+        Name = "单元格范围"
+    )]
+    params object[] ranges
+)
+    {
+        //默认值
+        if (delimiter == "")
+        {
+            delimiter = "[,]";
+        }
+        if (ignoreEmpty == "")
+        {
+            ignoreEmpty = "TRUE";
+        }
+        if (isOutline == "")
+        {
+            isOutline = "TRUE";
+        }
+        // 分隔符处理
+        var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
+        if (delimiterList.Length < 3)
+        {
+            throw new ArgumentException("分隔符至少需要三个字符，例如: {,}");
+        }
+
+        // 将所有范围转换为一维数组
+        var allValues = new List<object[]>();
+        foreach (var range in ranges)
+        {
+        
+            if (range is object[,] rangeObj)
+            {
+                allValues.Add(rangeObj.Cast<object>().ToArray());
+            }
+            else
+            {
+                throw new ArgumentException("输入的范围必须是二维数组");
+            }
+        }
+
+        // 确保所有范围的长度一致
+        var maxLength = allValues.Max(arr => arr.Length);
+        if (allValues.Any(arr => arr.Length != maxLength))
+        {
+            throw new ArgumentException("所有单元格范围的长度必须一致");
+        }
+
+        // 拼接结果
+        var result = Empty;
+        for (int i = 0; i < maxLength; i++)
+        {
+            var rowValues = new List<string>();
+            foreach (var rangeValues in allValues)
+            {
+                var value = rangeValues[i];
+                if (ignoreEmpty == "TRUE")
+                {
+                    var isExcelEmpty = value is ExcelEmpty;
+                    var isExcelError = value is ExcelError;
+                    var isStringEmpty = value?.ToString() == Empty;
+                    if (isExcelEmpty || isStringEmpty || isExcelError)
+                    {
+                        continue;
+                    }
+                }
+                rowValues.Add(value?.ToString() ?? Empty);
+            }
+
+            // 拼接每一行的值
+            if (rowValues.Count > 0)
+            {
+                result += delimiterList[0] + Join(delimiterList[1], rowValues) + delimiterList[2] + delimiter[1];
+            }
+        }
+
+        // 去掉最后一个多余的分隔符
+        if (!IsNullOrEmpty(result))
+        {
+            result = result.Substring(0, result.Length - 1);
+        }
+
+        if (isOutline == "TRUE")
+        {
+            result = delimiterList[0] + result + delimiterList[2];
+        }
+
+        return result;
+    }
+
 
     [ExcelFunction(
         Category = "UDF-组装字符串",

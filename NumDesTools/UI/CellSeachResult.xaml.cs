@@ -15,7 +15,7 @@ namespace NumDesTools.UI
         public CellSeachResult(List<(string, int, int)> list)
         {
             InitializeComponent();
-            this.DataContext = this;
+            DataContext = this;
             CellDataList = new ObservableCollection<SelfCellData>(list.Select(t => new SelfCellData(t)));
             ListBoxCellData.ItemsSource = CellDataList;
         }

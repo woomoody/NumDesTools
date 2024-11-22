@@ -7,6 +7,7 @@
         <UseWindowsForms>true</UseWindowsForms>
         <UseWPF>true</UseWPF>
         <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+        <ExcelAddInExplicitRegistration>true</ExcelAddInExplicitRegistration>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
         <LangVersion>latest</LangVersion>
@@ -121,6 +122,7 @@
         <PackageReference Include="ExcelDna.Integration" Version="1.8.0" />
         <PackageReference Include="ExcelDna.IntelliSense" Version="1.8.0" />
         <PackageReference Include="ExcelDna.Interop" Version="15.0.1" />
+        <PackageReference Include="ExcelDna.Registration" Version="1.8.0" />
         <PackageReference Include="GraphX" Version="3.0.0" />
         <PackageReference Include="KeraLua" Version="1.4.1" />
         <PackageReference Include="LibGit2Sharp" Version="0.30.0" />

@@ -18,7 +18,7 @@ namespace NumDesTools.UI
         public SheetCellSeachResult(List<(string, int, int, string, string)> list)
         {
             InitializeComponent();
-            this.DataContext = this;
+            DataContext = this;
             CellDataList = new ObservableCollection<SelfSheetCellData>(list.Select(t => new SelfSheetCellData(t)));
             ListBoxCellData.ItemsSource = CellDataList;
         }

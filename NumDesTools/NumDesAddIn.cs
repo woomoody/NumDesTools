@@ -10,6 +10,7 @@ global using System.Windows.Forms;
 global using ExcelDna.Integration;
 global using ExcelDna.Integration.CustomUI;
 global using ExcelDna.IntelliSense;
+global using ExcelDna.Registration;
 global using Microsoft.Office.Interop.Excel;
 global using Application = Microsoft.Office.Interop.Excel.Application;
 global using Color = System.Drawing.Color;
@@ -22,7 +23,9 @@ global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
 using System.Collections.Concurrent;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
+using ExcelDna.Registration;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using NumDesTools.Com;
@@ -186,6 +189,17 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.SheetBeforeRightClick += UD_RightClickButton;
         App.WorkbookActivate += ExcelApp_WorkbookActivate;
         App.WorkbookBeforeClose += ExcelApp_WorkbookBeforeClose;
+
+        //注册动态参数函数
+        ExcelIntegration.RegisterUnhandledExceptionHandler(ex => "!!! ERROR: " + ex.ToString());
+        // Set the Parameter Conversions before they are applied by the ProcessParameterConversions call below.
+
+        // Get all the ExcelFunction functions, process and register
+        // Since the .dna file has ExplicitExports="true", these explicit registrations are the only ones - there is no default processing
+        ExcelRegistration.GetExcelFunctions()
+            .ProcessAsyncRegistrations(nativeAsyncIfAvailable: false)
+            .ProcessParamsRegistrations()
+            .RegisterFunctions();
     }
 
     void IExcelAddIn.AutoClose()
@@ -195,6 +209,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.WorkbookActivate -= ExcelApp_WorkbookActivate;
         App.WorkbookBeforeClose -= ExcelApp_WorkbookBeforeClose;
     }
+
+    #endregion
+
+    #region 注册动态参数函数
+  
 
     #endregion
 
@@ -2327,7 +2346,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         if (wk.Name == "#【A大型活动】数值.xlsx")
         {
-            if (ws.Name.Contains("【基础】"))
+            if (ws.Name.Contains("【基础】") || ws.Name.Contains("【数值】"))
             {
                 //var usedRange = ws.UsedRange;
                 //太破坏原有格式
