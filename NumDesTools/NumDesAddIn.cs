@@ -2327,7 +2327,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         if (wk.Name == "#【A大型活动】数值.xlsx")
         {
-            if (ws.Name.Contains("【基础】"))
+            if (ws.Name.Contains("【基础】") || ws.Name.Contains("【数值】"))
             {
                 //var usedRange = ws.UsedRange;
                 //太破坏原有格式
