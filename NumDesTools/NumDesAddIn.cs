@@ -23,9 +23,7 @@ global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
 using System.Collections.Concurrent;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
-using ExcelDna.Registration;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using NumDesTools.Com;
@@ -111,7 +109,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public void OnLoad(IRibbonUI ribbon)
     {
         CustomRibbon = ribbon;
-        CustomRibbon.ActivateTab("Tab1");
+        CustomRibbon.ActivateTab("MainTab");
     }
 
     public override string GetCustomUI(string ribbonId)
@@ -122,8 +120,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ribbonXml = GetRibbonXml("RibbonUI.xml");
 #if DEBUG
             ribbonXml = ribbonXml.Replace(
-                "<tab id='Tab1' label='NumDesTools' insertBeforeMso='TabHome'>",
-                "<tab id='Tab1' label='N*D*T*Debug' insertBeforeMso='TabHome'>"
+                "<tab id='MainTab' label='NumDesTools' insertBeforeMso='TabHome'>",
+                "<tab id='MainTab' label='N*D*T*Debug' insertBeforeMso='TabHome'>"
+            );
+            ribbonXml = ribbonXml.Replace(
+                "<tab id='SecondTab' label='NumDesToolsPlus' insertBeforeMso='TabHome'>",
+                "<tab id='SecondTab' label='N*D*T*PlusDebug' insertBeforeMso='TabHome'>"
             );
 #endif
         }
@@ -200,6 +202,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             .ProcessAsyncRegistrations(nativeAsyncIfAvailable: false)
             .ProcessParamsRegistrations()
             .RegisterFunctions();
+        //添加动态参数自定函数注册后，需要重新刷新下智能感应提示
+        IntelliSenseServer.Refresh();
     }
 
     void IExcelAddIn.AutoClose()
@@ -209,11 +213,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.WorkbookActivate -= ExcelApp_WorkbookActivate;
         App.WorkbookBeforeClose -= ExcelApp_WorkbookBeforeClose;
     }
-
-    #endregion
-
-    #region 注册动态参数函数
-  
 
     #endregion
 

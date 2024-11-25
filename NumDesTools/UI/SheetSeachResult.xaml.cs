@@ -29,6 +29,9 @@ namespace NumDesTools.UI
             if (listBox.SelectedItem != null)
             {
                 var selectedWorkBook = (SelfWorkBookSearchCollect)listBox.SelectedItem;
+                // 关闭所有打开的备注编辑框，不隐藏角标
+                NumDesAddIn.App.DisplayCommentIndicator = XlCommentDisplayMode.xlCommentIndicatorOnly;
+
                 PubMetToExcel.OpenExcelAndSelectCell(
                     selectedWorkBook.FilePath,
                     selectedWorkBook.SheetName,
