@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using ExcelDna.Integration;
 using Newtonsoft.Json;
 using NPOI.XSSF.UserModel;
 using static System.String;
@@ -723,84 +722,6 @@ public class ExcelUdf
         return result;
     }
 
-    public static string CreatValueToArray2Dya(
-    [ExcelArgument(
-            AllowReference = true,
-            Description = "Range&Cell,eg:A1:A2",
-            Name = "第一单元格范围"
-        )]
-            object[,] rangeObj1,
-    [ExcelArgument(
-            AllowReference = true,
-            Description = "Range&Cell,eg:A1:A2",
-            Name = "第二单元格范围"
-        )]
-            object[,] rangeObj2,
-            [ExcelArgument(
-                AllowReference = true,
-                Description = "Range&Cell,eg:A1:A2",
-                Name = "第一单元格范围"
-            )]
-            object[,] rangeObj3,
-            [ExcelArgument(
-                AllowReference = true,
-                Description = "Range&Cell,eg:A1:A2",
-                Name = "第二单元格范围"
-            )]
-            object[,] rangeObj4,
-    [ExcelArgument(AllowReference = true, Description = "分隔符,eg:,", Name = "分隔符")]
-            string delimiter,
-    [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false", Name = "过滤空值")]
-            bool ignoreEmpty
-)
-    {
-        var values1Objects = rangeObj1.Cast<object>().ToArray();
-        var values2Objects = rangeObj2.Cast<object>().ToArray();
-        var values3Objects = rangeObj3.Cast<object>().ToArray();
-        var values4Objects = rangeObj4.Cast<object>().ToArray();
-        var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
-        var result = Empty;
-
-        if (values1Objects.Length > 0 && values2Objects.Length > 0 && delimiterList.Length > 0)
-        {
-            var count = 0;
-            foreach (var item in values1Objects)
-            {
-                if (ignoreEmpty)
-                {
-                    var excelNull = item is ExcelEmpty;
-                    var stringNull = ReferenceEquals(item.ToString(), "");
-                    if (!excelNull && !stringNull && item.ToString() != "")
-                    {
-                        var itemDef =
-                            delimiterList[0]
-                            + item
-                            + delimiterList[1]
-                            + values2Objects[count]
-                            + delimiterList[2];
-                        result += itemDef + delimiter[1];
-                    }
-                }
-                else
-                {
-                    var itemDef =
-                        delimiterList[0]
-                        + item
-                        + delimiterList[1]
-                        + values2Objects[count]
-                        + delimiterList[2];
-                    result += itemDef + delimiter[1];
-                }
-                count++;
-            }
-
-            result = result.Substring(0, result.Length - 1);
-            result = delimiterList[0] + result + delimiterList[2];
-        }
-
-        return result;
-    }
-
     [ExcelFunction(
         Category = "UDF-组装字符串",
         IsVolatile = true,
@@ -837,6 +758,8 @@ public class ExcelUdf
         {
             isOutline = "TRUE";
         }
+        // 拼接结果
+        var result = Empty;
         // 分隔符处理
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
         if (delimiterList.Length < 3)
@@ -848,7 +771,7 @@ public class ExcelUdf
         var allValues = new List<object[]>();
         foreach (var range in ranges)
         {
-        
+            if(range.ToString() == "ExcelErrorValue") continue;
             if (range is object[,] rangeObj)
             {
                 allValues.Add(rangeObj.Cast<object>().ToArray());
@@ -859,15 +782,18 @@ public class ExcelUdf
             }
         }
 
+        if (allValues.Count == 0)
+        {
+            return "";
+        }
+
         // 确保所有范围的长度一致
         var maxLength = allValues.Max(arr => arr.Length);
         if (allValues.Any(arr => arr.Length != maxLength))
         {
             throw new ArgumentException("所有单元格范围的长度必须一致");
         }
-
-        // 拼接结果
-        var result = Empty;
+    
         for (int i = 0; i < maxLength; i++)
         {
             var rowValues = new List<string>();

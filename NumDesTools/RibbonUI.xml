@@ -3,7 +3,7 @@
 <customUI xmlns='http://schemas.microsoft.com/office/2009/07/customui' loadImage='LoadImage' onLoad='OnLoad'>
     <ribbon startFromScratch='false'>
         <tabs>
-            <tab id='Tab1' label='NumDesTools' insertBeforeMso='TabHome'>
+            <tab id='MainTab' label='NumDesTools' insertBeforeMso='TabHome'>
                 <!--
         < group id = 'Group1' label = '导表(By:SC)'>
                   < button id = 'Button1' size = 'large' label = '导出本表' image = 'file' onAction = 'OneSheetOutPut_Click' screentip = '点击导出当前sheet' />
@@ -141,6 +141,22 @@
                     <button id="MapExcelButton" size='large' label="溯源改动" screentip='根据对比结果和【文档\表格关系.json】溯源每条改动最终影响的表格，一般为ActivityClientData.xlsx，输出至【文档\#溯源结果.xlsx】'
                             onAction='MapExcel_Click' image="video" />
                 </group>
+                <group id='FileInfo' label='文件信息'>
+                    <button id='CopyFileName' size='large' label='文件名称' image='document' onAction='CopyFileName_Click' />
+                    <button id='CopyFilePath' size='large' label='文件路径' image='file' onAction='CopyFilePath_Click' />
+                    <labelControl id="BasePathLab" label=" 源表/目标" />
+                    <editBox id="BasePathEdit" getText="GetFileInfo" onChange="BaseFileInfoChanged"
+                             sizeString="........................................................................."
+                             image="folder-android" screentip='输入自己本地目录，自动保存' />
+                    <editBox id="TargetPathEdit" getText="GetFileInfo" onChange="TargetFileInfoChanged"
+                             sizeString="........................................................................."
+                             image="folder-aws" screentip='输入自己本地目录，自动保存' />
+                </group>
+                <!--
+                <group id='Group4' label='战斗仿真'>控件id不能重复，否则无法加载Ribbon
+                -->
+            </tab>
+            <tab id='SecondTab' label='NumDesToolsPlus' insertBeforeMso='TabHome'>
                 <group id='Group10' label='玩法计算'>
                     <button id='Button15' size='large' label='Alice大富翁' image='dart' screentip='大富翁方案整理'
                             onAction='AliceBigRicher_Click' />
@@ -158,21 +174,11 @@
                     <button id='Button99992' size='large' label='测试' image='sofa' onAction='TestBar2_Click' />
                     <checkBox id='checkbox99991' label='是否后台' />
                 </group>
-                <group id='FileInfo' label='文件信息'>
-                    <button id='CopyFileName' size='large' label='文件名称' image='document' onAction='CopyFileName_Click' />
-                    <button id='CopyFilePath' size='large' label='文件路径' image='file' onAction='CopyFilePath_Click' />
-                    <labelControl id="BasePathLab" label=" 源表/目标" />
-                    <editBox id="BasePathEdit" getText="GetFileInfo" onChange="BaseFileInfoChanged"
-                             sizeString="........................................................................."
-                             image="folder-android" screentip='输入自己本地目录，自动保存' />
-                    <editBox id="TargetPathEdit" getText="GetFileInfo" onChange="TargetFileInfoChanged"
-                             sizeString="........................................................................."
-                             image="folder-aws" screentip='输入自己本地目录，自动保存' />
-                </group>
-                <!--
-                <group id='Group4' label='战斗仿真'>控件id不能重复，否则无法加载Ribbon
-                -->
             </tab>
+            <!--
+            < ribbon startFromScratch = 'false' >//表示加载时excel原有的选项卡隐藏否
+            -->
+        
         </tabs>
     </ribbon>
     <!--
