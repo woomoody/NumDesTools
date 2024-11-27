@@ -41,7 +41,8 @@ internal class SvnGitTools
         var repoPath = FindGitRoot(filePath);
         using var repo = new Repository(repoPath);
         var status = repo.RetrieveStatus(filePath);
-        return status == FileStatus.ModifiedInWorkdir || status == FileStatus.ModifiedInIndex;
+        // 使用按位与检查是否包含 ModifiedInWorkdir 或 ModifiedInIndex
+        return (status & FileStatus.ModifiedInWorkdir) != 0 || (status & FileStatus.ModifiedInIndex) != 0;
     }
 
 }
