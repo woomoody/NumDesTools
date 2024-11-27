@@ -125,9 +125,9 @@
                             onAction='CellDataReplace_Click' image="key" /> <button id="ExcelSearchBoxButton6" size='large' label="搜索文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串'
                             onAction='CellDataSearch_Click' image="dart" />
                     <menu  id ='AutoInsertExcelDataMenu2' label ='创建数据&#13;' image ='ejs' size='large'>
-                        <button id="ModelDataCreat"  label="常规模版" screentip='全局搜索关键词，输出表格数据，常规模版数据'
+                        <button id="ModelDataCreat"  label="常规模版" screentip='全局搜索关键词，输出表格数据，常规模版数据，例如：各类LTE、主岛活动常规【模版】'
                                 onAction='ModelDataCreat_Click' imageMso="AdpNewTable" />
-                        <button id="ModelDataCreat2"  label="特殊模版" screentip='指定表格搜索关键词，输出表格数据，特殊模版数据'
+                        <button id="ModelDataCreat2"  label="特殊模版" screentip='指定表格搜索关键词，输出表格数据，特殊模版数据，例如：LTE皮肤【模版】'
                                 onAction='ModelDataCreat2_Click' imageMso="Hotspot" />
                     </menu>
                 </group>

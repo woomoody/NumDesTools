@@ -193,12 +193,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.WorkbookBeforeClose += ExcelApp_WorkbookBeforeClose;
 
         //注册动态参数函数
-        ExcelIntegration.RegisterUnhandledExceptionHandler(ex => "!!! ERROR: " + ex.ToString());
+        ExcelIntegration.RegisterUnhandledExceptionHandler(ex => "!!! ERROR: " + ex);
         // Set the Parameter Conversions before they are applied by the ProcessParameterConversions call below.
 
         // Get all the ExcelFunction functions, process and register
         // Since the .dna file has ExplicitExports="true", these explicit registrations are the only ones - there is no default processing
-        ExcelRegistration.GetExcelFunctions()
+        ExcelRegistration
+            .GetExcelFunctions()
             .ProcessAsyncRegistrations(nativeAsyncIfAvailable: false)
             .ProcessParamsRegistrations()
             .RegisterFunctions();
@@ -288,7 +289,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var targetValue = target.Value2?.ToString();
             if (!isEntireColumn && !isEntireRow)
             {
-
                 if (string.IsNullOrEmpty(targetValue))
                     return;
             }
@@ -1578,6 +1578,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             true,
             true
         );
+        targetList = targetList
+            .OrderBy(x => x.Key, StringComparer.Ordinal)
+            .ToDictionary(x => x.Key, x => x.Value);
 
         int rows = targetList.Values.Sum(list => list.Count);
         int cols = 3;
