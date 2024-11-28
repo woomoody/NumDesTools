@@ -1566,11 +1566,7 @@ public static class ExcelDataAutoInsertMulti
                 var rowId = sheet.Cells[startRowSource + i, 2];
                 var cellCol = sheet.Cells[2, excelFileFixKey].Value?.ToString();
                 var cellFix = sheet.Cells[writeRow + 1 + i, excelFileFixKey];
-                if (cellSource.Value == null)
-                    continue;
 
-                if (cellSource.Value.ToString() == "" || cellSource.Value.ToString() == "0")
-                    continue;
                 if (cellCol != null && cellCol.Contains("#") && commentValue != null)
                 {
                     string[] baseParts = commentValue.Split("#");
@@ -1599,6 +1595,12 @@ public static class ExcelDataAutoInsertMulti
                     //自增值
                     else
                     {
+                        if (cellSource.Value == null)
+                            continue;
+
+                        if (cellSource.Value.ToString() == "" || cellSource.Value.ToString() == "0")
+                            continue;
+
                         var fixValueList = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
                         cellFixValue = ExcelDataAutoInsert.StringRegPlace(
                             cellSource.Value.ToString(),
@@ -1680,14 +1682,7 @@ public static class ExcelDataAutoInsertMulti
                                 var cellCol = sheet.Cells[2, excelFileFixKey].Value?.ToString();
                                 var cellFix = sheet.Cells[writeRow + j + 1, excelFileFixKey];
                                 var rowId = sheet.Cells[startRowSource + j, 2];
-                                if (cellSource.Value == null)
-                                    continue;
-
-                                if (
-                                    cellSource.Value.ToString() == ""
-                                    || cellSource.Value.ToString() == "0"
-                                )
-                                    continue;
+               
 
                                 if (
                                     cellCol != null
@@ -1725,6 +1720,14 @@ public static class ExcelDataAutoInsertMulti
                                     //自增值
                                     else
                                     {
+                                        if (cellSource.Value == null)
+                                            continue;
+
+                                        if (
+                                            cellSource.Value.ToString() == ""
+                                            || cellSource.Value.ToString() == "0"
+                                        )
+                                            continue;
                                         var fixValueList = ExcelDataAutoInsert.CellFixValueKeyList(
                                             excelKeyMethod
                                         );
@@ -1788,10 +1791,7 @@ public static class ExcelDataAutoInsertMulti
             for (var i = 0; i < count; i++)
             {
                 var cellSource = sheet.Cells[startRowSource + i, excelFileFixKey];
-                if (cellSource.Value == null)
-                    continue;
-                if (cellSource.Value.ToString() == "" || cellSource.Value.ToString() == "0")
-                    continue;
+ 
 
                 string cellFixValue;
                 //固定值
@@ -1803,6 +1803,10 @@ public static class ExcelDataAutoInsertMulti
                 }
                 else
                 {
+                    if (cellSource.Value == null)
+                        continue;
+                    if (cellSource.Value.ToString() == "" || cellSource.Value.ToString() == "0")
+                        continue;
 
                     var temp1 = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyMethod);
                     cellFixValue = ExcelDataAutoInsert.StringRegPlace(
@@ -1840,6 +1844,7 @@ public static class ExcelDataAutoInsertMultiNew
     private static dynamic _creatIdCol;
     private static dynamic _baseCommentCol;
     private static dynamic _creatCommentCol;
+    private static dynamic _specialReplaceValueCol;
     private static dynamic _replaceValues;
     private static dynamic _colorCell;
     private static Color _cellColor;
@@ -1851,6 +1856,7 @@ public static class ExcelDataAutoInsertMultiNew
     private static dynamic _fixKey;
     private static dynamic _ignoreExcel;
     private static dynamic _commentValue;
+    private static dynamic _specialReplaceValue;
     private static dynamic _errorExcelList;
     
     //初始化参数
@@ -1871,6 +1877,7 @@ public static class ExcelDataAutoInsertMultiNew
         _creatIdCol = _title.IndexOf("创建期号");
         _baseCommentCol = _title.IndexOf("初始备注");
         _creatCommentCol = _title.IndexOf("当前备注");
+        _specialReplaceValueCol = _title.IndexOf("专属替换");
         _replaceValues = _data[2][_baseIdCol];
 
         _colorCell = _sheet.Cells[6, 1];
@@ -1883,6 +1890,7 @@ public static class ExcelDataAutoInsertMultiNew
         _fixKey = PubMetToExcel.ExcelDataToDictionary(_data, _sheetNameCol, _fixKeyCol, _rowCount, _colFixKeyCount);
         _ignoreExcel = PubMetToExcel.ExcelDataToDictionary(_data, _sheetNameCol, _creatIdCol, _rowCount);
         _commentValue = PubMetToExcel.ExcelDataToDictionary(_data, _baseCommentCol, _creatCommentCol, 1);
+        _specialReplaceValue = PubMetToExcel.ExcelDataToDictionary(_data, _sheetNameCol, _specialReplaceValueCol, _rowCount);
         _errorExcelList = new List<List<(string, string, string)>>();
     }
 
@@ -2070,6 +2078,8 @@ public static class ExcelDataAutoInsertMultiNew
 
             //修改数据
             var fixItem = _fixKey[excelName][excelMulti].Item1;
+            //专属替换
+            var specialValue = _specialReplaceValue[excelName][excelMulti].Item1;
             errorList = FixData(
                 excelName,
                 fixItem,
@@ -2077,7 +2087,8 @@ public static class ExcelDataAutoInsertMultiNew
                 count,
                 startRowSource,
                 writeRow,
-                errorList
+                errorList,
+                specialValue
             );
             writeRow += count;
         }
@@ -2095,7 +2106,8 @@ public static class ExcelDataAutoInsertMultiNew
         dynamic count,
         dynamic startRowSource,
         int writeRow,
-        dynamic errorList
+        dynamic errorList,
+        dynamic specialValue
     )
     {
         // 获取工作表的行数和列数
@@ -2113,7 +2125,17 @@ public static class ExcelDataAutoInsertMultiNew
                 for (var i = 0; i < count; i++)
                 {
                     var replaceCell = wkSheet.Cells[writeRow + i + 1, cellCol];
-                    string[] baseParts = _replaceValues.Split("#");
+                    //判断使用通用替换还是专属替换
+                    string replaceValueCheck;
+                    if (!string.IsNullOrEmpty(specialValue[0, 0]))
+                    {
+                        replaceValueCheck = $"{_replaceValues}#{specialValue[0, 0]}";
+                    }
+                    else
+                    {
+                        replaceValueCheck = _replaceValues;
+                    }
+                    string[] baseParts = replaceValueCheck.Split("#");
                     var cellValue = replaceCell.Value?.ToString() ?? "";
                     foreach (var item in baseParts)
                     {
@@ -2135,11 +2157,6 @@ public static class ExcelDataAutoInsertMultiNew
                     var cellSource = wkSheet.Cells[startRowSource + i, excelFileFixKey];
                     var rowId = wkSheet.Cells[startRowSource + i, 2];
                     var cellFix = wkSheet.Cells[writeRow + 1 + i, excelFileFixKey];
-                    if (cellSource.Value == null)
-                        continue;
-
-                    if (cellSource.Value.ToString() == "" || cellSource.Value.ToString() == "0")
-                        continue;
 
                     string cellFixValue;
                     //固定值
@@ -2152,6 +2169,12 @@ public static class ExcelDataAutoInsertMultiNew
                     //自增值
                     else
                     {
+                        if (cellSource.Value == null)
+                            continue;
+
+                        if (cellSource.Value.ToString() == "" || cellSource.Value.ToString() == "0")
+                            continue;
+
                         var fixValueList = ExcelDataAutoInsert.CellFixValueKeyList(excelKeyFun);
                         cellFixValue = ExcelDataAutoInsert.StringRegPlace(
                             cellSource.Value.ToString(),

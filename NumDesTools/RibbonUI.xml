@@ -97,12 +97,16 @@
                         onAction='AutoInsertExcelDataDialog_Click' screentip='根据模板数据覆写对话数据表格：EPPlusI' />
                     <button id='AutoMergeExcel' size='large' label='合并Excel(Alice-Cove)' image='dart'
                             onAction='AutoMergeExcel_Click' screentip='Alice与Cove表格数据互相拷贝：EPPlusI' />
+                    
+                    <!--
                     <button id='AutoLinkExcel' size='large' label='Excel超链接' image='edge'
                             onAction='AutoLinkExcel_Click'
                             screentip='当前表格内的.xlsx加入超链接.xlsx' />
                     <button id='AutoCellFormat' size='large' label='模板表格式整理' image='diff'
                             onAction='AutoCellFormatEPPlus_Click'
                             screentip='整理表格样式' />
+                    -->
+                    
                     <button id='AutoSeachExcel' size='large' label='查验模版写入数据' image='document'
                             onAction='AutoSeachExcel_Click' screentip='查看模版表写入后的数据：EPPlus' />
                     <button id='AutoInsertNumChanges' size='large' label='活动奖励写入' image='console'
