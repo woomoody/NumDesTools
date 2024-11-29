@@ -216,7 +216,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.WorkbookBeforeClose -= ExcelApp_WorkbookBeforeClose;
     }
 
-    #endregion
+#endregion
 
     #region Ribbon点击命令
 
