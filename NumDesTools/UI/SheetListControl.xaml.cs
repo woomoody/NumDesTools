@@ -117,6 +117,8 @@ namespace NumDesTools.UI
                 // 更新 StatusBar
                 UpdateStatusBar((SelfComSheetCollect)listBox.SelectedItem);
             }
+            // 手动清空 SelectedItem，支持重复点击
+            listBox.SelectedItem = null;
         }
 
         public void SetListBoxItemStyle(ListBox listBox)

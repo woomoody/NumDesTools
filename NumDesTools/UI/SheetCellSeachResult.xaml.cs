@@ -64,6 +64,9 @@ namespace NumDesTools.UI
                 sheet.Select();
                 var cell = sheet.Cells[cellData.Row, cellData.Column];
                 cell.Select();
+
+                // 手动清空 SelectedItem，支持重复点击
+                ListBoxCellData.SelectedItem = null;
             }
         }
     }
