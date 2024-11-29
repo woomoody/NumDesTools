@@ -20,7 +20,7 @@ namespace NumDesTools.UI
     {
         public static Application ExcelApp = NumDesAddIn.App;
         public ObservableCollection<SelfComSheetCollect> Sheets { get; } =
-            new ObservableCollection<SelfComSheetCollect>();
+            [];
 
         public SheetListControl()
         {
@@ -117,6 +117,8 @@ namespace NumDesTools.UI
                 // 更新 StatusBar
                 UpdateStatusBar((SelfComSheetCollect)listBox.SelectedItem);
             }
+            // 手动清空 SelectedItem，支持重复点击
+            listBox.SelectedItem = null;
         }
 
         public void SetListBoxItemStyle(ListBox listBox)

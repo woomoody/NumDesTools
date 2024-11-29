@@ -11,9 +11,10 @@ public class GlobalVariable
             { "LabelText", "放大镜：关闭" },
             { "FocusLabelText", "聚光灯：关闭" },
             { "LabelTextRoleDataPreview", "角色数据预览：关闭" },
-            { "SheetMenuText", "表格目录：开启" },
+            { "SheetMenuText", "表格目录：关闭" },
             { "TempPath", @"\Client\Assets\Resources\Table" },
-            { "CellHiLightText", "高亮单元格：开启" }
+            { "CellHiLightText", "高亮单元格：关闭" },
+            { "CheckSheetValueText", "数据自检：开启" }
         };
 
     private readonly string _filePath = Path.Combine(
@@ -80,7 +81,6 @@ public class GlobalVariable
             File.WriteAllLines(_filePath, lines);
         }
     }
-
 
     public void SaveValue(string key, string value)
     {
