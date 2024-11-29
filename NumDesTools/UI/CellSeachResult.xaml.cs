@@ -15,7 +15,7 @@ namespace NumDesTools.UI
         public CellSeachResult(List<(string, int, int)> list)
         {
             InitializeComponent();
-            this.DataContext = this;
+            DataContext = this;
             CellDataList = new ObservableCollection<SelfCellData>(list.Select(t => new SelfCellData(t)));
             ListBoxCellData.ItemsSource = CellDataList;
         }
@@ -25,9 +25,13 @@ namespace NumDesTools.UI
             if (ListBoxCellData.SelectedItem is SelfCellData cellData)
             {
                 var sheet = NumDesAddIn.App.ActiveSheet;
+                // 关闭所有打开的备注编辑框，不隐藏角标
+                NumDesAddIn.App.DisplayCommentIndicator = XlCommentDisplayMode.xlCommentIndicatorOnly;
                 var cell = sheet.Cells[cellData.Row, cellData.Column];
                 cell.Select();
             }
+            // 手动清空 SelectedItem，支持重复点击
+            ListBoxCellData.SelectedItem = null;
         }
     }
 }

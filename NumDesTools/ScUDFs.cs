@@ -1,11 +1,9 @@
 ﻿using System.Text.RegularExpressions;
-using System.Windows.Documents;
 using Newtonsoft.Json;
 using NPOI.XSSF.UserModel;
 using static System.String;
 
 #pragma warning disable CA1416
-
 
 namespace NumDesTools;
 
@@ -307,6 +305,58 @@ public class ExcelUdf
     }
 
     [ExcelFunction(
+        Category = "UDF-查找值",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "二维Range查找值，返回指定查找到值的相对行、列"
+    )]
+    public static object FindValueFromRange(
+        [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "查找值")]
+        string seachValue,
+        [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "查找范围")]
+        object[,] searchRange,
+        [ExcelArgument(AllowReference = true, Description = "1：行；2：列；其他：自定义行列组{,},[,]", Name = "返回值类型")]
+        string returnType = "1",
+        [ExcelArgument(AllowReference = true, Description = "返回第几个值", Name = "返回值序号")]
+        int returnNum = 1
+    )
+    {
+        var rows = searchRange.GetLength(0);
+        var cols = searchRange.GetLength(1);
+
+        int counter = 1;
+        for (var row = 0; row < rows; row++)
+        for (var col = 0; col < cols; col++)
+        {
+            var targetCell = searchRange[row, col];
+            if (targetCell is ExcelEmpty)
+            {
+                continue;
+            }
+
+            if (targetCell.ToString() == seachValue)
+            {
+                if (counter == returnNum)
+                {
+                    if (returnType == "1")
+                    {
+                        return row + 1;
+                    }
+
+                    if (returnType == "2")
+                    {
+                        return col + 1;
+                    }
+
+                    var delimiterList = returnType.ToCharArray().Select(c => c.ToString()).ToArray();
+                    return $"{delimiterList[0]}{row + 1}{delimiterList[1]}{col + 1}{delimiterList[2]}";
+                }
+                counter++;
+            }
+        }
+        return $"不存在";
+    }
+    [ExcelFunction(
         Category = "UDF-获取表格信息",
         IsVolatile = true,
         IsMacroType = true,
@@ -364,7 +414,7 @@ public class ExcelUdf
         IsMacroType = true,
         Description = "提取字符串中数字"
     )]
-    public static int GetNumFromStr(
+    public static long GetNumFromStr(
         [ExcelArgument(AllowReference = true, Description = "输入字符串")] string inputValue,
         [ExcelArgument(AllowReference = true, Name = "分隔符", Description = "分隔符,eg:,")]
             string delimiter,
@@ -383,7 +433,7 @@ public class ExcelUdf
         var maxNumCount = numbers.Length;
         numCount = Math.Min(maxNumCount, numCount);
 #pragma warning disable CA1305
-        return Convert.ToInt32(numbers[numCount - 1]);
+        return Convert.ToInt64(numbers[numCount - 1]);
 #pragma warning restore CA1305
     }
 
@@ -451,7 +501,7 @@ public class ExcelUdf
         // 使用 ElementAtOrDefault 安全地获取匹配项
         var match = matches.ElementAtOrDefault(numCount - 1);
         // 如果匹配项存在，则返回其值，否则返回空字符串
-        return match?.Value ?? string.Empty;
+        return match?.Value ?? Empty;
     }
 
     [ExcelFunction(
@@ -460,7 +510,7 @@ public class ExcelUdf
         IsMacroType = true,
         Description = "分割字符串为特定结构的若干字符串-返回数组"
     )]
-    public static object[] GetStrStructFromStrArray(
+    public static object GetStrStructFromStrArray(
         [ExcelArgument(AllowReference = true, Name = "单元格索引", Description = "输入字符串")]
             object[,] inputValue,
         [ExcelArgument(AllowReference = true, Name = "分割符", Description = @"默认为逗号")]
@@ -477,7 +527,7 @@ public class ExcelUdf
         {
             // 正则表达式匹配内部数组
             var numbers = Regex
-                .Split(value.ToString(), delimiter)
+                .Split(value.ToString() ?? throw new InvalidOperationException(), delimiter)
                 .SelectMany(s => Regex.Matches(s, @"\d+").Select(m => m.Value))
                 .ToArray();
             foreach (var num in numbers)
@@ -538,7 +588,7 @@ public class ExcelUdf
         for (var col = 0; col < cols; col++)
         {
             var item = rangeObj[row, col];
-            if (item is ExcelEmpty || item.ToString() == ignoreValue) { }
+            if (item is ExcelEmpty || item.ToString() == ignoreValue || item is ExcelError) { }
             else
             {
                 if (!(rangeObjDef[0, 0] is ExcelMissing))
@@ -631,15 +681,17 @@ public class ExcelUdf
         var values2Objects = rangeObj2.Cast<object>().ToArray();
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
         var result = Empty;
-        var count = 0;
+
         if (values1Objects.Length > 0 && values2Objects.Length > 0 && delimiterList.Length > 0)
         {
+            var count = 0;
             foreach (var item in values1Objects)
+            {
                 if (ignoreEmpty)
                 {
                     var excelNull = item is ExcelEmpty;
                     var stringNull = ReferenceEquals(item.ToString(), "");
-                    if (!excelNull && !stringNull)
+                    if (!excelNull && !stringNull && item.ToString() != "")
                     {
                         var itemDef =
                             delimiterList[0]
@@ -648,7 +700,6 @@ public class ExcelUdf
                             + values2Objects[count]
                             + delimiterList[2];
                         result += itemDef + delimiter[1];
-                        count++;
                     }
                 }
                 else
@@ -660,8 +711,9 @@ public class ExcelUdf
                         + values2Objects[count]
                         + delimiterList[2];
                     result += itemDef + delimiter[1];
-                    count++;
                 }
+                count++;
+            }
 
             result = result.Substring(0, result.Length - 1);
             result = delimiterList[0] + result + delimiterList[2];
@@ -669,6 +721,119 @@ public class ExcelUdf
 
         return result;
     }
+
+    [ExcelFunction(
+        Category = "UDF-组装字符串",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "拼接Range（二维）-动态参数",
+        ExplicitRegistration = true
+    )]
+
+    public static string CreatValueToArray2Dya(
+    [ExcelArgument(AllowReference = true, Description = "分隔符,eg:,", Name = "分隔符")]
+    string delimiter,
+    [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg:true/false", Name = "过滤空值")]
+    string ignoreEmpty,
+    [ExcelArgument(AllowReference = true, Description = "是否包含外围分隔符,eg:,", Name = "过滤空值")]
+    string isOutline,
+    [ExcelArgument(
+        AllowReference = false,
+        Description = "多个单元格范围，支持动态输入，eg: A1:A2, B1:B2",
+        Name = "单元格范围"
+    )]
+    params object[] ranges
+)
+    {
+        //默认值
+        if (delimiter == "")
+        {
+            delimiter = "[,]";
+        }
+        if (ignoreEmpty == "")
+        {
+            ignoreEmpty = "TRUE";
+        }
+        if (isOutline == "")
+        {
+            isOutline = "TRUE";
+        }
+        // 拼接结果
+        var result = Empty;
+        // 分隔符处理
+        var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
+        if (delimiterList.Length < 3)
+        {
+            throw new ArgumentException("分隔符至少需要三个字符，例如: {,}");
+        }
+
+        // 将所有范围转换为一维数组
+        var allValues = new List<object[]>();
+        foreach (var range in ranges)
+        {
+            if(range.ToString() == "ExcelErrorValue") continue;
+            if (range is object[,] rangeObj)
+            {
+                allValues.Add(rangeObj.Cast<object>().ToArray());
+            }
+            else
+            {
+                throw new ArgumentException("输入的范围必须是二维数组");
+            }
+        }
+
+        if (allValues.Count == 0)
+        {
+            return "";
+        }
+
+        // 确保所有范围的长度一致
+        var maxLength = allValues.Max(arr => arr.Length);
+        if (allValues.Any(arr => arr.Length != maxLength))
+        {
+            throw new ArgumentException("所有单元格范围的长度必须一致");
+        }
+    
+        for (int i = 0; i < maxLength; i++)
+        {
+            var rowValues = new List<string>();
+            foreach (var rangeValues in allValues)
+            {
+                var value = rangeValues[i];
+                if (ignoreEmpty == "TRUE")
+                {
+                    var isExcelEmpty = value is ExcelEmpty;
+                    var isExcelError = value is ExcelError;
+                    var isStringEmpty = value?.ToString() == Empty;
+                    if (isExcelEmpty || isStringEmpty || isExcelError)
+                    {
+                        continue;
+                    }
+                }
+                rowValues.Add(value?.ToString() ?? Empty);
+            }
+
+            // 拼接每一行的值
+            if (rowValues.Count > 0)
+            {
+                result += delimiterList[0] + Join(delimiterList[1], rowValues) + delimiterList[2] + delimiter[1];
+            }
+        }
+
+        // 去掉最后一个多余的分隔符
+        if (!IsNullOrEmpty(result))
+        {
+            result = result.Substring(0, result.Length - 1);
+        }
+
+        if (isOutline == "TRUE")
+        {
+            result = delimiterList[0] + result + delimiterList[2];
+        }
+
+        return result;
+    }
+
 
     [ExcelFunction(
         Category = "UDF-组装字符串",
@@ -1133,14 +1298,138 @@ public class ExcelUdf
         {
             if (row >= rangeObjMax - 3)
             {
-                baseLinkCount = Math.Ceiling(baseLinkCount  * mergeType) - hasLinks[row - (rangeObjMax - 4)];
+                baseLinkCount =
+                    Math.Ceiling(baseLinkCount * mergeType) - hasLinks[row - (rangeObjMax - 4)];
             }
             else
             {
-                baseLinkCount = Math.Ceiling(baseLinkCount  * mergeType);
+                baseLinkCount = Math.Ceiling(baseLinkCount * mergeType);
             }
         }
 
         return baseLinkCount;
+    }
+
+    [ExcelFunction(
+        Category = "UDF-Alice专属函数",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "针对Alice项目特制的自定义函数-计算最近坐标",
+        Name = "AliceLtePoisonNear"
+    )]
+    public static string AliceLtePoisonNear(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "基准坐标")]
+            object[,] basePos,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "目标坐标组")]
+            string targetPos,
+        [ExcelArgument(AllowReference = true, Description = "\\d+", Name = "目标坐标组正则方法")]
+            string posPattern,
+        [ExcelArgument(AllowReference = true, Description = "1/0/-1", Name = "选择：最近、最远、中值")]
+            string posType
+    )
+    {
+        var baseX = int.Parse(basePos[0, 0].ToString() ?? throw new InvalidOperationException());
+        var baseY = int.Parse(basePos[0, 1].ToString() ?? throw new InvalidOperationException());
+        posPattern ??= "";
+        posType ??= "1";
+        // 提取坐标
+        MatchCollection posMatches = Regex.Matches(targetPos, posPattern);
+        // 构建结果
+        var posResult = new List<(double, string)>();
+        if (posResult == null)
+            throw new ArgumentNullException(nameof(posResult));
+        foreach (Match match in posMatches)
+        {
+            int x = int.Parse(match.Groups[1].Value);
+            int y = int.Parse(match.Groups[2].Value);
+            double distance = Math.Pow(x - baseX, 2) + Math.Pow(y - baseY, 2);
+            posResult.Add((distance, $"{x},{y}"));
+        }
+
+        //选择结果
+        if (posType == "1")
+        {
+            var minValueTuple = posResult.MinBy(t => t.Item1);
+            return minValueTuple.Item2;
+        }
+        else if (posType == "0")
+        {
+            var maxValueTuple = posResult.MaxBy(t => t.Item1);
+            return maxValueTuple.Item2;
+        }
+        else
+        {
+            var sortedList = posResult.OrderBy(t => t.Item1).ToList();
+            var middleIndex = sortedList.Count / 2;
+            var medianValueTuple = sortedList[middleIndex];
+            return medianValueTuple.Item2;
+        }
+    }
+
+    [ExcelFunction(
+        Category = "UDF-Alice专属函数",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "针对Alice项目特制的自定义函数-提取坐标",
+        Name = "AliceLtePoison"
+    )]
+    public static string AliceLtePoison(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "目标坐标组")]
+            string targetPos,
+        [ExcelArgument(AllowReference = true, Description = "\\d+", Name = "目标坐标组正则方法")]
+            string posPattern
+    )
+    {
+        // 提取坐标
+        MatchCollection posMatches = Regex.Matches(targetPos, posPattern);
+        // 构建结果
+        string posResult = Empty;
+        if (posResult == null)
+            throw new ArgumentNullException(nameof(posResult));
+        foreach (Match match in posMatches)
+        {
+            int x = int.Parse(match.Groups[1].Value);
+            int y = int.Parse(match.Groups[2].Value);
+            var pos = "{" + $"21,{x},{y}" + "},";
+            posResult += pos;
+        }
+        posResult = posResult.Substring(0, posResult.Length - 1);
+        return posResult;
+    }
+
+    [ExcelFunction(
+        Category = "UDF-Alice专属函数",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "针对Alice项目特制的自定义函数-查找指定Range文件名数据在文件夹中是否存在",
+        Name = "AliceLteSourceCheck"
+    )]
+    public static bool AliceLteSourceCheck(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "文件名")]
+            string filesName,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "目标文件夹子目录 ")]
+            string folderPath,
+        [ExcelArgument(AllowReference = true, Description = @"C:\My", Name = "目标文件夹根目录")]
+            string baseFolderPath
+    )
+    {
+        baseFolderPath = IsNullOrEmpty(baseFolderPath) ? @"C:/M1Work/Code/" : baseFolderPath;
+
+        var fileFullPath = baseFolderPath + folderPath;
+        try
+        {
+            // 获取文件夹及其子文件夹中的所有文件
+            var files = Directory.GetFiles(fileFullPath, filesName, SearchOption.AllDirectories);
+            if (files.Length > 0)
+            {
+                return true;
+            }
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+
+        return false;
     }
 }

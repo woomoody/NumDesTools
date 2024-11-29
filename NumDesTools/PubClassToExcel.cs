@@ -21,7 +21,7 @@ public class SelfComSheetCollect : INotifyPropertyChanged
 
     public string Name
     {
-        get { return _name; }
+        get => _name;
         set
         {
             if (_name != value)
@@ -34,7 +34,7 @@ public class SelfComSheetCollect : INotifyPropertyChanged
 
     public bool IsHidden
     {
-        get { return _isHidden; }
+        get => _isHidden;
         set
         {
             if (_isHidden != value)
@@ -46,7 +46,7 @@ public class SelfComSheetCollect : INotifyPropertyChanged
     }
     public string DetailInfo
     {
-        get { return _detailInfo; }
+        get => _detailInfo;
         set
         {
             if (_detailInfo != value)
@@ -58,7 +58,7 @@ public class SelfComSheetCollect : INotifyPropertyChanged
     }
     public Tuple<int, int> UsedRangeSize
     {
-        get { return _usedRangeSize; }
+        get => _usedRangeSize;
         set
         {
             if (!Equals(_usedRangeSize, value))
@@ -77,36 +77,32 @@ public class SelfComSheetCollect : INotifyPropertyChanged
 }
 
 //自定义Com工作簿信息容器类
-public class SelfWorkBookSearchCollect
+public class SelfWorkBookSearchCollect((string, string, int, string) tuple)
 {
-    public string FilePath { get; set; }
-    public string SheetName { get; set; }
-    public int CellRow { get; set; }
-    public string CellCol { get; set; }
-
-    public SelfWorkBookSearchCollect((string, string, int, string) tuple)
-    {
-        FilePath = tuple.Item1;
-        SheetName = tuple.Item2;
-        CellRow = tuple.Item3;
-        CellCol = tuple.Item4;
-    }
+    public string FilePath { get; set; } = tuple.Item1;
+    public string SheetName { get; set; } = tuple.Item2;
+    public int CellRow { get; set; } = tuple.Item3;
+    public string CellCol { get; set; } = tuple.Item4;
 }
 
 //自定义Com单元格类
-public class SelfCellData
+public class SelfCellData((string, int, int) tuple)
 {
-    public int Row { get; set; }
-    public int Column { get; set; }
-    public string Value { get; set; }
-    public SelfCellData((string, int, int) tuple)
-    {
-        Value = tuple.Item1;
-        Row = tuple.Item2;
-        Column = tuple.Item3;
-    }
+    public string Value { get; set; } = tuple.Item1;
+    public int Row { get; set; } = tuple.Item2;
+    public int Column { get; set; } = tuple.Item3;
+
 }
 
+//自定义Com表格-单元格类
+public class SelfSheetCellData((string, int, int,string , string) tuple)
+{
+    public string Value { get; set; } = tuple.Item1;
+    public int Row { get; set; } = tuple.Item2;
+    public int Column { get; set; } = tuple.Item3;
+    public string SheetName { get; set; } = tuple.Item4;
+    public string Tips { get; set; } = tuple.Item5;
+}
 //字符串正则转换
 public class SelfStringRegexConverter : IValueConverter
 {
@@ -149,11 +145,9 @@ public class SelfGraphXVertex : VertexBase
 }
 
 //自定义GraphX边数据类
-public class SelfGraphXEdge : EdgeBase<SelfGraphXVertex>
+public class SelfGraphXEdge(SelfGraphXVertex source, SelfGraphXVertex target)
+    : EdgeBase<SelfGraphXVertex>(source, target)
 {
-    public SelfGraphXEdge(SelfGraphXVertex source, SelfGraphXVertex target)
-        : base(source, target) { }
-
     public override string ToString()
     {
         return $"{Source.Name} -> {Target.Name}";
@@ -161,26 +155,39 @@ public class SelfGraphXEdge : EdgeBase<SelfGraphXVertex>
 }
 
 //自定义获取指定路径Excel文件
-public class SelfExcelFileCollector(string rootPath , int pathLevels)
+public class SelfExcelFileCollector(string currentPath)
 {
     //获取指定路径Excel文件路径
     public string[] GetAllExcelFilesPath()
     {
+        var rootPath = FindRootDirectory(currentPath, "Excels");
         var paths = new List<string>
         {
-            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "Tables"),
-            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "Localizations"),
-            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "UIs"),
-            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "Tables", "克朗代克"),
-            Path.Combine(GetParentDirectory(rootPath, pathLevels), "Excels", "Tables", "二合")
+            Path.Combine(GetParentDirectory(rootPath, 0), "Tables"),
+            Path.Combine(GetParentDirectory(rootPath, 0), "Localizations"),
+            Path.Combine(GetParentDirectory(rootPath, 0), "UIs"),
+            Path.Combine(GetParentDirectory(rootPath, 0), "Tables", "克朗代克"),
+            Path.Combine(GetParentDirectory(rootPath, 0), "Tables", "二合")
         };
 
         var files = paths
-            .SelectMany(path => Directory.Exists(path) ? GetExcelFiles(path) : Enumerable.Empty<string>())
+            .SelectMany(path => Directory.Exists(path) ? GetExcelFiles(path) : [])
             .Where(file => !Path.GetFileName(file).Contains("~")) // 过滤掉包含 ~ 的文件
             .ToArray();
 
         return files;
+    }
+    //获取根目录
+    private static string FindRootDirectory(string rootPath, string rootFolderName)
+    {
+        DirectoryInfo dirInfo = new DirectoryInfo(rootPath);
+
+        while (dirInfo != null && dirInfo.Name != rootFolderName)
+        {
+            dirInfo = dirInfo.Parent;
+        }
+
+        return dirInfo?.FullName;
     }
     //获取指定路径Excel文件路径MD5
     public enum KeyMode
@@ -231,13 +238,20 @@ public class SelfExcelFileCollector(string rootPath , int pathLevels)
     }
     private static string CalculateMd5(string filePath)
     {
-        using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-        {
-            using (var md5 = MD5.Create())
-            {
-                var hash = md5.ComputeHash(stream);
-                return BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
-            }
-        }
+        using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var md5 = MD5.Create();
+        var hash = md5.ComputeHash(stream);
+        return BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
+    }
+}
+
+//自定义获取单元格像素坐标
+public class SelfGetRangePixels
+{
+    public static void GetRangePixels()
+    {
+
+
+
     }
 }

@@ -1,10 +1,12 @@
-﻿<UserControl x:Class="NumDesTools.UI.SheetListControl"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+﻿<UserControl
+    x:Class="NumDesTools.UI.SheetListControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    mc:Ignorable="d">
     <UserControl.Resources>
         <Style x:Key="SheetListBoxItemStyle" TargetType="ListBoxItem">
             <Setter Property="Background" Value="LightBlue" />
@@ -18,28 +20,28 @@
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <ListBox x:Name="ListBoxSheet" 
-                 Grid.Row="0"
-                 ItemContainerStyle="{StaticResource SheetListBoxItemStyle}"
-                 SelectionMode="Extended" 
-                 SelectionChanged="ListBoxSheet_SelectionChanged" 
-                 PreviewMouseRightButtonDown="ListBoxSheet_PreviewMouseRightButtonDown" 
-                 Background="#FF1C1A1A" 
-                 Margin="10,10,0,10" 
-                 BorderBrush="#FFA3B0D6" 
-                 Foreground="#FFFFFEFE" 
-                 Cursor="Pen">
-        </ListBox>
-        <StatusBar x:Name="StatusBar" 
-                   Grid.Row="1"
-                   Height="22" 
-                   Margin="10,0,0,0" 
-                   VerticalAlignment="Bottom" 
-                   Background="Black" 
-                   Foreground="White" 
-                   />
+        <ListBox
+            x:Name="ListBoxSheet"
+            Grid.Row="0"
+            Margin="10,10,0,10"
+            Background="#FF1C1A1A"
+            BorderBrush="#FFA3B0D6"
+            Cursor="Pen"
+            Foreground="#FFFFFEFE"
+            ItemContainerStyle="{StaticResource SheetListBoxItemStyle}"
+            PreviewMouseRightButtonDown="ListBoxSheet_PreviewMouseRightButtonDown"
+            SelectionChanged="ListBoxSheet_SelectionChanged"
+            SelectionMode="Extended" />
+        <StatusBar
+            x:Name="StatusBar"
+            Grid.Row="1"
+            Height="22"
+            Margin="10,0,0,0"
+            VerticalAlignment="Bottom"
+            Background="Black"
+            Foreground="White" />
     </Grid>
 </UserControl>

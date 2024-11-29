@@ -16,7 +16,7 @@ namespace NumDesTools.UI
         public SheetSeachResult(List<(string, string, int, string)> list)
         {
             InitializeComponent();
-            this.DataContext = this;
+            DataContext = this;
             TargetSheetList = new ObservableCollection<SelfWorkBookSearchCollect>(
                 list.Select(t => new SelfWorkBookSearchCollect(t))
             );
@@ -29,11 +29,16 @@ namespace NumDesTools.UI
             if (listBox.SelectedItem != null)
             {
                 var selectedWorkBook = (SelfWorkBookSearchCollect)listBox.SelectedItem;
+                // 关闭所有打开的备注编辑框，不隐藏角标
+                NumDesAddIn.App.DisplayCommentIndicator = XlCommentDisplayMode.xlCommentIndicatorOnly;
+
                 PubMetToExcel.OpenExcelAndSelectCell(
                     selectedWorkBook.FilePath,
                     selectedWorkBook.SheetName,
                     selectedWorkBook.CellCol + selectedWorkBook.CellRow
                 );
+                // 手动清空 SelectedItem，支持重复点击
+                listBox.SelectedItem = null;
             }
         }
     }

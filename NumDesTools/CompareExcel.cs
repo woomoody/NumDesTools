@@ -3,7 +3,7 @@ using MiniExcelLibs;
 
 namespace NumDesTools;
 
-public class CompareExcel
+public static class CompareExcel
 {
     public static void CompareMain(string[] folder)
     {
@@ -18,7 +18,7 @@ public class CompareExcel
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(baseFolder));
         if (newPath != null)
         {
-            var filesCollection = new SelfExcelFileCollector(newPath, 2);
+            var filesCollection = new SelfExcelFileCollector(newPath);
             var baseFiles = filesCollection.GetAllExcelFilesPath();
 
             var newPathTarget = Path.GetDirectoryName(Path.GetDirectoryName(targetFolder));
@@ -310,14 +310,10 @@ public class CompareExcel
 
     private static string GetMd5HashFromFile(string filePath)
     {
-        using (var md5 = MD5.Create())
-        {
-            using (var stream = File.OpenRead(filePath))
-            {
-                byte[] hash = md5.ComputeHash(stream);
-                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
-            }
-        }
+        using var md5 = MD5.Create();
+        using var stream = File.OpenRead(filePath);
+        byte[] hash = md5.ComputeHash(stream);
+        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
     }
 
     private static void CheckAndLogSheetChanges(

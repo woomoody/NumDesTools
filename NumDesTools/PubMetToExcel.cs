@@ -1,8 +1,8 @@
 ﻿using System.Data;
 using System.Data.OleDb;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using NPOI.SS.Formula.Functions;
 using OfficeOpenXml;
 using DataTable = System.Data.DataTable;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
@@ -16,7 +16,7 @@ namespace NumDesTools;
 /// <summary>
 /// 公共的Excel功能类
 /// </summary>
-public class PubMetToExcel
+public static class PubMetToExcel
 {
     #region EPPlus与Excel
 
@@ -71,7 +71,13 @@ public class PubMetToExcel
             excelRealName = excelRealNameGroup[0];
             sheetRealName = excelRealNameGroup[1];
         }
+        else if (excelName.Contains("Sharp"))
 
+        {
+            var excelRealNameGroup = excelName.Split("Sharp");
+            excelRealName = excelRealNameGroup[0].ToString().Replace("Dorllar" , "$");
+            sheetRealName = excelRealNameGroup[1];
+        }
         switch (excelName)
         {
             case "Localizations.xlsx":
@@ -800,7 +806,7 @@ public class PubMetToExcel
 
         return errorLog;
     }
-    
+
     public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelId(
         string rootPath,
         string errorValue
@@ -975,7 +981,7 @@ public class PubMetToExcel
             if (!File.Exists(filePath))
             {
                 // ReSharper disable LocalizableElement
-                MessageBox.Show("文件不存在，请检查！");
+                MessageBox.Show(@"文件不存在，请检查！");
                 // ReSharper restore LocalizableElement
                 return;
             }
@@ -1041,6 +1047,86 @@ public class PubMetToExcel
             workSheet.Cells[startRow + rowCount - 1, startCol + columnCount - 1]
         ];
         targetRange.Value = targetDataArr;
+    }
+
+    //Alice文件路径修正
+    public static (string filePath, string sheetName) AliceFilePathFix(
+        string workbookPath,
+        string selectSheetName
+    )
+    {
+        workbookPath = Path.GetDirectoryName(workbookPath);
+
+        var isMatch = selectSheetName.Contains(".xls");
+
+        string filePath = String.Empty;
+        string sheetName = "Sheet1";
+        if (isMatch)
+        {
+            if (selectSheetName.Contains("#") && !selectSheetName.Contains("##"))
+            {
+                var excelSplit = selectSheetName.Split("#");
+                filePath = workbookPath + @"\Tables\" + excelSplit[0];
+                sheetName = excelSplit[1];
+            }
+            else if (selectSheetName.Contains("##"))
+            {
+                var excelSplit = selectSheetName.Split("##");
+                var sharpCount = excelSplit.Length;
+                if (selectSheetName.Contains("克朗代克"))
+                {
+                    filePath = workbookPath + @"\Tables\" + excelSplit[0] + @"\" + excelSplit[1];
+                    sheetName = sharpCount == 3 ? excelSplit[2] : "Sheet1";
+                }
+                else
+                {
+                    selectSheetName = workbookPath + @"\Tables\" + excelSplit[0];
+                    sheetName = excelSplit[1];
+                }
+            }
+            else
+            {
+                switch (selectSheetName)
+                {
+                    case "Localizations.xlsx":
+                        filePath = workbookPath + @"\Localizations\Localizations.xlsx";
+                        break;
+                    case "UIConfigs.xlsx":
+                        filePath = workbookPath + @"\UIs\UIConfigs.xlsx";
+                        break;
+                    case "UIItemConfigs.xlsx":
+                        filePath = workbookPath + @"\UIs\UIItemConfigs.xlsx";
+                        break;
+                    default:
+                        filePath = workbookPath + @"\Tables\" + selectSheetName;
+                        break;
+                }
+                sheetName = "Sheet1";
+            }
+        }
+
+        return (filePath, sheetName);
+    }
+
+    //二维数组搜索指定行的数据，返回指定行对应列数据
+    public static string FindValueInFirstRow(
+        object[,] array,
+        string value,
+        int findIndex = 0,
+        int returnIndex = 1
+    )
+    {
+        // 获取数组的列数
+        int columns = array.GetLength(1);
+        for (int col = 0; col < columns; col++)
+        {
+            if (array[findIndex, col]?.ToString() == value)
+            {
+                return array[returnIndex, col]?.ToString();
+            }
+        }
+        // 如果未找到匹配的值，返回 null
+        return string.Empty;
     }
 
     //Range二维数组List化
@@ -1134,6 +1220,7 @@ public class PubMetToExcel
         return list;
     }
 
+    //二维List转二维数组
     public static object[,] ConvertListToArray(List<List<object>> listOfLists)
     {
         var rowCount = listOfLists.Count;
@@ -1147,6 +1234,20 @@ public class PubMetToExcel
 
             for (var j = 0; j < colCount; j++)
                 twoDArray[i, j] = innerList[j];
+        }
+
+        return twoDArray;
+    }
+
+    //一维List转一维数组
+    public static object[] ConvertListToArray(List<object> listOfLists)
+    {
+        var rowCount = listOfLists.Count;
+        var twoDArray = new object[rowCount];
+
+        for (var i = 0; i < rowCount; i++)
+        {
+            twoDArray[i] = listOfLists[i];
         }
 
         return twoDArray;
@@ -1248,8 +1349,13 @@ public class PubMetToExcel
         }
         return dictionary;
     }
+
     //二维数组转二维字典
-    public static  Dictionary<(object, object), string>  Array2DToDic2D(int rowCount, int colCount, dynamic modelRangeValue)
+    public static Dictionary<(object, object), string> Array2DToDic2D(
+        int rowCount,
+        int colCount,
+        dynamic modelRangeValue
+    )
     {
         var modelValue = new Dictionary<(object, object), string>();
         for (int row = 2; row <= rowCount; row++)
@@ -1260,8 +1366,8 @@ public class PubMetToExcel
                 string colIndex = modelRangeValue[1, col];
                 if (rowIndex == null || colIndex == null)
                 {
-                    MessageBox.Show("模版表中表头有空值，请检查模版数据是否正确！");
-                    return null ;
+                    MessageBox.Show(@"模版表中表头有空值，请检查模版数据是否正确！");
+                    return null;
                 }
                 string value = modelRangeValue[row, col]?.ToString() ?? "";
                 modelValue[(rowIndex, colIndex)] = value;
@@ -1269,9 +1375,10 @@ public class PubMetToExcel
         }
         return modelValue;
     }
+
     //字典二维数组化
-    public static object[,] DictionaryTo2DArray(
-        Dictionary<int, List<int>> dictionary,
+    public static object[,] DictionaryTo2DArray<TKey, TValue>(
+        Dictionary<TKey, List<TValue>> dictionary,
         int? maxRows = null,
         int? maxCols = null
     )
@@ -1292,6 +1399,32 @@ public class PubMetToExcel
                 array2D[row, col] = kvp.Value[col];
             }
             row++;
+        }
+
+        return array2D;
+    }
+
+    //字典二维数组化-带Key(数据模版专用）
+    public static object[,] DictionaryTo2DArrayKey<TKey, TValue>(
+        Dictionary<TKey, List<TValue>> dictionary,
+        int maxRows,
+        int maxCols
+    )
+    {
+        object[,] array2D = new object[maxRows, maxCols];
+
+        int row = 0;
+        foreach (var kvp in dictionary)
+        {
+            bool isFirstValue = true;
+            foreach (var value in kvp.Value)
+            {
+                array2D[row, 0] = value;
+                array2D[row, 1] = null;
+                array2D[row, 2] = isFirstValue ? kvp.Key : null;
+                isFirstValue = false;
+                row++;
+            }
         }
 
         return array2D;
@@ -1339,8 +1472,221 @@ public class PubMetToExcel
         }
         return selectedData;
     }
+
+    //二维数组去重
+    public static object[,] FilterRepeatValue(object[,] array, int index, bool isRow, int baseIndex , bool emptyFilter = true)
+    {
+        var seen = new HashSet<object>(); // 用于存储已出现的基准值
+        var tempResult = new List<object[]>(); // 临时存储去重后的结果
+
+        int rows = array.GetLength(0); // 获取行数
+        int cols = array.GetLength(1); // 获取列数
+
+        // 检查 baseIndex 是否为 0 或 1
+        if (baseIndex != 0 && baseIndex != 1)
+        {
+            throw new ArgumentException("Base index must be 0 or 1.", nameof(baseIndex));
+        }
+
+        // 检查 index 是否超出数组的范围 (根据 baseIndex 调整)
+        if (index < baseIndex || (isRow && index >= cols + baseIndex) || (!isRow && index >= rows + baseIndex))
+        {
+            throw new ArgumentOutOfRangeException(nameof(index), "Index is outside the bounds of the array.");
+        }
+
+        // 遍历方向控制
+        int outerLoop = isRow ? cols : rows;
+        int innerLoop = isRow ? rows : cols;
+
+        for (int i = baseIndex; i < outerLoop + baseIndex; i++) // 根据 baseIndex 调整循环起点
+        {
+            // 如果 baseIndex 是 1，直接使用 index 和 i；如果是 0，减去 baseIndex
+            var key = isRow
+                ? array[baseIndex == 1 ? index : index - baseIndex, baseIndex == 1 ? i : i - baseIndex]
+                : array[baseIndex == 1 ? i : i - baseIndex, baseIndex == 1 ? index : index - baseIndex];
+
+            if (emptyFilter)
+            {
+                // 过滤掉 null 和空字符串
+                if (key == null || (key is string str && string.IsNullOrWhiteSpace(str)))
+                {
+                    continue; // 跳过空值
+                }
+            }
+            
+            if (!seen.Contains(key))
+            {
+                seen.Add(key);
+                var row = new object[innerLoop];
+
+                for (int j = baseIndex; j < innerLoop + baseIndex; j++) // 根据 baseIndex 调整循环起点
+                {
+                    // 检查是否超出数组边界
+                    if (isRow && (j - baseIndex >= rows || i - baseIndex >= cols) || !isRow && (i - baseIndex >= rows || j - baseIndex >= cols))
+                    {
+                        throw new IndexOutOfRangeException($"Index out of bounds: i={i}, j={j}, rows={rows}, cols={cols}");
+                    }
+
+                    // 如果按行去重，保留列的值；否则保留行的值
+                    row[j - baseIndex] = isRow
+                        ? array[baseIndex == 1 ? j : j - baseIndex, baseIndex == 1 ? i : i - baseIndex]
+                        : array[baseIndex == 1 ? i : i - baseIndex, baseIndex == 1 ? j : j - baseIndex];
+                }
+
+                tempResult.Add(row);
+            }
+        }
+
+        // 将临时结果转换为二维数组
+        var result = new object[tempResult.Count, innerLoop];
+        for (int i = 0; i < tempResult.Count; i++)
+        {
+            for (int j = 0; j < innerLoop; j++)
+            {
+                result[i, j] = tempResult[i][j];
+            }
+        }
+
+        return result;
+    }
+
+    //二维数组复制到剪切板
+    public static void CopyArrayToClipboard(object[,] array)
+    {
+        // 获取数组的行数和列数
+        int rows = array.GetLength(0);
+        int cols = array.GetLength(1);
+
+        // 构建制表符分隔的字符串
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < rows; i++)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                if (array[i, j] != null)
+                {
+                    sb.Append(array[i, j].ToString());
+                }
+
+                // 如果不是最后一列，添加制表符
+                if (j < cols - 1)
+                {
+                    sb.Append("\t");
+                }
+            }
+
+            // 如果不是最后一行，添加换行符
+            if (i < rows - 1)
+            {
+                sb.AppendLine();
+            }
+        }
+
+        // 将字符串复制到剪贴板
+        Clipboard.SetText(sb.ToString());
+    }
+
+    //Excel多选Range合并为二维数组
+
+    public static object[,] MergeRanges(object[] areas, bool mergeByRow)
+    {
+        int totalRows = 0;
+        int totalCols = 0;
+
+        // 计算合并后的数组大小
+        foreach (var area in areas)
+        {
+            object[,] areaValues = (object[,])area;
+            if (mergeByRow)
+            {
+                totalRows += areaValues.GetLength(0); // 累加行数
+                totalCols = Math.Max(totalCols, areaValues.GetLength(1)); // 取最大列数
+            }
+            else
+            {
+                totalCols += areaValues.GetLength(1); // 累加列数
+                totalRows = Math.Max(totalRows, areaValues.GetLength(0)); // 取最大行数
+            }
+        }
+
+        // 创建合并后的二维数组
+        object[,] mergedArray = new object[totalRows, totalCols];
+
+        // 按行或按列合并数据
+        if (mergeByRow)
+        {
+            int currentRow = 0;
+            foreach (var area in areas)
+            {
+                object[,] areaValues = (object[,])area;
+                int areaRows = areaValues.GetLength(0);
+                int areaCols = areaValues.GetLength(1);
+
+                for (int i = 0; i < areaRows ; i++)
+                {
+                    for (int j = 0; j < areaCols ; j++)
+                    {
+                        mergedArray[currentRow + i, j] = areaValues[i + 1, j + 1];
+                    }
+                }
+
+                currentRow += areaRows; // 更新当前行位置
+            }
+        }
+        else
+        {
+            int currentCol = 0;
+            foreach (var area in areas)
+            {
+                object[,] areaValues = (object[,])area;
+                int areaRows = areaValues.GetLength(0);
+                int areaCols = areaValues.GetLength(1);
+
+                for (int i = 0; i < areaRows ; i++)
+                {
+                    for (int j = 0; j < areaCols ; j++)
+                    {
+                        mergedArray[i, currentCol + j] = areaValues[i + 1, j + 1];
+                    }
+                }
+
+                currentCol += areaCols; // 更新当前列位置
+            }
+        }
+
+        return mergedArray;
+    }
+
+    // 查找二维数组中的值，返回行和列的元组
+    public static(int, int) FindValueIn2DArray(object[,] array, object value)
+    {
+        // 获取数组的行和列的起始索引
+        int rowStart = array.GetLowerBound(0);
+        int colStart = array.GetLowerBound(1);
+
+        // 获取数组的行和列的结束索引
+        int rowEnd = array.GetUpperBound(0);
+        int colEnd = array.GetUpperBound(1);
+
+        // 遍历数组
+        for (int row = rowStart; row <= rowEnd; row++) // 遍历行
+        {
+            for (int col = colStart; col <= colEnd; col++) // 遍历列
+            {
+                // 检查是否为空值，并进行比较
+                if (array[row, col] != null && array[row, col].ToString() == value.ToString())
+                {
+                    return (row, col); // 找到值，返回行和列
+                }
+            }
+        }
+
+        return (-1, -1); // 未找到值，返回 (-1, -1)
+    }
+
     #region 自定义数组类型判断
-    // 检查并解析一维数组
+    //检查并解析一维数组
     public static bool IsValidArray(string input, out object[] array)
     {
         array = null;
@@ -1353,7 +1699,7 @@ public class PubMetToExcel
         return false;
     }
 
-    // 检查并解析二维数组
+    //检查并解析二维数组
     public static bool IsValidArray(string input, out object[][] array)
     {
         array = null;
@@ -1375,15 +1721,16 @@ public class PubMetToExcel
             rows = rows.Select(row => row.Trim('[', ']')).ToArray();
 
             // 转换为二维数组
-            array = rows.Select(row => row.Split(',')
-                    .Select(value => (object)value.Trim())
-                    .ToArray())
+            array = rows.Select(row =>
+                    row.Split(',').Select(value => (object)value.Trim()).ToArray()
+                )
                 .ToArray();
             return true;
         }
         return false;
     }
-    // 检查一维数组中的元素是否为指定类型
+
+    //检查一维数组中的元素是否为指定类型
     public static bool IsArrayOfType(object[] array, Type type)
     {
         if (array == null || type == null)
@@ -1410,7 +1757,7 @@ public class PubMetToExcel
         return true;
     }
 
-    // 检查二维数组中的元素是否为指定类型
+    //检查二维数组中的元素是否为指定类型
     public static bool IsArrayOfType(object[][] array, Type type)
     {
         if (array == null || type == null)
@@ -1442,5 +1789,4 @@ public class PubMetToExcel
         return true;
     }
     #endregion
-    public static void TestEpPlus() { }
 }

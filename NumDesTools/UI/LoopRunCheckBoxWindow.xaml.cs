@@ -82,7 +82,7 @@ namespace NumDesTools.UI
 
         private void GetCurrentCheckBox_Click(object sender, RoutedEventArgs e)
         {
-            List<object> selectedNumbers = new List<object>();
+            List<object> selectedNumbers = [];
 
             foreach (var child in CheckBoxContainer.Children)
             {

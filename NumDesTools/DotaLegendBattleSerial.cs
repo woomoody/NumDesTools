@@ -86,7 +86,7 @@ public class DotaLegendBattleTem
     }
 }
 
-internal class DotaLegendBattleSerial
+internal class DotaLegendBattleSerial(int detailType)
 {
     private const int Atk = 9;
     private const int Hp = 10;
@@ -141,15 +141,10 @@ internal class DotaLegendBattleSerial
 
     private static readonly Array ArrB = RangeB.Value2;
     public int AutoRatio = 15;
-    public int DetailType;
+    public int DetailType = detailType;
     public int Lvl = 7;
     public int SkillLv = 8;
     public int Type = 6;
-
-    public DotaLegendBattleSerial(int detailType)
-    {
-        DetailType = detailType;
-    }
 
     public static void BattleSimTime()
     {

@@ -34,14 +34,12 @@ public class ExcelLinksGraphic
             }
         }
 
-        using (var file = new StreamWriter(@"C:\Users\admin\Desktop\output.dot"))
-        {
-            file.WriteLine("digraph G {");
-            foreach (var pair in mainExcel)
-            foreach (var field in pair.Value)
-                if (mainExcel.ContainsKey(field))
-                    file.WriteLine("\"" + pair.Key + "\" -> \"" + field + "\"");
-            file.WriteLine("}");
-        }
+        using var file = new StreamWriter(@"C:\Users\admin\Desktop\output.dot");
+        file.WriteLine("digraph G {");
+        foreach (var pair in mainExcel)
+        foreach (var field in pair.Value)
+            if (mainExcel.ContainsKey(field))
+                file.WriteLine("\"" + pair.Key + "\" -> \"" + field + "\"");
+        file.WriteLine("}");
     }
 }
