@@ -37,6 +37,8 @@ namespace NumDesTools.UI
                     selectedWorkBook.SheetName,
                     selectedWorkBook.CellCol + selectedWorkBook.CellRow
                 );
+                // 手动清空 SelectedItem，支持重复点击
+                listBox.SelectedItem = null;
             }
         }
     }

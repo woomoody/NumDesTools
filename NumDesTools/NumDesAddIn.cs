@@ -32,6 +32,7 @@ using OfficeOpenXml;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
 using Panel = System.Windows.Forms.Panel;
+using Process = System.Diagnostics.Process;
 using TabControl = System.Windows.Forms.TabControl;
 
 #pragma warning disable CA1416
