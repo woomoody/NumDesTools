@@ -144,6 +144,8 @@
                             onAction='CompareExcel_Click' image="console" />
                     <button id="MapExcelButton" size='large' label="溯源改动" screentip='根据对比结果和【文档\表格关系.json】溯源每条改动最终影响的表格，一般为ActivityClientData.xlsx，输出至【文档\#溯源结果.xlsx】'
                             onAction='MapExcel_Click' image="video" />
+                    <button id="CheckFileFormat" size='large' label="检查数据格式" screentip='手动检查数据格式，取消隐藏，过滤符配置在\Document\NumDesToolsConfig.json'
+                            onAction='CheckFileFormat_Click' image="dart" />
                 </group>
                 <group id='FileInfo' label='文件信息'>
                     <button id='CopyFileName' size='large' label='文件名称' image='document' onAction='CopyFileName_Click' />

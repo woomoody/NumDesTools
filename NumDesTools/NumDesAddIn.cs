@@ -216,7 +216,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.WorkbookBeforeClose -= ExcelApp_WorkbookBeforeClose;
     }
 
-#endregion
+    #endregion
 
     #region Ribbon点击命令
 
@@ -2372,6 +2372,39 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
 
         _globalValue.SaveValue("CellHiLightText", CellHiLightText);
+    }
+
+    public void CheckFileFormat_Click(IRibbonControl control)
+    {
+        //自检工作簿中第2列是否有重复值、单元格值根据2行的数据类型检测是否非法
+        var ctpCheckValueName = "错误数据";
+        var sourceData = PubMetToExcelFunc.CheckRepeatValue();
+        sourceData.AddRange(PubMetToExcelFunc.CheckValueFormat());
+
+        NumDesCTP.DeleteCTP(true, ctpCheckValueName);
+        _ = (SheetCellSeachResult)
+            NumDesCTP.ShowCTP(
+                550,
+                ctpCheckValueName,
+                true,
+                ctpCheckValueName,
+                new SheetCellSeachResult(sourceData),
+                MsoCTPDockPosition.msoCTPDockPositionRight
+            );
+
+        //取消隐藏
+
+        var workBook = App.ActiveWorkbook;
+        var workPath = workBook.FullName;
+        bool isModified = SvnGitTools.IsFileModified(workPath);
+        if (isModified)
+        {
+            foreach (Worksheet sheet in workBook.Worksheets)
+            {
+                sheet.Rows.Hidden = false;
+                sheet.Columns.Hidden = false;
+            }
+        }
     }
 
     private void RepeatValueCal(object sh, Range target)
