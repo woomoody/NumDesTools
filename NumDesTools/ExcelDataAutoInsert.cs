@@ -2036,6 +2036,13 @@ public static class ExcelDataAutoInsertMultiNew
             var startValue = _modelId[excelName][excelMulti].Item1[0, 0].ToString();
             var endValue = _modelId[excelName][excelMulti].Item1[1, 0].ToString();
 
+            if (string.IsNullOrEmpty(startValue) || string.IsNullOrEmpty(endValue))
+            {
+                errorExcelLog = excelName + "#【初始模板】#起始或结束值为空";
+                errorList.Add((startValue ?? "空值", errorExcelLog, excelName));
+                return errorList;
+            }
+
             var startRowSource = PubMetToExcel.FindSourceRow(sheet, 2, startValue);
             if (startRowSource == -1)
             {

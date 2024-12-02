@@ -242,9 +242,9 @@ public static class PubMetToExcel
     {
         for (var col = 2; col <= sheet.Dimension.End.Column; col++)
         {
-            var cellValue = sheet.Cells[row, col].Value;
+            var cellValue = sheet.Cells[row, col].Text;
 
-            if (cellValue != null && cellValue.ToString() == searchValue)
+            if (cellValue != null && cellValue== searchValue)
             {
                 var cellAddress = new ExcelCellAddress(row, col);
                 var rowAddress = cellAddress.Column;
@@ -257,18 +257,19 @@ public static class PubMetToExcel
 
     public static int FindSourceRow(ExcelWorksheet sheet, int col, string searchValue)
     {
+        // 遍历指定列的所有行，从第2行开始
         for (var row = 2; row <= sheet.Dimension.End.Row; row++)
         {
-            var cellValue = sheet.Cells[row, col].Value;
+            var cellValue = sheet.Cells[row, col].Text; // 获取单元格的文本值
 
-            if (cellValue != null && cellValue.ToString() == searchValue)
+            // 如果单元格值不为空且匹配目标值
+            if (!string.IsNullOrEmpty(cellValue) && cellValue == searchValue)
             {
-                var cellAddress = new ExcelCellAddress(row, col);
-                var rowAddress = cellAddress.Row;
-                return rowAddress;
+                return row; // 直接返回匹配的行号
             }
         }
 
+        // 如果未找到匹配值，返回 -1
         return -1;
     }
 
