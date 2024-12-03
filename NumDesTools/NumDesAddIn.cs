@@ -380,6 +380,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         MsoButtonStyle.msoButtonIconAndCaption,
                         ExcelDataAutoInsertLanguage.AutoInsertDataByUd
                     )
+                    :sheetName == "多语言对话【模板】"
+                    ? (
+                    "对话写入",
+                    "对话写入(末尾)(New)",
+                    MsoButtonStyle.msoButtonIconAndCaption,
+                    ExcelDataAutoInsertLanguage.AutoInsertDataByUdNew
+                    )
                     : default,
                 !bookName.Contains("#") && target.Column > 2
                     ? (
@@ -1702,7 +1709,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var wkPath = wk.FullName;
 
-        ExcelDataAutoInsertLanguage.AutoInsertDataByUdNew();
 
         //App.Visible = false;
         //App.ScreenUpdating = false;
