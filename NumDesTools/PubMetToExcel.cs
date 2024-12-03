@@ -483,6 +483,7 @@ public static class PubMetToExcel
         Range usedRange = workSheet.UsedRange;
         int dataRowEnd;
         int dataColEnd;
+        //填0为选中单元格作为数据，否则全部
         if (dataRow == 0)
         {
             dataRow = selectRange.Row;
@@ -1363,8 +1364,8 @@ public static class PubMetToExcel
         {
             for (int col = 2; col <= colCount; col++)
             {
-                string rowIndex = modelRangeValue[row, 1];
-                string colIndex = modelRangeValue[1, col];
+                var rowIndex = modelRangeValue[row, 1];
+                var colIndex = modelRangeValue[1, col];
                 if (rowIndex == null || colIndex == null)
                 {
                     MessageBox.Show(@"模版表中表头有空值，请检查模版数据是否正确！");

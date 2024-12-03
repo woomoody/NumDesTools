@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using LicenseContext = OfficeOpenXml.LicenseContext;
@@ -291,7 +292,7 @@ public static class ExcelDataAutoInsertLanguage
         Marshal.ReleaseComObject(workBook);
     }
 
-    public static List<(int, string, string)> LanguageDialogData(
+    private static List<(int, string, string)> LanguageDialogData(
         dynamic sourceSheet,
         dynamic fixSheet,
         dynamic classSheet,
@@ -596,19 +597,19 @@ public static class ExcelDataAutoInsertLanguage
                         strBranch = "[" + strBranch.Substring(0, strBranch.Length - 1) + "]";
                         cellTarget.Value = strBranch;
                     }
-                    else if (source == "分支多语言")
-                    {
-                        var newId = sourceDataList[m][sourceTitle.IndexOf("BranchID")]?.ToString();
-                        var sourceStr = cellTarget.Value?.ToString();
-                        if (sourceStr == null || sourceStr == "")
-                            continue;
-                        var reg = "\\d+";
-                        var matches = Regex.Matches(sourceStr, reg);
-                        var oldId = matches[0].Value.ToString();
-                        if (newId != "")
-                            sourceStr = sourceStr.Replace(oldId, newId);
-                        cellTarget.Value = sourceStr;
-                    }
+                    //else if (source == "分支多语言")
+                    //{
+                    //    var newId = sourceDataList[m][sourceTitle.IndexOf("BranchID")]?.ToString();
+                    //    var sourceStr = cellTarget.Value?.ToString();
+                    //    if (sourceStr == null || sourceStr == "")
+                    //        continue;
+                    //    var reg = "\\d+";
+                    //    var matches = Regex.Matches(sourceStr, reg);
+                    //    var oldId = matches[0].Value.ToString();
+                    //    if (newId != "")
+                    //        sourceStr = sourceStr.Replace(oldId, newId);
+                    //    cellTarget.Value = sourceStr;
+                    //}
                     else if (source == "角色换装1")
                     {
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf("说话角色")];
@@ -753,7 +754,7 @@ public static class ExcelDataAutoInsertLanguage
         Marshal.ReleaseComObject(workBook);
     }
 
-    public static List<(int, string, string)> LanguageDialogDataByUd(
+    private static List<(int, string, string)> LanguageDialogDataByUd(
         dynamic sourceSheet,
         dynamic fixSheet,
         dynamic classSheet,
@@ -1163,6 +1164,343 @@ public static class ExcelDataAutoInsertLanguage
         }
 
         return errorList;
+    }
+
+    public static void AutoInsertDataByUdNew()
+    {
+        var workBook = NumDesAddIn.App.ActiveWorkbook;
+        var excelPath = workBook.Path;
+
+        //获取基础数据
+        var sourceSheet = workBook.Worksheets["多语言对话【模板】"];
+        var sourceData = PubMetToExcel.ExcelDataToListBySelfToEnd(sourceSheet, 0, 1, 1);
+        var sourceTitle = sourceData.Item1;
+        List<List<object>> sourceDataList = sourceData.Item2;
+
+        //获取【数据修改】名称Table
+        var fixSheet = workBook.Worksheets["数据修改"];
+        var fixSheetListObjects = fixSheet.ListObjects;
+        var fixSheetValueAll = new Dictionary<string, Dictionary<(object, object), string>>();
+
+        foreach (ListObject list in fixSheetListObjects)
+        {
+            var modelName = list.Name;
+            var modelRangeValue = list.Range.Value2;
+
+            int rowCount = modelRangeValue.GetLength(0);
+            int colCount = modelRangeValue.GetLength(1);
+
+            // 将二维数组的数据存储到字典中
+            var modelValue = PubMetToExcel.Array2DToDic2D(rowCount, colCount, modelRangeValue);
+            if (modelValue == null)
+            {
+                return;
+            }
+            fixSheetValueAll[modelName] = modelValue;
+        }
+        //获取【角色数据】名称Table
+        var roleSheet = workBook.Worksheets["角色数据"];
+        var roleSheetListObjects = roleSheet.ListObjects;
+        var roleSheetValueAll = new Dictionary<string, Dictionary<(object, object), string>>();
+
+        foreach (ListObject list in roleSheetListObjects)
+        {
+            var modelName = list.Name;
+            var modelRangeValue = list.Range.Value2;
+
+            int rowCount = modelRangeValue.GetLength(0);
+            int colCount = modelRangeValue.GetLength(1);
+
+            // 将二维数组的数据存储到字典中
+            var modelValue = PubMetToExcel.Array2DToDic2D(rowCount, colCount, modelRangeValue);
+            if (modelValue == null)
+            {
+                return;
+            }
+            roleSheetValueAll[modelName] = modelValue;
+        }
+
+        ErrorLogCtp.DisposeCtp();
+
+        var errorExcelList = new List<List<(int, string, string)>>();
+        if (errorExcelList == null)
+            throw new ArgumentNullException(nameof(errorExcelList));
+
+        string error = LanguageDialogDataByUdNew(
+            sourceTitle,
+            sourceDataList,
+            fixSheetValueAll,
+            roleSheetValueAll,
+            excelPath
+        );
+        if (error != "")
+        {
+            ErrorLogCtp.DisposeCtp();
+            ErrorLogCtp.CreateCtpNormal(error);
+        }
+
+        NumDesAddIn.App.StatusBar = "导出完成";
+        Marshal.ReleaseComObject(sourceSheet);
+        Marshal.ReleaseComObject(fixSheet);
+        Marshal.ReleaseComObject(roleSheet);
+        Marshal.ReleaseComObject(workBook);
+    }
+
+    private static  string LanguageDialogDataByUdNew(
+        dynamic sourceTitle,
+        List<List<object>> sourceDataList,
+        dynamic fixSheetValueAll,
+        dynamic roleSheetValueAll,
+        string excelPath
+    )
+    {
+        //替换通配符生成数据
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        var dicValue = new Dictionary<(string, string), List<string>>();
+
+        string error = String.Empty;
+
+        foreach (var fixSheet in fixSheetValueAll)
+        {
+            string fixSheetName = fixSheet.Key;
+            string id = "";
+            if (fixSheetName == "GuideDialogGroup.xlsx")
+            {
+                id = "GroupID";
+            }
+
+            if (fixSheetName == "GuideDialogDetail.xlsx")
+            {
+                id = "DetailID";
+            }
+
+            if (fixSheetName == "Localizations.xlsx")
+            {
+                id = "多语言KEY";
+            }
+
+            if (fixSheetName == "GuideDialogBranch.xlsx")
+            {
+                id = "BranchID";
+            }
+
+            // 获取列索引
+            int idIndex = sourceTitle.IndexOf(id);
+
+            // 检查索引是否有效
+            if (idIndex < 0)
+            {
+                error += error + fixSheetName + $"列名 '{id}' 在 多语言对话 中不存在" + @"\n";
+            }
+
+            // 提取列数据
+            var idList = sourceDataList
+                .Select(row => row != null && idIndex < row.Count ? row[idIndex] : null)
+                .ToList();
+
+            var rowData = new Dictionary<string, Dictionary<string, object>>();
+
+            for (int idCount = 0; idCount < idList.Count; idCount++)
+            {
+                string itemId = idList[idCount]?.ToString() ?? "";
+                if (itemId == "")
+                {
+                    continue;
+                }
+                var colData = new Dictionary<string, object>();
+                foreach (var fixData in fixSheet.Value)
+                {
+                    string fixMethod = fixData.Value ?? "";
+                    string fixKey = fixData.Key.Item2;
+
+                    // 根据方法获得 fix 值
+                    var fixValue = FixValueAnalysis(
+                        idCount,
+                        fixMethod,
+                        sourceTitle,
+                        sourceDataList,
+                        dicValue,
+                        roleSheetValueAll
+                    );
+
+                    // 检查 fixValue 是否为空，避免覆盖已有数据
+                    if (fixValue != null && !string.IsNullOrEmpty(fixValue.ToString()))
+                    {
+                        colData[fixKey] = fixValue;
+                    }
+                    else if (rowData.ContainsKey(itemId) && rowData[itemId] is Dictionary<string, object> existingColData)
+                    {
+                        // 如果 fixValue 为空，保留 rowData 中已有的值
+                        if (existingColData.ContainsKey(fixKey))
+                        {
+                            colData[fixKey] = existingColData[fixKey];
+                        }
+                    }
+                }
+
+                // 更新 rowData
+                rowData[itemId] = colData;
+            }
+
+            //写入数据
+            PubMetToExcel.SetExcelObjectEpPlus(
+                excelPath,
+                fixSheetName,
+                out ExcelWorksheet targetSheet,
+                out ExcelPackage targetExcel
+            );
+            var writeCol = targetSheet.Dimension.End.Column;
+            bool dataWritten = false; // 标志是否有实际写入
+            var dataRepeatWritten = new HashSet<string>();
+            foreach (var row in rowData)
+            {
+                string itemId = row.Key;
+                if (itemId == "")
+                    continue;
+                var writeRow = targetSheet.Dimension.End.Row + 1;
+
+                HashSet<string> processedKeys = new HashSet<string>();
+                for (int j = 2; j <= writeCol; j++)
+                {
+                    var cellTitle = targetSheet.Cells[2, j].Value?.ToString() ?? "";
+
+                    if (cellTitle == "")
+                        continue;
+
+                    
+                    // 使用 LINQ 查询判断字典中是否包含指定的值
+                    var matchingKey = row.Value.Keys.FirstOrDefault(key => key.Equals(cellTitle));
+                    var isContains = processedKeys.Contains(cellTitle);
+                    if (matchingKey != null && !isContains)
+                    {
+                        processedKeys.Add(cellTitle);
+                        var cellRealValue = row.Value[cellTitle];
+                        //空ID判断
+                        if (j == 2 && cellRealValue == string.Empty)
+                        {
+                            break;
+                        }
+
+                        //重复ID判断
+                        if (j == 2 && dataRepeatWritten.Contains(cellRealValue))
+                        {
+                            break;
+                        }
+
+                        if (j == 2)
+                        {
+                            //字典型数据判断，需要数据计算完毕后单独写入
+                            dataRepeatWritten.Add(cellRealValue?.ToString());
+                        }
+
+                        //实际写入
+                        var cell = targetSheet.Cells[writeRow, j];
+                        cell.Value = cellRealValue;
+                        dataWritten = true;
+
+                    }
+
+                }
+            }
+            if (dataWritten) // 只有在写入数据时才保存
+            {
+                targetExcel.Save();
+                NumDesAddIn.App.StatusBar = $"导出：{fixSheetName}";
+            }
+            targetSheet.Dispose();
+        }
+
+        return error;
+    }
+
+    private static string FixValueAnalysis(
+        int idCount,
+        string fixMethod,
+        dynamic sourceTitle,
+        dynamic sourceDataList,
+        Dictionary<(string, string), List<string>> dicValue,
+        dynamic roleSheetValueAll
+    )
+    {
+        string cellRealValue = fixMethod;
+        string wildcardPattern = "#(.*?)#";
+        string wildcardValuePattern = "-";
+
+        MatchCollection matches = Regex.Matches(fixMethod, wildcardPattern);
+
+        foreach (Match match in matches)
+        {
+            var wildcard = match.Groups[1].Value;
+
+            var wildcardValueSplit = Regex.Split(wildcard, wildcardValuePattern);
+            string funName = wildcardValueSplit.ElementAtOrDefault(0) ?? "";
+            string funDy1 = wildcardValueSplit.ElementAtOrDefault(1) ?? "";
+            string funDy2 = wildcardValueSplit.ElementAtOrDefault(2) ?? "";
+            string funDy3 = wildcardValueSplit.ElementAtOrDefault(3) ?? "";
+            string funDy4 = wildcardValueSplit.ElementAtOrDefault(4) ?? "";
+
+            string fixWildcardValue = funName switch
+            {
+                //根据静态值计算值
+                "Dic" => Dic(funDy1, funDy2, funDy3),
+                "Find" => Find(funDy1, funDy2, funDy3),
+
+                //获取静态值
+                _ => GetValue(funName)
+            };
+
+            cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
+        }
+        return cellRealValue;
+
+        string Dic(string funDy1, string funDy2, string funDy3)
+        {
+            var itemValue = sourceDataList[idCount][sourceTitle.IndexOf(funDy1)];
+            itemValue = itemValue != null ? itemValue.ToString() : string.Empty;
+
+            if (!dicValue.ContainsKey((funDy2, itemValue)))
+            {
+                dicValue[(funDy2, itemValue)] = new List<string>();
+            }
+
+            var rawValue = sourceDataList[idCount][sourceTitle.IndexOf(funDy2)];
+            string value = rawValue != null ? rawValue.ToString() : string.Empty;
+            dicValue[(funDy2, itemValue)].Add(value);
+
+            if (funDy3 != "0")
+            {
+                dicValue[(funDy2, itemValue)] = dicValue[(funDy2, itemValue)]
+                    .Where(new Func<string, bool>(value=> !string.IsNullOrEmpty(value))) // 过滤掉 null 和空字符串
+                    .Distinct()
+                    .ToList();
+
+            }
+            //list变字符串
+            string result = string.Join(",", dicValue[(funDy2, itemValue)]);
+            return result;
+        }
+        string Find(string funDy1, string funDy2, string funDy3)
+        {
+            var findSheet = roleSheetValueAll[funDy1];
+            var findValue = sourceDataList[idCount][sourceTitle.IndexOf(funDy2)];
+            if (findValue == null)
+            {
+                return String.Empty;
+            }
+            else
+            {
+                var result = findSheet[((object)findValue, (object)funDy3)];
+                return result;
+            }
+        }
+        string GetValue(string funName)
+        {
+            var getValueCol = sourceTitle.IndexOf(funName);
+            var getValue = sourceDataList[idCount][getValueCol];
+            var result = getValue?.ToString();
+            return result;
+        }
     }
 }
 
@@ -1682,7 +2020,6 @@ public static class ExcelDataAutoInsertMulti
                                 var cellCol = sheet.Cells[2, excelFileFixKey].Value?.ToString();
                                 var cellFix = sheet.Cells[writeRow + j + 1, excelFileFixKey];
                                 var rowId = sheet.Cells[startRowSource + j, 2];
-               
 
                                 if (
                                     cellCol != null
@@ -1791,7 +2128,6 @@ public static class ExcelDataAutoInsertMulti
             for (var i = 0; i < count; i++)
             {
                 var cellSource = sheet.Cells[startRowSource + i, excelFileFixKey];
- 
 
                 string cellFixValue;
                 //固定值
@@ -1858,7 +2194,7 @@ public static class ExcelDataAutoInsertMultiNew
     private static dynamic _commentValue;
     private static dynamic _specialReplaceValue;
     private static dynamic _errorExcelList;
-    
+
     //初始化参数
     private static void InitializeVariables()
     {
@@ -1885,12 +2221,43 @@ public static class ExcelDataAutoInsertMultiNew
         _addValue = (int)_data[0][_creatIdCol] - (int)_data[0][_baseIdCol];
         _rowCount = 2;
         _colFixKeyCount = _baseCommentCol - _fixKeyCol;
-        _modelId = PubMetToExcel.ExcelDataToDictionary(_data, _sheetNameCol, _modelIdCol, _rowCount);
-        _modelIdNew = PubMetToExcel.ExcelDataToDictionary(_data, _sheetNameCol, _modelIdNewCol, _rowCount);
-        _fixKey = PubMetToExcel.ExcelDataToDictionary(_data, _sheetNameCol, _fixKeyCol, _rowCount, _colFixKeyCount);
-        _ignoreExcel = PubMetToExcel.ExcelDataToDictionary(_data, _sheetNameCol, _creatIdCol, _rowCount);
-        _commentValue = PubMetToExcel.ExcelDataToDictionary(_data, _baseCommentCol, _creatCommentCol, 1);
-        _specialReplaceValue = PubMetToExcel.ExcelDataToDictionary(_data, _sheetNameCol, _specialReplaceValueCol, _rowCount);
+        _modelId = PubMetToExcel.ExcelDataToDictionary(
+            _data,
+            _sheetNameCol,
+            _modelIdCol,
+            _rowCount
+        );
+        _modelIdNew = PubMetToExcel.ExcelDataToDictionary(
+            _data,
+            _sheetNameCol,
+            _modelIdNewCol,
+            _rowCount
+        );
+        _fixKey = PubMetToExcel.ExcelDataToDictionary(
+            _data,
+            _sheetNameCol,
+            _fixKeyCol,
+            _rowCount,
+            _colFixKeyCount
+        );
+        _ignoreExcel = PubMetToExcel.ExcelDataToDictionary(
+            _data,
+            _sheetNameCol,
+            _creatIdCol,
+            _rowCount
+        );
+        _commentValue = PubMetToExcel.ExcelDataToDictionary(
+            _data,
+            _baseCommentCol,
+            _creatCommentCol,
+            1
+        );
+        _specialReplaceValue = PubMetToExcel.ExcelDataToDictionary(
+            _data,
+            _sheetNameCol,
+            _specialReplaceValueCol,
+            _rowCount
+        );
         _errorExcelList = new List<List<(string, string, string)>>();
     }
 
@@ -2119,7 +2486,7 @@ public static class ExcelDataAutoInsertMultiNew
     {
         // 获取工作表的行数和列数
         var colCount = wkSheet.Dimension.Columns;
-        
+
         //遍历目标表字段（区分自定义还是批量替换字段）
         for (var cellCol = 2; cellCol <= colCount; cellCol++)
         {
@@ -2218,7 +2585,10 @@ public static class ExcelDataAutoInsertMultiNew
                             //空值不替换
                             if (replaceComment != "")
                             {
-                                replaceCellValue = replaceCellValue.Replace(comment.Key, replaceComment);
+                                replaceCellValue = replaceCellValue.Replace(
+                                    comment.Key,
+                                    replaceComment
+                                );
                                 replaceCell.Value = replaceCellValue;
                             }
                         }
@@ -2258,7 +2628,7 @@ public static class ExcelDataAutoInsertMultiNew
                     return (writeIdList2, -1);
                 }
             }
-            if(endRowSource < startRowSource)
+            if (endRowSource < startRowSource)
             {
                 return ([$"{endValue}-有重复值"], -9527);
             }

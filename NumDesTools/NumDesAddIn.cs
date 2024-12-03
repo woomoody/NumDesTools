@@ -1694,7 +1694,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
-    public void TestBar1_Click(IRibbonControl control)
+    public void TestBar1_Click(IRibbonControl control )
     {
         var sw = new Stopwatch();
         sw.Start();
@@ -1702,7 +1702,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var wkPath = wk.FullName;
 
-        PubMetToExcelFunc.IceClimberCostSimulate(wkPath, wk);
+        ExcelDataAutoInsertLanguage.AutoInsertDataByUdNew();
 
         //App.Visible = false;
         //App.ScreenUpdating = false;
