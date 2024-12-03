@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Input;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using LicenseContext = OfficeOpenXml.LicenseContext;
@@ -1166,18 +1165,18 @@ public static class ExcelDataAutoInsertLanguage
         return errorList;
     }
 
-    public static void AutoInsertDataByUdNew()
+    public static void AutoInsertDataByUdNew(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var workBook = NumDesAddIn.App.ActiveWorkbook;
         var excelPath = workBook.Path;
 
-        //获取基础数据
+        // 获取基础数据
         var sourceSheet = workBook.Worksheets["多语言对话【模板】"];
         var sourceData = PubMetToExcel.ExcelDataToListBySelfToEnd(sourceSheet, 0, 1, 1);
         var sourceTitle = sourceData.Item1;
         List<List<object>> sourceDataList = sourceData.Item2;
 
-        //获取【数据修改】名称Table
+        // 获取【数据修改】名称表
         var fixSheet = workBook.Worksheets["数据修改"];
         var fixSheetListObjects = fixSheet.ListObjects;
         var fixSheetValueAll = new Dictionary<string, Dictionary<(object, object), string>>();
@@ -1198,7 +1197,8 @@ public static class ExcelDataAutoInsertLanguage
             }
             fixSheetValueAll[modelName] = modelValue;
         }
-        //获取【角色数据】名称Table
+
+        // 获取【角色数据】名称表
         var roleSheet = workBook.Worksheets["角色数据"];
         var roleSheetListObjects = roleSheet.ListObjects;
         var roleSheetValueAll = new Dictionary<string, Dictionary<(object, object), string>>();
@@ -1246,7 +1246,7 @@ public static class ExcelDataAutoInsertLanguage
         Marshal.ReleaseComObject(workBook);
     }
 
-    private static  string LanguageDialogDataByUdNew(
+    private static string LanguageDialogDataByUdNew(
         dynamic sourceTitle,
         List<List<object>> sourceDataList,
         dynamic fixSheetValueAll,
@@ -1254,7 +1254,7 @@ public static class ExcelDataAutoInsertLanguage
         string excelPath
     )
     {
-        //替换通配符生成数据
+        // 替换通配符生成数据
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
         var dicValue = new Dictionary<(string, string), List<string>>();
@@ -1264,26 +1264,14 @@ public static class ExcelDataAutoInsertLanguage
         foreach (var fixSheet in fixSheetValueAll)
         {
             string fixSheetName = fixSheet.Key;
-            string id = "";
-            if (fixSheetName == "GuideDialogGroup.xlsx")
+            string id = fixSheetName switch
             {
-                id = "GroupID";
-            }
-
-            if (fixSheetName == "GuideDialogDetail.xlsx")
-            {
-                id = "DetailID";
-            }
-
-            if (fixSheetName == "Localizations.xlsx")
-            {
-                id = "多语言KEY";
-            }
-
-            if (fixSheetName == "GuideDialogBranch.xlsx")
-            {
-                id = "BranchID";
-            }
+                "GuideDialogGroup.xlsx" => "GroupID",
+                "GuideDialogDetail.xlsx" => "DetailID",
+                "Localizations.xlsx" => "多语言KEY",
+                "GuideDialogBranch.xlsx" => "BranchID",
+                _ => ""
+            };
 
             // 获取列索引
             int idIndex = sourceTitle.IndexOf(id);
@@ -1291,7 +1279,7 @@ public static class ExcelDataAutoInsertLanguage
             // 检查索引是否有效
             if (idIndex < 0)
             {
-                error += error + fixSheetName + $"列名 '{id}' 在 多语言对话 中不存在" + @"\n";
+                error += $"{fixSheetName} 列名 '{id}' 在 多语言对话 中不存在\n";
             }
 
             // 提取列数据
@@ -1329,12 +1317,12 @@ public static class ExcelDataAutoInsertLanguage
                     {
                         colData[fixKey] = fixValue;
                     }
-                    else if (rowData.ContainsKey(itemId) && rowData[itemId] is Dictionary<string, object> existingColData)
+                    else if (rowData.ContainsKey(itemId) && rowData[itemId] is { } existingColData)
                     {
                         // 如果 fixValue 为空，保留 rowData 中已有的值
-                        if (existingColData.ContainsKey(fixKey))
+                        if (existingColData.TryGetValue(fixKey, out var values))
                         {
-                            colData[fixKey] = existingColData[fixKey];
+                            colData[fixKey] = values;
                         }
                     }
                 }
@@ -1343,7 +1331,7 @@ public static class ExcelDataAutoInsertLanguage
                 rowData[itemId] = colData;
             }
 
-            //写入数据
+            // 写入数据
             PubMetToExcel.SetExcelObjectEpPlus(
                 excelPath,
                 fixSheetName,
@@ -1368,7 +1356,6 @@ public static class ExcelDataAutoInsertLanguage
                     if (cellTitle == "")
                         continue;
 
-                    
                     // 使用 LINQ 查询判断字典中是否包含指定的值
                     var matchingKey = row.Value.Keys.FirstOrDefault(key => key.Equals(cellTitle));
                     var isContains = processedKeys.Contains(cellTitle);
@@ -1376,13 +1363,13 @@ public static class ExcelDataAutoInsertLanguage
                     {
                         processedKeys.Add(cellTitle);
                         var cellRealValue = row.Value[cellTitle];
-                        //空ID判断
-                        if (j == 2 && cellRealValue == string.Empty)
+                        // 空ID判断
+                        if (j == 2 && (string)cellRealValue == string.Empty)
                         {
                             break;
                         }
 
-                        //重复ID判断
+                        // 重复ID判断
                         if (j == 2 && dataRepeatWritten.Contains(cellRealValue))
                         {
                             break;
@@ -1390,17 +1377,15 @@ public static class ExcelDataAutoInsertLanguage
 
                         if (j == 2)
                         {
-                            //字典型数据判断，需要数据计算完毕后单独写入
+                            // 字典型数据判断，需要数据计算完毕后单独写入
                             dataRepeatWritten.Add(cellRealValue?.ToString());
                         }
 
-                        //实际写入
+                        // 实际写入
                         var cell = targetSheet.Cells[writeRow, j];
                         cell.Value = cellRealValue;
                         dataWritten = true;
-
                     }
-
                 }
             }
             if (dataWritten) // 只有在写入数据时才保存
@@ -1438,15 +1423,11 @@ public static class ExcelDataAutoInsertLanguage
             string funDy1 = wildcardValueSplit.ElementAtOrDefault(1) ?? "";
             string funDy2 = wildcardValueSplit.ElementAtOrDefault(2) ?? "";
             string funDy3 = wildcardValueSplit.ElementAtOrDefault(3) ?? "";
-            string funDy4 = wildcardValueSplit.ElementAtOrDefault(4) ?? "";
 
             string fixWildcardValue = funName switch
             {
-                //根据静态值计算值
                 "Dic" => Dic(funDy1, funDy2, funDy3),
                 "Find" => Find(funDy1, funDy2, funDy3),
-
-                //获取静态值
                 _ => GetValue(funName)
             };
 
@@ -1471,15 +1452,15 @@ public static class ExcelDataAutoInsertLanguage
             if (funDy3 != "0")
             {
                 dicValue[(funDy2, itemValue)] = dicValue[(funDy2, itemValue)]
-                    .Where(new Func<string, bool>(value=> !string.IsNullOrEmpty(value))) // 过滤掉 null 和空字符串
+                    .Where(new Func<string, bool>(values => !string.IsNullOrEmpty(values))) // 过滤掉 null 和空字符串
                     .Distinct()
                     .ToList();
-
             }
-            //list变字符串
+            // list变字符串
             string result = string.Join(",", dicValue[(funDy2, itemValue)]);
             return result;
         }
+
         string Find(string funDy1, string funDy2, string funDy3)
         {
             var findSheet = roleSheetValueAll[funDy1];
@@ -1494,6 +1475,7 @@ public static class ExcelDataAutoInsertLanguage
                 return result;
             }
         }
+
         string GetValue(string funName)
         {
             var getValueCol = sourceTitle.IndexOf(funName);
