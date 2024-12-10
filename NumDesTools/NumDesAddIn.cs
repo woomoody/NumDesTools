@@ -246,7 +246,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         currentBar.Reset();
         var currentBars = currentBar.Controls;
 
-        // 删除已有的按钮
+        // 删除已有的按钮：每个功能最好使用单独的Tag，否则Debug时某个tag的其中1个命令调用时会触发其他
         var tagsToDelete = new[]
         {
             "自选表格写入",
@@ -256,6 +256,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "合并表格Col",
             "打开表格",
             "对话写入",
+            "对话写入（new）",
             "打开关联表格",
             "LTE配置导出",
             "自选表格写入（new）",
@@ -383,7 +384,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     : default,
                 sheetName == "多语言对话【模板】"
                     ? (
-                        "对话写入",
+                        "对话写入（new）",
                         "对话写入(末尾)(new)",
                         MsoButtonStyle.msoButtonIconAndCaption,
                         ExcelDataAutoInsertLanguage.AutoInsertDataByUdNew
