@@ -2010,7 +2010,7 @@ public static class ExcelDataAutoInsertMulti
                                 )
                                 {
                                     string[] baseParts = commentValue.Split("#");
-                                    var cellValue = cellFix.Value.ToString();
+                                    var cellValue = cellFix.Value?.ToString();
                                     foreach (var item in baseParts)
                                     {
                                         var parts = item.Split("-");

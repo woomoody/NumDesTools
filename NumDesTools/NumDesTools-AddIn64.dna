@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DnaLibrary RollForward="LatestMajor" Name="NumDesTools" RuntimeVersion="v6.0" xmlns="http://schemas.excel-dna.net/addin/2020/07/dnalibrary">
+  <ExternalLibrary ExplicitRegistration="true" Path="NumDesTools.dll" ExplicitExports="false" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+
+  <Pack>
+    <!-- 包含本地库（如 git2-a4189d.dll） -->
+    <File Path="runtimes\win-x64\native\git2-a4189d.dll" />
+    <File Path="runtimes\win-x64\native\lua54.dll" />
+  </Pack>
+</DnaLibrary>
