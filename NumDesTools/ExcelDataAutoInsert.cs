@@ -1165,6 +1165,7 @@ public static class ExcelDataAutoInsertLanguage
         return errorList;
     }
 
+    //重构的多语言对话写入功能
     public static void AutoInsertDataByUdNew(CommandBarButton ctrl, ref bool cancelDefault)
     {
         var workBook = NumDesAddIn.App.ActiveWorkbook;
@@ -1244,6 +1245,7 @@ public static class ExcelDataAutoInsertLanguage
         Marshal.ReleaseComObject(fixSheet);
         Marshal.ReleaseComObject(roleSheet);
         Marshal.ReleaseComObject(workBook);
+
     }
 
     private static string LanguageDialogDataByUdNew(
@@ -1311,7 +1313,12 @@ public static class ExcelDataAutoInsertLanguage
                         dicValue,
                         roleSheetValueAll
                     );
-
+                    if (fixValue.ToString().Contains("Error"))
+                    {
+                        error += fixValue + "\n";
+                        LogDisplay.RecordLine(fixValue, "【角色数据】中不存在");
+                       
+                    }
                     // 检查 fixValue 是否为空，避免覆盖已有数据
                     if (fixValue != null && !string.IsNullOrEmpty(fixValue.ToString()))
                     {
@@ -1395,7 +1402,6 @@ public static class ExcelDataAutoInsertLanguage
             }
             targetSheet.Dispose();
         }
-
         return error;
     }
 
@@ -1430,7 +1436,11 @@ public static class ExcelDataAutoInsertLanguage
                 "Find" => Find(funDy1, funDy2, funDy3),
                 _ => GetValue(funName)
             };
-
+            fixWildcardValue ??= "";
+            if (fixWildcardValue.Contains("Error"))
+            {
+                return fixWildcardValue;
+            }
             cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
         }
         return cellRealValue;
@@ -1471,7 +1481,17 @@ public static class ExcelDataAutoInsertLanguage
             }
             else
             {
-                var result = findSheet[((object)findValue, (object)funDy3)];
+                string result;
+                try
+                {
+                     result = findSheet[((object)findValue, (object)funDy3)];
+                    
+                }
+                catch
+                {
+                    LogDisplay.RecordLine(findValue , "【角色数据】中不存在");
+                    result = $"Error#{findValue}#在【角色数据】中不存在";
+                }
                 return result;
             }
         }
