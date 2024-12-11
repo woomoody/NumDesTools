@@ -10,6 +10,7 @@ global using System.Windows.Forms;
 global using ExcelDna.Integration;
 global using ExcelDna.Integration.CustomUI;
 global using ExcelDna.IntelliSense;
+global using ExcelDna.Logging;
 global using ExcelDna.Registration;
 global using Microsoft.Office.Interop.Excel;
 global using Application = Microsoft.Office.Interop.Excel.Application;
@@ -31,6 +32,7 @@ using NumDesTools.UI;
 using OfficeOpenXml;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
+using LicenseContext = OfficeOpenXml.LicenseContext;
 using Panel = System.Windows.Forms.Panel;
 using Process = System.Diagnostics.Process;
 using TabControl = System.Windows.Forms.TabControl;
@@ -54,6 +56,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public static string CellHiLightText = _globalValue.Value["CellHiLightText"];
     public static string TempPath = _globalValue.Value["TempPath"];
     public static string CheckSheetValueText = _globalValue.Value["CheckSheetValueText"];
+    public static string ShowDnaLogText = _globalValue.Value["ShowDnaLogText"];
 
     public static CommandBarButton Btn;
     public static Application App = (Application)ExcelDnaUtil.Application;
@@ -177,6 +180,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "SheetMenu" => SheetMenuText,
             "CellHiLight" => CellHiLightText,
             "CheckSheetValue" => CheckSheetValueText,
+            "ShowDnaLog" => ShowDnaLogText,
             _ => ""
         };
         return latext;
@@ -188,7 +192,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     void IExcelAddIn.AutoOpen()
     {
+        //注册智能感应
         IntelliSenseServer.Install();
+
+        //注册Excel事件
         App.SheetBeforeRightClick += UD_RightClickButton;
         App.WorkbookActivate += ExcelApp_WorkbookActivate;
         App.WorkbookBeforeClose += ExcelApp_WorkbookBeforeClose;
@@ -1703,13 +1710,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
-    public void TestBar1_Click(IRibbonControl control )
+    public void TestBar1_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
         sw.Start();
 
-        var wk = App.ActiveWorkbook;
-        var wkPath = wk.FullName;
 
 
         //App.Visible = false;
@@ -2380,6 +2385,26 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
 
         _globalValue.SaveValue("CellHiLightText", CellHiLightText);
+    }
+
+    public void ShowDnaLog_Click(IRibbonControl control)
+    {
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
+
+        ShowDnaLogText = ShowDnaLogText == "插件日志：开启" ? "插件日志：关闭" : "插件日志：开启";
+        CustomRibbon.InvalidateControl("ShowDnaLog");
+
+        if (ShowDnaLogText == "插件日志：开启")
+        {
+            LogDisplay.Show();
+        }
+        else
+        {
+            LogDisplay.Hide();
+        }
+
+        _globalValue.SaveValue("ShowDnaLogText", ShowDnaLogText);
     }
 
     public void CheckFileFormat_Click(IRibbonControl control)

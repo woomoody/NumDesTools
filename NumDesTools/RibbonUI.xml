@@ -158,6 +158,9 @@
                              sizeString="........................................................................."
                              image="folder-aws" screentip='输入自己本地目录，自动保存' />
                 </group>
+                <group id='NormalFun' label='杂项'>
+                    <button id='ShowDnaLog' size='large' getLabel='GetLableText' image='ejs' onAction='ShowDnaLog_Click' />
+                </group>
                 <!--
                 <group id='Group4' label='战斗仿真'>控件id不能重复，否则无法加载Ribbon
                 -->
