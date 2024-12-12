@@ -1245,7 +1245,6 @@ public static class ExcelDataAutoInsertLanguage
         Marshal.ReleaseComObject(fixSheet);
         Marshal.ReleaseComObject(roleSheet);
         Marshal.ReleaseComObject(workBook);
-
     }
 
     private static string LanguageDialogDataByUdNew(
@@ -1316,8 +1315,11 @@ public static class ExcelDataAutoInsertLanguage
                     if (fixValue.ToString().Contains("Error"))
                     {
                         error += fixValue + "\n";
-                        LogDisplay.RecordLine(fixValue, "【角色数据】中不存在");
-                       
+                        LogDisplay.RecordLine(
+                            "[{0}] , {1}【角色数据】中不存在",
+                            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                            fixValue
+                        );
                     }
                     // 检查 fixValue 是否为空，避免覆盖已有数据
                     if (fixValue != null && !string.IsNullOrEmpty(fixValue.ToString()))
@@ -1484,12 +1486,15 @@ public static class ExcelDataAutoInsertLanguage
                 string result;
                 try
                 {
-                     result = findSheet[((object)findValue, (object)funDy3)];
-                    
+                    result = findSheet[((object)findValue, (object)funDy3)];
                 }
                 catch
                 {
-                    LogDisplay.RecordLine(findValue , "【角色数据】中不存在");
+                    LogDisplay.RecordLine(
+                        "[{0}] , {1}【角色数据】中不存在",
+                        DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                        findValue
+                    );
                     result = $"Error#{findValue}#在【角色数据】中不存在";
                 }
                 return result;
