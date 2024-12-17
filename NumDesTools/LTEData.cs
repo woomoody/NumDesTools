@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using OfficeOpenXml;
 using Match = System.Text.RegularExpressions.Match;
@@ -171,6 +172,9 @@ public class LteData
         {
      
             string modelSheetName = modelSheet.Key;
+
+            
+
             PubMetToExcel.SetExcelObjectEpPlus(
                 WkPath,
                 modelSheetName,
@@ -180,86 +184,99 @@ public class LteData
             var idList = baseData[id];
             var typeList = baseData[idType];
 
-            var writeCol = targetSheet.Dimension.End.Column;
-
-            var exportWildcardDyData = new Dictionary<string, string>(exportWildcardData);
-
-            bool dataWritten = false; // 标志是否有实际写入
-            var dataRepeatWritten = new HashSet<string>();
-
-            for (int idCount = 0; idCount < idList.Count; idCount++)
+            if (targetSheet == null)
             {
-                string itemId = idList[idCount]?.ToString() ?? "";
-                if (itemId == "")
-                    continue;
-                string itemType = typeList[idCount]?.ToString() ?? "";
+                LogDisplay.RecordLine(
+                    "[{0}] , {1}【#LTE数据模版】中创建的文件名不存在",
+                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                    modelSheetName
+                );
+            }
 
-                var writeRow = targetSheet.Dimension.End.Row + 1;
-                //更新动态值
-                foreach (var wildcardDy in exportWildcardData)
+            if (targetSheet != null)
+            {
+                var writeCol = targetSheet.Dimension.End.Column;
+
+                var exportWildcardDyData = new Dictionary<string, string>(exportWildcardData);
+
+                bool dataWritten = false; // 标志是否有实际写入
+                var dataRepeatWritten = new HashSet<string>();
+
+                for (int idCount = 0; idCount < idList.Count; idCount++)
                 {
-                    GetDyWildcardValue(
-                        baseData,
-                        exportWildcardDyData,
-                        wildcardDy.Key,
-                        wildcardDy.Value,
-                        idCount
-                    );
-                }
+                    string itemId = idList[idCount]?.ToString() ?? "";
+                    if (itemId == "")
+                        continue;
+                    string itemType = typeList[idCount]?.ToString() ?? "";
+
+                    var writeRow = targetSheet.Dimension.End.Row + 1;
+                    //更新动态值
+                    foreach (var wildcardDy in exportWildcardData)
+                    {
+                        GetDyWildcardValue(
+                            baseData,
+                            exportWildcardDyData,
+                            wildcardDy.Key,
+                            wildcardDy.Value,
+                            idCount
+                        );
+                    }
 
            
 
-                for (int j = 2; j <= writeCol; j++)
-                {
-                    var cellTitle = targetSheet.Cells[2, j].Value?.ToString() ?? "";
-                    if (cellTitle == "")
-                        continue;
-                    // 使用 LINQ 查询判断字典中是否包含指定的值
-                    bool containsValue = modelSheet.Value.Keys.Any(key =>
-                        key.Item1.Equals(itemType) && key.Item2.Equals(cellTitle)
-                    );
-
-                    if (containsValue)
+                    for (int j = 2; j <= writeCol; j++)
                     {
-                        var cellModelValue = modelSheet.Value[(itemType, cellTitle)];
-                        //分析cellModelValue中的通配符
-                        var cellRealValue = AnalyzeWildcard(
-                            cellModelValue,
-                            exportWildcardData,
-                            exportWildcardDyData,
-                            strDictionary
+                        var cellTitle = targetSheet.Cells[2, j].Value?.ToString() ?? "";
+                        if (cellTitle == "")
+                            continue;
+                        // 使用 LINQ 查询判断字典中是否包含指定的值
+                        bool containsValue = modelSheet.Value.Keys.Any(key =>
+                            key.Item1.Equals(itemType) && key.Item2.Equals(cellTitle)
                         );
 
-                        //空ID判断
-                        if (j == 2 && cellRealValue == string.Empty)
+                        if (containsValue)
                         {
-                            break;
-                        }
-                        //重复ID判断
-                        if (j == 2 && dataRepeatWritten.Contains(cellRealValue))
-                        {
-                            break;
-                        }
+                            var cellModelValue = modelSheet.Value[(itemType, cellTitle)];
+                            //分析cellModelValue中的通配符
+                            var cellRealValue = AnalyzeWildcard(
+                                cellModelValue,
+                                exportWildcardData,
+                                exportWildcardDyData,
+                                strDictionary
+                            );
 
-                        if (j == 2)
-                        {
-                            //字典型数据判断，需要数据计算完毕后单独写入
-                            dataRepeatWritten.Add(cellRealValue);
-                        }
-                        //实际写入
-                        var cell = targetSheet.Cells[writeRow, j];
-                        cell.Value = cellRealValue;
-                        dataWritten = true;
+                            //空ID判断
+                            if (j == 2 && cellRealValue == string.Empty)
+                            {
+                                break;
+                            }
+                            //重复ID判断
+                            if (j == 2 && dataRepeatWritten.Contains(cellRealValue))
+                            {
+                                break;
+                            }
 
+                            if (j == 2)
+                            {
+                                //字典型数据判断，需要数据计算完毕后单独写入
+                                dataRepeatWritten.Add(cellRealValue);
+                            }
+                            //实际写入
+                            var cell = targetSheet.Cells[writeRow, j];
+                            cell.Value = cellRealValue;
+                            dataWritten = true;
+
+                        }
                     }
                 }
+                if (dataWritten) // 只有在写入数据时才保存
+                {
+                    targetExcel.Save();
+                    NumDesAddIn.App.StatusBar = $"导出：{modelSheetName}";
+                }
             }
-            if (dataWritten) // 只有在写入数据时才保存
-            {
-                targetExcel.Save();
-                NumDesAddIn.App.StatusBar = $"导出：{modelSheetName}";
-            }
-            targetSheet.Dispose();
+
+            if (targetSheet != null) targetSheet.Dispose();
         }
         //输出字典数据
         if (strDictionary.Count > 0)

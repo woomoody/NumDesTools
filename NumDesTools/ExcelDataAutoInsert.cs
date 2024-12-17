@@ -2364,118 +2364,133 @@ public static class ExcelDataAutoInsertMultiNew
             out ExcelWorksheet sheet,
             out ExcelPackage excel
         );
-
-        var excelRealName = excel.File.Name;
-
-        foreach (var cell in sheet.Cells)
-            if (cell.Formula is { Length: > 0 })
-            {
-                errorList.Add(
-                    ($"{excelRealName}#{sheet.Name}", @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@")
-                );
-                return errorList;
-            }
-
-        //查找是否已经写入过新ID，如果写入过，则删除
-        var writeIdList = GetElementIdGroup(excelName, sheet, _modelIdNew, true);
-
-        var writeRow = writeIdList.Item2;
-        if (writeRow == -9527)
+        if (excel == null)
         {
-            errorExcelLog = excelName + "#重复值#" + writeIdList.Item1[0];
-            errorList.Add((excelName, errorExcelLog, excelName));
-            return errorList;
-        }
-
-        //多语言表不需要复制全部列
-        var colCount = sheet.Dimension.Columns;
-        if (excelRealName == "Localizations.xlsx")
-        {
-            colCount = 7;
-        }
-
-        //获取老ID所在行列信息，准备复制
-        writeIdList = GetElementIdGroup(excelName, sheet, _modelId);
-
-        writeRow = writeIdList.Item2;
-        if (writeRow == -1)
-        {
-            errorExcelLog = excelName + "#找不到" + writeIdList.Item1[0];
-            errorList.Add((excelName, errorExcelLog, excelName));
-            return errorList;
-        }
-
-        for (var excelMulti = 0; excelMulti < _modelId[excelName].Count; excelMulti++)
-        {
-            var startValue = _modelId[excelName][excelMulti].Item1[0, 0].ToString();
-            var endValue = _modelId[excelName][excelMulti].Item1[1, 0].ToString();
-
-            if (string.IsNullOrEmpty(startValue) || string.IsNullOrEmpty(endValue))
-            {
-                errorExcelLog = excelName + "#【初始模板】#起始或结束值为空";
-                errorList.Add((startValue ?? "空值", errorExcelLog, excelName));
-                return errorList;
-            }
-
-            var startRowSource = PubMetToExcel.FindSourceRow(sheet, 2, startValue);
-            if (startRowSource == -1)
-            {
-                errorExcelLog = excelName + "#【初始模板】#[" + startValue + "]未找到(序号出错)";
-                errorList.Add((startValue, errorExcelLog, excelName));
-                return errorList;
-            }
-
-            var endRowSource = PubMetToExcel.FindSourceRow(sheet, 2, endValue);
-            if (endRowSource == -1)
-            {
-                errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]未找到(序号出错)";
-                errorList.Add((endValue, errorExcelLog, excelName));
-                return errorList;
-            }
-
-            if (endRowSource - startRowSource < 0)
-            {
-                errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]起始、终结ID顺序反了";
-                errorList.Add((endValue, errorExcelLog, excelName));
-                return errorList;
-            }
-
-            //复制数据
-            if (excelRealName.Contains("Recharge"))
-            {
-                writeRow = sheet.Dimension.End.Row;
-            }
-            var count = endRowSource - startRowSource + 1;
-            sheet.InsertRow(writeRow + 1, count);
-            var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
-            var cellTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, colCount];
-            cellTarget.Value = cellSource.Value;
-            cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            cellTarget.Style.Fill.BackgroundColor.SetColor(_cellColor);
-
-            cellTarget.Style.Font.Name = "微软雅黑";
-            cellTarget.Style.Font.Size = 10;
-            cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
-
-            //修改数据
-            var fixItem = _fixKey[excelName][excelMulti].Item1;
-            //专属替换
-            var specialValue = _specialReplaceValue[excelName][excelMulti].Item1;
-            errorList = FixData(
-                excelName,
-                fixItem,
-                sheet,
-                count,
-                startRowSource,
-                writeRow,
-                errorList,
-                specialValue
+            LogDisplay.RecordLine(
+                "[{0}] , {1}不存在，看看是否重命名了",
+                DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                excelName
             );
-            writeRow += count;
         }
 
-        excel.Save();
-        excel.Dispose();
+        if (excel != null)
+        {
+            var excelRealName = excel.File.Name;
+
+            foreach (var cell in sheet.Cells)
+                if (cell.Formula is { Length: > 0 })
+                {
+                    errorList.Add(
+                        ($"{excelRealName}#{sheet.Name}", @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@")
+                    );
+                    return errorList;
+                }
+
+            //查找是否已经写入过新ID，如果写入过，则删除
+            var writeIdList = GetElementIdGroup(excelName, sheet, _modelIdNew, true);
+
+            var writeRow = writeIdList.Item2;
+            if (writeRow == -9527)
+            {
+                errorExcelLog = excelName + "#重复值#" + writeIdList.Item1[0];
+                errorList.Add((excelName, errorExcelLog, excelName));
+                return errorList;
+            }
+
+            //多语言表不需要复制全部列
+            var colCount = sheet.Dimension.Columns;
+            if (excelRealName == "Localizations.xlsx")
+            {
+                colCount = 7;
+            }
+
+            //获取老ID所在行列信息，准备复制
+            writeIdList = GetElementIdGroup(excelName, sheet, _modelId);
+
+            writeRow = writeIdList.Item2;
+            if (writeRow == -1)
+            {
+                errorExcelLog = excelName + "#找不到" + writeIdList.Item1[0];
+                errorList.Add((excelName, errorExcelLog, excelName));
+                return errorList;
+            }
+
+            for (var excelMulti = 0; excelMulti < _modelId[excelName].Count; excelMulti++)
+            {
+                var startValue = _modelId[excelName][excelMulti].Item1[0, 0].ToString();
+                var endValue = _modelId[excelName][excelMulti].Item1[1, 0].ToString();
+
+                if (string.IsNullOrEmpty(startValue) || string.IsNullOrEmpty(endValue))
+                {
+                    errorExcelLog = excelName + "#【初始模板】#起始或结束值为空";
+                    errorList.Add((startValue ?? "空值", errorExcelLog, excelName));
+                    return errorList;
+                }
+
+                var startRowSource = PubMetToExcel.FindSourceRow(sheet, 2, startValue);
+                if (startRowSource == -1)
+                {
+                    errorExcelLog = excelName + "#【初始模板】#[" + startValue + "]未找到(序号出错)";
+                    errorList.Add((startValue, errorExcelLog, excelName));
+                    return errorList;
+                }
+
+                var endRowSource = PubMetToExcel.FindSourceRow(sheet, 2, endValue);
+                if (endRowSource == -1)
+                {
+                    errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]未找到(序号出错)";
+                    errorList.Add((endValue, errorExcelLog, excelName));
+                    return errorList;
+                }
+
+                if (endRowSource - startRowSource < 0)
+                {
+                    errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]起始、终结ID顺序反了";
+                    errorList.Add((endValue, errorExcelLog, excelName));
+                    return errorList;
+                }
+
+                //复制数据
+                if (excelRealName.Contains("Recharge"))
+                {
+                    writeRow = sheet.Dimension.End.Row;
+                }
+                var count = endRowSource - startRowSource + 1;
+                sheet.InsertRow(writeRow + 1, count);
+                var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
+                var cellTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, colCount];
+                cellTarget.Value = cellSource.Value;
+                cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                cellTarget.Style.Fill.BackgroundColor.SetColor(_cellColor);
+
+                cellTarget.Style.Font.Name = "微软雅黑";
+                cellTarget.Style.Font.Size = 10;
+                cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+
+                //修改数据
+                var fixItem = _fixKey[excelName][excelMulti].Item1;
+                //专属替换
+                var specialValue = _specialReplaceValue[excelName][excelMulti].Item1;
+                errorList = FixData(
+                    excelName,
+                    fixItem,
+                    sheet,
+                    count,
+                    startRowSource,
+                    writeRow,
+                    errorList,
+                    specialValue
+                );
+                writeRow += count;
+            }
+        }
+
+        if (excel != null)
+        {
+            excel.Save();
+            excel.Dispose();
+        }
+
         errorList.Add(("-1", errorExcelLog, excelName));
         return errorList;
     }
@@ -3660,6 +3675,11 @@ public class ExcelDataAutoInsertNumChanges
                             keyIndexCol,
                             keyIndexValue
                         );
+                        LogDisplay.RecordLine(
+                            "[{0}] , {1}",
+                            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                            keyIndexValue
+                        );
                         var baseValue = sheetTarget
                             .Cells[keyIndexRow, keyTargetCol]
                             .Value?.ToString();
@@ -3751,7 +3771,13 @@ public static class AutoInsertExcelDataModelCreat
             }
         }
         //获取模版ListObject数据，并替换数据
-        var modelSheet = wk.Worksheets["LTE皮肤【模板】"];
+
+        var modelSheet = sheet;
+        if (!sheet.Name.Contains("LTE皮肤"))
+        {
+            MessageBox.Show("当前表格不是【LTE皮肤……】类表格，不能使用该功能");
+            return;
+        }
         var modelListObjects = modelSheet.ListObjects;
         var modelValueAll = new Dictionary<string, (List<object>, List<List<object>>)>();
 
@@ -3763,6 +3789,15 @@ public static class AutoInsertExcelDataModelCreat
                 modelName = modelName.Replace("Dollar", "$");
                 modelName = modelName.Replace("_", "##");
             }
+            //截取.xlsx之前的字符
+            modelName = modelName.Substring(0, modelName.IndexOf(".xlsx")) + ".xlsx";
+
+            LogDisplay.RecordLine(
+                "[{0}] , {1}",
+                DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                modelName
+            );
+
             // 获取列标题
             var headers = new List<object>();
             foreach (Range cell in list.HeaderRowRange.Cells)
