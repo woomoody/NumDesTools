@@ -1715,7 +1715,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-
+        
 
         //App.Visible = false;
         //App.ScreenUpdating = false;
