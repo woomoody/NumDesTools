@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net8.0-windows</TargetFrameworks>
+        <TargetFrameworks>net6.0-windows</TargetFrameworks>
         <RollForward>LatestMajor</RollForward>
         <OutputType>Library</OutputType>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -8,9 +8,11 @@
         <UseWPF>true</UseWPF>
         <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
         <ExcelAddInExplicitRegistration>true</ExcelAddInExplicitRegistration>
+        <!--ExcelDna目前版本不支持NativeAOT
         <PublishAot>true</PublishAot>
-        <InvariantGlobalization>true</InvariantGlobalization> <!-- 可选，优化大小 -->
+        <InvariantGlobalization>true</InvariantGlobalization> 
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+        -->
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
         <LangVersion>latest</LangVersion>
