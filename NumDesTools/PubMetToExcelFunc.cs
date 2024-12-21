@@ -588,7 +588,7 @@ public static class PubMetToExcelFunc
     //Epplus
     public static List<(string, string, int, int)> SearchKeyFromExcel(
         string rootPath,
-        string errorValue
+        string findValue
     )
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -599,8 +599,8 @@ public static class PubMetToExcelFunc
         var targetList = new List<(string, string, int, int)>();
         var currentCount = 0;
         var count = files.Length;
-        var isAll = errorValue.Contains("*");
-        errorValue = errorValue.Replace("*", "");
+        var isAll = findValue.Contains("*");
+        findValue = findValue.Replace("*", "");
         foreach (var file in files)
         {
             try
@@ -632,8 +632,8 @@ public static class PubMetToExcelFunc
                                     cellValue != null
                                     && (
                                         isAll
-                                            ? cellValue.Contains(errorValue)
-                                            : cellValue == errorValue
+                                            ? cellValue.Contains(findValue)
+                                            : cellValue == findValue
                                     )
                                 )
                                 {
@@ -662,7 +662,7 @@ public static class PubMetToExcelFunc
 
     public static List<(string, string, int, int)> SearchKeyFromExcelMulti(
         string rootPath,
-        string errorValue
+        string findValue
     )
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -671,8 +671,8 @@ public static class PubMetToExcelFunc
         var files = filesCollection.GetAllExcelFilesPath();
 
         var targetList = new List<(string, string, int, int)>();
-        var isAll = errorValue.Contains("*");
-        errorValue = errorValue.Replace("*", "");
+        var isAll = findValue.Contains("*");
+        findValue = findValue.Replace("*", "");
         var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
         Parallel.ForEach(
@@ -709,8 +709,8 @@ public static class PubMetToExcelFunc
                                         cellValue != null
                                         && (
                                             isAll
-                                                ? cellValue.Contains(errorValue)
-                                                : cellValue == errorValue
+                                                ? cellValue.Contains(findValue)
+                                                : cellValue == findValue
                                         )
                                     )
                                     {
@@ -737,8 +737,8 @@ public static class PubMetToExcelFunc
     //MiniExcel查询：全局查询
     public static List<(string, string, int, int)> SearchKeyFromExcel(
         string rootPath,
-        string errorValue,
-        bool isParallel = false,
+        string findValue,
+        bool isMulti = false,
         bool searchSpecificColumn = false,
         int specificColumnIndex = 2
     )
@@ -747,8 +747,8 @@ public static class PubMetToExcelFunc
         var files = filesCollection.GetAllExcelFilesPath();
 
         var targetList = new ConcurrentBag<(string, string, int, int)>();
-        var isAll = errorValue.Contains("*");
-        errorValue = errorValue.Replace("*", "");
+        var isAll = findValue.Contains("*");
+        findValue = findValue.Replace("*", "");
 
         var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
@@ -778,9 +778,7 @@ public static class PubMetToExcelFunc
                             var cellValue = cell.Value?.ToString();
                             if (
                                 cellValue != null
-                                && (
-                                    isAll ? cellValue.Contains(errorValue) : cellValue == errorValue
-                                )
+                                && (isAll ? cellValue.Contains(findValue) : cellValue == findValue)
                             )
                             {
                                 targetList.Add((file, sheetName, rowIndex, colIndex));
@@ -797,7 +795,7 @@ public static class PubMetToExcelFunc
             }
         };
 
-        if (isParallel)
+        if (isMulti)
         {
             Parallel.ForEach(files, options, processFile);
         }
@@ -814,7 +812,7 @@ public static class PubMetToExcelFunc
 
     //MiniExcel查询：全局或指定查询
     public static Dictionary<string, List<string>> SearchModelKeyMiniExcel(
-        string errorValue,
+        string findValue,
         string[] files,
         bool isFixList,
         bool isMulti
@@ -825,8 +823,8 @@ public static class PubMetToExcelFunc
             : new Dictionary<string, List<string>>();
         var currentCount = 0;
         var count = files.Length;
-        var isAll = errorValue.Contains("*");
-        errorValue = errorValue.Replace("*", "");
+        var isAll = findValue.Contains("*");
+        findValue = findValue.Replace("*", "");
 
         Action<string> processFile = file =>
         {
@@ -865,8 +863,8 @@ public static class PubMetToExcelFunc
                                     cellValue != null
                                     && (
                                         isAll
-                                            ? cellValue.StartsWith(errorValue)
-                                            : cellValue == errorValue
+                                            ? cellValue.StartsWith(findValue)
+                                            : cellValue == findValue
                                     )
                                 )
                                 {
@@ -932,6 +930,73 @@ public static class PubMetToExcelFunc
         return new Dictionary<string, List<string>>(targetList);
     }
 
+    //MiniExcel查询：全局查询Sheet名
+    public static List<(string, string, int, int)> SearchSheetNameFromExcel(
+        string rootPath,
+        string findValue,
+        bool isMulti = false
+    )
+    {
+        var filesCollection = new SelfExcelFileCollector(rootPath);
+        var files = filesCollection.GetAllExcelFilesPath();
+
+        var targetList = new ConcurrentBag<(string, string, int, int)>();
+        var isAll = findValue.Contains("*");
+        findValue = findValue.Replace("*", "");
+
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+        Action<string> processFile = file =>
+        {
+            try
+            {
+                var sheetNames = MiniExcel.GetSheetNames(file);
+                var fileName = Path.GetFileName(file);
+
+                bool isFileMatch = isAll
+                    ? fileName.Contains(findValue + ".xlsx")
+                    : fileName == findValue + ".xlsx";
+                bool isSheetMatch(string sheetName) =>
+                    isAll ? sheetName.Contains(findValue) : sheetName == findValue;
+
+                if (isFileMatch)
+                {
+                    targetList.Add((file, sheetNames[0], 1, 1));
+                }
+                else
+                {
+                    foreach (var sheetName in sheetNames)
+                    {
+                        if (sheetName.Contains("#"))
+                            continue;
+
+                        if (isSheetMatch(sheetName))
+                        {
+                            targetList.Add((file, sheetName, 1, 1));
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // 记录异常信息，继续处理下一个文件
+            }
+        };
+
+        if (isMulti)
+        {
+            Parallel.ForEach(files, options, processFile);
+        }
+        else
+        {
+            foreach (var file in files)
+            {
+                processFile(file);
+            }
+        }
+
+        return targetList.ToList();
+    }
     #endregion
 
     //大富翁种
@@ -1703,7 +1768,8 @@ public static class PubMetToExcelFunc
             var newFolderPath = WkPath + @"\";
 
             // 获取工作簿中的所有查询
-            queries = Wk.GetType().InvokeMember("Queries", BindingFlags.GetProperty, null, Wk, null);
+            queries = Wk.GetType()
+                .InvokeMember("Queries", BindingFlags.GetProperty, null, Wk, null);
 
             foreach (dynamic query in queries)
             {
@@ -1722,24 +1788,20 @@ public static class PubMetToExcelFunc
                     string newFormula = formula.Replace(oldFilePath, newFilePath);
 
                     // 更新查询公式
-                    query.GetType().InvokeMember(
-                        "Formula",
-                        BindingFlags.SetProperty,
-                        null,
-                        query,
-                        new object[] { newFormula }
-                    );
+                    query
+                        .GetType()
+                        .InvokeMember(
+                            "Formula",
+                            BindingFlags.SetProperty,
+                            null,
+                            query,
+                            new object[] { newFormula }
+                        );
                 }
             }
 
             // 刷新所有查询
-            Wk.GetType().InvokeMember(
-                "RefreshAll",
-                BindingFlags.InvokeMethod,
-                null,
-                Wk,
-                null
-            );
+            Wk.GetType().InvokeMember("RefreshAll", BindingFlags.InvokeMethod, null, Wk, null);
         }
         catch (Exception ex)
         {
@@ -2323,7 +2385,6 @@ public static class PubMetToExcelFunc
 
             // 按列合并
             mergedArray = PubMetToExcel.MergeRanges(areas, false);
-
         }
         else
         {
@@ -2335,6 +2396,5 @@ public static class PubMetToExcelFunc
         mergedArray = PubMetToExcel.FilterRepeatValue(mergedArray, index, false, baseIndex);
         //复制
         PubMetToExcel.CopyArrayToClipboard(mergedArray);
-
     }
 }

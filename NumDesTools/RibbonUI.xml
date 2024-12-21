@@ -114,7 +114,9 @@
                 </group>
                 <group id="Group8" label="Excel搜索">
                     <labelControl id="SearchLab" label="搜索编号/关键字" />
-                    <editBox id="ExcelSearchBoxEdit" onChange="ExcelOnEditBoxTextChanged" sizeString="……………………" screentip='需要模糊搜索时关键词前加：*' />
+                    <editBox id="ExcelSearchBoxEdit" label ='输入查找值' onChange="ExcelOnEditBoxTextChanged" sizeString="…………………………………………" 
+                             screentip='需要模糊搜索时关键词前加：*'  getText ='GetEditBoxDefaultText' supertip ='测试长提示……………………………………………………………………………………………………
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^………………'/>
                     <menu  id ='ExcelSearchBoxMenu' label ='全局搜索&#13;' image ='key' size='large'>
                         <button id="ExcelSearchBoxButton1" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件'
                                 onAction='ExcelSearchAll_Click' imageMso="RulesInspector" />
@@ -126,7 +128,8 @@
                                 onAction='ExcelSearchAllToExcel_Click' imageMso="SelectAll" />
                     </menu>
                     <button id="ExcelSearchBoxButton5" size='large' label="替换文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串并替换'
-                            onAction='CellDataReplace_Click' image="key" /> <button id="ExcelSearchBoxButton6" size='large' label="搜索文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串'
+                            onAction='CellDataReplace_Click' image="key" /> 
+                    <button id="ExcelSearchBoxButton6" size='large' label="搜索文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串'
                             onAction='CellDataSearch_Click' image="dart" />
                     <menu  id ='AutoInsertExcelDataMenu2' label ='创建数据&#13;' image ='ejs' size='large'>
                         <button id="ModelDataCreat"  label="常规模版" screentip='全局搜索关键词，输出表格数据，常规模版数据，例如：各类LTE、主岛活动常规【模版】'
@@ -134,6 +137,8 @@
                         <button id="ModelDataCreat2"  label="特殊模版" screentip='指定表格搜索关键词，输出表格数据，特殊模版数据，例如：LTE皮肤【模版】'
                                 onAction='ModelDataCreat2_Click' imageMso="Hotspot" />
                     </menu>
+                    <button id="ExcelSearchBoxButton7" size='large' label="搜索Sheet名" screentip='搜索txt导出文件所在工作簿，特别指$开头'
+                            onAction='ExcelSearchAllSheetName_Click' image="verilog" />
                 </group>
                 <group id="Group9" label="运营工具">
                     <button id="ActivityServerDataButton1" size='large' label="生成活动(活动名)" screentip='根据运营排期自动生成活动配置'

@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using NPOI.SS.UserModel;
+﻿using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
 // ReSharper disable All
