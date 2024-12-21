@@ -23,6 +23,7 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
+global using System.Globalization;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using NPOI.SS.UserModel;
@@ -213,6 +214,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             .RegisterFunctions();
         //添加动态参数自定函数注册后，需要重新刷新下智能感应提示
         IntelliSenseServer.Refresh();
+
+        //添加快捷键触发，例如： Ctrl+Alt+F//尝试失败
+        App.OnKey("^%f", "SuperFindAndReplace");
+
     }
 
     void IExcelAddIn.AutoClose()
@@ -221,8 +226,21 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.SheetBeforeRightClick -= UD_RightClickButton;
         App.WorkbookActivate -= ExcelApp_WorkbookActivate;
         App.WorkbookBeforeClose -= ExcelApp_WorkbookBeforeClose;
+
+        //戒除快捷键触发，例如： Ctrl+Alt+F
+        App.OnKey("^%f");
     }
 
+    #endregion
+
+    #region Ribbon快捷键命令
+
+    [ExcelCommand(Description = "触发超级查找和替换功能")]
+    public static void SuperFindAndReplace()
+    {
+        Debug.Print("SuperFindAndReplace 方法被调用");
+        LogDisplay.Show();
+    }
     #endregion
 
     #region Ribbon点击命令
@@ -447,7 +465,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, ctpName);
             _sheetMenuCtp = (SheetListControl)
                 NumDesCTP.ShowCTP(
-                    250,
+                    400,
                     ctpName,
                     true,
                     ctpName,
@@ -506,7 +524,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, ctpName);
             _sheetMenuCtp = (SheetListControl)
                 NumDesCTP.ShowCTP(
-                    250,
+                    400,
                     ctpName,
                     true,
                     ctpName,
@@ -1104,7 +1122,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         _excelSeachStr = text;
     }
-
+    //编辑框的默认值
+    public string GetEditBoxDefaultText(IRibbonControl control)
+    {
+        return "搜索：前缀加*表示模糊搜";
+    }
     public void ExcelSearchAll_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1113,7 +1135,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr);
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr , false);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1130,7 +1152,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 .ToList();
             _ = (SheetSeachResult)
                 NumDesCTP.ShowCTP(
-                    320,
+                    400,
                     ctpName,
                     true,
                     ctpName,
@@ -1145,7 +1167,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "搜索完成，用时：" + ts2;
     }
-
+    
     public void ExcelSearchAllMultiThread_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1171,7 +1193,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 .ToList();
             _ = (SheetSeachResult)
                 NumDesCTP.ShowCTP(
-                    320,
+                    400,
                     ctpName,
                     true,
                     ctpName,
@@ -1212,7 +1234,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 .ToList();
             _ = (SheetSeachResult)
                 NumDesCTP.ShowCTP(
-                    320,
+                    400,
                     ctpName,
                     true,
                     ctpName,
@@ -1234,6 +1256,55 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         sw.Start();
         PubMetToExcelFunc.ExcelDataSearchAndMerge(_excelSeachStr);
         sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        App.StatusBar = "搜索完成，用时：" + ts2;
+    }
+    //查询某个Sheet名字在哪个工作簿
+    public void ExcelSearchAllSheetName_Click(IRibbonControl control)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+
+        var targetList = PubMetToExcelFunc.SearchSheetNameFromExcel(path, _excelSeachStr , true);
+        if (targetList.Count == 0)
+        {
+            sw.Stop();
+            var log = @"没有检查到匹配字符串的Sheet，字符串可能有误";
+
+            LogDisplay.RecordLine(
+                "[{0}] , {1}",
+                DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                log
+            );
+
+            MessageBox.Show(log);
+        }
+        else
+        {
+            var ctpName = "表格查询结果";
+            NumDesCTP.DeleteCTP(true, ctpName);
+            var tupleList = targetList
+                .Select(t =>
+                    (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
+                )
+                .ToList();
+            _ = (SheetSeachResult)
+                NumDesCTP.ShowCTP(
+                    400,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new SheetSeachResult(tupleList),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+
+            sw.Stop();
+        }
+
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
         App.StatusBar = "搜索完成，用时：" + ts2;
@@ -2319,7 +2390,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, ctpName);
             _sheetMenuCtp = (SheetListControl)
                 NumDesCTP.ShowCTP(
-                    250,
+                    400,
                     ctpName,
                     true,
                     ctpName,

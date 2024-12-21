@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -3790,7 +3789,7 @@ public static class AutoInsertExcelDataModelCreat
                 modelName = modelName.Replace("_", "##");
             }
             //截取.xlsx之前的字符
-            modelName = modelName.Substring(0, modelName.IndexOf(".xlsx")) + ".xlsx";
+            modelName = modelName.Substring(0, modelName.IndexOf(".xlsx", StringComparison.Ordinal)) + ".xlsx";
 
             LogDisplay.RecordLine(
                 "[{0}] , {1}",
