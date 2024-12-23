@@ -40,6 +40,7 @@ namespace NumDesTools.UI
             if (string.IsNullOrEmpty(selectedText))
             {
                 textMarkerService.RemoveAll(m => true); // 清除高亮
+                UpdateMatchCount(0); // 更新匹配统计
                 return;
             }
 
@@ -49,6 +50,7 @@ namespace NumDesTools.UI
             // 查找并高亮匹配项
             var text = TextEditor.Text;
             var startIndex = 0;
+            int matchCount = 0; // 匹配项计数
             while (
                 (
                     startIndex = text.IndexOf(
@@ -62,7 +64,9 @@ namespace NumDesTools.UI
                 var marker = textMarkerService.Create(startIndex, selectedText.Length);
                 marker.BackgroundColor = Colors.Yellow; // 设置高亮颜色
                 startIndex += selectedText.Length;
+                matchCount++; // 统计匹配项
             }
+            UpdateMatchCount(matchCount); // 更新匹配统计
         }
 
         private void ReplaceAll_Click(object sender, RoutedEventArgs e)
@@ -96,12 +100,14 @@ namespace NumDesTools.UI
                 MessageBoxButton.OK,
                 MessageBoxImage.Information
             );
+            UpdateMatchCount(0); // 替换后清空匹配统计
         }
 
         private void Reset_Click(object sender, RoutedEventArgs e)
         {
             // 重置到初始文本
             TextEditor.Text = originalText;
+            UpdateMatchCount(0); // 替换后清空匹配统计
         }
 
         private void Confirm_Click(object sender, RoutedEventArgs e)
@@ -111,12 +117,10 @@ namespace NumDesTools.UI
             DialogResult = true;
             Close();
         }
-
-        private void Cancel_Click(object sender, RoutedEventArgs e)
+        private void UpdateMatchCount(int count)
         {
-            // 用户点击取消，关闭窗口
-            DialogResult = false;
-            Close();
+            // 更新匹配统计的显示
+            MatchCountTextBlock.Text = $"匹配项数量：{count}";
         }
     }
 
