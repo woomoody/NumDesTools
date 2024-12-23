@@ -12,7 +12,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- AvalonEdit 文本编辑器 -->
+        <!--  AvalonEdit 文本编辑器  -->
         <avalonedit:TextEditor
             x:Name="TextEditor"
             Grid.Row="0"
@@ -22,19 +22,18 @@
             ShowLineNumbers="True"
             VerticalScrollBarVisibility="Auto" />
 
-        <!-- 底部输入框和按钮 -->
+        <!--  底部输入框和按钮  -->
         <StackPanel
             Grid.Row="1"
             Margin="10"
-            Orientation="Horizontal"
-            HorizontalAlignment="Right">
+            HorizontalAlignment="Right"
+            Orientation="Horizontal">
             <TextBox
                 x:Name="ReplaceTextBox"
                 Width="200"
                 Margin="5"
-                VerticalAlignment="Center"
                 HorizontalAlignment="Left"
-                 />
+                VerticalAlignment="Center" />
             <Button
                 Width="80"
                 Margin="5"
@@ -50,11 +49,12 @@
                 Margin="5"
                 Click="Confirm_Click"
                 Content="确定" />
-            <Button
-                Width="80"
+            <TextBlock
+                x:Name="MatchCountTextBlock"
                 Margin="5"
-                Click="Cancel_Click"
-                Content="取消" />
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Text="匹配项数量：0" />
         </StackPanel>
     </Grid>
 </Window>

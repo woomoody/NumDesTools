@@ -314,17 +314,29 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         if (editorWindow.ShowDialog() == true)
         {
+            var sw = new Stopwatch();
+            sw.Start();
+
             // 用户完成编辑后，将修改的内容同步回 Excel
             var updatedTexts = editorWindow.UpdatedTexts;
             for (int i = 0; i < updatedTexts.Count; i++)
             {
-                foundCells[i].Value = updatedTexts[i];
+                var baseValue = foundCells[i].Value2?.ToString() ?? "";
+                if (baseValue != updatedTexts[i])
+                {
+                    foundCells[i].Value = updatedTexts[i];
+                }
             }
             LogDisplay.RecordLine(
                 "[{0}] , {1}",
                 DateTime.Now.ToString(CultureInfo.InvariantCulture),
                 "替换完成！！"
             );
+
+
+            sw.Stop();
+            var ts2 = sw.Elapsed;
+            App.StatusBar = $"替换完成用时：{ts2}";
         }
     }
     #endregion
@@ -1872,7 +1884,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-        
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+
 
         //App.Visible = false;
         //App.ScreenUpdating = false;
@@ -2011,8 +2025,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         ////CompareExcel.CompareMain(lines);
         //MapExcel.ExcelToJson(lines);
 
-        sw.Stop();
-        var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
