@@ -118,6 +118,7 @@
         </COMReference>
     </ItemGroup>
     <ItemGroup>
+        <PackageReference Include="AvalonEdit" Version="6.3.0.90" />
         <PackageReference Include="BouncyCastle.Cryptography" Version="2.4.0" />
         <PackageReference Include="Enums.NET" Version="5.0.0" />
         <PackageReference Include="EPPlus" Version="7.4.2" />
