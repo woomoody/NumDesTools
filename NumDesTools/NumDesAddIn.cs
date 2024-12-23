@@ -212,10 +212,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             .ProcessAsyncRegistrations(nativeAsyncIfAvailable: false)
             .ProcessParamsRegistrations()
             .RegisterFunctions();
+
         //添加动态参数自定函数注册后，需要重新刷新下智能感应提示
         IntelliSenseServer.Refresh();
 
-        //添加快捷键触发，例如： Ctrl+Alt+F//尝试失败
+        //注册动态命令函数
+        ExcelRegistration.GetExcelCommands().RegisterCommands();
+        //添加快捷键触发，例如： Ctrl+Alt+F
         App.OnKey("^%f", "SuperFindAndReplace");
 
     }
@@ -227,7 +230,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.WorkbookActivate -= ExcelApp_WorkbookActivate;
         App.WorkbookBeforeClose -= ExcelApp_WorkbookBeforeClose;
 
-        //戒除快捷键触发，例如： Ctrl+Alt+F
+        //解除快捷键触发，例如： Ctrl+Alt+F
         App.OnKey("^%f");
     }
 
@@ -2458,7 +2461,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         _globalValue.SaveValue("CellHiLightText", CellHiLightText);
     }
 
-    public void ShowDnaLog_Click(IRibbonControl control)
+    public  void ShowDnaLog_Click(IRibbonControl control)
     {
         if (control == null)
             throw new ArgumentNullException(nameof(control));
