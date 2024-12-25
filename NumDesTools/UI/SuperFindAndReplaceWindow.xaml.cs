@@ -1,33 +1,33 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Media;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Rendering;
 using MessageBox = System.Windows.MessageBox;
-using Window = System.Windows.Window;
 
 namespace NumDesTools.UI
 {
-    public partial class SuperFindAndReplaceWindow : Window
+    public partial class SuperFindAndReplaceWindow
     {
-        private TextMarkerService textMarkerService;
-        private string originalText; // 保存初始文本
+        private readonly TextMarkerService _textMarkerService;
+        private readonly string _originalText; // 保存初始文本
 
         public List<string> UpdatedTexts { get; private set; }
 
-        public SuperFindAndReplaceWindow(List<string> initialTexts)
+        public SuperFindAndReplaceWindow(List<dynamic> initialTexts)
         {
             InitializeComponent();
 
+            // 启用自动换行
+            TextEditor.WordWrap = true;
+
             // 保存初始文本
-            originalText = string.Join("\n", initialTexts);
-            TextEditor.Text = originalText;
+            _originalText = string.Join("\n", initialTexts);
+            TextEditor.Text = _originalText;
 
             // 初始化高亮服务
-            textMarkerService = new TextMarkerService(TextEditor.TextArea.TextView);
-            TextEditor.TextArea.TextView.BackgroundRenderers.Add(textMarkerService);
-            TextEditor.TextArea.TextView.LineTransformers.Add(textMarkerService);
+            _textMarkerService = new TextMarkerService(TextEditor.TextArea.TextView);
+            TextEditor.TextArea.TextView.BackgroundRenderers.Add(_textMarkerService);
+            TextEditor.TextArea.TextView.LineTransformers.Add(_textMarkerService);
 
             // 手动订阅 TextArea.SelectionChanged 事件
             TextEditor.TextArea.SelectionChanged += TextArea_SelectionChanged;
@@ -39,13 +39,13 @@ namespace NumDesTools.UI
             var selectedText = TextEditor.SelectedText;
             if (string.IsNullOrEmpty(selectedText))
             {
-                textMarkerService.RemoveAll(m => true); // 清除高亮
+                _textMarkerService.RemoveAll(_ => true); // 清除高亮
                 UpdateMatchCount(0); // 更新匹配统计
                 return;
             }
 
             // 清除之前的高亮
-            textMarkerService.RemoveAll(m => true);
+            _textMarkerService.RemoveAll(_ => true);
 
             // 查找并高亮匹配项
             var text = TextEditor.Text;
@@ -61,7 +61,7 @@ namespace NumDesTools.UI
                 ) != -1
             )
             {
-                var marker = textMarkerService.Create(startIndex, selectedText.Length);
+                var marker = _textMarkerService.Create(startIndex, selectedText.Length);
                 marker.BackgroundColor = Colors.Yellow; // 设置高亮颜色
                 startIndex += selectedText.Length;
                 matchCount++; // 统计匹配项
@@ -88,25 +88,19 @@ namespace NumDesTools.UI
             }
 
             // 替换所有匹配的文本
-            var originalText = TextEditor.Text;
-            TextEditor.Text = originalText.Replace(selectedText, replaceText);
+            var textEditorText = TextEditor.Text;
+            TextEditor.Text = textEditorText.Replace(selectedText, replaceText);
 
             // 清除高亮
-            textMarkerService.RemoveAll(m => true);
+            _textMarkerService.RemoveAll(_ => true);
 
-            MessageBox.Show(
-                $"已将所有 '{selectedText}' 替换为 '{replaceText}'",
-                "替换完成",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information
-            );
             UpdateMatchCount(0); // 替换后清空匹配统计
         }
 
         private void Reset_Click(object sender, RoutedEventArgs e)
         {
             // 重置到初始文本
-            TextEditor.Text = originalText;
+            TextEditor.Text = _originalText;
             UpdateMatchCount(0); // 替换后清空匹配统计
         }
 
@@ -127,25 +121,25 @@ namespace NumDesTools.UI
     // 高亮服务类
     public class TextMarkerService : IBackgroundRenderer, IVisualLineTransformer
     {
-        private readonly TextSegmentCollection<TextMarker> markers;
-        private readonly TextView textView;
+        private readonly TextSegmentCollection<TextMarker> _markers;
+        private readonly TextView _textView;
 
         public TextMarkerService(TextView textView)
         {
-            this.textView = textView;
-            markers = new TextSegmentCollection<TextMarker>(textView.Document);
+            this._textView = textView;
+            _markers = new TextSegmentCollection<TextMarker>(textView.Document);
         }
 
         public KnownLayer Layer => KnownLayer.Selection;
 
-        public void Draw(TextView textView, DrawingContext drawingContext)
+        public void Draw(TextView strTextView, DrawingContext drawingContext)
         {
-            if (textView.VisualLinesValid)
+            if (strTextView.VisualLinesValid)
             {
-                foreach (var marker in markers)
+                foreach (var marker in _markers)
                 {
                     foreach (
-                        var rect in BackgroundGeometryBuilder.GetRectsForSegment(textView, marker)
+                        var rect in BackgroundGeometryBuilder.GetRectsForSegment(strTextView, marker)
                     )
                     {
                         drawingContext.DrawRectangle(
@@ -166,15 +160,15 @@ namespace NumDesTools.UI
         public TextMarker Create(int offset, int length)
         {
             var marker = new TextMarker(offset, length);
-            markers.Add(marker);
-            textView.Redraw();
+            _markers.Add(marker);
+            _textView.Redraw();
             return marker;
         }
 
         public void RemoveAll(Predicate<TextMarker> predicate)
         {
             var markersToRemove = new List<TextMarker>();
-            foreach (var marker in markers)
+            foreach (var marker in _markers)
             {
                 if (predicate(marker))
                 {
@@ -184,10 +178,10 @@ namespace NumDesTools.UI
 
             foreach (var marker in markersToRemove)
             {
-                markers.Remove(marker);
+                _markers.Remove(marker);
             }
 
-            textView.Redraw();
+            _textView.Redraw();
         }
     }
 
