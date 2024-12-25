@@ -1914,7 +1914,7 @@ public static class ExcelDataAutoInsertMulti
                 if (cellCol != null && cellCol.Contains("#") && commentValue != null)
                 {
                     string[] baseParts = commentValue.Split("#");
-                    var cellValue = cellFix.Value.ToString();
+                    var cellValue = cellFix.Value?.ToString();
                     foreach (var item in baseParts)
                     {
                         var parts = item.Split("-");

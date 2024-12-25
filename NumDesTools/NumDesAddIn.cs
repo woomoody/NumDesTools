@@ -242,72 +242,24 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     [ExcelCommand(MenuName = "批量操作", MenuText = "批量查找和替换")]
     public static void SuperFindAndReplace()
     {
-        var activeSheet = App.ActiveSheet as Worksheet;
+        //Com获取带地址的单元格集合
+        var selectedRange = App.Selection;
 
-        if (activeSheet == null)
+        if (selectedRange.Count > 1000)
         {
-            LogDisplay.RecordLine(
-                "[{0}] , {1}",
-                DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                "当前激活工作表不存在"
-            );
+            MessageBox.Show(@"选择单元格太多，无法显示");
             return;
         }
 
-        // 打开输入框，获取用户输入的查找关键词
-        var inputWindow = new SearchInputWindow();
-        if (inputWindow.ShowDialog() != true)
-        {
-            LogDisplay.RecordLine(
-                "[{0}] , {1}",
-                DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                "用户取消了查找操作"
-            );
-            return;
-        }
-
-        var searchText = inputWindow.SearchText; // 获取用户输入的查找内容
-
-        var range = activeSheet.UsedRange;
         var foundCells = new List<Range>();
-
-        if (range is Range selectedRange)
+        foreach (Range cell in selectedRange)
         {
-            if (string.IsNullOrEmpty(searchText))
-            {
-                // 如果 searchText 为空，将 range 的所有单元格添加到 foundCells
-                foreach (Range cell in selectedRange)
-                {
-                    foundCells.Add(cell);
-                }
-            }
-            else
-            {
-                // 如果 searchText 不为空，筛选包含 searchText 的单元格
-                foreach (Range cell in selectedRange)
-                {
-                    var cellValue = cell.Value2?.ToString(); // 获取单元格的值并转为字符串
-                    if (!string.IsNullOrEmpty(cellValue) && cellValue.Contains(searchText)) // 检查是否包含搜索值
-                    {
-                        foundCells.Add(cell);
-                    }
-                }
-            }
+            foundCells.Add(cell);
         }
 
-        if (foundCells.Count == 0)
-        {
-            LogDisplay.RecordLine(
-                "[{0}] , {1}",
-                DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                "未找到匹配的内容！"
-            );
-            System.Windows.MessageBox.Show("未查到匹配单元格");
-            return;
-        }
 
         // 提取匹配的文本内容
-        var matchedTexts = foundCells.Select(c => c.Text.ToString() as string).ToList();
+        var matchedTexts = foundCells.Select(c => c.Text.ToString() ?? "").ToList();
 
         // 打开自定义窗口进行编辑
         var editorWindow = new SuperFindAndReplaceWindow(matchedTexts);
@@ -319,18 +271,20 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
             // 用户完成编辑后，将修改的内容同步回 Excel
             var updatedTexts = editorWindow.UpdatedTexts;
+
+            var updatedValues = new object[foundCells.Count];
+
             for (int i = 0; i < updatedTexts.Count; i++)
             {
-                var baseValue = foundCells[i].Value2?.ToString() ?? "";
-                if (baseValue != updatedTexts[i])
-                {
-                    foundCells[i].Value = updatedTexts[i];
-                }
+                updatedValues[i] = updatedTexts[i];
             }
+
+            selectedRange.Value2 = updatedValues;
+
             LogDisplay.RecordLine(
                 "[{0}] , {1}",
                 DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                "替换完成！！"
+                $"替换完成，共处理{foundCells.Count} 个单元格"
             );
 
 
