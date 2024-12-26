@@ -219,9 +219,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         //注册动态命令函数
         ExcelRegistration.GetExcelCommands().RegisterCommands();
-        //添加快捷键触发，例如： Ctrl+Alt+F
-        App.OnKey("^%f", "SuperFindAndReplace");
 
+        //添加快捷键触发,可以自定义快捷键，例如： Ctrl+Alt+L
+        App.OnKey("^%l", "ShowDnaLog");
     }
 
     void IExcelAddIn.AutoClose()
@@ -231,19 +231,20 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.WorkbookActivate -= ExcelApp_WorkbookActivate;
         App.WorkbookBeforeClose -= ExcelApp_WorkbookBeforeClose;
 
-        //解除快捷键触发，例如： Ctrl+Alt+F
-        App.OnKey("^%f");
+        //解除快捷键触发，例如： Ctrl+Alt+L
+        App.OnKey("^%l");
     }
 
     #endregion
 
-    #region Ribbon快捷键命令
+    #region Ribbon快捷键命令，固定快捷键，不可自定义修改
 
-    [ExcelCommand(MenuName = "批量操作", MenuText = "批量查找和替换")]
+    //Ctrl+Alt+F，超级查找替换
+    [ExcelCommand(ShortCut = "^%f")]
     public static void SuperFindAndReplace()
     {
         //Com获取带地址的单元格集合
-        var selectedRange = App.Selection;
+        Range selectedRange = App.Selection;
 
         if (selectedRange.Count > 1000)
         {
@@ -251,48 +252,73 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             return;
         }
 
-        var foundCells = new List<Range>();
-        foreach (Range cell in selectedRange)
+        try
         {
-            foundCells.Add(cell);
-        }
+            // 提取匹配的文本内容
+            var matchedTexts = selectedRange.Cast<Range>().Select(cell => cell.Text.ToString() ?? "").ToList();
 
+            // 打开自定义窗口进行编辑
+            var editorWindow = new SuperFindAndReplaceWindow(matchedTexts);
 
-        // 提取匹配的文本内容
-        var matchedTexts = foundCells.Select(c => c.Text.ToString() ?? "").ToList();
-
-        // 打开自定义窗口进行编辑
-        var editorWindow = new SuperFindAndReplaceWindow(matchedTexts);
-
-        if (editorWindow.ShowDialog() == true)
-        {
-            var sw = new Stopwatch();
-            sw.Start();
-
-            // 用户完成编辑后，将修改的内容同步回 Excel
-            var updatedTexts = editorWindow.UpdatedTexts;
-
-            var updatedValues = new object[foundCells.Count];
-
-            for (int i = 0; i < updatedTexts.Count; i++)
+            if (editorWindow.ShowDialog() == true)
             {
-                updatedValues[i] = updatedTexts[i];
+                var sw = new Stopwatch();
+                sw.Start();
+
+                // 用户完成编辑后，将修改的内容同步回 Excel
+                var updatedTexts = editorWindow.UpdatedTexts;
+
+                // 获取选中区域的行数和列数
+                int rowCount = selectedRange.Rows.Count;
+                int colCount = selectedRange.Columns.Count;
+
+                // 创建一个与 selectedRange.Value2 结构一致的二维数组
+                var updatedValues = new object[rowCount, colCount];
+
+                // 将 updatedTexts 的内容填充到二维数组中
+                int index = 0;
+                for (int row = 1; row <= rowCount; row++)
+                {
+                    for (int col = 1; col <= colCount; col++)
+                    {
+                        if (index < updatedTexts.Count)
+                        {
+                            updatedValues[row - 1, col - 1] = updatedTexts[index];
+                            index++;
+                        }
+                        else
+                        {
+                            updatedValues[row - 1, col - 1] = null; // 如果 updatedTexts 不够，填充 null
+                        }
+                    }
+                }
+
+                // 将二维数组赋值回选中区域
+                selectedRange.Value2 = updatedValues;
+
+
+                LogDisplay.RecordLine(
+                    "[{0}] , {1}",
+                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                    $"替换完成，共处理{selectedRange.Count} 个单元格"
+                );
+
+                sw.Stop();
+                var ts2 = sw.Elapsed;
+                App.StatusBar = $"替换完成用时：{ts2}";
             }
-
-            selectedRange.Value2 = updatedValues;
-
+        }
+        catch (Exception ex)
+        {
             LogDisplay.RecordLine(
                 "[{0}] , {1}",
                 DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                $"替换完成，共处理{foundCells.Count} 个单元格"
+                $"替换失败，错误信息：{ex.Message}"
             );
-
-
-            sw.Stop();
-            var ts2 = sw.Elapsed;
-            App.StatusBar = $"替换完成用时：{ts2}";
+            MessageBox.Show(ex.Message);
         }
     }
+
     #endregion
 
     #region Ribbon点击命令
@@ -351,7 +377,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 control.Delete();
             }
             catch
-            { /* ignored */
+            {
+                /* ignored */
             }
         }
 
@@ -398,7 +425,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 string Caption,
                 MsoButtonStyle Style,
                 Microsoft.Office.Core._CommandBarButtonEvents_ClickEventHandler Handler
-            )>
+                )>
             {
                 // 根据条件添加按钮配置
                 sheetName.Contains("【模板】")
@@ -777,11 +804,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 {
                     MessageBox.Show(
                         filesName
-                            + @"导出完成!用时:"
-                            + Math.Round(milliseconds / 1000, 2)
-                            + @"秒"
-                            + @"\n"
-                            + @"转完建议重启Excel！"
+                        + @"导出完成!用时:"
+                        + Math.Round(milliseconds / 1000, 2)
+                        + @"秒"
+                        + @"\n"
+                        + @"转完建议重启Excel！"
                     );
                 }
 
@@ -852,7 +879,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         cellAdress = cellAdress.Substring(0, cellAdress.LastIndexOf("$") + 1) + "7";
         if (fileTemp != null)
         {
-            if (fileTemp.Contains("@")) { }
+            if (fileTemp.Contains("@"))
+            {
+            }
             else
             {
                 MessageBox.Show(@"没有找到关联表格" + cellAdress + @"是[" + fileTemp + @"]格式不对：xxx@xxx");
@@ -1093,7 +1122,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
     }
 
-    public void SvnCommitExcel_Click(IRibbonControl control) { }
+    public void SvnCommitExcel_Click(IRibbonControl control)
+    {
+    }
 
     public void SvnCommitTxt_Click(IRibbonControl control)
     {
@@ -1174,11 +1205,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         _excelSeachStr = text;
     }
+
     //编辑框的默认值
     public string GetEditBoxDefaultText(IRibbonControl control)
     {
         return "搜索：前缀加*表示模糊搜";
     }
+
     public void ExcelSearchAll_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1187,7 +1220,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr , false);
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr, false);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1219,7 +1252,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "搜索完成，用时：" + ts2;
     }
-    
+
     public void ExcelSearchAllMultiThread_Click(IRibbonControl control)
     {
         var sw = new Stopwatch();
@@ -1312,6 +1345,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         Debug.Print(ts2.ToString());
         App.StatusBar = "搜索完成，用时：" + ts2;
     }
+
     //查询某个Sheet名字在哪个工作簿
     public void ExcelSearchAllSheetName_Click(IRibbonControl control)
     {
@@ -1321,7 +1355,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcelFunc.SearchSheetNameFromExcel(path, _excelSeachStr , true);
+        var targetList = PubMetToExcelFunc.SearchSheetNameFromExcel(path, _excelSeachStr, true);
         if (targetList.Count == 0)
         {
             sw.Stop();
@@ -1771,6 +1805,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             string filePath = fileInfo.Item1;
             fileList.Add(filePath);
         }
+
         var files = fileList.ToArray();
         var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(seachValue, files, false, false);
 
@@ -2421,6 +2456,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 FocusLight.DeleteCondition(worksheet);
             App.SheetSelectionChange -= FocusLightCal;
         }
+
         _globalValue.SaveValue("FocusLabelText", FocusLabelText);
     }
 
@@ -2454,6 +2490,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             NumDesCTP.DeleteCTP(true, ctpName);
         }
+
         _globalValue.SaveValue("SheetMenuText", SheetMenuText);
     }
 
@@ -2469,6 +2506,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             NumDesCTP.DeleteCTP(true, ctpName);
         }
+
         _globalValue.SaveValue("CheckSheetValueText", CheckSheetValueText);
     }
 
@@ -2510,11 +2548,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         _globalValue.SaveValue("CellHiLightText", CellHiLightText);
     }
 
-    public  void ShowDnaLog_Click(IRibbonControl control)
+    //打开插件日志窗口
+    [ExcelCommand]
+    public static void ShowDnaLog()
     {
-        if (control == null)
-            throw new ArgumentNullException(nameof(control));
-
         ShowDnaLogText = ShowDnaLogText == "插件日志：开启" ? "插件日志：关闭" : "插件日志：开启";
         CustomRibbon.InvalidateControl("ShowDnaLog");
 
@@ -2528,6 +2565,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
 
         _globalValue.SaveValue("ShowDnaLogText", ShowDnaLogText);
+    }
+    public void ShowDnaLog_Click(IRibbonControl control)
+    {
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
+        ShowDnaLog();
     }
 
     public void CheckFileFormat_Click(IRibbonControl control)
@@ -2573,5 +2616,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         ConditionFormat.Add(ws, formula + rangeAddress);
         ws.Calculate();
     }
+
     #endregion
 }
