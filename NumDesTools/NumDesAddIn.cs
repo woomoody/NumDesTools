@@ -205,7 +205,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //注册动态参数函数
         ExcelIntegration.RegisterUnhandledExceptionHandler(ex => "!!! ERROR: " + ex);
         // Set the Parameter Conversions before they are applied by the ProcessParameterConversions call below.
-
         // Get all the ExcelFunction functions, process and register
         // Since the .dna file has ExplicitExports="true", these explicit registrations are the only ones - there is no default processing
         ExcelRegistration
