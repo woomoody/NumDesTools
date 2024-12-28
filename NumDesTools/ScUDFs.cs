@@ -767,7 +767,7 @@ public class ExcelUdf
             throw new ArgumentException("分隔符至少需要三个字符，例如: {,}");
         }
 
-        // 将所有范围转换为一维数组
+        // 将所有范围转换为二维数组list
         var allValues = new List<object[]>();
         foreach (var range in ranges)
         {
