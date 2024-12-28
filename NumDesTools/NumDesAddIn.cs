@@ -59,6 +59,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public static string TempPath = _globalValue.Value["TempPath"];
     public static string CheckSheetValueText = _globalValue.Value["CheckSheetValueText"];
     public static string ShowDnaLogText = _globalValue.Value["ShowDnaLogText"];
+    public static string ShowChatGptText = _globalValue.Value["ShowChatGptText"];
 
     public static CommandBarButton Btn;
     public static Application App = (Application)ExcelDnaUtil.Application;
@@ -76,6 +77,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private TabControl _tabControl = new();
 
     private SheetListControl _sheetMenuCtp;
+    private static GptTaskPanel _chatGptMenuCtp;
 
     #region 释放COM
 
@@ -183,6 +185,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "CellHiLight" => CellHiLightText,
             "CheckSheetValue" => CheckSheetValueText,
             "ShowDnaLog" => ShowDnaLogText,
+            "ShowChatGpt" => ShowChatGptText,
             _ => ""
         };
         return latext;
@@ -2570,6 +2573,40 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (control == null)
             throw new ArgumentNullException(nameof(control));
         ShowDnaLog();
+    }
+    //打开插件ChatGPT窗口
+    [ExcelCommand]
+    public static void ShowChatGpt()
+    {
+        ShowChatGptText = ShowChatGptText == "ChatGPT：开启" ? "ChatGPT：关闭" : "ChatGPT：开启";
+        CustomRibbon.InvalidateControl("ShowChatGpt");
+
+        var ctpName = "ChatGPT-Excel";
+        if (ShowChatGptText == "ChatGPT：开启")
+        {
+            NumDesCTP.DeleteCTP(true, ctpName);
+            _chatGptMenuCtp = (GptTaskPanel)
+                NumDesCTP.ShowCTP(
+                    400,
+                     ctpName,
+                    true,
+                    ctpName,
+                    new GptTaskPanel(),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+        }
+        else
+        {
+            NumDesCTP.DeleteCTP(true, ctpName);
+        }
+
+        _globalValue.SaveValue("ShowChatGptText", ShowDnaLogText);
+    }
+    public void ShowChatGpt_Click(IRibbonControl control)
+    {
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
+        ShowChatGpt();
     }
 
     public void CheckFileFormat_Click(IRibbonControl control)

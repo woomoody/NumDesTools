@@ -15,7 +15,8 @@ public class GlobalVariable
             { "TempPath", @"\Client\Assets\Resources\Table" },
             { "CellHiLightText", "高亮单元格：关闭" },
             { "CheckSheetValueText", "数据自检：开启" },
-            {"ShowDnaLogText" , "插件日志：关闭"}
+            {"ShowDnaLogText" , "插件日志：关闭"},
+            {"ShowChatGptText" , "ChatGPT：关闭"}
         };
 
     private readonly string _filePath = Path.Combine(

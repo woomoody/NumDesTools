@@ -185,6 +185,10 @@
                     <button id='Button_LoopRun' size='large' label='移动转盘' image='key' screentip='移动转盘随机方案机选'
                             onAction='LoopRun_Click' />
                 </group>
+                <group id='GroupChatGPT' label='ChatGPT'>
+                    <button id='ShowChatGpt' size='large' getLabel='GetLableText' image='csharp' 
+                            onAction='ShowChatGpt_Click' />
+                </group>
                 <group id='Group9999' label='测试功能区'>
                     <button id='Button99991' size='large' label='不要点击红色按钮' image='sofa' onAction='TestBar1_Click' />
                     <button id='Button99992' size='large' label='测试' image='sofa' onAction='TestBar2_Click' />

@@ -116,6 +116,7 @@
       <PackageReference Include="GraphX" Version="3.0.0" />
       <PackageReference Include="KeraLua" Version="1.4.1" />
       <PackageReference Include="LibGit2Sharp" Version="0.30.0" />
+      <PackageReference Include="Markdig" Version="0.39.1" />
       <PackageReference Include="MathNet.Numerics.Signed" Version="5.0.0" />
       <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
       <PackageReference Include="MiniExcel" Version="1.34.2" />
