@@ -2587,7 +2587,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, ctpName);
             _chatGptMenuCtp = (GptTaskPanel)
                 NumDesCTP.ShowCTP(
-                    400,
+                    600,
                      ctpName,
                     true,
                     ctpName,
