@@ -14,12 +14,13 @@ namespace NumDesTools.UI
     /// </summary>
     public partial class GptTaskPanel : UserControl
     {
-        private readonly string _apiKey = "***";
+        private readonly string _apiKey;
 
         public GptTaskPanel()
         {
             InitializeComponent();
             InitializeHtmlTemplate();
+            _apiKey = Environment.GetEnvironmentVariable("API_KEY");
         }
 
         private void InitializeHtmlTemplate()
