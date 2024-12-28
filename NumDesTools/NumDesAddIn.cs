@@ -209,7 +209,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         // Since the .dna file has ExplicitExports="true", these explicit registrations are the only ones - there is no default processing
         ExcelRegistration
             .GetExcelFunctions()
-            .ProcessAsyncRegistrations(nativeAsyncIfAvailable: false)
+            .ProcessAsyncRegistrations(nativeAsyncIfAvailable: true)
             .ProcessParamsRegistrations()
             .RegisterFunctions();
 
@@ -234,7 +234,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.OnKey("^%l");
     }
 
-    #endregion
+#endregion
 
     #region Ribbon快捷键命令，固定快捷键，不可自定义修改
 

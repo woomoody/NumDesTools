@@ -186,15 +186,26 @@
     Suffix used for packed .xll files e.g. MyAddIn-packed.xll
     -->
     <ExcelDnaPackXllSuffix Condition="'$(ExcelDnaPackXllSuffix)' == ''">-packed</ExcelDnaPackXllSuffix>
+    <ExcelDnaPackCompressResources Condition="'$(ConfigurationName)' == 'Debug'">false</ExcelDnaPackCompressResources>
+    <ExcelDnaPackCompressResources Condition="'$(ConfigurationName)' == 'Release'">false</ExcelDnaPackCompressResources>
+    <!--
+    Enable/disable collectible AssemblyLoadContext for .NET 6.
+    Default value: false
+    -->
+    <ExcelAddInDisableAssemblyContextUnload Condition="'$(ConfigurationName)' == 'Debug'">true</ExcelAddInDisableAssemblyContextUnload>
+    <!--
+    Prevents every static public function from becomming a UDF, they will need an explicit [ExcelFunction] annotation.
+    Default value: false静态公共函数都会被导出，true则表示只有标记[ExcelFunction]的函数会被导出
+    -->
+    <ExcelAddInExplicitExports>true</ExcelAddInExplicitExports>
     <!--
     Options used when packing .xll files.
     When in trouble with your virus scanner, try uncommenting at least the resource compression properties.
     The default is true for both compression and multithreaded runs when not specified.
     -->
     <!--
-    <ExcelDnaPackCompressResources Condition="'$(ConfigurationName)' == 'Debug'">false</ExcelDnaPackCompressResources>
+
     <ExcelDnaPackRunMultithreaded  Condition="'$(ConfigurationName)' == 'Debug'">false</ExcelDnaPackRunMultithreaded>
-    <ExcelDnaPackCompressResources Condition="'$(ConfigurationName)' == 'Release'">false</ExcelDnaPackCompressResources>
     <ExcelDnaPackRunMultithreaded  Condition="'$(ConfigurationName)' == 'Release'">false</ExcelDnaPackRunMultithreaded>
     -->
 
