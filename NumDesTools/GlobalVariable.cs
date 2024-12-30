@@ -15,8 +15,15 @@ public class GlobalVariable
             { "TempPath", @"\Client\Assets\Resources\Table" },
             { "CellHiLightText", "高亮单元格：关闭" },
             { "CheckSheetValueText", "数据自检：开启" },
-            {"ShowDnaLogText" , "插件日志：关闭"},
-            {"ShowChatGptText" , "ChatGPT：关闭"}
+            { "ShowDnaLogText", "插件日志：关闭" },
+            { "ShowChatGptText", "ChatGPT：关闭" },
+            { "ChatGptApiKey", "***" },
+            { "ChatGptSysContentExcelAss", "你是一个助手，特别擅长回答Excel的各项功能" },
+            { "ChatGptSysContentTransferAss", "你是一个助手，特别擅长多种语言的翻译工作，你的回答中只会输出指定的翻译后的内容，不掺杂别的解释，" +
+                                              "输入文本以【#cent#】为标识符区分文本的键值" +
+                                              "输出文本需要根据所需翻译的语言种类作为键值的不同值" +
+                                              "输入的内容需要遵循json格式"
+            }
         };
 
     private readonly string _filePath = Path.Combine(
@@ -28,8 +35,8 @@ public class GlobalVariable
 
     public GlobalVariable()
     {
-        bool fileUpdated = false;
-
+        bool defaultValueUpdate = false;
+        //文件存在，则读取文件内容
         if (File.Exists(_filePath))
         {
             var lines = File.ReadAllLines(_filePath);
@@ -42,38 +49,41 @@ public class GlobalVariable
                 {
                     var key = parts[0].Trim();
                     var value = parts[1].Trim();
+                    //验证_defaultValue和文件内容的key是否一致
                     if (_defaultValue.ContainsKey(key))
                     {
-                        Value[key] = value;
+                        //共有的Key以文件内容为准
+                        _defaultValue[key] = value;
                     }
                     else
                     {
-                        // 如果文件中有不在 _defaultValue 中的键值对，添加到 _defaultValue
-                        _defaultValue[key] = value;
-                        fileUpdated = true;
+                        // 文件内容中有新的 key，忽略
+                        continue;
                     }
                 }
             }
-
-            // 检查 _defaultValue 中是否有新的键值对
+            // 检查 _defaultValue 中是否有新的 key
             foreach (var kvp in _defaultValue)
             {
                 if (!Value.ContainsKey(kvp.Key))
                 {
                     Value[kvp.Key] = kvp.Value;
-                    fileUpdated = true;
+                    defaultValueUpdate = true;
                 }
             }
 
-            // 如果文件内容与 _defaultValue 不一致，更新文件
-            if (fileUpdated)
+            // 如果有新的默认值，更新文件内容
+            if (defaultValueUpdate)
             {
-                var updatedLines = new List<string>();
-                foreach (var kvp in _defaultValue)
-                    updatedLines.Add($"{kvp.Key} = {kvp.Value}");
-                File.WriteAllLines(_filePath, updatedLines);
+                var linesToWrite = new List<string>();
+                foreach (var kvp in Value)
+                {
+                    linesToWrite.Add($"{kvp.Key} = {kvp.Value}");
+                }
+                File.WriteAllLines(_filePath, linesToWrite);
             }
         }
+        //不存在则创建文件配置，写入默认值
         else
         {
             Value = new Dictionary<string, string>(_defaultValue);

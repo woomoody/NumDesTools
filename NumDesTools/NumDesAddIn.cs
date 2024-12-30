@@ -60,6 +60,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public static string CheckSheetValueText = _globalValue.Value["CheckSheetValueText"];
     public static string ShowDnaLogText = _globalValue.Value["ShowDnaLogText"];
     public static string ShowChatGptText = _globalValue.Value["ShowChatGptText"];
+    public static string ChatGptApiKey = _globalValue.Value["ChatGptApiKey"];
+    public static string ChatGptSysContentExcelAss = _globalValue.Value["ChatGptSysContentExcelAss"];
+    public static string ChatGptSysContentTransferAss = _globalValue.Value["ChatGptSysContentTransferAss"];
 
     public static CommandBarButton Btn;
     public static Application App = (Application)ExcelDnaUtil.Application;
