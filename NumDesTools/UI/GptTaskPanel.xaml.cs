@@ -1,26 +1,26 @@
-﻿using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using Newtonsoft.Json;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
-using UserControl = System.Windows.Controls.UserControl;
 
 namespace NumDesTools.UI
 {
     /// <summary>
     /// GptTaskPanel.xaml 的交互逻辑
     /// </summary>
-    public partial class GptTaskPanel : UserControl
+    public partial class GptTaskPanel
     {
         private readonly string _apiKey;
+        private readonly string _userName = Environment.UserName;
+        private readonly string _sysName = "gpt-4o";
+        private readonly string _sysContent;
 
         public GptTaskPanel()
         {
             InitializeComponent();
             InitializeHtmlTemplate();
-            _apiKey = Environment.GetEnvironmentVariable("API_KEY");
+            _apiKey = NumDesAddIn.ChatGptApiKey;
+            _sysContent = NumDesAddIn.ChatGptSysContentExcelAss;
         }
 
         private void InitializeHtmlTemplate()
@@ -33,7 +33,7 @@ namespace NumDesTools.UI
                 body {
                     background-color: #1e1e1e;
                     color: white;
-                    font-family: Consolas, monospace;
+                    font-family: 微软雅黑, monospace;
                     line-height: 1.6;
                     margin: 0;
                     padding: 10px;
@@ -69,7 +69,7 @@ namespace NumDesTools.UI
                     overflow-x: auto;
                 }
                 code {
-                    font-family: Consolas, monospace;
+                    font-family: 微软雅黑, monospace;
                     background-color: #2d2d30;
                     color: #dcdcdc;
                     padding: 2px 4px;
@@ -96,29 +96,44 @@ namespace NumDesTools.UI
         }
 
 
-        private async void ProcessInput()
+        private  void ProcessInput()
         {
             string userInput = PromptInput.Text.Trim();
             if (string.IsNullOrEmpty(userInput))
                 return;
 
             PromptInput.Clear();
-            GeneratingHint.Visibility = Visibility.Visible;
-
             try
             {
-                string response = await CallChatGptApi(userInput, _apiKey);
-                AppendToOutput("用户", userInput, isUser: true);
-                AppendToOutput("系统", response, isUser: false);
+                var requestBody = CreateRequestBody(userInput);
+
+                string response = Task.Run(() => ChatGptApiClient.CallApiAsync(requestBody, _apiKey)).Result;
+
+                AppendToOutput(_userName, userInput, isUser: true);
+                AppendToOutput(_sysName, response, isUser: false);
             }
             catch (Exception ex)
             {
-                AppendToOutput("系统", $"调用 GPT API 时出错：{ex.Message}", isUser: false);
+                AppendToOutput(_sysName, $"调用 GPT API 时出错：{ex.Message}", isUser: false);
             }
-            finally
+        }
+
+
+
+        //Gpt配置参数
+        private object CreateRequestBody(string prompt)
+        {
+            //model role是保留字段，不能自定义修改，可以修改content内容
+            return new
             {
-                GeneratingHint.Visibility = Visibility.Collapsed;
-            }
+                model = "gpt-4o",
+                messages = new[]
+                {
+                    new { role = "system", content = _sysContent},
+                    new { role = "user", content = prompt }
+                },
+                max_tokens = 2048
+            };
         }
 
         private void AppendToOutput(string role, string message, bool isUser)
@@ -144,42 +159,5 @@ namespace NumDesTools.UI
             });
         }
 
-        private async Task<string> CallChatGptApi(string prompt, string apiKey)
-        {
-            string apiUrl = "https://api.openai.com/v1/chat/completions";
-
-            using (HttpClient client = new HttpClient())
-            {
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-
-                var requestBody = new
-                {
-                    model = "gpt-4o",
-                    messages = new[]
-                    {
-                    new { role = "system", content = "You are an assistant." },
-                    new { role = "user", content = prompt }
-                },
-                    max_tokens = 2048
-                };
-
-                string jsonBody = JsonConvert.SerializeObject(requestBody);
-                var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    string responseContent = await response.Content.ReadAsStringAsync();
-                    dynamic jsonResponse = JsonConvert.DeserializeObject(responseContent);
-                    return jsonResponse.choices[0].message.content.ToString();
-                }
-                else
-                {
-                    string errorContent = await response.Content.ReadAsStringAsync();
-                    throw new Exception($"API 调用失败，状态码：{response.StatusCode}，错误信息：{errorContent}");
-                }
-            }
-        }
     }
 }

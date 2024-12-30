@@ -1225,17 +1225,25 @@ public static class PubMetToExcel
     //二维List转二维数组
     public static object[,] ConvertListToArray(List<List<object>> listOfLists)
     {
+        // 获取行数
         var rowCount = listOfLists.Count;
-        var colCount = listOfLists.Count > 0 ? listOfLists[0].Count : 0;
 
+        // 获取最大列数（找出最长的子列表）
+        var colCount = listOfLists.Max(innerList => innerList.Count);
+
+        // 初始化二维数组
         var twoDArray = new object[rowCount, colCount];
 
+        // 遍历每个子列表
         for (var i = 0; i < rowCount; i++)
         {
             var innerList = listOfLists[i];
 
             for (var j = 0; j < colCount; j++)
-                twoDArray[i, j] = innerList[j];
+            {
+                // 如果当前列索引超出子列表长度，补充空值（null 或 ""）
+                twoDArray[i, j] = j < innerList.Count ? innerList[j] : null;
+            }
         }
 
         return twoDArray;

@@ -1,7 +1,9 @@
 ﻿using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using NPOI.XSSF.UserModel;
 using static System.String;
+using Match = System.Text.RegularExpressions.Match;
 
 #pragma warning disable CA1416
 
@@ -312,13 +314,17 @@ public class ExcelUdf
     )]
     public static object FindValueFromRange(
         [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "查找值")]
-        string seachValue,
+            string seachValue,
         [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "查找范围")]
-        object[,] searchRange,
-        [ExcelArgument(AllowReference = true, Description = "1：行；2：列；其他：自定义行列组{,},[,]", Name = "返回值类型")]
-        string returnType = "1",
+            object[,] searchRange,
+        [ExcelArgument(
+            AllowReference = true,
+            Description = "1：行；2：列；其他：自定义行列组{,},[,]",
+            Name = "返回值类型"
+        )]
+            string returnType = "1",
         [ExcelArgument(AllowReference = true, Description = "返回第几个值", Name = "返回值序号")]
-        int returnNum = 1
+            int returnNum = 1
     )
     {
         var rows = searchRange.GetLength(0);
@@ -348,7 +354,10 @@ public class ExcelUdf
                         return col + 1;
                     }
 
-                    var delimiterList = returnType.ToCharArray().Select(c => c.ToString()).ToArray();
+                    var delimiterList = returnType
+                        .ToCharArray()
+                        .Select(c => c.ToString())
+                        .ToArray();
                     return $"{delimiterList[0]}{row + 1}{delimiterList[1]}{col + 1}{delimiterList[2]}";
                 }
                 counter++;
@@ -356,6 +365,7 @@ public class ExcelUdf
         }
         return $"不存在";
     }
+
     [ExcelFunction(
         Category = "UDF-获取表格信息",
         IsVolatile = true,
@@ -729,21 +739,20 @@ public class ExcelUdf
         Description = "拼接Range（二维）-动态参数",
         ExplicitRegistration = true
     )]
-
     public static string CreatValueToArray2Dya(
-    [ExcelArgument(AllowReference = true, Description = "分隔符,eg:,", Name = "分隔符")]
-    string delimiter,
-    [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg:true/false", Name = "过滤空值")]
-    string ignoreEmpty,
-    [ExcelArgument(AllowReference = true, Description = "是否包含外围分隔符,eg:,", Name = "过滤空值")]
-    string isOutline,
-    [ExcelArgument(
-        AllowReference = false,
-        Description = "多个单元格范围，支持动态输入，eg: A1:A2, B1:B2",
-        Name = "单元格范围"
-    )]
-    params object[] ranges
-)
+        [ExcelArgument(AllowReference = true, Description = "分隔符,eg:,", Name = "分隔符")]
+            string delimiter,
+        [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg:true/false", Name = "过滤空值")]
+            string ignoreEmpty,
+        [ExcelArgument(AllowReference = true, Description = "是否包含外围分隔符,eg:,", Name = "过滤空值")]
+            string isOutline,
+        [ExcelArgument(
+            AllowReference = false,
+            Description = "多个单元格范围，支持动态输入，eg: A1:A2, B1:B2",
+            Name = "单元格范围"
+        )]
+            params object[] ranges
+    )
     {
         //默认值
         if (delimiter == "")
@@ -771,7 +780,8 @@ public class ExcelUdf
         var allValues = new List<object[]>();
         foreach (var range in ranges)
         {
-            if(range.ToString() == "ExcelErrorValue") continue;
+            if (range.ToString() == "ExcelErrorValue")
+                continue;
             if (range is object[,] rangeObj)
             {
                 allValues.Add(rangeObj.Cast<object>().ToArray());
@@ -793,7 +803,7 @@ public class ExcelUdf
         {
             throw new ArgumentException("所有单元格范围的长度必须一致");
         }
-    
+
         for (int i = 0; i < maxLength; i++)
         {
             var rowValues = new List<string>();
@@ -816,7 +826,11 @@ public class ExcelUdf
             // 拼接每一行的值
             if (rowValues.Count > 0)
             {
-                result += delimiterList[0] + Join(delimiterList[1], rowValues) + delimiterList[2] + delimiter[1];
+                result +=
+                    delimiterList[0]
+                    + Join(delimiterList[1], rowValues)
+                    + delimiterList[2]
+                    + delimiter[1];
             }
         }
 
@@ -833,7 +847,6 @@ public class ExcelUdf
 
         return result;
     }
-
 
     [ExcelFunction(
         Category = "UDF-组装字符串",
@@ -1431,5 +1444,110 @@ public class ExcelUdf
         }
 
         return false;
+    }
+
+    [ExcelFunction(
+        Category = "UDF-ChatGPT专属函数",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "使用ChatGPT辅助翻译-反应还是比较慢",
+        Name = "ChatTransfer"
+    )]
+    public static object ChatTransfer(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "要翻译的单元格")]
+            object[,] sourceLan,
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "要翻译的语言类型")]
+            object[,] lanType,
+        [ExcelArgument(
+            AllowReference = true,
+            Description = "补充对翻译的要求，例如：语言，格式：默认：英语",
+            Name = "翻译要求"
+        )]
+            string addContent,
+        [ExcelArgument(AllowReference = true, Description = "任意字符串或缺省", Name = "忽略空值")]
+            string ignoreValue
+    )
+    {
+        // 使用 ExcelAsyncUtil.Run 实现异步操作
+        return ExcelAsyncUtil.Run("ChatTransfer", new object[] { sourceLan, lanType, addContent, ignoreValue }, () =>
+        {
+            try
+            {
+                // 获取 API Key
+                var apiKey = NumDesAddIn.ChatGptApiKey;
+
+                // 处理 sourceLan 数据
+                var sourceLanStr = ProcessInputRange(sourceLan, ignoreValue, "#centRow#");
+
+                // 处理 lanType 数据
+                var lanTypeStr = ProcessInputRange(lanType, ignoreValue, ",");
+
+                // 构造系统提示内容
+                var sysContent = NumDesAddIn.ChatGptSysContentTransferAss + "翻译为：" + lanTypeStr;
+
+                // 构造请求体
+                var requestBody = new
+                {
+                    model = "gpt-4o",
+                    messages = new[]
+                    {
+                        new { role = "system", content = sysContent },
+                        new { role = "user", content = sourceLanStr }
+                    },
+                    max_tokens = 10000
+                };
+
+                // 调用 ChatGPT API
+                var response = ChatGptApiClient.CallApiAsync(requestBody, apiKey).GetAwaiter().GetResult();
+
+                // 解析返回结果
+                return ParseResponse(response);
+            }
+            catch (Exception ex)
+            {
+                // 捕获异常并返回错误信息
+                return $"Error: {ex.Message}";
+            }
+        });
+    }
+
+    // 处理输入范围数据
+    private static string ProcessInputRange(object[,] inputRange, string ignoreValue, string delimiter)
+    {
+        var result = new List<string>();
+
+        foreach (var item in inputRange)
+        {
+            if (item is ExcelEmpty || item is ExcelError || item.ToString() == ignoreValue)
+            {
+                continue;
+            }
+            result.Add(item.ToString());
+        }
+
+        return string.Join(delimiter, result);
+    }
+
+    // 解析 API 返回的结果
+    private static object[,] ParseResponse(string response)
+    {
+        // 按行拆分字符串
+        string[] rows = response.Split(new[] { "#centRow#" }, StringSplitOptions.RemoveEmptyEntries);
+
+        // 用于存储结果的二维数组
+        var responseGroup = new List<List<object>>();
+
+        // 遍历每一行
+        foreach (string row in rows)
+        {
+            // 按列拆分（#centCol# 是分隔符）
+            object[] columns = row.Split(new[] { "#centCol#" }, StringSplitOptions.RemoveEmptyEntries);
+
+            // 将当前行的列数据添加到结果中
+            responseGroup.Add(new List<object>(columns));
+        }
+
+        // 转换为二维数组
+        return PubMetToExcel.ConvertListToArray(responseGroup);
     }
 }
