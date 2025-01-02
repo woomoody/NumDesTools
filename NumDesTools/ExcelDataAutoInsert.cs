@@ -1915,13 +1915,26 @@ public static class ExcelDataAutoInsertMulti
                 {
                     string[] baseParts = commentValue.Split("#");
                     var cellValue = cellFix.Value?.ToString();
+
+                    int partCount = 0;
                     foreach (var item in baseParts)
                     {
                         var parts = item.Split("-");
                         var replaceValue = parts[0];
-                        var pattern = parts[1];
-                        if (cellValue != null)
-                            cellValue = Regex.Replace(cellValue, pattern, replaceValue);
+                        //备注的全量替换
+                        if (replaceValue.Contains("***"))
+                        {
+                            replaceValue = baseParts[partCount].Replace("***", "");
+                            cellValue = replaceValue;
+                        }
+                        else
+                        {
+                            var pattern = parts[1];
+                            if (cellValue != null)
+                                cellValue = Regex.Replace(cellValue, pattern, replaceValue);
+                        }
+
+                        partCount++;
                     }
 
                     cellFix.Value = cellValue;
@@ -2035,17 +2048,26 @@ public static class ExcelDataAutoInsertMulti
                                 {
                                     string[] baseParts = commentValue.Split("#");
                                     var cellValue = cellFix.Value?.ToString();
+
+                                    int partCount = 0;
                                     foreach (var item in baseParts)
                                     {
                                         var parts = item.Split("-");
                                         var replaceValue = parts[0];
-                                        var pattern = parts[1];
-                                        if (cellValue != null)
-                                            cellValue = Regex.Replace(
-                                                cellValue,
-                                                pattern,
-                                                replaceValue
-                                            );
+                                        //备注的全量替换
+                                        if (replaceValue.Contains("***"))
+                                        {
+                                            replaceValue = baseParts[partCount].Replace("***", "");
+                                            cellValue = replaceValue;
+                                        }
+                                        else
+                                        {
+                                            var pattern = parts[1];
+                                            if (cellValue != null)
+                                                cellValue = Regex.Replace(cellValue, pattern, replaceValue);
+                                        }
+
+                                        partCount++;
                                     }
 
                                     cellFix.Value = cellValue;
@@ -2532,13 +2554,25 @@ public static class ExcelDataAutoInsertMultiNew
                     }
                     string[] baseParts = replaceValueCheck.Split("#");
                     var cellValue = replaceCell.Value?.ToString() ?? "";
+
+                    int partCount = 0;
                     foreach (var item in baseParts)
                     {
                         var parts = item.Split("-");
                         var replaceValue = parts[0];
-                        var pattern = parts[1];
-                        if (cellValue != null)
-                            cellValue = Regex.Replace(cellValue, pattern, replaceValue);
+                        //备注的全量替换
+                        if (replaceValue.Contains("***"))
+                        {
+                            replaceValue = baseParts[partCount].Replace("***", "");
+                            cellValue = replaceValue;
+                        }
+                        else
+                        {
+                            var pattern = parts[1];
+                            if (cellValue != null)
+                                cellValue = Regex.Replace(cellValue, pattern, replaceValue);
+                        }
+                        partCount++;
                     }
                     replaceCell.Value = cellValue;
                 }

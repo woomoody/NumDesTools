@@ -16,8 +16,16 @@ public class GlobalVariable
             { "CellHiLightText", "高亮单元格：关闭" },
             { "CheckSheetValueText", "数据自检：开启" },
             { "ShowDnaLogText", "插件日志：关闭" },
-            { "ShowChatGptText", "ChatGPT：关闭" },
+            { "ShowAIText", "AI对话：关闭" },
+            { "ApiKey" , ""},
+            { "ApiUrl" , ""},
+            { "ApiModel" , ""},
             { "ChatGptApiKey", "***" },
+            { "ChatGptApiUrl", "https://api.openai.com/v1/chat/completions"},
+            { "ChatGptApiModel", "gpt-4o"},
+            { "DeepSeektApiKey" , "***"},
+            { "DeepSeektApiUrl" , "https://api.deepseek.com/v1"},
+            { "DeepSeektApiModel", "deepseek-chat"},
             { "ChatGptSysContentExcelAss", "你是一个助手，特别擅长回答Excel的各项功能" },
             { "ChatGptSysContentTransferAss", "你是一个助手，特别擅长多种语言的翻译工作，你的回答中只会输出指定的翻译后的内容，不掺杂别的解释，" +
                                               "输入文本以【#cent#】为标识符区分文本的键值" +

@@ -185,9 +185,14 @@
                     <button id='Button_LoopRun' size='large' label='移动转盘' image='key' screentip='移动转盘随机方案机选'
                             onAction='LoopRun_Click' />
                 </group>
-                <group id='GroupChatGPT' label='ChatGPT'>
-                    <button id='ShowChatGpt' size='large' getLabel='GetLableText' image='csharp' 
-                            onAction='ShowChatGpt_Click' />
+                <group id='GroupAI' label='AI聚合'>
+                    <button id='ShowAI' size='large' getLabel='GetLableText' image='csharp' 
+                            onAction='ShowAIText_Click' />
+                    <dropDown id="AIConfig" label="AI配置选择" onAction="AIConfig_Select"
+                              getSelectedItemID ="AIConfig_Select_Default" >
+                        <item id="ChatGPT" label="ChatGPT-4o模型" />
+                        <item id="DeepSeek" label="DeepSeek-V3模型（url404)" />
+                     </dropDown>
                 </group>
                 <group id='Group9999' label='测试功能区'>
                     <button id='Button99991' size='large' label='不要点击红色按钮' image='sofa' onAction='TestBar1_Click' />

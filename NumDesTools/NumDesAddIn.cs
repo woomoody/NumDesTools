@@ -2,6 +2,7 @@
 global using System.Collections.Generic;
 global using System.Diagnostics;
 global using System.Drawing;
+global using System.Globalization;
 global using System.IO;
 global using System.Linq;
 global using System.Reflection;
@@ -23,7 +24,6 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
-global using System.Globalization;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using NPOI.SS.UserModel;
@@ -37,7 +37,6 @@ using LicenseContext = OfficeOpenXml.LicenseContext;
 using Panel = System.Windows.Forms.Panel;
 using Process = System.Diagnostics.Process;
 using TabControl = System.Windows.Forms.TabControl;
-
 
 #pragma warning disable CA1416
 
@@ -59,10 +58,22 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public static string TempPath = _globalValue.Value["TempPath"];
     public static string CheckSheetValueText = _globalValue.Value["CheckSheetValueText"];
     public static string ShowDnaLogText = _globalValue.Value["ShowDnaLogText"];
-    public static string ShowChatGptText = _globalValue.Value["ShowChatGptText"];
+    public static string ShowAiText = _globalValue.Value["ShowAIText"];
+    public static string ApiKey = _globalValue.Value["ApiKey"];
+    public static string ApiUrl = _globalValue.Value["ApiUrl"];
+    public static string ApiModel = _globalValue.Value["ApiModel"];
     public static string ChatGptApiKey = _globalValue.Value["ChatGptApiKey"];
-    public static string ChatGptSysContentExcelAss = _globalValue.Value["ChatGptSysContentExcelAss"];
-    public static string ChatGptSysContentTransferAss = _globalValue.Value["ChatGptSysContentTransferAss"];
+    public static string ChatGptApiUrl = _globalValue.Value["ChatGptApiUrl"];
+    public static string ChatGptApiModel = _globalValue.Value["ChatGptApiModel"];
+    public static string DeepSeektApiKey = _globalValue.Value["DeepSeektApiKey"];
+    public static string DeepSeektApiUrl = _globalValue.Value["DeepSeektApiUrl"];
+    public static string DeepSeektApiModel = _globalValue.Value["DeepSeektApiModel"];
+    public static string ChatGptSysContentExcelAss = _globalValue.Value[
+        "ChatGptSysContentExcelAss"
+    ];
+    public static string ChatGptSysContentTransferAss = _globalValue.Value[
+        "ChatGptSysContentTransferAss"
+    ];
 
     public static CommandBarButton Btn;
     public static Application App = (Application)ExcelDnaUtil.Application;
@@ -80,7 +91,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private TabControl _tabControl = new();
 
     private SheetListControl _sheetMenuCtp;
-    private static GptTaskPanel _chatGptMenuCtp;
+    private static AiChatTaskPanel _chatAiChatMenuCtp;
 
     #region 释放COM
 
@@ -188,7 +199,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "CellHiLight" => CellHiLightText,
             "CheckSheetValue" => CheckSheetValueText,
             "ShowDnaLog" => ShowDnaLogText,
-            "ShowChatGpt" => ShowChatGptText,
+            "ShowAI" => ShowAiText,
             _ => ""
         };
         return latext;
@@ -240,7 +251,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.OnKey("^%l");
     }
 
-#endregion
+    #endregion
 
     #region Ribbon快捷键命令，固定快捷键，不可自定义修改
 
@@ -260,7 +271,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         try
         {
             // 提取匹配的文本内容
-            var matchedTexts = selectedRange.Cast<Range>().Select(cell => cell.Text.ToString() ?? "").ToList();
+            var matchedTexts = selectedRange
+                .Cast<Range>()
+                .Select(cell => cell.Text.ToString() ?? "")
+                .ToList();
 
             // 打开自定义窗口进行编辑
             var editorWindow = new SuperFindAndReplaceWindow(matchedTexts);
@@ -300,7 +314,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
                 // 将二维数组赋值回选中区域
                 selectedRange.Value2 = updatedValues;
-
 
                 LogDisplay.RecordLine(
                     "[{0}] , {1}",
@@ -430,7 +443,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 string Caption,
                 MsoButtonStyle Style,
                 Microsoft.Office.Core._CommandBarButtonEvents_ClickEventHandler Handler
-                )>
+            )>
             {
                 // 根据条件添加按钮配置
                 sheetName.Contains("【模板】")
@@ -809,11 +822,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 {
                     MessageBox.Show(
                         filesName
-                        + @"导出完成!用时:"
-                        + Math.Round(milliseconds / 1000, 2)
-                        + @"秒"
-                        + @"\n"
-                        + @"转完建议重启Excel！"
+                            + @"导出完成!用时:"
+                            + Math.Round(milliseconds / 1000, 2)
+                            + @"秒"
+                            + @"\n"
+                            + @"转完建议重启Excel！"
                     );
                 }
 
@@ -884,9 +897,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         cellAdress = cellAdress.Substring(0, cellAdress.LastIndexOf("$") + 1) + "7";
         if (fileTemp != null)
         {
-            if (fileTemp.Contains("@"))
-            {
-            }
+            if (fileTemp.Contains("@")) { }
             else
             {
                 MessageBox.Show(@"没有找到关联表格" + cellAdress + @"是[" + fileTemp + @"]格式不对：xxx@xxx");
@@ -1127,9 +1138,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
     }
 
-    public void SvnCommitExcel_Click(IRibbonControl control)
-    {
-    }
+    public void SvnCommitExcel_Click(IRibbonControl control) { }
 
     public void SvnCommitTxt_Click(IRibbonControl control)
     {
@@ -1881,7 +1890,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         sw.Stop();
         var ts2 = sw.Elapsed;
 
-
         //App.Visible = false;
         //App.ScreenUpdating = false;
         //App.DisplayAlerts = false;
@@ -2571,30 +2579,32 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         _globalValue.SaveValue("ShowDnaLogText", ShowDnaLogText);
     }
+
     public void ShowDnaLog_Click(IRibbonControl control)
     {
         if (control == null)
             throw new ArgumentNullException(nameof(control));
         ShowDnaLog();
     }
+
     //打开插件ChatGPT窗口
     [ExcelCommand]
-    public static void ShowChatGpt()
+    public static void ShowAi()
     {
-        ShowChatGptText = ShowChatGptText == "ChatGPT：开启" ? "ChatGPT：关闭" : "ChatGPT：开启";
-        CustomRibbon.InvalidateControl("ShowChatGpt");
+        ShowAiText = ShowAiText == "AI对话：开启" ? "AI对话：关闭" : "AI对话：开启";
+        CustomRibbon.InvalidateControl("ShowAI");
 
-        var ctpName = "ChatGPT-Excel";
-        if (ShowChatGptText == "ChatGPT：开启")
+        var ctpName = "AI对话-Excel";
+        if (ShowAiText == "AI对话：开启")
         {
             NumDesCTP.DeleteCTP(true, ctpName);
-            _chatGptMenuCtp = (GptTaskPanel)
+            _chatAiChatMenuCtp = (AiChatTaskPanel)
                 NumDesCTP.ShowCTP(
-                    600,
-                     ctpName,
+                    800,
+                    ctpName,
                     true,
                     ctpName,
-                    new GptTaskPanel(),
+                    new AiChatTaskPanel(),
                     MsoCTPDockPosition.msoCTPDockPositionRight
                 );
         }
@@ -2603,13 +2613,51 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, ctpName);
         }
 
-        _globalValue.SaveValue("ShowChatGptText", ShowDnaLogText);
+        _globalValue.SaveValue("ShowAIText", ShowAiText);
     }
-    public void ShowChatGpt_Click(IRibbonControl control)
+
+    public void ShowAIText_Click(IRibbonControl control)
     {
         if (control == null)
             throw new ArgumentNullException(nameof(control));
-        ShowChatGpt();
+        ShowAi();
+    }
+
+    public void AIConfig_Select(IRibbonControl control, string selectedId, int selectedIndex)
+    {
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
+
+        if (selectedId == "ChatGPT")
+        {
+            ApiKey = ChatGptApiKey;
+            ApiUrl = ChatGptApiUrl;
+            ApiModel = ChatGptApiModel;
+        }
+        else if (selectedId == "DeepSeek")
+        {
+            ApiKey = DeepSeektApiKey;
+            ApiUrl = DeepSeektApiUrl;
+            ApiModel = DeepSeektApiModel;
+        }
+        _globalValue.SaveValue("ApiKey", ApiKey);
+        _globalValue.SaveValue("ApiUrl", ApiUrl);
+        _globalValue.SaveValue("ApiModel", ApiModel);
+    }
+
+    public string AIConfig_Select_Default(IRibbonControl control)
+    {
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
+        ApiKey = ChatGptApiKey;
+        ApiUrl = ChatGptApiUrl;
+        ApiModel = ChatGptApiModel;
+
+        _globalValue.SaveValue("ApiKey", ApiKey);
+        _globalValue.SaveValue("ApiUrl", ApiUrl);
+        _globalValue.SaveValue("ApiModel", ApiModel);
+
+        return "ChatGPT";
     }
 
     public void CheckFileFormat_Click(IRibbonControl control)
