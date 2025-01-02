@@ -262,41 +262,39 @@ public class SelfGetRangePixels
 //自定义ChatGptApi
 public class ChatGptApiClient
 {
-    private const string _apiUrl = "https://api.openai.com/v1/chat/completions";
 
-    public static async Task<string> CallApiAsync(object requestBody, string apiKey)
+    public static async Task<string> CallApiAsync(object requestBody, string apiKey, string apiUrl)
     {
         if (string.IsNullOrEmpty(apiKey))
         {
             throw new ArgumentException("API 密钥不能为空。");
         }
 
-        using (HttpClient client = new HttpClient())
+        using HttpClient client = new HttpClient();
+
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+        string jsonBody = JsonConvert.SerializeObject(requestBody);
+        var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+
+        HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+
+        if (response.IsSuccessStatusCode)
         {
-            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+            string responseContent = await response.Content.ReadAsStringAsync();
+            dynamic jsonResponse = JsonConvert.DeserializeObject(responseContent);
 
-            string jsonBody = JsonConvert.SerializeObject(requestBody);
-            var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-
-            HttpResponseMessage response = await client.PostAsync(_apiUrl, content);
-
-            if (response.IsSuccessStatusCode)
+            if (jsonResponse != null && (jsonResponse.choices == null || jsonResponse.choices.Count == 0))
             {
-                string responseContent = await response.Content.ReadAsStringAsync();
-                dynamic jsonResponse = JsonConvert.DeserializeObject(responseContent);
-
-                if (jsonResponse.choices == null || jsonResponse.choices.Count == 0)
-                {
-                    throw new Exception("API 响应中没有返回有效的 choices 数据。");
-                }
-
-                return jsonResponse.choices[0].message.content.ToString();
+                throw new Exception("API 响应中没有返回有效的 choices 数据。");
             }
-            else
-            {
-                string errorContent = await response.Content.ReadAsStringAsync();
-                throw new Exception($"API 调用失败，状态码：{response.StatusCode}，错误信息：{errorContent}");
-            }
+
+            return jsonResponse?.choices[0].message.content.ToString();
+        }
+        else
+        {
+            string errorContent = await response.Content.ReadAsStringAsync();
+            throw new Exception($"API 调用失败，状态码：{response.StatusCode}，错误信息：{errorContent}");
         }
     }
 }

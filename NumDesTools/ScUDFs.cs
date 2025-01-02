@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 using NPOI.XSSF.UserModel;
 using static System.String;
@@ -1473,8 +1472,10 @@ public class ExcelUdf
         {
             try
             {
-                // 获取 API Key
-                var apiKey = NumDesAddIn.ChatGptApiKey;
+                // 获取 API Key、Url 、model
+                var apiKey = NumDesAddIn.ApiKey;
+                var apiUrl = NumDesAddIn.ApiUrl;
+                var apiModel = NumDesAddIn.ApiModel;
 
                 // 处理 sourceLan 数据
                 var sourceLanStr = ProcessInputRange(sourceLan, ignoreValue, "#centRow#");
@@ -1488,7 +1489,7 @@ public class ExcelUdf
                 // 构造请求体
                 var requestBody = new
                 {
-                    model = "gpt-4o",
+                    model = apiModel,
                     messages = new[]
                     {
                         new { role = "system", content = sysContent },
@@ -1498,7 +1499,7 @@ public class ExcelUdf
                 };
 
                 // 调用 ChatGPT API
-                var response = ChatGptApiClient.CallApiAsync(requestBody, apiKey).GetAwaiter().GetResult();
+                var response = ChatGptApiClient.CallApiAsync(requestBody, apiKey , apiUrl).GetAwaiter().GetResult();
 
                 // 解析返回结果
                 return ParseResponse(response);
