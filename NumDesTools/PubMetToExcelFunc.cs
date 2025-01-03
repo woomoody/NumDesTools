@@ -1328,6 +1328,7 @@ public static class PubMetToExcelFunc
 
     public static void FormularBaseCheck()
     {
+  
         var app = NumDesAddIn.App;
         var wk = app.ActiveWorkbook;
         var basePath = wk.Path;
@@ -1377,7 +1378,7 @@ public static class PubMetToExcelFunc
             {
                 var fileName = Path.GetFileName(link);
                 var filePath = Path.GetDirectoryName(link);
-                var newLink = filePath + @"\[" + fileName + @"]";
+                var newLink = filePath + @"[" + fileName + @"]";
                 needFixLinks.Add(newLink);
             }
         }
@@ -1394,6 +1395,7 @@ public static class PubMetToExcelFunc
             if (replaceFixLinks != null)
             {
                 NumDesAddIn.App.ScreenUpdating = false;
+
                 // 遍历所有工作表
                 foreach (Worksheet worksheet in wk.Worksheets)
                 {
@@ -1417,8 +1419,19 @@ public static class PubMetToExcelFunc
                             {
                                 var oldFor = needFixLinks[indexFor];
                                 var newFor = replaceFixLinks[indexFor];
-                                // 替换公式样式
-                                newFormula = newFormula.Replace(oldFor, newFor);
+
+                                var checkNewFor = newFor.Replace("[", "").Replace("]", "");
+                                if (baseFilePathList.Contains(checkNewFor))
+                                {
+                                    // 替换公式样式
+                                    newFormula = newFormula.Replace(oldFor, newFor);
+                                }
+                                else
+                                {
+                                    //修改的公式也是错的，跳过
+                                    MessageBox.Show("修改的公式也是错误的，执行失败");
+                                    return;
+                                }
                             }
 
                             if (originalFormula != newFormula)
@@ -1457,6 +1470,7 @@ public static class PubMetToExcelFunc
                 NumDesAddIn.App.ScreenUpdating = true;
             }
         }
+
     }
 
     public static void LoopRunCac(string sheetName)
