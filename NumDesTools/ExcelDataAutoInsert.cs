@@ -2244,6 +2244,37 @@ public static class ExcelDataAutoInsertMultiNew
         _specialReplaceValueCol = _title.IndexOf("专属替换");
         _replaceValues = _data[2][_baseIdCol];
 
+        //记录日志
+        LogDisplay.RecordLine("[{0}] , 【表名】所在列：{1}",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            _sheetNameCol);
+        LogDisplay.RecordLine("[{0}] , 【初始模板】所在列：{1}",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            _sheetNameCol);
+        LogDisplay.RecordLine("[{0}] , 【实际模板(上一期)】所在列：{1}",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            _sheetNameCol);
+        LogDisplay.RecordLine("[{0}] , 【修改字段】所在列：{1}",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            _sheetNameCol);
+        LogDisplay.RecordLine("[{0}] , 【模板期号】所在列：{1}",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            _sheetNameCol);
+        LogDisplay.RecordLine("[{0}] , 【创建期号】所在列：{1}",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            _sheetNameCol);
+        LogDisplay.RecordLine("[{0}] , 【初始备注】所在列：{1}",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            _sheetNameCol);
+        LogDisplay.RecordLine("[{0}] , 【当前备注】所在列：{1}",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            _sheetNameCol);
+        LogDisplay.RecordLine("[{0}] , 【专属替换】所在列：{1}",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            _sheetNameCol);
+
+
+
         _colorCell = _sheet.Cells[6, 1];
         _cellColor = PubMetToExcel.GetCellBackgroundColor(_colorCell);
         _addValue = (int)_data[0][_creatIdCol] - (int)_data[0][_baseIdCol];
