@@ -2601,7 +2601,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, ctpName);
             _chatAiChatMenuCtp = (AiChatTaskPanel)
                 NumDesCTP.ShowCTP(
-                    800,
+                    1000,
                     ctpName,
                     true,
                     ctpName,
