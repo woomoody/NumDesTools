@@ -238,6 +238,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         //添加快捷键触发,可以自定义快捷键，例如： Ctrl+Alt+L
         App.OnKey("^%l", "ShowDnaLog");
+
     }
 
     void IExcelAddIn.AutoClose()

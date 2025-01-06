@@ -1,9 +1,11 @@
-﻿using System.Threading.Tasks;
+﻿using System.Runtime.ConstrainedExecution;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Input;
 using Brushes = System.Windows.Media.Brushes;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+
 
 namespace NumDesTools.UI
 {
@@ -15,7 +17,7 @@ namespace NumDesTools.UI
         private readonly string _userName = Environment.UserName;
         private readonly string _sysContent;
 
-        private const string DefaultPromptText = "Enter发送，Shift + Enter换行"; // 输入框默认文本
+        private const string DefaultPromptText = "Enter发送，Shift + Enter换行，聊天框内容复制使用右键"; // 输入框默认文本
 
         public AiChatTaskPanel()
         {
@@ -41,7 +43,10 @@ namespace NumDesTools.UI
             InitializeTextEditors();
 
             InitializeHtmlTemplate();
+
+
         }
+ 
 
         private void InitializeHtmlTemplate()
         {
@@ -154,7 +159,7 @@ namespace NumDesTools.UI
             }
         }
 
-        private void ProcessInput()
+        private async void ProcessInput()
         {
             string userInput = PromptInput.Document.Text.Trim();
             if (string.IsNullOrEmpty(userInput))
@@ -164,9 +169,7 @@ namespace NumDesTools.UI
             {
                 var requestBody = CreateRequestBody(userInput);
 
-                string response = Task.Run(
-                    () => ChatGptApiClient.CallApiAsync(requestBody, _apiKey, _apiUrl)
-                ).Result;
+                string response = await ChatGptApiClient.CallApiAsync(requestBody, _apiKey, _apiUrl);
 
                 AppendToOutput(_userName, userInput, isUser: true);
                 AppendToOutput(_apiModel, response, isUser: false);
@@ -197,7 +200,7 @@ namespace NumDesTools.UI
 
         private void AppendToOutput(string role, string message, bool isUser)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.BeginInvoke(() =>
             {
                 dynamic doc = ResponseOutput.Document;
                 dynamic body = doc?.body;
@@ -205,7 +208,7 @@ namespace NumDesTools.UI
                 if (body != null)
                 {
                     // 将 Markdown 转换为 HTML
-                    string htmlMessage = Markdig.Markdown.ToHtml(message);
+                    string htmlMessage = Markdig.Markdown.ToHtml(System.Web.HttpUtility.HtmlEncode(message));
 
                     string messageHtml = $@"
                     <div class='message {(isUser ? "user" : "system")}'>
