@@ -56,7 +56,7 @@ namespace NumDesTools.UI
             <meta charset='utf-8'>
             <style>
                 body {
-                    background-color: #1e1e1e;
+                    background-color: #1c1c1c;
                     color: white;
                     font-family: 微软雅黑, monospace;
                     line-height: 1.6;
