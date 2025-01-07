@@ -5,7 +5,7 @@
 /// </summary>
 public class GlobalVariable
 {
-    private readonly Dictionary<string, string> _defaultValue =
+    public  readonly Dictionary<string, string> _defaultValue =
         new()
         {
             { "LabelText", "放大镜：关闭" },
@@ -24,17 +24,13 @@ public class GlobalVariable
             { "ChatGptApiUrl", "https://api.openai.com/v1/chat/completions"},
             { "ChatGptApiModel", "gpt-4o"},
             { "DeepSeektApiKey" , "***"},
-            { "DeepSeektApiUrl" , "https://api.deepseek.com/v1"},
-            { "DeepSeektApiModel", "deepseek-chat"},
-            { "ChatGptSysContentExcelAss", "你是一个助手，特别擅长回答Excel的各项功能" },
-            { "ChatGptSysContentTransferAss", "你是一个助手，特别擅长多种语言的翻译工作，你的回答中只会输出指定的翻译后的内容，不掺杂别的解释，" +
-                                              "输入文本以【#cent#】为标识符区分文本的键值" +
-                                              "输出文本需要根据所需翻译的语言种类作为键值的不同值" +
-                                              "输入的内容需要遵循json格式"
-            }
+            { "DeepSeektApiUrl" , "https://api.deepseek.com/v1/chat/completions"},
+            { "DeepSeektApiModel", "deepseek-coder"},
+            { "ChatGptSysContentExcelAss", "你是一个代码和办公助手，特别擅长回答Excel的公式以及代码编写，特别擅长C#，打印输出不要使用控制台，使用：Debug.Print，判断需要记录日志，使用：LogDisplay.RecordLine(\r\n \"[{0}] , {1}\",\r\n DateTime.Now.ToString(CultureInfo.InvariantCulture),\r\n$\"{selectedRange.Count}\"\r\n);" },
+            { "ChatGptSysContentTransferAss", "你是一个助手，特别擅长多种语言的翻译工作,你的回答中只会输出指定的翻译后的内容，不掺杂其他解释， 根据输入内容中的换行符，作为行的分界线，所需要翻译语言的种类为列的分界线，输出的翻译结果格式为Json的嵌套数组，格式如下：[[\"A语言译文1\",\"A语言译文2\"],[\"B语言译文1\",\"B语言译文2\"]]" }
         };
 
-    private readonly string _filePath = Path.Combine(
+    public  readonly  string _filePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
         "NumDesGlobalKey.txt"
     );
@@ -61,7 +57,7 @@ public class GlobalVariable
                     if (_defaultValue.ContainsKey(key))
                     {
                         //共有的Key以文件内容为准
-                        _defaultValue[key] = value;
+                        Value[key] = value;
                     }
                     else
                     {
@@ -104,6 +100,22 @@ public class GlobalVariable
 
     public void SaveValue(string key, string value)
     {
+
+        ReadValue();
+
+        // 更新指定的键值对
+        if (_defaultValue.ContainsKey(key))
+            Value[key] = value;
+
+        // 将更新后的 _defaultValue 写回文件
+        var updatedLines = new List<string>();
+        foreach (var kvp in Value)
+            updatedLines.Add($"{kvp.Key} = {kvp.Value}");
+        File.WriteAllLines(_filePath, updatedLines);
+    }
+
+    public void ReadValue()
+    {
         // 读取文件中的数据并更新 _defaultValue
         if (File.Exists(_filePath))
         {
@@ -116,19 +128,9 @@ public class GlobalVariable
                     var fileKey = parts[0].Trim();
                     var fileValue = parts[1].Trim();
                     if (_defaultValue.ContainsKey(fileKey))
-                        _defaultValue[fileKey] = fileValue;
+                        Value[fileKey] = fileValue;
                 }
             }
         }
-
-        // 更新指定的键值对
-        if (_defaultValue.ContainsKey(key))
-            _defaultValue[key] = value;
-
-        // 将更新后的 _defaultValue 写回文件
-        var updatedLines = new List<string>();
-        foreach (var kvp in _defaultValue)
-            updatedLines.Add($"{kvp.Key} = {kvp.Value}");
-        File.WriteAllLines(_filePath, updatedLines);
     }
 }

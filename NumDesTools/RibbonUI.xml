@@ -165,8 +165,9 @@
                 </group>
                 <group id='NormalFun' label='杂项'>
                     <button id='ShowDnaLog' size='large' getLabel='GetLableText' image='ejs' 
-                            onAction='ShowDnaLog_Click' 
-                           />
+                            onAction='ShowDnaLog_Click'          />
+                    <button id='GlobalVariableDefault' size='large' getLabel='GetLableText' image='vscode' 
+                            onAction='GlobalVariableDefault_Click'      />
                 </group>
                 <!--
                 <group id='Group4' label='战斗仿真'>控件id不能重复，否则无法加载Ribbon
@@ -191,7 +192,7 @@
                     <dropDown id="AIConfig" label="AI配置选择" onAction="AIConfig_Select"
                               getSelectedItemID ="AIConfig_Select_Default" >
                         <item id="ChatGPT" label="ChatGPT-4o模型" />
-                        <item id="DeepSeek" label="DeepSeek-V3模型（url404)" />
+                        <item id="DeepSeek" label="DeepSeek-V3模型" />
                      </dropDown>
                 </group>
                 <group id='Group9999' label='测试功能区'>

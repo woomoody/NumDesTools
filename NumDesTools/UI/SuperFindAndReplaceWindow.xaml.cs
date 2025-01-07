@@ -126,7 +126,7 @@ namespace NumDesTools.UI
 
         public TextMarkerService(TextView textView)
         {
-            this._textView = textView;
+            _textView = textView;
             _markers = new TextSegmentCollection<TextMarker>(textView.Document);
         }
 

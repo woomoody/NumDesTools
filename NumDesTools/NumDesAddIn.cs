@@ -238,7 +238,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         //添加快捷键触发,可以自定义快捷键，例如： Ctrl+Alt+L
         App.OnKey("^%l", "ShowDnaLog");
-
     }
 
     void IExcelAddIn.AutoClose()
@@ -2598,6 +2597,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var ctpName = "AI对话-Excel";
         if (ShowAiText == "AI对话：开启")
         {
+            _globalValue.ReadValue();
+
             NumDesCTP.DeleteCTP(true, ctpName);
             _chatAiChatMenuCtp = (AiChatTaskPanel)
                 NumDesCTP.ShowCTP(
@@ -2629,17 +2630,19 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (control == null)
             throw new ArgumentNullException(nameof(control));
 
+        _globalValue.ReadValue();
+
         if (selectedId == "ChatGPT")
         {
-            ApiKey = ChatGptApiKey;
-            ApiUrl = ChatGptApiUrl;
-            ApiModel = ChatGptApiModel;
+            ApiKey = _globalValue.Value["ChatGptApiKey"];
+            ApiUrl = _globalValue.Value["ChatGptApiUrl"];
+            ApiModel = _globalValue.Value["ChatGptApiModel"];
         }
         else if (selectedId == "DeepSeek")
         {
-            ApiKey = DeepSeektApiKey;
-            ApiUrl = DeepSeektApiUrl;
-            ApiModel = DeepSeektApiModel;
+            ApiKey = _globalValue.Value["DeepSeektApiKey"];
+            ApiUrl = _globalValue.Value["DeepSeektApiUrl"];
+            ApiModel = _globalValue.Value["DeepSeektApiModel"];
         }
         _globalValue.SaveValue("ApiKey", ApiKey);
         _globalValue.SaveValue("ApiUrl", ApiUrl);
@@ -2650,15 +2653,110 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         if (control == null)
             throw new ArgumentNullException(nameof(control));
-        ApiKey = ChatGptApiKey;
-        ApiUrl = ChatGptApiUrl;
-        ApiModel = ChatGptApiModel;
-
-        _globalValue.SaveValue("ApiKey", ApiKey);
-        _globalValue.SaveValue("ApiUrl", ApiUrl);
-        _globalValue.SaveValue("ApiModel", ApiModel);
-
+        if (ApiKey == "" || ApiKey == ChatGptApiKey)
+        {
+            ApiKey = ChatGptApiKey;
+            ApiUrl = ChatGptApiUrl;
+            ApiModel = ChatGptApiModel;
+            _globalValue.SaveValue("ApiKey", ApiKey);
+            _globalValue.SaveValue("ApiUrl", ApiUrl);
+            _globalValue.SaveValue("ApiModel", ApiModel);
+            return "ChatGPT";
+        }
+        if (ApiKey == DeepSeektApiKey)
+        {
+            ApiKey = DeepSeektApiKey;
+            ApiUrl = DeepSeektApiUrl;
+            ApiModel = DeepSeektApiModel;
+            _globalValue.SaveValue("ApiKey", ApiKey);
+            _globalValue.SaveValue("ApiUrl", ApiUrl);
+            _globalValue.SaveValue("ApiModel", ApiModel);
+            return "DeepSeek";
+        }
         return "ChatGPT";
+    }
+
+    //全局变量恢复为默认值
+    public void GlobalVariableDefault_Click(IRibbonControl control)
+    {
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
+
+        var lines = new List<string>();
+        foreach (var kvp in _globalValue._defaultValue)
+            lines.Add($"{kvp.Key} = {kvp.Value}");
+
+        // 弹出确认对话框
+        var result = MessageBox.Show(
+            "确定全局变量回滚到默认？所有自定义设置都会丢失！",
+            "确认操作",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning
+        );
+
+        // 如果用户选择 "No"，则直接返回，不执行后续操作
+        if (result != DialogResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            // 清空文件
+            File.WriteAllLines(_globalValue._filePath, Array.Empty<string>());
+
+            // 重写文件内容
+            File.WriteAllLines(_globalValue._filePath, lines);
+
+            // 重置全局变量
+            ResetGlobalVariables();
+
+            // 刷新 Ribbon 控件
+            RefreshRibbonControls();
+        }
+        catch (Exception ex)
+        {
+            // 捕获异常并显示错误信息
+            MessageBox.Show($"重置失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    // 重置全局变量的方法
+    private void ResetGlobalVariables()
+    {
+        LabelText = _globalValue._defaultValue["LabelText"];
+        FocusLabelText = _globalValue._defaultValue["FocusLabelText"];
+        LabelTextRoleDataPreview = _globalValue._defaultValue["LabelTextRoleDataPreview"];
+        SheetMenuText = _globalValue._defaultValue["SheetMenuText"];
+        CellHiLightText = _globalValue._defaultValue["CellHiLightText"];
+        TempPath = _globalValue._defaultValue["TempPath"];
+        CheckSheetValueText = _globalValue._defaultValue["CheckSheetValueText"];
+        ShowDnaLogText = _globalValue._defaultValue["ShowDnaLogText"];
+        ShowAiText = _globalValue._defaultValue["ShowAIText"];
+        ApiKey = _globalValue._defaultValue["ApiKey"];
+        ApiUrl = _globalValue._defaultValue["ApiUrl"];
+        ApiModel = _globalValue._defaultValue["ApiModel"];
+        ChatGptApiKey = _globalValue._defaultValue["ChatGptApiKey"];
+        ChatGptApiUrl = _globalValue._defaultValue["ChatGptApiUrl"];
+        ChatGptApiModel = _globalValue._defaultValue["ChatGptApiModel"];
+        DeepSeektApiKey = _globalValue._defaultValue["DeepSeektApiKey"];
+        DeepSeektApiUrl = _globalValue._defaultValue["DeepSeektApiUrl"];
+        DeepSeektApiModel = _globalValue._defaultValue["DeepSeektApiModel"];
+        ChatGptSysContentExcelAss = _globalValue._defaultValue["ChatGptSysContentExcelAss"];
+        ChatGptSysContentTransferAss = _globalValue._defaultValue["ChatGptSysContentTransferAss"];
+    }
+
+    // 刷新 Ribbon 控件的方法
+    private void RefreshRibbonControls()
+    {
+        CustomRibbon.InvalidateControl("Button5");
+        CustomRibbon.InvalidateControl("Button14");
+        CustomRibbon.InvalidateControl("FocusLightButton");
+        CustomRibbon.InvalidateControl("SheetMenu");
+        CustomRibbon.InvalidateControl("CellHiLight");
+        CustomRibbon.InvalidateControl("CheckSheetValue");
+        CustomRibbon.InvalidateControl("ShowDnaLog");
+        CustomRibbon.InvalidateControl("ShowAI");
     }
 
     public void CheckFileFormat_Click(IRibbonControl control)

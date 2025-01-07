@@ -1597,6 +1597,50 @@ public static class PubMetToExcel
         Clipboard.SetText(sb.ToString());
     }
 
+    //数组变为二维化字符串
+    public static string ArrayToArrayStr(object selectValue)
+    {
+        var resultStr = string.Empty;
+
+        if (selectValue is object[,])
+        {
+            // 如果是二维数组
+            var values = (object[,])selectValue;
+            int rows = values.GetLength(0); // 获取行数
+            int cols = values.GetLength(1); // 获取列数
+
+            // 用 StringBuilder 拼接字符串
+            var result = new System.Text.StringBuilder();
+
+            for (int i = 1; i <= rows; i++) // 遍历每一行
+            {
+                for (int j = 1; j <= cols; j++) // 遍历每一列
+                {
+                    var cellValue = values[i, j] ?? ""; // 获取单元格值，处理空值
+                    result.Append(cellValue.ToString()); // 拼接单元格值
+
+                    if (j < cols)
+                    {
+                        result.Append(","); // 列之间用逗号分隔
+                    }
+                }
+                if (i < rows)
+                {
+                    result.AppendLine(); // 行之间换行
+                }
+            }
+
+            resultStr = result.ToString();
+        }
+        else
+        {
+            // 如果是单个值
+            resultStr = selectValue.ToString();
+        }
+
+        return resultStr;
+    }
+
     //Excel多选Range合并为二维数组
 
     public static object[,] MergeRanges(object[] areas, bool mergeByRow)
