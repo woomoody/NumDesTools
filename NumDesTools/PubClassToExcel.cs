@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Data;
 using GraphX.Common.Models;
 using Newtonsoft.Json;
+using NPOI.POIFS.Crypt;
 
 
 
@@ -261,8 +262,8 @@ public class SelfGetRangePixels
     }
 }
 
-//自定义ChatGptApi
-public class ChatGptApiClient
+//自定义ChatApi
+public class ChatApiClient
 {
 
     public static async Task<string> CallApiAsync(object requestBody, string apiKey, string apiUrl)

@@ -1468,52 +1468,102 @@ public class ExcelUdf
     )
     {
         // 使用 ExcelAsyncUtil.Run 实现异步操作
-        return ExcelAsyncUtil.Run("ChatTransfer", new object[] { sourceLan, lanType, addContent, ignoreValue }, () =>
-        {
-            try
+        return ExcelAsyncUtil.Run(
+            "ChatTransfer",
+            new object[] { sourceLan, lanType, addContent, ignoreValue },
+            () =>
             {
-                // 获取 API Key、Url 、model
-                var apiKey = NumDesAddIn.ApiKey;
-                var apiUrl = NumDesAddIn.ApiUrl;
-                var apiModel = NumDesAddIn.ApiModel;
-
-                // 处理 sourceLan 数据
-                var sourceLanStr = ProcessInputRange(sourceLan, ignoreValue, "#centRow#");
-
-                // 处理 lanType 数据
-                var lanTypeStr = ProcessInputRange(lanType, ignoreValue, ",");
-
-                // 构造系统提示内容
-                var sysContent = NumDesAddIn.ChatGptSysContentTransferAss + "翻译为：" + lanTypeStr;
-
-                // 构造请求体
-                var requestBody = new
+                try
                 {
-                    model = apiModel,
-                    messages = new[]
+                    // 获取 API Key、Url 、model
+                    var apiKey = NumDesAddIn.ApiKey;
+                    var apiUrl = NumDesAddIn.ApiUrl;
+                    var apiModel = NumDesAddIn.ApiModel;
+
+                    // 处理 sourceLan 数据
+                    var sourceLanStr = ProcessInputRange(sourceLan, ignoreValue, @"\n");
+
+                    // 处理 lanType 数据
+                    var lanTypeStr = ProcessInputRange(lanType, ignoreValue, ",");
+
+                    // 构造系统提示内容
+                    var sysContent = NumDesAddIn.ChatGptSysContentTransferAss + "翻译为：" + lanTypeStr;
+
+                    // 构造请求体
+                    object requestBody = null;
+                    if (apiModel.Contains("gpt"))
                     {
-                        new { role = "system", content = sysContent },
-                        new { role = "user", content = sourceLanStr }
-                    },
-                    max_tokens = 10000
-                };
+                        requestBody = new
+                        {
+                            model = apiModel,
+                            messages = new[]
+                            {
+                                new { role = "system", content = sysContent },
+                                new { role = "user", content = sourceLanStr }
+                            },
+                            max_tokens = 10000
+                        };
+                    }
+                    else if (apiModel.Contains("deepseek"))
+                    {
+                        requestBody = new
+                        {
+                            model = apiModel,
 
-                // 调用 ChatGPT API
-                var response = ChatGptApiClient.CallApiAsync(requestBody, apiKey , apiUrl).GetAwaiter().GetResult();
+                            messages = new[]
+                            {
+                                new { content = sysContent, role = "system" },
+                                new { content = sourceLanStr, role = "user" }
+                            },
+                            max_tokens = 2048,
+                            frequency_penalty = 0,
+                            presence_penalty = 0,
+                            response_format = new { type = "text" },
+                            stop = (string)null,
+                            stream = false,
+                            stream_options = (object)null,
+                            temperature = 1,
+                            top_p = 1,
+                            tools = (object)null,
+                            tool_choice = "none",
+                            logprobs = false,
+                            top_logprobs = (object)null
+                        };
+                    }
 
-                // 解析返回结果
-                return ParseResponse(response);
+                    // 调用 Chat API
+                    string response = ChatApiClient
+                        .CallApiAsync(requestBody, apiKey, apiUrl)
+                        .GetAwaiter()
+                        .GetResult();
+
+                    // 解析返回结果
+                    var responseList = JsonConvert.DeserializeObject<List<List<object>>>(response);
+
+                    // 使用 LINQ 转置
+                    responseList = responseList[0]
+                        .Select((_, colIndex) => responseList.Select(row => row[colIndex]).ToList())
+                        .ToList();
+
+                    var responseRange = PubMetToExcel.ConvertListToArray(responseList);
+
+                    return responseRange;
+                }
+                catch (Exception ex)
+                {
+                    // 捕获异常并返回错误信息
+                    return $"Error: {ex.Message}";
+                }
             }
-            catch (Exception ex)
-            {
-                // 捕获异常并返回错误信息
-                return $"Error: {ex.Message}";
-            }
-        });
+        );
     }
 
     // 处理输入范围数据
-    private static string ProcessInputRange(object[,] inputRange, string ignoreValue, string delimiter)
+    private static string ProcessInputRange(
+        object[,] inputRange,
+        string ignoreValue,
+        string delimiter
+    )
     {
         var result = new List<string>();
 
@@ -1526,29 +1576,6 @@ public class ExcelUdf
             result.Add(item.ToString());
         }
 
-        return string.Join(delimiter, result);
-    }
-
-    // 解析 API 返回的结果
-    private static object[,] ParseResponse(string response)
-    {
-        // 按行拆分字符串
-        string[] rows = response.Split(new[] { "#centRow#" }, StringSplitOptions.RemoveEmptyEntries);
-
-        // 用于存储结果的二维数组
-        var responseGroup = new List<List<object>>();
-
-        // 遍历每一行
-        foreach (string row in rows)
-        {
-            // 按列拆分（#centCol# 是分隔符）
-            object[] columns = row.Split(new[] { "#centCol#" }, StringSplitOptions.RemoveEmptyEntries);
-
-            // 将当前行的列数据添加到结果中
-            responseGroup.Add(new List<object>(columns));
-        }
-
-        // 转换为二维数组
-        return PubMetToExcel.ConvertListToArray(responseGroup);
+        return Join(delimiter, result);
     }
 }

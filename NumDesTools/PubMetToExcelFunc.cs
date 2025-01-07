@@ -1378,6 +1378,11 @@ public static class PubMetToExcelFunc
             {
                 var fileName = Path.GetFileName(link);
                 var filePath = Path.GetDirectoryName(link);
+                //根目录与非根目录统一格式
+                if (!string.IsNullOrEmpty(filePath) && !filePath.EndsWith(@"\"))
+                {
+                    filePath += @"\";
+                }
                 var newLink = filePath + @"[" + fileName + @"]";
                 needFixLinks.Add(newLink);
             }
@@ -1395,6 +1400,7 @@ public static class PubMetToExcelFunc
             if (replaceFixLinks != null)
             {
                 NumDesAddIn.App.ScreenUpdating = false;
+                NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
 
                 // 遍历所有工作表
                 foreach (Worksheet worksheet in wk.Worksheets)
@@ -1467,7 +1473,9 @@ public static class PubMetToExcelFunc
                     }
                 }
 
+                NumDesAddIn.App.Calculation = XlCalculation.xlCalculationAutomatic;
                 NumDesAddIn.App.ScreenUpdating = true;
+
             }
         }
 

@@ -4,26 +4,23 @@ using System.Windows.Input;
 using Brushes = System.Windows.Media.Brushes;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
-
 namespace NumDesTools.UI
 {
     public partial class AiChatTaskPanel
     {
-        private readonly string _apiKey;
-        private readonly string _apiUrl;
-        private readonly string _apiModel;
-        private readonly string _userName = Environment.UserName;
-        private readonly string _sysContent;
+        private string _apiKey;
+        private string _apiUrl;
+        private string _apiModel;
+        private string _sysContent;
 
-        private const string DefaultPromptText = "Enter发送，Shift + Enter换行，聊天框内容复制使用右键"; // 输入框默认文本
+        private readonly string _userName = Environment.UserName;
+
+        private const string DefaultPromptText =
+            "Enter发送，Shift + Enter换行，聊天框内容复制使用右键\n首字输入###会把当前选择单元格值一并输入"; // 输入框默认文本
 
         public AiChatTaskPanel()
         {
             InitializeComponent();
-            _apiKey = NumDesAddIn.ApiKey;
-            _apiUrl = NumDesAddIn.ApiUrl;
-            _apiModel = NumDesAddIn.ApiModel;
-            _sysContent = NumDesAddIn.ChatGptSysContentExcelAss;
 
             // 禁用 AvalonEdit 默认的 Enter 键行为
             var enterCommandBinding =
@@ -41,70 +38,75 @@ namespace NumDesTools.UI
             InitializeTextEditors();
 
             InitializeHtmlTemplate();
-
-
         }
- 
 
         private void InitializeHtmlTemplate()
         {
-            ResponseOutput.NavigateToString(@"
-        <html>
-        <head>
-            <meta charset='utf-8'>
-            <style>
-                body {
-                    background-color: #1c1c1c;
-                    color: white;
-                    font-family: 微软雅黑, monospace;
-                    line-height: 1.6;
-                    margin: 0;
-                    padding: 10px;
-                }
-                .message {
-                    margin: 10px 0;
-                    padding: 10px;
-                    border-radius: 8px;
-                    max-width: 90%;
-                    word-wrap: break-word;
-                }
-                .user {
-                    background-color: #2d2d30;
-                    border: 1px solid #3e3e42;
-                    text-align: right;
-                    margin-left: 10px;
-                }
-                .system {
-                    background-color: #3e3e42;
-                    border: 1px solid #5a5a5e;
-                    text-align: left;
-                    margin-left: 10px;
-                }
-                .role {
-                    font-weight: bold;
-                    margin-bottom: 5px;
-                }
-                pre {
-                    background-color: #2d2d30;
-                    color: #dcdcdc;
-                    padding: 10px;
-                    border-radius: 8px;
-                    overflow-x: auto;
-                }
-                code {
-                    font-family: 微软雅黑, monospace;
-                    background-color: #2d2d30;
-                    color: #dcdcdc;
-                    padding: 2px 4px;
-                    border-radius: 4px;
-                }
-            </style>
-        </head>
-        <body></body>
-        </html>
-        ");
+            ResponseOutput.NavigateToString(
+                @"
+                    <html>
+                    <head>
+                        <meta charset='utf-8'>
+                        <style>
+                            body {
+                                background-color: #1c1c1c;
+                                color: white;
+                                font-family: 微软雅黑, monospace;
+                                line-height: 1.6;
+                                margin: 0;
+                                padding: 10px;
+                                overflow-y: auto;
+                            }
+                            .message {
+                                margin: 10px 0;
+                                padding: 10px;
+                                border-radius: 8px;
+                                max-width: 90%;
+                                word-wrap: break-word;
+                            }
+                            .user {
+                                background-color: #2d2d30;
+                                border: 1px solid #3e3e42;
+                                margin-left: auto;
+                                margin-right: 10px;
+                                text-align: left;
+                            }
+                            .system {
+                                background-color: #3e3e42;
+                                border: 1px solid #5a5a5e;
+                                text-align: left;
+                                margin-left: 10px;
+                            }
+                            .role {
+                                font-weight: bold;
+                                margin-bottom: 5px;
+                            }
+                            pre {
+                                background-color: #2d2d30;
+                                color: #dcdcdc;
+                                padding: 10px;
+                                border-radius: 8px;
+                                overflow-x: auto;
+                            }
+                            code {
+                                font-family: 微软雅黑, monospace;
+                                background-color: #2d2d30;
+                                color: #dcdcdc;
+                                padding: 2px 4px;
+                                border-radius: 4px;
+                            }
+                        </style>
+                        <script>
+                            function scrollToBottom() {
+                                window.scrollTo(0, document.body.scrollHeight);
+                            }
+                        </script>
+                    </head>
+                    <body></body>
+                    </html>
+                            "
+            );
         }
-
 
         private void InitializeTextEditors()
         {
@@ -159,15 +161,39 @@ namespace NumDesTools.UI
 
         private async void ProcessInput()
         {
+            _apiKey = NumDesAddIn.ApiKey;
+            _apiUrl = NumDesAddIn.ApiUrl;
+            _apiModel = NumDesAddIn.ApiModel;
+
             string userInput = PromptInput.Document.Text.Trim();
+
+            //新增当前单元格选中内容，输入的首字符为/时，识别
+            if (userInput.StartsWith("###"))
+            {
+                var app = NumDesAddIn.App;
+                var selectRange = app.Selection;
+                var selectValue = selectRange.Value2;
+
+                string selectValueStr = PubMetToExcel.ArrayToArrayStr(selectValue);
+
+                userInput = selectValueStr + "," + userInput.Replace("###", "");
+            }
             if (string.IsNullOrEmpty(userInput))
                 return;
 
             try
             {
-                var requestBody = CreateRequestBody(userInput);
+                object requestBody = null;
+                if (_apiModel.Contains("gpt"))
+                {
+                    requestBody = CreateRequestBody(userInput);
+                }
+                else if (_apiModel.Contains("deepseek"))
+                {
+                    requestBody = CreateRequestBodyDeepSeek(userInput);
+                }
 
-                string response = await ChatGptApiClient.CallApiAsync(requestBody, _apiKey, _apiUrl);
+                string response = await ChatApiClient.CallApiAsync(requestBody, _apiKey, _apiUrl);
 
                 AppendToOutput(_userName, userInput, isUser: true);
                 AppendToOutput(_apiModel, response, isUser: false);
@@ -182,17 +208,52 @@ namespace NumDesTools.UI
             PromptInput.Focus(); // 自动聚焦到输入框
         }
 
-        private object CreateRequestBody(string prompt)
+        private object CreateRequestBody(string userInput)
         {
+            _apiModel = NumDesAddIn.ApiModel;
+            _sysContent = NumDesAddIn.ChatGptSysContentExcelAss;
+
             return new
             {
                 model = _apiModel,
                 messages = new[]
                 {
                     new { role = "system", content = _sysContent },
-                    new { role = "user", content = prompt }
+                    new { role = "user", content = userInput }
                 },
-                max_tokens = 2048
+                max_tokens = 2048,     // 最大生成的 token 数量
+                temperature = 0.5,     // 控制生成的随机性
+                top_p = 5,             // 核采样参数
+                stream = false          // 启用流式输出
+            };
+        }
+
+        private object CreateRequestBodyDeepSeek(string userInput)
+        {
+            _apiModel = NumDesAddIn.ApiModel;
+            _sysContent = NumDesAddIn.ChatGptSysContentExcelAss;
+
+            return new
+            {
+                model = _apiModel,
+                messages = new[]
+                {
+                    new { content = _sysContent, role = "system" },
+                    new { content = userInput, role = "user" }
+                },
+                max_tokens = 2048,
+                frequency_penalty = 0,
+                presence_penalty = 0,
+                response_format = new { type = "text" },
+                stop = (string)null,
+                stream = false,
+                stream_options = (object)null,
+                temperature = 1,
+                top_p = 1,
+                tools = (object)null,
+                tool_choice = "none",
+                logprobs = false,
+                top_logprobs = (object)null
             };
         }
 
@@ -200,26 +261,54 @@ namespace NumDesTools.UI
         {
             Dispatcher.BeginInvoke(() =>
             {
-                dynamic doc = ResponseOutput.Document;
-                dynamic body = doc?.body;
+                var doc = ResponseOutput.Document;
 
-                if (body != null)
+                if (doc != null)
                 {
-                    // 将 Markdown 转换为 HTML
-                    string htmlMessage = Markdig.Markdown.ToHtml(System.Web.HttpUtility.HtmlEncode(message));
+                    // 使用反射获取 body 对象
+                    var body = doc.GetType()
+                        .InvokeMember("body", BindingFlags.GetProperty, null, doc, null);
 
-                    string messageHtml = $@"
-                    <div class='message {(isUser ? "user" : "system")}'>
-                        <div class='role'>{role}</div>
-                        <div>{htmlMessage}</div>
-                    </div>";
+                    if (body != null)
+                    {
+                        // 获取当前的 innerHTML
+                        string currentHtml = body.GetType()
+                            .InvokeMember("innerHTML", BindingFlags.GetProperty, null, body, null)
+                            ?.ToString();
 
-                    body.innerHTML += messageHtml;
+                        // 转换新消息为 HTML
+                        string htmlMessage = Markdig.Markdown.ToHtml(
+                            System.Web.HttpUtility.HtmlEncode(message)
+                        );
+
+                        // **解码 HTML 实体**
+                        htmlMessage = System.Web.HttpUtility.HtmlDecode(htmlMessage);
+
+                        string messageHtml =
+                            $@"
+                <div class='message {(isUser ? "user" : "system")}'>
+                    <div class='role'>{role}</div>
+                    <div>{htmlMessage}</div>
+                </div>";
+
+                        // 追加新消息到现有内容
+                        string updatedHtml = currentHtml + messageHtml;
+
+                        // 设置新的 innerHTML
+                        body.GetType()
+                            .InvokeMember(
+                                "innerHTML",
+                                BindingFlags.SetProperty,
+                                null,
+                                body,
+                                new object[] { updatedHtml }
+                            );
+
+                        // 调用 JavaScript 函数 scrollToBottom
+                        ResponseOutput.InvokeScript("scrollToBottom");
+                    }
                 }
             });
         }
-
-
-
     }
 }
