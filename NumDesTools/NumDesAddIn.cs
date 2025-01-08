@@ -31,6 +31,7 @@ using Newtonsoft.Json;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using NumDesTools.Com;
+using NumDesTools.Config;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using Button = System.Windows.Forms.Button;
@@ -39,6 +40,7 @@ using LicenseContext = OfficeOpenXml.LicenseContext;
 using Panel = System.Windows.Forms.Panel;
 using Process = System.Diagnostics.Process;
 using TabControl = System.Windows.Forms.TabControl;
+using NumDesTools.Config;
 
 #pragma warning disable CA1416
 
@@ -2602,7 +2604,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var ctpName = "AI对话-Excel";
         if (ShowAiText == "AI对话：开启")
         {
-            _globalValue.ReadValue();
+            _globalValue.ReadOrCreate();
 
             NumDesCTP.DeleteCTP(true, ctpName);
             _chatAiChatMenuCtp = (AiChatTaskPanel)
@@ -2635,7 +2637,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (control == null)
             throw new ArgumentNullException(nameof(control));
 
-        _globalValue.ReadValue();
+        _globalValue.ReadOrCreate();
 
         if (selectedId == "ChatGPT")
         {

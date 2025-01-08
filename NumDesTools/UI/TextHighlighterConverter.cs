@@ -27,7 +27,7 @@ namespace NumDesTools.UI
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            var config = new NumDesToolsConfig();
+            var config = new GlobalVariable();
             var normalCharactersCheck = config.NormaKeyList;
             var specialCharactersCheck = config.SpecialKeyList;
             // 合并两个列表
