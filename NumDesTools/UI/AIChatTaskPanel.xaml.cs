@@ -221,10 +221,7 @@ namespace NumDesTools.UI
                     new { role = "system", content = _sysContent },
                     new { role = "user", content = userInput }
                 },
-                max_tokens = 2048,     // 最大生成的 token 数量
-                temperature = 0.5,     // 控制生成的随机性
-                top_p = 5,             // 核采样参数
-                stream = false          // 启用流式输出
+                max_tokens = 10000,     // 最大生成的 token 数量
             };
         }
 
