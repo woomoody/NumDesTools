@@ -20,21 +20,21 @@
                             screentip='点击开启单元格内容放大功能，再次点击关闭放大功能(创建Form机制)！报错请删除！配置路径：\Documents\NumDesGlobalKey.txt' />
                     <button id='FocusLightButton' size='large' getLabel='GetLableText' image='email'
                             onAction='FocusLight_Click'
-                            screentip='聚光灯效果！报错请删除！配置路径：\Documents\NumDesGlobalKey.txt' />
+                            screentip='聚光灯效果！报错请删除！配置路径：\Documents\NumDesGlobalKey.json' />
                     <button id='Button8' size='large' label='公式检查' image='asciidoc' onAction='FormularBaseCheck_Click'
                             screentip='点击检查当前工作簿所有sheet中的公式，看是否有错误的连接，推荐合完表后进行检查' />
                     <button id='SheetMenu' size='large' getLabel='GetLableText' image='reason'
                             onAction='SheetMenu_Click'
-                            screentip='点击创建表格目录，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.txt' />
+                            screentip='点击创建表格目录，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.json' />
                     <button id='CellHiLight' size='large' getLabel='GetLableText' image='reason'
                             onAction='CellHiLight_Click'
-                            screentip='点击高亮显示一定范围内同值内容，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.txt' />
+                            screentip='点击高亮显示一定范围内同值内容，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.json' />
                     <button id='PowerQueryLinksUpdate' size='large' label='更新表格路径' image='verilog'
                             onAction='PowerQueryLinksUpdate_Click'
                             screentip='更新PowerQuery表连接路径' />
                     <button id='CheckSheetValue' size='large' getLabel='GetLableText' image='dart'
                             onAction='CheckSheetValue_Click'
-                            screentip='点击启动表格关闭时数据自检，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.txt' />
+                            screentip='点击启动表格关闭时数据自检，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.json' />
                     <button id='CheckHiddenCellVsto' size='large' label='检查隐藏' image='reason'
                             onAction='CheckHiddenCellVsto_Click'
                             screentip='点击检查当前变动Excel是否有隐藏单元格，VSTO方式需要打开Excel，较慢' />
@@ -50,7 +50,7 @@
                           screentip='点击更新当前目录所有Txt表格' />
                             <button id='CellHiLight' size='large' getLabel='GetLableText' image='reason'
                             onAction='CellHiLight_Click'
-                            screentip='点击高亮显示一定范围内同值内容，再次点击关闭! 配置路径：\Documents\NumDesGlobalKey.txt' />
+                            screentip='点击高亮显示一定范围内同值内容，再次点击关闭! 配置路径：\Documents\NumDesGlobalKey.json' />
                 </group>
                 -->
                 <!--
@@ -71,7 +71,7 @@
                 <group id='Group5' label='表格功能定制'>
                     <button id='Button14' size='large' getLabel='GetLableText' image='edge'
                             onAction='RoleDataPreview_Click'
-                            screentip='点击启用角色数据实时预览！配置路径：\Documents\NumDesGlobalKey.txt' />
+                            screentip='点击启用角色数据实时预览！配置路径：\Documents\NumDesGlobalKey.json' />
                 </group>
                 <group id="Group6" label="网页搜索">
                     <editBox id="SearchBoxEdit" onChange="OnEditBoxTextChanged" sizeString="…………………………………………" />
@@ -165,9 +165,9 @@
                 </group>
                 <group id='NormalFun' label='杂项'>
                     <button id='ShowDnaLog' size='large' getLabel='GetLableText' image='ejs' 
-                            onAction='ShowDnaLog_Click'          />
-                    <button id='GlobalVariableDefault' size='large' getLabel='GetLableText' image='vscode' 
-                            onAction='GlobalVariableDefault_Click'      />
+                            onAction='ShowDnaLog_Click'   screentip = '展示插件Log'       />
+                    <button id='GlobalVariableDefault' size='large' label='默认配置' image='vscode' 
+                            onAction='GlobalVariableDefault_Click' screentip ='恢复插件配置为默认'     />
                 </group>
                 <!--
                 <group id='Group4' label='战斗仿真'>控件id不能重复，否则无法加载Ribbon

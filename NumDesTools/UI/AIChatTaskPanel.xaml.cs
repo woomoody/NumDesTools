@@ -44,70 +44,133 @@ namespace NumDesTools.UI
         {
             ResponseOutput.NavigateToString(
                 @"
-                    <html>
-                    <head>
-                        <meta charset='utf-8'>
-                        <style>
-                            body {
-                                background-color: #1c1c1c;
-                                color: white;
-                                font-family: 微软雅黑, monospace;
-                                line-height: 1.6;
-                                margin: 0;
-                                padding: 10px;
-                                overflow-y: auto;
-                            }
-                            .message {
-                                margin: 10px 0;
-                                padding: 10px;
-                                border-radius: 8px;
-                                max-width: 90%;
-                                word-wrap: break-word;
-                            }
-                            .user {
-                                background-color: #2d2d30;
-                                border: 1px solid #3e3e42;
-                                margin-left: auto;
-                                margin-right: 10px;
-                                text-align: left;
-                            }
-                            .system {
-                                background-color: #3e3e42;
-                                border: 1px solid #5a5a5e;
-                                text-align: left;
-                                margin-left: 10px;
-                            }
-                            .role {
-                                font-weight: bold;
-                                margin-bottom: 5px;
-                            }
-                            pre {
-                                background-color: #2d2d30;
-                                color: #dcdcdc;
-                                padding: 10px;
-                                border-radius: 8px;
-                                overflow-x: auto;
-                            }
-                            code {
-                                font-family: 微软雅黑, monospace;
-                                background-color: #2d2d30;
-                                color: #dcdcdc;
-                                padding: 2px 4px;
-                                border-radius: 4px;
-                            }
-                        </style>
-                        <script>
-                            function scrollToBottom() {
-                                window.scrollTo(0, document.body.scrollHeight);
-                            }
-                        </script>
-                    </head>
-                    <body></body>
-                    </html>
-                            "
-            );
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {
+            background-color: #1c1c1c;
+            color: white;
+            font-family: 微软雅黑, monospace;
+            line-height: 1.6;
+            margin: 0;
+            padding: 10px;
+            overflow-y: auto;
         }
 
+        /* 消息容器 */
+        .message-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* 默认左对齐 */
+            margin: 10px 0;
+        }
+
+        /* 消息框 */
+        .message {
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 90%;
+            word-wrap: break-word;
+        }
+
+        /* 用户消息样式 */
+        .user {
+            background-color: #2d2d30;
+            border: 1px solid #3e3e42;
+            margin-left: auto;
+            margin-right: 10px;
+            text-align: left;
+        }
+
+        /* 系统消息样式 */
+        .system {
+            background-color: #3e3e42;
+            border: 1px solid #5a5a5e;
+            text-align: left;
+            margin-left: 10px;
+        }
+
+        /* 角色名称 */
+        .role {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        /* 时间戳样式 */
+        .timestamp {
+            font-size: 0.75em; /* 字体更小 */
+            color: gray;
+            margin-top: 5px;
+            margin-left: 10px; /* 默认左对齐 */
+            margin-right: 10px; /* 默认右边距 */
+            text-align: left; /* 默认左对齐 */
+        }
+
+        /* 用户消息的时间戳右对齐 */
+        .user + .timestamp {
+            text-align: right;
+            margin-left: auto; /* 自动调整左边距 */
+            margin-right: 10px; /* 与框体右边距一致 */
+        }
+
+        pre {
+            background-color: #2d2d30;
+            color: #dcdcdc;
+            padding: 10px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        code {
+            font-family: 微软雅黑, monospace;
+            background-color: #2d2d30;
+            color: #dcdcdc;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+    </style>
+    <script>
+        function scrollToBottom() {
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+    </script>
+</head>
+<body>
+    <!-- 示例消息 
+    <div class=""message-container"">
+        <div class=""message user"">
+            <div class=""role"">cent</div>
+            <div>你好</div>
+        </div>
+        <div class=""timestamp"">2025-01-08 17:13:24</div>
+    </div>
+
+    <div class=""message-container"">
+        <div class=""message system"">
+            <div class=""role"">gpt-4o</div>
+            <div>你好！有什么我可以帮助你的吗？如果你有关于Excel公式或C#代码的问题，请随时告诉我。</div>
+        </div>
+        <div class=""timestamp"">2025-01-08 17:13:25</div>
+    </div>-->
+</body>
+</html>
+                    "
+            );
+            // 加载本地聊天记录
+            LoadChatHistory();
+
+        }
+
+        private void LoadChatHistory()
+        {
+            var chatRecord = new ChatHistoryManager();
+            var chatHistory = chatRecord.LoadChatHistory();
+            foreach (var message in chatHistory)
+            {
+                AppendToOutput(message.Role, message.Message, message.IsUser , message.Timestamp);
+            }
+        }
         private void InitializeTextEditors()
         {
             // 输入框默认文本
@@ -183,6 +246,8 @@ namespace NumDesTools.UI
 
             try
             {
+                AppendToOutput(_userName, userInput, isUser: true);
+
                 object requestBody = null;
                 if (_apiModel.Contains("gpt"))
                 {
@@ -195,7 +260,6 @@ namespace NumDesTools.UI
 
                 string response = await ChatApiClient.CallApiAsync(requestBody, _apiKey, _apiUrl);
 
-                AppendToOutput(_userName, userInput, isUser: true);
                 AppendToOutput(_apiModel, response, isUser: false);
             }
             catch (Exception ex)
@@ -257,7 +321,7 @@ namespace NumDesTools.UI
             };
         }
 
-        private void AppendToOutput(string role, string message, bool isUser)
+        private void AppendToOutput(string role, string message, bool isUser , DateTime? timestamp = null)
         {
             Dispatcher.BeginInvoke(() =>
             {
@@ -284,12 +348,19 @@ namespace NumDesTools.UI
                         // **解码 HTML 实体**
                         htmlMessage = System.Web.HttpUtility.HtmlDecode(htmlMessage);
 
+                        // 如果未传递时间戳，则使用当前时间
+                        string displayTimestamp = timestamp?.ToString("yyyy-MM-dd HH:mm:ss") ?? DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                        // 生成消息 HTML
                         string messageHtml =
                             $@"
-                <div class='message {(isUser ? "user" : "system")}'>
-                    <div class='role'>{role}</div>
-                    <div>{htmlMessage}</div>
-                </div>";
+                        <div class='message-container'>
+                            <div class='message {(isUser ? "user" : "system")}'>
+                                <div class='role'>{role}</div>
+                                <div>{htmlMessage}</div>
+                            </div>
+                            <div class='timestamp'>{displayTimestamp}</div>
+                        </div>";
 
                         // 追加新消息到现有内容
                         string updatedHtml = currentHtml + messageHtml;
@@ -306,9 +377,20 @@ namespace NumDesTools.UI
 
                         // 调用 JavaScript 函数 scrollToBottom
                         ResponseOutput.InvokeScript("scrollToBottom");
+
+                        // 保存消息到本地文件
+                        var chatRecord = new ChatHistoryManager();
+                        chatRecord.SaveChatMessage(new ChatMessage
+                        {
+                            Role = role,
+                            Message = message,
+                            IsUser = isUser,
+                            Timestamp = DateTime.Now // 保存时间戳
+                        });
                     }
                 }
             });
         }
+
     }
 }

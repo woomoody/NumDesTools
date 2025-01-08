@@ -300,5 +300,41 @@ public class ChatApiClient
             throw new Exception($"API 调用失败，状态码：{response.StatusCode}，错误信息：{errorContent}");
         }
     }
+}
+//Chat聊天记录存取
+public class ChatMessage
+{
+    public string Role { get; set; } // 用户或系统
+    public string Message { get; set; } // 消息内容
+    public bool IsUser { get; set; } // 是否是用户消息
+    public DateTime Timestamp { get; set; } // 消息时间戳
+}
 
+public class ChatHistoryManager
+{
+    private readonly string _chatHistoryFilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        "ChatHistory.json"
+    );
+
+    // 保存聊天记录
+    public  void SaveChatMessage(ChatMessage message)
+    {
+        var chatHistory = LoadChatHistory();
+        chatHistory.Add(message);
+
+        File.WriteAllText(_chatHistoryFilePath, JsonConvert.SerializeObject(chatHistory, Formatting.Indented));
+    }
+
+    // 读取聊天记录
+    public  List<ChatMessage> LoadChatHistory()
+    {
+        if (File.Exists(_chatHistoryFilePath))
+        {
+            var json = File.ReadAllText(_chatHistoryFilePath);
+            return JsonConvert.DeserializeObject<List<ChatMessage>>(json) ?? new List<ChatMessage>();
+        }
+
+        return new List<ChatMessage>();
+    }
 }
