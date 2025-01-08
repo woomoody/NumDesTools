@@ -2091,7 +2091,7 @@ public static class PubMetToExcelFunc
         //    ("{", "}")
         //};
 
-        var config = new NumDesToolsConfig();
+        var config = new GlobalVariable();
         var normalCharactersCheck = config.NormaKeyList;
         var specialCharactersCheck = config.SpecialKeyList;
         var coupleCharactersCheck = config.CoupleKeyList;
