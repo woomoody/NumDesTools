@@ -25,7 +25,9 @@ global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
 using System.Collections.Concurrent;
+using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using NumDesTools.Com;
@@ -49,6 +51,9 @@ namespace NumDesTools;
 [ComVisible(true)]
 public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 {
+ 
+    public const int LongTextThreshold = 50;
+    public const int MaxLineLength = 50;
     private static GlobalVariable _globalValue = new();
     public static string LabelText = _globalValue.Value["LabelText"];
     public static string FocusLabelText = _globalValue.Value["FocusLabelText"];
@@ -2682,9 +2687,32 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (control == null)
             throw new ArgumentNullException(nameof(control));
 
-        var lines = new List<string>();
+        // 确保所有值为字符串类型
+        var cleanValue = new Dictionary<string, object>();
         foreach (var kvp in _globalValue._defaultValue)
-            lines.Add($"{kvp.Key} = {kvp.Value}");
+        {
+            if (kvp.Value?.Length > LongTextThreshold)
+            {
+                if (kvp.Value.Contains("\n"))
+                {
+                    // 如果是长文本，按行拆分为数组
+                    cleanValue[kvp.Key] = kvp.Value.Split("\n")?.ToString() ?? string.Empty;
+                }
+                else
+                {
+                    var lines = new List<string>();
+                    for (int i = 0; i < kvp.Value.Length; i += NumDesAddIn.MaxLineLength)
+                    {
+                        lines.Add(kvp.Value.Substring(i, Math.Min(MaxLineLength, kvp.Value.Length - i)));
+                    }
+                    cleanValue[kvp.Key] = lines;
+                }
+            }
+            else
+            {
+                cleanValue[kvp.Key] = kvp.Value?.ToString() ?? string.Empty;
+            }
+        }
 
         // 弹出确认对话框
         var result = MessageBox.Show(
@@ -2706,7 +2734,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             File.WriteAllLines(_globalValue._filePath, Array.Empty<string>());
 
             // 重写文件内容
-            File.WriteAllLines(_globalValue._filePath, lines);
+            var json = JsonConvert.SerializeObject(cleanValue, Formatting.Indented);
+            File.WriteAllText(_globalValue._filePath, json, Encoding.UTF8);
 
             // 重置全局变量
             ResetGlobalVariables();
