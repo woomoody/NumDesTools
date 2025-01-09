@@ -1,6 +1,8 @@
-﻿using System.Windows;
+﻿using System.Web;
+using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Input;
+using Markdig;
 using Brushes = System.Windows.Media.Brushes;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
@@ -168,7 +170,7 @@ namespace NumDesTools.UI
             var chatHistory = chatRecord.LoadChatHistory();
             foreach (var message in chatHistory)
             {
-                AppendToOutput(message.Role, message.Message, message.IsUser , message.Timestamp);
+                LoadChatHistoryOutPut(message.Role, message.Message, message.IsUser , message.Timestamp);
             }
         }
         private void InitializeTextEditors()
@@ -341,12 +343,12 @@ namespace NumDesTools.UI
                             ?.ToString();
 
                         // 转换新消息为 HTML
-                        string htmlMessage = Markdig.Markdown.ToHtml(
-                            System.Web.HttpUtility.HtmlEncode(message)
+                        string htmlMessage = Markdown.ToHtml(
+                            HttpUtility.HtmlEncode(message)
                         );
 
                         // **解码 HTML 实体**
-                        htmlMessage = System.Web.HttpUtility.HtmlDecode(htmlMessage);
+                        htmlMessage = HttpUtility.HtmlDecode(htmlMessage);
 
                         // 如果未传递时间戳，则使用当前时间
                         string displayTimestamp = timestamp?.ToString("yyyy-MM-dd HH:mm:ss") ?? DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
@@ -392,5 +394,66 @@ namespace NumDesTools.UI
             });
         }
 
+        private void LoadChatHistoryOutPut(string role, string message, bool isUser, DateTime? timestamp = null)
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                var doc = ResponseOutput.Document;
+
+                if (doc != null)
+                {
+                    // 使用反射获取 body 对象
+                    var body = doc.GetType()
+                        .InvokeMember("body", BindingFlags.GetProperty, null, doc, null);
+
+                    if (body != null)
+                    {
+                        // 获取当前的 innerHTML
+                        string currentHtml = body.GetType()
+                            .InvokeMember("innerHTML", BindingFlags.GetProperty, null, body, null)
+                            ?.ToString();
+
+                        // 转换新消息为 HTML
+                        string htmlMessage = Markdown.ToHtml(
+                            HttpUtility.HtmlEncode(message)
+                        );
+
+                        // **解码 HTML 实体**
+                        htmlMessage = HttpUtility.HtmlDecode(htmlMessage);
+
+                        // 如果未传递时间戳，则使用当前时间
+                        string displayTimestamp = timestamp?.ToString("yyyy-MM-dd HH:mm:ss") ?? DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                        // 生成消息 HTML
+                        string messageHtml =
+                            $@"
+                        <div class='message-container'>
+                            <div class='message {(isUser ? "user" : "system")}'>
+                                <div class='role'>{role}</div>
+                                <div>{htmlMessage}</div>
+                            </div>
+                            <div class='timestamp'>{displayTimestamp}</div>
+                        </div>";
+
+                        // 追加新消息到现有内容
+                        string updatedHtml = currentHtml + messageHtml;
+
+                        // 设置新的 innerHTML
+                        body.GetType()
+                            .InvokeMember(
+                                "innerHTML",
+                                BindingFlags.SetProperty,
+                                null,
+                                body,
+                                new object[] { updatedHtml }
+                            );
+
+                        // 调用 JavaScript 函数 scrollToBottom
+                        ResponseOutput.InvokeScript("scrollToBottom");
+
+                    }
+                }
+            });
+        }
     }
 }

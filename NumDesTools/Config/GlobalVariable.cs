@@ -11,7 +11,7 @@ namespace NumDesTools.Config
         #region 默认值
 
         // 默认键值对配置
-        public readonly Dictionary<string, string> _defaultValue =
+        public readonly Dictionary<string, string> DefaultValue =
             new()
             {
                 { "LabelText", "放大镜：关闭" },
@@ -19,6 +19,8 @@ namespace NumDesTools.Config
                 { "LabelTextRoleDataPreview", "角色数据预览：关闭" },
                 { "SheetMenuText", "表格目录：关闭" },
                 { "TempPath", @"\Client\Assets\Resources\Table" },
+                { "BasePath", @"C:\M1Work\Public\Excels\Tables\" },
+                { "TargetPath", @"C:\M2Work\Public\Excels\Tables\" },
                 { "CellHiLightText", "高亮单元格：关闭" },
                 { "CheckSheetValueText", "数据自检：开启" },
                 { "ShowDnaLogText", "插件日志：关闭" },
@@ -43,18 +45,18 @@ namespace NumDesTools.Config
             };
 
         // 默认列表配置
-        public readonly List<string> _defaultNormaKeyList =
+        public readonly List<string> DefaultNormaKeyList =
             new() { ",,", "[,", ",]", "{,", ",}", "，，", "[，", "，]", "{，", "，}" };
 
-        public readonly List<string> _defaultSpecialKeyList = new() { "][", "}{" };
+        public readonly List<string> DefaultSpecialKeyList = new() { "][", "}{" };
 
-        public readonly List<CoupleKey> _defaultCoupleKeyList =
+        public readonly List<CoupleKey> DefaultCoupleKeyList =
             new() { new CoupleKey("[", "]"), new CoupleKey("{", "}") };
 
         #endregion
 
         // 配置文件路径
-        public readonly string _filePath = Path.Combine(
+        public readonly string FilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
             "NumDesGlobalKey.json"
         );
@@ -80,9 +82,9 @@ namespace NumDesTools.Config
 
         public void ReadOrCreate()
         {
-            if (File.Exists(_filePath))
+            if (File.Exists(FilePath))
             {
-                var json = File.ReadAllText(_filePath);
+                var json = File.ReadAllText(FilePath);
                 var fileValues = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
 
                 _configData = new ConfigData
@@ -96,9 +98,12 @@ namespace NumDesTools.Config
                 // 处理键值对配置
                 foreach (var kvp in fileValues)
                 {
-                    if (kvp.Value is List<object> listValue)
+                    if (kvp.Value is JToken listValue)
                     {
-                        _configData.Value[kvp.Key] = string.Join("\n", listValue);
+                        if (listValue.Type == JTokenType.Array)
+                        {
+                            _configData.Value[kvp.Key] = string.Join("", listValue.ToObject<List<object>>());
+                        }
                     }
                     else if (kvp.Value is string stringValue)
                     {
@@ -162,7 +167,7 @@ namespace NumDesTools.Config
         private void MergeWithDefaults()
         {
             // 合并键值对配置
-            foreach (var kvp in _defaultValue)
+            foreach (var kvp in DefaultValue)
             {
                 if (!_configData.Value.ContainsKey(kvp.Key))
                 {
@@ -171,25 +176,22 @@ namespace NumDesTools.Config
             }
 
             // 合并列表配置
-            _configData.NormaKeyList = MergeLists(_configData.NormaKeyList, _defaultNormaKeyList);
+            _configData.NormaKeyList = MergeLists(_configData.NormaKeyList, DefaultNormaKeyList);
             _configData.SpecialKeyList = MergeLists(
                 _configData.SpecialKeyList,
-                _defaultSpecialKeyList
+                DefaultSpecialKeyList
             );
-            _configData.CoupleKeyList = MergeLists(
-                _configData.CoupleKeyList,
-                _defaultCoupleKeyList
-            );
+            _configData.CoupleKeyList = MergeLists(_configData.CoupleKeyList, DefaultCoupleKeyList);
         }
 
         private ConfigData CreateDefaultConfig()
         {
             return new ConfigData
             {
-                Value = new Dictionary<string, string>(_defaultValue),
-                NormaKeyList = [.. _defaultNormaKeyList],
-                SpecialKeyList = [.. _defaultSpecialKeyList],
-                CoupleKeyList = [.. _defaultCoupleKeyList]
+                Value = new Dictionary<string, string>(DefaultValue),
+                NormaKeyList = [.. DefaultNormaKeyList],
+                SpecialKeyList = [.. DefaultSpecialKeyList],
+                CoupleKeyList = [.. DefaultCoupleKeyList]
             };
         }
 
@@ -197,9 +199,9 @@ namespace NumDesTools.Config
         {
             // 如果文件存在，先读取现有的配置内容
             OrderedDictionary existingConfig = new OrderedDictionary();
-            if (File.Exists(_filePath))
+            if (File.Exists(FilePath))
             {
-                var json = File.ReadAllText(_filePath, Encoding.UTF8);
+                var json = File.ReadAllText(FilePath, Encoding.UTF8);
                 var tempDict =
                     JsonConvert.DeserializeObject<Dictionary<string, object>>(json)
                     ?? new Dictionary<string, object>();
@@ -228,7 +230,7 @@ namespace NumDesTools.Config
 
             // 序列化回文件
             var updatedJson = JsonConvert.SerializeObject(orderedDictAsDict, Formatting.Indented);
-            File.WriteAllText(_filePath, updatedJson, Encoding.UTF8);
+            File.WriteAllText(FilePath, updatedJson, Encoding.UTF8);
         }
 
         public void SaveConfig()
@@ -282,23 +284,52 @@ namespace NumDesTools.Config
             var json = JsonConvert.SerializeObject(orderedDictAsDict, Formatting.Indented);
 
             // 写入文件
-            File.WriteAllText(_filePath, json, Encoding.UTF8);
+            File.WriteAllText(FilePath, json, Encoding.UTF8);
         }
 
-        public void ResetToDefault()
+        public void ResetToDefault(params string[] ignoreKey)
         {
             try
             {
-                // 重置配置数据为默认值
+                // 从文件中读取当前配置
+                var backupValues = new Dictionary<string, string>();
+                if (File.Exists(FilePath))
+                {
+                    var json = File.ReadAllText(FilePath, Encoding.UTF8);
+                    var existingConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+
+                    // 备份需要保留的值
+                    if (existingConfig != null)
+                    {
+                        foreach (var key in ignoreKey) 
+                        {
+                            if (existingConfig.ContainsKey(key) && existingConfig[key] is string value)
+                            {
+                                backupValues[key] = value;
+                            }
+                        }
+                    }
+                }
+
+                //  重置配置数据为默认值
                 _configData = CreateDefaultConfig();
 
-                // 保存默认配置到文件
+                // 恢复保留的值
+                foreach (var kvp in backupValues)
+                {
+                    if (_configData.Value.ContainsKey(kvp.Key))
+                    {
+                        _configData.Value[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                // 保存默认配置到文件（保持顺序一致）
                 SaveConfig();
 
                 // 提示用户操作成功
                 MessageBox.Show(
-                    "全局变量已重置为默认值！",
-                    "操作成功",
+                    @"全局变量已重置为默认值（部分值已保留）！",
+                    @"操作成功",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information
                 );
@@ -307,13 +338,14 @@ namespace NumDesTools.Config
             {
                 // 捕获异常并提示用户
                 MessageBox.Show(
-                    $"重置失败：{ex.Message}",
-                    "错误",
+                    @$"重置失败：{ex.Message}",
+                    @"错误",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error
                 );
             }
         }
+
 
         #endregion
 

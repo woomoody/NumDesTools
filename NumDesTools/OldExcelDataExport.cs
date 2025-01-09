@@ -50,7 +50,7 @@ public static class ErrorLogCtp
 #pragma warning restore CA1305
                 if (errorLine != "")
                 {
-                    var errorTextBox = new TextBox()
+                    var errorTextBox = new TextBox
                     {
                         Text = errorLine,
                         Height = 20,
@@ -78,7 +78,7 @@ public static class ErrorLogCtp
     public static void CreateCtpNormal(string errorLog)
     {
         LabelControl = new LabelControl();
-        var errorLinkLable = new RichTextBox()
+        var errorLinkLable = new RichTextBox
         {
             Text = errorLog,
             Location = new Point(10, 40),

@@ -4,6 +4,8 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using Binding = System.Windows.Data.Binding;
+using Brushes = System.Windows.Media.Brushes;
 using ListBox = System.Windows.Controls.ListBox;
 using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
@@ -125,22 +127,22 @@ namespace NumDesTools.UI
         {
             Style itemContainerStyle = new Style(typeof(ListBoxItem));
 
-            DataTrigger trigger = new DataTrigger()
+            DataTrigger trigger = new DataTrigger
             {
-                Binding = new System.Windows.Data.Binding("IsHidden"),
+                Binding = new Binding("IsHidden"),
                 Value = true
             };
 
             trigger.Setters.Add(new Setter(FontStyleProperty, FontStyles.Italic));
             trigger.Setters.Add(
-                new Setter(ForegroundProperty, System.Windows.Media.Brushes.PapayaWhip)
+                new Setter(ForegroundProperty, Brushes.PapayaWhip)
             );
 
             itemContainerStyle.Triggers.Add(trigger);
 
             // 添加 ToolTip
             itemContainerStyle.Setters.Add(
-                new Setter(ToolTipProperty, new System.Windows.Data.Binding("DetailInfo"))
+                new Setter(ToolTipProperty, new Binding("DetailInfo"))
             );
 
             listBox.ItemContainerStyle = itemContainerStyle;

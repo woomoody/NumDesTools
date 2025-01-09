@@ -1,8 +1,8 @@
-﻿using NumDesTools.Config;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
+using NumDesTools.Config;
 using Brushes = System.Windows.Media.Brushes;
 
 namespace NumDesTools.UI

@@ -5,10 +5,10 @@ namespace NumDesTools
 {
     class MapExcel
     {
-        public static void ExcelToJson(string[] folder)
+        public static void ExcelToJson(string folderPath)
         {
             var myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            var basePath = folder[1];
+            var basePath = folderPath;
             // 读取Excel文件
             var filePath = basePath + @"#表格关联.xlsx";
             var linkTable = MiniExcel

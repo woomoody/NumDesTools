@@ -160,7 +160,7 @@ public class RatioCaculate
     )
     {
         var scoreGetTimes = 0;
-        var otherRankCountTotal = new List<double>()
+        var otherRankCountTotal = new List<double>
         {
             0,
             0,
@@ -211,11 +211,11 @@ public class RatioCaculate
             var cardList2 = new List<int>();
             var cardList3 = new List<int>();
             var currentScore = 0;
-            var otherRankCount = new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            var otherRankCount = new List<double> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
             var maxRankCount = 0;
-            var currentCount1 = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-            var currentCount2 = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-            var currentCount3 = new List<int>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            var currentCount1 = new List<int> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            var currentCount2 = new List<int> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            var currentCount3 = new List<int> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
             while (
                 cardList1.Count < newGroupRarityCount[i].Item2

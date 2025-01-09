@@ -362,7 +362,7 @@ public class ExcelUdf
                 counter++;
             }
         }
-        return $"不存在";
+        return "不存在";
     }
 
     [ExcelFunction(
@@ -1364,18 +1364,17 @@ public class ExcelUdf
             var minValueTuple = posResult.MinBy(t => t.Item1);
             return minValueTuple.Item2;
         }
-        else if (posType == "0")
+
+        if (posType == "0")
         {
             var maxValueTuple = posResult.MaxBy(t => t.Item1);
             return maxValueTuple.Item2;
         }
-        else
-        {
-            var sortedList = posResult.OrderBy(t => t.Item1).ToList();
-            var middleIndex = sortedList.Count / 2;
-            var medianValueTuple = sortedList[middleIndex];
-            return medianValueTuple.Item2;
-        }
+
+        var sortedList = posResult.OrderBy(t => t.Item1).ToList();
+        var middleIndex = sortedList.Count / 2;
+        var medianValueTuple = sortedList[middleIndex];
+        return medianValueTuple.Item2;
     }
 
     [ExcelFunction(

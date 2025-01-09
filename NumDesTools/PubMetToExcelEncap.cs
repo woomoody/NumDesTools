@@ -330,9 +330,7 @@ public class ExcelDataByVsto
         {
             return (foundRange.Row, foundRange.Column);
         }
-        else
-        {
-            return (-1, -1);
-        }
+
+        return (-1, -1);
     }
 }

@@ -6,8 +6,8 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using GraphX.Common.Models;
+using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
-
 
 namespace NumDesTools;
 
@@ -95,11 +95,10 @@ public class SelfCellData((string, int, int) tuple)
     public string Value { get; set; } = tuple.Item1;
     public int Row { get; set; } = tuple.Item2;
     public int Column { get; set; } = tuple.Item3;
-
 }
 
 //自定义Com表格-单元格类
-public class SelfSheetCellData((string, int, int,string , string) tuple)
+public class SelfSheetCellData((string, int, int, string, string) tuple)
 {
     public string Value { get; set; } = tuple.Item1;
     public int Row { get; set; } = tuple.Item2;
@@ -107,6 +106,7 @@ public class SelfSheetCellData((string, int, int,string , string) tuple)
     public string SheetName { get; set; } = tuple.Item4;
     public string Tips { get; set; } = tuple.Item5;
 }
+
 //字符串正则转换
 public class SelfStringRegexConverter : IValueConverter
 {
@@ -181,6 +181,7 @@ public class SelfExcelFileCollector(string currentPath)
 
         return files;
     }
+
     //获取根目录
     private static string FindRootDirectory(string rootPath, string rootFolderName)
     {
@@ -193,17 +194,26 @@ public class SelfExcelFileCollector(string currentPath)
 
         return dirInfo?.FullName;
     }
+
     //获取指定路径Excel文件路径MD5
     public enum KeyMode
     {
-        FullPath,//完整路径
-        FileNameWithExt,//带扩展名
-        FileNameWithoutExt//不带扩展名
+        FullPath, //完整路径
+        FileNameWithExt, //带扩展名
+        FileNameWithoutExt //不带扩展名
     }
-    public Dictionary<string, (string FullPath, string FileNameWithExt, string FileNameWithoutExt, string MD5)> GetAllExcelFilesMd5(KeyMode mode)
+
+    public Dictionary<
+        string,
+        (string FullPath, string FileNameWithExt, string FileNameWithoutExt, string MD5)
+    > GetAllExcelFilesMd5(KeyMode mode)
     {
         var files = GetAllExcelFilesPath();
-        var fileMd5Dictionary = new Dictionary<string, (string FullPath, string FileNameWithExt, string FileNameWithoutExt, string MD5)>();
+        var fileMd5Dictionary =
+            new Dictionary<
+                string,
+                (string FullPath, string FileNameWithExt, string FileNameWithoutExt, string MD5)
+            >();
 
         foreach (var file in files)
         {
@@ -234,15 +244,22 @@ public class SelfExcelFileCollector(string currentPath)
         }
         return path;
     }
+
     private static IEnumerable<string> GetExcelFiles(string path)
     {
         return Directory
             .EnumerateFiles(path, "*.xlsx")
             .Where(file => !Path.GetFileName(file).Contains("#"));
     }
+
     private static string CalculateMd5(string filePath)
     {
-        using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var stream = new FileStream(
+            filePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite
+        );
         using var md5 = MD5.Create();
         var hash = md5.ComputeHash(stream);
         return BitConverter.ToString(hash).Replace("-", "").ToUpperInvariant();
@@ -252,18 +269,12 @@ public class SelfExcelFileCollector(string currentPath)
 //自定义获取单元格像素坐标
 public class SelfGetRangePixels
 {
-    public static void GetRangePixels()
-    {
-
-
-
-    }
+    public static void GetRangePixels() { }
 }
 
 //自定义ChatApi
 public class ChatApiClient
 {
-
     public static async Task<string> CallApiAsync(object requestBody, string apiKey, string apiUrl)
     {
         if (string.IsNullOrEmpty(apiKey))
@@ -285,20 +296,22 @@ public class ChatApiClient
             string responseContent = await response.Content.ReadAsStringAsync();
             dynamic jsonResponse = JsonConvert.DeserializeObject(responseContent);
 
-            if (jsonResponse != null && (jsonResponse.choices == null || jsonResponse.choices.Count == 0))
+            if (
+                jsonResponse != null
+                && (jsonResponse.choices == null || jsonResponse.choices.Count == 0)
+            )
             {
                 throw new Exception("API 响应中没有返回有效的 choices 数据。");
             }
 
             return jsonResponse?.choices[0].message.content.ToString();
         }
-        else
-        {
-            string errorContent = await response.Content.ReadAsStringAsync();
-            throw new Exception($"API 调用失败，状态码：{response.StatusCode}，错误信息：{errorContent}");
-        }
+
+        string errorContent = await response.Content.ReadAsStringAsync();
+        throw new Exception($"API 调用失败，状态码：{response.StatusCode}，错误信息：{errorContent}");
     }
 }
+
 //Chat聊天记录存取
 public class ChatMessage
 {
@@ -310,29 +323,156 @@ public class ChatMessage
 
 public class ChatHistoryManager
 {
-    private readonly string _chatHistoryFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-        "ChatHistory.json"
-    );
+    private readonly string _connectionString =
+        $"Data Source={Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ChatHistory.db")}";
+
+    public ChatHistoryManager()
+    {
+        // 初始化数据库和表
+        using (var connection = new SqliteConnection(_connectionString))
+        {
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText =
+                @"
+                CREATE TABLE IF NOT EXISTS ChatHistory (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Role TEXT NOT NULL,
+                    Message TEXT NOT NULL,
+                    IsUser INTEGER NOT NULL,
+                    Timestamp DATETIME NOT NULL
+                )";
+            command.ExecuteNonQuery();
+        }
+    }
 
     // 保存聊天记录
-    public  void SaveChatMessage(ChatMessage message)
+    public void SaveChatMessage(ChatMessage message)
     {
-        var chatHistory = LoadChatHistory();
-        chatHistory.Add(message);
-
-        File.WriteAllText(_chatHistoryFilePath, JsonConvert.SerializeObject(chatHistory, Formatting.Indented));
+        using (var connection = new SqliteConnection(_connectionString))
+        {
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText =
+                @"
+                INSERT INTO ChatHistory (Role, Message, IsUser, Timestamp)
+                VALUES (@Role, @Message, @IsUser, @Timestamp)";
+            command.Parameters.AddWithValue("@Role", message.Role);
+            command.Parameters.AddWithValue("@Message", message.Message);
+            command.Parameters.AddWithValue("@IsUser", message.IsUser ? 1 : 0);
+            command.Parameters.AddWithValue("@Timestamp", message.Timestamp);
+            command.ExecuteNonQuery();
+        }
     }
 
     // 读取聊天记录
-    public  List<ChatMessage> LoadChatHistory()
+    public List<ChatMessage> LoadChatHistory()
     {
-        if (File.Exists(_chatHistoryFilePath))
+        var chatHistory = new List<ChatMessage>();
+        using (var connection = new SqliteConnection(_connectionString))
         {
-            var json = File.ReadAllText(_chatHistoryFilePath);
-            return JsonConvert.DeserializeObject<List<ChatMessage>>(json) ?? new List<ChatMessage>();
-        }
+            connection.Open();
+            var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT Role, Message, IsUser, Timestamp FROM ChatHistory ORDER BY Timestamp ASC";
 
-        return new List<ChatMessage>();
+            using (var reader = command.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    chatHistory.Add(
+                        new ChatMessage
+                        {
+                            Role = reader.GetString(0),
+                            Message = reader.GetString(1),
+                            IsUser = reader.GetInt32(2) == 1,
+                            Timestamp = reader.GetDateTime(3)
+                        }
+                    );
+                }
+            }
+        }
+        return chatHistory;
+    }
+}
+
+//自动检测运行环境
+public class SelfEnvironmentDetector
+{
+    public static bool IsInstalled(
+        string version,
+        string versionName,
+        string fileName,
+        string arguments
+    )
+    {
+        try
+        {
+            // 调用 dotnet --list-runtimes 命令
+            ProcessStartInfo psi = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using (Process process = Process.Start(psi))
+            {
+                if (process == null)
+                    return false;
+
+                using (StreamReader reader = process.StandardOutput)
+                {
+                    string output = reader.ReadToEnd();
+                    process.WaitForExit();
+
+                    // 检查输出中是否包含指定版本
+                    return output.Contains($"{versionName} {version}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"检查 .NET 版本时发生错误: {ex.Message}");
+            Debug.Print($"检查 .NET 版本时发生错误: {ex.Message}");
+            return false;
+        }
+    }
+
+    public static void Install(string installerPath)
+    {
+        try
+        {
+            if (!File.Exists(installerPath))
+            {
+                Debug.Print("安装程序路径无效，请检查路径是否正确。");
+                return;
+            }
+
+            // 调用安装程序
+            ProcessStartInfo psi = new ProcessStartInfo
+            {
+                FileName = installerPath,
+                Arguments = "/quiet /norestart", // 安装程序参数（根据需要修改）
+                UseShellExecute = true // 使用 Shell 执行
+            };
+
+            using (Process process = Process.Start(psi))
+            {
+                if (process != null)
+                {
+                    process.WaitForExit();
+                    MessageBox.Show("安装程序已执行完成。");
+                    Debug.Print("安装程序已执行完成。");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"执行安装程序时发生错误: {ex.Message}");
+            Debug.Print($"执行安装程序时发生错误: {ex.Message}");
+        }
     }
 }

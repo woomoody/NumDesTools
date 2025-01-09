@@ -17,7 +17,7 @@
                             screentip='点击整理当前sheet格式，标准化文本和单元格大小' />
                     <button id='Button5' size='large' getLabel='GetLableText' image='redux-reducer'
                             onAction='ZoomInOut_Click'
-                            screentip='点击开启单元格内容放大功能，再次点击关闭放大功能(创建Form机制)！报错请删除！配置路径：\Documents\NumDesGlobalKey.txt' />
+                            screentip='点击开启单元格内容放大功能，再次点击关闭放大功能(创建Form机制)！报错请删除！配置路径：\Documents\NumDesGlobalKey.json' />
                     <button id='FocusLightButton' size='large' getLabel='GetLableText' image='email'
                             onAction='FocusLight_Click'
                             screentip='聚光灯效果！报错请删除！配置路径：\Documents\NumDesGlobalKey.json' />
@@ -156,10 +156,10 @@
                     <button id='CopyFileName' size='large' label='文件名称' image='document' onAction='CopyFileName_Click' />
                     <button id='CopyFilePath' size='large' label='文件路径' image='file' onAction='CopyFilePath_Click' />
                     <labelControl id="BasePathLab" label=" 源表/目标" />
-                    <editBox id="BasePathEdit" getText="GetFileInfo" onChange="BaseFileInfoChanged"
+                    <editBox id="BasePathEdit" getText="GetFileInfo" onChange="FileInfoChanged"
                              sizeString="........................................................................."
                              image="folder-android" screentip='输入自己本地目录，自动保存' />
-                    <editBox id="TargetPathEdit" getText="GetFileInfo" onChange="TargetFileInfoChanged"
+                    <editBox id="TargetPathEdit" getText="GetFileInfo" onChange="FileInfoChanged"
                              sizeString="........................................................................."
                              image="folder-aws" screentip='输入自己本地目录，自动保存' />
                 </group>

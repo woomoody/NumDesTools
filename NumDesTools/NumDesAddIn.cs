@@ -25,9 +25,8 @@ global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
 using System.Collections.Concurrent;
-using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+using Microsoft.Office.Core;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using NumDesTools.Com;
@@ -36,11 +35,14 @@ using NumDesTools.UI;
 using OfficeOpenXml;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
+using CommandBar = Microsoft.Office.Core.CommandBar;
+using IRibbonControl = ExcelDna.Integration.CustomUI.IRibbonControl;
+using IRibbonUI = ExcelDna.Integration.CustomUI.IRibbonUI;
 using LicenseContext = OfficeOpenXml.LicenseContext;
+using MsoCTPDockPosition = ExcelDna.Integration.CustomUI.MsoCTPDockPosition;
 using Panel = System.Windows.Forms.Panel;
 using Process = System.Diagnostics.Process;
 using TabControl = System.Windows.Forms.TabControl;
-using NumDesTools.Config;
 
 #pragma warning disable CA1416
 
@@ -53,7 +55,6 @@ namespace NumDesTools;
 [ComVisible(true)]
 public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 {
- 
     public const int LongTextThreshold = 50;
     public const int MaxLineLength = 50;
     private static GlobalVariable _globalValue = new();
@@ -63,6 +64,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public static string SheetMenuText = _globalValue.Value["SheetMenuText"];
     public static string CellHiLightText = _globalValue.Value["CellHiLightText"];
     public static string TempPath = _globalValue.Value["TempPath"];
+    public static string BasePath = _globalValue.Value["BasePath"];
+    public static string TargetPath = _globalValue.Value["TargetPath"];
     public static string CheckSheetValueText = _globalValue.Value["CheckSheetValueText"];
     public static string ShowDnaLogText = _globalValue.Value["ShowDnaLogText"];
     public static string ShowAiText = _globalValue.Value["ShowAIText"];
@@ -88,18 +91,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private string _excelSeachStr = string.Empty;
     public static IRibbonUI CustomRibbon;
 
-    public string DefaultFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-        "mergePath.txt"
-    );
-
-    private string _currentBaseText;
-    private string _currentTargetText;
     private TabControl _tabControl = new();
-
     private SheetListControl _sheetMenuCtp;
     private static AiChatTaskPanel _chatAiChatMenuCtp;
 
+    private string _requiredVersion = "6.0.2";
     #region 释放COM
 
     ~NumDesAddIn()
@@ -218,6 +214,53 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     void IExcelAddIn.AutoOpen()
     {
+#if RELEASE
+        string addInPath = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
+        var isInstall =  SelfEnvironmentDetector.IsInstalled(_requiredVersion, "Microsoft.NETCore.App", "dotnet", "--list-runtimes");
+        if (isInstall)
+        {
+            //MessageBox.Show(@$".NET {_requiredVersion} 已安装");
+        }
+        else
+        {
+            // .NET 未安装，执行安装程序
+            MessageBox.Show(@$".NET {_requiredVersion} 未安装，点击安装...");
+            string installerPath = Path.Combine(addInPath, "windowsdesktop-runtime-6.0.20-win-x64.exe");
+
+            // 调用安装程序并等待安装完成
+            var process = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = installerPath,
+                    Arguments = "/quiet /norestart", // 静默安装参数（根据需要调整）
+                    UseShellExecute = false, // 不使用 Shell 执行
+                    CreateNoWindow = true // 不显示窗口
+                }
+            };
+
+            try
+            {
+                process.Start();
+                process.WaitForExit(); // 等待安装程序完成
+                if (process.ExitCode == 0)
+                {
+                    MessageBox.Show("安装完成！");
+                }
+                else
+                {
+                    MessageBox.Show($"安装程序执行失败，退出代码：{process.ExitCode}");
+                    return; // 如果安装失败，退出后续逻辑
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"安装程序启动失败：{ex.Message}");
+                return; // 如果启动失败，退出后续逻辑
+            }
+        }
+#endif
+
         //注册智能感应
         IntelliSenseServer.Install();
 
@@ -350,7 +393,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private void UD_RightClickButton(object sh, Range target, ref bool cancel)
     {
-        Microsoft.Office.Core.CommandBar currentBar;
+        CommandBar currentBar;
         var missing = Type.Missing;
 
         // 判断是否是全选列或全选行
@@ -429,7 +472,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 string tag,
                 string caption,
                 MsoButtonStyle style,
-                Microsoft.Office.Core._CommandBarButtonEvents_ClickEventHandler clickHandler
+                _CommandBarButtonEvents_ClickEventHandler clickHandler
             )
             {
                 if (
@@ -449,7 +492,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 string Tag,
                 string Caption,
                 MsoButtonStyle Style,
-                Microsoft.Office.Core._CommandBarButtonEvents_ClickEventHandler Handler
+                _CommandBarButtonEvents_ClickEventHandler Handler
             )>
             {
                 // 根据条件添加按钮配置
@@ -1678,9 +1721,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-        var lines = File.ReadAllLines(DefaultFilePath);
+        _globalValue.ReadOrCreate();
 
-        MapExcel.ExcelToJson(lines);
+        MapExcel.ExcelToJson(BasePath);
 
         sw.Stop();
         var ts2 = sw.Elapsed;
@@ -1693,8 +1736,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var sw = new Stopwatch();
         sw.Start();
 
-        var lines = File.ReadAllLines(DefaultFilePath);
-        CompareExcel.CompareMain(lines);
+        _globalValue.ReadOrCreate();
+
+        CompareExcel.CompareMain(BasePath, TargetPath);
 
         var ts2 = sw.Elapsed;
         Debug.Print(ts2.ToString());
@@ -1855,7 +1899,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         try
         {
-            var line1 = File.ReadLines(DefaultFilePath).Skip(1 - 1).FirstOrDefault();
+        _globalValue.ReadOrCreate();
+
+            var line1 = BasePath;
             var fileList = SvnGitTools.GitDiffFileCount(line1);
             VstoExcel.FixHiddenCellVsto(fileList.ToArray());
         }
@@ -2218,9 +2264,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
                     if (hasHidden)
                     {
-                        hiddenSheets.Add(
-                            new string[] { Path.GetFileName(fileInfo), worksheet.Name }
-                        );
+                        hiddenSheets.Add(new[] { Path.GetFileName(fileInfo), worksheet.Name });
                     }
                 }
             }
@@ -2392,45 +2436,26 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public string GetFileInfo(IRibbonControl control)
     {
-        if (!File.Exists(DefaultFilePath))
-        {
-            var defaultContent =
-                @"C:\M1Work\Public\Excels\Tables\"
-                + Environment.NewLine
-                + @"C:\M2Work\Public\Excels\Tables\"
-                + Environment.NewLine
-                + @"\n";
-
-            File.WriteAllText(DefaultFilePath, defaultContent);
-        }
-
-        var line1 = File.ReadLines(DefaultFilePath).Skip(1 - 1).FirstOrDefault();
-        var line2 = File.ReadLines(DefaultFilePath).Skip(2 - 1).FirstOrDefault();
-        var line3 = File.ReadLines(DefaultFilePath).Skip(3 - 1).FirstOrDefault();
+        var basePath = BasePath;
+        var targetPath = TargetPath;
         if (control.Id == "BasePathEdit")
-            return line1;
+            return basePath;
         if (control.Id == "TargetPathEdit")
-            return line2;
-        if (control.Id == "ExcelSearchBoxEdit")
-            return line3;
+            return targetPath;
 
         return @"..\Public\Excels\Tables\";
     }
 
-    public void BaseFileInfoChanged(IRibbonControl control, string text)
+    public void FileInfoChanged(IRibbonControl control, string text)
     {
-        _currentBaseText = text;
-        var lines = File.ReadAllLines(DefaultFilePath);
-        lines[1 - 1] = _currentBaseText;
-        File.WriteAllLines(DefaultFilePath, lines);
-    }
-
-    public void TargetFileInfoChanged(IRibbonControl control, string text)
-    {
-        _currentTargetText = text;
-        var lines = File.ReadAllLines(DefaultFilePath);
-        lines[2 - 1] = _currentTargetText;
-        File.WriteAllLines(DefaultFilePath, lines);
+        if (control.Id == "BasePathEdit")
+        {
+            _globalValue.SaveValue("BasePath", text);
+        }
+        if (control.Id == "TargetPathEdit")
+        {
+            _globalValue.SaveValue("TargetPath", text);
+        }
     }
 
     private List<CellSelectChangeTip> _customZoomForms = [];
@@ -2691,8 +2716,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         // 弹出确认对话框
         var result = MessageBox.Show(
-            "确定全局变量回滚到默认？所有自定义设置都会丢失！",
-            "确认操作",
+            @"确定全局变量回滚到默认？所有自定义设置都会丢失！",
+            @"确认操作",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning
         );
@@ -2703,9 +2728,38 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             return;
         }
 
-        _globalValue.ResetToDefault();
+        _globalValue.ResetToDefault("ApiKey", "ChatGptApiKey", "DeepSeektApiKey");
+
+        ResetGlobalVariables();
+
         RefreshRibbonControls();
     }
+
+    // 重置全局变量的方法
+    private void ResetGlobalVariables()
+    {
+        LabelText = _globalValue.DefaultValue["LabelText"];
+        FocusLabelText = _globalValue.DefaultValue["FocusLabelText"];
+        LabelTextRoleDataPreview = _globalValue.DefaultValue["LabelTextRoleDataPreview"];
+        SheetMenuText = _globalValue.DefaultValue["SheetMenuText"];
+        CellHiLightText = _globalValue.DefaultValue["CellHiLightText"];
+        TempPath = _globalValue.DefaultValue["TempPath"];
+        CheckSheetValueText = _globalValue.DefaultValue["CheckSheetValueText"];
+        ShowDnaLogText = _globalValue.DefaultValue["ShowDnaLogText"];
+        ShowAiText = _globalValue.DefaultValue["ShowAIText"];
+        ApiKey = _globalValue.DefaultValue["ApiKey"];
+        ApiUrl = _globalValue.DefaultValue["ApiUrl"];
+        ApiModel = _globalValue.DefaultValue["ApiModel"];
+        ChatGptApiKey = _globalValue.DefaultValue["ChatGptApiKey"];
+        ChatGptApiUrl = _globalValue.DefaultValue["ChatGptApiUrl"];
+        ChatGptApiModel = _globalValue.DefaultValue["ChatGptApiModel"];
+        DeepSeektApiKey = _globalValue.DefaultValue["DeepSeektApiKey"];
+        DeepSeektApiUrl = _globalValue.DefaultValue["DeepSeektApiUrl"];
+        DeepSeektApiModel = _globalValue.DefaultValue["DeepSeektApiModel"];
+        ChatGptSysContentExcelAss = _globalValue.DefaultValue["ChatGptSysContentExcelAss"];
+        ChatGptSysContentTransferAss = _globalValue.DefaultValue["ChatGptSysContentTransferAss"];
+    }
+
     // 刷新 Ribbon 控件的方法
     private void RefreshRibbonControls()
     {
