@@ -5,15 +5,12 @@ namespace NumDesTools;
 
 public static class CompareExcel
 {
-    public static void CompareMain(string[] folder)
+    public static void CompareMain(string baseFolder, string targetFolder)
     {
         var compareData = new List<Dictionary<string, object>>();
         var compareLog = new List<Dictionary<string, object>>();
         var myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var outFile = myDocumentsPath + @"\#表格比对结果.xlsx";
-
-        var baseFolder = folder[0];
-        var targetFolder = folder[1];
 
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(baseFolder));
         if (newPath != null)

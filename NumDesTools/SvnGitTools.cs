@@ -39,6 +39,10 @@ internal class SvnGitTools
     public static bool IsFileModified(string filePath)
     {
         var repoPath = FindGitRoot(filePath);
+        if (repoPath == null)
+        {
+            return false;
+        }
         using var repo = new Repository(repoPath);
         var status = repo.RetrieveStatus(filePath);
         // 使用按位与检查是否包含 ModifiedInWorkdir 或 ModifiedInIndex

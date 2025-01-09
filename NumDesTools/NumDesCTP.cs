@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Windows.Forms.Integration;
+using Font = System.Drawing.Font;
+using ListBox = System.Windows.Forms.ListBox;
 using UserControl = System.Windows.Forms.UserControl;
 
 #pragma warning disable CA1416
@@ -46,7 +48,7 @@ public class NumDesCTP
                 ExcelAsyncUtil.QueueAsMacro(() =>
                 {
                     LableControlWF = new SelfControl();
-                    var listBoxSheet = new System.Windows.Forms.ListBox();
+                    var listBoxSheet = new ListBox();
 
                     var contextMenu = new ContextMenuStrip();
                     var hideItem = new ToolStripMenuItem("隐藏");
@@ -59,7 +61,7 @@ public class NumDesCTP
 
                     listBoxSheet.SelectedIndexChanged += (sender, _) =>
                     {
-                        if (sender is System.Windows.Forms.ListBox listBox)
+                        if (sender is ListBox listBox)
                         {
                             var sheetName =
                                 listBox.SelectedItem.ToString()
@@ -102,7 +104,7 @@ public class NumDesCTP
                             if (e.Font is not null)
                             {
                                 var font = isHidden
-                                    ? new System.Drawing.Font(e.Font, FontStyle.Italic)
+                                    ? new Font(e.Font, FontStyle.Italic)
                                     : e.Font;
                                 Brush brush = new SolidBrush(e.ForeColor);
                                 if (e.Font != null)
@@ -138,45 +140,43 @@ public class NumDesCTP
             }
             return null;
         }
+
+        if (!ctpsWPF.TryGetValue(name, out ctpWPF))
+        {
+            LableControlWPF = new SelfControl();
+            var elementHost = new ElementHost
+            {
+                Dock = DockStyle.Fill,
+                Child = controlWPF,
+                Tag = eleTag
+            };
+            LableControlWPF.Controls.Add(elementHost);
+
+            ctpWPF = CustomTaskPaneFactory.CreateCustomTaskPane(LableControlWPF, name);
+            ctpWPF.DockPosition = dockPosition;
+            ctpWPF.Width = width;
+            ctpWPF.Visible = true;
+
+            ctpsWPF[name] = ctpWPF;
+        }
         else
         {
-            if (!ctpsWPF.TryGetValue(name, out ctpWPF))
+            ElementHost elementHost = null;
+            foreach (Control control in LableControlWPF.Controls)
             {
-                LableControlWPF = new SelfControl();
-                var elementHost = new ElementHost
+                if (control is ElementHost host && (string)host.Tag == eleTag)
                 {
-                    Dock = DockStyle.Fill,
-                    Child = controlWPF,
-                    Tag = eleTag
-                };
-                LableControlWPF.Controls.Add(elementHost);
-
-                ctpWPF = CustomTaskPaneFactory.CreateCustomTaskPane(LableControlWPF, name);
-                ctpWPF.DockPosition = dockPosition;
-                ctpWPF.Width = width;
-                ctpWPF.Visible = true;
-
-                ctpsWPF[name] = ctpWPF;
-            }
-            else
-            {
-                ElementHost elementHost = null;
-                foreach (Control control in LableControlWPF.Controls)
-                {
-                    if (control is ElementHost host && (string)host.Tag == eleTag)
-                    {
-                        elementHost = host;
-                        break;
-                    }
+                    elementHost = host;
+                    break;
                 }
-
-                if (elementHost != null)
-                    elementHost.Child = controlWPF;
-
-                ctpWPF.Visible = true;
             }
-            return controlWPF;
+
+            if (elementHost != null)
+                elementHost.Child = controlWPF;
+
+            ctpWPF.Visible = true;
         }
+        return controlWPF;
     }
 
     public static void DeleteCTP(bool isWPF, string name)

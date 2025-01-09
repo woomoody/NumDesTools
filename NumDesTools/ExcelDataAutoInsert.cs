@@ -1480,24 +1480,22 @@ public static class ExcelDataAutoInsertLanguage
             {
                 return String.Empty;
             }
-            else
+
+            string result;
+            try
             {
-                string result;
-                try
-                {
-                    result = findSheet[((object)findValue, (object)funDy3)];
-                }
-                catch
-                {
-                    LogDisplay.RecordLine(
-                        "[{0}] , {1}【角色数据】中不存在",
-                        DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                        findValue
-                    );
-                    result = $"Error#{findValue}#在【角色数据】中不存在";
-                }
-                return result;
+                result = findSheet[((object)findValue, (object)funDy3)];
             }
+            catch
+            {
+                LogDisplay.RecordLine(
+                    "[{0}] , {1}【角色数据】中不存在",
+                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                    findValue
+                );
+                result = $"Error#{findValue}#在【角色数据】中不存在";
+            }
+            return result;
         }
 
         string GetValue(string funName)
