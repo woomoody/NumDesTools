@@ -2689,33 +2689,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (control == null)
             throw new ArgumentNullException(nameof(control));
 
-        // 确保所有值为字符串类型
-        var cleanValue = new Dictionary<string, object>();
-        foreach (var kvp in _globalValue._defaultValue)
-        {
-            if (kvp.Value?.Length > LongTextThreshold)
-            {
-                if (kvp.Value.Contains("\n"))
-                {
-                    // 如果是长文本，按行拆分为数组
-                    cleanValue[kvp.Key] = kvp.Value.Split("\n")?.ToString() ?? string.Empty;
-                }
-                else
-                {
-                    var lines = new List<string>();
-                    for (int i = 0; i < kvp.Value.Length; i += NumDesAddIn.MaxLineLength)
-                    {
-                        lines.Add(kvp.Value.Substring(i, Math.Min(MaxLineLength, kvp.Value.Length - i)));
-                    }
-                    cleanValue[kvp.Key] = lines;
-                }
-            }
-            else
-            {
-                cleanValue[kvp.Key] = kvp.Value?.ToString() ?? string.Empty;
-            }
-        }
-
         // 弹出确认对话框
         var result = MessageBox.Show(
             "确定全局变量回滚到默认？所有自定义设置都会丢失！",
@@ -2730,53 +2703,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             return;
         }
 
-        try
-        {
-            // 清空文件
-            File.WriteAllLines(_globalValue._filePath, Array.Empty<string>());
-
-            // 重写文件内容
-            var json = JsonConvert.SerializeObject(cleanValue, Formatting.Indented);
-            File.WriteAllText(_globalValue._filePath, json, Encoding.UTF8);
-
-            // 重置全局变量
-            ResetGlobalVariables();
-
-            // 刷新 Ribbon 控件
-            RefreshRibbonControls();
-        }
-        catch (Exception ex)
-        {
-            // 捕获异常并显示错误信息
-            MessageBox.Show($"重置失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
+        _globalValue.ResetToDefault();
+        RefreshRibbonControls();
     }
-
-    // 重置全局变量的方法
-    private void ResetGlobalVariables()
-    {
-        LabelText = _globalValue._defaultValue["LabelText"];
-        FocusLabelText = _globalValue._defaultValue["FocusLabelText"];
-        LabelTextRoleDataPreview = _globalValue._defaultValue["LabelTextRoleDataPreview"];
-        SheetMenuText = _globalValue._defaultValue["SheetMenuText"];
-        CellHiLightText = _globalValue._defaultValue["CellHiLightText"];
-        TempPath = _globalValue._defaultValue["TempPath"];
-        CheckSheetValueText = _globalValue._defaultValue["CheckSheetValueText"];
-        ShowDnaLogText = _globalValue._defaultValue["ShowDnaLogText"];
-        ShowAiText = _globalValue._defaultValue["ShowAIText"];
-        ApiKey = _globalValue._defaultValue["ApiKey"];
-        ApiUrl = _globalValue._defaultValue["ApiUrl"];
-        ApiModel = _globalValue._defaultValue["ApiModel"];
-        ChatGptApiKey = _globalValue._defaultValue["ChatGptApiKey"];
-        ChatGptApiUrl = _globalValue._defaultValue["ChatGptApiUrl"];
-        ChatGptApiModel = _globalValue._defaultValue["ChatGptApiModel"];
-        DeepSeektApiKey = _globalValue._defaultValue["DeepSeektApiKey"];
-        DeepSeektApiUrl = _globalValue._defaultValue["DeepSeektApiUrl"];
-        DeepSeektApiModel = _globalValue._defaultValue["DeepSeektApiModel"];
-        ChatGptSysContentExcelAss = _globalValue._defaultValue["ChatGptSysContentExcelAss"];
-        ChatGptSysContentTransferAss = _globalValue._defaultValue["ChatGptSysContentTransferAss"];
-    }
-
     // 刷新 Ribbon 控件的方法
     private void RefreshRibbonControls()
     {
