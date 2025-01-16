@@ -228,9 +228,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             string installerPath = Path.Combine(addInPath, "windowsdesktop-runtime-6.0.20-win-x64.exe");
 
             // 调用安装程序并等待安装完成
-            var process = new System.Diagnostics.Process
+            var process = new Process
             {
-                StartInfo = new System.Diagnostics.ProcessStartInfo
+                StartInfo = new ProcessStartInfo
                 {
                     FileName = installerPath,
                     Arguments = "/quiet /norestart", // 静默安装参数（根据需要调整）
