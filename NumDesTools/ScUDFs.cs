@@ -249,6 +249,57 @@ public class ExcelUdf
 
         return result;
     }
+    [ExcelFunction(
+        Category = "UDF-查找值",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "查找正则匹配到的数据并输出为字符串"
+    )]
+    public static string FindKey(
+        [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "单元格")]
+        string inputRange,
+        [ExcelArgument(AllowReference = true, Description = "正则方案：%d", Name = "正则方案")]
+        string regexMethod
+    )
+    {
+        // 参数校验
+        if (IsNullOrEmpty(inputRange))
+        {
+            return "输入单元格地址不能为空";
+        }
+
+        if (IsNullOrEmpty(regexMethod))
+        {
+            regexMethod = @"\d+";
+        }
+
+        try
+        {
+            // 使用正则表达式匹配
+            var matches = Regex.Matches(inputRange, regexMethod);
+
+            // 将匹配结果连接为字符串
+            string result = Join(", ", matches.Select(m => m.Value));
+
+            // 如果没有匹配到内容，返回提示信息
+            if (IsNullOrEmpty(result))
+            {
+                return "未找到匹配内容";
+            }
+
+            return result;
+        }
+        catch (ArgumentException ex)
+        {
+            // 捕获正则表达式语法错误
+            return $"正则表达式错误：{ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            // 捕获其他异常
+            return $"发生错误：{ex.Message}";
+        }
+    }
 
     [ExcelFunction(
         Category = "UDF-查找值",
