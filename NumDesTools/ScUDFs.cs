@@ -1153,7 +1153,7 @@ public class ExcelUdf
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")]
         object[,] rangeObj1,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false", Name = "过滤空值")]
-        bool ignoreEmpty
+        bool ignoreEmpty = true
     )
     {
         HashSet<object> uniqueValues = new HashSet<object>();
