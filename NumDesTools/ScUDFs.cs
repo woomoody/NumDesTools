@@ -1142,7 +1142,42 @@ public class ExcelUdf
 
         return sumProductValueList.ToArray();
     }
+    [ExcelFunction(
+        Category = "UDF-Excel函数增强",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "统计指定范围内不重复值的数量",
+        Name = "UXUNIQUECOUNT"
+    )]
+    public static int UxUniqueCount(
+        [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")]
+        object[,] rangeObj1,
+        [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false", Name = "过滤空值")]
+        bool ignoreEmpty
+    )
+    {
+        HashSet<object> uniqueValues = new HashSet<object>();
 
+        var rowCount = rangeObj1.GetLength(0);
+        var colCount = rangeObj1.GetLength(1);
+
+        for (var col = 0; col < colCount; col++)
+        {
+            for (var row = 0; row < rowCount; row++)
+            {
+                var value = rangeObj1[row, col];
+
+                if (ignoreEmpty && (value == null || IsNullOrEmpty(value.ToString())))
+                {
+                    continue; // 跳过空值
+                }
+
+                uniqueValues.Add(value);
+            }
+        }
+
+        return uniqueValues.Count;
+    }
     [ExcelFunction(
         Category = "UDF-Alice专属函数",
         IsVolatile = true,
