@@ -304,7 +304,11 @@ public class ChatApiClient
                 throw new Exception("API 响应中没有返回有效的 choices 数据。");
             }
 
-            return jsonResponse?.choices[0].message.content.ToString();
+            var reponseThink = jsonResponse?.choices[0].message.reasoning_content.ToString();
+            var reponseResult = jsonResponse?.choices[0].message.content.ToString();
+            string reponseText = "[思考]\n" + reponseThink + "\n[思考]\n" + reponseResult;
+
+            return reponseText;
         }
 
         string errorContent = await response.Content.ReadAsStringAsync();
