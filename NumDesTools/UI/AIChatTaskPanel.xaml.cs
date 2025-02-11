@@ -304,22 +304,10 @@ namespace NumDesTools.UI
                 model = _apiModel,
                 messages = new[]
                 {
-                    new { content = _sysContent, role = "system" },
+                    new { content = "", role = "system" },
                     new { content = userInput, role = "user" }
                 },
                 max_tokens = 2048,
-                frequency_penalty = 0,
-                presence_penalty = 0,
-                response_format = new { type = "text" },
-                stop = (string)null,
-                stream = false,
-                stream_options = (object)null,
-                temperature = 1,
-                top_p = 1,
-                tools = (object)null,
-                tool_choice = "none",
-                logprobs = false,
-                top_logprobs = (object)null
             };
         }
 
