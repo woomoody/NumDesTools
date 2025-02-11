@@ -260,7 +260,7 @@ namespace NumDesTools.UI
                     requestBody = CreateRequestBodyDeepSeek(userInput);
                 }
 
-                string response = await ChatApiClient.CallApiAsync(requestBody, _apiKey, _apiUrl);
+                string response = await ChatApiClient.CallApiStreamAsync(requestBody, _apiKey, _apiUrl);
 
                 AppendToOutput(_apiModel, response, isUser: false);
             }
@@ -290,7 +290,7 @@ namespace NumDesTools.UI
                 max_tokens = 10000,     // 最大生成的 token 数量
                 temperature = 0.5,     // 控制生成的随机性
                 top_p = 1,             // 核采样参数
-                stream = false          // 启用流式输出
+                stream = true          // 流式输出
             };
         }
 
@@ -307,7 +307,8 @@ namespace NumDesTools.UI
                     new { content = "", role = "system" },
                     new { content = userInput, role = "user" }
                 },
-                max_tokens = 2048,
+                max_tokens = 10000,
+                stream = true          // 流式输出
             };
         }
 
