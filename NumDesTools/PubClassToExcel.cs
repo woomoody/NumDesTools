@@ -276,14 +276,37 @@ public class SelfGetRangePixels
 //自定义ChatApi
 public class ChatApiClient
 {
-    public static async Task CallApiStreamAsync(object requestBody, string apiKey, string apiUrl,
-        Action<string> onChunkReceived, string allText,
-        Action onStreamCompleted = null )
+    public static async Task<string> CallApiAsync(object requestBody, string apiKey, string apiUrl)
     {
         if (string.IsNullOrEmpty(apiKey))
         {
             throw new ArgumentException("API 密钥不能为空。");
         }
+
+        using HttpClient client = new HttpClient()
+        {
+            Timeout = TimeSpan.FromMinutes(5) // 设置超时时间为5分钟
+        }; ;
+
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+        string jsonBody = JsonConvert.SerializeObject(requestBody);
+        var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+
+        HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+
+        if (response.IsSuccessStatusCode)
+        {
+            string responseContent = await response.Content.ReadAsStringAsync();
+            dynamic jsonResponse = JsonConvert.DeserializeObject(responseContent);
+
+            if (
+                jsonResponse != null
+                && (jsonResponse.choices == null || jsonResponse.choices.Count == 0)
+            )
+            {
+                throw new Exception("API 响应中没有返回有效的 choices 数据。");
+            }
 
             var reponseThink = jsonResponse?.choices[0].message.reasoning_content.ToString();
             var reponseResult = jsonResponse?.choices[0].message.content.ToString();
@@ -295,11 +318,9 @@ public class ChatApiClient
         string errorContent = await response.Content.ReadAsStringAsync();
         throw new Exception($"API 调用失败，状态码：{response.StatusCode}，错误信息：{errorContent}");
     }
-    /// <summary>
-    /// 流式调用 API，逐块读取返回的数据，并通过 onChunkReceived 回调实时返回解析后的文本
-    /// </summary>
+
     public static async Task CallApiStreamAsync(object requestBody, string apiKey, string apiUrl,
-        Action<string> onChunkReceived, string allText,
+        Action<string> onChunkReceived,
         Action onStreamCompleted = null )
     {
         if (string.IsNullOrEmpty(apiKey))
@@ -356,7 +377,6 @@ public class ChatApiClient
                     }
 
                     onChunkReceived(reponseThink);
-                    allText += reponseThink;
                 }
                 catch (Exception ex)
                 {
