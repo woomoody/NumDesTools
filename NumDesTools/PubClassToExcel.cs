@@ -283,10 +283,8 @@ public class ChatApiClient
             throw new ArgumentException("API 密钥不能为空。");
         }
 
-        using HttpClient client = new HttpClient()
-        {
-            Timeout = TimeSpan.FromMinutes(5) // 设置超时时间为5分钟
-        }; ;
+        using HttpClient client = new HttpClient();
+        client.Timeout = TimeSpan.FromMinutes(5); // 设置超时时间为5分钟
 
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
@@ -335,10 +333,8 @@ public class ChatApiClient
         var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
 
         // 设置 HttpCompletionOption.ResponseHeadersRead 开启流式读取
-        using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, apiUrl)
-        {
-            Content = content
-        };
+        using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
+        request.Content = content;
         HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         if (!response.IsSuccessStatusCode)
         {
@@ -373,7 +369,7 @@ public class ChatApiClient
    
                     if (reponseThink == "")
                     {
-                        reponseThink = jsonChunk?.choices[0].delta.content.ToString();
+                        reponseThink = jsonChunk.choices[0].delta.content.ToString();
                     }
 
                     onChunkReceived(reponseThink);
