@@ -4,6 +4,7 @@ using System.Windows.Documents;
 using System.Windows.Forms;
 using System.Windows.Input;
 using Markdig;
+using Microsoft.VisualBasic.ApplicationServices;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 using Brushes = System.Windows.Media.Brushes;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -133,27 +134,22 @@ public partial class AiChatTaskPanel
             padding: 2px 4px;
             border-radius: 4px;
         }
-        /* 修改content样式 */
-        .content {
-            white-space: pre-wrap;  /* 保留换行 */
-            overflow-anchor: auto;  /* 启用滚动锚定 */
-        }
-
-        /* 添加加载动画 */
-        .loading-dots::after {
-            content: '.';
-            animation: dots 1s infinite steps(4);
-        }
-
-        @keyframes dots {
-            0% { content: '.'; }
-            33% { content: '..'; }
-            66% { content: '...'; }
-        }
     </style>
     <script>
         function scrollToBottom() {
             window.scrollTo(0, document.body.scrollHeight);
+        }
+        function replaceContent(responseId, newContent) {
+            // 找到对应ID的消息容器div
+            var messageContainer = document.getElementById(responseId);
+            if (messageContainer) {
+                // 在消息容器内找到类名为'content'的div
+                var contentDiv = messageContainer.querySelector('.content');
+                if (contentDiv) {
+                    // 替换内容
+                    contentDiv.innerHTML = newContent;
+                }
+            }
         }
     </script>
 </head>
@@ -273,33 +269,56 @@ public partial class AiChatTaskPanel
 
             AppendToOutput(_userName, userInput, true);
 
-            ShowLoadingIndicator();
-
             // 重置当前响应ID
             _currentResponseId = null;
 
-            string allText = string.Empty; 
-
+            // 初始化流式消息
+            var streamMessage = new ChatMessage
+            {
+                Role = _apiModel,
+                Message = "",
+                IsUser = false
+            };
             await ChatApiClient.CallApiStreamAsync(
                 requestBody,
                 _apiKey,
                 _apiUrl,
-                chunk => AppendStreamingContent(chunk), // 实时处理数据块
-                allText,
+                chunk =>
+                {
+                    // 更新消息
+                    streamMessage.Message += chunk;
+                    AppendStreamingContent(chunk);
+                },
                 () =>
                 {
+                    var nowTime = DateTime.Now;
+                    streamMessage.Timestamp = nowTime;
+
                     // 流结束时添加时间戳
                     Dispatcher.Invoke(() =>
                     {
                         var script = $@"
                         var container = document.getElementById('{_currentResponseId}');
                         var timestampDiv = container.querySelector('.timestamp');
-                        timestampDiv.innerHTML = '{DateTime.Now:yyyy-MM-dd HH:mm:ss}';";
+                        timestampDiv.innerHTML = '{nowTime:yyyy-MM-dd HH:mm:ss}';";
 
                         ResponseOutput.InvokeScript("eval", script);
-                        _currentResponseId = null;
+
                     });
                 });
+
+            // 转换新消息为 HTML
+            var htmlMessage = Markdown.ToHtml(streamMessage.Message);
+            // **解码 HTML 实体**
+            htmlMessage = HttpUtility.HtmlDecode(htmlMessage);
+
+            // 保存完整消息
+            streamMessage.Message = htmlMessage;
+            new ChatHistoryManager().SaveChatMessage(streamMessage);
+
+            ResponseOutput.InvokeScript("replaceContent",
+                new object[] { _currentResponseId, htmlMessage });
+
         }
         catch (Exception ex)
         {
@@ -354,6 +373,7 @@ public partial class AiChatTaskPanel
 
         ResponseOutput.InvokeScript("eval", script);
     }
+
     private void ShowLoadingIndicator()
     {
         var script = @"
@@ -472,7 +492,7 @@ public partial class AiChatTaskPanel
                     chatRecord.SaveChatMessage(new ChatMessage
                     {
                         Role = role,
-                        Message = message,
+                        Message = htmlMessage,
                         IsUser = isUser,
                         Timestamp = DateTime.Now // 保存时间戳
                     });
@@ -500,27 +520,15 @@ public partial class AiChatTaskPanel
                         .InvokeMember("innerHTML", BindingFlags.GetProperty, null, body, null)
                         ?.ToString();
 
-                    // 转换新消息为 HTML
-                    var htmlMessage = Markdown.ToHtml(
-                        HttpUtility.HtmlEncode(message)
-                    );
-
-                    // **解码 HTML 实体**
-                    htmlMessage = HttpUtility.HtmlDecode(htmlMessage);
-
-                    // 如果未传递时间戳，则使用当前时间
-                    var displayTimestamp = timestamp?.ToString("yyyy-MM-dd HH:mm:ss") ??
-                                           DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-
                     // 生成消息 HTML
                     var messageHtml =
                         $@"
                         <div class='message-container'>
                             <div class='message {(isUser ? "user" : "system")}'>
                                 <div class='role'>{role}</div>
-                                <div>{htmlMessage}</div>
+                                <div>{message}</div>
                             </div>
-                            <div class='timestamp'>{displayTimestamp}</div>
+                            <div class='timestamp'>{timestamp}</div>
                         </div>";
 
                     // 追加新消息到现有内容
