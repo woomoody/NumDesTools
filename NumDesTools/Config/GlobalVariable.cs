@@ -32,8 +32,8 @@ namespace NumDesTools.Config
                 { "ChatGptApiUrl", "https://api.openai.com/v1/chat/completions" },
                 { "ChatGptApiModel", "gpt-4o" },
                 { "DeepSeektApiKey", "***" },
-                { "DeepSeektApiUrl", "https://api.deepseek.com/v1/chat/completions" },
-                { "DeepSeektApiModel", "deepseek-coder" },
+                { "DeepSeektApiUrl", "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions" },
+                { "DeepSeektApiModel", "deepseek-r1" },
                 {
                     "ChatGptSysContentExcelAss",
                     "你是一个代码和办公助手，特别擅长回答Excel的公式以及代码编写，特别擅长C#，打印输出不要使用控制台，使用：Debug.Print，判断需要记录日志，使用：LogDisplay.RecordLine(\"[{0}] , {1}\", DateTime.Now.ToString(CultureInfo.InvariantCulture),$\"{selectedRange.Count}\");"
