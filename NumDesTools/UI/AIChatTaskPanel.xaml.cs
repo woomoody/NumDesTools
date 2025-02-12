@@ -1,11 +1,8 @@
 ﻿using System.Web;
 using System.Windows;
 using System.Windows.Documents;
-using System.Windows.Forms;
 using System.Windows.Input;
 using Markdig;
-using Microsoft.VisualBasic.ApplicationServices;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 using Brushes = System.Windows.Media.Brushes;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
@@ -342,15 +339,16 @@ public partial class AiChatTaskPanel
             if (string.IsNullOrEmpty(_currentResponseId))
             {
                 _currentResponseId = $"msg-{DateTime.Now.Ticks}";
+
                 var newMessage = $@"
                 <div id='{_currentResponseId}' class='message-container'>
                     <div class='message system'>
                         <div class='role'>{_apiModel}</div>
-                        <div class='content'></div>
+                        <div class='content'</div>
+                        <div class='content loading-dots' style='color:#888'>思考中……</div>
                     </div>
                     <div class='timestamp'></div>
                 </div>";
-
                 AppendRawHtml(newMessage);
             }
 
@@ -372,23 +370,6 @@ public partial class AiChatTaskPanel
         scrollToBottom();";
 
         ResponseOutput.InvokeScript("eval", script);
-    }
-
-    private void ShowLoadingIndicator()
-    {
-        var script = @"
-        var loading = document.createElement('div');
-        loading.className = 'message-container loading-dots';
-        // ...加载动画HTML...
-        document.body.appendChild(loading);
-        scrollToBottom();";
-
-        ResponseOutput.InvokeScript("eval", script);
-    }
-
-    private void HideLoadingIndicator()
-    {
-        ResponseOutput.InvokeScript("eval", "document.querySelector('.loading-dots').remove();");
     }
 
     private object CreateRequestBody(string userInput)
