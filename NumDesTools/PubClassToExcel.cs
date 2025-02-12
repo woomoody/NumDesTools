@@ -285,6 +285,28 @@ public class ChatApiClient
             throw new ArgumentException("API 密钥不能为空。");
         }
 
+            var reponseThink = jsonResponse?.choices[0].message.reasoning_content.ToString();
+            var reponseResult = jsonResponse?.choices[0].message.content.ToString();
+            string reponseText = "[思考]\n" + reponseThink + "\n[思考]\n" + reponseResult;
+
+            return reponseText;
+        }
+
+        string errorContent = await response.Content.ReadAsStringAsync();
+        throw new Exception($"API 调用失败，状态码：{response.StatusCode}，错误信息：{errorContent}");
+    }
+    /// <summary>
+    /// 流式调用 API，逐块读取返回的数据，并通过 onChunkReceived 回调实时返回解析后的文本
+    /// </summary>
+    public static async Task CallApiStreamAsync(object requestBody, string apiKey, string apiUrl,
+        Action<string> onChunkReceived, string allText,
+        Action onStreamCompleted = null )
+    {
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            throw new ArgumentException("API 密钥不能为空。");
+        }
+
         using HttpClient client = new HttpClient();
         client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 

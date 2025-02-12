@@ -300,22 +300,6 @@ public partial class AiChatTaskPanel
                         _currentResponseId = null;
                     });
                 });
-            //markdown一次性渲染
-
-            // 转换新消息为 HTML
-            var htmlMessage = Markdown.ToHtml(
-                HttpUtility.HtmlEncode(allText)
-            );
-            // **解码 HTML 实体**
-            htmlMessage = HttpUtility.HtmlDecode(htmlMessage);
-
-            var script = $@"
-            var container = document.getElementById('{_currentResponseId}');
-            var contentDiv = container.querySelector('.content');
-            contentDiv.innerHTML = '{HttpUtility.JavaScriptStringEncode(htmlMessage)}';
-            scrollToBottom();";
-            ResponseOutput.InvokeScript("eval", script);
-
         }
         catch (Exception ex)
         {
