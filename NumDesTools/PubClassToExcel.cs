@@ -8,6 +8,7 @@ using System.Windows.Data;
 using GraphX.Common.Models;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
+using Action = System.Action;
 
 namespace NumDesTools;
 
@@ -275,52 +276,9 @@ public class SelfGetRangePixels
 //自定义ChatApi
 public class ChatApiClient
 {
-    public static async Task<string> CallApiAsync(object requestBody, string apiKey, string apiUrl)
-    {
-        if (string.IsNullOrEmpty(apiKey))
-        {
-            throw new ArgumentException("API 密钥不能为空。");
-        }
-
-        using HttpClient client = new HttpClient()
-        {
-            Timeout = TimeSpan.FromMinutes(5) // 设置超时时间为5分钟
-        }; ;
-
-        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-
-        string jsonBody = JsonConvert.SerializeObject(requestBody);
-        var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-
-        HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-
-        if (response.IsSuccessStatusCode)
-        {
-            string responseContent = await response.Content.ReadAsStringAsync();
-            dynamic jsonResponse = JsonConvert.DeserializeObject(responseContent);
-
-            if (
-                jsonResponse != null
-                && (jsonResponse.choices == null || jsonResponse.choices.Count == 0)
-            )
-            {
-                throw new Exception("API 响应中没有返回有效的 choices 数据。");
-            }
-
-            var reponseThink = jsonResponse?.choices[0].message.reasoning_content.ToString();
-            var reponseResult = jsonResponse?.choices[0].message.content.ToString();
-            string reponseText = "[思考]\n" + reponseThink + "\n[思考]\n" + reponseResult;
-
-            return reponseText;
-        }
-
-        string errorContent = await response.Content.ReadAsStringAsync();
-        throw new Exception($"API 调用失败，状态码：{response.StatusCode}，错误信息：{errorContent}");
-    }
-    /// <summary>
-    /// 流式调用 API，逐块读取返回的数据，并通过 onChunkReceived 回调实时返回解析后的文本
-    /// </summary>
-    public static async Task<string> CallApiStreamAsync(object requestBody, string apiKey, string apiUrl)
+    public static async Task CallApiStreamAsync(object requestBody, string apiKey, string apiUrl,
+        Action<string> onChunkReceived, string allText,
+        Action onStreamCompleted = null )
     {
         if (string.IsNullOrEmpty(apiKey))
         {
@@ -348,9 +306,6 @@ public class ChatApiClient
         using var stream = await response.Content.ReadAsStreamAsync();
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
-        var reponseThink = string.Empty;
-        var reponseResult = string.Empty;
-
         while (!reader.EndOfStream)
         {
             string line = await reader.ReadLineAsync();
@@ -371,18 +326,23 @@ public class ChatApiClient
                     // 此处假设返回的 JSON 格式为：{ "choices": [ { "delta": { "content": "..." } } ] }
                     dynamic jsonChunk = JsonConvert.DeserializeObject(jsonPart);
 
-                    reponseThink += jsonChunk?.choices[0].delta.reasoning_content.ToString();
-                    reponseResult += jsonChunk?.choices[0].delta.content.ToString();
+                    string reponseThink = jsonChunk?.choices[0].delta.reasoning_content.ToString();
+   
+                    if (reponseThink == "")
+                    {
+                        reponseThink = jsonChunk?.choices[0].delta.content.ToString();
+                    }
+
+                    onChunkReceived(reponseThink);
+                    allText += reponseThink;
                 }
                 catch (Exception ex)
                 {
-                    // 这里可以选择记录错误或直接忽略解析异常
-                    // 例如：onChunkReceived($"[解析出错：{ex.Message}]");
+                    MessageBox.Show($"onChunkReceived [解析出错：{ex.Message}]");
                 }
             }
         }
-        string reponseText = "[思考]\n" + reponseThink + "\n[思考]\n" + reponseResult;
-        return reponseText;
+        onStreamCompleted?.Invoke();
     }
 }
 
@@ -393,6 +353,7 @@ public class ChatMessage
     public string Message { get; set; } // 消息内容
     public bool IsUser { get; set; } // 是否是用户消息
     public DateTime Timestamp { get; set; } // 消息时间戳
+    public bool IsStreaming { get; set; }    // 新增字段标识流式消息
 }
 
 public class ChatHistoryManager
