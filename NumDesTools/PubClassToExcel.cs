@@ -278,7 +278,7 @@ public class SelfGetRangePixels
 //自定义ChatApi
 public class ChatApiClient
 {
-    private static readonly HttpClient Client = new HttpClient();
+    private static readonly HttpClient Client;
 
     // 静态构造函数确保只初始化一次
     static ChatApiClient()
@@ -330,10 +330,8 @@ public class ChatApiClient
         Action<string> onChunkReceived,
         Action onCompleted = null)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl)
-        {
-            Content = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json")
-        };
+        using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
+        request.Content = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
         using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
@@ -359,7 +357,12 @@ public class ChatApiClient
         {
             var obj = JObject.Parse(json);
             var content = obj["choices"]?[0]?["delta"]?["content"]?.ToString();
-            if (!string.IsNullOrEmpty(content))
+            var contentRes = obj["choices"]?[0]?["delta"]?["reasoning_content"]?.ToString();
+            if (string.IsNullOrEmpty(content))
+            {
+                handler(contentRes);
+            }
+            else
             {
                 handler(content);
             }
@@ -421,7 +424,6 @@ public class ChatHistoryManager
             command.Parameters.AddWithValue("@Message", message.Message);
             command.Parameters.AddWithValue("@IsUser", message.IsUser ? 1 : 0);
             command.Parameters.AddWithValue("@Timestamp", message.Timestamp);
-            command.ExecuteNonQuery();
             await command.ExecuteNonQueryAsync(); 
         }
     }

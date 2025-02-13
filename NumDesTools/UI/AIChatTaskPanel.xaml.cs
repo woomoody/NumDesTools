@@ -315,6 +315,7 @@ public partial class AiChatTaskPanel
 
             ResponseOutput.InvokeScript("replaceContent",
                 new object[] { _currentResponseId, htmlMessage });
+            ResponseOutput.InvokeScript("scrollToBottom");
 
         }
         catch (Exception ex)
