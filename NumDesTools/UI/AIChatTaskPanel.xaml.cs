@@ -36,7 +36,7 @@ public partial class AiChatTaskPanel
                 enterCommandBinding
             );
 
-        // 初始化输入框和输出框
+        // 初始化输入框
         InitializeTextEditors();
 
         InitializeHtmlTemplate();
@@ -344,8 +344,7 @@ public partial class AiChatTaskPanel
                 <div id='{_currentResponseId}' class='message-container'>
                     <div class='message system'>
                         <div class='role'>{_apiModel}</div>
-                        <div class='content'</div>
-                        <div class='content loading-dots' style='color:#888'>思考中……</div>
+                        <div class='content'>思考中……</div>
                     </div>
                     <div class='timestamp'></div>
                 </div>";
