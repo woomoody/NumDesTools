@@ -430,9 +430,7 @@ public partial class AiChatTaskPanel
                         ?.ToString();
 
                     // 转换新消息为 HTML
-                    var htmlMessage = Markdown.ToHtml(
-                        HttpUtility.HtmlEncode(message)
-                    );
+                    var htmlMessage = Markdown.ToHtml(message);
 
                     // **解码 HTML 实体**
                     htmlMessage = HttpUtility.HtmlDecode(htmlMessage);
@@ -468,17 +466,22 @@ public partial class AiChatTaskPanel
                     // 调用 JavaScript 函数 scrollToBottom
                     ResponseOutput.InvokeScript("scrollToBottom");
 
-                    // 保存消息到本地文件
-                    var chatRecord = new ChatHistoryManager();
-                    chatRecord.SaveChatMessage(new ChatMessage
-                    {
-                        Role = role,
-                        Message = htmlMessage,
-                        IsUser = isUser,
-                        Timestamp = DateTime.Now // 保存时间戳
-                    });
+                    SaveMessage(role, isUser, htmlMessage);
                 }
             }
+        });
+    }
+
+    private static void SaveMessage(string role, bool isUser, string htmlMessage)
+    {
+        // 保存消息到本地文件
+        var chatRecord = new ChatHistoryManager();
+        chatRecord.SaveChatMessage(new ChatMessage
+        {
+            Role = role,
+            Message = htmlMessage,
+            IsUser = isUser,
+            Timestamp = DateTime.Now // 保存时间戳
         });
     }
 

@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -8,6 +9,7 @@ using System.Windows.Data;
 using GraphX.Common.Models;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Action = System.Action;
 
 namespace NumDesTools;
@@ -276,6 +278,8 @@ public class SelfGetRangePixels
 //自定义ChatApi
 public class ChatApiClient
 {
+    private static readonly HttpClient _client = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
+
     public static async Task<string> CallApiAsync(object requestBody, string apiKey, string apiUrl)
     {
         if (string.IsNullOrEmpty(apiKey))
@@ -283,15 +287,14 @@ public class ChatApiClient
             throw new ArgumentException("API 密钥不能为空。");
         }
 
-        using HttpClient client = new HttpClient();
-        client.Timeout = TimeSpan.FromMinutes(5); // 设置超时时间为5分钟
+        _client.Timeout = TimeSpan.FromMinutes(5); // 设置超时时间为5分钟
 
-        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
         string jsonBody = JsonConvert.SerializeObject(requestBody);
         var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
 
-        HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+        HttpResponseMessage response = await _client.PostAsync(apiUrl, content);
 
         if (response.IsSuccessStatusCode)
         {
@@ -317,70 +320,51 @@ public class ChatApiClient
         throw new Exception($"API 调用失败，状态码：{response.StatusCode}，错误信息：{errorContent}");
     }
 
-    public static async Task CallApiStreamAsync(object requestBody, string apiKey, string apiUrl,
+    public static async Task CallApiStreamAsync(
+        object requestBody,
+        string apiKey,
+        string apiUrl,
         Action<string> onChunkReceived,
-        Action onStreamCompleted = null )
+        Action onCompleted = null)
     {
-        if (string.IsNullOrEmpty(apiKey))
+        using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl)
         {
-            throw new ArgumentException("API 密钥不能为空。");
-        }
+            Content = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json")
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-        using HttpClient client = new HttpClient();
-        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-
-        string jsonBody = JsonConvert.SerializeObject(requestBody);
-        var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-
-        // 设置 HttpCompletionOption.ResponseHeadersRead 开启流式读取
-        using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-        request.Content = content;
-        HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-        if (!response.IsSuccessStatusCode)
-        {
-            string errorContent = await response.Content.ReadAsStringAsync();
-            throw new Exception($"API 调用失败，状态码：{response.StatusCode}，错误信息：{errorContent}");
-        }
+        using var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
 
         using var stream = await response.Content.ReadAsStreamAsync();
-        using var reader = new StreamReader(stream, Encoding.UTF8);
+        using var reader = new StreamReader(stream);
 
         while (!reader.EndOfStream)
         {
-            string line = await reader.ReadLineAsync();
-            if (string.IsNullOrWhiteSpace(line))
-                continue;
-
-            // 流式 API 通常每行以 "data: " 开头
-            if (line.StartsWith("data: "))
+            var line = await reader.ReadLineAsync();
+            if (line?.StartsWith("data: ") == true)
             {
-                string jsonPart = line.Substring("data: ".Length).Trim();
-                // 遇到结束标记则退出循环
-                if (jsonPart == "[DONE]")
-                {
-                    break;
-                }
-                try
-                {
-                    // 此处假设返回的 JSON 格式为：{ "choices": [ { "delta": { "content": "..." } } ] }
-                    dynamic jsonChunk = JsonConvert.DeserializeObject(jsonPart);
-
-                    string reponseThink = jsonChunk?.choices[0].delta.reasoning_content.ToString();
-   
-                    if (reponseThink == "")
-                    {
-                        reponseThink = jsonChunk.choices[0].delta.content.ToString();
-                    }
-
-                    onChunkReceived(reponseThink);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"onChunkReceived [解析出错：{ex.Message}]");
-                }
+                ProcessLine(line["data: ".Length..], onChunkReceived);
             }
         }
-        onStreamCompleted?.Invoke();
+        onCompleted?.Invoke();
+    }
+
+    private static void ProcessLine(string json, Action<string> handler)
+    {
+        try
+        {
+            var obj = JObject.Parse(json);
+            var content = obj["choices"]?[0]?["delta"]?["content"]?.ToString();
+            if (!string.IsNullOrEmpty(content))
+            {
+                handler(content);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.Print($"解析失败: {ex.Message}");
+        }
     }
 }
 
