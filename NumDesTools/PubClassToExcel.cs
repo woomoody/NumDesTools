@@ -278,8 +278,13 @@ public class SelfGetRangePixels
 //自定义ChatApi
 public class ChatApiClient
 {
-    private static readonly HttpClient _client = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
+    private static readonly HttpClient Client = new HttpClient();
 
+    // 静态构造函数确保只初始化一次
+    static ChatApiClient()
+    {
+        Client = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
+    }
     public static async Task<string> CallApiAsync(object requestBody, string apiKey, string apiUrl)
     {
         if (string.IsNullOrEmpty(apiKey))
@@ -287,14 +292,12 @@ public class ChatApiClient
             throw new ArgumentException("API 密钥不能为空。");
         }
 
-        _client.Timeout = TimeSpan.FromMinutes(5); // 设置超时时间为5分钟
-
-        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+        Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
         string jsonBody = JsonConvert.SerializeObject(requestBody);
         var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
 
-        HttpResponseMessage response = await _client.PostAsync(apiUrl, content);
+        HttpResponseMessage response = await Client.PostAsync(apiUrl, content);
 
         if (response.IsSuccessStatusCode)
         {
@@ -333,7 +336,7 @@ public class ChatApiClient
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-        using var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
         using var stream = await response.Content.ReadAsStreamAsync();
@@ -404,11 +407,11 @@ public class ChatHistoryManager
     }
 
     // 保存聊天记录
-    public void SaveChatMessage(ChatMessage message)
+    public async Task SaveChatMessageAsync(ChatMessage message)
     {
         using (var connection = new SqliteConnection(_connectionString))
         {
-            connection.Open();
+            await connection.OpenAsync();
             var command = connection.CreateCommand();
             command.CommandText =
                 @"
@@ -419,6 +422,7 @@ public class ChatHistoryManager
             command.Parameters.AddWithValue("@IsUser", message.IsUser ? 1 : 0);
             command.Parameters.AddWithValue("@Timestamp", message.Timestamp);
             command.ExecuteNonQuery();
+            await command.ExecuteNonQueryAsync(); 
         }
     }
 

@@ -311,7 +311,7 @@ public partial class AiChatTaskPanel
 
             // 保存完整消息
             streamMessage.Message = htmlMessage;
-            new ChatHistoryManager().SaveChatMessage(streamMessage);
+            await new ChatHistoryManager().SaveChatMessageAsync(streamMessage);
 
             ResponseOutput.InvokeScript("replaceContent",
                 new object[] { _currentResponseId, htmlMessage });
@@ -476,7 +476,7 @@ public partial class AiChatTaskPanel
     {
         // 保存消息到本地文件
         var chatRecord = new ChatHistoryManager();
-        chatRecord.SaveChatMessage(new ChatMessage
+        _ = chatRecord.SaveChatMessageAsync(new ChatMessage
         {
             Role = role,
             Message = htmlMessage,
