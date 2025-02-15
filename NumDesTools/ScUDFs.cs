@@ -1026,12 +1026,20 @@ public class ExcelUdf
     public static object[,] Trans2ArrayTo1Arrays(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")]
             object[,] rangeObj,
+        [ExcelArgument(AllowReference = true, Description = "是否带索引号", Name = "是否带索引号，带2不带1")]
+            int outMax,
+        [ExcelArgument(AllowReference = true, Description = "行优先还是列优先：1行0列", Name = "行列优先")]
+            int rowOrCol,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false", Name = "过滤空值")]
-            bool ignoreEmpty,
-        [ExcelArgument(AllowReference = true, Description = "行优先还是列优先：0行1列", Name = "行列优先")]
-            int rowOrCol
+            bool ignoreEmpty =true
     )
     {
+        //默认值
+        if (outMax > 2)
+        {
+            outMax = 2;
+        }
+
         List<object> rangeValueList = [];
         List<object> rangeColIndexList = [];
 
@@ -1089,12 +1097,19 @@ public class ExcelUdf
             }
         }
 
-        var result = new object[rangeValueList.Count, 2];
+        var result = new object[rangeValueList.Count, outMax];
 
         for (var i = 0; i < rangeValueList.Count; i++)
         {
-            result[i, 1] = rangeValueList[i];
-            result[i, 0] = rangeColIndexList[i];
+            if(outMax == 2)
+            {
+                result[i, 1] = rangeValueList[i];
+                result[i, 0] = rangeColIndexList[i];
+            }
+            else
+            {
+                result[i, 0] = rangeValueList[i];
+            }
         }
 
         return result;
