@@ -9,22 +9,6 @@ namespace NumDesTools.UI
 {
     public class TextHighlighterConverter : IValueConverter
     {
-        //private readonly string[] charactersToCheck = new[]
-        //{
-        //    ",,",
-        //    "[,",
-        //    ",]",
-        //    "{,",
-        //    ",}",
-        //    "，，",
-        //    "[，",
-        //    "，]",
-        //    "{，",
-        //    "，}",
-        //    "][",
-        //    "}{"
-        //};
-
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             var config = new GlobalVariable();

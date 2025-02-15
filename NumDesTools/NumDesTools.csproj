@@ -35,9 +35,13 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="pack\**" />
+    <Compile Remove="Resources\**" />
     <EmbeddedResource Remove="pack\**" />
+    <EmbeddedResource Remove="Resources\**" />
     <None Remove="pack\**" />
+    <None Remove="Resources\**" />
     <Page Remove="pack\**" />
+    <Page Remove="Resources\**" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="ScUDFs.cs~RF14a310c8.TMP" />
@@ -135,7 +139,6 @@
       <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.1" />
   </ItemGroup>
   <ItemGroup>
-      <Folder Include="Resources\" />
       <Folder Include="Com\" />
   </ItemGroup>
   <ItemGroup>
