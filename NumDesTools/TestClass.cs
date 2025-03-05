@@ -1,127 +1,81 @@
-﻿using System.Threading.Tasks;
-using Action = System.Action;
+﻿using ExcelDna.Integration;
+using Excel = Microsoft.Office.Interop.Excel;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+using System.Drawing;
+using NumDesTools;
 
-class Program
+public class ScreenCoordinateFix
 {
-    public static async Task Main()
+    // Windows API
+    [DllImport("user32.dll")]
+    private static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POINT
     {
-        // 模拟输入数据
-        object[,] rangeObj = {
-            { "A1", "A2" },
-            { "B1", "B2" }
-        };
-        object[,] rangeObjDef = {
-            { "Default1", "Default2" },
-            { "Default3", "Default4" }
-        };
-        string delimiter = "[,]";
-        string ignoreValue = "";
-
-        int iterations = 1000; // 调用次数
-
-        // 测试同步方法
-        Debug.Print("开始测试同步方法...");
-        var syncTime = MeasureExecutionTime(() =>
-        {
-            for (int i = 0; i < iterations; i++)
-            {
-                CreatValueToArray(rangeObj, rangeObjDef, delimiter, ignoreValue);
-            }
-        });
-        Debug.Print($"同步方法调用 {iterations} 次总耗时: {syncTime} ms");
-
-        // 测试异步方法
-        Debug.Print("开始测试异步方法...");
-        var asyncTime = await MeasureExecutionTimeAsync(async () =>
-        {
-            for (int i = 0; i < iterations; i++)
-            {
-                await CreatValueToArrayAsync(rangeObj, rangeObjDef, delimiter, ignoreValue);
-            }
-        });
-        Debug.Print($"异步方法调用 {iterations} 次总耗时: {asyncTime} ms");
+        public int X;
+        public int Y;
     }
 
-    // 测量同步方法的执行时间
-    static long MeasureExecutionTime(Action syncMethod)
+    [ExcelCommand]
+    public static void GetCorrectScreenCoordinates()
     {
-        var stopwatch = Stopwatch.StartNew();
-        syncMethod(); // 执行同步方法
-        stopwatch.Stop();
-        return stopwatch.ElapsedMilliseconds;
-    }
+        var excelApp = NumDesAddIn.App;
+        Excel.Range range = excelApp.Selection as Excel.Range;
+        if (range == null) return;
 
-    // 测量异步方法的执行时间
-    static async Task<long> MeasureExecutionTimeAsync(Func<Task> asyncMethod)
-    {
-        var stopwatch = Stopwatch.StartNew();
-        await asyncMethod(); // 等待异步方法完成
-        stopwatch.Stop();
-        return stopwatch.ElapsedMilliseconds;
-    }
+        IntPtr hwnd = (IntPtr)excelApp.Hwnd;
+        Excel.Window window = excelApp.ActiveWindow;
 
-    // 同步版本的函数
-    public static string CreatValueToArray(
-        object[,] rangeObj,
-        object[,] rangeObjDef,
-        string delimiter,
-        string ignoreValue)
-    {
-        var result = string.Empty;
-        if (string.IsNullOrEmpty(delimiter))
+        // Step 1: 获取客户区原点屏幕坐标
+        POINT clientOrigin = new POINT { X = 0, Y = 0 };
+        ClientToScreen(hwnd, ref clientOrigin);
+
+        // Step 2: 获取DPI（精确到当前显示器）
+        float dpiX, dpiY;
+        using (Graphics g = Graphics.FromHwnd(hwnd))
         {
-            delimiter = "[,]";
+            dpiX = g.DpiX;
+            dpiY = g.DpiY;
         }
-        var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
-        string startDelimiter;
-        string midDelimiter;
-        string endDelimiter;
-        if (delimiterList.Length == 3)
-        {
-            startDelimiter = delimiterList[0];
-            midDelimiter = delimiterList[1];
-            endDelimiter = delimiterList[2];
-        }
-        else
-        {
-            startDelimiter = string.Empty;
-            midDelimiter = delimiterList[0];
-            endDelimiter = string.Empty;
-        }
-        var rows = rangeObj.GetLength(0);
-        var cols = rangeObj.GetLength(1);
-        for (var row = 0; row < rows; row++)
-            for (var col = 0; col < cols; col++)
-            {
-                var item = rangeObj[row, col];
-                if (item is ExcelEmpty || item.ToString() == ignoreValue || item is ExcelError) { }
-                else
-                {
-                    if (!(rangeObjDef[0, 0] is ExcelMissing))
-                    {
-                        var itemDef = rangeObjDef[row, col];
-                        result += itemDef + midDelimiter;
-                    }
-                    else
-                    {
-                        result += item + midDelimiter;
-                    }
-                }
-            }
 
-        if (!string.IsNullOrEmpty(result))
-            result = startDelimiter + result.Substring(0, result.Length - midDelimiter.Length) + endDelimiter;
-        return result;
+        // Step 3: 计算滚动偏移（改进方法）
+        Excel.Range visibleStart = window.VisibleRange.Cells[1, 1];
+        double scrollOffsetX = visibleStart.Left;
+        double scrollOffsetY = visibleStart.Top;
+
+        // Step 4: 处理缩放比例
+        double zoomFactor = window.Zoom / 100.0;
+
+        // Step 5: 计算最终坐标
+        double adjustedLeft = (range.Left - scrollOffsetX) * zoomFactor;
+        double adjustedTop = (range.Top - scrollOffsetY) * zoomFactor;
+
+        int screenX = clientOrigin.X + (int)(adjustedLeft * dpiX / 72.0);
+        int screenY = clientOrigin.Y + (int)(adjustedTop * dpiY / 72.0);
+
+        // Step 6: 处理行列标题偏移
+        screenX += GetColumnHeaderWidth(window);  // 添加列标题宽度
+        screenY += GetRowHeaderHeight(window);    // 添加行标题高度
+
+        // 在消息框中显示中间值
+        MessageBox.Show($"ClientOrigin: ({clientOrigin.X},{clientOrigin.Y})\n" +
+                        $"DPI: {dpiX}x{dpiY}\n" +
+                        $"ScrollOffset: {scrollOffsetX},{scrollOffsetY}\n" +
+                        $"Zoom: {window.Zoom}%\n" +
+                        $"修正后坐标: ({screenX}, {screenY})");
     }
 
-    // 异步版本的函数
-    public static async Task<string> CreatValueToArrayAsync(
-        object[,] rangeObj,
-        object[,] rangeObjDef,
-        string delimiter,
-        string ignoreValue)
+    private static int GetColumnHeaderWidth(Excel.Window window)
     {
-        // 模拟异步操作
-        return await Task.Run(() => CreatValueToArray(rangeObj, rangeObjDef, delimiter, ignoreValue));
+        // 列标题区域宽度（默认37像素，可根据实际调整）
+        return window.DisplayHeadings ? 37 : 0;
+    }
+
+    private static int GetRowHeaderHeight(Excel.Window window)
+    {
+        // 行标题区域高度（默认20像素，可根据实际调整）
+        return window.DisplayHeadings ? 20 : 0;
     }
 }

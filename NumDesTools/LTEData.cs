@@ -454,10 +454,18 @@ public class LteData
             exportWildcardDyData[funDepends]
                 .Substring(exportWildcardDyData[funDepends].Length - 1, 1)
         );
-        int baseMax = int.Parse(exportWildcardDyData[funDy1]);
+        int baseMax = 0;
+        try
+        {
+            baseMax = int.Parse(exportWildcardDyData[funDy1]);
+        }
+        catch (Exception e)
+        {
+            MessageBox.Show($"{rootNum}##{funDy1}可能为空{e.Message}");
+        }
         if (baseMax == 0)
         {
-            MessageBox.Show($@"{rootNum}物品应该不属于链");
+            MessageBox.Show($"{rootNum}物品应该不属于链");
         }
         var loopNum = LoopNumber(baseValue, baseMax);
         string result = "";

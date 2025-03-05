@@ -83,8 +83,11 @@ namespace NumDesTools.UI
             var replaceText = ReplaceTextBox.Text;
             if (string.IsNullOrEmpty(replaceText))
             {
-                MessageBox.Show("请输入替换文本！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                MessageBoxResult result = MessageBox.Show("请输入替换文本！选择确定则为删除选定文本", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                if (result != MessageBoxResult.OK)
+                {
+                    return;
+                }
             }
 
             // 替换所有匹配的文本

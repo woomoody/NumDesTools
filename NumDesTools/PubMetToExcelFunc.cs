@@ -809,6 +809,78 @@ public static class PubMetToExcelFunc
 
         return targetList.ToList();
     }
+    //MiniExcel查询：同一个表查找多个值
+    public static Dictionary<string, string> SearchKeysFrom1ExcelMulti(
+        string rootPath,
+        List<string> findValues,
+        bool isMulti = true,
+        string specificColumnName = "B",
+        string returnSpecificColumnName = "C"
+    )
+    {
+        var sheetNames = MiniExcel.GetSheetNames(rootPath);
+
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+        var targetList = new Dictionary<string, string>();
+
+        Action<string> processFile = findValue =>
+        {
+            try
+            {
+                foreach (var sheetName in sheetNames)
+                {
+                    if (sheetName.Contains("#"))
+                        continue;
+                    var rows = MiniExcel.Query(rootPath, sheetName: sheetName).ToList();
+
+                    foreach (var row in rows)
+                    {
+                        var rowDict = (IDictionary<string, object>)row;
+
+                        // 获取查找列的值
+                        if (!rowDict.TryGetValue(specificColumnName, out var columnValue))
+                            continue;
+
+                        var cellValue = columnValue?.ToString();
+
+                        // 判断是否匹配
+                        if (cellValue != null && (isMulti ? cellValue.Contains(findValue) : cellValue == findValue))
+                        {
+                            // 如果不存在目标值，则获取目标列
+                            if (!targetList.ContainsKey(findValue))
+                            {
+                                if (rowDict.TryGetValue(returnSpecificColumnName, out var targetValue))
+                                {
+                                    targetList[findValue] = targetValue?.ToString();
+                                }
+                                else
+                                {
+                                    targetList[findValue] = "不存在";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // 记录异常信息，继续处理下一个表格
+            }
+        };
+        if (isMulti)
+        {
+            Parallel.ForEach(findValues, options, processFile);
+        }
+        else
+        {
+            foreach (var findValue in findValues)
+            {
+                processFile(findValue);
+            }
+        }
+        return targetList;
+    }
 
     //MiniExcel查询：全局或指定查询
     public static Dictionary<string, List<string>> SearchModelKeyMiniExcel(

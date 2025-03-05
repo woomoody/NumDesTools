@@ -63,7 +63,7 @@
     </EmbeddedResource>
     <Content Include="image\dart.png" />
     <Content Include="image\lacrosse.png" />
-    <Content Include="image\sofa.png" />
+    <EmbeddedResource Include="image\sofa.png" />
     <EmbeddedResource Include="image\angular-resolver.png" />
     <EmbeddedResource Include="image\applescript.png" />
     <EmbeddedResource Include="image\asciidoc.png" />
