@@ -3,6 +3,8 @@ using System.Data.OleDb;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using Microsoft.Office.Core;
 using OfficeOpenXml;
 using DataTable = System.Data.DataTable;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
@@ -1843,4 +1845,22 @@ public static class PubMetToExcel
         return true;
     }
     #endregion
+
+    //查找资源文件
+    public static Dictionary<string , string> FindResourceFile(List<string> longNumbers ,string searchFolder)
+    {
+        var imageDict = new Dictionary<string, string>();
+        foreach (var num in longNumbers)
+        {
+            string searchPattern = $"{num}.png";
+            var files = Directory.GetFiles(searchFolder, searchPattern,
+                SearchOption.AllDirectories);
+
+            if (files.Length > 0)
+            {
+                imageDict[num] = files.First();
+            }
+        }
+        return imageDict;
+    }
 }

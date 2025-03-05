@@ -538,4 +538,5 @@ public class SelfEnvironmentDetector
             Debug.Print($"执行安装程序时发生错误: {ex.Message}");
         }
     }
+
 }
