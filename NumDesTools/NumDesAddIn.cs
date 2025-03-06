@@ -459,8 +459,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 else
                     mergedDict[kv.Key] = new List<string> { kv.Value };
 
-            var ctpName = "图片预览";
+            //字典空检测
+            if (mergedDict.Count == 0)
+            {
+                MessageBox.Show("未找到匹配图片");
+                return;
+            }
 
+            var ctpName = "图片预览";
             NumDesCTP.DeleteCTP(true, ctpName);
 
             var _ = (ImagePreviewControl)
