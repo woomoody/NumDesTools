@@ -1,28 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using Image = System.Windows.Controls.Image;
 using MessageBox = System.Windows.MessageBox;
-using UserControl = System.Windows.Controls.UserControl;
 
 namespace NumDesTools.UI
 {
     /// <summary>
     /// ImagePreviewControl.xaml 的交互逻辑
     /// </summary>
-    public partial class ImagePreviewControl : UserControl
+    public partial class ImagePreviewControl
     {
-        public string SelectedImagePath { get; private set; }
         public ObservableCollection<ImageItemViewModel> ImageItems { get; }
 
         public ImagePreviewControl(Dictionary<string, List<string>> imageDict)
@@ -31,21 +24,31 @@ namespace NumDesTools.UI
             ImageItems = new ObservableCollection<ImageItemViewModel>(
                 imageDict.Select(kv => new ImageItemViewModel
                 {
-                    ImageId = kv.Key,
-                    ImagePath = kv.Value[0],
-                    ImageContent = kv.Value[1]
+                    DataId = kv.Key,
+                    ImageId = kv.Value[1],
+                    ImagePath = kv.Value[2],
+                    ImageContent = kv.Value[0]
                 })
             );
             DataContext = this;
         }
-        private void OnImageSelected(object sender, RoutedEventArgs e)
+        private void OpenPopup(object sender, MouseButtonEventArgs e)
         {
-            if (sender is FrameworkElement element &&
-                element.DataContext is ImageItemViewModel item)
+            if (sender is Image img && img.DataContext is ImageItemViewModel item)
             {
-                SelectedImagePath = item.ImagePath;
+                if (!string.IsNullOrEmpty(item.ImagePath) && File.Exists(item.ImagePath))
+                {
+                    PopupImage.Source = new BitmapImage(new Uri(item.ImagePath));
+                    ImagePopup.IsOpen = true;
+                }
             }
         }
+
+        private void ClosePopup(object sender, MouseButtonEventArgs e)
+        {
+            ImagePopup.IsOpen = false;
+        }
+
 
         private void TextBlock_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
@@ -71,6 +74,7 @@ namespace NumDesTools.UI
 
         public string ImageId { get; set; }
         public string ImageContent { get; set; }
+        public string DataId { get; set; }
         public BitmapImage Thumbnail { get; private set; }
 
         private string _imagePath;

@@ -372,7 +372,9 @@ public static class PubMetToExcelFunc
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Question
                     );
-                    if (tips == MessageBoxResult.Yes) { }
+                    if (tips == MessageBoxResult.Yes)
+                    {
+                    }
 
                     PubMetToExcel.OpenExcelAndSelectCell(
                         excelPath + @"\#表格关联.xlsx",
@@ -510,9 +512,13 @@ public static class PubMetToExcelFunc
         if (m == 0)
             return n;
 
-        for (int i = 0; i <= n; d[i, 0] = i++) { }
+        for (int i = 0; i <= n; d[i, 0] = i++)
+        {
+        }
 
-        for (int j = 0; j <= m; d[0, j] = j++) { }
+        for (int j = 0; j <= m; d[0, j] = j++)
+        {
+        }
 
         for (int i = 1; i <= n; i++)
         {
@@ -783,8 +789,10 @@ public static class PubMetToExcelFunc
                             {
                                 targetList.Add((file, sheetName, rowIndex, colIndex));
                             }
+
                             colIndex++;
                         }
+
                         rowIndex++;
                     }
                 }
@@ -809,76 +817,43 @@ public static class PubMetToExcelFunc
 
         return targetList.ToList();
     }
+
     //MiniExcel查询：同一个表查找多个值
-    public static Dictionary<string, string> SearchKeysFrom1ExcelMulti(
+    public static Dictionary<string, List<string>> SearchKeysFrom1ExcelMulti(
         string rootPath,
         List<string> findValues,
         bool isMulti = true,
-        string specificColumnName = "B",
-        string returnSpecificColumnName = "C"
+        List<string> returnColumnNames = null,
+        string searchColumnName = "B"
     )
     {
         var sheetNames = MiniExcel.GetSheetNames(rootPath);
 
-        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+        var targetList = new Dictionary<string, List<string>>();
 
-        var targetList = new Dictionary<string, string>();
-
-        Action<string> processFile = findValue =>
+        foreach (var findValue in findValues)
         {
-            try
+            foreach (var sheetName in sheetNames)
             {
-                foreach (var sheetName in sheetNames)
+                if (sheetName.Contains("#") || sheetName.Contains("Sheet") && sheetName != "Sheet1")
+                    continue;
+                var rows = MiniExcel.Query(rootPath, sheetName: sheetName).Cast<IDictionary<string, object>>();
+                var result = rows
+                    .FirstOrDefault(
+                        row => row.ContainsKey(searchColumnName) && row[searchColumnName]?.ToString() == findValue);
+                if (result == null)
+                    continue;
+
+                var returnValue = new List<string>();
+                foreach (var returnColumnName in returnColumnNames)
                 {
-                    if (sheetName.Contains("#"))
-                        continue;
-                    var rows = MiniExcel.Query(rootPath, sheetName: sheetName).ToList();
-
-                    foreach (var row in rows)
-                    {
-                        var rowDict = (IDictionary<string, object>)row;
-
-                        // 获取查找列的值
-                        if (!rowDict.TryGetValue(specificColumnName, out var columnValue))
-                            continue;
-
-                        var cellValue = columnValue?.ToString();
-
-                        // 判断是否匹配
-                        if (cellValue != null && (isMulti ? cellValue.Contains(findValue) : cellValue == findValue))
-                        {
-                            // 如果不存在目标值，则获取目标列
-                            if (!targetList.ContainsKey(findValue))
-                            {
-                                if (rowDict.TryGetValue(returnSpecificColumnName, out var targetValue))
-                                {
-                                    targetList[findValue] = targetValue?.ToString();
-                                }
-                                else
-                                {
-                                    targetList[findValue] = "不存在";
-                                }
-                            }
-                        }
-                    }
+                    returnValue.Add(result[returnColumnName].ToString());
                 }
-            }
-            catch
-            {
-                // 记录异常信息，继续处理下一个表格
-            }
-        };
-        if (isMulti)
-        {
-            Parallel.ForEach(findValues, options, processFile);
-        }
-        else
-        {
-            foreach (var findValue in findValues)
-            {
-                processFile(findValue);
+
+                targetList[findValue] = returnValue;
             }
         }
+
         return targetList;
     }
 
@@ -1028,6 +1003,7 @@ public static class PubMetToExcelFunc
                 bool isFileMatch = isAll
                     ? fileName.Contains(findValue + ".xlsx")
                     : fileName == findValue + ".xlsx";
+
                 bool isSheetMatch(string sheetName) =>
                     isAll ? sheetName.Contains(findValue) : sheetName == findValue;
 
@@ -1069,6 +1045,7 @@ public static class PubMetToExcelFunc
 
         return targetList.ToList();
     }
+
     #endregion
 
     //大富翁种
@@ -1400,7 +1377,6 @@ public static class PubMetToExcelFunc
 
     public static void FormularBaseCheck()
     {
-  
         var app = NumDesAddIn.App;
         var wk = app.ActiveWorkbook;
         var basePath = wk.Path;
@@ -1455,6 +1431,7 @@ public static class PubMetToExcelFunc
                 {
                     filePath += @"\";
                 }
+
                 var newLink = filePath + @"[" + fileName + @"]";
                 needFixLinks.Add(newLink);
             }
@@ -1547,10 +1524,8 @@ public static class PubMetToExcelFunc
 
                 NumDesAddIn.App.Calculation = XlCalculation.xlCalculationAutomatic;
                 NumDesAddIn.App.ScreenUpdating = true;
-
             }
         }
-
     }
 
     public static void LoopRunCac(string sheetName)
@@ -2486,6 +2461,7 @@ public static class PubMetToExcelFunc
             index = 1;
             baseIndex = 1;
         }
+
         //去重
         mergedArray = PubMetToExcel.FilterRepeatValue(mergedArray, index, false, baseIndex);
         //复制

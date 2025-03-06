@@ -24,7 +24,6 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -45,7 +44,6 @@ using MsoCTPDockPosition = ExcelDna.Integration.CustomUI.MsoCTPDockPosition;
 using Panel = System.Windows.Forms.Panel;
 using Process = System.Diagnostics.Process;
 using TabControl = System.Windows.Forms.TabControl;
-using System.Threading;
 
 #pragma warning disable CA1416
 
@@ -403,7 +401,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 return;
             }
 
-            // 步骤1：提取长数字（>5位）
+            //提取长数字（>5位）
             var longNumbers = selectedRange
                 .Cast<Range>()
                 .Select(cell =>
@@ -411,7 +409,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     string text = cell.Text.ToString();
                     // 使用正则匹配连续5位以上纯数字
                     return Regex.Matches(text, @"\d{6,}")
-                        .Cast<Match>()
                         .Select(m => m.Value);
                 })
                 .Where(nums => nums.Any())
@@ -425,60 +422,40 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 return;
             }
 
-            // 步骤2：构建相对路径
+            //构建相对路径-搜索
             var workbookPath = App.ActiveWorkbook.Path;
-
             var levelsToGoUp = 3;
-
             if (workbookPath.Contains("二合") || workbookPath.Contains("工会") || workbookPath.Contains("克朗代克"))
                 levelsToGoUp = 4;
-            var relativePath = string.Concat(Enumerable.Repeat("../", levelsToGoUp)) + "code/assets/game2/";
 
-            var searchFolder = Path.GetFullPath(Path.Combine(workbookPath, relativePath)).Replace("\\", "/");
-
-            var contentPath = string.Concat(Enumerable.Repeat("../", levelsToGoUp)) + "public/excels/tables/type.xlsx";
-
+            var contentPath = string.Concat(Enumerable.Repeat("../", levelsToGoUp)) + "public/excels/tables/icon.xlsx";
             var searchContent = Path.GetFullPath(Path.Combine(workbookPath, contentPath)).Replace("\\", "/");
 
+            // 存储ID对应的Type
+            Dictionary<string, List<string>> typeDict;
+            var returnColNames = new List<string> { "C", "E" ,"F" };
+            typeDict = PubMetToExcelFunc.SearchKeysFrom1ExcelMulti(searchContent, longNumbers, false , returnColNames);
+
+            //构建相对路径-资源
+            var relativePath = string.Concat(Enumerable.Repeat("../", levelsToGoUp)) + "code/";
+            var searchFolder = Path.GetFullPath(Path.Combine(workbookPath, relativePath));
             if (!Directory.Exists(searchFolder)) searchFolder = searchFolder.Replace("code", "coder");
 
-            // 存储图片路径
-            Dictionary<string, string> imageDict = null;
-            // 存储ID对应的Type
-            Dictionary<string, string> typeDict = null;
-            imageDict = PubMetToExcel.FindResourceFile(longNumbers, searchFolder);
-            typeDict = PubMetToExcelFunc.SearchKeysFrom1ExcelMulti(searchContent, longNumbers, false);
-            //字典合并
-            var mergedDict = new Dictionary<string, List<string>>();
-
-            foreach (var kv in imageDict) mergedDict[kv.Key] = new List<string> { kv.Value };
-
-            foreach (var kv in typeDict)
-                if (mergedDict.ContainsKey(kv.Key))
-                    mergedDict[kv.Key].Add(kv.Value); // 合并值
-                else
-                    mergedDict[kv.Key] = new List<string> { kv.Value };
-
-            //字典空检测
-            if (mergedDict.Count == 0)
-            {
-                MessageBox.Show("未找到匹配图片");
-                return;
-            }
+            //表格中的资源路径不完整，需要搜索
+            Dictionary<string, List<string>> imageDict;
+            imageDict = PubMetToExcel.FindResourceFile(typeDict, searchFolder);
 
             var ctpName = "图片预览";
             NumDesCTP.DeleteCTP(true, ctpName);
-
             var _ = (ImagePreviewControl)
                 NumDesCTP.ShowCTP(
                     600,
                     ctpName,
                     true,
                     ctpName,
-                    new ImagePreviewControl(mergedDict),
+                    new ImagePreviewControl(imageDict),
                     MsoCTPDockPosition.msoCTPDockPositionLeft
                 );
-
 
             // 步骤5：记录操作日志（参考原始代码）
             LogDisplay.RecordLine($"[{DateTime.Now}] 提取到{imageDict.Count}张匹配图片");
@@ -1795,7 +1772,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (wk != null)
         {
             var excelName = wk.Name;
-            Clipboard.SetText(excelName);
+            try
+            {
+                Clipboard.Clear();
+                Clipboard.SetText(excelName);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show(e.Message);
+            }
         }
     }
 
@@ -1805,7 +1790,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (wk != null)
         {
             var excelPath = wk.FullName;
-            Clipboard.SetText(excelPath);
+            try
+            {
+                Clipboard.Clear();
+                Clipboard.SetText(excelPath);
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show(e.Message);
+            }
+
         }
     }
 
