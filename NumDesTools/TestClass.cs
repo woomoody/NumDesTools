@@ -1,8 +1,4 @@
-﻿using ExcelDna.Integration;
-using Excel = Microsoft.Office.Interop.Excel;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using System.Drawing;
+﻿using Excel = Microsoft.Office.Interop.Excel;
 using NumDesTools;
 
 public class ScreenCoordinateFix
