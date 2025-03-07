@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -56,10 +57,10 @@ namespace NumDesTools.UI
                 textBlock.DataContext is ImageItemViewModel item &&
                 File.Exists(item.ImagePath))
             {
-                var filepath = item.ImagePath.Replace("/", "\\");
+                var filePath = Path.Combine(Path.GetDirectoryName(item.ImagePath), Path.GetFileName(item.ImagePath));
                 try
                 {
-                    Process.Start("explorer.exe", $"/select,\"{filepath}\"");
+                    Process.Start("explorer.exe", $"/select,\"{filePath}\"");
                 }
                 catch (Exception ex)
                 {
@@ -89,30 +90,68 @@ namespace NumDesTools.UI
             }
         }
 
+        private CancellationTokenSource _thumbnailCts;
+
         private async void LoadImageThumbnail()
         {
-            await Task.Run(() =>
+            _thumbnailCts?.Cancel();
+            _thumbnailCts = new CancellationTokenSource();
+
+            try
             {
-                if (!File.Exists(ImagePath)) throw new FileNotFoundException();
-                var bitmap = new BitmapImage();
-                bitmap.BeginInit();
-                bitmap.UriSource = new Uri(ImagePath);
-                bitmap.DecodePixelWidth = 200;
-                bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                bitmap.EndInit();
-                bitmap.Freeze();
-                return bitmap;
-            }).ContinueWith(t =>
-            {
-                Thumbnail = t.Result;
+                var bitmap = await Task.Run(() =>
+                {
+                    if (!File.Exists(ImagePath)) throw new FileNotFoundException();
+                    var bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.UriSource = new Uri(ImagePath);
+                    bitmap.DecodePixelWidth = 200;
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.EndInit();
+                    bitmap.Freeze();
+                    return bitmap;
+                }, _thumbnailCts.Token);
+
+                Thumbnail = bitmap;
                 OnPropertyChanged(nameof(Thumbnail));
-            }, TaskScheduler.FromCurrentSynchronizationContext());
+            }
+            catch (OperationCanceledException) { /* 正常取消 */ }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"缩略图加载失败: {ex.Message}");
+            }
         }
+
+        //private async void LoadImageThumbnail()
+        //{
+        //    await Task.Run(() =>
+        //    {
+        //        if (!File.Exists(ImagePath)) throw new FileNotFoundException();
+        //        var bitmap = new BitmapImage();
+        //        bitmap.BeginInit();
+        //        bitmap.UriSource = new Uri(ImagePath);
+        //        bitmap.DecodePixelWidth = 200;
+        //        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        //        bitmap.EndInit();
+        //        bitmap.Freeze();
+        //        return bitmap;
+        //    }).ContinueWith(t =>
+        //    {
+        //        Thumbnail = t.Result;
+        //        OnPropertyChanged(nameof(Thumbnail));
+        //    }, TaskScheduler.FromCurrentSynchronizationContext());
+        //}
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+        // ImageItemViewModel 增加释放逻辑
+        ~ImageItemViewModel()
+        {
+            Thumbnail?.StreamSource?.Dispose();
+            Thumbnail = null;
         }
     }
 }
