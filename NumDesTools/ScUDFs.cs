@@ -184,8 +184,9 @@ public class ExcelUdf
     )]
     public static string FindKeyClose(
         [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "单元格")]
-            object inputRange,
-        [ExcelArgument(Description = "行索引或列索引")] bool isRow
+        object inputRange,
+        [ExcelArgument(Description = "行索引或列索引")]
+        bool isRow
     )
     {
         if (inputRange is ExcelReference cellRef)
@@ -238,17 +239,18 @@ public class ExcelUdf
     )]
     public static string ReplaceKey(
         [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "单元格")]
-            string inputRange,
+        string inputRange,
         [ExcelArgument(AllowReference = true, Description = "正则方案：%d", Name = "正则方案")]
-            string regexMethod,
+        string regexMethod,
         [ExcelArgument(AllowReference = true, Description = "替换值：abc", Name = "替换值")]
-            string replaceValue
+        string replaceValue
     )
     {
-        string result = Regex.Replace(inputRange, regexMethod, replaceValue);
+        var result = Regex.Replace(inputRange, regexMethod, replaceValue);
 
         return result;
     }
+
     [ExcelFunction(
         Category = "UDF-查找值",
         IsVolatile = true,
@@ -263,15 +265,9 @@ public class ExcelUdf
     )
     {
         // 参数校验
-        if (IsNullOrEmpty(inputRange))
-        {
-            return "输入单元格地址不能为空";
-        }
+        if (IsNullOrEmpty(inputRange)) return "输入单元格地址不能为空";
 
-        if (IsNullOrEmpty(regexMethod))
-        {
-            regexMethod = @"\d+";
-        }
+        if (IsNullOrEmpty(regexMethod)) regexMethod = @"\d+";
 
         try
         {
@@ -279,13 +275,10 @@ public class ExcelUdf
             var matches = Regex.Matches(inputRange, regexMethod);
 
             // 将匹配结果连接为字符串
-            string result = Join(", ", matches.Select(m => m.Value));
+            var result = Join(", ", matches.Select(m => m.Value));
 
             // 如果没有匹配到内容，返回提示信息
-            if (IsNullOrEmpty(result))
-            {
-                return "未找到匹配内容";
-            }
+            if (IsNullOrEmpty(result)) return "未找到匹配内容";
 
             return result;
         }
@@ -309,35 +302,32 @@ public class ExcelUdf
     )]
     public static string ReplaceKeyByIndex(
         [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "单元格")]
-            string inputRange,
+        string inputRange,
         [ExcelArgument(AllowReference = true, Description = "匹配位置", Name = "匹配位置信息")]
-            object[,] matchIndex,
+        object[,] matchIndex,
         [ExcelArgument(AllowReference = true, Description = "替换值", Name = "替换值信息")]
-            object[,] replaceValue,
+        object[,] replaceValue,
         [ExcelArgument(AllowReference = true, Description = "正则方案", Name = "正则方案")]
-            string regexMethod
+        string regexMethod
     )
     {
         var rows = matchIndex.GetLength(0);
         var cols = matchIndex.GetLength(1);
 
-        Dictionary<int, string> replacements = new Dictionary<int, string>();
+        var replacements = new Dictionary<int, string>();
 
         for (var row = 0; row < rows; row++)
         for (var col = 0; col < cols; col++)
         {
-            if (matchIndex[row, col] is ExcelEmpty)
-            {
-                continue;
-            }
-            int matchKey = Convert.ToInt32(matchIndex[row, col]);
+            if (matchIndex[row, col] is ExcelEmpty) continue;
+            var matchKey = Convert.ToInt32(matchIndex[row, col]);
 
-            string matchValue = replaceValue[row, col]?.ToString();
+            var matchValue = replaceValue[row, col]?.ToString();
 
             replacements.Add(matchKey, matchValue);
         }
 
-        int counter = 0;
+        var counter = 0;
 
         var result = Regex.Replace(
             inputRange,
@@ -345,10 +335,7 @@ public class ExcelUdf
             m =>
             {
                 counter++;
-                if (replacements.TryGetValue(counter, out var expression))
-                {
-                    return expression;
-                }
+                if (replacements.TryGetValue(counter, out var expression)) return expression;
                 return m.Value;
             }
         );
@@ -364,45 +351,36 @@ public class ExcelUdf
     )]
     public static object FindValueFromRange(
         [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "查找值")]
-            string seachValue,
+        string seachValue,
         [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "查找范围")]
-            object[,] searchRange,
+        object[,] searchRange,
         [ExcelArgument(
             AllowReference = true,
             Description = "1：行；2：列；其他：自定义行列组{,},[,]",
             Name = "返回值类型"
         )]
-            string returnType = "1",
+        string returnType = "1",
         [ExcelArgument(AllowReference = true, Description = "返回第几个值", Name = "返回值序号")]
-            int returnNum = 1
+        int returnNum = 1
     )
     {
         var rows = searchRange.GetLength(0);
         var cols = searchRange.GetLength(1);
 
-        int counter = 1;
+        var counter = 1;
         for (var row = 0; row < rows; row++)
         for (var col = 0; col < cols; col++)
         {
             var targetCell = searchRange[row, col];
-            if (targetCell is ExcelEmpty)
-            {
-                continue;
-            }
+            if (targetCell is ExcelEmpty) continue;
 
             if (targetCell.ToString() == seachValue)
             {
                 if (counter == returnNum)
                 {
-                    if (returnType == "1")
-                    {
-                        return row + 1;
-                    }
+                    if (returnType == "1") return row + 1;
 
-                    if (returnType == "2")
-                    {
-                        return col + 1;
-                    }
+                    if (returnType == "2") return col + 1;
 
                     var delimiterList = returnType
                         .ToCharArray()
@@ -410,10 +388,56 @@ public class ExcelUdf
                         .ToArray();
                     return $"{delimiterList[0]}{row + 1}{delimiterList[1]}{col + 1}{delimiterList[2]}";
                 }
+
                 counter++;
             }
         }
+
         return "不存在";
+    }
+
+    [ExcelFunction(
+        Category = "UDF-查找值",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "判断A列数据是否为0或空，把B列数据累积到向下的非0值位置"
+    )]
+    public static object SumValueFilterNull(
+        [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "条件范围")]
+        object[,] conditionRange,
+        [ExcelArgument(AllowReference = true, Description = "单元格地址：A1", Name = "累加范围")]
+        object[,] sumRange
+    )
+    {
+        var rows = conditionRange.GetLength(0);
+        var cols = conditionRange.GetLength(1);
+
+        var matchesList = new List<double>();
+
+        double sum = 0;
+
+
+        for (var row = 0; row < rows; row++)
+        for (var col = 0; col < cols; col++)
+        {
+            double conditionCell = (double)conditionRange[row, col];
+
+            double sumCell = (double)sumRange[row, col];
+
+
+            if (conditionCell is ExcelEmpty || conditionCell == 0)
+            {
+                sum += sumCell;
+                matchesList.Add(sum);
+            }
+            else
+            {
+                matchesList.Add(sum + sumCell);
+                sum = 0;
+            }
+        }
+
+        return matchesList.ToArray();
     }
 
     [ExcelFunction(
@@ -424,7 +448,7 @@ public class ExcelUdf
     )]
     public static string GetCellColor(
         [ExcelArgument(AllowReference = true, Name = "单元格地址", Description = "引用Range&Cell地址,eg:A1")]
-            object address
+        object address
     )
     {
         if (address is ExcelReference cellRef)
@@ -451,7 +475,7 @@ public class ExcelUdf
     )]
     public static string SetCellColor(
         [ExcelArgument(AllowReference = true, Name = "单元格值", Description = "获取单元格值")]
-            string inputValue
+        string inputValue
     )
     {
         var cellRef = (ExcelReference)XlCall.Excel(XlCall.xlfCaller);
@@ -475,15 +499,16 @@ public class ExcelUdf
         Description = "提取字符串中数字"
     )]
     public static long GetNumFromStr(
-        [ExcelArgument(AllowReference = true, Description = "输入字符串")] string inputValue,
+        [ExcelArgument(AllowReference = true, Description = "输入字符串")]
+        string inputValue,
         [ExcelArgument(AllowReference = true, Name = "分隔符", Description = "分隔符,eg:,")]
-            string delimiter,
+        string delimiter,
         [ExcelArgument(
             AllowReference = true,
             Name = "数字序号",
             Description = "选择提取字符串中的第几个数字，如果值很大，表示提取最末尾字符"
         )]
-            int numCount
+        int numCount
     )
     {
         var numbers = Regex
@@ -505,17 +530,17 @@ public class ExcelUdf
     )]
     public static string GetStrFromStr(
         [ExcelArgument(AllowReference = true, Name = "单元格索引", Description = "输入字符串")]
-            string inputValue,
+        string inputValue,
         [ExcelArgument(AllowReference = true, Name = "分隔符", Description = "分隔符,eg:,")]
-            string delimiter,
+        string delimiter,
         [ExcelArgument(AllowReference = true, Name = "过滤符", Description = "过滤符,eg:[,]")]
-            string filter,
+        string filter,
         [ExcelArgument(
             AllowReference = true,
             Name = "序号",
             Description = "选择提取字符串中的第几个字符串，如果值很大，表示提取最末尾字符"
         )]
-            int numCount
+        int numCount
     )
     {
         var filterGroup = filter.ToCharArray().Select(c => c.ToString()).ToArray();
@@ -537,27 +562,21 @@ public class ExcelUdf
     )]
     public static string GetStrStructFromStr(
         [ExcelArgument(AllowReference = true, Name = "单元格索引", Description = "输入字符串")]
-            string inputValue,
+        string inputValue,
         [ExcelArgument(AllowReference = true, Name = "正则方法", Description = @"正则方法,eg:\[(.*?)\]")]
-            string regexStr,
+        string regexStr,
         [ExcelArgument(
             AllowReference = true,
             Name = "序号",
             Description = "选择提取字符串中的第几个字符串，如果值很大，表示提取最末尾字符"
         )]
-            int numCount
+        int numCount
     )
     {
-        if (regexStr == "")
-        {
-            regexStr = @"\[(\d+.*?)]";
-        }
+        if (regexStr == "") regexStr = @"\[(\d+.*?)]";
         // 正则表达式匹配内部数组
         var matches = Regex.Matches(inputValue, regexStr);
-        if (numCount > matches.Count)
-        {
-            numCount = matches.Count;
-        }
+        if (numCount > matches.Count) numCount = matches.Count;
         // 使用 ElementAtOrDefault 安全地获取匹配项
         var match = matches.ElementAtOrDefault(numCount - 1);
         // 如果匹配项存在，则返回其值，否则返回空字符串
@@ -572,15 +591,12 @@ public class ExcelUdf
     )]
     public static object GetStrStructFromStrArray(
         [ExcelArgument(AllowReference = true, Name = "单元格索引", Description = "输入字符串")]
-            object[,] inputValue,
+        object[,] inputValue,
         [ExcelArgument(AllowReference = true, Name = "分割符", Description = @"默认为逗号")]
-            string delimiter
+        string delimiter
     )
     {
-        if (delimiter == "")
-        {
-            delimiter = ",";
-        }
+        if (delimiter == "") delimiter = ",";
 
         var matchesList = new List<string>();
         foreach (var value in inputValue)
@@ -590,10 +606,7 @@ public class ExcelUdf
                 .Split(value.ToString() ?? throw new InvalidOperationException(), delimiter)
                 .SelectMany(s => Regex.Matches(s, @"\d+").Select(m => m.Value))
                 .ToArray();
-            foreach (var num in numbers)
-            {
-                matchesList.Add(num);
-            }
+            foreach (var num in numbers) matchesList.Add(num);
         }
 
         return matchesList.ToArray();
@@ -607,25 +620,22 @@ public class ExcelUdf
     )]
     public static string CreatValueToArray(
         [ExcelArgument(AllowReference = true, Name = "单元格范围", Description = "Range&Cell,eg:A1:A2")]
-            object[,] rangeObj,
+        object[,] rangeObj,
         [ExcelArgument(
             AllowReference = true,
             Name = "默认值单元格范围",
             Description = "Range&Cell,eg:A1:A2，不填表示没有默认值"
         )]
-            object[,] rangeObjDef,
+        object[,] rangeObjDef,
         [ExcelArgument(AllowReference = true, Name = "分隔符", Description = "分隔符,默认:[,]表示：首-中-尾符")]
-            string delimiter,
+        string delimiter,
         [ExcelArgument(AllowReference = true, Name = "过滤值", Description = "一般为空值")]
-            string ignoreValue
+        string ignoreValue
     )
     {
         var result = Empty;
         //设定默认值
-        if (delimiter == "")
-        {
-            delimiter = "[,]";
-        }
+        if (delimiter == "") delimiter = "[,]";
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
         string startDelimiter;
         string midDelimiter;
@@ -642,13 +652,16 @@ public class ExcelUdf
             midDelimiter = delimiterList[0];
             endDelimiter = Empty;
         }
+
         var rows = rangeObj.GetLength(0);
         var cols = rangeObj.GetLength(1);
         for (var row = 0; row < rows; row++)
         for (var col = 0; col < cols; col++)
         {
             var item = rangeObj[row, col];
-            if (item is ExcelEmpty || item.ToString() == ignoreValue || item is ExcelError) { }
+            if (item is ExcelEmpty || item.ToString() == ignoreValue || item is ExcelError)
+            {
+            }
             else
             {
                 if (!(rangeObjDef[0, 0] is ExcelMissing))
@@ -676,17 +689,17 @@ public class ExcelUdf
     )]
     public static string CreatValueToArrayRepeat(
         [ExcelArgument(AllowReference = true, Name = "单元格范围", Description = "Range&Cell,eg:A1:A2")]
-            object[,] rangeObj,
+        object[,] rangeObj,
         [ExcelArgument(
             AllowReference = true,
             Name = "单元格范围-数量",
             Description = "Range&Cell,eg:A1:A2"
         )]
-            object[,] rangeObj2,
+        object[,] rangeObj2,
         [ExcelArgument(AllowReference = true, Name = "分隔符", Description = "分隔符,eg:,")]
-            string delimiter,
+        string delimiter,
         [ExcelArgument(AllowReference = true, Name = "过滤值", Description = "一般为空值")]
-            string ignoreValue
+        string ignoreValue
     )
     {
         var result = Empty;
@@ -696,7 +709,9 @@ public class ExcelUdf
         for (var col = 0; col < cols; col++)
         {
             var item = rangeObj[row, col];
-            if (item is ExcelEmpty || item.ToString() == ignoreValue) { }
+            if (item is ExcelEmpty || item.ToString() == ignoreValue)
+            {
+            }
             else
             {
                 var item2 = rangeObj2[row, col];
@@ -724,17 +739,17 @@ public class ExcelUdf
             Description = "Range&Cell,eg:A1:A2",
             Name = "第一单元格范围"
         )]
-            object[,] rangeObj1,
+        object[,] rangeObj1,
         [ExcelArgument(
             AllowReference = true,
             Description = "Range&Cell,eg:A1:A2",
             Name = "第二单元格范围"
         )]
-            object[,] rangeObj2,
+        object[,] rangeObj2,
         [ExcelArgument(AllowReference = true, Description = "分隔符,eg:,", Name = "分隔符")]
-            string delimiter,
+        string delimiter,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false", Name = "过滤空值")]
-            bool ignoreEmpty
+        bool ignoreEmpty
     )
     {
         var values1Objects = rangeObj1.Cast<object>().ToArray();
@@ -772,6 +787,7 @@ public class ExcelUdf
                         + delimiterList[2];
                     result += itemDef + delimiter[1];
                 }
+
                 count++;
             }
 
@@ -791,40 +807,28 @@ public class ExcelUdf
     )]
     public static string CreatValueToArray2Dya(
         [ExcelArgument(AllowReference = true, Description = "分隔符,eg:,", Name = "分隔符")]
-            string delimiter,
+        string delimiter,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg:true/false", Name = "过滤空值")]
-            string ignoreEmpty,
+        string ignoreEmpty,
         [ExcelArgument(AllowReference = true, Description = "是否包含外围分隔符,eg:,", Name = "过滤空值")]
-            string isOutline,
+        string isOutline,
         [ExcelArgument(
             AllowReference = false,
             Description = "多个单元格范围，支持动态输入，eg: A1:A2, B1:B2",
             Name = "单元格范围"
         )]
-            params object[] ranges
+        params object[] ranges
     )
     {
         //默认值
-        if (delimiter == "")
-        {
-            delimiter = "[,]";
-        }
-        if (ignoreEmpty == "")
-        {
-            ignoreEmpty = "TRUE";
-        }
-        if (isOutline == "")
-        {
-            isOutline = "TRUE";
-        }
+        if (delimiter == "") delimiter = "[,]";
+        if (ignoreEmpty == "") ignoreEmpty = "TRUE";
+        if (isOutline == "") isOutline = "TRUE";
         // 拼接结果
         var result = Empty;
         // 分隔符处理
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
-        if (delimiterList.Length < 3)
-        {
-            throw new ArgumentException("分隔符至少需要三个字符，例如: {,}");
-        }
+        if (delimiterList.Length < 3) throw new ArgumentException("分隔符至少需要三个字符，例如: {,}");
 
         // 将所有范围转换为二维数组list
         var allValues = new List<object[]>();
@@ -833,28 +837,18 @@ public class ExcelUdf
             if (range.ToString() == "ExcelErrorValue")
                 continue;
             if (range is object[,] rangeObj)
-            {
                 allValues.Add(rangeObj.Cast<object>().ToArray());
-            }
             else
-            {
                 throw new ArgumentException("输入的范围必须是二维数组");
-            }
         }
 
-        if (allValues.Count == 0)
-        {
-            return "";
-        }
+        if (allValues.Count == 0) return "";
 
         // 确保所有范围的长度一致
         var maxLength = allValues.Max(arr => arr.Length);
-        if (allValues.Any(arr => arr.Length != maxLength))
-        {
-            throw new ArgumentException("所有单元格范围的长度必须一致");
-        }
+        if (allValues.Any(arr => arr.Length != maxLength)) throw new ArgumentException("所有单元格范围的长度必须一致");
 
-        for (int i = 0; i < maxLength; i++)
+        for (var i = 0; i < maxLength; i++)
         {
             var rowValues = new List<string>();
             foreach (var rangeValues in allValues)
@@ -865,35 +859,25 @@ public class ExcelUdf
                     var isExcelEmpty = value is ExcelEmpty;
                     var isExcelError = value is ExcelError;
                     var isStringEmpty = value?.ToString() == Empty;
-                    if (isExcelEmpty || isStringEmpty || isExcelError)
-                    {
-                        continue;
-                    }
+                    if (isExcelEmpty || isStringEmpty || isExcelError) continue;
                 }
+
                 rowValues.Add(value?.ToString() ?? Empty);
             }
 
             // 拼接每一行的值
             if (rowValues.Count > 0)
-            {
                 result +=
                     delimiterList[0]
                     + Join(delimiterList[1], rowValues)
                     + delimiterList[2]
                     + delimiter[1];
-            }
         }
 
         // 去掉最后一个多余的分隔符
-        if (!IsNullOrEmpty(result))
-        {
-            result = result.Substring(0, result.Length - 1);
-        }
+        if (!IsNullOrEmpty(result)) result = result.Substring(0, result.Length - 1);
 
-        if (isOutline == "TRUE")
-        {
-            result = delimiterList[0] + result + delimiterList[2];
-        }
+        if (isOutline == "TRUE") result = delimiterList[0] + result + delimiterList[2];
 
         return result;
     }
@@ -910,23 +894,23 @@ public class ExcelUdf
             Description = "Range&Cell,eg:A1:A2",
             Name = "第一单元格范围"
         )]
-            object[,] rangeObj1,
+        object[,] rangeObj1,
         [ExcelArgument(
             AllowReference = true,
             Description = "Range&Cell,eg:A1:A2",
             Name = "第二单元格范围"
         )]
-            object[,] rangeObj2,
+        object[,] rangeObj2,
         [ExcelArgument(
             AllowReference = true,
             Description = "Range&Cell,eg:A1",
             Name = "第二个单元格筛选条件值"
         )]
-            object[,] filterObj,
+        object[,] filterObj,
         [ExcelArgument(AllowReference = true, Description = "分隔符,eg:[,](头-中-尾)", Name = "分隔符")]
-            string delimiter,
+        string delimiter,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false", Name = "过滤空值")]
-            bool ignoreEmpty
+        bool ignoreEmpty
     )
     {
         var values1Objects = rangeObj1.Cast<object>().ToArray();
@@ -980,29 +964,25 @@ public class ExcelUdf
             Description = "Range&Cell,eg:A1:A2",
             Name = "第一单元格范围"
         )]
-            object[,] rangeObj1,
+        object[,] rangeObj1,
         [ExcelArgument(
             AllowReference = true,
             Description = "Range&Cell,eg:A1:A2",
             Name = "第二单元格范围"
         )]
-            object[,] rangeObj2
+        object[,] rangeObj2
     )
     {
         // 创建一个包含两个数组的对象
         var gridDataList = new object[rangeObj1.GetLength(0) * rangeObj1.GetLength(1)];
-        int index = 0;
-        for (int i = 0; i < rangeObj1.GetLength(0); i++)
-        {
-            for (int j = 0; j < rangeObj1.GetLength(1); j++)
+        var index = 0;
+        for (var i = 0; i < rangeObj1.GetLength(0); i++)
+        for (var j = 0; j < rangeObj1.GetLength(1); j++)
+            gridDataList[index++] = new
             {
-                gridDataList[index++] = new
-                {
-                    ConfigId = Convert.ToInt32(rangeObj1[i, j]),
-                    ObstacleConfigId = Convert.ToInt32(rangeObj2[i, j])
-                };
-            }
-        }
+                ConfigId = Convert.ToInt32(rangeObj1[i, j]),
+                ObstacleConfigId = Convert.ToInt32(rangeObj2[i, j])
+            };
 
         var combinedData = new
         {
@@ -1012,7 +992,7 @@ public class ExcelUdf
         };
 
         // 将对象转换为 JSON 格式
-        string json = JsonConvert.SerializeObject(combinedData, Formatting.None);
+        var json = JsonConvert.SerializeObject(combinedData, Formatting.None);
 
         return json;
     }
@@ -1025,20 +1005,17 @@ public class ExcelUdf
     )]
     public static object[,] Trans2ArrayTo1Arrays(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")]
-            object[,] rangeObj,
+        object[,] rangeObj,
         [ExcelArgument(AllowReference = true, Description = "是否带索引号", Name = "是否带索引号，带2不带1")]
-            int outMax,
+        int outMax,
         [ExcelArgument(AllowReference = true, Description = "行优先还是列优先：1行0列", Name = "行列优先")]
-            int rowOrCol,
+        int rowOrCol,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false", Name = "过滤空值")]
-            bool ignoreEmpty =true
+        bool ignoreEmpty = true
     )
     {
         //默认值
-        if (outMax > 2)
-        {
-            outMax = 2;
-        }
+        if (outMax > 2) outMax = 2;
 
         List<object> rangeValueList = [];
         List<object> rangeColIndexList = [];
@@ -1047,7 +1024,6 @@ public class ExcelUdf
         var colCount = rangeObj.GetLength(1);
 
         if (rowOrCol == 0)
-        {
             //按行
             for (var col = 0; col < colCount; col++)
             for (var row = 0; row < rowCount; row++)
@@ -1070,9 +1046,7 @@ public class ExcelUdf
                     rangeColIndexList.Add(col + 1);
                 }
             }
-        }
         else if (rowOrCol == 1)
-        {
             //按行
             for (var row = 0; row < rowCount; row++)
             for (var col = 0; col < colCount; col++)
@@ -1095,13 +1069,11 @@ public class ExcelUdf
                     rangeColIndexList.Add(col + 1);
                 }
             }
-        }
 
         var result = new object[rangeValueList.Count, outMax];
 
         for (var i = 0; i < rangeValueList.Count; i++)
-        {
-            if(outMax == 2)
+            if (outMax == 2)
             {
                 result[i, 1] = rangeValueList[i];
                 result[i, 0] = rangeColIndexList[i];
@@ -1110,7 +1082,6 @@ public class ExcelUdf
             {
                 result[i, 0] = rangeValueList[i];
             }
-        }
 
         return result;
     }
@@ -1124,11 +1095,11 @@ public class ExcelUdf
     )]
     public static double[] UxSumProduct(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")]
-            object[,] rangeObj1,
+        object[,] rangeObj1,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "单元格范围")]
-            object[,] rangeObj2,
+        object[,] rangeObj2,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,true/false", Name = "过滤空值")]
-            bool ignoreEmpty
+        bool ignoreEmpty
     )
     {
         List<double> sumProductValueList = [];
@@ -1139,24 +1110,21 @@ public class ExcelUdf
 
         for (var col = 0; col < colCount; col++)
         for (var row = 0; row < rowCount; row++)
-        {
             if (ignoreEmpty)
             {
                 var value1 = rangeObj1[row, col];
                 var value2 = rangeObj2[row, col];
-                if (double.TryParse(value1.ToString(), out double result1))
-                {
-                    if (double.TryParse(value2.ToString(), out double result2))
+                if (double.TryParse(value1.ToString(), out var result1))
+                    if (double.TryParse(value2.ToString(), out var result2))
                     {
                         sumProductValue += result1 * result2;
                         sumProductValueList.Add(sumProductValue);
                     }
-                }
             }
-        }
 
         return sumProductValueList.ToArray();
     }
+
     [ExcelFunction(
         Category = "UDF-Excel函数增强",
         IsVolatile = true,
@@ -1171,28 +1139,24 @@ public class ExcelUdf
         bool ignoreEmpty = true
     )
     {
-        HashSet<object> uniqueValues = new HashSet<object>();
+        var uniqueValues = new HashSet<object>();
 
         var rowCount = rangeObj1.GetLength(0);
         var colCount = rangeObj1.GetLength(1);
 
         for (var col = 0; col < colCount; col++)
+        for (var row = 0; row < rowCount; row++)
         {
-            for (var row = 0; row < rowCount; row++)
-            {
-                var value = rangeObj1[row, col];
+            var value = rangeObj1[row, col];
 
-                if (ignoreEmpty && (value == null || IsNullOrEmpty(value.ToString())))
-                {
-                    continue; // 跳过空值
-                }
+            if (ignoreEmpty && (value == null || IsNullOrEmpty(value.ToString()))) continue; // 跳过空值
 
-                uniqueValues.Add(value);
-            }
+            uniqueValues.Add(value);
         }
 
         return uniqueValues.Count;
     }
+
     [ExcelFunction(
         Category = "UDF-Alice专属函数",
         IsVolatile = true,
@@ -1202,22 +1166,19 @@ public class ExcelUdf
     )]
     public static double[] AliceCountBuildLinks(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "链等级范围")]
-            object[,] rangeObj1,
+        object[,] rangeObj1,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "链数量范围")]
-            object[,] rangeObj2,
+        object[,] rangeObj2,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "矿数量范围")]
-            object[,] rangeObj3,
+        object[,] rangeObj3,
         [ExcelArgument(AllowReference = true, Description = "链最大级别,默认为：8", Name = "数量范围")]
-            int linkMax,
+        int linkMax,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,0/其他数组，不填为0", Name = "过滤空值")]
-            int ignoreEmpty
+        int ignoreEmpty
     )
     {
-        if (linkMax == 0)
-        {
-            linkMax = 8;
-        }
-        double[] linkTotalCount = new double[linkMax];
+        if (linkMax == 0) linkMax = 8;
+        var linkTotalCount = new double[linkMax];
 
         var rowCount = rangeObj1.GetLength(0);
         var colCount = rangeObj1.GetLength(1);
@@ -1229,21 +1190,14 @@ public class ExcelUdf
         {
             object buildNumResult = null;
             if (buildRowCount == 1 && col < buildColCount)
-            {
                 buildNumResult = rangeObj3[0, col];
-            }
-            else if (buildColCount == 1 && col < buildRowCount)
-            {
-                buildNumResult = rangeObj3[col, 0];
-            }
+            else if (buildColCount == 1 && col < buildRowCount) buildNumResult = rangeObj3[col, 0];
 
             if (
                 buildNumResult != null
-                && double.TryParse(buildNumResult.ToString(), out double buildNum)
+                && double.TryParse(buildNumResult.ToString(), out var buildNum)
             )
-            {
                 for (var row = 0; row < rowCount; row++)
-                {
                     if (ignoreEmpty == 0)
                     {
                         var linkLevelResult = rangeObj1[row, col];
@@ -1251,19 +1205,14 @@ public class ExcelUdf
                         if (
                             linkLevelResult != null
                             && linkNumResult != null
-                            && int.TryParse(linkLevelResult.ToString(), out int linkLevel)
-                            && double.TryParse(linkNumResult.ToString(), out double linkNum)
+                            && int.TryParse(linkLevelResult.ToString(), out var linkLevel)
+                            && double.TryParse(linkNumResult.ToString(), out var linkNum)
                         )
-                        {
                             if (linkLevel > 0 && linkLevel <= linkMax)
-                            {
                                 linkTotalCount[linkLevel - 1] += linkNum * buildNum;
-                            }
-                        }
                     }
-                }
-            }
         }
+
         return linkTotalCount;
     }
 
@@ -1276,46 +1225,37 @@ public class ExcelUdf
     )]
     public static double[] AliceCountBuilds(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "矿数量范围")]
-            object[,] rangeObj1,
+        object[,] rangeObj1,
         [ExcelArgument(AllowReference = true, Description = "矿最大级别,默认为：3", Name = "矿最大等级")]
-            int buildMax,
+        int buildMax,
         [ExcelArgument(AllowReference = true, Description = "数据按列还是按行：默认按列：0，1为按行", Name = "按行按列")]
-            int rowOrCol,
+        int rowOrCol,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,0/其他数组，不填为0", Name = "过滤空值")]
-            int ignoreEmpty
+        int ignoreEmpty
     )
     {
-        if (buildMax == 0)
-        {
-            buildMax = 3;
-        }
-        double[] buildTotalCount = new double[buildMax];
+        if (buildMax == 0) buildMax = 3;
+        var buildTotalCount = new double[buildMax];
 
         var rowCount = rangeObj1.GetLength(0);
         var colCount = rangeObj1.GetLength(1);
 
-        bool processRows = rowOrCol == 0;
-        int outerLoopCount = processRows ? rowCount : colCount;
+        var processRows = rowOrCol == 0;
+        var outerLoopCount = processRows ? rowCount : colCount;
         //int innerLoopCount = processRows ? colCount : rowCount;
 
         for (var outer = 0; outer < outerLoopCount; outer++)
         {
-            object buildLevelResult = processRows ? rangeObj1[outer, 0] : rangeObj1[0, outer];
-            object buildNumResult = processRows ? rangeObj1[outer, 1] : rangeObj1[1, outer];
+            var buildLevelResult = processRows ? rangeObj1[outer, 0] : rangeObj1[0, outer];
+            var buildNumResult = processRows ? rangeObj1[outer, 1] : rangeObj1[1, outer];
 
             if (ignoreEmpty == 0 && buildLevelResult != null && buildNumResult != null)
-            {
                 if (
-                    int.TryParse(buildLevelResult.ToString(), out int buildLevel)
-                    && double.TryParse(buildNumResult.ToString(), out double buildNum)
+                    int.TryParse(buildLevelResult.ToString(), out var buildLevel)
+                    && double.TryParse(buildNumResult.ToString(), out var buildNum)
                 )
-                {
                     if (buildLevel > 0 && buildLevel <= buildMax)
-                    {
                         buildTotalCount[buildLevel - 1] += buildNum;
-                    }
-                }
-            }
         }
 
         return buildTotalCount;
@@ -1330,51 +1270,41 @@ public class ExcelUdf
     )]
     public static double AliceCountMergeLinks(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "链数量范围")]
-            object[,] rangeObj1,
+        object[,] rangeObj1,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1:A2", Name = "链积分范围")]
-            object[,] rangeObj2,
+        object[,] rangeObj2,
         [ExcelArgument(AllowReference = true, Description = "链最大级别,默认为：8", Name = "链最大等级")]
-            int linksMax,
+        int linksMax,
         [ExcelArgument(AllowReference = true, Description = "是否过滤空值,eg,0/其他数组，不填为0", Name = "过滤空值")]
-            int ignoreEmpty
+        int ignoreEmpty
     )
     {
-        if (linksMax == 0)
-        {
-            linksMax = 8;
-        }
+        if (linksMax == 0) linksMax = 8;
 
         double mergeScoreTotalCount = 0;
 
         var rowCount = rangeObj1.GetLength(0);
         var colCount = rangeObj1.GetLength(1);
 
-        int addLinksNum = 0;
+        var addLinksNum = 0;
 
         for (var row = 0; row < rowCount - 1; row++)
+        for (var col = 0; col < colCount; col++)
         {
-            for (var col = 0; col < colCount; col++)
-            {
-                object linksNumResult = rangeObj1[row, col];
-                object linksScoreResult = rangeObj2[row, col];
+            var linksNumResult = rangeObj1[row, col];
+            var linksScoreResult = rangeObj2[row, col];
 
-                if (ignoreEmpty == 0 && linksNumResult != null && linksScoreResult != null)
+            if (ignoreEmpty == 0 && linksNumResult != null && linksScoreResult != null)
+                if (
+                    int.TryParse(linksNumResult.ToString(), out var linksNum)
+                    && double.TryParse(linksScoreResult.ToString(), out var linksScore)
+                )
                 {
-                    if (
-                        int.TryParse(linksNumResult.ToString(), out int linksNum)
-                        && double.TryParse(linksScoreResult.ToString(), out double linksScore)
-                    )
-                    {
-                        linksNum += addLinksNum;
-                        addLinksNum = (int)(linksNum / 2.5);
-                        //倒数第2链或者大于等于5时才合成的积分
-                        if (row >= linksMax - 3 || linksNum >= 5)
-                        {
-                            mergeScoreTotalCount += addLinksNum * linksScore;
-                        }
-                    }
+                    linksNum += addLinksNum;
+                    addLinksNum = (int)(linksNum / 2.5);
+                    //倒数第2链或者大于等于5时才合成的积分
+                    if (row >= linksMax - 3 || linksNum >= 5) mergeScoreTotalCount += addLinksNum * linksScore;
                 }
-            }
         }
 
         return mergeScoreTotalCount;
@@ -1389,36 +1319,30 @@ public class ExcelUdf
     )]
     public static double AliceCountLinksMax(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "链最大等级")]
-            int rangeObjMax,
+        int rangeObjMax,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "链最大等级需要数量")]
-            int rangeObjMaxCount,
+        int rangeObjMaxCount,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "合成类型")]
-            double mergeType,
+        double mergeType,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "链1已有数量")]
-            double rangeObj1,
+        double rangeObj1,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "链2已有数量")]
-            double rangeObj2,
+        double rangeObj2,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "链3已有数量")]
-            double rangeObj3,
+        double rangeObj3,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "链4已有数量")]
-            double rangeObj4
+        double rangeObj4
     )
     {
         double baseLinkCount = rangeObjMaxCount;
         var hasLinks = new List<double> { rangeObj4, rangeObj3, rangeObj2, rangeObj1 };
 
         for (var row = 1; row < rangeObjMax; row++)
-        {
             if (row >= rangeObjMax - 3)
-            {
                 baseLinkCount =
                     Math.Ceiling(baseLinkCount * mergeType) - hasLinks[row - (rangeObjMax - 4)];
-            }
             else
-            {
                 baseLinkCount = Math.Ceiling(baseLinkCount * mergeType);
-            }
-        }
 
         return baseLinkCount;
     }
@@ -1432,13 +1356,13 @@ public class ExcelUdf
     )]
     public static string AliceLtePoisonNear(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "基准坐标")]
-            object[,] basePos,
+        object[,] basePos,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "目标坐标组")]
-            string targetPos,
+        string targetPos,
         [ExcelArgument(AllowReference = true, Description = "\\d+", Name = "目标坐标组正则方法")]
-            string posPattern,
+        string posPattern,
         [ExcelArgument(AllowReference = true, Description = "1/0/-1", Name = "选择：最近、最远、中值")]
-            string posType
+        string posType
     )
     {
         var baseX = int.Parse(basePos[0, 0].ToString() ?? throw new InvalidOperationException());
@@ -1446,16 +1370,16 @@ public class ExcelUdf
         posPattern ??= "";
         posType ??= "1";
         // 提取坐标
-        MatchCollection posMatches = Regex.Matches(targetPos, posPattern);
+        var posMatches = Regex.Matches(targetPos, posPattern);
         // 构建结果
         var posResult = new List<(double, string)>();
         if (posResult == null)
             throw new ArgumentNullException(nameof(posResult));
         foreach (Match match in posMatches)
         {
-            int x = int.Parse(match.Groups[1].Value);
-            int y = int.Parse(match.Groups[2].Value);
-            double distance = Math.Pow(x - baseX, 2) + Math.Pow(y - baseY, 2);
+            var x = int.Parse(match.Groups[1].Value);
+            var y = int.Parse(match.Groups[2].Value);
+            var distance = Math.Pow(x - baseX, 2) + Math.Pow(y - baseY, 2);
             posResult.Add((distance, $"{x},{y}"));
         }
 
@@ -1487,24 +1411,25 @@ public class ExcelUdf
     )]
     public static string AliceLtePoison(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "目标坐标组")]
-            string targetPos,
+        string targetPos,
         [ExcelArgument(AllowReference = true, Description = "\\d+", Name = "目标坐标组正则方法")]
-            string posPattern
+        string posPattern
     )
     {
         // 提取坐标
-        MatchCollection posMatches = Regex.Matches(targetPos, posPattern);
+        var posMatches = Regex.Matches(targetPos, posPattern);
         // 构建结果
-        string posResult = Empty;
+        var posResult = Empty;
         if (posResult == null)
             throw new ArgumentNullException(nameof(posResult));
         foreach (Match match in posMatches)
         {
-            int x = int.Parse(match.Groups[1].Value);
-            int y = int.Parse(match.Groups[2].Value);
+            var x = int.Parse(match.Groups[1].Value);
+            var y = int.Parse(match.Groups[2].Value);
             var pos = "{" + $"21,{x},{y}" + "},";
             posResult += pos;
         }
+
         posResult = posResult.Substring(0, posResult.Length - 1);
         return posResult;
     }
@@ -1518,11 +1443,11 @@ public class ExcelUdf
     )]
     public static bool AliceLteSourceCheck(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "文件名")]
-            string filesName,
+        string filesName,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "目标文件夹子目录 ")]
-            string folderPath,
+        string folderPath,
         [ExcelArgument(AllowReference = true, Description = @"C:\My", Name = "目标文件夹根目录")]
-            string baseFolderPath
+        string baseFolderPath
     )
     {
         baseFolderPath = IsNullOrEmpty(baseFolderPath) ? @"C:/M1Work/Code/" : baseFolderPath;
@@ -1532,10 +1457,7 @@ public class ExcelUdf
         {
             // 获取文件夹及其子文件夹中的所有文件
             var files = Directory.GetFiles(fileFullPath, filesName, SearchOption.AllDirectories);
-            if (files.Length > 0)
-            {
-                return true;
-            }
+            if (files.Length > 0) return true;
         }
         catch (Exception)
         {
@@ -1554,17 +1476,17 @@ public class ExcelUdf
     )]
     public static object ChatTransfer(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "要翻译的单元格")]
-            object[,] sourceLan,
+        object[,] sourceLan,
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "要翻译的语言类型")]
-            object[,] lanType,
+        object[,] lanType,
         [ExcelArgument(
             AllowReference = true,
             Description = "补充对翻译的要求，例如：语言，格式：默认：英语",
             Name = "翻译要求"
         )]
-            string addContent,
+        string addContent,
         [ExcelArgument(AllowReference = true, Description = "任意字符串或缺省", Name = "忽略空值")]
-            string ignoreValue
+        string ignoreValue
     )
     {
         // 使用 ExcelAsyncUtil.Run 实现异步操作
@@ -1592,7 +1514,6 @@ public class ExcelUdf
                     // 构造请求体
                     object requestBody = null;
                     if (apiModel.Contains("gpt"))
-                    {
                         requestBody = new
                         {
                             model = apiModel,
@@ -1603,9 +1524,7 @@ public class ExcelUdf
                             },
                             max_tokens = 10000
                         };
-                    }
                     else if (apiModel.Contains("deepseek"))
-                    {
                         requestBody = new
                         {
                             model = apiModel,
@@ -1629,10 +1548,9 @@ public class ExcelUdf
                             logprobs = false,
                             top_logprobs = (object)null
                         };
-                    }
 
                     // 调用 Chat API
-                    string response = ChatApiClient
+                    var response = ChatApiClient
                         .CallApiAsync(requestBody, apiKey, apiUrl)
                         .GetAwaiter()
                         .GetResult();
@@ -1669,10 +1587,7 @@ public class ExcelUdf
 
         foreach (var item in inputRange)
         {
-            if (item is ExcelEmpty || item is ExcelError || item.ToString() == ignoreValue)
-            {
-                continue;
-            }
+            if (item is ExcelEmpty || item is ExcelError || item.ToString() == ignoreValue) continue;
             result.Add(item.ToString());
         }
 
