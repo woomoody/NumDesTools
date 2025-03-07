@@ -841,6 +841,7 @@ public static class PubMetToExcelFunc
                 var result = rows
                     .FirstOrDefault(
                         row => row.ContainsKey(searchColumnName) && row[searchColumnName]?.ToString() == findValue);
+                
                 if (result == null)
                     continue;
 

@@ -25,14 +25,24 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- 放大图片的 Popup -->
-        <Popup x:Name="ImagePopup" StaysOpen="False" Placement="Center">
-            <Border Background="Black" Opacity="0.8" MouseDown="ClosePopup">
-                <Image x:Name="PopupImage" Width="500" Height="500" Stretch="Uniform" />
+        <!--  放大图片的 Popup  -->
+        <Popup
+            x:Name="ImagePopup"
+            Placement="Center"
+            StaysOpen="False">
+            <Border
+                Background="Black"
+                MouseDown="ClosePopup"
+                Opacity="0.8">
+                <Image
+                    x:Name="PopupImage"
+                    Width="500"
+                    Height="500"
+                    Stretch="Uniform" />
             </Border>
         </Popup>
 
-        <!-- 图片列表 -->
+        <!--  图片列表  -->
         <ScrollViewer Grid.Row="1">
             <ItemsControl ItemsSource="{Binding ImageItems}">
                 <ItemsControl.ItemsPanel>
@@ -43,26 +53,43 @@
 
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Margin="5" Padding="3" BorderBrush="LightGray" BorderThickness="1">
+                        <Border
+                            Margin="5"
+                            Padding="3"
+                            BorderBrush="LightGray"
+                            BorderThickness="1">
                             <StackPanel>
-                                <!-- 图片 -->
+                                <!--  图片  -->
                                 <Image
-                                Width="150"
-                                Height="100"
-                                Cursor="Hand"
-                                Source="{Binding Thumbnail}"
-                                ToolTip="点击放大"
-                                MouseLeftButtonDown="OpenPopup"/>
-                                <TextBlock HorizontalAlignment="Center" Foreground="White"
-                                       Text="{Binding DataId, StringFormat= '数据ID：{0}'}"/>
-                                <TextBlock HorizontalAlignment="Center" Foreground="White"
-                                       Text="{Binding ImageContent}" ToolTip="{Binding ImageContent}"/>
-                                <TextBlock HorizontalAlignment="Center" Foreground="Gold"
-                                       Text="{Binding ImageId , StringFormat= '资源ID：{0}'}"/>
-                                <TextBlock Width="250" Cursor="Hand" FontSize="10"
-                                       Foreground="White" MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
-                                       Style="{StaticResource PathTextBlockStyle}" Text="{Binding ImagePath}"
-                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding ImagePath}" />
+                                    Width="150"
+                                    Height="100"
+                                    Cursor="Hand"
+                                    MouseLeftButtonDown="OpenPopup"
+                                    Source="{Binding Thumbnail}"
+                                    ToolTip="点击放大" />
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    Foreground="White"
+                                    Text="{Binding DataId, StringFormat='数据ID：{0}'}" />
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    Foreground="White"
+                                    Text="{Binding ImageContent}"
+                                    ToolTip="{Binding ImageContent}" />
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    Foreground="Gold"
+                                    Text="{Binding ImageId, StringFormat='资源ID：{0}'}" />
+                                <TextBlock
+                                    Width="250"
+                                    Cursor="Hand"
+                                    FontSize="10"
+                                    Foreground="White"
+                                    MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
+                                    Style="{StaticResource PathTextBlockStyle}"
+                                    Text="{Binding ImagePath}"
+                                    TextTrimming="CharacterEllipsis"
+                                    ToolTip="{Binding ImagePath}" />
                             </StackPanel>
                         </Border>
                     </DataTemplate>
