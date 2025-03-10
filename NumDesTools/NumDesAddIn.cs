@@ -505,7 +505,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "打开关联表格",
             "LTE配置导出",
             "自选表格写入（new）",
-            "自定义复制"
+            "自定义复制",
+            "克隆数据"
         };
 
         foreach (
@@ -647,6 +648,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         MsoButtonStyle.msoButtonIconAndCaption,
                         LteData.ExportLteDataConfig
                     )
+
                     : default,
                 sheetName.Contains("【模板】")
                     ? (
@@ -655,6 +657,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         MsoButtonStyle.msoButtonIconAndCaption,
                         ExcelDataAutoInsertMultiNew.RightClickInsertDataNew
                     )
+
+                    : default,
+                bookName.Contains("RechargeGP")
+                    ? (
+                    "克隆数据",
+                    "克隆数据-Recharge",
+                    MsoButtonStyle.msoButtonIconAndCaption,
+                    ExcelDataAutoInsertCopyActivity.RightClickCloneData
+                    )
+
                     : default,
                 (
                     "自定义复制",
