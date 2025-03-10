@@ -2728,7 +2728,7 @@ public static class ExcelDataAutoInsertMultiNew
         return (["查询完毕：正确"], lastRow);
     }
 }
-
+//纯Epplus，不使用Interop，无法针对激活Sheet使用
 public static class ExcelDataAutoInsertCopyMulti
 {
     public static void SearchData(dynamic isMulti)
@@ -3186,6 +3186,8 @@ public static class ExcelDataAutoInsertCopyMulti
 
         targetExcel.Save();
         targetSheet.Dispose();
+
+
         return errorList;
     }
 
@@ -3894,5 +3896,195 @@ public static class AutoInsertExcelDataModelCreat
         //写入数据
         var excelData = new ExcelDataAutoInsertNumChanges();
         excelData.SetNumChangesData(modelValueAll);
+    }
+}
+
+//使用Interop获取激活Sheet数据，Epplus写入目标工作簿数据
+public static class ExcelDataAutoInsertCopyActivity
+{
+    public static void RightClickCloneData(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var wkPath = NumDesAddIn.App.ActiveWorkbook.Path;
+        var excelNames = new List<string>()
+        {
+            "RechargeAmazon.xlsx",
+            "RechargeAptoide.xlsx",
+            "RechargeGlobalOfficial.xlsx",
+            "RechargeSamsung.xlsx",
+            "RechargeIOS.xlsx"
+        };
+        var defaultValues = new Dictionary<string, List<string>>()
+        {
+            {"thirdProductID", new List<string>(){ "com.mergeland.alices.adventure_diamond_", "price_Num"}},
+        };
+
+        var replaceValues = new Dictionary<string, Dictionary<string, List<string>>>()
+        {
+            {
+                "RechargeIOS.xlsx",
+                new Dictionary<string, List<string>>()  
+                {
+                    {
+                        "productID",  
+                        new List<string>()
+                        {
+                            "mergeland.alices.adventure",
+                            "casualgame.type.pipe"
+                        }
+                    },
+                    {
+                        "productID_test",
+                        new List<string>()
+                        {
+                            "mergeland.alices.adventure",
+                            "casualgame.type.pipe"
+                        }
+                    }
+                }  
+            }  
+        };
+
+        SyncSelectedRows(wkPath, excelNames, defaultValues , replaceValues);
+
+    }
+
+    public static void SyncSelectedRows(string targetPaths, List<string> excelNames, 
+        Dictionary<string , List<string>> defaultValues,
+        Dictionary<string, Dictionary<string, List<string>>> replaceValues)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        dynamic excel = NumDesAddIn.App;
+
+        //获取选中的行数据范围
+        Range selection = excel.Selection;
+        if (selection == null) return;
+
+        //读取源数据（A表）
+        var sourceHeaders = GetHeaders(excel.ActiveSheet); // 读取第2行列名
+        var sourceData = ReadSelectedData(selection, sourceHeaders);
+
+        for (int i = 0; i < excelNames.Count;i++)
+        {
+            var excelName = excelNames[i];
+            PubMetToExcel.SetExcelObjectEpPlus(
+                targetPaths,
+                excelName,
+                out ExcelWorksheet targetSheet,
+                out ExcelPackage targetExcel
+            );
+            var targetHeaders = GetHeaders(targetSheet);
+            // 确定写入起始行
+            int startRow = targetSheet.Dimension?.End.Row + 1 ?? 1;
+            // 逐行写入数据
+            foreach (var rowData in sourceData)
+            {
+                foreach (var header in targetHeaders)
+                {
+                    int colIndex = targetHeaders.IndexOf(header) + 1; 
+                    // 根据列名匹配或使用默认值
+                    if (rowData.ContainsKey(header))
+                    {
+                        targetSheet.Cells[startRow, colIndex].Value = rowData[header];
+
+                        //IOS需要替换
+                        if (replaceValues.TryGetValue(excelName, out var innerDict) 
+                            && innerDict != null
+                            && innerDict.TryGetValue(header, out var replaceList) 
+                            && replaceList != null
+                            && replaceList.Count >= 2) 
+                        {
+                            // 安全替换
+                            string originalValue = replaceList[0];
+                            string newValue = replaceList[1];
+                            targetSheet.Cells[startRow, colIndex].Value = rowData[header].ToString()
+                                .Replace(originalValue, newValue);
+                        }
+
+                    }
+                    else if(defaultValues.ContainsKey(header))
+                    {
+                        targetSheet.Cells[startRow, colIndex].Value = defaultValues[header][0] +Convert.ToDouble(rowData[defaultValues[header][1]]) / 100;
+                    }
+                }
+                startRow++;
+            }
+            targetExcel.Save();
+            targetSheet.Dispose();
+            excel.StatusBar = $"导出：{targetPaths}\\{excelName}";
+        }
+
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        excel.StatusBar = "搜索完成，用时：" + ts2;
+    }
+
+    // 重载方法：根据不同类型的工作表获取表头
+    private static List<string> GetHeaders(dynamic sheet)
+    {
+        if (sheet is ExcelWorksheet)
+        {
+            return GetEpplusHeaders(sheet);
+        }
+        else
+        {
+            return GetComHeaders(sheet);
+        }
+    }
+
+    // 处理 Excel COM 对象（如 Excel.Worksheet）
+    private static List<string> GetComHeaders(dynamic comSheet)
+    {
+        try
+        {
+            Range rowRange = comSheet.Rows[2]; // 第2行
+            object[,] values = rowRange.Value as object[,];
+            if (values == null) return new List<string>();
+
+            List<string> headers = new List<string>();
+            int columnCount = values.GetLength(1); // 总列数
+            for (int col = 1; col <= columnCount; col++)
+            {
+                headers.Add(values[1, col]?.ToString() ?? ""); // 二维数组索引 [行,列]
+            }
+            return headers;
+        }
+        catch
+        {
+            return new List<string>();
+        }
+    }
+
+    // 处理 EPPlus 的 ExcelWorksheet
+    private static List<string> GetEpplusHeaders(ExcelWorksheet eppSheet)
+    {
+        List<string> headers = new List<string>();
+        if (eppSheet.Dimension == null) return headers;
+
+        // 遍历第2行所有列
+        for (int col = eppSheet.Dimension.Start.Column; col <= eppSheet.Dimension.End.Column; col++)
+        {
+            var cell = eppSheet.Cells[2, col];
+            headers.Add(cell.Text ?? ""); // 直接取文本，避免空值异常
+        }
+        return headers;
+    }
+
+    // 辅助方法：读取选中行数据
+    private static List<Dictionary<string, object>> ReadSelectedData(Range selection, List<string> headers)
+    {
+        var data = new List<Dictionary<string, object>>();
+        foreach (Range row in selection.Rows)
+        {
+            var rowData = new Dictionary<string, object>();
+            for (int i = 0; i < headers.Count; i++)
+            {
+                rowData[headers[i]] = row.Cells[1, i + 1].Value;
+            }
+            data.Add(rowData);
+        }
+        return data;
     }
 }
