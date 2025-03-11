@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+using EnvDTE80;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using LicenseContext = OfficeOpenXml.LicenseContext;
@@ -1346,6 +1347,34 @@ public static class ExcelDataAutoInsertLanguage
                 out ExcelWorksheet targetSheet,
                 out ExcelPackage targetExcel
             );
+            
+            //去重更新
+            var newIdList = idList.Distinct().ToList();
+            var rowsToDelete = new List<int>();
+            foreach (var newId in newIdList)
+            {
+                var reDd = PubMetToExcel.FindSourceRow(targetSheet, 2, newId.ToString());
+                if (reDd != -1)
+                    rowsToDelete.Add(reDd);
+            }
+
+            rowsToDelete.Sort();
+            rowsToDelete.Reverse();
+
+            foreach (var rowToDelete in rowsToDelete)
+                try
+                {
+                    targetSheet.DeleteRow(rowToDelete, 1);
+                }
+                catch (Exception ex)
+                {
+                    LogDisplay.RecordLine(
+                        "[{0}] , {1}",
+                        DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                        "sheet表有问题无法删除"
+                    );
+                }
+
             var writeCol = targetSheet.Dimension.End.Column;
             bool dataWritten = false; // 标志是否有实际写入
             var dataRepeatWritten = new HashSet<string>();
