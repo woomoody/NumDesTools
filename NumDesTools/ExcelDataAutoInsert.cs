@@ -1464,6 +1464,7 @@ public static class ExcelDataAutoInsertLanguage
             {
                 "Dic" => Dic(funDy1, funDy2, funDy3),
                 "Find" => Find(funDy1, funDy2, funDy3),
+                "Merge" => Merge(funDy1, funDy2, funDy3),
                 _ => GetValue(funName)
             };
             fixWildcardValue ??= "";
@@ -1523,6 +1524,45 @@ public static class ExcelDataAutoInsertLanguage
                     findValue
                 );
                 result = $"Error#{findValue}#在【角色数据】中不存在";
+            }
+            return result;
+        }
+        string Merge(string funDy1, string funDy2, string funDy3)
+        {
+            string result = String.Empty;
+
+            string itemValue1;
+            string itemValue2;
+            string itemValue3;
+
+            if (sourceTitle.IndexOf(funDy1) == -1)
+            {
+                itemValue1 = funDy1;
+            }
+            else
+            {
+                itemValue1 = sourceDataList[idCount][sourceTitle.IndexOf(funDy1)]?.ToString();
+            }
+            if (sourceTitle.IndexOf(funDy2) == -1)
+            {
+                itemValue2 = funDy2;
+            }
+            else
+            {
+                itemValue2 = sourceDataList[idCount][sourceTitle.IndexOf(funDy2)]?.ToString();
+            }
+            if (sourceTitle.IndexOf(funDy3) == -1)
+            {
+                itemValue3 = funDy3;
+            }
+            else
+            {
+                itemValue3 = sourceDataList[idCount][sourceTitle.IndexOf(funDy3)]?.ToString();
+            }
+
+            if (itemValue3 != null)
+            {
+                result = $"{itemValue1}{itemValue2}{itemValue3}";
             }
             return result;
         }
