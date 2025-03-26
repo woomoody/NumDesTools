@@ -161,12 +161,16 @@ public static class PubMetToExcelFunc
         var workbookPath = workBook.Path;
         var sheetName = sheet.Name;
 
-        if (workbookPath!.Contains("克朗代克"))
+        //根目录下的子文件路径处理
+        if (workbookPath!.Contains("克朗代克") || workbookPath!.Contains("二合") || workbookPath!.Contains("工会"))
         {
             workBookName = "克朗代克##" + workBookName;
+            workbookPath = Directory.GetParent(Path.GetDirectoryName(workbookPath)).FullName;
         }
-
-        workbookPath = Path.GetDirectoryName(workbookPath);
+        else
+        {
+            workbookPath = Path.GetDirectoryName(workbookPath);
+        }
 
         var selectCellCol = selectCell.Column;
         var keyCell = sheet.Cells[2, selectCellCol];

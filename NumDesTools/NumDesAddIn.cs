@@ -506,7 +506,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "LTE配置导出",
             "自选表格写入（new）",
             "自定义复制",
-            "克隆数据"
+            "克隆数据",
+            "克隆数据All"
         };
 
         foreach (
@@ -666,7 +667,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     MsoButtonStyle.msoButtonIconAndCaption,
                     ExcelDataAutoInsertCopyActivity.RightClickCloneData
                     )
-
+                    : default,
+                bookName.Contains("RechargeGP")
+                    ? (
+                        "克隆数据All",
+                        "克隆数据-Recharge-All",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        ExcelDataAutoInsertCopyActivity.RightClickCloneAllData
+                    )
                     : default,
                 (
                     "自定义复制",
@@ -1791,7 +1799,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
             catch (Exception e)
             {
-                MessageBox.Show(e.Message);
+                MessageBox.Show(e.Message +":实际已经复制，可直接Ctr+V");
             }
         }
     }
@@ -1809,7 +1817,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
             catch (Exception e)
             {
-                MessageBox.Show(e.Message);
+                MessageBox.Show(e.Message + ":实际已经复制，可直接Ctr+V");
             }
 
         }
@@ -2041,7 +2049,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         sw.Stop();
         var ts2 = sw.Elapsed;
-        ScreenCoordinateFix.GetCorrectScreenCoordinates();
+
+        var files = new List<string>(Directory.GetFiles(@"C:\Users\cent\Downloads\configs_1.1.53\", "*.json",
+            SearchOption.AllDirectories));
+        var converter = new JsonToExcelConverter();
+        foreach (var jsonFile in files)
+        {
+            converter.ConvertMultipleJsonToExcel(jsonFile);
+        }
+      
+
         //App.Visible = false;
         //App.ScreenUpdating = false;
         //App.DisplayAlerts = false;

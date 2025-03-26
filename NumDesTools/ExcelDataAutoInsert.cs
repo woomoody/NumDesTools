@@ -1,8 +1,11 @@
-﻿using System.Text;
+﻿using System.Data.Common;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using EnvDTE80;
+using Microsoft.Office.Interop.Excel;
+using NPOI.SS.Formula.Functions;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using LicenseContext = OfficeOpenXml.LicenseContext;
@@ -4017,6 +4020,52 @@ public static class ExcelDataAutoInsertCopyActivity
 
     }
 
+    public static void RightClickCloneAllData(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var wkPath = NumDesAddIn.App.ActiveWorkbook.Path;
+        var excelNames = new List<string>()
+        {
+            "RechargeAmazon.xlsx",
+            "RechargeAptoide.xlsx",
+            "RechargeGlobalOfficial.xlsx",
+            "RechargeSamsung.xlsx",
+            "RechargeIOS.xlsx"
+        };
+        var defaultValues = new Dictionary<string, List<string>>()
+        {
+            {"thirdProductID", new List<string>(){ "com.mergeland.alices.adventure_diamond_", "price_Num"}},
+        };
+
+        var replaceValues = new Dictionary<string, Dictionary<string, List<string>>>()
+        {
+            {
+                "RechargeIOS.xlsx",
+                new Dictionary<string, List<string>>()
+                {
+                    {
+                        "productID",
+                        new List<string>()
+                        {
+                            "mergeland.alices.adventure",
+                            "casualgame.type.pipe"
+                        }
+                    },
+                    {
+                        "productID_test",
+                        new List<string>()
+                        {
+                            "mergeland.alices.adventure",
+                            "casualgame.type.pipe"
+                        }
+                    }
+                }
+            }
+        };
+
+        SyncAllRows(wkPath, excelNames, defaultValues, replaceValues);
+
+    }
+
     public static void SyncSelectedRows(string targetPaths, List<string> excelNames, 
         Dictionary<string , List<string>> defaultValues,
         Dictionary<string, Dictionary<string, List<string>>> replaceValues)
@@ -4044,8 +4093,10 @@ public static class ExcelDataAutoInsertCopyActivity
                 out ExcelPackage targetExcel
             );
             var targetHeaders = GetHeaders(targetSheet);
+
             // 确定写入起始行
             int startRow = targetSheet.Dimension?.End.Row + 1 ?? 1;
+
             // 逐行写入数据
             foreach (var rowData in sourceData)
             {
@@ -4090,6 +4141,106 @@ public static class ExcelDataAutoInsertCopyActivity
         excel.StatusBar = "搜索完成，用时：" + ts2;
     }
 
+    public static void SyncAllRows(string targetPaths, List<string> excelNames,
+    Dictionary<string, List<string>> defaultValues,
+    Dictionary<string, Dictionary<string, List<string>>> replaceValues)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        dynamic excel = NumDesAddIn.App;
+
+        PubMetToExcel.SetExcelObjectEpPlus(
+            targetPaths,
+            "RechargeGP.xlsx",
+            out ExcelWorksheet activeSheet,
+            out ExcelPackage activeExcel
+        );
+
+        var sourceData = ExcelToDictionaryList(activeSheet);
+
+        for (int i = 0; i < excelNames.Count; i++)
+        {
+            var excelName = excelNames[i];
+            PubMetToExcel.SetExcelObjectEpPlus(
+                targetPaths,
+                excelName,
+                out ExcelWorksheet targetSheet,
+                out ExcelPackage targetExcel
+            );
+            var targetHeaders = GetHeaders(targetSheet);
+
+            // 确定写入起始行
+            int startRow;
+            int targetIdIndex = 2;
+
+            int sourceCount = 1;
+            // 逐行写入数据
+            foreach (var rowData in sourceData)
+            {
+                //跳过前2行
+                if (sourceCount < 3)
+                {
+                    sourceCount++;
+                    continue;
+                }
+                //判断当前ID是否在Target中存在，存在则覆写，否则末行新增
+                var sourceId = rowData["id"].ToString();
+
+                // 查找第一个匹配的单元格
+                var firstMatch = targetSheet.Cells[targetSheet.Dimension.Address]
+                    .FirstOrDefault(c => c.Start.Column == targetIdIndex && c.Value?.ToString() == sourceId);
+
+                //同ID跳过
+                if (firstMatch == null)
+                {
+                    startRow = targetSheet.Dimension?.End.Row + 1 ?? 1;
+                    foreach (var header in targetHeaders)
+                    {
+                        int colIndex = targetHeaders.IndexOf(header) + 1;
+                        // 根据列名匹配或使用默认值
+                        if (rowData.ContainsKey(header))
+                        {
+                            targetSheet.Cells[startRow, colIndex].Value = rowData[header];
+
+                            //IOS需要替换
+                            if (replaceValues.TryGetValue(excelName, out var innerDict)
+                                && innerDict != null
+                                && innerDict.TryGetValue(header, out var replaceList)
+                                && replaceList != null
+                                && replaceList.Count >= 2)
+                            {
+                                // 安全替换
+                                string originalValue = replaceList[0];
+                                string newValue = replaceList[1];
+                                targetSheet.Cells[startRow, colIndex].Value = rowData[header].ToString()
+                                    .Replace(originalValue, newValue);
+                            }
+
+                        }
+                        else if (defaultValues.ContainsKey(header))
+                        {
+                            targetSheet.Cells[startRow, colIndex].Value = defaultValues[header][0] +
+                                                                          Convert.ToDouble(
+                                                                              rowData[defaultValues[header][1]]) / 100;
+                        }
+                    }
+                }
+
+                sourceCount++;
+            }
+            targetExcel.Save();
+            targetSheet.Dispose();
+            activeSheet.Dispose();
+
+            excel.StatusBar = $"导出：{targetPaths}\\{excelName}";
+        }
+
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        Debug.Print(ts2.ToString());
+        excel.StatusBar = "搜索完成，用时：" + ts2;
+    }
     // 重载方法：根据不同类型的工作表获取表头
     private static List<string> GetHeaders(dynamic sheet)
     {
@@ -4155,5 +4306,58 @@ public static class ExcelDataAutoInsertCopyActivity
             data.Add(rowData);
         }
         return data;
+    }
+    private static List<Dictionary<string, object>> ExcelToDictionaryList(ExcelWorksheet worksheet, int startRow = 2)
+    {
+        var result = new List<Dictionary<string, object>>();
+
+        // 获取工作表维度
+        var dimension = worksheet.Dimension;
+        if (dimension == null) return result;
+
+        // 读取标题行（假设标题在第一行）
+        int headerRow = startRow;
+        var headers = new Dictionary<int, string>();
+
+        for (int col = dimension.Start.Column; col <= dimension.End.Column; col++)
+        {
+            var headerCell = worksheet.Cells[headerRow, col];
+            if (headerCell.Value != null)
+            {
+                headers[col] = headerCell.Value.ToString();
+            }
+            else
+            {
+                headers[col] = $"Column{col}"; // 默认列名
+            }
+        }
+
+        // 从标题行下一行开始读取数据
+        for (int row = startRow + 1; row <= dimension.End.Row; row++)
+        {
+            var rowDict = new Dictionary<string, object>();
+            bool rowHasData = false;
+
+            for (int col = dimension.Start.Column; col <= dimension.End.Column; col++)
+            {
+                var cell = worksheet.Cells[row, col];
+                if (cell.Value != null)
+                {
+                    rowDict[headers[col]] = cell.Value;
+                    rowHasData = true;
+                }
+                else
+                {
+                    rowDict[headers[col]] = null;
+                }
+            }
+
+            if (rowHasData)
+            {
+                result.Add(rowDict);
+            }
+        }
+
+        return result;
     }
 }
