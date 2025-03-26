@@ -11,6 +11,7 @@ using OfficeOpenXml.Style;
 using LicenseContext = OfficeOpenXml.LicenseContext;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
+using Excel = Microsoft.Office.Interop.Excel;
 
 #pragma warning disable CA1416
 
@@ -4016,8 +4017,12 @@ public static class ExcelDataAutoInsertCopyActivity
             }  
         };
 
-        SyncSelectedRows(wkPath, excelNames, defaultValues , replaceValues);
-
+        ExcelDataSyncHelper.SyncSelectedRows(
+            targetPath: wkPath,
+            targetFileNames: excelNames,
+            defaultValues: defaultValues,
+            replaceValues: replaceValues
+            );
     }
 
     public static void RightClickCloneAllData(CommandBarButton ctrl, ref bool cancelDefault)
@@ -4062,214 +4067,296 @@ public static class ExcelDataAutoInsertCopyActivity
             }
         };
 
-        SyncAllRows(wkPath, excelNames, defaultValues, replaceValues);
-
-    }
-
-    public static void SyncSelectedRows(string targetPaths, List<string> excelNames, 
-        Dictionary<string , List<string>> defaultValues,
-        Dictionary<string, Dictionary<string, List<string>>> replaceValues)
-    {
-        var sw = new Stopwatch();
-        sw.Start();
-
-        dynamic excel = NumDesAddIn.App;
-
-        //获取选中的行数据范围
-        Range selection = excel.Selection;
-        if (selection == null) return;
-
-        //读取源数据（A表）
-        var sourceHeaders = GetHeaders(excel.ActiveSheet); // 读取第2行列名
-        var sourceData = ReadSelectedData(selection, sourceHeaders);
-
-        for (int i = 0; i < excelNames.Count;i++)
-        {
-            var excelName = excelNames[i];
-            PubMetToExcel.SetExcelObjectEpPlus(
-                targetPaths,
-                excelName,
-                out ExcelWorksheet targetSheet,
-                out ExcelPackage targetExcel
-            );
-            var targetHeaders = GetHeaders(targetSheet);
-
-            // 确定写入起始行
-            int startRow = targetSheet.Dimension?.End.Row + 1 ?? 1;
-
-            // 逐行写入数据
-            foreach (var rowData in sourceData)
-            {
-                foreach (var header in targetHeaders)
-                {
-                    int colIndex = targetHeaders.IndexOf(header) + 1; 
-                    // 根据列名匹配或使用默认值
-                    if (rowData.ContainsKey(header))
-                    {
-                        targetSheet.Cells[startRow, colIndex].Value = rowData[header];
-
-                        //IOS需要替换
-                        if (replaceValues.TryGetValue(excelName, out var innerDict) 
-                            && innerDict != null
-                            && innerDict.TryGetValue(header, out var replaceList) 
-                            && replaceList != null
-                            && replaceList.Count >= 2) 
-                        {
-                            // 安全替换
-                            string originalValue = replaceList[0];
-                            string newValue = replaceList[1];
-                            targetSheet.Cells[startRow, colIndex].Value = rowData[header].ToString()
-                                .Replace(originalValue, newValue);
-                        }
-
-                    }
-                    else if(defaultValues.ContainsKey(header))
-                    {
-                        targetSheet.Cells[startRow, colIndex].Value = defaultValues[header][0] +Convert.ToDouble(rowData[defaultValues[header][1]]) / 100;
-                    }
-                }
-                startRow++;
-            }
-            targetExcel.Save();
-            targetSheet.Dispose();
-            excel.StatusBar = $"导出：{targetPaths}\\{excelName}";
-        }
-
-        sw.Stop();
-        var ts2 = sw.Elapsed;
-        Debug.Print(ts2.ToString());
-        excel.StatusBar = "搜索完成，用时：" + ts2;
-    }
-
-    public static void SyncAllRows(string targetPaths, List<string> excelNames,
-    Dictionary<string, List<string>> defaultValues,
-    Dictionary<string, Dictionary<string, List<string>>> replaceValues)
-    {
-        var sw = new Stopwatch();
-        sw.Start();
-
-        dynamic excel = NumDesAddIn.App;
-
-        PubMetToExcel.SetExcelObjectEpPlus(
-            targetPaths,
-            "RechargeGP.xlsx",
-            out ExcelWorksheet activeSheet,
-            out ExcelPackage activeExcel
+        ExcelDataSyncHelper.SyncAllRows(
+            targetPath: wkPath,
+            targetFileNames: excelNames,
+            sourceFileName: "RechargeGP.xlsx",
+            defaultValues: defaultValues,
+            replaceValues: replaceValues
         );
 
-        var sourceData = ExcelToDictionaryList(activeSheet);
+    }
 
-        for (int i = 0; i < excelNames.Count; i++)
+ 
+}
+
+public static class ExcelDataSyncHelper
+{
+    private static dynamic ExcelApp => NumDesAddIn.App;
+
+    #region 公共接口方法
+
+    /// <summary>
+    /// 同步选中行数据到多个目标工作表
+    /// </summary>
+    public static void SyncSelectedRows(string targetPath, List<string> targetFileNames,
+        Dictionary<string, List<string>> defaultValues,
+        Dictionary<string, Dictionary<string, List<string>>> replaceValues)
+    {
+        var timer = Stopwatch.StartNew();
+
+        try
         {
-            var excelName = excelNames[i];
-            PubMetToExcel.SetExcelObjectEpPlus(
-                targetPaths,
-                excelName,
-                out ExcelWorksheet targetSheet,
-                out ExcelPackage targetExcel
-            );
-            var targetHeaders = GetHeaders(targetSheet);
+            // 获取选中数据
+            var selection = ExcelApp.Selection as Excel.Range;
+            if (selection == null) return;
 
-            // 确定写入起始行
-            int startRow;
-            int targetIdIndex = 2;
+            var sourceData = GetSelectedData(selection);
+            if (sourceData.Count == 0) return;
 
-            int sourceCount = 1;
-            // 逐行写入数据
+            // 同步到每个目标文件
+            foreach (var fileName in targetFileNames)
+            {
+                SyncDataToTargetFile(targetPath, fileName, sourceData, defaultValues, replaceValues);
+                ExcelApp.StatusBar = $"导出：{targetPath}\\{fileName}";
+            }
+
+            ExcelApp.StatusBar = $"同步完成，用时：{timer.Elapsed}";
+        }
+        finally
+        {
+            timer.Stop();
+        }
+    }
+
+    /// <summary>
+    /// 全量同步源表数据到多个目标工作表(跳过已存在的数据)
+    /// </summary>
+    public static void SyncAllRows(string targetPath, List<string> targetFileNames,
+        string sourceFileName,
+        Dictionary<string, List<string>> defaultValues,
+        Dictionary<string, Dictionary<string, List<string>>> replaceValues)
+    {
+        var timer = Stopwatch.StartNew();
+
+        try
+        {
+            // 读取源表所有数据
+            var sourceData = ReadExcelData(targetPath, sourceFileName);
+            if (sourceData.Count == 0) return;
+
+            // 同步到每个目标文件
+            foreach (var fileName in targetFileNames)
+            {
+                SyncAllDataToTargetFile(targetPath, fileName, sourceData, defaultValues, replaceValues);
+                ExcelApp.StatusBar = $"导出：{targetPath}\\{fileName}";
+            }
+
+            ExcelApp.StatusBar = $"全量同步完成，用时：{timer.Elapsed}";
+        }
+        finally
+        {
+            timer.Stop();
+        }
+    }
+
+    #endregion
+
+    #region 核心同步逻辑
+
+    private static void SyncDataToTargetFile(string path, string fileName,
+        List<Dictionary<string, object>> sourceData,
+        Dictionary<string, List<string>> defaultValues,
+        Dictionary<string, Dictionary<string, List<string>>> replaceValues)
+    {
+        using (var package = new ExcelPackage(new System.IO.FileInfo(System.IO.Path.Combine(path, fileName))))
+        {
+            var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+            if (worksheet == null) return;
+
+            var headers = GetHeaders(worksheet);
+            int startRow = worksheet.Dimension?.End.Row + 1 ?? 1;
+
             foreach (var rowData in sourceData)
             {
-                //跳过前2行
-                if (sourceCount < 3)
-                {
-                    sourceCount++;
-                    continue;
-                }
-                //判断当前ID是否在Target中存在，存在则覆写，否则末行新增
-                var sourceId = rowData["id"].ToString();
+                WriteRowData(worksheet, headers, startRow++, rowData, defaultValues,
+                    replaceValues.GetValueOrDefault(fileName));
+            }
 
-                // 查找第一个匹配的单元格
-                var firstMatch = targetSheet.Cells[targetSheet.Dimension.Address]
-                    .FirstOrDefault(c => c.Start.Column == targetIdIndex && c.Value?.ToString() == sourceId);
+            package.Save();
+        }
+    }
 
-                //同ID跳过
-                if (firstMatch == null)
+    private static void SyncAllDataToTargetFile(string path, string fileName,
+        List<Dictionary<string, object>> sourceData,
+        Dictionary<string, List<string>> defaultValues,
+        Dictionary<string, Dictionary<string, List<string>>> replaceValues)
+    {
+        using (var package = new ExcelPackage(new System.IO.FileInfo(System.IO.Path.Combine(path, fileName))))
+        {
+            var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+            if (worksheet == null) return;
+
+            var headers = GetHeaders(worksheet);
+            var idColumnIndex = headers.IndexOf("id") + 1; // 假设id列存在
+
+            // 获取目标表中已有的ID集合
+            var existingIds = new HashSet<string>();
+            if (worksheet.Dimension != null && idColumnIndex > 0)
+            {
+                for (int row = 2; row <= worksheet.Dimension.End.Row; row++)
                 {
-                    startRow = targetSheet.Dimension?.End.Row + 1 ?? 1;
-                    foreach (var header in targetHeaders)
+                    var idValue = worksheet.Cells[row, idColumnIndex].Text;
+                    if (!string.IsNullOrEmpty(idValue))
                     {
-                        int colIndex = targetHeaders.IndexOf(header) + 1;
-                        // 根据列名匹配或使用默认值
-                        if (rowData.ContainsKey(header))
-                        {
-                            targetSheet.Cells[startRow, colIndex].Value = rowData[header];
-
-                            //IOS需要替换
-                            if (replaceValues.TryGetValue(excelName, out var innerDict)
-                                && innerDict != null
-                                && innerDict.TryGetValue(header, out var replaceList)
-                                && replaceList != null
-                                && replaceList.Count >= 2)
-                            {
-                                // 安全替换
-                                string originalValue = replaceList[0];
-                                string newValue = replaceList[1];
-                                targetSheet.Cells[startRow, colIndex].Value = rowData[header].ToString()
-                                    .Replace(originalValue, newValue);
-                            }
-
-                        }
-                        else if (defaultValues.ContainsKey(header))
-                        {
-                            targetSheet.Cells[startRow, colIndex].Value = defaultValues[header][0] +
-                                                                          Convert.ToDouble(
-                                                                              rowData[defaultValues[header][1]]) / 100;
-                        }
+                        existingIds.Add(idValue);
                     }
                 }
-
-                sourceCount++;
             }
-            targetExcel.Save();
-            targetSheet.Dispose();
-            activeSheet.Dispose();
 
-            excel.StatusBar = $"导出：{targetPaths}\\{excelName}";
+            // 写入新数据
+            int startRow = worksheet.Dimension?.End.Row + 1 ?? 1;
+
+            foreach (var rowData in sourceData)
+            {
+                if (rowData.TryGetValue("id", out var idObj) && idObj != null)
+                {
+                    string id = idObj.ToString();
+                    if (!existingIds.Contains(id))
+                    {
+                        WriteRowData(worksheet, headers, startRow++, rowData, defaultValues,
+                            replaceValues.GetValueOrDefault(fileName));
+                    }
+                }
+            }
+
+            package.Save();
+        }
+    }
+
+    private static void WriteRowData(ExcelWorksheet worksheet, List<string> headers, int row,
+        Dictionary<string, object> sourceRow,
+        Dictionary<string, List<string>> defaultValues,
+        Dictionary<string, List<string>> replaceRules)
+    {
+        for (int col = 0; col < headers.Count; col++)
+        {
+            var header = headers[col];
+            var cell = worksheet.Cells[row, col + 1];
+
+            if (sourceRow.TryGetValue(header, out var value))
+            {
+                // 应用替换规则
+                if (replaceRules != null && replaceRules.TryGetValue(header, out var replacePair)
+                    && replacePair.Count >= 2)
+                {
+                    cell.Value = value?.ToString()?.Replace(replacePair[0], replacePair[1]);
+                }
+                else
+                {
+                    cell.Value = value;
+                }
+            }
+            else if (defaultValues.TryGetValue(header, out var defaultValue)
+                     && defaultValue.Count >= 2
+                     && sourceRow.TryGetValue(defaultValue[1], out var refValue))
+            {
+                // 应用默认值公式
+                cell.Value = defaultValue[0] + Convert.ToDouble(refValue) / 100;
+            }
+        }
+    }
+
+    #endregion
+
+    #region 数据读取方法
+
+    private static List<Dictionary<string, object>> GetSelectedData(Excel.Range selection)
+    {
+        var headers = GetHeaders(ExcelApp.ActiveSheet);
+        var data = new List<Dictionary<string, object>>();
+
+        foreach (Excel.Range row in selection.Rows)
+        {
+            var rowData = new Dictionary<string, object>();
+
+            for (int i = 0; i < headers.Count; i++)
+            {
+                rowData[headers[i]] = row.Cells[1, i + 1].Value;
+            }
+
+            data.Add(rowData);
         }
 
-        sw.Stop();
-        var ts2 = sw.Elapsed;
-        Debug.Print(ts2.ToString());
-        excel.StatusBar = "搜索完成，用时：" + ts2;
+        return data;
     }
-    // 重载方法：根据不同类型的工作表获取表头
+
+    private static List<Dictionary<string, object>> ReadExcelData(string path, string fileName)
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        var filePath = System.IO.Path.Combine(path, fileName);
+        if (!System.IO.File.Exists(filePath)) return new List<Dictionary<string, object>>();
+
+        using (var package = new ExcelPackage(new System.IO.FileInfo(filePath)))
+        {
+            var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+            return worksheet == null
+                ? new List<Dictionary<string, object>>()
+                : ExcelToDictionaryList(worksheet);
+        }
+    }
+
+    private static List<Dictionary<string, object>> ExcelToDictionaryList(ExcelWorksheet worksheet, int headerRow = 2)
+    {
+        var data = new List<Dictionary<string, object>>();
+        if (worksheet.Dimension == null) return data;
+
+        // 读取表头
+        var headers = new Dictionary<int, string>();
+        for (int col = worksheet.Dimension.Start.Column; col <= worksheet.Dimension.End.Column; col++)
+        {
+            headers[col] = worksheet.Cells[headerRow, col].Text ?? $"Column{col}";
+        }
+
+        // 读取数据行
+        for (int row = headerRow + 1; row <= worksheet.Dimension.End.Row; row++)
+        {
+            var rowData = new Dictionary<string, object>();
+            bool hasData = false;
+
+            foreach (var header in headers)
+            {
+                var value = worksheet.Cells[row, header.Key].Value;
+                if (value != null) hasData = true;
+                rowData[header.Value] = value;
+            }
+
+            if (hasData) data.Add(rowData);
+        }
+
+        return data;
+    }
+
+    #endregion
+
+    #region 辅助方法
+
     private static List<string> GetHeaders(dynamic sheet)
     {
-        if (sheet is ExcelWorksheet)
+        if (sheet is ExcelWorksheet eppSheet)
         {
-            return GetEpplusHeaders(sheet);
+            return GetEpplusHeaders(eppSheet);
         }
-        else
+        else if (sheet is Excel.Worksheet comSheet)
         {
-            return GetComHeaders(sheet);
+            return GetComHeaders(comSheet);
         }
+        return new List<string>();
     }
 
-    // 处理 Excel COM 对象（如 Excel.Worksheet）
-    private static List<string> GetComHeaders(dynamic comSheet)
+    private static List<string> GetComHeaders(Excel.Worksheet worksheet)
     {
         try
         {
-            Range rowRange = comSheet.Rows[2]; // 第2行
-            object[,] values = rowRange.Value as object[,];
-            if (values == null) return new List<string>();
+            var rowRange = worksheet.Rows[2] as Excel.Range;
+            var values = rowRange.Value as object[,];
 
-            List<string> headers = new List<string>();
-            int columnCount = values.GetLength(1); // 总列数
-            for (int col = 1; col <= columnCount; col++)
-            {
-                headers.Add(values[1, col]?.ToString() ?? ""); // 二维数组索引 [行,列]
-            }
-            return headers;
+            return values == null
+                ? new List<string>()
+                : Enumerable.Range(1, values.GetLength(1))
+                    .Select(col => values[1, col]?.ToString() ?? "")
+                    .ToList();
         }
         catch
         {
@@ -4277,87 +4364,14 @@ public static class ExcelDataAutoInsertCopyActivity
         }
     }
 
-    // 处理 EPPlus 的 ExcelWorksheet
-    private static List<string> GetEpplusHeaders(ExcelWorksheet eppSheet)
+    private static List<string> GetEpplusHeaders(ExcelWorksheet worksheet)
     {
-        List<string> headers = new List<string>();
-        if (eppSheet.Dimension == null) return headers;
+        if (worksheet.Dimension == null) return new List<string>();
 
-        // 遍历第2行所有列
-        for (int col = eppSheet.Dimension.Start.Column; col <= eppSheet.Dimension.End.Column; col++)
-        {
-            var cell = eppSheet.Cells[2, col];
-            headers.Add(cell.Text ?? ""); // 直接取文本，避免空值异常
-        }
-        return headers;
+        return Enumerable.Range(worksheet.Dimension.Start.Column, worksheet.Dimension.End.Column)
+            .Select(col => worksheet.Cells[2, col].Text ?? "")
+            .ToList();
     }
 
-    // 辅助方法：读取选中行数据
-    private static List<Dictionary<string, object>> ReadSelectedData(Range selection, List<string> headers)
-    {
-        var data = new List<Dictionary<string, object>>();
-        foreach (Range row in selection.Rows)
-        {
-            var rowData = new Dictionary<string, object>();
-            for (int i = 0; i < headers.Count; i++)
-            {
-                rowData[headers[i]] = row.Cells[1, i + 1].Value;
-            }
-            data.Add(rowData);
-        }
-        return data;
-    }
-    private static List<Dictionary<string, object>> ExcelToDictionaryList(ExcelWorksheet worksheet, int startRow = 2)
-    {
-        var result = new List<Dictionary<string, object>>();
-
-        // 获取工作表维度
-        var dimension = worksheet.Dimension;
-        if (dimension == null) return result;
-
-        // 读取标题行（假设标题在第一行）
-        int headerRow = startRow;
-        var headers = new Dictionary<int, string>();
-
-        for (int col = dimension.Start.Column; col <= dimension.End.Column; col++)
-        {
-            var headerCell = worksheet.Cells[headerRow, col];
-            if (headerCell.Value != null)
-            {
-                headers[col] = headerCell.Value.ToString();
-            }
-            else
-            {
-                headers[col] = $"Column{col}"; // 默认列名
-            }
-        }
-
-        // 从标题行下一行开始读取数据
-        for (int row = startRow + 1; row <= dimension.End.Row; row++)
-        {
-            var rowDict = new Dictionary<string, object>();
-            bool rowHasData = false;
-
-            for (int col = dimension.Start.Column; col <= dimension.End.Column; col++)
-            {
-                var cell = worksheet.Cells[row, col];
-                if (cell.Value != null)
-                {
-                    rowDict[headers[col]] = cell.Value;
-                    rowHasData = true;
-                }
-                else
-                {
-                    rowDict[headers[col]] = null;
-                }
-            }
-
-            if (rowHasData)
-            {
-                result.Add(rowDict);
-            }
-        }
-
-        return result;
-    }
+    #endregion
 }
