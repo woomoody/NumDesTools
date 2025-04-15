@@ -120,6 +120,7 @@ public class LteData
 
         string id;
         string idType;
+
         if (baseSheetName.Contains("【基础】"))
         {
   
@@ -155,6 +156,235 @@ public class LteData
         NumDesAddIn.App.StatusBar = "导出完成，用时：" + ts2;
     }
 
+    //个别导出LTE数据配置
+    public static void ExportLteDataConfigSelf(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        //获取【导出】表信息
+        var ws = Wk.ActiveSheet;
+        var selectRange = NumDesAddIn.App.Selection;
+        var baseSheetName = selectRange.Value2.ToString();
+        var selectRow = selectRange.Row;
+        var selectCol = selectRange.Column;
+        //需要查找通配符字段所在列
+        var exportWildcardRange = ws.Range["A1:AZ1"].Value2;
+        var exportWildcardCol = PubMetToExcel.FindValueIn2DArray(exportWildcardRange, "通配符").Item2;
+
+        //基本信息
+        var exportBaseSheetData = new Dictionary<string, Dictionary<string, Tuple<int, int>>>();
+        var exportBaseData = new Dictionary<string, Tuple<int, int>>();
+        if (exportBaseData == null)
+            throw new ArgumentNullException(nameof(exportBaseData));
+
+        object[,] baseRangeValue = ws.Range[
+            ws.Cells[selectRow, selectCol + 2],
+            ws.Cells[selectRow + 2, exportWildcardCol - 2]
+        ].Value2;
+
+        for (int col = 1; col <= baseRangeValue.GetLength(1); col++)
+        {
+            var keyName = baseRangeValue[1, col]?.ToString() ?? "";
+            if (keyName != "")
+            {
+                if (baseRangeValue[2, col] == null)
+                {
+                    continue;
+                }
+                var keyCol = Convert.ToInt32(baseRangeValue[2, col]);
+                var keyRowMax = Convert.ToInt32(baseRangeValue[3, col]);
+                exportBaseData[keyName] = new Tuple<int, int>(keyCol, keyRowMax);
+            }
+        }
+        exportBaseSheetData[baseSheetName] = exportBaseData;
+
+        //通配符信息
+        var exportWildcardData = new Dictionary<string, string>();
+        if (exportWildcardData == null)
+            throw new ArgumentNullException(nameof(exportWildcardData));
+
+        var wildcardCount = (int)ws.Cells[selectRow + 1, selectCol].Value2;
+        var wildcardRangeValue = ws.Range[
+            ws.Cells[selectRow, exportWildcardCol],
+            ws.Cells[selectRow + wildcardCount, exportWildcardCol + 1]
+        ].Value2;
+        for (int row = 1; row <= wildcardCount; row++)
+        {
+            var wildcardName = wildcardRangeValue[row, 1]?.ToString() ?? "";
+            if (wildcardName != "")
+            {
+                var wildcardValue = wildcardRangeValue[row, 2].ToString();
+                exportWildcardData[wildcardName] = wildcardValue;
+            }
+        }
+
+        //读取【基础/任务……】表数据
+        var baseSheet = Wk.Worksheets[baseSheetName];
+        var baseData = new Dictionary<string, List<object>>();
+        var baseSheetData = exportBaseSheetData[baseSheetName];
+
+        foreach (var baseElement in baseSheetData)
+        {
+            var range = baseSheet
+                .Range[
+                    baseSheet.Cells[2, baseElement.Value.Item1],
+                    baseSheet.Cells[baseElement.Value.Item2, baseElement.Value.Item1]
+                ]
+                .Value2;
+
+            var dataList = PubMetToExcel.List2DToListRowOrCol(
+                PubMetToExcel.RangeDataToList(range),
+                true
+            );
+
+            baseData[baseElement.Key] = dataList;
+        }
+
+        //获取【#LTE数据模版】信息
+        var modelSheet = Wk.Worksheets["#LTE数据模版"];
+        var modelListObjects = modelSheet.ListObjects;
+        var modelValueAll = new Dictionary<string, Dictionary<(object, object), string>>();
+
+        foreach (ListObject list in modelListObjects)
+        {
+            var modelName = list.Name;
+            var modelRangeValue = list.Range.Value2;
+
+            int rowCount = modelRangeValue.GetLength(0);
+            int colCount = modelRangeValue.GetLength(1);
+
+            // 将二维数组的数据存储到字典中
+            var modelValue = PubMetToExcel.Array2DToDic2D(rowCount, colCount, modelRangeValue);
+            if (modelValue == null)
+            {
+                return;
+            }
+            modelValueAll[modelName] = modelValue;
+        }
+
+        string id;
+        string idType;
+
+        if (baseSheetName.Contains("【基础】"))
+        {
+
+            //走【基础】表逻辑
+            id = "数据编号";
+            idType = "类型";
+
+            var keysToFilter = GetCellValuesFromUserInput("【基础】");
+            if (keysToFilter.Count != 0)
+            {
+                baseData = FilterBySpecifiedKeyAndSyncPositions(baseData, id, keysToFilter);
+            }
+            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
+
+        }
+        else if (baseSheetName.Contains("【任务】"))
+        {
+            //走【基础】表逻辑
+            id = "任务编号";
+            idType = "类型";
+            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
+        }
+        else if (baseSheetName.Contains("【坐标】"))
+        {
+            //走【基础】表逻辑
+            id = "编号";
+            idType = "类型";
+            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
+        }
+
+        else if (baseSheetName.Contains("【通用】"))
+        {
+            //走【基础】表逻辑
+            id = "数据编号";
+            idType = "类型";
+            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
+        }
+        sw.Stop();
+        var ts2 = sw.Elapsed;
+        NumDesAddIn.App.StatusBar = "导出完成，用时：" + ts2;
+    }
+
+    private static Dictionary<string, List<object>> FilterBySpecifiedKeyAndSyncPositions(
+        Dictionary<string, List<object>> baseData,
+        string targetKey,
+        List<string> cellValues)
+    {
+        // 如果 baseData 不包含目标 Key，直接返回空字典
+        if (!baseData.ContainsKey(targetKey))
+        {
+            return new Dictionary<string, List<object>>();
+        }
+
+        // 获取目标 Key 的 List
+        List<object> targetList = baseData[targetKey];
+
+        // 转换为 HashSet 提高性能
+        var valueSet = new HashSet<string>(cellValues);
+
+        // 找出目标 List 中符合条件的元素的索引位置
+        List<int> matchedIndices = targetList
+            .Select((item, index) => new { item, index })
+            .Where(x => valueSet.Contains(x.item.ToString()))
+            .Select(x => x.index)
+            .ToList();
+
+        // 如果没有匹配项，返回空字典
+        if (matchedIndices.Count == 0)
+        {
+            return new Dictionary<string, List<object>>();
+        }
+
+        // 构建筛选后的新 baseData
+        var filteredData = new Dictionary<string, List<object>>();
+        foreach (var kv in baseData)
+        {
+            // 对每个 Key 的 List，只保留 matchedIndices 对应的元素
+            List<object> filteredList = matchedIndices
+                .Select(i => kv.Value[i])
+                .ToList();
+
+            filteredData.Add(kv.Key, filteredList);
+        }
+
+        return filteredData;
+    }
+
+    //获取用户输入的单元格值
+    private static  List<string> GetCellValuesFromUserInput(string sheetName)
+    {
+        Range selectedRange = NumDesAddIn.App.InputBox(
+            $"请用鼠标选择{sheetName}单元格（Ctr，可多选）",
+            "选择单元格",
+            Type: 8
+        ) as Range;
+
+        if (selectedRange == null)
+        {
+            MessageBox.Show("未选择任何单元格！");
+            return null;
+        }
+
+        // 遍历所选单元格，获取值
+        List<string> cellValues = new List<string>();
+        foreach (Range cell in selectedRange)
+        {
+            try
+            {
+                string value = cell.Value?.ToString();
+                cellValues.Add(value ?? "");
+            }
+            catch (Exception ex)
+            {
+                cellValues.Add($"错误: 无法读取 {cell.Address} - {ex.Message}");
+            }
+        }
+
+        return cellValues;
+    }
     private static void BaseSheet(
         Dictionary<string, List<object>> baseData,
         Dictionary<string, string> exportWildcardData,
@@ -163,16 +393,18 @@ public class LteData
         string idType
     )
     {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
         var strDictionary = new Dictionary<string, Dictionary<string, List<string>>>();
 
+        var idList = baseData[id];
+        var typeList = baseData[idType];
+
         //替换通配符生成数据
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
         foreach (var modelSheet in modelValueAll)
         {
-     
             string modelSheetName = modelSheet.Key;
-
-            
 
             PubMetToExcel.SetExcelObjectEpPlus(
                 WkPath,
@@ -180,8 +412,6 @@ public class LteData
                 out ExcelWorksheet targetSheet,
                 out ExcelPackage targetExcel
             );
-            var idList = baseData[id];
-            var typeList = baseData[idType];
 
             if (targetSheet == null)
             {
@@ -194,6 +424,8 @@ public class LteData
 
             if (targetSheet != null)
             {
+                NumDesAddIn.App.StatusBar = $"导出：{modelSheetName}";
+
                 var writeCol = targetSheet.Dimension.End.Column;
 
                 var exportWildcardDyData = new Dictionary<string, string>(exportWildcardData);
@@ -271,7 +503,6 @@ public class LteData
                 if (dataWritten) // 只有在写入数据时才保存
                 {
                     targetExcel.Save();
-                    NumDesAddIn.App.StatusBar = $"导出：{modelSheetName}";
                 }
             }
 

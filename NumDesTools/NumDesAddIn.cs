@@ -504,6 +504,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "对话写入（new）",
             "打开关联表格",
             "LTE配置导出",
+            "LTE配置导出Self",
             "自选表格写入（new）",
             "自定义复制",
             "克隆数据",
@@ -649,7 +650,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         MsoButtonStyle.msoButtonIconAndCaption,
                         LteData.ExportLteDataConfig
                     )
-
+                    : default,
+                sheetName == "LTE配置【导出】" && target.Column == 2
+                    ? (
+                        "LTE配置导出Self",
+                        "LTE配置导出Self",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        LteData.ExportLteDataConfigSelf
+                    )
                     : default,
                 sheetName.Contains("【模板】")
                     ? (
