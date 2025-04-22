@@ -987,7 +987,12 @@ public static class ExcelDataAutoInsertLanguage
                             var targetValueKey = classDataList[k][scCol];
                             if (targetValueKey == sourceValue)
                             {
-                                newId = classDataList[k][scCol + 1].ToString();
+                                newId = classDataList[k][scCol + 1];
+                                if(newId == null)
+                                {
+                                    MessageBox.Show($"{classDataList[k][0]}没有找到对应的ID值");
+                                    return null;
+                                }
                                 break;
                             }
                         }

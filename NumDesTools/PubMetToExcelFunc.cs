@@ -2229,6 +2229,18 @@ public static class PubMetToExcelFunc
                                 );
                                 break;
                             }
+
+                            if (leftString == "\"")
+                            {
+                                int isDouble = leftStringCount % 2;
+                                if (isDouble != 0)
+                                {
+                                    sourceData.Add(
+                                        (cellValue, rowIndex + 1, colIndex + 1, sheetName, "双引号问题")
+                                    );
+                                    break;
+                                }
+                            }
                         }
                     }
                 }

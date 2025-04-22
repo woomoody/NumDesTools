@@ -51,7 +51,7 @@ namespace NumDesTools.Config
         public readonly List<string> DefaultSpecialKeyList = new() { "][", "}{" };
 
         public readonly List<CoupleKey> DefaultCoupleKeyList =
-            new() { new CoupleKey("[", "]"), new CoupleKey("{", "}") };
+            new() { new CoupleKey("[", "]"), new CoupleKey("{", "}"), new CoupleKey("\"", "\"") };
 
         #endregion
 

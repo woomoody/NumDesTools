@@ -204,7 +204,17 @@ public class LteData
         if (exportWildcardData == null)
             throw new ArgumentNullException(nameof(exportWildcardData));
 
-        var wildcardCount = (int)ws.Cells[selectRow + 1, selectCol].Value2;
+        int wildcardCount;
+        if (ws.Cells[selectRow + 1, selectCol].Value2 == null)
+        {
+            MessageBox.Show("需要选中表格名的单元格，通配符数量为空，请检查数据");
+            return;
+        }
+        else
+        {
+            wildcardCount = (int)ws.Cells[selectRow + 1, selectCol].Value2;
+        }
+
         var wildcardRangeValue = ws.Range[
             ws.Cells[selectRow, exportWildcardCol],
             ws.Cells[selectRow + wildcardCount, exportWildcardCol + 1]
@@ -274,7 +284,7 @@ public class LteData
             idType = "类型";
 
             var keysToFilter = GetCellValuesFromUserInput("【基础】");
-            if (keysToFilter.Count != 0)
+            if (keysToFilter != null)
             {
                 baseData = FilterBySpecifiedKeyAndSyncPositions(baseData, id, keysToFilter);
             }
