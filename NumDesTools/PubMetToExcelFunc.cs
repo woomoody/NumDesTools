@@ -2192,7 +2192,7 @@ public static class PubMetToExcelFunc
                         if (normalCharactersCheck.Any(c => cellValue.Contains(c)))
                         {
                             sourceData.Add(
-                                (cellValue, rowIndex + 1, colIndex + 1, sheetName, "多逗号")
+                                (cellValue, rowIndex + 1, colIndex + 1, sheetName, "多逗号或中文逗号")
                             );
                         }
 
