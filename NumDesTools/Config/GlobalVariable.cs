@@ -46,7 +46,7 @@ namespace NumDesTools.Config
 
         // 默认列表配置
         public readonly List<string> DefaultNormaKeyList =
-            new() { ",,", "[,", ",]", "{,", ",}", "，，", "[，", "，]", "{，", "，}" };
+            new() { ",,", "[,", ",]", "{,", ",}", "，，", "[，", "，]", "{，", "，}" , "，" };
 
         public readonly List<string> DefaultSpecialKeyList = new() { "][", "}{" };
 
