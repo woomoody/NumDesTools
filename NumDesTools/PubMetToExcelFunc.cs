@@ -2189,7 +2189,8 @@ public static class PubMetToExcelFunc
                     var cellValue = row[col]?.ToString();
                     if (cellValue != null)
                     {
-                        if (normalCharactersCheck.Any(c => cellValue.Contains(c)))
+                        if (normalCharactersCheck.Any(c => cellValue.Contains(c)) 
+                            && !typeCell.Contains("string"))
                         {
                             sourceData.Add(
                                 (cellValue, rowIndex + 1, colIndex + 1, sheetName, "多逗号或中文逗号")
