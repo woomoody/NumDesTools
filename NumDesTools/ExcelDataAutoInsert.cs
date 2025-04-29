@@ -1,11 +1,7 @@
-﻿using System.Data.Common;
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
-using EnvDTE80;
-using Microsoft.Office.Interop.Excel;
-using NPOI.SS.Formula.Functions;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using LicenseContext = OfficeOpenXml.LicenseContext;
