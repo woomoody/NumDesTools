@@ -26,20 +26,20 @@ public class JsonToExcelConverter
             }
 
         foreach (var item in jsonArray)
+        {
+            var rowDict = new Dictionary<string, object>();
+            foreach (JProperty prop in item.Children<JProperty>())
             {
-                var rowDict = new Dictionary<string, object>();
-                foreach (JProperty prop in item.Children<JProperty>())
+                // 仅处理简单值，忽略嵌套对象或数组
+                if (prop.Value.Type != JTokenType.Object && prop.Value.Type != JTokenType.Array)
                 {
-                    // 仅处理简单值，忽略嵌套对象或数组
-                    if (prop.Value.Type != JTokenType.Object && prop.Value.Type != JTokenType.Array)
-                    {
-                        string key = prop.Name;
-                        allKeys.Add(key);
-                        rowDict[key] = prop.Value.ToString();
-                    }
+                    string key = prop.Name;
+                    allKeys.Add(key);
+                    rowDict[key] = prop.Value.ToString();
                 }
-                allRows.Add(rowDict);
             }
+            allRows.Add(rowDict);
+        }
         
         var excelFilePath = Path.ChangeExtension(jsonFilePath, ".xlsx");
 
