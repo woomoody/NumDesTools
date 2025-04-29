@@ -1,5 +1,4 @@
-﻿using Excel = Microsoft.Office.Interop.Excel;
-using NumDesTools;
+﻿using NumDesTools;
 
 public class ScreenCoordinateFix
 {
@@ -18,11 +17,11 @@ public class ScreenCoordinateFix
     public static void GetCorrectScreenCoordinates()
     {
         var excelApp = NumDesAddIn.App;
-        Excel.Range range = excelApp.Selection as Excel.Range;
+        Range range = excelApp.Selection as Range;
         if (range == null) return;
 
         IntPtr hwnd = (IntPtr)excelApp.Hwnd;
-        Excel.Window window = excelApp.ActiveWindow;
+        Window window = excelApp.ActiveWindow;
 
         // Step 1: 获取客户区原点屏幕坐标
         POINT clientOrigin = new POINT { X = 0, Y = 0 };
@@ -37,7 +36,7 @@ public class ScreenCoordinateFix
         }
 
         // Step 3: 计算滚动偏移（改进方法）
-        Excel.Range visibleStart = window.VisibleRange.Cells[1, 1];
+        Range visibleStart = window.VisibleRange.Cells[1, 1];
         double scrollOffsetX = visibleStart.Left;
         double scrollOffsetY = visibleStart.Top;
 
@@ -63,13 +62,13 @@ public class ScreenCoordinateFix
                         $"修正后坐标: ({screenX}, {screenY})");
     }
 
-    private static int GetColumnHeaderWidth(Excel.Window window)
+    private static int GetColumnHeaderWidth(Window window)
     {
         // 列标题区域宽度（默认37像素，可根据实际调整）
         return window.DisplayHeadings ? 37 : 0;
     }
 
-    private static int GetRowHeaderHeight(Excel.Window window)
+    private static int GetRowHeaderHeight(Window window)
     {
         // 行标题区域高度（默认20像素，可根据实际调整）
         return window.DisplayHeadings ? 20 : 0;

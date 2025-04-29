@@ -1973,7 +1973,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         List<List<object>> data = sheetData.Item2;
         var sheetNameCol = title.IndexOf("表名");
         var sheetNames = data.Select(row => row[sheetNameCol])
-            .Where(name => !string.IsNullOrEmpty(name))
+            .Where(name => name is string && !string.IsNullOrEmpty((string)name))
             .ToList();
 
         //查询值
