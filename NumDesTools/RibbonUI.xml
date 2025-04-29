@@ -91,7 +91,7 @@
                         <button id='AutoInsertExcelDataThreadNew'  label='自动数据LTE(多线程)（New）' imageMso='ConnectionPoints'
                                 onAction='AutoInsertExcelDataThreadNew_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI，多线程更快速' />
                         <button id='AutoInsertExcelDataModelCreat'  label='特殊写入' imageMso='ConnectedToolSyncMenu'
-                                onAction='AutoInsertExcelDataModelCreat_Click' screentip='修正已存在的表格值，无法自增或者批量替换：EPPlusI' />
+                                onAction='AutoInsertExcelDataModelCreat_Click' screentip='修正已存在的表格值（例如：LTE皮肤xxx【模版】），无法自增或者批量替换：EPPlusI' />
                     </menu>
                     <button id='AutoInsertExcelDialog' size='large' label='自动数据(对话类)' image='ejs'
                         onAction='AutoInsertExcelDataDialog_Click' screentip='根据模板数据覆写对话数据表格：EPPlusI' />

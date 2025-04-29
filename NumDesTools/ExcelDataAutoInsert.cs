@@ -7,7 +7,6 @@ using OfficeOpenXml.Style;
 using LicenseContext = OfficeOpenXml.LicenseContext;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
-using Excel = Microsoft.Office.Interop.Excel;
 
 #pragma warning disable CA1416
 
@@ -1371,7 +1370,7 @@ public static class ExcelDataAutoInsertLanguage
                 {
                     targetSheet.DeleteRow(rowToDelete, 1);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     LogDisplay.RecordLine(
                         "[{0}] , {1}",
@@ -3818,6 +3817,16 @@ public class ExcelDataAutoInsertNumChanges
                             DateTime.Now.ToString(CultureInfo.InvariantCulture),
                             keyIndexValue
                         );
+                        if (keyIndexRow == -1)
+                        {
+                            MessageBox.Show($"{workBookName} 找不到Id：{keyIndexValue}");
+                            LogDisplay.RecordLine(
+                                "[{0}] , {1}",
+                                DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                                $"{workBookName} 找不到Id：{keyIndexValue}"
+                            );
+                            return;
+                        }
                         var baseValue = sheetTarget
                             .Cells[keyIndexRow, keyTargetCol]
                             .Value?.ToString();
@@ -4099,7 +4108,7 @@ public static class ExcelDataSyncHelper
         try
         {
             // 获取选中数据
-            var selection = ExcelApp.Selection as Excel.Range;
+            var selection = ExcelApp.Selection as Range;
             if (selection == null) return;
 
             var sourceData = GetSelectedData(selection);
@@ -4160,7 +4169,7 @@ public static class ExcelDataSyncHelper
         Dictionary<string, List<string>> defaultValues,
         Dictionary<string, Dictionary<string, List<string>>> replaceValues)
     {
-        using (var package = new ExcelPackage(new System.IO.FileInfo(System.IO.Path.Combine(path, fileName))))
+        using (var package = new ExcelPackage(new FileInfo(Path.Combine(path, fileName))))
         {
             var worksheet = package.Workbook.Worksheets.FirstOrDefault();
             if (worksheet == null) return;
@@ -4183,7 +4192,7 @@ public static class ExcelDataSyncHelper
         Dictionary<string, List<string>> defaultValues,
         Dictionary<string, Dictionary<string, List<string>>> replaceValues)
     {
-        using (var package = new ExcelPackage(new System.IO.FileInfo(System.IO.Path.Combine(path, fileName))))
+        using (var package = new ExcelPackage(new FileInfo(Path.Combine(path, fileName))))
         {
             var worksheet = package.Workbook.Worksheets.FirstOrDefault();
             if (worksheet == null) return;
@@ -4262,12 +4271,12 @@ public static class ExcelDataSyncHelper
 
     #region 数据读取方法
 
-    private static List<Dictionary<string, object>> GetSelectedData(Excel.Range selection)
+    private static List<Dictionary<string, object>> GetSelectedData(Range selection)
     {
         var headers = GetHeaders(ExcelApp.ActiveSheet);
         var data = new List<Dictionary<string, object>>();
 
-        foreach (Excel.Range row in selection.Rows)
+        foreach (Range row in selection.Rows)
         {
             var rowData = new Dictionary<string, object>();
 
@@ -4286,10 +4295,10 @@ public static class ExcelDataSyncHelper
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-        var filePath = System.IO.Path.Combine(path, fileName);
-        if (!System.IO.File.Exists(filePath)) return new List<Dictionary<string, object>>();
+        var filePath = Path.Combine(path, fileName);
+        if (!File.Exists(filePath)) return new List<Dictionary<string, object>>();
 
-        using (var package = new ExcelPackage(new System.IO.FileInfo(filePath)))
+        using (var package = new ExcelPackage(new FileInfo(filePath)))
         {
             var worksheet = package.Workbook.Worksheets.FirstOrDefault();
             return worksheet == null
@@ -4339,19 +4348,19 @@ public static class ExcelDataSyncHelper
         {
             return GetEpplusHeaders(eppSheet);
         }
-        else if (sheet is Excel.Worksheet comSheet)
+        else if (sheet is Worksheet comSheet)
         {
             return GetComHeaders(comSheet);
         }
         return new List<string>();
     }
 
-    private static List<string> GetComHeaders(Excel.Worksheet worksheet)
+    private static List<string> GetComHeaders(Worksheet worksheet)
     {
         try
         {
-            var rowRange = worksheet.Rows[2] as Excel.Range;
-            var values = rowRange.Value as object[,];
+            var rowRange = worksheet.Rows[2] as Range;
+            var values = rowRange?.Value as object[,];
 
             return values == null
                 ? new List<string>()
