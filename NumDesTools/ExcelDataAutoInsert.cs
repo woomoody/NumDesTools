@@ -4169,22 +4169,20 @@ public static class ExcelDataSyncHelper
         Dictionary<string, List<string>> defaultValues,
         Dictionary<string, Dictionary<string, List<string>>> replaceValues)
     {
-        using (var package = new ExcelPackage(new FileInfo(Path.Combine(path, fileName))))
+        using var package = new ExcelPackage(new FileInfo(Path.Combine(path, fileName)));
+        var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+        if (worksheet == null) return;
+
+        var headers = GetHeaders(worksheet);
+        int startRow = worksheet.Dimension?.End.Row + 1 ?? 1;
+
+        foreach (var rowData in sourceData)
         {
-            var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-            if (worksheet == null) return;
-
-            var headers = GetHeaders(worksheet);
-            int startRow = worksheet.Dimension?.End.Row + 1 ?? 1;
-
-            foreach (var rowData in sourceData)
-            {
-                WriteRowData(worksheet, headers, startRow++, rowData, defaultValues,
-                    replaceValues.GetValueOrDefault(fileName));
-            }
-
-            package.Save();
+            WriteRowData(worksheet, headers, startRow++, rowData, defaultValues,
+                replaceValues.GetValueOrDefault(fileName));
         }
+
+        package.Save();
     }
 
     private static void SyncAllDataToTargetFile(string path, string fileName,
@@ -4192,46 +4190,44 @@ public static class ExcelDataSyncHelper
         Dictionary<string, List<string>> defaultValues,
         Dictionary<string, Dictionary<string, List<string>>> replaceValues)
     {
-        using (var package = new ExcelPackage(new FileInfo(Path.Combine(path, fileName))))
+        using var package = new ExcelPackage(new FileInfo(Path.Combine(path, fileName)));
+        var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+        if (worksheet == null) return;
+
+        var headers = GetHeaders(worksheet);
+        var idColumnIndex = headers.IndexOf("id") + 1; // 假设id列存在
+
+        // 获取目标表中已有的ID集合
+        var existingIds = new HashSet<string>();
+        if (worksheet.Dimension != null && idColumnIndex > 0)
         {
-            var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-            if (worksheet == null) return;
-
-            var headers = GetHeaders(worksheet);
-            var idColumnIndex = headers.IndexOf("id") + 1; // 假设id列存在
-
-            // 获取目标表中已有的ID集合
-            var existingIds = new HashSet<string>();
-            if (worksheet.Dimension != null && idColumnIndex > 0)
+            for (int row = 2; row <= worksheet.Dimension.End.Row; row++)
             {
-                for (int row = 2; row <= worksheet.Dimension.End.Row; row++)
+                var idValue = worksheet.Cells[row, idColumnIndex].Text;
+                if (!string.IsNullOrEmpty(idValue))
                 {
-                    var idValue = worksheet.Cells[row, idColumnIndex].Text;
-                    if (!string.IsNullOrEmpty(idValue))
-                    {
-                        existingIds.Add(idValue);
-                    }
+                    existingIds.Add(idValue);
                 }
             }
-
-            // 写入新数据
-            int startRow = worksheet.Dimension?.End.Row + 1 ?? 1;
-
-            foreach (var rowData in sourceData)
-            {
-                if (rowData.TryGetValue("id", out var idObj) && idObj != null)
-                {
-                    string id = idObj.ToString();
-                    if (!existingIds.Contains(id))
-                    {
-                        WriteRowData(worksheet, headers, startRow++, rowData, defaultValues,
-                            replaceValues.GetValueOrDefault(fileName));
-                    }
-                }
-            }
-
-            package.Save();
         }
+
+        // 写入新数据
+        int startRow = worksheet.Dimension?.End.Row + 1 ?? 1;
+
+        foreach (var rowData in sourceData)
+        {
+            if (rowData.TryGetValue("id", out var idObj) && idObj != null)
+            {
+                string id = idObj.ToString();
+                if (!existingIds.Contains(id))
+                {
+                    WriteRowData(worksheet, headers, startRow++, rowData, defaultValues,
+                        replaceValues.GetValueOrDefault(fileName));
+                }
+            }
+        }
+
+        package.Save();
     }
 
     private static void WriteRowData(ExcelWorksheet worksheet, List<string> headers, int row,
@@ -4298,13 +4294,11 @@ public static class ExcelDataSyncHelper
         var filePath = Path.Combine(path, fileName);
         if (!File.Exists(filePath)) return new List<Dictionary<string, object>>();
 
-        using (var package = new ExcelPackage(new FileInfo(filePath)))
-        {
-            var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-            return worksheet == null
-                ? new List<Dictionary<string, object>>()
-                : ExcelToDictionaryList(worksheet);
-        }
+        using var package = new ExcelPackage(new FileInfo(filePath));
+        var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+        return worksheet == null
+            ? new List<Dictionary<string, object>>()
+            : ExcelToDictionaryList(worksheet);
     }
 
     private static List<Dictionary<string, object>> ExcelToDictionaryList(ExcelWorksheet worksheet, int headerRow = 2)

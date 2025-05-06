@@ -392,12 +392,11 @@ public class ChatHistoryManager
     public ChatHistoryManager()
     {
         // 初始化数据库和表
-        using (var connection = new SqliteConnection(_connectionString))
-        {
-            connection.Open();
-            var command = connection.CreateCommand();
-            command.CommandText =
-                @"
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText =
+            @"
                 CREATE TABLE IF NOT EXISTS ChatHistory (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     Role TEXT NOT NULL,
@@ -405,56 +404,50 @@ public class ChatHistoryManager
                     IsUser INTEGER NOT NULL,
                     Timestamp DATETIME NOT NULL
                 )";
-            command.ExecuteNonQuery();
-        }
+        command.ExecuteNonQuery();
     }
 
     // 保存聊天记录
     public async Task SaveChatMessageAsync(ChatMessage message)
     {
-        using (var connection = new SqliteConnection(_connectionString))
-        {
-            await connection.OpenAsync();
-            var command = connection.CreateCommand();
-            command.CommandText =
-                @"
+        using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync();
+        var command = connection.CreateCommand();
+        command.CommandText =
+            @"
                 INSERT INTO ChatHistory (Role, Message, IsUser, Timestamp)
                 VALUES (@Role, @Message, @IsUser, @Timestamp)";
-            command.Parameters.AddWithValue("@Role", message.Role);
-            command.Parameters.AddWithValue("@Message", message.Message);
-            command.Parameters.AddWithValue("@IsUser", message.IsUser ? 1 : 0);
-            command.Parameters.AddWithValue("@Timestamp", message.Timestamp);
-            await command.ExecuteNonQueryAsync(); 
-        }
+        command.Parameters.AddWithValue("@Role", message.Role);
+        command.Parameters.AddWithValue("@Message", message.Message);
+        command.Parameters.AddWithValue("@IsUser", message.IsUser ? 1 : 0);
+        command.Parameters.AddWithValue("@Timestamp", message.Timestamp);
+        await command.ExecuteNonQueryAsync();
     }
 
     // 读取聊天记录
     public List<ChatMessage> LoadChatHistory()
     {
         var chatHistory = new List<ChatMessage>();
-        using (var connection = new SqliteConnection(_connectionString))
-        {
-            connection.Open();
-            var command = connection.CreateCommand();
-            command.CommandText =
-                "SELECT Role, Message, IsUser, Timestamp FROM ChatHistory ORDER BY Timestamp ASC";
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText =
+            "SELECT Role, Message, IsUser, Timestamp FROM ChatHistory ORDER BY Timestamp ASC";
 
-            using (var reader = command.ExecuteReader())
-            {
-                while (reader.Read())
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            chatHistory.Add(
+                new ChatMessage
                 {
-                    chatHistory.Add(
-                        new ChatMessage
-                        {
-                            Role = reader.GetString(0),
-                            Message = reader.GetString(1),
-                            IsUser = reader.GetInt32(2) == 1,
-                            Timestamp = reader.GetDateTime(3)
-                        }
-                    );
+                    Role = reader.GetString(0),
+                    Message = reader.GetString(1),
+                    IsUser = reader.GetInt32(2) == 1,
+                    Timestamp = reader.GetDateTime(3)
                 }
-            }
+            );
         }
+
         return chatHistory;
     }
 }
@@ -481,20 +474,16 @@ public class SelfEnvironmentDetector
                 CreateNoWindow = true
             };
 
-            using (Process process = Process.Start(psi))
-            {
-                if (process == null)
-                    return false;
+            using Process process = Process.Start(psi);
+            if (process == null)
+                return false;
 
-                using (StreamReader reader = process.StandardOutput)
-                {
-                    string output = reader.ReadToEnd();
-                    process.WaitForExit();
+            using StreamReader reader = process.StandardOutput;
+            string output = reader.ReadToEnd();
+            process.WaitForExit();
 
-                    // 检查输出中是否包含指定版本
-                    return output.Contains($"{versionName} {version}");
-                }
-            }
+            // 检查输出中是否包含指定版本
+            return output.Contains($"{versionName} {version}");
         }
         catch (Exception ex)
         {
@@ -522,14 +511,12 @@ public class SelfEnvironmentDetector
                 UseShellExecute = true // 使用 Shell 执行
             };
 
-            using (Process process = Process.Start(psi))
+            using Process process = Process.Start(psi);
+            if (process != null)
             {
-                if (process != null)
-                {
-                    process.WaitForExit();
-                    MessageBox.Show("安装程序已执行完成。");
-                    Debug.Print("安装程序已执行完成。");
-                }
+                process.WaitForExit();
+                MessageBox.Show("安装程序已执行完成。");
+                Debug.Print("安装程序已执行完成。");
             }
         }
         catch (Exception ex)

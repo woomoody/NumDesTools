@@ -1,4 +1,4 @@
-﻿using NumDesTools;
+﻿namespace NumDesTools;
 
 public class ScreenCoordinateFix
 {
