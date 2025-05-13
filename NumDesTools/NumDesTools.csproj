@@ -16,7 +16,7 @@
     -->
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-      <LangVersion>latest</LangVersion>
+      <LangVersion>12.0</LangVersion>
       <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
       <RegisterForComInterop>false</RegisterForComInterop>
       <DocumentationFile>
@@ -24,7 +24,7 @@
       <WarningLevel>7</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <LangVersion>latest</LangVersion>
+    <LangVersion>12.0</LangVersion>
     <WarningLevel>7</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
