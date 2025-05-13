@@ -425,7 +425,7 @@ public class ExcelUdf
             double sumCell = (double)sumRange[row, col];
 
 
-            if (conditionCell is ExcelEmpty || conditionCell == 0)
+            if (conditionCell == 0)
             {
                 sum += sumCell;
                 matchesList.Add(sum);
@@ -498,7 +498,7 @@ public class ExcelUdf
         IsMacroType = true,
         Description = "提取字符串中数字"
     )]
-    public static long GetNumFromStr(
+    public static object GetNumFromStr(
         [ExcelArgument(AllowReference = true, Description = "输入字符串")]
         string inputValue,
         [ExcelArgument(AllowReference = true, Name = "分隔符", Description = "分隔符,eg:,")]
@@ -516,10 +516,16 @@ public class ExcelUdf
             .SelectMany(s => Regex.Matches(s, @"\d+").Select(m => m.Value))
             .ToArray();
         var maxNumCount = numbers.Length;
-        numCount = Math.Min(maxNumCount, numCount);
-#pragma warning disable CA1305
-        return Convert.ToInt64(numbers[numCount - 1]);
-#pragma warning restore CA1305
+
+        if(maxNumCount >= numCount)
+        {
+            return Convert.ToInt64(numbers[numCount - 1]);
+        }
+        else
+        {
+            return "";
+        }
+
     }
 
     [ExcelFunction(
@@ -1084,8 +1090,70 @@ public class ExcelUdf
             }
 
         return result;
+    } 
+
+    [ExcelFunction(
+        Category = "UDF-数组公式写入",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = @"针对各种数据公式填充数据慢问题，采用Range写入法",
+        Name = "RangeWriteFast"
+    )]
+    public static object RangeWriteFast(object[,] inputRange)
+    {
+        // 获取当前调用位置及目标区域
+        ExcelReference callerRef = (ExcelReference)XlCall.Excel(XlCall.xlfCaller);
+        int rows = inputRange.GetLength(0);
+        int cols = inputRange.GetLength(1);
+
+
+        string fullName = (string)XlCall.Excel(XlCall.xlSheetNm, callerRef);
+        // 匹配格式：[工作簿名]工作表名
+        Match match = Regex.Match(fullName, @"\]([^!]+)");
+        string sheetName = match.Success ? match.Groups[1].Value.Trim('\'') : "地编关系";
+
+        var app = NumDesAddIn.App;
+        Worksheet targetSheet = app.Sheets[sheetName];
+        
+        Range targetRange = targetSheet.Range[
+            targetSheet.Cells[callerRef.RowFirst + 2, callerRef.ColumnFirst + 1],
+            targetSheet.Cells[callerRef.RowFirst + rows + 1, callerRef.ColumnFirst + cols]
+        ];
+
+        // 直接写入数据
+        targetRange.Value = inputRange;  // 批量写入二维数组
+
+        return "最新数据↓";
     }
 
+    [ExcelFunction(
+        Category = "UDF-Excel函数增强",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = @"针对自动填充，例如：自动填充迭代=IF(C49= "",X48,B49&C49)功能的拓展，输出数组",
+        Name = "UXFillBlanks"
+    )]
+    public static object[,] FillBlanks(object[,] inputRange)
+    {
+        object[,] result = (object[,])inputRange.Clone();
+        object lastValue = null;
+
+        for (int i = 0; i < inputRange.GetLength(0); i++)
+        {
+            if (inputRange[i, 0] is ExcelEmpty || inputRange[i, 0] == null)
+            {
+                if (lastValue != null)
+                    result[i, 0] = lastValue;
+                else
+                    result[i, 0] = ExcelError.ExcelErrorNA; // 空值且无前值返回错误
+            }
+            else
+            {
+                lastValue = inputRange[i, 0];
+            }
+        }
+        return result;
+    }
     [ExcelFunction(
         Category = "UDF-Excel函数增强",
         IsVolatile = true,
