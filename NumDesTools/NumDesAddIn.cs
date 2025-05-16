@@ -25,8 +25,10 @@ global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using ExcelDna.Registration;
 using Microsoft.Office.Core;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -90,15 +92,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public static CommandBarButton Btn;
     public static Application App = (Application)ExcelDnaUtil.Application;
-    private string _seachStr = string.Empty;
-    private string _excelSeachStr = string.Empty;
     public static IRibbonUI CustomRibbon;
-
-    private TabControl _tabControl = new();
-    private SheetListControl _sheetMenuCtp;
     private static AiChatTaskPanel _chatAiChatMenuCtp;
+    private string _excelSeachStr = string.Empty;
 
     private string _requiredVersion = "6.0.2";
+    private string _seachStr = string.Empty;
+    private SheetListControl _sheetMenuCtp;
+
+    private TabControl _tabControl = new();
 
     #region 释放COM
 
@@ -220,8 +222,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
 #if RELEASE
         string addInPath = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
-        var isInstall =
-  SelfEnvironmentDetector.IsInstalled(_requiredVersion, "Microsoft.NETCore.App", "dotnet", "--list-runtimes");
+        var isInstall = SelfEnvironmentDetector.IsInstalled(
+            _requiredVersion,
+            "Microsoft.NETCore.App",
+            "dotnet",
+            "--list-runtimes"
+        );
         if (isInstall)
         {
             //MessageBox.Show(@$".NET {_requiredVersion} 已安装");
@@ -230,7 +236,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             // .NET 未安装，执行安装程序
             MessageBox.Show(@$".NET {_requiredVersion} 未安装，点击安装...");
-            string installerPath = Path.Combine(addInPath, "windowsdesktop-runtime-6.0.20-win-x64.exe");
+            string installerPath = Path.Combine(
+                addInPath,
+                "windowsdesktop-runtime-6.0.20-win-x64.exe"
+            );
 
             // 调用安装程序并等待安装完成
             var process = new Process
@@ -408,8 +417,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 {
                     string text = cell.Text.ToString();
                     // 使用正则匹配连续5位以上纯数字
-                    return Regex.Matches(text, @"\d{6,}")
-                        .Select(m => m.Value);
+                    return Regex.Matches(text, @"\d{6,}").Select(m => m.Value);
                 })
                 .Where(nums => nums.Any())
                 .SelectMany(x => x)
@@ -425,21 +433,34 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             //构建相对路径-搜索
             var workbookPath = App.ActiveWorkbook.Path;
             var levelsToGoUp = 3;
-            if (workbookPath.Contains("二合") || workbookPath.Contains("工会") || workbookPath.Contains("克朗代克"))
+            if (
+                workbookPath.Contains("二合")
+                || workbookPath.Contains("工会")
+                || workbookPath.Contains("克朗代克")
+            )
                 levelsToGoUp = 4;
 
-            var contentPath = string.Concat(Enumerable.Repeat("../", levelsToGoUp)) + "public/excels/tables/icon.xlsx";
-            var searchContent = Path.GetFullPath(Path.Combine(workbookPath, contentPath)).Replace("\\", "/");
+            var contentPath =
+                string.Concat(Enumerable.Repeat("../", levelsToGoUp))
+                + "public/excels/tables/icon.xlsx";
+            var searchContent = Path.GetFullPath(Path.Combine(workbookPath, contentPath))
+                .Replace("\\", "/");
 
             // 存储ID对应的Type
             Dictionary<string, List<string>> typeDict;
-            var returnColNames = new List<string> { "C", "E" ,"F" };
-            typeDict = PubMetToExcelFunc.SearchKeysFrom1ExcelMulti(searchContent, longNumbers, false , returnColNames);
+            var returnColNames = new List<string> { "C", "E", "F" };
+            typeDict = PubMetToExcelFunc.SearchKeysFrom1ExcelMulti(
+                searchContent,
+                longNumbers,
+                false,
+                returnColNames
+            );
 
             //构建相对路径-资源
             var relativePath = string.Concat(Enumerable.Repeat("../", levelsToGoUp)) + "code/";
             var searchFolder = Path.GetFullPath(Path.Combine(workbookPath, relativePath));
-            if (!Directory.Exists(searchFolder)) searchFolder = searchFolder.Replace("code", "coder");
+            if (!Directory.Exists(searchFolder))
+                searchFolder = searchFolder.Replace("code", "coder");
 
             //表格中的资源路径不完整，需要搜索
             Dictionary<string, List<string>> imageDict;
@@ -508,7 +529,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "自选表格写入（new）",
             "自定义复制",
             "克隆数据",
-            "克隆数据All"
+            "克隆数据All",
+            "LTE基础数据-首次",
+            "LTE基础数据-更新"
         };
 
         foreach (
@@ -566,7 +589,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 string Caption,
                 MsoButtonStyle Style,
                 _CommandBarButtonEvents_ClickEventHandler Handler
-                )>
+            )>
             {
                 // 根据条件添加按钮配置
                 sheetName.Contains("【模板】")
@@ -666,14 +689,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         MsoButtonStyle.msoButtonIconAndCaption,
                         ExcelDataAutoInsertMultiNew.RightClickInsertDataNew
                     )
-
                     : default,
                 bookName.Contains("RechargeGP")
                     ? (
-                    "克隆数据",
-                    "克隆数据-Recharge",
-                    MsoButtonStyle.msoButtonIconAndCaption,
-                    ExcelDataAutoInsertCopyActivity.RightClickCloneData
+                        "克隆数据",
+                        "克隆数据-Recharge",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        ExcelDataAutoInsertCopyActivity.RightClickCloneData
                     )
                     : default,
                 bookName.Contains("RechargeGP")
@@ -682,6 +704,22 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         "克隆数据-Recharge-All",
                         MsoButtonStyle.msoButtonIconAndCaption,
                         ExcelDataAutoInsertCopyActivity.RightClickCloneAllData
+                    )
+                    : default,
+                bookName.Contains("#【A大型活动】数值") && sheetName.Contains("【设计】")
+                    ? (
+                        "LTE基础数据-首次",
+                        "LTE基础数据-首次",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        PubMetToExcelFunc.FirstCopyValue
+                    )
+                    : default,
+                bookName.Contains("#【A大型活动】数值") && sheetName.Contains("【设计】")
+                    ? (
+                        "LTE基础数据-更新",
+                        "LTE基础数据-更新",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        PubMetToExcelFunc.UpdateCopyValue
                     )
                     : default,
                 (
@@ -966,11 +1004,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 {
                     MessageBox.Show(
                         filesName
-                        + @"导出完成!用时:"
-                        + Math.Round(milliseconds / 1000, 2)
-                        + @"秒"
-                        + @"\n"
-                        + @"转完建议重启Excel！"
+                            + @"导出完成!用时:"
+                            + Math.Round(milliseconds / 1000, 2)
+                            + @"秒"
+                            + @"\n"
+                            + @"转完建议重启Excel！"
                     );
                 }
 
@@ -1041,9 +1079,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         cellAdress = cellAdress.Substring(0, cellAdress.LastIndexOf("$") + 1) + "7";
         if (fileTemp != null)
         {
-            if (fileTemp.Contains("@"))
-            {
-            }
+            if (fileTemp.Contains("@")) { }
             else
             {
                 MessageBox.Show(@"没有找到关联表格" + cellAdress + @"是[" + fileTemp + @"]格式不对：xxx@xxx");
@@ -1284,9 +1320,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
     }
 
-    public void SvnCommitExcel_Click(IRibbonControl control)
-    {
-    }
+    public void SvnCommitExcel_Click(IRibbonControl control) { }
 
     public void SvnCommitTxt_Click(IRibbonControl control)
     {
@@ -1807,7 +1841,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
             catch (Exception e)
             {
-                MessageBox.Show(e.Message +":实际已经复制，可直接Ctr+V");
+                MessageBox.Show(e.Message + ":实际已经复制，可直接Ctr+V");
             }
         }
     }
@@ -1827,7 +1861,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             {
                 MessageBox.Show(e.Message + ":实际已经复制，可直接Ctr+V");
             }
-
         }
     }
 
@@ -2058,14 +2091,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         sw.Stop();
         var ts2 = sw.Elapsed;
 
-        var files = new List<string>(Directory.GetFiles(@"C:\Users\cent\Downloads\configs_1.1.53\", "*.json",
-            SearchOption.AllDirectories));
+        var files = new List<string>(
+            Directory.GetFiles(
+                @"C:\Users\cent\Downloads\configs_1.1.53\",
+                "*.json",
+                SearchOption.AllDirectories
+            )
+        );
         var converter = new JsonToExcelConverter();
         foreach (var jsonFile in files)
         {
             converter.ConvertMultipleJsonToExcel(jsonFile);
         }
-      
 
         //App.Visible = false;
         //App.ScreenUpdating = false;
@@ -2234,11 +2271,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
                 foreach (var sheet in workbook)
                 {
-                    if (sheet.SheetName.Contains("#") || sheet.SheetName.Contains("Chart")) continue;
+                    if (sheet.SheetName.Contains("#") || sheet.SheetName.Contains("Chart"))
+                        continue;
 
                     var cellA1 = sheet.GetRow(0)?.GetCell(0);
                     var cellA1Value = cellA1?.ToString() ?? "";
-                    if (!cellA1Value.Contains("#")) continue;
+                    if (!cellA1Value.Contains("#"))
+                        continue;
 
                     // 检查隐藏的行
                     for (var row = 0; row <= sheet.LastRowNum + 1000; row++)
@@ -2341,11 +2380,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 using var package = new ExcelPackage(new FileInfo(fileInfo));
                 foreach (var worksheet in package.Workbook.Worksheets)
                 {
-                    if (worksheet.Name.Contains("#") || worksheet.Name.Contains("Chart")) continue;
+                    if (worksheet.Name.Contains("#") || worksheet.Name.Contains("Chart"))
+                        continue;
 
                     var cellA1 = worksheet.Cells[1, 1];
                     var cellA1Value = cellA1.Value?.ToString() ?? "";
-                    if (!cellA1Value.Contains("#")) continue;
+                    if (!cellA1Value.Contains("#"))
+                        continue;
 
                     var hasHidden = false;
 
@@ -2366,7 +2407,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                                 break;
                             }
 
-                    if (hasHidden) hiddenSheets.Add(new[] { Path.GetFileName(fileInfo), worksheet.Name });
+                    if (hasHidden)
+                        hiddenSheets.Add(new[] { Path.GetFileName(fileInfo), worksheet.Name });
                 }
             }
         );
@@ -2412,11 +2454,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 var count = 0;
                 foreach (var worksheet in package.Workbook.Worksheets)
                 {
-                    if (worksheet.Name.Contains("#") || worksheet.Name.Contains("Chart")) continue;
+                    if (worksheet.Name.Contains("#") || worksheet.Name.Contains("Chart"))
+                        continue;
 
                     var cellA1 = worksheet.Cells[1, 1];
                     var cellA1Value = cellA1.Value?.ToString() ?? "";
-                    if (!cellA1Value.Contains("#")) continue;
+                    if (!cellA1Value.Contains("#"))
+                        continue;
 
                     // 检查隐藏的行
                     for (var row = 1; row <= worksheet.Dimension.End.Row + 1000; row++)
@@ -2436,7 +2480,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         }
                 }
 
-                if (count > 0) package.Save();
+                if (count > 0)
+                    package.Save();
             }
         );
 
@@ -2471,11 +2516,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
                 foreach (var sheet in workbook)
                 {
-                    if (sheet.SheetName.Contains("#") || sheet.SheetName.Contains("Chart")) continue;
+                    if (sheet.SheetName.Contains("#") || sheet.SheetName.Contains("Chart"))
+                        continue;
 
                     var cellA1 = sheet.GetRow(0)?.GetCell(0);
                     var cellA1Value = cellA1?.ToString() ?? "";
-                    if (!cellA1Value.Contains("#")) continue;
+                    if (!cellA1Value.Contains("#"))
+                        continue;
 
                     // 检查隐藏的行
                     for (var row = 0; row <= sheet.LastRowNum + 1000; row++)
@@ -2528,8 +2575,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void FileInfoChanged(IRibbonControl control, string text)
     {
-        if (control.Id == "BasePathEdit") _globalValue.SaveValue("BasePath", text);
-        if (control.Id == "TargetPathEdit") _globalValue.SaveValue("TargetPath", text);
+        if (control.Id == "BasePathEdit")
+            _globalValue.SaveValue("BasePath", text);
+        if (control.Id == "TargetPathEdit")
+            _globalValue.SaveValue("TargetPath", text);
     }
 
     private List<CellSelectChangeTip> _customZoomForms = [];
@@ -2621,7 +2670,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         CustomRibbon.InvalidateControl("CheckSheetValue");
 
         var ctpName = "错误数据";
-        if (CheckSheetValueText != "数据自检：开启") NumDesCTP.DeleteCTP(true, ctpName);
+        if (CheckSheetValueText != "数据自检：开启")
+            NumDesCTP.DeleteCTP(true, ctpName);
 
         _globalValue.SaveValue("CheckSheetValueText", CheckSheetValueText);
     }
@@ -2791,7 +2841,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         );
 
         // 如果用户选择 "No"，则直接返回，不执行后续操作
-        if (result != DialogResult.Yes) return;
+        if (result != DialogResult.Yes)
+            return;
 
         _globalValue.ResetToDefault("ApiKey", "ChatGptApiKey", "DeepSeektApiKey");
 

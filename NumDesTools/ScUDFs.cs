@@ -635,7 +635,7 @@ public class ExcelUdf
         object[,] rangeObjDef,
         [ExcelArgument(AllowReference = true, Name = "分隔符", Description = "分隔符,默认:[,]表示：首-中-尾符")]
         string delimiter,
-        [ExcelArgument(AllowReference = true, Name = "过滤值", Description = "一般为空值")]
+        [ExcelArgument(AllowReference = true, Name = "过滤值", Description = "一般为空值或0")]
         string ignoreValue
     )
     {
