@@ -73,7 +73,6 @@ public static class PubMetToExcel
             sheetRealName = excelRealNameGroup[1];
         }
         else if (excelName.Contains("Sharp"))
-
         {
             var excelRealNameGroup = excelName.Split("Sharp");
             excelRealName = excelRealNameGroup[0].ToString().Replace("Dorllar", "$");
@@ -316,21 +315,24 @@ public static class PubMetToExcel
     {
         var sheet = (ExcelReference)XlCall.Excel(XlCall.xlSheetId, sheetName);
         var range = new ExcelReference(rowFirst, rowLast, colFirst, colLast, sheet.SheetId);
-        ExcelAsyncUtil.QueueAsMacro(() => { range.SetValue(rangeValue); });
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            range.SetValue(rangeValue);
+        });
     }
 
     public static Task<(
         ExcelReference currentRange,
         string sheetName,
         string sheetPath
-        )> GetCurrentExcelObjectC()
+    )> GetCurrentExcelObjectC()
     {
         var tcs =
             new TaskCompletionSource<(
                 ExcelReference currentRange,
                 string sheetName,
                 string sheetPath
-                )>();
+            )>();
         ExcelAsyncUtil.QueueAsMacro(() =>
         {
             try
@@ -476,7 +478,7 @@ public static class PubMetToExcel
     public static (
         List<object> sheetHeaderCol,
         List<List<object>> sheetData
-        ) ExcelDataToListBySelfToEnd(dynamic workSheet, int dataRow, int dataCol, int headRow)
+    ) ExcelDataToListBySelfToEnd(dynamic workSheet, int dataRow, int dataCol, int headRow)
     {
         Range selectRange = NumDesAddIn.App.Selection;
         Range usedRange = workSheet.UsedRange;
@@ -558,7 +560,7 @@ public static class PubMetToExcel
                     {
                         // ReSharper disable ConditionIsAlwaysTrueOrFalse
                         if (row is not null && row["TABLE_NAME"].ToString().Equals("Sheet1"))
-                            // ReSharper restore ConditionIsAlwaysTrueOrFalse
+                        // ReSharper restore ConditionIsAlwaysTrueOrFalse
                         {
                             sheetName = "Sheet1";
                             break;
@@ -1021,9 +1023,8 @@ public static class PubMetToExcel
         }
         // ReSharper disable EmptyGeneralCatchClause
         catch (Exception)
-            // ReSharper restore EmptyGeneralCatchClause
-        {
-        }
+        // ReSharper restore EmptyGeneralCatchClause
+        { }
 
         GC.Collect();
     }
@@ -1255,8 +1256,85 @@ public static class PubMetToExcel
         return twoDArray;
     }
 
+    //一维List转二维数组
+    public static object[,] ConvertList1ToArray(List<object> listOfLists)
+    {
+        // 获取行数
+        var rowCount = listOfLists.Count;
+
+        // 获取最大列数（找出最长的子列表）
+        int colCount = 1;
+
+        // 初始化二维数组
+        var twoDArray = new object[rowCount, colCount];
+
+        // 遍历每个子列表
+        for (var i = 0; i < rowCount; i++)
+        {
+            var innerList = listOfLists[i];
+
+            twoDArray[i, colCount - 1] = innerList;
+        }
+
+        return twoDArray;
+    }
+
+    public static string[,] ConvertList1ToArray(List<string> listOfLists)
+    {
+        // 获取行数
+        var rowCount = listOfLists.Count;
+
+        // 获取最大列数（找出最长的子列表）
+        int colCount = 1;
+
+        // 初始化二维数组
+        var twoDArray = new string[rowCount, colCount];
+
+        // 遍历每个子列表
+        for (var i = 0; i < rowCount; i++)
+        {
+            var innerList = listOfLists[i];
+
+            twoDArray[i, colCount - 1] = innerList;
+        }
+
+        return twoDArray;
+    }
+
+    public static string[,] ConvertListArrayToTwoArray(List<string[]> listArray)
+    {
+        var rowmax = listArray.Count;
+        var colmax = listArray[0].GetLength(0);
+
+        // 初始化二维数组
+        var arrObjects = new string[rowmax, colmax];
+
+        for (int i = 0; i < rowmax; i++)
+        {
+            var list = listArray[i];
+            for (int j = 0; j < colmax; j++)
+            {
+                arrObjects[i, j] = list[j];
+            }
+        }
+        return arrObjects;
+    }
+
     //一维List转一维数组
     public static object[] ConvertListToArray(List<object> listOfLists)
+    {
+        var rowCount = listOfLists.Count;
+        var twoDArray = new object[rowCount];
+
+        for (var i = 0; i < rowCount; i++)
+        {
+            twoDArray[i] = listOfLists[i];
+        }
+
+        return twoDArray;
+    }
+
+    public static object[] ConvertListToArray(List<string> listOfLists)
     {
         var rowCount = listOfLists.Count;
         var twoDArray = new object[rowCount];
@@ -1366,6 +1444,36 @@ public static class PubMetToExcel
         }
 
         return dictionary;
+    }
+
+    //二维数组字典化-首列为Key，0开始
+    public static Dictionary<string, string[]> TwoDArrayToDictionaryFirstKey(object[,] array)
+    {
+        var dict = new Dictionary<string, string[]>();
+        for (int i = 0; i < array.GetLength(0); i++)
+        {
+            string key = array[i, 0].ToString();
+            string[] row = new string[array.GetLength(1)];
+            for (int j = 0; j < array.GetLength(1); j++)
+                row[j] = array[i, j]?.ToString();
+            dict[key] = row;
+        }
+        return dict;
+    }
+
+    //二维数组字典化-首列为Key,ExcelRange对象，1老手
+    public static Dictionary<string, string[]> TwoDArrayToDictionaryFirstKey1(object[,] array)
+    {
+        var dict = new Dictionary<string, string[]>();
+        for (int i = 1; i <= array.GetLength(0); i++)
+        {
+            string key = array[i, 1].ToString();
+            string[] row = new string[array.GetLength(1)];
+            for (int j = 1; j <= array.GetLength(1); j++)
+                row[j - 1] = array[i, j]?.ToString();
+            dict[key] = row;
+        }
+        return dict;
     }
 
     //二维数组转二维字典
@@ -1497,8 +1605,13 @@ public static class PubMetToExcel
     }
 
     //二维数组去重
-    public static object[,] FilterRepeatValue(object[,] array, int index, bool isRow, int baseIndex,
-        bool emptyFilter = true)
+    public static object[,] CleanRepeatValue(
+        object[,] array,
+        int index,
+        bool isRow,
+        int baseIndex,
+        bool emptyFilter = true
+    )
     {
         var seen = new HashSet<object>(); // 用于存储已出现的基准值
         var tempResult = new List<object[]>(); // 临时存储去重后的结果
@@ -1513,9 +1626,16 @@ public static class PubMetToExcel
         }
 
         // 检查 index 是否超出数组的范围 (根据 baseIndex 调整)
-        if (index < baseIndex || (isRow && index >= cols + baseIndex) || (!isRow && index >= rows + baseIndex))
+        if (
+            index < baseIndex
+            || (isRow && index >= cols + baseIndex)
+            || (!isRow && index >= rows + baseIndex)
+        )
         {
-            throw new ArgumentOutOfRangeException(nameof(index), "Index is outside the bounds of the array.");
+            throw new ArgumentOutOfRangeException(
+                nameof(index),
+                "Index is outside the bounds of the array."
+            );
         }
 
         // 遍历方向控制
@@ -1526,8 +1646,14 @@ public static class PubMetToExcel
         {
             // 如果 baseIndex 是 1，直接使用 index 和 i；如果是 0，减去 baseIndex
             var key = isRow
-                ? array[baseIndex == 1 ? index : index - baseIndex, baseIndex == 1 ? i : i - baseIndex]
-                : array[baseIndex == 1 ? i : i - baseIndex, baseIndex == 1 ? index : index - baseIndex];
+                ? array[
+                    baseIndex == 1 ? index : index - baseIndex,
+                    baseIndex == 1 ? i : i - baseIndex
+                ]
+                : array[
+                    baseIndex == 1 ? i : i - baseIndex,
+                    baseIndex == 1 ? index : index - baseIndex
+                ];
 
             if (emptyFilter)
             {
@@ -1546,17 +1672,26 @@ public static class PubMetToExcel
                 for (int j = baseIndex; j < innerLoop + baseIndex; j++) // 根据 baseIndex 调整循环起点
                 {
                     // 检查是否超出数组边界
-                    if (isRow && (j - baseIndex >= rows || i - baseIndex >= cols) ||
-                        !isRow && (i - baseIndex >= rows || j - baseIndex >= cols))
+                    if (
+                        isRow && (j - baseIndex >= rows || i - baseIndex >= cols)
+                        || !isRow && (i - baseIndex >= rows || j - baseIndex >= cols)
+                    )
                     {
                         throw new IndexOutOfRangeException(
-                            $"Index out of bounds: i={i}, j={j}, rows={rows}, cols={cols}");
+                            $"Index out of bounds: i={i}, j={j}, rows={rows}, cols={cols}"
+                        );
                     }
 
                     // 如果按行去重，保留列的值；否则保留行的值
                     row[j - baseIndex] = isRow
-                        ? array[baseIndex == 1 ? j : j - baseIndex, baseIndex == 1 ? i : i - baseIndex]
-                        : array[baseIndex == 1 ? i : i - baseIndex, baseIndex == 1 ? j : j - baseIndex];
+                        ? array[
+                            baseIndex == 1 ? j : j - baseIndex,
+                            baseIndex == 1 ? i : i - baseIndex
+                        ]
+                        : array[
+                            baseIndex == 1 ? i : i - baseIndex,
+                            baseIndex == 1 ? j : j - baseIndex
+                        ];
                 }
 
                 tempResult.Add(row);
@@ -1868,7 +2003,10 @@ public static class PubMetToExcel
     #endregion
 
     //查找资源文件
-    public static Dictionary<string, List<string>> FindResourceFile(Dictionary<string, List<string>> longNumbers, string searchFolder)
+    public static Dictionary<string, List<string>> FindResourceFile(
+        Dictionary<string, List<string>> longNumbers,
+        string searchFolder
+    )
     {
         // 线程安全字典：存储并行查找的结果
         var tempDict = new ConcurrentDictionary<string, List<string>>();
@@ -1880,37 +2018,45 @@ public static class PubMetToExcel
         };
 
         // **并行遍历字典的 Key-Value 对**
-        Parallel.ForEach(longNumbers, kvp =>
-        {
-            string dictKey = kvp.Key;   // 原始 Key
-            List<string> values = kvp.Value; // 该 Key 关联的 List<string>
-
-            if (values.Count < 3) return; // 确保 values 至少有 3 个元素
-
-            string value1 = values[0];   // 第 1 个值
-            string subFolder = values[1]; // 用于拼接路径
-            string searchNum = values[2]; // 作为图片名称查找
-
-            string newSearchPath = Path.Combine(searchFolder, subFolder); // 拼接路径
-            List<string> foundImages = new List<string>();
-
-            if (Directory.Exists(newSearchPath)) // 确保目录存在
+        Parallel.ForEach(
+            longNumbers,
+            kvp =>
             {
-                var files = Directory.EnumerateFiles(newSearchPath, $"{searchNum}.png", searchOptions);
-                foundImages.AddRange(files);
-            }
+                string dictKey = kvp.Key; // 原始 Key
+                List<string> values = kvp.Value; // 该 Key 关联的 List<string>
 
-            // **存入 Key，包含 (value1, searchNum, 图片路径)**
-            if (foundImages.Count > 0)
-            {
-                tempDict[dictKey] = new List<string> { value1, searchNum };
-                tempDict[dictKey].AddRange(foundImages); // 添加所有找到的图片路径
+                if (values.Count < 3)
+                    return; // 确保 values 至少有 3 个元素
+
+                string value1 = values[0]; // 第 1 个值
+                string subFolder = values[1]; // 用于拼接路径
+                string searchNum = values[2]; // 作为图片名称查找
+
+                string newSearchPath = Path.Combine(searchFolder, subFolder); // 拼接路径
+                List<string> foundImages = new List<string>();
+
+                if (Directory.Exists(newSearchPath)) // 确保目录存在
+                {
+                    var files = Directory.EnumerateFiles(
+                        newSearchPath,
+                        $"{searchNum}.png",
+                        searchOptions
+                    );
+                    foundImages.AddRange(files);
+                }
+
+                // **存入 Key，包含 (value1, searchNum, 图片路径)**
+                if (foundImages.Count > 0)
+                {
+                    tempDict[dictKey] = new List<string> { value1, searchNum };
+                    tempDict[dictKey].AddRange(foundImages); // 添加所有找到的图片路径
+                }
+                else
+                {
+                    tempDict[dictKey] = new List<string> { value1, searchNum }; // 即使没找到，也存储基础数据
+                }
             }
-            else
-            {
-                tempDict[dictKey] = new List<string> { value1, searchNum }; // 即使没找到，也存储基础数据
-            }
-        });
+        );
 
         // **保证返回的 Dictionary 顺序与 longNumbers 一致**
         var orderedDict = new Dictionary<string, List<string>>();

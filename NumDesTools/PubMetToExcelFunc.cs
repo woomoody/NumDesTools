@@ -162,7 +162,11 @@ public static class PubMetToExcelFunc
         var sheetName = sheet.Name;
 
         //根目录下的子文件路径处理
-        if (workbookPath!.Contains("克朗代克") || workbookPath!.Contains("二合") || workbookPath!.Contains("工会"))
+        if (
+            workbookPath!.Contains("克朗代克")
+            || workbookPath!.Contains("二合")
+            || workbookPath!.Contains("工会")
+        )
         {
             workBookName = "克朗代克##" + workBookName;
             workbookPath = Directory.GetParent(Path.GetDirectoryName(workbookPath)).FullName;
@@ -376,9 +380,7 @@ public static class PubMetToExcelFunc
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Question
                     );
-                    if (tips == MessageBoxResult.Yes)
-                    {
-                    }
+                    if (tips == MessageBoxResult.Yes) { }
 
                     PubMetToExcel.OpenExcelAndSelectCell(
                         excelPath + @"\#表格关联.xlsx",
@@ -516,13 +518,9 @@ public static class PubMetToExcelFunc
         if (m == 0)
             return n;
 
-        for (int i = 0; i <= n; d[i, 0] = i++)
-        {
-        }
+        for (int i = 0; i <= n; d[i, 0] = i++) { }
 
-        for (int j = 0; j <= m; d[0, j] = j++)
-        {
-        }
+        for (int j = 0; j <= m; d[0, j] = j++) { }
 
         for (int i = 1; i <= n; i++)
         {
@@ -592,466 +590,6 @@ public static class PubMetToExcelFunc
                 PubMetToExcel.ConvertToExcelColumn(findValue[0].Item4) + findValue[0].Item3;
         PubMetToExcel.OpenExcelAndSelectCell(newPath, "Sheet1", cellAddress);
     }
-
-    #region Excel数据查找
-
-    //Epplus
-    public static List<(string, string, int, int)> SearchKeyFromExcel(
-        string rootPath,
-        string findValue
-    )
-    {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-        var filesCollection = new SelfExcelFileCollector(rootPath);
-        var files = filesCollection.GetAllExcelFilesPath();
-
-        var targetList = new List<(string, string, int, int)>();
-        var currentCount = 0;
-        var count = files.Length;
-        var isAll = findValue.Contains("*");
-        findValue = findValue.Replace("*", "");
-        foreach (var file in files)
-        {
-            try
-            {
-                using (var package = new ExcelPackage(new FileInfo(file)))
-                {
-                    try
-                    {
-                        var wk = package.Workbook;
-                        for (var sheetIndex = 0; sheetIndex < wk.Worksheets.Count; sheetIndex++)
-                        {
-                            var sheet = wk.Worksheets[sheetIndex];
-                            if (
-                                sheet.Name.Contains("#")
-                                || sheet.Name.Contains("Sheet") && sheet.Name != "Sheet1"
-                            )
-                                continue;
-                            int rowMax = Math.Max(sheet.Dimension.End.Row, 4);
-                            int colMax = Math.Max(sheet.Dimension.End.Column, 2);
-                            for (var col = 2; col <= colMax; col++)
-                            for (var row = 4; row <= rowMax; row++)
-                            {
-                                var cellValue = sheet.Cells[row, col].Value?.ToString();
-                                var cellAddress = new ExcelCellAddress(row, col);
-                                var cellCol = cellAddress.Column;
-                                var cellRow = cellAddress.Row;
-
-                                if (
-                                    cellValue != null
-                                    && (
-                                        isAll
-                                            ? cellValue.Contains(findValue)
-                                            : cellValue == findValue
-                                    )
-                                )
-                                {
-                                    targetList.Add((file, sheet.Name, cellRow, cellCol));
-                                }
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        // 记录异常信息，继续处理下一个文件
-                    }
-                }
-            }
-            catch
-            {
-                // 记录异常信息，继续处理下一个文件
-            }
-
-            currentCount++;
-            NumDesAddIn.App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
-        }
-
-        return targetList;
-    }
-
-    public static List<(string, string, int, int)> SearchKeyFromExcelMulti(
-        string rootPath,
-        string findValue
-    )
-    {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-        var filesCollection = new SelfExcelFileCollector(rootPath);
-        var files = filesCollection.GetAllExcelFilesPath();
-
-        var targetList = new List<(string, string, int, int)>();
-        var isAll = findValue.Contains("*");
-        findValue = findValue.Replace("*", "");
-        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
-
-        Parallel.ForEach(
-            files,
-            options,
-            file =>
-            {
-                try
-                {
-                    using (var package = new ExcelPackage(new FileInfo(file)))
-                    {
-                        try
-                        {
-                            var wk = package.Workbook;
-                            for (var sheetIndex = 0; sheetIndex < wk.Worksheets.Count; sheetIndex++)
-                            {
-                                var sheet = wk.Worksheets[sheetIndex];
-                                if (
-                                    sheet.Name.Contains("#")
-                                    || sheet.Name.Contains("Sheet") && sheet.Name != "Sheet1"
-                                )
-                                    continue;
-                                int rowMax = Math.Max(sheet.Dimension.End.Row, 4);
-                                int colMax = Math.Max(sheet.Dimension.End.Column, 2);
-                                for (var col = 2; col <= colMax; col++)
-                                for (var row = 4; row <= rowMax; row++)
-                                {
-                                    var cellValue = sheet.Cells[row, col].Value?.ToString();
-                                    var cellAddress = new ExcelCellAddress(row, col);
-                                    var cellCol = cellAddress.Column;
-                                    var cellRow = cellAddress.Row;
-
-                                    if (
-                                        cellValue != null
-                                        && (
-                                            isAll
-                                                ? cellValue.Contains(findValue)
-                                                : cellValue == findValue
-                                        )
-                                    )
-                                    {
-                                        targetList.Add((file, sheet.Name, cellRow, cellCol));
-                                    }
-                                }
-                            }
-                        }
-                        catch
-                        {
-                            // 记录异常信息，继续处理下一个文件
-                        }
-                    }
-                }
-                catch
-                {
-                    // 记录异常信息，继续处理下一个文件
-                }
-            }
-        );
-        return targetList;
-    }
-
-    //MiniExcel查询：全局查询
-    public static List<(string, string, int, int)> SearchKeyFromExcel(
-        string rootPath,
-        string findValue,
-        bool isMulti = false,
-        bool searchSpecificColumn = false,
-        int specificColumnIndex = 2
-    )
-    {
-        var filesCollection = new SelfExcelFileCollector(rootPath);
-        var files = filesCollection.GetAllExcelFilesPath();
-
-        var targetList = new ConcurrentBag<(string, string, int, int)>();
-        var isAll = findValue.Contains("*");
-        findValue = findValue.Replace("*", "");
-
-        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
-
-        Action<string> processFile = file =>
-        {
-            try
-            {
-                var sheetNames = MiniExcel.GetSheetNames(file);
-                foreach (var sheetName in sheetNames)
-                {
-                    if (sheetName.Contains("#"))
-                        continue;
-
-                    var rows = MiniExcel.Query(file, sheetName: sheetName);
-                    int rowIndex = 1;
-                    foreach (var row in rows)
-                    {
-                        int colIndex = 1;
-                        foreach (var cell in row)
-                        {
-                            if (searchSpecificColumn && colIndex != specificColumnIndex)
-                            {
-                                colIndex++;
-                                continue;
-                            }
-
-                            var cellValue = cell.Value?.ToString();
-                            if (
-                                cellValue != null
-                                && (isAll ? cellValue.Contains(findValue) : cellValue == findValue)
-                            )
-                            {
-                                targetList.Add((file, sheetName, rowIndex, colIndex));
-                            }
-
-                            colIndex++;
-                        }
-
-                        rowIndex++;
-                    }
-                }
-            }
-            catch
-            {
-                // 记录异常信息，继续处理下一个文件
-            }
-        };
-
-        if (isMulti)
-        {
-            Parallel.ForEach(files, options, processFile);
-        }
-        else
-        {
-            foreach (var file in files)
-            {
-                processFile(file);
-            }
-        }
-
-        return targetList.ToList();
-    }
-
-    //MiniExcel查询：同一个表查找多个值
-    public static Dictionary<string, List<string>> SearchKeysFrom1ExcelMulti(
-        string rootPath,
-        List<string> findValues,
-        bool isMulti = true,
-        List<string> returnColumnNames = null,
-        string searchColumnName = "B"
-    )
-    {
-        var sheetNames = MiniExcel.GetSheetNames(rootPath);
-
-        var targetList = new Dictionary<string, List<string>>();
-
-        foreach (var findValue in findValues)
-        {
-            foreach (var sheetName in sheetNames)
-            {
-                if (sheetName.Contains("#") || sheetName.Contains("Sheet") && sheetName != "Sheet1")
-                    continue;
-                var rows = MiniExcel.Query(rootPath, sheetName: sheetName).Cast<IDictionary<string, object>>();
-                var result = rows
-                    .FirstOrDefault(
-                        row => row.ContainsKey(searchColumnName) && row[searchColumnName]?.ToString() == findValue);
-                
-                if (result == null)
-                    continue;
-
-                var returnValue = new List<string>();
-                foreach (var returnColumnName in returnColumnNames)
-                {
-                    returnValue.Add(result[returnColumnName].ToString());
-                }
-
-                targetList[findValue] = returnValue;
-            }
-        }
-
-        return targetList;
-    }
-
-    //MiniExcel查询：全局或指定查询
-    public static Dictionary<string, List<string>> SearchModelKeyMiniExcel(
-        string findValue,
-        string[] files,
-        bool isFixList,
-        bool isMulti
-    )
-    {
-        var targetList = isMulti
-            ? (IDictionary<string, List<string>>)new ConcurrentDictionary<string, List<string>>()
-            : new Dictionary<string, List<string>>();
-        var currentCount = 0;
-        var count = files.Length;
-        var isAll = findValue.Contains("*");
-        findValue = findValue.Replace("*", "");
-
-        Action<string> processFile = file =>
-        {
-            var fileName = Path.GetFileName(file);
-            var sheetFullName = fileName;
-
-            try
-            {
-                var sheetNames = MiniExcel.GetSheetNames(file);
-
-                foreach (var sheetName in sheetNames)
-                {
-                    if (sheetName.Contains("#") || sheetName.Contains("Chart"))
-                        continue;
-
-                    var rows = MiniExcel.Query(
-                        file,
-                        sheetName: sheetName,
-                        startCell: "A2",
-                        useHeaderRow: true
-                    );
-
-                    sheetFullName = fileName.Contains("$") ? $"{fileName}#{sheetName}" : fileName;
-
-                    int rowIndex = 1;
-                    foreach (var row in rows)
-                    {
-                        int colIndex = 1;
-                        foreach (var cell in row)
-                        {
-                            // 只搜索第2列
-                            if (colIndex == 2)
-                            {
-                                var cellValue = cell.Value?.ToString();
-                                if (
-                                    cellValue != null
-                                    && (
-                                        isAll
-                                            ? cellValue.StartsWith(findValue)
-                                            : cellValue == findValue
-                                    )
-                                )
-                                {
-                                    // 确保 targetList 中存在 fileName 键
-                                    if (!targetList.ContainsKey(sheetFullName))
-                                    {
-                                        targetList[sheetFullName] = new List<string>();
-                                    }
-
-                                    targetList[sheetFullName].Add(cellValue);
-                                }
-                            }
-
-                            colIndex++;
-                        }
-
-                        rowIndex++;
-                    }
-
-                    if (targetList.ContainsKey(sheetFullName) && isFixList)
-                    {
-                        var list = targetList[sheetFullName];
-                        if (list.Count > 1)
-                        {
-                            targetList[sheetFullName] = new List<string>
-                            {
-                                list.First(),
-                                list.Last()
-                            };
-                        }
-                        else if (list.Count == 1)
-                        {
-                            list.Add(list.First());
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // 记录异常信息，继续处理下一个文件
-            }
-
-            Interlocked.Increment(ref currentCount);
-            NumDesAddIn.App.StatusBar = $"正在检查第 {currentCount}/{count} 个文件: {file}";
-        };
-
-        if (isMulti)
-        {
-            var options = new ParallelOptions
-            {
-                MaxDegreeOfParallelism = Environment.ProcessorCount
-            };
-            Parallel.ForEach(files, options, processFile);
-        }
-        else
-        {
-            foreach (var file in files)
-            {
-                processFile(file);
-            }
-        }
-
-        return new Dictionary<string, List<string>>(targetList);
-    }
-
-    //MiniExcel查询：全局查询Sheet名
-    public static List<(string, string, int, int)> SearchSheetNameFromExcel(
-        string rootPath,
-        string findValue,
-        bool isMulti = false
-    )
-    {
-        var filesCollection = new SelfExcelFileCollector(rootPath);
-        var files = filesCollection.GetAllExcelFilesPath();
-
-        var targetList = new ConcurrentBag<(string, string, int, int)>();
-        var isAll = findValue.Contains("*");
-        findValue = findValue.Replace("*", "");
-
-        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
-
-        Action<string> processFile = file =>
-        {
-            try
-            {
-                var sheetNames = MiniExcel.GetSheetNames(file);
-                var fileName = Path.GetFileName(file);
-
-                bool isFileMatch = isAll
-                    ? fileName.Contains(findValue + ".xlsx")
-                    : fileName == findValue + ".xlsx";
-
-                bool isSheetMatch(string sheetName) =>
-                    isAll ? sheetName.Contains(findValue) : sheetName == findValue;
-
-                if (isFileMatch)
-                {
-                    targetList.Add((file, sheetNames[0], 1, 1));
-                }
-                else
-                {
-                    foreach (var sheetName in sheetNames)
-                    {
-                        if (sheetName.Contains("#"))
-                            continue;
-
-                        if (isSheetMatch(sheetName))
-                        {
-                            targetList.Add((file, sheetName, 1, 1));
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // 记录异常信息，继续处理下一个文件
-            }
-        };
-
-        if (isMulti)
-        {
-            Parallel.ForEach(files, options, processFile);
-        }
-        else
-        {
-            foreach (var file in files)
-            {
-                processFile(file);
-            }
-        }
-
-        return targetList.ToList();
-    }
-
-    #endregion
 
     //大富翁种
     public static void AliceBigRicherDfs2(string sheetName)
@@ -2189,8 +1727,10 @@ public static class PubMetToExcelFunc
                     var cellValue = row[col]?.ToString();
                     if (cellValue != null)
                     {
-                        if (normalCharactersCheck.Any(c => cellValue.Contains(c)) 
-                            && !typeCell.Contains("string"))
+                        if (
+                            normalCharactersCheck.Any(c => cellValue.Contains(c))
+                            && !typeCell.Contains("string")
+                        )
                         {
                             sourceData.Add(
                                 (cellValue, rowIndex + 1, colIndex + 1, sheetName, "多逗号或中文逗号")
@@ -2447,27 +1987,218 @@ public static class PubMetToExcelFunc
     //去重复制
     public static void FilterRepeatValueCopy(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        var excel = NumDesAddIn.App;
-        var selectRange = excel.Selection;
+        var sw = new Stopwatch();
+        sw.Start();
 
-        if (selectRange == null)
+        //去重
+        var mergedArray = FilterRepeatValue("", "", true);
+        //复制
+        PubMetToExcel.CopyArrayToClipboard(mergedArray);
+
+        sw.Stop();
+        var costTime = sw.Elapsed;
+        NumDesAddIn.App.StatusBar = $"复制完成，用时{costTime}";
+    }
+
+    //首次写入数据（指定范围内数据去重）
+    public static void FirstCopyValue(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        NumDesAddIn.App.ScreenUpdating = false;
+        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
+
+        object[,] copyArray = FilterRepeatValue("C1", "D1");
+        var list = GetExcelListObjects("LTE【基础】", "基础");
+        if (list == null)
+        {
+            MessageBox.Show($"LTE【基础】中的名称表-基础不存在");
+            return;
+        }
+
+        //删除list原始内容
+        list.DataBodyRange.ClearContents();
+        //写入新内容,调整ListObject的行数
+        int newRowCount = copyArray.GetLength(0);
+        list.Resize(list.Range.Resize[newRowCount + 1, list.Range.Columns.Count]);
+        list.DataBodyRange.Value2 = copyArray;
+
+        //删除标记原始内容
+        var sheet = Wk.Worksheets["LTE【基础】"];
+
+        var oldTagRange = sheet.Range["A1:A10000"];
+        oldTagRange.Value2 = null;
+
+        //写入新标记
+        var tagRange = sheet.Range[sheet.Cells[2, 1], sheet.Cells[copyArray.GetLength(0) + 1, 1]];
+        tagRange.Value2 = "+";
+
+        sw.Stop();
+        var costTime = sw.Elapsed;
+
+        NumDesAddIn.App.StatusBar = $"写入完成，用时{costTime}";
+        NumDesAddIn.App.ScreenUpdating = true;
+        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationAutomatic;
+    }
+
+    //多次写入数据（指定范围内数据去重），比对数据，更新数据状态
+    public static void UpdateCopyValue(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        NumDesAddIn.App.ScreenUpdating = false;
+        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
+
+        object[,] copyArray = FilterRepeatValue("C1", "D1");
+        var list = GetExcelListObjects("LTE【基础】", "基础");
+        if (list == null)
+        {
+            MessageBox.Show($"LTE【基础】中的名称表-基础不存在");
+            return;
+        }
+
+        //获取原始list内容
+        object[,] oldListData = list.DataBodyRange.Value2;
+
+        //和新内容进行比对
+        var copyDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(copyArray);
+        var oldListDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(oldListData);
+
+        // 分类处理
+        List<string[]> added = new List<string[]>();
+        List<string[]> deleted = new List<string[]>();
+        List<string[]> modified = new List<string[]>();
+        List<string[]> unchanged = new List<string[]>();
+
+        var addedTag = new List<string>();
+        var deletedTag = new List<string>();
+        var modifiedTag = new List<string>();
+        var unchangedTag = new List<string>();
+
+        // 新增项
+        foreach (var key in copyDic.Keys.Where(k => !oldListDic.ContainsKey(k)))
+        {
+            added.Add(copyDic[key]);
+            addedTag.Add("+");
+        }
+        // 删除项
+        foreach (var key in oldListDic.Keys.Where(k => !copyDic.ContainsKey(k)))
+        {
+            deleted.Add(oldListDic[key]);
+            deletedTag.Add("-");
+        }
+        // 修改/不变项
+        foreach (var key in copyDic.Keys.Intersect(oldListDic.Keys))
+        {
+            var rowNew = copyDic[key];
+            var rowOld = oldListDic[key];
+            bool isModified = false;
+
+            // 从第二列开始比较（索引从1开始）
+            for (int i = 1; i < rowNew.Length; i++)
+            {
+                var newValue = rowNew[i]?.ToString();
+                var oldValue = rowOld[i]?.ToString();
+                if (newValue == null)
+                {
+                    newValue = "";
+                }
+                if (oldValue == null)
+                {
+                    oldValue = "";
+                }
+
+                if (newValue != oldValue)
+                {
+                    isModified = true;
+                    break;
+                }
+            }
+
+            if (isModified)
+            {
+                modified.Add(rowNew);
+                modifiedTag.Add("*");
+            }
+            else
+            {
+                unchanged.Add(rowNew);
+                unchangedTag.Add("#");
+            }
+        }
+        //合并数据转数组
+        List<string[]> dataList = added.Concat(deleted).Concat(modified).Concat(unchanged).ToList();
+
+        var data = PubMetToExcel.ConvertListArrayToTwoArray(dataList) as object[,];
+        //删除list原始内容
+        list.DataBodyRange.ClearContents();
+        //写入新内容,调整ListObject的行数
+        int newRowCount = data.GetLength(0);
+        list.Resize(list.Range.Resize[newRowCount + 1, list.Range.Columns.Count]);
+        list.DataBodyRange.Value2 = data;
+        //删除标记原始内容
+        var sheet = Wk.Worksheets["LTE【基础】"];
+
+        var oldTagRange = sheet.Range["A1:A10000"];
+        oldTagRange.Value2 = null;
+
+        //写入新标记
+        List<string> tagList = addedTag
+            .Concat(deletedTag)
+            .Concat(modifiedTag)
+            .Concat(unchangedTag)
+            .ToList();
+
+        var tagData = PubMetToExcel.ConvertList1ToArray(tagList);
+        int tagRowCount = tagList.Count;
+        var tagRange = sheet.Range[sheet.Cells[2, 1], sheet.Cells[1 + tagRowCount, 1]];
+        tagRange.Value2 = tagData;
+
+        sw.Stop();
+        var costTime = sw.Elapsed;
+        NumDesAddIn.App.StatusBar = $"写入完成，用时{costTime}";
+        NumDesAddIn.App.ScreenUpdating = true;
+        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationAutomatic;
+    }
+
+    //指定列范围的数据去重
+    public static object[,] FilterRepeatValue(string min, string max, bool isSelect = false)
+    {
+        var excel = NumDesAddIn.App;
+
+        var sheet = excel.ActiveSheet as Worksheet;
+
+        Range copyRange;
+        if (!isSelect)
+        {
+            var copyColMin = sheet.Range[min].Value2;
+            var copyColMax = sheet.Range[max].Value2;
+            copyRange = sheet.Range[sheet.Cells[2, copyColMin], sheet.Cells[10000, copyColMax]];
+        }
+        else
+        {
+            copyRange = excel.Selection;
+        }
+        if (copyRange == null)
         {
             // 如果没有选择任何内容，直接返回
-            return;
+            return null;
         }
 
         object[,] mergedArray;
         int index = 0;
         int baseIndex = 0;
 
-        if (selectRange.Areas.Count > 1)
+        if (copyRange.Areas.Count > 1)
         {
-            object[] areas = new object[selectRange.Areas.Count];
+            object[] areas = new object[copyRange.Areas.Count];
 
             // 获取每个区域的数据
-            for (int i = 1; i <= selectRange.Areas.Count; i++)
+            for (int i = 1; i <= copyRange.Areas.Count; i++)
             {
-                areas[i - 1] = selectRange.Areas[i].Value2;
+                areas[i - 1] = copyRange.Areas[i].Value2;
             }
 
             // 按列合并
@@ -2475,14 +2206,486 @@ public static class PubMetToExcelFunc
         }
         else
         {
-            mergedArray = selectRange.Value2;
+            mergedArray = copyRange.Value2;
             index = 1;
             baseIndex = 1;
         }
 
         //去重
-        mergedArray = PubMetToExcel.FilterRepeatValue(mergedArray, index, false, baseIndex);
-        //复制
-        PubMetToExcel.CopyArrayToClipboard(mergedArray);
+        mergedArray = PubMetToExcel.CleanRepeatValue(mergedArray, index, false, baseIndex);
+        return mergedArray;
     }
+
+    //获取指定表的名称表
+    public static ListObject GetExcelListObjects(string sheetName, string listName)
+    {
+        var sheet = Wk.Worksheets[sheetName];
+        var lisObjs = sheet.ListObjects;
+        // 获取ListObject并操作
+        ListObject listObj = sheet.ListObjects[listName];
+        return listObj;
+    }
+
+    #region Excel数据查找
+
+    //Epplus
+    public static List<(string, string, int, int)> SearchKeyFromExcel(
+        string rootPath,
+        string findValue
+    )
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        var filesCollection = new SelfExcelFileCollector(rootPath);
+        var files = filesCollection.GetAllExcelFilesPath();
+
+        var targetList = new List<(string, string, int, int)>();
+        var currentCount = 0;
+        var count = files.Length;
+        var isAll = findValue.Contains("*");
+        findValue = findValue.Replace("*", "");
+        foreach (var file in files)
+        {
+            try
+            {
+                using (var package = new ExcelPackage(new FileInfo(file)))
+                {
+                    try
+                    {
+                        var wk = package.Workbook;
+                        for (var sheetIndex = 0; sheetIndex < wk.Worksheets.Count; sheetIndex++)
+                        {
+                            var sheet = wk.Worksheets[sheetIndex];
+                            if (
+                                sheet.Name.Contains("#")
+                                || sheet.Name.Contains("Sheet") && sheet.Name != "Sheet1"
+                            )
+                                continue;
+                            int rowMax = Math.Max(sheet.Dimension.End.Row, 4);
+                            int colMax = Math.Max(sheet.Dimension.End.Column, 2);
+                            for (var col = 2; col <= colMax; col++)
+                            for (var row = 4; row <= rowMax; row++)
+                            {
+                                var cellValue = sheet.Cells[row, col].Value?.ToString();
+                                var cellAddress = new ExcelCellAddress(row, col);
+                                var cellCol = cellAddress.Column;
+                                var cellRow = cellAddress.Row;
+
+                                if (
+                                    cellValue != null
+                                    && (
+                                        isAll
+                                            ? cellValue.Contains(findValue)
+                                            : cellValue == findValue
+                                    )
+                                )
+                                {
+                                    targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                }
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // 记录异常信息，继续处理下一个文件
+                    }
+                }
+            }
+            catch
+            {
+                // 记录异常信息，继续处理下一个文件
+            }
+
+            currentCount++;
+            NumDesAddIn.App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
+        }
+
+        return targetList;
+    }
+
+    public static List<(string, string, int, int)> SearchKeyFromExcelMulti(
+        string rootPath,
+        string findValue
+    )
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        var filesCollection = new SelfExcelFileCollector(rootPath);
+        var files = filesCollection.GetAllExcelFilesPath();
+
+        var targetList = new List<(string, string, int, int)>();
+        var isAll = findValue.Contains("*");
+        findValue = findValue.Replace("*", "");
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+        Parallel.ForEach(
+            files,
+            options,
+            file =>
+            {
+                try
+                {
+                    using (var package = new ExcelPackage(new FileInfo(file)))
+                    {
+                        try
+                        {
+                            var wk = package.Workbook;
+                            for (var sheetIndex = 0; sheetIndex < wk.Worksheets.Count; sheetIndex++)
+                            {
+                                var sheet = wk.Worksheets[sheetIndex];
+                                if (
+                                    sheet.Name.Contains("#")
+                                    || sheet.Name.Contains("Sheet") && sheet.Name != "Sheet1"
+                                )
+                                    continue;
+                                int rowMax = Math.Max(sheet.Dimension.End.Row, 4);
+                                int colMax = Math.Max(sheet.Dimension.End.Column, 2);
+                                for (var col = 2; col <= colMax; col++)
+                                for (var row = 4; row <= rowMax; row++)
+                                {
+                                    var cellValue = sheet.Cells[row, col].Value?.ToString();
+                                    var cellAddress = new ExcelCellAddress(row, col);
+                                    var cellCol = cellAddress.Column;
+                                    var cellRow = cellAddress.Row;
+
+                                    if (
+                                        cellValue != null
+                                        && (
+                                            isAll
+                                                ? cellValue.Contains(findValue)
+                                                : cellValue == findValue
+                                        )
+                                    )
+                                    {
+                                        targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                    }
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // 记录异常信息，继续处理下一个文件
+                        }
+                    }
+                }
+                catch
+                {
+                    // 记录异常信息，继续处理下一个文件
+                }
+            }
+        );
+        return targetList;
+    }
+
+    //MiniExcel查询：全局查询
+    public static List<(string, string, int, int)> SearchKeyFromExcel(
+        string rootPath,
+        string findValue,
+        bool isMulti = false,
+        bool searchSpecificColumn = false,
+        int specificColumnIndex = 2
+    )
+    {
+        var filesCollection = new SelfExcelFileCollector(rootPath);
+        var files = filesCollection.GetAllExcelFilesPath();
+
+        var targetList = new ConcurrentBag<(string, string, int, int)>();
+        var isAll = findValue.Contains("*");
+        findValue = findValue.Replace("*", "");
+
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+        Action<string> processFile = file =>
+        {
+            try
+            {
+                var sheetNames = MiniExcel.GetSheetNames(file);
+                foreach (var sheetName in sheetNames)
+                {
+                    if (sheetName.Contains("#"))
+                        continue;
+
+                    var rows = MiniExcel.Query(file, sheetName: sheetName);
+                    int rowIndex = 1;
+                    foreach (var row in rows)
+                    {
+                        int colIndex = 1;
+                        foreach (var cell in row)
+                        {
+                            if (searchSpecificColumn && colIndex != specificColumnIndex)
+                            {
+                                colIndex++;
+                                continue;
+                            }
+
+                            var cellValue = cell.Value?.ToString();
+                            if (
+                                cellValue != null
+                                && (isAll ? cellValue.Contains(findValue) : cellValue == findValue)
+                            )
+                            {
+                                targetList.Add((file, sheetName, rowIndex, colIndex));
+                            }
+
+                            colIndex++;
+                        }
+
+                        rowIndex++;
+                    }
+                }
+            }
+            catch
+            {
+                // 记录异常信息，继续处理下一个文件
+            }
+        };
+
+        if (isMulti)
+        {
+            Parallel.ForEach(files, options, processFile);
+        }
+        else
+        {
+            foreach (var file in files)
+            {
+                processFile(file);
+            }
+        }
+
+        return targetList.ToList();
+    }
+
+    //MiniExcel查询：同一个表查找多个值
+    public static Dictionary<string, List<string>> SearchKeysFrom1ExcelMulti(
+        string rootPath,
+        List<string> findValues,
+        bool isMulti = true,
+        List<string> returnColumnNames = null,
+        string searchColumnName = "B"
+    )
+    {
+        var sheetNames = MiniExcel.GetSheetNames(rootPath);
+
+        var targetList = new Dictionary<string, List<string>>();
+
+        foreach (var findValue in findValues)
+        {
+            foreach (var sheetName in sheetNames)
+            {
+                if (sheetName.Contains("#") || sheetName.Contains("Sheet") && sheetName != "Sheet1")
+                    continue;
+                var rows = MiniExcel
+                    .Query(rootPath, sheetName: sheetName)
+                    .Cast<IDictionary<string, object>>();
+                var result = rows.FirstOrDefault(row =>
+                    row.ContainsKey(searchColumnName)
+                    && row[searchColumnName]?.ToString() == findValue
+                );
+
+                if (result == null)
+                    continue;
+
+                var returnValue = new List<string>();
+                foreach (var returnColumnName in returnColumnNames)
+                {
+                    returnValue.Add(result[returnColumnName].ToString());
+                }
+
+                targetList[findValue] = returnValue;
+            }
+        }
+
+        return targetList;
+    }
+
+    //MiniExcel查询：全局或指定查询
+    public static Dictionary<string, List<string>> SearchModelKeyMiniExcel(
+        string findValue,
+        string[] files,
+        bool isFixList,
+        bool isMulti
+    )
+    {
+        var targetList = isMulti
+            ? (IDictionary<string, List<string>>)new ConcurrentDictionary<string, List<string>>()
+            : new Dictionary<string, List<string>>();
+        var currentCount = 0;
+        var count = files.Length;
+        var isAll = findValue.Contains("*");
+        findValue = findValue.Replace("*", "");
+
+        Action<string> processFile = file =>
+        {
+            var fileName = Path.GetFileName(file);
+            var sheetFullName = fileName;
+
+            try
+            {
+                var sheetNames = MiniExcel.GetSheetNames(file);
+
+                foreach (var sheetName in sheetNames)
+                {
+                    if (sheetName.Contains("#") || sheetName.Contains("Chart"))
+                        continue;
+
+                    var rows = MiniExcel.Query(
+                        file,
+                        sheetName: sheetName,
+                        startCell: "A2",
+                        useHeaderRow: true
+                    );
+
+                    sheetFullName = fileName.Contains("$") ? $"{fileName}#{sheetName}" : fileName;
+
+                    int rowIndex = 1;
+                    foreach (var row in rows)
+                    {
+                        int colIndex = 1;
+                        foreach (var cell in row)
+                        {
+                            // 只搜索第2列
+                            if (colIndex == 2)
+                            {
+                                var cellValue = cell.Value?.ToString();
+                                if (
+                                    cellValue != null
+                                    && (
+                                        isAll
+                                            ? cellValue.StartsWith(findValue)
+                                            : cellValue == findValue
+                                    )
+                                )
+                                {
+                                    // 确保 targetList 中存在 fileName 键
+                                    if (!targetList.ContainsKey(sheetFullName))
+                                    {
+                                        targetList[sheetFullName] = new List<string>();
+                                    }
+
+                                    targetList[sheetFullName].Add(cellValue);
+                                }
+                            }
+
+                            colIndex++;
+                        }
+
+                        rowIndex++;
+                    }
+
+                    if (targetList.ContainsKey(sheetFullName) && isFixList)
+                    {
+                        var list = targetList[sheetFullName];
+                        if (list.Count > 1)
+                        {
+                            targetList[sheetFullName] = new List<string>
+                            {
+                                list.First(),
+                                list.Last()
+                            };
+                        }
+                        else if (list.Count == 1)
+                        {
+                            list.Add(list.First());
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // 记录异常信息，继续处理下一个文件
+            }
+
+            Interlocked.Increment(ref currentCount);
+            NumDesAddIn.App.StatusBar = $"正在检查第 {currentCount}/{count} 个文件: {file}";
+        };
+
+        if (isMulti)
+        {
+            var options = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount
+            };
+            Parallel.ForEach(files, options, processFile);
+        }
+        else
+        {
+            foreach (var file in files)
+            {
+                processFile(file);
+            }
+        }
+
+        return new Dictionary<string, List<string>>(targetList);
+    }
+
+    //MiniExcel查询：全局查询Sheet名
+    public static List<(string, string, int, int)> SearchSheetNameFromExcel(
+        string rootPath,
+        string findValue,
+        bool isMulti = false
+    )
+    {
+        var filesCollection = new SelfExcelFileCollector(rootPath);
+        var files = filesCollection.GetAllExcelFilesPath();
+
+        var targetList = new ConcurrentBag<(string, string, int, int)>();
+        var isAll = findValue.Contains("*");
+        findValue = findValue.Replace("*", "");
+
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+        Action<string> processFile = file =>
+        {
+            try
+            {
+                var sheetNames = MiniExcel.GetSheetNames(file);
+                var fileName = Path.GetFileName(file);
+
+                bool isFileMatch = isAll
+                    ? fileName.Contains(findValue + ".xlsx")
+                    : fileName == findValue + ".xlsx";
+
+                bool isSheetMatch(string sheetName) =>
+                    isAll ? sheetName.Contains(findValue) : sheetName == findValue;
+
+                if (isFileMatch)
+                {
+                    targetList.Add((file, sheetNames[0], 1, 1));
+                }
+                else
+                {
+                    foreach (var sheetName in sheetNames)
+                    {
+                        if (sheetName.Contains("#"))
+                            continue;
+
+                        if (isSheetMatch(sheetName))
+                        {
+                            targetList.Add((file, sheetName, 1, 1));
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // 记录异常信息，继续处理下一个文件
+            }
+        };
+
+        if (isMulti)
+        {
+            Parallel.ForEach(files, options, processFile);
+        }
+        else
+        {
+            foreach (var file in files)
+            {
+                processFile(file);
+            }
+        }
+
+        return targetList.ToList();
+    }
+
+    #endregion
 }
