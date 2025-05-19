@@ -4,6 +4,7 @@ using System.Data.OleDb;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.Office.Interop.Excel;
 using OfficeOpenXml;
 using DataTable = System.Data.DataTable;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
@@ -274,6 +275,20 @@ public static class PubMetToExcel
         return -1;
     }
 
+    public static int FindSourceRowBlur(ExcelWorksheet sheet, int col, Regex regexValue)
+    {
+        var searchRange = sheet.Cells[2, col, sheet.Dimension.End.Row, col];
+        var lastMatch = searchRange
+            .Reverse()
+            .FirstOrDefault(c => c.Value != null && regexValue.IsMatch(c.Value.ToString()));
+
+        var rowIndex = -1;
+        if (lastMatch != null)
+        {
+            rowIndex = lastMatch.Start.Row;
+        }
+        return -1;
+    }
     #endregion
 
     #region C-API与Excel
