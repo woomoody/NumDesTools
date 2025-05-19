@@ -25,10 +25,8 @@ global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using ExcelDna.Registration;
 using Microsoft.Office.Core;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -396,8 +394,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             MessageBox.Show(ex.Message);
         }
     }
-
-    [ExcelCommand(ShortCut = "^%n")] // 快捷键设置为 Ctrl+Alt+N
+    //Ctrl+Alt+N，查找资源Icon
+    [ExcelCommand(ShortCut = "^%n")] 
     public static void ExtractLongNumberAndSearchImage()
     {
         try
