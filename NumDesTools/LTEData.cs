@@ -123,11 +123,10 @@ public class LteData
 
         if (baseSheetName.Contains("【基础】"))
         {
-  
-                //走【基础】表逻辑
-                id = "数据编号";
-                idType = "类型";
-                BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
+            //走【基础】表逻辑
+            id = "数据编号";
+            idType = "类型";
+            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
         }
         else if (baseSheetName.Contains("【任务】"))
         {
@@ -143,7 +142,6 @@ public class LteData
             idType = "类型";
             BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
         }
-
         else if (baseSheetName.Contains("【通用】"))
         {
             //走【基础】表逻辑
@@ -278,18 +276,17 @@ public class LteData
 
         if (baseSheetName.Contains("【基础】"))
         {
-
             //走【基础】表逻辑
             id = "数据编号";
             idType = "类型";
 
+            //自选新增数据，否则全量数据
             var keysToFilter = GetCellValuesFromUserInput("【基础】");
             if (keysToFilter != null)
             {
                 baseData = FilterBySpecifiedKeyAndSyncPositions(baseData, id, keysToFilter);
             }
             BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
-
         }
         else if (baseSheetName.Contains("【任务】"))
         {
@@ -305,7 +302,6 @@ public class LteData
             idType = "类型";
             BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
         }
-
         else if (baseSheetName.Contains("【通用】"))
         {
             //走【基础】表逻辑
@@ -321,7 +317,8 @@ public class LteData
     private static Dictionary<string, List<object>> FilterBySpecifiedKeyAndSyncPositions(
         Dictionary<string, List<object>> baseData,
         string targetKey,
-        List<string> cellValues)
+        List<string> cellValues
+    )
     {
         // 如果 baseData 不包含目标 Key，直接返回空字典
         if (!baseData.ContainsKey(targetKey))
@@ -353,9 +350,7 @@ public class LteData
         foreach (var kv in baseData)
         {
             // 对每个 Key 的 List，只保留 matchedIndices 对应的元素
-            List<object> filteredList = matchedIndices
-                .Select(i => kv.Value[i])
-                .ToList();
+            List<object> filteredList = matchedIndices.Select(i => kv.Value[i]).ToList();
 
             filteredData.Add(kv.Key, filteredList);
         }
@@ -364,13 +359,10 @@ public class LteData
     }
 
     //获取用户输入的单元格值
-    private static  List<string> GetCellValuesFromUserInput(string sheetName)
+    private static List<string> GetCellValuesFromUserInput(string sheetName)
     {
-        Range selectedRange = NumDesAddIn.App.InputBox(
-            $"请用鼠标选择{sheetName}单元格（Ctr，可多选）",
-            "选择单元格",
-            Type: 8
-        ) as Range;
+        Range selectedRange =
+            NumDesAddIn.App.InputBox($"请用鼠标选择{sheetName}单元格（Ctr，可多选）", "选择单元格", Type: 8) as Range;
 
         if (selectedRange == null)
         {
@@ -395,6 +387,7 @@ public class LteData
 
         return cellValues;
     }
+
     private static void BaseSheet(
         Dictionary<string, List<object>> baseData,
         Dictionary<string, string> exportWildcardData,
@@ -409,6 +402,36 @@ public class LteData
 
         var idList = baseData[id];
         var typeList = baseData[idType];
+
+        //过滤id和type，只针对有增删改的数据进行导出
+        List<object> dataStatusList = null;
+        List<object> dataStatusListNew = null;
+
+        if (baseData.ContainsKey("数据状态"))
+        {
+            dataStatusList = baseData["数据状态"];
+        }
+        if (dataStatusList != null)
+        {
+            var combined = idList
+                .Zip(typeList, (dataId, type) => new { id = dataId, type })
+                .Zip(
+                    dataStatusList,
+                    (first, status) =>
+                        new
+                        {
+                            first.id,
+                            first.type,
+                            status
+                        }
+                )
+                .Where(x => x.status?.ToString() is "+" or "-" or "*")
+                .ToList();
+
+            idList = combined.Select(x => x.id).ToList();
+            typeList = combined.Select(x => x.type).ToList();
+            dataStatusListNew = combined.Select(x => x.status).ToList();
+        }
 
         //替换通配符生成数据
 
@@ -441,6 +464,7 @@ public class LteData
                 var exportWildcardDyData = new Dictionary<string, string>(exportWildcardData);
 
                 bool dataWritten = false; // 标志是否有实际写入
+
                 var dataRepeatWritten = new HashSet<string>();
 
                 for (int idCount = 0; idCount < idList.Count; idCount++)
@@ -451,6 +475,58 @@ public class LteData
                     string itemType = typeList[idCount]?.ToString() ?? "";
 
                     var writeRow = targetSheet.Dimension.End.Row + 1;
+
+                    if (dataStatusListNew != null)
+                    {
+                        //查找ID是否存在
+                        var rowIndex = PubMetToExcel.FindSourceRow(targetSheet, 2, itemId);
+                        //如果存在且标识为删除，则删除，不进行写入，标识为修改则进行写入
+                        if (rowIndex != -1)
+                        {
+                            if ((string)dataStatusListNew[idCount] == "-")
+                            {
+                                targetSheet.DeleteRow(rowIndex);
+                                continue;
+                            }
+
+                            if ((string)dataStatusListNew[idCount] == "*")
+                            {
+                                writeRow = rowIndex;
+                            }
+
+                            else
+                            {
+                                //带#的已经写入过，不需要再写入
+                                continue;
+                            }
+                        }
+                        //如果不存在，则需要寻找本表相似ID最大行，依次写入
+                        else
+                        {
+                            if ((string)dataStatusListNew[idCount] == "-")
+                            {
+                                //跳过标记为删除，但目标表也不存在的数据
+                                continue;
+                            }
+
+                            var activeId = itemId.Substring(0, 6);
+                            var regexSearch = new Regex($"^{activeId}\\d{{4}}$");
+                            var baseWriteRow = PubMetToExcel.FindSourceRowBlur(
+                                targetSheet,
+                                2,
+                                regexSearch
+                            );
+                            if (baseWriteRow != -1)
+                            {
+                                if (writeRow != baseWriteRow + 1)
+                                {
+                                    //需要插入行
+                                    targetSheet.InsertRow(baseWriteRow, 1);
+                                    writeRow = baseWriteRow + 1;
+                                }
+                            }
+                        }
+                    }
                     //更新动态值
                     foreach (var wildcardDy in exportWildcardData)
                     {
@@ -462,8 +538,6 @@ public class LteData
                             idCount
                         );
                     }
-
-           
 
                     for (int j = 2; j <= writeCol; j++)
                     {
@@ -506,7 +580,6 @@ public class LteData
                             var cell = targetSheet.Cells[writeRow, j];
                             cell.Value = cellRealValue;
                             dataWritten = true;
-
                         }
                     }
                 }
@@ -516,7 +589,8 @@ public class LteData
                 }
             }
 
-            if (targetSheet != null) targetSheet.Dispose();
+            if (targetSheet != null)
+                targetSheet.Dispose();
         }
         //输出字典数据
         if (strDictionary.Count > 0)
@@ -525,7 +599,6 @@ public class LteData
             string filePath = Path.Combine(documentsPath, "strDic.csv");
             SaveDictionaryToFile(strDictionary, filePath);
         }
-
     }
 
     //分析Cell中通配符构成
@@ -577,7 +650,15 @@ public class LteData
                 "Ads" => Ads(exportWildcardDyData, funDepends, funDy1),
                 "Arr" => Arr(exportWildcardDyData, funDepends, funDy1, funDy2),
                 "Get" => Get(exportWildcardDyData, funDepends, funDy1, funDy2),
-                "GetDic" => GetDic(strDictionary, exportWildcardDyData , funDepends , funDy1 , funDy2, funDy3),
+                "GetDic"
+                    => GetDic(
+                        strDictionary,
+                        exportWildcardDyData,
+                        funDepends,
+                        funDy1,
+                        funDy2,
+                        funDy3
+                    ),
                 "GetDicKey" => GetDicKey(funDepends),
                 //获取动态值
                 "Var" => exportWildcardDyData[wildcard],
@@ -796,20 +877,20 @@ public class LteData
         funDy1 = string.IsNullOrEmpty(funDy1) ? "物品编号" : funDy1;
         funDy2 = string.IsNullOrEmpty(funDy2) ? "2" : funDy2;
         funDy3 = string.IsNullOrEmpty(funDy3) ? "00" : funDy1;
-        var baseDicKey = exportWildcardDyData[funDy1]
-            .Substring(0, exportWildcardDyData[funDy1].Length - int.Parse(funDy2)) + funDy3;
+        var baseDicKey =
+            exportWildcardDyData[funDy1]
+                .Substring(0, exportWildcardDyData[funDy1].Length - int.Parse(funDy2)) + funDy3;
         var dependsDicValue = strDictionary[funDepends];
         var dependsValueList = dependsDicValue[baseDicKey];
         // 去重并按照数字从小到大排序
         List<string> distinctSortedNumbers = dependsValueList
-            .Distinct()                      // 去重
-            .OrderBy(n => long.Parse(n))       // 按照数字从小到大排序
-            .ToList();                        // 转换回 List
+            .Distinct() // 去重
+            .OrderBy(n => long.Parse(n)) // 按照数字从小到大排序
+            .ToList(); // 转换回 List
         return string.Join(",", distinctSortedNumbers);
     }
-    private static string GetDicKey(
-        string funDepends
-    )
+
+    private static string GetDicKey(string funDepends)
     {
         //读取本地存储数据
         string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -818,6 +899,7 @@ public class LteData
         var dependsDicValue = fileDicData[funDepends];
         return string.Join(",", dependsDicValue.Keys);
     }
+
     //获取动态值
     private static void GetDyWildcardValue(
         Dictionary<string, List<object>> baseData,
@@ -888,8 +970,11 @@ public class LteData
             }
         }
     }
+
     //文件输出到strDic
-    private static Dictionary<string, Dictionary<string, List<string>>> LoadDictionaryFromFile(string filePath)
+    private static Dictionary<string, Dictionary<string, List<string>>> LoadDictionaryFromFile(
+        string filePath
+    )
     {
         var dictionary = new Dictionary<string, Dictionary<string, List<string>>>();
 

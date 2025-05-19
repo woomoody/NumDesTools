@@ -2027,7 +2027,7 @@ public static class PubMetToExcelFunc
         //删除标记原始内容
         var sheet = Wk.Worksheets["LTE【基础】"];
 
-        var oldTagRange = sheet.Range["A1:A10000"];
+        var oldTagRange = sheet.Range["A2:A10000"];
         oldTagRange.Value2 = null;
 
         //写入新标记
@@ -2141,7 +2141,7 @@ public static class PubMetToExcelFunc
         //删除标记原始内容
         var sheet = Wk.Worksheets["LTE【基础】"];
 
-        var oldTagRange = sheet.Range["A1:A10000"];
+        var oldTagRange = sheet.Range["A2:A10000"];
         oldTagRange.Value2 = null;
 
         //写入新标记
