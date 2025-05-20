@@ -726,7 +726,7 @@ public static class PubMetToExcel
         {
             var value = data[i][dicKeyCol];
 
-            if (value == null)
+            if (value == null || value == string.Empty)
                 continue;
 
             var values = new object[valueRowCount, valueColCount];

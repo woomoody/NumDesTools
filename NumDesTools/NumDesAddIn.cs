@@ -394,8 +394,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             MessageBox.Show(ex.Message);
         }
     }
+
     //Ctrl+Alt+N，查找资源Icon
-    [ExcelCommand(ShortCut = "^%n")] 
+    [ExcelCommand(ShortCut = "^%n")]
     public static void ExtractLongNumberAndSearchImage()
     {
         try
@@ -486,6 +487,58 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
     }
 
+    //Ctrl+Alt+G，帮助GIF
+    [ExcelCommand(ShortCut = "^%g")]
+    public static void LteItemTypeHelpGifShow()
+    {
+        try
+        {
+            //构建相对路径-搜索
+            var workbookPath = App.ActiveWorkbook.Path;
+            var contentPath = string.Concat(Enumerable.Repeat("../", 1)) + "/tablestools/alicehelp";
+            var searchContent = Path.GetFullPath(Path.Combine(workbookPath, contentPath))
+                .Replace("/", @"\");
+
+            // 获取当前选中区域
+            Range selectedRange = App.Selection;
+
+            var selectDic = new Dictionary<string, List<string>>();
+
+            foreach (Range cell in selectedRange)
+            {
+                string selectValue = cell.Value2?.ToString();
+                if (!string.IsNullOrEmpty(selectValue) && !selectDic.ContainsKey(selectValue))
+                {
+                    selectDic[selectValue] = new List<string> 
+                    {
+                        "图片备注",
+                        "点击↓↓链接打开图片",
+                        Path.Combine(searchContent, $"{selectValue}.gif") 
+                    };
+                }
+            }
+
+            var ctpName = "图片预览";
+            NumDesCTP.DeleteCTP(true, ctpName);
+            var _ = (ImagePreviewControl)
+                NumDesCTP.ShowCTP(
+                    600,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new ImagePreviewControl(selectDic),
+                    MsoCTPDockPosition.msoCTPDockPositionLeft
+                );
+
+            // 步骤5：记录操作日志（参考原始代码）
+            LogDisplay.RecordLine($"[{DateTime.Now}] 提取到{selectDic.Count}张匹配图片");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"操作失败：{ex.Message}");
+            LogDisplay.RecordLine($"[{DateTime.Now}] 错误：{ex.Message}");
+        }
+    }
     #endregion
 
     #region Ribbon点击命令
