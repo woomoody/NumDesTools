@@ -33,6 +33,7 @@ namespace NumDesTools.UI
             );
             DataContext = this;
         }
+
         private void OpenPopup(object sender, MouseButtonEventArgs e)
         {
             if (sender is Image img && img.DataContext is ImageItemViewModel item)
@@ -50,29 +51,66 @@ namespace NumDesTools.UI
             ImagePopup.IsOpen = false;
         }
 
-
         private void TextBlock_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (sender is TextBlock textBlock &&
-                textBlock.DataContext is ImageItemViewModel item &&
-                File.Exists(item.ImagePath))
+            if (
+                sender is TextBlock textBlock
+                && textBlock.DataContext is ImageItemViewModel item
+                && File.Exists(item.ImagePath)
+            )
             {
-                var filePath = Path.Combine(Path.GetDirectoryName(item.ImagePath), Path.GetFileName(item.ImagePath));
+                var filePath = Path.Combine(
+                    Path.GetDirectoryName(item.ImagePath),
+                    Path.GetFileName(item.ImagePath)
+                );
                 try
                 {
-                    Process.Start("explorer.exe", $"/select,\"{filePath}\"");
+                    ////打开文件位置
+                    //if (!IsExplorerViewingPath(item.ImagePath))
+                    //{
+                    //    Process.Start("explorer.exe", $"/select,\"{filePath}\"");
+                    //}
+                    //打开文件
+                    Process.Start(
+                        new ProcessStartInfo
+                        {
+                            FileName = item.ImagePath,
+                            UseShellExecute = true // 使用系统关联程序打开[4,5](@ref)
+                        }
+                    );
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"无法打开文件位置：{ex.Message}", "错误",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show(
+                        $"无法打开文件位置：{ex.Message}",
+                        "错误",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error
+                    );
                 }
             }
         }
+
+        //private bool IsExplorerViewingPath(string path)
+        //{
+        //    var dirPath = Path.GetDirectoryName(path);
+        //    foreach (var proc in Process.GetProcessesByName("explorer"))
+        //    {
+        //        try
+        //        {
+        //            if (proc.MainWindowTitle.Contains(dirPath, StringComparison.OrdinalIgnoreCase))
+        //                return true;
+        //        }
+        //        catch
+        //        { /* 忽略权限异常 */
+        //        }
+        //    }
+        //    return false;
+        //}
     }
+
     public class ImageItemViewModel : INotifyPropertyChanged
     {
-
         public string ImageId { get; set; }
         public string ImageContent { get; set; }
         public string DataId { get; set; }
@@ -99,23 +137,32 @@ namespace NumDesTools.UI
 
             try
             {
-                var bitmap = await Task.Run(() =>
-                {
-                    if (!File.Exists(ImagePath)) throw new FileNotFoundException();
-                    var bitmap = new BitmapImage();
-                    bitmap.BeginInit();
-                    bitmap.UriSource = new Uri(ImagePath);
-                    bitmap.DecodePixelWidth = 200;
-                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                    bitmap.EndInit();
-                    bitmap.Freeze();
-                    return bitmap;
-                }, _thumbnailCts.Token);
+                var bitmap = await Task.Run(
+                    () =>
+                    {
+                        if (!File.Exists(ImagePath))
+                        {
+                            var sourcePath = Path.GetDirectoryName(ImagePath);
+                            ImagePath = Path.Combine(sourcePath, "默认.gif");
+                        }
+                        var bitmap = new BitmapImage();
+                        bitmap.BeginInit();
+                        bitmap.UriSource = new Uri(ImagePath);
+                        bitmap.DecodePixelWidth = 200;
+                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                        bitmap.EndInit();
+                        bitmap.Freeze();
+                        return bitmap;
+                    },
+                    _thumbnailCts.Token
+                );
 
                 Thumbnail = bitmap;
                 OnPropertyChanged(nameof(Thumbnail));
             }
-            catch (OperationCanceledException) { /* 正常取消 */ }
+            catch (OperationCanceledException)
+            { /* 正常取消 */
+            }
             catch (Exception ex)
             {
                 MessageBox.Show($"缩略图加载失败: {ex.Message}");
@@ -143,10 +190,12 @@ namespace NumDesTools.UI
         //}
 
         public event PropertyChangedEventHandler PropertyChanged;
+
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
         // ImageItemViewModel 增加释放逻辑
         ~ImageItemViewModel()
         {
