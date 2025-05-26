@@ -1270,6 +1270,32 @@ public static class PubMetToExcel
         return twoDArray;
     }
 
+    public static object[,] ConvertListToArray(List<List<string>> listOfLists)
+    {
+        // 获取行数
+        var rowCount = listOfLists.Count;
+
+        // 获取最大列数（找出最长的子列表）
+        var colCount = listOfLists.Max(innerList => innerList.Count);
+
+        // 初始化二维数组
+        var twoDArray = new object[rowCount, colCount];
+
+        // 遍历每个子列表
+        for (var i = 0; i < rowCount; i++)
+        {
+            var innerList = listOfLists[i];
+
+            for (var j = 0; j < colCount; j++)
+            {
+                // 如果当前列索引超出子列表长度，补充空值（null 或 ""）
+                twoDArray[i, j] = j < innerList.Count ? innerList[j] : null;
+            }
+        }
+
+        return twoDArray;
+    }
+
     //一维List转二维数组
     public static object[,] ConvertList1ToArray(List<object> listOfLists)
     {
@@ -1461,30 +1487,31 @@ public static class PubMetToExcel
     }
 
     //二维数组字典化-首列为Key，0开始
-    public static Dictionary<string, string[]> TwoDArrayToDictionaryFirstKey(object[,] array)
+    public static Dictionary<string, List<string>> TwoDArrayToDictionaryFirstKey(object[,] array)
     {
-        var dict = new Dictionary<string, string[]>();
+        var dict = new Dictionary<string, List<string>>();
         for (int i = 0; i < array.GetLength(0); i++)
         {
             string key = array[i, 0].ToString();
-            string[] row = new string[array.GetLength(1)];
+
+            var row = new List<string>();
             for (int j = 0; j < array.GetLength(1); j++)
-                row[j] = array[i, j]?.ToString();
+                row.Add(array[i, j]?.ToString());
             dict[key] = row;
         }
         return dict;
     }
 
-    //二维数组字典化-首列为Key,ExcelRange对象，1老手
-    public static Dictionary<string, string[]> TwoDArrayToDictionaryFirstKey1(object[,] array)
+    //二维数组字典化-首列为Key,ExcelRange对象，1开始
+    public static Dictionary<string, List<string>> TwoDArrayToDictionaryFirstKey1(object[,] array)
     {
-        var dict = new Dictionary<string, string[]>();
+        var dict = new Dictionary<string, List<string>>();
         for (int i = 1; i <= array.GetLength(0); i++)
         {
             string key = array[i, 1].ToString();
-            string[] row = new string[array.GetLength(1)];
+            var row = new List<string>();
             for (int j = 1; j <= array.GetLength(1); j++)
-                row[j - 1] = array[i, j]?.ToString();
+                row.Add(array[i, j]?.ToString());
             dict[key] = row;
         }
         return dict;

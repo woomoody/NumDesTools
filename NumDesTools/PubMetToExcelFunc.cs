@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using Microsoft.VisualStudio.OLE.Interop;
 using MiniExcelLibs;
 using NLua;
 using NumDesTools.Config;
@@ -2010,12 +2011,23 @@ public static class PubMetToExcelFunc
         NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
 
         object[,] copyArray = FilterRepeatValue("C1", "D1");
+
         var list = GetExcelListObjects("LTE【基础】", "基础");
         if (list == null)
         {
             MessageBox.Show($"LTE【基础】中的名称表-基础不存在");
             return;
         }
+        //原始数据修改依赖数据
+        var dataTypeList = GetExcelListObjects("#各类枚举", "数据类型");
+        if (dataTypeList == null)
+        {
+            MessageBox.Show($"#各类枚举 中的名称表-数据类型-不存在");
+            return;
+        }
+
+        //原始数据修改
+        copyArray = BaseArrayFix(copyArray , dataTypeList);
 
         //删除list原始内容
         list.DataBodyRange.ClearContents();
@@ -2059,6 +2071,17 @@ public static class PubMetToExcelFunc
             return;
         }
 
+        //原始数据修改依赖数据
+        var dataTypeList = GetExcelListObjects("#各类枚举", "数据类型");
+        if (dataTypeList == null)
+        {
+            MessageBox.Show($"#各类枚举 中的名称表-数据类型-不存在");
+            return;
+        }
+
+        //原始数据修改
+        copyArray = BaseArrayFix(copyArray , dataTypeList);
+
         //获取原始list内容
         object[,] oldListData = list.DataBodyRange.Value2;
 
@@ -2067,10 +2090,10 @@ public static class PubMetToExcelFunc
         var oldListDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(oldListData);
 
         // 分类处理
-        List<string[]> added = new List<string[]>();
-        List<string[]> deleted = new List<string[]>();
-        List<string[]> modified = new List<string[]>();
-        List<string[]> unchanged = new List<string[]>();
+        var added = new List<List<string>>();
+        var deleted = new List<List<string>>();
+        var modified = new List<List<string>>();
+        var unchanged = new List<List<string>>();
 
         var addedTag = new List<string>();
         var deletedTag = new List<string>();
@@ -2096,8 +2119,8 @@ public static class PubMetToExcelFunc
             var rowOld = oldListDic[key];
             bool isModified = false;
 
-            // 从第二列开始比较（索引从1开始）
-            for (int i = 1; i < rowNew.Length; i++)
+            // 从第二列开始比较
+            for (int i = 1; i < rowNew.Count; i++)
             {
                 var newValue = rowNew[i]?.ToString();
                 var oldValue = rowOld[i]?.ToString();
@@ -2129,9 +2152,13 @@ public static class PubMetToExcelFunc
             }
         }
         //合并数据转数组
-        List<string[]> dataList = added.Concat(deleted).Concat(modified).Concat(unchanged).ToList();
+        List<List<string>> dataList = added
+            .Concat(deleted)
+            .Concat(modified)
+            .Concat(unchanged)
+            .ToList();
 
-        var data = PubMetToExcel.ConvertListArrayToTwoArray(dataList) as object[,];
+        var data = PubMetToExcel.ConvertListToArray(dataList) as object[,];
         //删除list原始内容
         list.DataBodyRange.ClearContents();
         //写入新内容,调整ListObject的行数
@@ -2164,7 +2191,7 @@ public static class PubMetToExcelFunc
     }
 
     //指定列范围的数据去重
-    public static object[,] FilterRepeatValue(string min, string max, bool isSelect = false)
+    private static object[,] FilterRepeatValue(string min, string max, bool isSelect = false)
     {
         var excel = NumDesAddIn.App;
 
@@ -2217,13 +2244,154 @@ public static class PubMetToExcelFunc
     }
 
     //获取指定表的名称表
-    public static ListObject GetExcelListObjects(string sheetName, string listName)
+    private static ListObject GetExcelListObjects(string sheetName, string listName)
     {
         var sheet = Wk.Worksheets[sheetName];
         var lisObjs = sheet.ListObjects;
         // 获取ListObject并操作
         ListObject listObj = sheet.ListObjects[listName];
         return listObj;
+    }
+
+    //原始数据改造
+    private static object[,] BaseArrayFix(
+        object[,] baseArray,
+        ListObject dataTypeList
+    )
+    {
+        var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(baseArray);
+        var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(
+            dataTypeList.DataBodyRange.Value2
+        );
+
+        foreach (var baseList in baseDic)
+        {
+            var key = baseList.Key;
+
+            //寻找类型、寻找细类
+            string findType = String.Empty;
+            string findDetailType = String.Empty;
+
+            string itemType = baseDic[key][8];
+            if (dataTypeDic.ContainsKey(itemType) && dataTypeDic[itemType][4] == "1")
+            {
+                findType = dataTypeDic[itemType][2]?.ToString();
+                findDetailType = dataTypeDic[itemType][3]?.ToString();
+            }
+            baseDic[key].Add(findType);
+            baseDic[key].Add(findDetailType);
+
+            //链长
+            string linkMax = string.Empty;
+            string currentName = baseDic[key][6];
+
+            int countCurrent = baseDic
+                .Values.Where(list => list.Count > 6)
+                .Count(list => list[6] == currentName);
+            if (countCurrent > 1)
+            {
+                linkMax = countCurrent.ToString();
+            }
+            baseDic[key].Add(linkMax);
+
+            //五合提示
+            string fiveMergeTip = string.Empty;
+            string rank = baseDic[key][7];
+
+            if (int.TryParse(rank, out int rankNum))
+            {
+                if (rankNum >= 6 && rankNum < countCurrent && countCurrent >= 3)
+                {
+                    fiveMergeTip = "35";
+                }
+            }
+            baseDic[key].Add(fiveMergeTip);
+
+            //消耗ID组、产出ID组、消耗量组、产出量组
+            string consumeIDGroup = string.Empty;
+            string productIDGroup = string.Empty;
+            string consumeCountGroup = string.Empty;
+            string productCountGroup = string.Empty;
+
+            var idNameList = new List<int>() { 11, 13, 15, 17, 19, 21, 23 ,25};
+            var countNumList = new List<int>() { 12, 14, 16, 18, 20, 22, 24 ,26};
+
+            string firstPos = baseDic[key][3];
+            var firstPosPre = firstPos.Split("-")[0];
+
+            int onlyNum = 4;
+            int num = 5;
+
+            int countNum = 0;
+            foreach (var idName in idNameList)
+            {
+                if (baseDic[key][idName] != null)
+                {
+                    var name = baseDic[key][idName].ToString();
+                    if (name != string.Empty)
+                    {
+                        //先在唯一ID中查找
+                        string matchID = baseDic
+                            .FirstOrDefault(kv =>
+                                kv.Value.Count > onlyNum && kv.Value[onlyNum] == firstPosPre + name
+                            )
+                            .Key;
+                        if (matchID == null)
+                        {
+                            //后在ID中查找
+                            matchID = baseDic
+                                .FirstOrDefault(kv =>
+                                    kv.Value.Count > num && kv.Value[num] ==  name
+                                )
+                                .Key;
+                        }
+                        if (matchID != null)
+                        {
+                            if (countNum < 4)
+                            {
+                                consumeIDGroup += matchID + "#";
+                                consumeCountGroup += baseDic[key][countNumList[countNum]] + "#";
+                            }
+                            else
+                            {
+                                productIDGroup += matchID + "#";
+                                productCountGroup += baseDic[key][countNumList[countNum]] + "#";
+                            }
+                        }
+                    }
+                }
+                countNum++;
+            }
+            string consumeIDGroups = string.Empty;
+            string productIDGroups = string.Empty;
+            string consumeCountGroups = string.Empty;
+            string productCountGroups = string.Empty;
+
+            if (consumeIDGroup != string.Empty)
+            {
+                consumeIDGroups = consumeIDGroup.Substring(0, consumeIDGroup.Length - 1);
+            }
+            if (consumeCountGroup != string.Empty)
+            {
+                consumeCountGroups = consumeCountGroup.Substring(0, consumeCountGroup.Length - 1);
+            }
+            if (productIDGroup != string.Empty)
+            {
+                productIDGroups = productIDGroup.Substring(0, productIDGroup.Length - 1);
+            }
+            if(productCountGroup != string.Empty)
+            {
+                productCountGroups = productCountGroup.Substring(0, productCountGroup.Length - 1);
+            }
+            baseDic[key].Add(consumeIDGroups);
+            baseDic[key].Add(productIDGroups);
+            baseDic[key].Add(consumeCountGroups);
+            baseDic[key].Add(productCountGroups);
+
+        }
+        var fixArray = PubMetToExcel.DictionaryTo2DArray(baseDic ,baseDic.Count ,baseDic[baseDic.Keys.First()].Count);
+
+        return fixArray;
     }
 
     #region Excel数据查找
