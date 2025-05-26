@@ -977,12 +977,13 @@ public static class ExcelDataAutoInsertLanguage
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf("说话角色")];
                         var scCol = classTitle.IndexOf(source);
                         var newId = "";
+                        double aasd  = scCol + 1;
                         for (var k = 0; k < classDataList.Count; k++)
                         {
                             var targetValueKey = classDataList[k][scCol];
                             if (targetValueKey == sourceValue)
                             {
-                                newId = classDataList[k][scCol + 1];
+                                newId = classDataList[k][scCol + 1]?.ToString();
                                 if(newId == null)
                                 {
                                     MessageBox.Show($"{classDataList[k][0]}没有找到对应的ID值");

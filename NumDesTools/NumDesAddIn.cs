@@ -509,11 +509,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 string selectValue = cell.Value2?.ToString();
                 if (!string.IsNullOrEmpty(selectValue) && !selectDic.ContainsKey(selectValue))
                 {
-                    selectDic[selectValue] = new List<string> 
+                    selectDic[selectValue] = new List<string>
                     {
                         "图片备注",
                         "点击↓↓链接打开图片",
-                        Path.Combine(searchContent, $"{selectValue}.gif") 
+                        Path.Combine(searchContent, $"{selectValue}.gif")
                     };
                 }
             }
@@ -575,7 +575,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "对话写入",
             "对话写入（new）",
             "打开关联表格",
-            "LTE配置导出",
+            "LTE配置导出-首次",
+            "LTE配置导出-更新",
             "LTE配置导出Self",
             "自选表格写入（new）",
             "自定义复制",
@@ -719,10 +720,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     : default,
                 sheetName == "LTE配置【导出】" && target.Column == 2
                     ? (
-                        "LTE配置导出",
-                        "LTE配置导出",
+                        "LTE配置导出-首次",
+                        "LTE配置导出-首次",
                         MsoButtonStyle.msoButtonIconAndCaption,
-                        LteData.ExportLteDataConfig
+                        LteData.ExportLteDataConfigFirst
+                    )
+                    : default,
+                sheetName == "LTE配置【导出】" && target.Column == 2
+                    ? (
+                        "LTE配置导出-更新",
+                        "LTE配置导出-更新",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        LteData.ExportLteDataConfigUpdate
                     )
                     : default,
                 sheetName == "LTE配置【导出】" && target.Column == 2

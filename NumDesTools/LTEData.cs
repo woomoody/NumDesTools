@@ -12,7 +12,17 @@ public class LteData
     private static readonly string WkPath = Wk.Path;
 
     //导出LTE数据配置
-    public static void ExportLteDataConfig(CommandBarButton ctrl, ref bool cancelDefault)
+    public static void ExportLteDataConfigFirst(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        ExportLteDataConfig(true);
+    }
+
+    public static void ExportLteDataConfigUpdate(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        ExportLteDataConfig(false);
+    }
+
+    public static void ExportLteDataConfig(bool isFirst)
     {
         var sw = new Stopwatch();
         sw.Start();
@@ -126,28 +136,28 @@ public class LteData
             //走【基础】表逻辑
             id = "数据编号";
             idType = "类型";
-            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
+            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType, isFirst);
         }
         else if (baseSheetName.Contains("【任务】"))
         {
             //走【基础】表逻辑
             id = "任务编号";
             idType = "类型";
-            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
+            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType, isFirst);
         }
         else if (baseSheetName.Contains("【坐标】"))
         {
             //走【基础】表逻辑
             id = "编号";
             idType = "类型";
-            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
+            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType, isFirst);
         }
         else if (baseSheetName.Contains("【通用】"))
         {
             //走【基础】表逻辑
             id = "数据编号";
             idType = "类型";
-            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
+            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType, isFirst);
         }
         sw.Stop();
         var ts2 = sw.Elapsed;
@@ -393,7 +403,8 @@ public class LteData
         Dictionary<string, string> exportWildcardData,
         Dictionary<string, Dictionary<(object, object), string>> modelValueAll,
         string id,
-        string idType
+        string idType,
+        bool isFirst = true
     )
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -406,35 +417,36 @@ public class LteData
         //过滤id和type，只针对有增删改的数据进行导出
         List<object> dataStatusList = null;
         List<object> dataStatusListNew = null;
-
-        if (baseData.ContainsKey("数据状态"))
+        if (!isFirst)
         {
-            dataStatusList = baseData["数据状态"];
-        }
-        if (dataStatusList != null)
-        {
-            var combined = idList
-                .Zip(typeList, (dataId, type) => new { id = dataId, type })
-                .Zip(
-                    dataStatusList,
-                    (first, status) =>
-                        new
-                        {
-                            first.id,
-                            first.type,
-                            status
-                        }
-                )
-                .Where(x => x.status?.ToString() is "+" or "-" or "*")
-                .ToList();
+            if (baseData.ContainsKey("数据状态"))
+            {
+                dataStatusList = baseData["数据状态"];
+            }
+            if (dataStatusList != null)
+            {
+                var combined = idList
+                    .Zip(typeList, (dataId, type) => new { id = dataId, type })
+                    .Zip(
+                        dataStatusList,
+                        (first, status) =>
+                            new
+                            {
+                                first.id,
+                                first.type,
+                                status
+                            }
+                    )
+                    .Where(x => x.status?.ToString() is "+" or "-" or "*")
+                    .ToList();
 
-            idList = combined.Select(x => x.id).ToList();
-            typeList = combined.Select(x => x.type).ToList();
-            dataStatusListNew = combined.Select(x => x.status).ToList();
+                idList = combined.Select(x => x.id).ToList();
+                typeList = combined.Select(x => x.type).ToList();
+                dataStatusListNew = combined.Select(x => x.status).ToList();
+            }
         }
 
         //替换通配符生成数据
-
         foreach (var modelSheet in modelValueAll)
         {
             string modelSheetName = modelSheet.Key;
@@ -476,6 +488,7 @@ public class LteData
 
                     var writeRow = targetSheet.Dimension.End.Row + 1;
 
+                    //非第一次执行更新逻辑，否则首次逻辑
                     if (dataStatusListNew != null)
                     {
                         //查找ID是否存在
@@ -493,7 +506,6 @@ public class LteData
                             {
                                 writeRow = rowIndex;
                             }
-
                             else
                             {
                                 //带#的已经写入过，不需要再写入
@@ -648,7 +660,7 @@ public class LteData
                 "Mer" => Mer(exportWildcardDyData, funDepends, funDy1),
                 "MerB" => MerB(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3),
                 "Ads" => Ads(exportWildcardDyData, funDepends, funDy1),
-                "Arr" => Arr(exportWildcardDyData, funDepends, funDy1, funDy2),
+                "Arr" => Arr(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3),
                 "Get" => Get(exportWildcardDyData, funDepends, funDy1, funDy2),
                 "GetDic"
                     => GetDic(
@@ -807,11 +819,13 @@ public class LteData
         Dictionary<string, string> exportWildcardDyData,
         string funDepends,
         string funDy1,
-        string funDy2
+        string funDy2,
+        string funDy3
     )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "消耗量组" : funDy1;
         funDy2 = string.IsNullOrEmpty(funDy2) ? "" : funDy2;
+        funDy3 = string.IsNullOrEmpty(funDy2) ? "" : funDy3;
 
         var funDy1Value = exportWildcardDyData[funDy1];
         var funDependsValue = exportWildcardDyData[funDepends];
@@ -819,6 +833,12 @@ public class LteData
         var funDy1ValueSplit = Regex.Split(funDy1Value, ",");
 
         var funDependsValueSplit = Regex.Split(funDependsValue, ",");
+
+        double numBit = 0;
+        if (double.TryParse(funDy3, out double intFunDy3))
+        {
+            numBit = Math.Pow(10, intFunDy3 - 1);
+        }
 
         string result = "";
         if (funDy1ValueSplit.Length == funDependsValueSplit.Length)
@@ -832,7 +852,7 @@ public class LteData
                     if (long.TryParse(funDy2Value, out long funDy2ValueLong))
                     {
                         temp =
-                            $"[{funDependsValueSplit[i]},{funDy1ValueSplit[i]},{funDy2ValueLong + i}]";
+                            $"[{funDependsValueSplit[i]},{funDy1ValueSplit[i]},{funDy2ValueLong + numBit * i}]";
                     }
                     else
                     {
