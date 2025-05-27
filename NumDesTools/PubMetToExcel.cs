@@ -291,7 +291,7 @@ public static class PubMetToExcel
     #endregion
 
     #region C-API与Excel
-
+    //索引从0开始
     [ExcelFunction(IsHidden = true)]
     public static object[,] ReadExcelDataC(
         string sheetName,
@@ -317,7 +317,7 @@ public static class PubMetToExcel
 
         return rangeValues;
     }
-
+    [ExcelFunction(IsHidden = true)]
     public static void WriteExcelDataC(
         string sheetName,
         int rowFirst,

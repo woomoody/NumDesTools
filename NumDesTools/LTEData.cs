@@ -1,5 +1,8 @@
-﻿using System.Text;
+﻿using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Office.Interop.Excel;
+using Microsoft.VisualStudio.TextManager.Interop;
 using OfficeOpenXml;
 using Match = System.Text.RegularExpressions.Match;
 
@@ -11,6 +14,7 @@ public class LteData
 
     private static readonly string WkPath = Wk.Path;
 
+    #region LTE数据配置导出
     //导出LTE数据配置
     public static void ExportLteDataConfigFirst(CommandBarButton ctrl, ref bool cancelDefault)
     {
@@ -145,10 +149,10 @@ public class LteData
             idType = "类型";
             BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType, isFirst);
         }
-        else if (baseSheetName.Contains("【坐标】"))
+        else if (baseSheetName.Contains("【寻找】"))
         {
-            //走【基础】表逻辑
-            id = "编号";
+            //走【寻找】表逻辑
+            id = "寻找编号";
             idType = "类型";
             BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType, isFirst);
         }
@@ -300,21 +304,21 @@ public class LteData
         }
         else if (baseSheetName.Contains("【任务】"))
         {
-            //走【基础】表逻辑
+            //走【任务】表逻辑
             id = "任务编号";
             idType = "类型";
             BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
         }
-        else if (baseSheetName.Contains("【坐标】"))
+        else if (baseSheetName.Contains("【寻找】"))
         {
-            //走【基础】表逻辑
-            id = "编号";
+            //走【寻找】表逻辑
+            id = "寻找编号";
             idType = "类型";
             BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
         }
         else if (baseSheetName.Contains("【通用】"))
         {
-            //走【基础】表逻辑
+            //走【通用】表逻辑
             id = "数据编号";
             idType = "类型";
             BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
@@ -1027,4 +1031,753 @@ public class LteData
 
         return dictionary;
     }
+    #endregion
+
+    #region LTE基础数据计算
+    //去重复制
+    public static void FilterRepeatValueCopy(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        //去重
+        var mergedArray = FilterRepeatValue("", "", true);
+        //复制
+        PubMetToExcel.CopyArrayToClipboard(mergedArray);
+
+        sw.Stop();
+        var costTime = sw.Elapsed;
+        NumDesAddIn.App.StatusBar = $"复制完成，用时{costTime}";
+    }
+
+    //首次写入数据（指定范围内数据去重）
+    public static void FirstCopyValue(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        NumDesAddIn.App.ScreenUpdating = false;
+        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
+
+        object[,] copyArray = FilterRepeatValue("C1", "D1");
+
+        var baseList = GetExcelListObjects("LTE【基础】", "基础");
+        if (baseList == null)
+        {
+            MessageBox.Show($"LTE【基础】中的名称表-基础不存在");
+            return;
+        }
+        var findList = GetExcelListObjects("LTE【寻找】", "寻找");
+        if (findList == null)
+        {
+            MessageBox.Show($"LTE【寻找】中的名称表-寻找不存在");
+            return;
+        }
+        //基础数据修改依赖数据
+        var dataTypeList = GetExcelListObjects("#各类枚举", "数据类型");
+        if (dataTypeList == null)
+        {
+            MessageBox.Show($"#各类枚举 中的名称表-数据类型-不存在");
+            return;
+        }
+
+        //基础数据整理
+        copyArray = BaseData(copyArray, dataTypeList);
+        ////基础List数据清理
+        //baseList.DataBodyRange.ClearContents();
+        ////基础List行数刷新
+        //int newRowCount = copyArray.GetLength(0);
+        //baseList.Resize(baseList.Range.Resize[newRowCount + 1, baseList.Range.Columns.Count]);
+        //baseList.DataBodyRange.Value2 = copyArray;
+
+        ////基础标记数据删除
+        //var sheet = Wk.Worksheets["LTE【基础】"];
+        //var oldTagRange = sheet.Range["A2:A10000"];
+        //oldTagRange.Value2 = null;
+        ////基础标记数据写入
+        //var tagRange = sheet.Range[sheet.Cells[2, 1], sheet.Cells[copyArray.GetLength(0) + 1, 1]];
+        //tagRange.Value2 = "+";
+
+        var sheetName = "LTE【基础】";
+        var rowMax = copyArray.GetLength(0);
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, 1, 33, null);
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, 1, 33, copyArray);
+
+        //非Com写入数据,索引从0开始,效率确实更高
+
+        PubMetToExcel.WriteExcelDataC(sheetName,1,10000,0,0,null);
+        object[,] writeArray = new object[rowMax, 1];
+        for (int i = 0; i < rowMax; i++) writeArray[i, 0] = "+";
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax , 0, 0, writeArray);
+
+
+        ////寻找数据整理
+        var findArray = FindData(copyArray, dataTypeList);
+        ////寻找List数据清理
+        //findList.DataBodyRange.ClearContents();
+        ////寻找List行数刷新
+        //int newFindRowCount = findArray.GetLength(0);
+        //findList.Resize(baseList.Range.Resize[newFindRowCount + 1, findList.Range.Columns.Count]);
+        //findList.DataBodyRange.Value2 = findArray;
+
+        ////寻找标记数据删除
+        //var sheetFind = Wk.Worksheets["LTE【寻找】"];
+        //var oldTagFindRange = sheetFind.Range["A2:A10000"];
+        //oldTagFindRange.Value2 = null;
+        ////寻找标记数据写入
+        //var tagFindRange = sheetFind.Range[
+        //    sheetFind.Cells[2, 1],
+        //    sheetFind.Cells[findArray.GetLength(0) + 1, 1]
+        //];
+        //tagFindRange.Value2 = "+";
+
+        var sheetFindName = "LTE【寻找】";
+        var rowFindMax = findArray.GetLength(0);
+        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, 10000, 1, 9, null);
+        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, rowFindMax, 1, 9, findArray);
+
+        object[,] writeFindArray = new object[rowFindMax, 1];
+        for (int i = 0; i < rowMax; i++) writeArray[i, 0] = "+";
+        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, 10000, 0, 0, null);
+        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, rowFindMax, 0, 0, writeFindArray);
+
+        sw.Stop();
+        var costTime = sw.Elapsed;
+
+        NumDesAddIn.App.StatusBar = $"写入完成，用时{costTime}";
+        NumDesAddIn.App.ScreenUpdating = true;
+        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationAutomatic;
+    }
+
+    //更新写入数据（指定范围内数据去重），比对数据，更新数据状态
+    public static void UpdateCopyValue(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        var sw = new Stopwatch();
+        sw.Start();
+
+        NumDesAddIn.App.ScreenUpdating = false;
+        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
+
+        object[,] copyArray = FilterRepeatValue("C1", "D1");
+        var list = GetExcelListObjects("LTE【基础】", "基础");
+        if (list == null)
+        {
+            MessageBox.Show($"LTE【基础】中的名称表-基础不存在");
+            return;
+        }
+        var findList = GetExcelListObjects("LTE【寻找】", "寻找");
+        if (findList == null)
+        {
+            MessageBox.Show($"LTE【寻找】中的名称表-寻找不存在");
+            return;
+        }
+        //基础数据修改依赖数据
+        var dataTypeList = GetExcelListObjects("#各类枚举", "数据类型");
+        if (dataTypeList == null)
+        {
+            MessageBox.Show($"#各类枚举 中的名称表-数据类型-不存在");
+            return;
+        }
+
+        //基础数据整理
+        copyArray = BaseData(copyArray, dataTypeList);
+        WriteDymaicData(copyArray, list , "LTE【基础】" , "A2:A10000");
+
+        //寻找数据整理
+        var findArray = FindData(copyArray, dataTypeList);
+        WriteDymaicData(findArray,findList, "LTE【寻找】", "A2:A10000");
+
+        sw.Stop();
+        var costTime = sw.Elapsed;
+        NumDesAddIn.App.StatusBar = $"写入完成，用时{costTime}";
+        NumDesAddIn.App.ScreenUpdating = true;
+        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationAutomatic;
+    }
+
+    private static void WriteDymaicData(
+        object[,] copyArray,
+        ListObject list,
+        string sheetName,
+        string rangeName
+    )
+    {
+        //基础List数据清理
+        object[,] oldListData = list.DataBodyRange.Value2;
+        //基础数据和基础List数据对比
+        var copyDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(copyArray);
+        var oldListDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(oldListData);
+
+        var tagDataGroup = TagData(copyDic, oldListDic);
+        //基础数据对比后写入List
+        var data = PubMetToExcel.ConvertListToArray(tagDataGroup.Item1) as object[,];
+        list.DataBodyRange.ClearContents();
+        int newRowCount = data.GetLength(0);
+        list.Resize(list.Range.Resize[newRowCount + 1, list.Range.Columns.Count]);
+        list.DataBodyRange.Value2 = data;
+        //基础数据对比标识写入Range
+        var sheet = Wk.Worksheets[sheetName];
+        var oldTagRange = sheet.Range[rangeName];
+        oldTagRange.Value2 = null;
+        var tagData = PubMetToExcel.ConvertList1ToArray(tagDataGroup.Item2);
+        int tagRowCount = tagDataGroup.Item2.Count;
+        var tagRange = sheet.Range[sheet.Cells[2, 1], sheet.Cells[1 + tagRowCount, 1]];
+        tagRange.Value2 = tagData;
+    }
+
+    private static Tuple<List<List<string>>, List<string>> TagData(
+        Dictionary<string, List<string>> copyDic,
+        Dictionary<string, List<string>> oldListDic
+    )
+    {
+        // 分类处理
+        var added = new List<List<string>>();
+        var deleted = new List<List<string>>();
+        var modified = new List<List<string>>();
+        var unchanged = new List<List<string>>();
+
+        var addedTag = new List<string>();
+        var deletedTag = new List<string>();
+        var modifiedTag = new List<string>();
+        var unchangedTag = new List<string>();
+
+        // 新增项
+        foreach (var key in copyDic.Keys.Where(k => !oldListDic.ContainsKey(k)))
+        {
+            added.Add(copyDic[key]);
+            addedTag.Add("+");
+        }
+        // 删除项
+        foreach (var key in oldListDic.Keys.Where(k => !copyDic.ContainsKey(k)))
+        {
+            deleted.Add(oldListDic[key]);
+            deletedTag.Add("-");
+        }
+        // 修改/不变项
+        foreach (var key in copyDic.Keys.Intersect(oldListDic.Keys))
+        {
+            var rowNew = copyDic[key];
+            var rowOld = oldListDic[key];
+            bool isModified = false;
+
+            // 从第二列开始比较
+            for (int i = 1; i < rowNew.Count; i++)
+            {
+                var newValue = rowNew[i]?.ToString();
+                var oldValue = rowOld[i]?.ToString();
+                if (newValue == null)
+                {
+                    newValue = "";
+                }
+                if (oldValue == null)
+                {
+                    oldValue = "";
+                }
+
+                if (newValue != oldValue)
+                {
+                    isModified = true;
+                    break;
+                }
+            }
+
+            if (isModified)
+            {
+                modified.Add(rowNew);
+                modifiedTag.Add("*");
+            }
+            else
+            {
+                unchanged.Add(rowNew);
+                unchangedTag.Add("#");
+            }
+        }
+        //合并数据转数组
+        List<List<string>> dataList = added
+            .Concat(deleted)
+            .Concat(modified)
+            .Concat(unchanged)
+            .ToList();
+        List<string> tagList = addedTag
+            .Concat(deletedTag)
+            .Concat(modifiedTag)
+            .Concat(unchangedTag)
+            .ToList();
+        return Tuple.Create(dataList, tagList);
+    }
+
+    //指定列范围的数据去重
+    private static object[,] FilterRepeatValue(string min, string max, bool isSelect = false)
+    {
+        var excel = NumDesAddIn.App;
+
+        var sheet = excel.ActiveSheet as Worksheet;
+
+        Range copyRange;
+        if (!isSelect)
+        {
+            var copyColMin = sheet.Range[min].Value2;
+            var copyColMax = sheet.Range[max].Value2;
+            copyRange = sheet.Range[sheet.Cells[2, copyColMin], sheet.Cells[10000, copyColMax]];
+        }
+        else
+        {
+            copyRange = excel.Selection;
+        }
+        if (copyRange == null)
+        {
+            // 如果没有选择任何内容，直接返回
+            return null;
+        }
+
+        object[,] mergedArray;
+        int index = 0;
+        int baseIndex = 0;
+
+        if (copyRange.Areas.Count > 1)
+        {
+            object[] areas = new object[copyRange.Areas.Count];
+
+            // 获取每个区域的数据
+            for (int i = 1; i <= copyRange.Areas.Count; i++)
+            {
+                areas[i - 1] = copyRange.Areas[i].Value2;
+            }
+
+            // 按列合并
+            mergedArray = PubMetToExcel.MergeRanges(areas, false);
+        }
+        else
+        {
+            mergedArray = copyRange.Value2;
+            index = 1;
+            baseIndex = 1;
+        }
+
+        //去重
+        mergedArray = PubMetToExcel.CleanRepeatValue(mergedArray, index, false, baseIndex);
+        return mergedArray;
+    }
+
+    //获取指定表的名称表
+    private static ListObject GetExcelListObjects(string sheetName, string listName)
+    {
+        var sheet = Wk.Worksheets[sheetName];
+        var lisObjs = sheet.ListObjects;
+        // 获取ListObject并操作
+        ListObject listObj = sheet.ListObjects[listName];
+        return listObj;
+    }
+
+    //原始数据改造
+    private static object[,] BaseData(object[,] baseArray, ListObject dataTypeList)
+    {
+        var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(baseArray);
+        var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(
+            dataTypeList.DataBodyRange.Value2
+        );
+
+        foreach (var baseList in baseDic)
+        {
+            var key = baseList.Key;
+
+            //寻找类型、寻找细类
+            string findType = String.Empty;
+            string findDetailType = String.Empty;
+
+            string itemType = baseDic[key][6];
+            if (dataTypeDic.ContainsKey(itemType))
+            {
+                findType = dataTypeDic[itemType][2]?.ToString();
+                findDetailType = dataTypeDic[itemType][3]?.ToString();
+            }
+            baseDic[key].Add(findType);
+            baseDic[key].Add(findDetailType);
+
+            //链长
+            string linkMax = string.Empty;
+            string currentName = baseDic[key][4];
+
+            int countCurrent = baseDic
+                .Values.Where(list => list.Count > 4)
+                .Count(list => list[4] == currentName);
+            if (countCurrent > 1)
+            {
+                linkMax = countCurrent.ToString();
+            }
+            baseDic[key].Add(linkMax);
+
+            //五合提示
+            string fiveMergeTip = string.Empty;
+            string rank = baseDic[key][5];
+
+            if (int.TryParse(rank, out int rankNum))
+            {
+                if (rankNum >= 6 && rankNum < countCurrent && countCurrent >= 3)
+                {
+                    fiveMergeTip = "35";
+                }
+            }
+            baseDic[key].Add(fiveMergeTip);
+
+            //消耗ID组、产出ID组、消耗量组、产出量组
+            string consumeIDGroup = string.Empty;
+            string productIDGroup = string.Empty;
+            string consumeCountGroup = string.Empty;
+            string productCountGroup = string.Empty;
+
+            var idNameList = new List<int>() { 9, 11, 13, 15, 17, 19, 21, 23 };
+            var countNumList = new List<int>() { 10, 12, 14, 16, 18, 20, 22, 24 };
+
+            string firstPos = baseDic[key][1];
+            var firstPosPre = firstPos.Split("-")[0];
+
+            int onlyNum = 2;
+            int num = 3;
+
+            int countNum = 0;
+            foreach (var idName in idNameList)
+            {
+                if (baseDic[key][idName] != null)
+                {
+                    var name = baseDic[key][idName].ToString();
+                    if (name != string.Empty)
+                    {
+                        //先在唯一ID中查找
+                        string matchID = baseDic
+                            .FirstOrDefault(kv =>
+                                kv.Value.Count > onlyNum && kv.Value[onlyNum] == firstPosPre + name
+                            )
+                            .Key;
+                        if (matchID == null)
+                        {
+                            //后在ID中查找
+                            matchID = baseDic
+                                .FirstOrDefault(kv => kv.Value.Count > num && kv.Value[num] == name)
+                                .Key;
+                        }
+                        if (matchID != null)
+                        {
+                            if (countNum < 4)
+                            {
+                                consumeIDGroup += matchID + "#";
+                                consumeCountGroup += baseDic[key][countNumList[countNum]] + "#";
+                            }
+                            else
+                            {
+                                productIDGroup += matchID + "#";
+                                productCountGroup += baseDic[key][countNumList[countNum]] + "#";
+                            }
+                        }
+                    }
+                }
+                countNum++;
+            }
+            string consumeIDGroups = string.Empty;
+            string productIDGroups = string.Empty;
+            string consumeCountGroups = string.Empty;
+            string productCountGroups = string.Empty;
+
+            if (consumeIDGroup != string.Empty)
+            {
+                consumeIDGroups = consumeIDGroup.Substring(0, consumeIDGroup.Length - 1);
+            }
+            if (consumeCountGroup != string.Empty)
+            {
+                consumeCountGroups = consumeCountGroup.Substring(0, consumeCountGroup.Length - 1);
+            }
+            if (productIDGroup != string.Empty)
+            {
+                productIDGroups = productIDGroup.Substring(0, productIDGroup.Length - 1);
+            }
+            if (productCountGroup != string.Empty)
+            {
+                productCountGroups = productCountGroup.Substring(0, productCountGroup.Length - 1);
+            }
+            baseDic[key].Add(consumeIDGroups);
+            baseDic[key].Add(productIDGroups);
+            baseDic[key].Add(consumeCountGroups);
+            baseDic[key].Add(productCountGroups);
+        }
+        var fixArray = PubMetToExcel.DictionaryTo2DArray(
+            baseDic,
+            baseDic.Count,
+            baseDic[baseDic.Keys.First()].Count
+        );
+
+        return fixArray;
+    }
+    #endregion
+
+    #region LTE寻找数据计算
+    private static object[,] FindData(object[,] copyArray, ListObject dataTypeList)
+    {
+        var findDic = new Dictionary<string, List<string>>();
+
+        var copyDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(copyArray);
+
+        var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(
+            dataTypeList.DataBodyRange.Value2
+        );
+
+        foreach (var key in copyDic.Keys)
+        {
+            var keyType = copyDic[key][6];
+            if (!dataTypeDic.ContainsKey(keyType))
+            {
+                continue;
+            }
+            var dataType = dataTypeDic[keyType][4];
+            if (dataType != "1")
+            {
+                continue;
+            }
+            var inputGroup = copyDic[key][29];
+            var inputArray = inputGroup.Split("#");
+
+            //正向查找
+            for (int i = 0; i < inputArray.Length; i++)
+            {
+                if (double.TryParse(key, out double intKey))
+                {
+                    double findId = intKey + i * 100;
+                    var findTargetId = inputArray[i];
+
+                    if (findTargetId == string.Empty)
+                    {
+                        continue;
+                    }
+                    var findTargetType = copyDic[findTargetId][25];
+                    var findTargetDetailType = copyDic[findTargetId][26];
+
+                    if (findTargetType != String.Empty)
+                    {
+                        var findLinks = string.Empty;
+                        var findTips = string.Empty;
+                        //1层查找
+                        if (findTargetDetailType == string.Empty)
+                        {
+                            findTargetDetailType = "未找到细类";
+                        }
+                        if (findTargetType == "19")
+                        {
+                            findLinks +=
+                                "{"
+                                + findTargetType
+                                + ","
+                                + findTargetDetailType
+                                + ","
+                                + findTargetId
+                                + "},";
+                        }
+                        else if (findTargetType == "1")
+                        {
+                            findLinks +=
+                                "{" + findTargetType + "," + findTargetId + "},{4,地组ID（没有就删掉）},";
+                        }
+                        else
+                        {
+                            findLinks += "{" + findTargetType + "," + findTargetId + "},";
+                        }
+                        //2层查找
+                        List<string> matchedIDs = copyDic
+                            .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId))
+                            .Select(kv => kv.Key)
+                            .ToList();
+                        //如果没有直接匹配的说明目标可能是链，需要继续查找
+                        if (matchedIDs.Count == 0)
+                        {
+                            findTargetId =
+                                findTargetId.Substring(0, findTargetId.Length - 2) + "01";
+                            matchedIDs = copyDic
+                                .Where(kv =>
+                                    kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId)
+                                )
+                                .Select(kv => kv.Key)
+                                .ToList();
+                        }
+                        if (matchedIDs.Count == 0)
+                        {
+                            if (double.TryParse(findTargetId, out double fixFindTargetId))
+                            {
+                                findTargetId =
+                                    findTargetId.Substring(0, findTargetId.Length - 2) + "02";
+                                matchedIDs = copyDic
+                                    .Where(kv =>
+                                        kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId)
+                                    )
+                                    .Select(kv => kv.Key)
+                                    .ToList();
+                            }
+                        }
+                        if (matchedIDs.Count == 0)
+                        {
+                            findTips = "{1,\"tip_obstacleItem\",2}";
+                        }
+                        else
+                        {
+                            int itemCount = 0;
+                            foreach (var findTargetId2 in matchedIDs)
+                            {
+                                if (findTargetId2 != string.Empty)
+                                {
+                                    var findTargetType2 = copyDic[findTargetId2][25];
+                                    var findTargetDetailType2 = copyDic[findTargetId2][26];
+
+                                    if (findTargetType2 != string.Empty)
+                                    {
+                                        if (findTargetDetailType2 == string.Empty)
+                                        {
+                                            findTargetDetailType2 = "未找到细类";
+                                        }
+                                        if (findTargetType2 == "19")
+                                        {
+                                            findLinks +=
+                                                "{"
+                                                + findTargetType2
+                                                + ","
+                                                + findTargetDetailType2
+                                                + ","
+                                                + findTargetId2
+                                                + "},";
+                                        }
+                                        else if (findTargetType2 == "1")
+                                        {
+                                            findLinks +=
+                                                "{"
+                                                + findTargetType2
+                                                + ","
+                                                + findTargetId2
+                                                + "},{4,地组ID（没有就删掉）},";
+                                        }
+                                        else
+                                        {
+                                            findLinks +=
+                                                "{" + findTargetType2 + "," + findTargetId2 + "},";
+                                        }
+                                        if (itemCount == 0)
+                                        {
+                                            if (findTargetDetailType == "4")
+                                            {
+                                                findTips =
+                                                    "{3,"
+                                                    + findTargetId.Substring(
+                                                        0,
+                                                        findTargetId.Length - 2
+                                                    )
+                                                    + "00,"
+                                                    + findTargetId2
+                                                    + "}";
+                                            }
+                                            else
+                                            {
+                                                findTips =
+                                                    "{1,\"tip_obstacleItem\",1,"
+                                                    + findTargetId2
+                                                    + "}";
+                                            }
+                                        }
+                                    }
+                                }
+                                itemCount++;
+                            }
+                        }
+                        if (findLinks != String.Empty)
+                        {
+                            var findIdStr = Convert.ToString(findId);
+                            if (!findDic.ContainsKey(findIdStr))
+                            {
+                                findDic.Add(findIdStr, new List<string>());
+                            }
+                            findDic[findIdStr].Add(findIdStr);
+                            findDic[findIdStr].Add(copyDic[key][1]);
+                            findDic[findIdStr].Add(copyDic[key][2]);
+                            findDic[findIdStr].Add(copyDic[key][3]);
+                            findDic[findIdStr].Add(copyDic[key][4]);
+                            findDic[findIdStr].Add("寻-" + copyDic[key][6]);
+                            findDic[findIdStr].Add(copyDic[key][7]);
+                            findDic[findIdStr].Add(findTips);
+
+                            var findLinksFix = findLinks.Substring(0, findLinks.Length - 1);
+                            findLinksFix += ",{8,9999}";
+
+                            findDic[findIdStr].Add(findLinksFix);
+                        }
+                    }
+                }
+            }
+
+            //反向查找
+            List<string> subMatchIDs = copyDic
+                .Where(kv => kv.Value.Count > 31 && kv.Value[31].Contains(key))
+                .Select(kv => kv.Key)
+                .ToList();
+
+            var subFindLinks = string.Empty;
+            var subFindId = key;
+            foreach (var findTargetId2 in subMatchIDs)
+            {
+                if (findTargetId2 != string.Empty)
+                {
+                    var findTargetType2 = copyDic[findTargetId2][25];
+                    var findTargetDetailType2 = copyDic[findTargetId2][26];
+
+                    if (findTargetType2 != string.Empty)
+                    {
+                        if (findTargetDetailType2 == string.Empty)
+                        {
+                            findTargetDetailType2 = "未找到细类";
+                        }
+                        if (findTargetType2 == "19")
+                        {
+                            subFindLinks +=
+                                "{"
+                                + findTargetType2
+                                + ","
+                                + findTargetDetailType2
+                                + ","
+                                + findTargetId2
+                                + "},";
+                        }
+                        else if (findTargetType2 == "1")
+                        {
+                            subFindLinks +=
+                                "{" + findTargetType2 + "," + findTargetId2 + "},{4,地组ID（没有就删掉）},";
+                        }
+                        else
+                        {
+                            subFindLinks += "{" + findTargetType2 + "," + findTargetId2 + "},";
+                        }
+                    }
+                }
+            }
+            if (subFindLinks != String.Empty)
+            {
+                if (!findDic.ContainsKey(subFindId))
+                {
+                    findDic.Add(subFindId, new List<string>());
+                    findDic[subFindId].Add(subFindId);
+                    findDic[subFindId].Add(copyDic[key][1]);
+                    findDic[subFindId].Add(copyDic[key][2]);
+                    findDic[subFindId].Add(copyDic[key][3]);
+                    findDic[subFindId].Add(copyDic[key][4]);
+                    findDic[subFindId].Add("寻-" + copyDic[key][6]);
+                    findDic[subFindId].Add(copyDic[key][7]);
+                    findDic[subFindId].Add("");
+
+                    var findLinksFix = subFindLinks.Substring(0, subFindLinks.Length - 1);
+                    findLinksFix += ",{8,9999}" ;
+
+                    findDic[subFindId].Add(findLinksFix);
+                }
+            }
+        }
+        var findLinksArray = PubMetToExcel.DictionaryTo2DArray(
+            findDic,
+            findDic.Count,
+            findDic[findDic.Keys.First()].Count
+        );
+        return findLinksArray;
+    }
+
+    #endregion
 }
