@@ -771,7 +771,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         "LTE基础数据-首次",
                         "LTE基础数据-首次",
                         MsoButtonStyle.msoButtonIconAndCaption,
-                        PubMetToExcelFunc.FirstCopyValue
+                        LteData.FirstCopyValue
                     )
                     : default,
                 bookName.Contains("#【A大型活动】数值") && sheetName.Contains("【设计】")
@@ -779,14 +779,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         "LTE基础数据-更新",
                         "LTE基础数据-更新",
                         MsoButtonStyle.msoButtonIconAndCaption,
-                        PubMetToExcelFunc.UpdateCopyValue
+                        LteData.UpdateCopyValue
                     )
                     : default,
                 (
                     "自定义复制",
                     "去重复制",
                     MsoButtonStyle.msoButtonIconAndCaption,
-                    PubMetToExcelFunc.FilterRepeatValueCopy
+                    LteData.FilterRepeatValueCopy
                 )
             };
 
