@@ -1319,7 +1319,7 @@ public static class PubMetToExcel
         return twoDArray;
     }
 
-    public static string[,] ConvertList1ToArray(List<string> listOfLists)
+    public static object[,] ConvertList1ToArray(List<string> listOfLists)
     {
         // 获取行数
         var rowCount = listOfLists.Count;
@@ -1508,7 +1508,9 @@ public static class PubMetToExcel
         var dict = new Dictionary<string, List<string>>();
         for (int i = 1; i <= array.GetLength(0); i++)
         {
-            string key = array[i, 1].ToString();
+            string key = array[i, 1]?.ToString();
+            if(key == string.Empty)
+                continue;
             var row = new List<string>();
             for (int j = 1; j <= array.GetLength(1); j++)
                 row.Add(array[i, j]?.ToString());

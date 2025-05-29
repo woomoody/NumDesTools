@@ -380,7 +380,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 );
 
                 sw.Stop();
-                var ts2 = sw.Elapsed;
+                var ts2 = sw.ElapsedMilliseconds;
                 App.StatusBar = $"替换完成用时：{ts2}";
             }
         }
@@ -583,7 +583,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "克隆数据",
             "克隆数据All",
             "LTE基础数据-首次",
-            "LTE基础数据-更新"
+            "LTE基础数据-更新"            ,
+            "LTE任务数据-首次",
+            "LTE任务数据-更新"
         };
 
         foreach (
@@ -780,6 +782,22 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         "LTE基础数据-更新",
                         MsoButtonStyle.msoButtonIconAndCaption,
                         LteData.UpdateCopyValue
+                    )
+                    : default,
+                bookName.Contains("#【A大型活动】数值") && sheetName.Contains("【任务】")
+                    ? (
+                        "LTE任务数据-首次",
+                        "LTE任务数据-首次",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        LteData.FirstCopyTaskValue
+                    )
+                    : default,
+                bookName.Contains("#【A大型活动】数值") && sheetName.Contains("【任务】")
+                    ? (
+                        "LTE任务数据-更新",
+                        "LTE任务数据-更新",
+                        MsoButtonStyle.msoButtonIconAndCaption,
+                        LteData.FirstCopyTaskValue
                     )
                     : default,
                 (
@@ -1392,6 +1410,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void PVP_H_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         DotaLegendBattleSerial.BattleSimTime();
@@ -1403,6 +1422,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void PVP_J_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         DotaLegendBattleParallel.BattleSimTime(true);
@@ -1414,6 +1434,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void PVE_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         DotaLegendBattleParallel.BattleSimTime(false);
@@ -1470,6 +1491,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void ExcelSearchAll_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -1504,13 +1526,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             sw.Stop();
         }
 
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "搜索完成，用时：" + ts2;
     }
 
     public void ExcelSearchAllMultiThread_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -1545,13 +1568,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             sw.Stop();
         }
 
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "搜索完成，用时：" + ts2;
     }
 
     public void ExcelSearchID_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -1586,18 +1610,19 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             sw.Stop();
         }
 
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "搜索完成，用时：" + ts2;
     }
 
     public void ExcelSearchAllToExcel_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         PubMetToExcelFunc.ExcelDataSearchAndMerge(_excelSeachStr);
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "搜索完成，用时：" + ts2;
     }
@@ -1605,6 +1630,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     //查询某个Sheet名字在哪个工作簿
     public void ExcelSearchAllSheetName_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -1647,13 +1673,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             sw.Stop();
         }
 
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "搜索完成，用时：" + ts2;
     }
 
     public void AutoInsertExcelData_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var indexWk = App.ActiveWorkbook;
@@ -1673,6 +1700,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void AutoInsertExcelDataThread_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var indexWk = App.ActiveWorkbook;
@@ -1692,6 +1720,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void AutoInsertExcelDataNew_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var indexWk = App.ActiveWorkbook;
@@ -1711,6 +1740,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void AutoInsertExcelDataThreadNew_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var indexWk = App.ActiveWorkbook;
@@ -1731,6 +1761,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     //写入自定义度极高的数据（无法自增、批量替换）
     public void AutoInsertExcelDataModelCreat_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var indexWk = App.ActiveWorkbook;
@@ -1751,6 +1782,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void AutoInsertExcelDataDialog_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         ExcelDataAutoInsertLanguage.AutoInsertData();
@@ -1761,6 +1793,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void AutoLinkExcel_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var indexWk = App.ActiveWorkbook;
@@ -1768,13 +1801,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var excelPath = indexWk.Path;
         ExcelDataAutoInsert.ExcelHyperLinks(excelPath, sheet);
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "完成，用时：" + ts2;
     }
 
     public void AutoCellFormatEPPlus_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var indexWk = App.ActiveWorkbook;
@@ -1782,108 +1816,115 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var excelPath = indexWk.Path;
         ExcelDataAutoInsert.ExcelHyperLinksNormal(excelPath, sheet);
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "完成，用时：" + ts2;
     }
 
     public void AutoSeachExcel_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         ExcelDataAutoInsertCopyMulti.SearchData(false);
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void ActivityServerData_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         ExcelDataAutoInsertActivityServer.Source(true);
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "完成，用时：" + ts2;
     }
 
     public void ActivityServerData2_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         ExcelDataAutoInsertActivityServer.Source(false);
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "完成，用时：" + ts2;
     }
 
     public void AutoMergeExcel_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         ExcelDataAutoInsertCopyMulti.MergeData(true);
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void AliceBigRicher_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var ws = App.ActiveSheet;
         var sheetName = ws.Name;
         PubMetToExcelFunc.AliceBigRicherDfs2(sheetName);
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void TmTargetEle_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
-
         TmCaculate.CreatTmTargetEle();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void TmNormalEle_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
-
         TmCaculate.CreatTmNormalEle();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void MagicBottle_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var ws = App.ActiveSheet;
         var sheetName = ws.Name;
         PubMetToExcelFunc.MagicBottleCostSimulate(sheetName);
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void AutoInsertNumChanges_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var excelData = new ExcelDataAutoInsertNumChanges();
         excelData.OutDataIsAll();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "数据写入完成，用时：" + ts2;
     }
@@ -1926,6 +1967,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void MapExcel_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -1934,13 +1976,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         MapExcel.ExcelToJson(BasePath);
 
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void CompareExcel_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -1948,13 +1991,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         CompareExcel.CompareMain(BasePath, TargetPath);
 
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void LoopRun_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var ws = App.ActiveSheet;
@@ -1963,47 +2007,51 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         PubMetToExcelFunc.LoopRunCac(sheetName);
 
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void CellDataReplace_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         PubMetToExcelFunc.ReplaceValueFormat(_excelSeachStr);
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void CellDataSearch_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         PubMetToExcelFunc.SeachValueFormat(_excelSeachStr);
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void PowerQueryLinksUpdate_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
         PubMetToExcelFunc.UpdatePowerQueryLinks();
 
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void ModelDataCreat_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var wk = App.ActiveWorkbook;
@@ -2042,13 +2090,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         range.Value2 = targetValue;
 
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void ModelDataCreat2_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var wk = App.ActiveWorkbook;
@@ -2095,13 +2144,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         range.Value2 = targetValue;
 
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void CheckHiddenCellVsto_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -2120,13 +2170,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
 
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void CheckHiddenCellVstoAll_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -2138,18 +2189,19 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         VstoExcel.FixHiddenCellVsto(files);
 
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void TestBar1_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
 
         var files = new List<string>(
             Directory.GetFiles(
@@ -2307,6 +2359,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void TestBar2_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -2411,13 +2464,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //    sw.Stop();
         //}
 
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void CheckHiddenCell_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -2487,13 +2541,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         acrange.Value = resultArray;
 
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void FixHiddenCellEpplus_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -2545,13 +2600,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
         );
 
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     public void FixHiddenCellNPOI_Click(IRibbonControl control)
     {
+        App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -2616,7 +2672,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
         );
 
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
         App.StatusBar = "导出完成，用时：" + ts2;
     }

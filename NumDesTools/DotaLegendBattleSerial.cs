@@ -18,6 +18,8 @@ public class DotaLegendBattleTem
         _hpB = 100;
 
         var a = 0;
+
+        NumDesAddIn.App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -38,7 +40,7 @@ public class DotaLegendBattleTem
         taskB.Wait();
 
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         Debug.Print(ts2.ToString());
 
         var sw2 = new Stopwatch();
@@ -53,7 +55,7 @@ public class DotaLegendBattleTem
         Debug.Print(_hpB + "22");
 
         sw.Stop();
-        var ts3 = sw2.Elapsed;
+        var ts3 = sw2.ElapsedMilliseconds;
         Debug.Print(ts3.ToString());
     }
 
