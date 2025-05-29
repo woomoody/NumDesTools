@@ -59,7 +59,7 @@ namespace NumDesTools.UI
                 && File.Exists(item.ImagePath)
             )
             {
-                var filePath = Path.Combine(
+                Path.Combine(
                     Path.GetDirectoryName(item.ImagePath),
                     Path.GetFileName(item.ImagePath)
                 );

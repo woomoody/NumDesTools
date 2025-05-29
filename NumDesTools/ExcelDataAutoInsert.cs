@@ -977,7 +977,6 @@ public static class ExcelDataAutoInsertLanguage
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf("说话角色")];
                         var scCol = classTitle.IndexOf(source);
                         var newId = "";
-                        double aasd  = scCol + 1;
                         for (var k = 0; k < classDataList.Count; k++)
                         {
                             var targetValueKey = classDataList[k][scCol];
@@ -1676,6 +1675,7 @@ public static class ExcelDataAutoInsertMulti
 
     public static void RightClickInsertData(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        NumDesAddIn.App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -2433,6 +2433,7 @@ public static class ExcelDataAutoInsertMultiNew
     public static void RightClickInsertDataNew(CommandBarButton ctrl, ref bool cancelDefault)
     {
         InitializeVariables();
+        NumDesAddIn.App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
         var cell = NumDesAddIn.App.Selection;
@@ -3130,6 +3131,7 @@ public static class ExcelDataAutoInsertCopyMulti
 
     public static void RightClickMergeData(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        NumDesAddIn.App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -3150,7 +3152,7 @@ public static class ExcelDataAutoInsertCopyMulti
         if (errorLog == "")
         {
             sw.Stop();
-            var ts1 = sw.Elapsed;
+            var ts1 = sw.ElapsedMilliseconds;
             NumDesAddIn.App.StatusBar = "完成写入：" + ts1;
             return;
         }
@@ -3159,7 +3161,7 @@ public static class ExcelDataAutoInsertCopyMulti
         ErrorLogCtp.CreateCtpNormal(errorLog);
 
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         NumDesAddIn.App.StatusBar = "完成写入：" + ts2;
         Marshal.ReleaseComObject(sheet);
         Marshal.ReleaseComObject(indexWk);
@@ -3267,6 +3269,7 @@ public static class ExcelDataAutoInsertCopyMulti
 
     public static void RightClickMergeDataCol(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        NumDesAddIn.App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
@@ -3282,7 +3285,7 @@ public static class ExcelDataAutoInsertCopyMulti
         if (errorLog == "")
         {
             sw.Stop();
-            var ts1 = sw.Elapsed;
+            var ts1 = sw.ElapsedMilliseconds;
             NumDesAddIn.App.StatusBar = "完成写入：" + ts1;
             return;
         }
@@ -3291,7 +3294,7 @@ public static class ExcelDataAutoInsertCopyMulti
         ErrorLogCtp.CreateCtpNormal(errorLog);
 
         sw.Stop();
-        var ts2 = sw.Elapsed;
+        var ts2 = sw.ElapsedMilliseconds;
         NumDesAddIn.App.StatusBar = "完成写入：" + ts2;
     }
 
@@ -4104,6 +4107,7 @@ public static class ExcelDataSyncHelper
         Dictionary<string, List<string>> defaultValues,
         Dictionary<string, Dictionary<string, List<string>>> replaceValues)
     {
+        NumDesAddIn.App.StatusBar = false;
         var timer = Stopwatch.StartNew();
 
         try
@@ -4122,7 +4126,7 @@ public static class ExcelDataSyncHelper
                 ExcelApp.StatusBar = $"导出：{targetPath}\\{fileName}";
             }
 
-            ExcelApp.StatusBar = $"同步完成，用时：{timer.Elapsed}";
+            ExcelApp.StatusBar = $"同步完成，用时：{timer.ElapsedMilliseconds}";
         }
         finally
         {
@@ -4138,6 +4142,7 @@ public static class ExcelDataSyncHelper
         Dictionary<string, List<string>> defaultValues,
         Dictionary<string, Dictionary<string, List<string>>> replaceValues)
     {
+        NumDesAddIn.App.StatusBar = false;
         var timer = Stopwatch.StartNew();
 
         try
@@ -4153,7 +4158,7 @@ public static class ExcelDataSyncHelper
                 ExcelApp.StatusBar = $"导出：{targetPath}\\{fileName}";
             }
 
-            ExcelApp.StatusBar = $"全量同步完成，用时：{timer.Elapsed}";
+            ExcelApp.StatusBar = $"全量同步完成，用时：{timer.ElapsedMilliseconds}";
         }
         finally
         {

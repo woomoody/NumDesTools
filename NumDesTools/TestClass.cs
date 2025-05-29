@@ -4,10 +4,10 @@ public class ScreenCoordinateFix
 {
     // Windows API
     [DllImport("user32.dll")]
-    private static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
+    private static extern bool ClientToScreen(IntPtr hWnd, ref Point lpPoint);
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct POINT
+    public struct Point
     {
         public int X;
         public int Y;
@@ -24,7 +24,7 @@ public class ScreenCoordinateFix
         Window window = excelApp.ActiveWindow;
 
         // Step 1: 获取客户区原点屏幕坐标
-        POINT clientOrigin = new POINT { X = 0, Y = 0 };
+        Point clientOrigin = new Point { X = 0, Y = 0 };
         ClientToScreen(hwnd, ref clientOrigin);
 
         // Step 2: 获取DPI（精确到当前显示器）
