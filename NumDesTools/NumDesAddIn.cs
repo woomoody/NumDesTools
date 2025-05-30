@@ -797,7 +797,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         "LTE任务数据-更新",
                         "LTE任务数据-更新",
                         MsoButtonStyle.msoButtonIconAndCaption,
-                        LteData.FirstCopyTaskValue
+                        LteData.UpdateCopyTaskValue
                     )
                     : default,
                 (

@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
+using NPOI.Util;
 using OfficeOpenXml;
 using Org.BouncyCastle.Bcpg.OpenPgp;
 using Match = System.Text.RegularExpressions.Match;
@@ -592,7 +593,7 @@ public class LteData
                             }
                             //实际写入
                             var cell = targetSheet.Cells[writeRow, j];
-                            if(isFirst)
+                            if (isFirst)
                             {
                                 cell.Value = cellRealValue;
                                 dataWritten = true;
@@ -802,7 +803,7 @@ public class LteData
                 .Substring(exportWildcardDyData[funDepends].Length - 1, 1)
         );
         int baseMax = 0;
-        if(funDy1 == "链类最大值")
+        if (funDy1 == "链类最大值")
         {
             return string.Empty;
         }
@@ -813,7 +814,6 @@ public class LteData
         catch (Exception e)
         {
             MessageBox.Show($"{rootNum}##{funDy1}可能为空{e.Message}");
-
         }
         if (baseMax == 0)
         {
@@ -1221,7 +1221,8 @@ public class LteData
         ListObject list,
         string sheetName,
         int firstCol,
-        int lastCol
+        int lastCol,
+        int tagCol = 0
     )
     {
         //基础List数据清理
@@ -1242,10 +1243,10 @@ public class LteData
         list.Resize(list.Range.Resize[newRowCount + 1, list.Range.Columns.Count]);
 
         //基础数据对比标识写入Range
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, listRowCount, 0, 0, null);
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, listRowCount, tagCol, tagCol, null);
         object[,] tagData = PubMetToExcel.ConvertList1ToArray(tagDataGroup.Item2);
         int tagRowCount = tagDataGroup.Item2.Count;
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, tagRowCount, 0, 0, tagData);
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, tagRowCount, tagCol, tagCol, tagData);
     }
 
     private static Tuple<List<List<string>>, List<string>> TagData(
@@ -1814,7 +1815,7 @@ public class LteData
 
     #region LTE任务数据计算
 
-    //首次写入数据（指定范围内数据去重）
+    //首次写入数据
     public static void FirstCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
         NumDesAddIn.App.StatusBar = false;
@@ -1869,6 +1870,56 @@ public class LteData
         for (int i = 0; i < rowMax; i++)
             writeArray[i, 0] = "+";
         PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, 13, 13, writeArray);
+
+        sw.Stop();
+        var costTime = sw.ElapsedMilliseconds;
+
+        NumDesAddIn.App.StatusBar = $"写入完成，用时{costTime}";
+        NumDesAddIn.App.ScreenUpdating = true;
+        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationAutomatic;
+    }
+
+    //更新写入数据
+    public static void UpdateCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        NumDesAddIn.App.StatusBar = false;
+        var sw = new Stopwatch();
+        sw.Start();
+
+        NumDesAddIn.App.ScreenUpdating = false;
+        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
+
+        var sheetName = "LTE【任务】";
+        var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
+        double activtiyId = (double)colIndexArray[0, 0];
+
+        object[,] copyTaskArray = FilterRepeatValue("C1", "D1", false, false);
+
+        var taskList = GetExcelListObjects("LTE【任务】", "任务");
+        if (taskList == null)
+        {
+            MessageBox.Show("LTE【任务】中的名称表-任务不存在");
+            return;
+        }
+        //任务数据修改依赖数据
+        var taskDataTypeList = GetExcelListObjects("#各类枚举", "任务类型");
+        if (taskDataTypeList == null)
+        {
+            MessageBox.Show("#各类枚举 中的名称表-任务类型-不存在");
+            return;
+        }
+        var taskDataTypeArray = taskDataTypeList.DataBodyRange.Value2;
+        var baseList = GetExcelListObjects("LTE【基础】", "基础");
+        if (baseList == null)
+        {
+            MessageBox.Show("LTE【基础】中的名称表-基础不存在");
+            return;
+        }
+        var baseArray = baseList.DataBodyRange.Value2;
+
+        //任务数据整理
+        copyTaskArray = TaskData(copyTaskArray, taskDataTypeArray, baseArray, activtiyId);
+        WriteDymaicData(copyTaskArray, taskList, "LTE【任务】", 14, 23, 13);
 
         sw.Stop();
         var costTime = sw.ElapsedMilliseconds;
@@ -1962,7 +2013,6 @@ public class LteData
                             taskNextId = taskIdDouble.ToString();
                         }
                     }
-
                 }
                 taskColDataList.Add(taskNextId);
 
@@ -1983,7 +2033,7 @@ public class LteData
                 );
 
                 taskTargetMapName = taskTargetMapName.Split("-")[0];
-                var match = Regex.Match(taskTargetMapName, @"\d+"); 
+                var match = Regex.Match(taskTargetMapName, @"\d+");
                 var taskTargetMapId = match.Success ? match.Value : "0";
 
                 if (double.TryParse(taskTargetMapId, out double taskTargetMapIdDouble))
@@ -1992,7 +2042,8 @@ public class LteData
                         CultureInfo.InvariantCulture
                     );
                 }
-                findLinks = findLinks + "{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
+                findLinks =
+                    findLinks + "{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
                 taskColDataList.Add(findLinks);
             }
 
@@ -2012,7 +2063,6 @@ public class LteData
                 if (i != taskTaskArrayCount)
                 {
                     taskSubNextId = copyTaskArray[i + 1, 6]?.ToString() ?? string.Empty;
-        
                 }
                 taskSubColDataList.Add(taskSubNextId);
 
@@ -2042,7 +2092,8 @@ public class LteData
                         CultureInfo.InvariantCulture
                     );
                 }
-                findSubLinks = findSubLinks + "{20,\"UILteMapEntrance\"," + taskSubTargetMapId + "},{8,9999}";
+                findSubLinks =
+                    findSubLinks + "{20,\"UILteMapEntrance\"," + taskSubTargetMapId + "},{8,9999}";
                 taskSubColDataList.Add(findSubLinks);
             }
 
