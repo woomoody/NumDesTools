@@ -1,8 +1,7 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
-using NPOI.Util;
+using MiniExcelLibs.OpenXml;
 using OfficeOpenXml;
-using Org.BouncyCastle.Bcpg.OpenPgp;
 using Match = System.Text.RegularExpressions.Match;
 
 namespace NumDesTools;
@@ -12,6 +11,27 @@ public class LteData
     private static readonly dynamic Wk = NumDesAddIn.App.ActiveWorkbook;
 
     private static readonly string WkPath = Wk.Path;
+
+    private static readonly Regex WildcardRegex = new Regex("#(.*?)#", RegexOptions.Compiled);
+    
+    private static readonly Dictionary<string, (string id, string idType)> SheetTypeMap =
+    new Dictionary<string, (string, string)>(StringComparer.Ordinal)
+    {
+        ["【基础】"] = ("数据编号", "类型"),
+        ["【任务】"] = ("任务编号", "类型"),
+        ["【寻找】"] = ("寻找编号", "类型"),
+        ["【通用】"] = ("数据编号", "类型")
+    };
+
+    private const int BaseDataTagCol = 0; 
+    private const int BaseDataStartCol = 1;
+    private const int BaseDataEndCol = 33;
+    private const int FindDataTagCol = 0;
+    private const int FindDataStartCol = 1;
+    private const int FindDataEndCol = 9;
+    private const int TaskDataTagCol = 13;
+    private const int TaskDataStartCol = 14;
+    private const int TaskDataEndCol = 23;
 
     #region LTE数据配置导出
     //导出LTE数据配置
@@ -31,67 +51,14 @@ public class LteData
         var sw = new Stopwatch();
         sw.Start();
 
-        //获取【导出】表信息
-        var ws = Wk.ActiveSheet;
-        var selectRange = NumDesAddIn.App.Selection;
-        var baseSheetName = selectRange.Value2.ToString();
-        var selectRow = selectRange.Row;
-        var selectCol = selectRange.Column;
-        //需要查找通配符字段所在列
-        var exportWildcardRange = ws.Range["A1:AZ1"].Value2;
-        var exportWildcardCol = PubMetToExcel.FindValueIn2DArray(exportWildcardRange, "通配符").Item2;
-
-        //基本信息
-        var exportBaseSheetData = new Dictionary<string, Dictionary<string, Tuple<int, int>>>();
-        var exportBaseData = new Dictionary<string, Tuple<int, int>>();
-        if (exportBaseData == null)
-            throw new ArgumentNullException(nameof(exportBaseData));
-
-        object[,] baseRangeValue = ws.Range[
-            ws.Cells[selectRow, selectCol + 2],
-            ws.Cells[selectRow + 2, exportWildcardCol - 2]
-        ].Value2;
-
-        for (int col = 1; col <= baseRangeValue.GetLength(1); col++)
-        {
-            var keyName = baseRangeValue[1, col]?.ToString() ?? "";
-            if (keyName != "")
-            {
-                if (baseRangeValue[2, col] == null)
-                {
-                    continue;
-                }
-                var keyCol = Convert.ToInt32(baseRangeValue[2, col]);
-                var keyRowMax = Convert.ToInt32(baseRangeValue[3, col]);
-                exportBaseData[keyName] = new Tuple<int, int>(keyCol, keyRowMax);
-            }
-        }
-        exportBaseSheetData[baseSheetName] = exportBaseData;
-
-        //通配符信息
-        var exportWildcardData = new Dictionary<string, string>();
-        if (exportWildcardData == null)
-            throw new ArgumentNullException(nameof(exportWildcardData));
-
-        var wildcardCount = (int)ws.Cells[selectRow + 1, selectCol].Value2;
-        var wildcardRangeValue = ws.Range[
-            ws.Cells[selectRow, exportWildcardCol],
-            ws.Cells[selectRow + wildcardCount, exportWildcardCol + 1]
-        ].Value2;
-        for (int row = 1; row <= wildcardCount; row++)
-        {
-            var wildcardName = wildcardRangeValue[row, 1]?.ToString() ?? "";
-            if (wildcardName != "")
-            {
-                var wildcardValue = wildcardRangeValue[row, 2].ToString();
-                exportWildcardData[wildcardName] = wildcardValue;
-            }
-        }
-
         //读取【基础/任务……】表数据
+        var sheetInfo = ReadExportSheetInfo();
+        string baseSheetName = sheetInfo.baseSheetName;
+        
         var baseSheet = Wk.Worksheets[baseSheetName];
         var baseData = new Dictionary<string, List<object>>();
-        var baseSheetData = exportBaseSheetData[baseSheetName];
+        var baseSheetData = sheetInfo.exportBaseData;
+        var exportWildcardData = sheetInfo.exportWildcardData;
 
         foreach (var baseElement in baseSheetData)
         {
@@ -135,34 +102,18 @@ public class LteData
         string id;
         string idType;
 
-        if (baseSheetName.Contains("【基础】"))
+
+        foreach (var kv in SheetTypeMap)
         {
-            //走【基础】表逻辑
-            id = "数据编号";
-            idType = "类型";
-            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType, isFirst);
+            if (baseSheetName.Contains(kv.Key))
+            {
+                id = kv.Value.id;
+                idType = kv.Value.idType;
+                BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType, isFirst);
+                break;
+            }
         }
-        else if (baseSheetName.Contains("【任务】"))
-        {
-            //走【基础】表逻辑
-            id = "任务编号";
-            idType = "类型";
-            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType, isFirst);
-        }
-        else if (baseSheetName.Contains("【寻找】"))
-        {
-            //走【寻找】表逻辑
-            id = "寻找编号";
-            idType = "类型";
-            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType, isFirst);
-        }
-        else if (baseSheetName.Contains("【通用】"))
-        {
-            //走【基础】表逻辑
-            id = "数据编号";
-            idType = "类型";
-            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType, isFirst);
-        }
+
         sw.Stop();
         var ts2 = sw.ElapsedMilliseconds;
         NumDesAddIn.App.StatusBar = "导出完成，用时：" + ts2;
@@ -175,75 +126,13 @@ public class LteData
         var sw = new Stopwatch();
         sw.Start();
 
-        //获取【导出】表信息
-        var ws = Wk.ActiveSheet;
-        var selectRange = NumDesAddIn.App.Selection;
-        var baseSheetName = selectRange.Value2.ToString();
-        var selectRow = selectRange.Row;
-        var selectCol = selectRange.Column;
-        //需要查找通配符字段所在列
-        var exportWildcardRange = ws.Range["A1:AZ1"].Value2;
-        var exportWildcardCol = PubMetToExcel.FindValueIn2DArray(exportWildcardRange, "通配符").Item2;
-
-        //基本信息
-        var exportBaseSheetData = new Dictionary<string, Dictionary<string, Tuple<int, int>>>();
-        var exportBaseData = new Dictionary<string, Tuple<int, int>>();
-        if (exportBaseData == null)
-            throw new ArgumentNullException(nameof(exportBaseData));
-
-        object[,] baseRangeValue = ws.Range[
-            ws.Cells[selectRow, selectCol + 2],
-            ws.Cells[selectRow + 2, exportWildcardCol - 2]
-        ].Value2;
-
-        for (int col = 1; col <= baseRangeValue.GetLength(1); col++)
-        {
-            var keyName = baseRangeValue[1, col]?.ToString() ?? "";
-            if (keyName != "")
-            {
-                if (baseRangeValue[2, col] == null)
-                {
-                    continue;
-                }
-                var keyCol = Convert.ToInt32(baseRangeValue[2, col]);
-                var keyRowMax = Convert.ToInt32(baseRangeValue[3, col]);
-                exportBaseData[keyName] = new Tuple<int, int>(keyCol, keyRowMax);
-            }
-        }
-        exportBaseSheetData[baseSheetName] = exportBaseData;
-
-        //通配符信息
-        var exportWildcardData = new Dictionary<string, string>();
-        if (exportWildcardData == null)
-            throw new ArgumentNullException(nameof(exportWildcardData));
-
-        int wildcardCount;
-        if (ws.Cells[selectRow + 1, selectCol].Value2 == null)
-        {
-            MessageBox.Show("需要选中表格名的单元格，通配符数量为空，请检查数据");
-            return;
-        }
-
-        wildcardCount = (int)ws.Cells[selectRow + 1, selectCol].Value2;
-
-        var wildcardRangeValue = ws.Range[
-            ws.Cells[selectRow, exportWildcardCol],
-            ws.Cells[selectRow + wildcardCount, exportWildcardCol + 1]
-        ].Value2;
-        for (int row = 1; row <= wildcardCount; row++)
-        {
-            var wildcardName = wildcardRangeValue[row, 1]?.ToString() ?? "";
-            if (wildcardName != "")
-            {
-                var wildcardValue = wildcardRangeValue[row, 2].ToString();
-                exportWildcardData[wildcardName] = wildcardValue;
-            }
-        }
-
         //读取【基础/任务……】表数据
+        var sheetInfo = ReadExportSheetInfo();
+        string baseSheetName = sheetInfo.baseSheetName;
         var baseSheet = Wk.Worksheets[baseSheetName];
         var baseData = new Dictionary<string, List<object>>();
-        var baseSheetData = exportBaseSheetData[baseSheetName];
+        var baseSheetData = sheetInfo.exportBaseData;
+        var exportWildcardData = sheetInfo.exportWildcardData;
 
         foreach (var baseElement in baseSheetData)
         {
@@ -327,6 +216,59 @@ public class LteData
         NumDesAddIn.App.StatusBar = "导出完成，用时：" + ts2;
     }
 
+
+    private static (string baseSheetName, int selectRow, int selectCol,
+               Dictionary<string, Tuple<int, int>> exportBaseData,
+               Dictionary<string, string> exportWildcardData)
+               ReadExportSheetInfo()
+    {
+        var ws = Wk.ActiveSheet;
+        var selectRange = NumDesAddIn.App.Selection;
+        string baseSheetName = selectRange.Value2.ToString();
+        int selectRow = selectRange.Row;
+        int selectCol = selectRange.Column;
+
+        // 查找通配符列
+        var exportWildcardRange = ws.Range["A1:AZ1"].Value2;
+        int exportWildcardCol = PubMetToExcel.FindValueIn2DArray(exportWildcardRange, "通配符").Item2;
+
+        // 读取基础数据
+        var exportBaseData = new Dictionary<string, Tuple<int, int>>();
+        object[,] baseRangeValue = ws.Range[
+            ws.Cells[selectRow, selectCol + 2],
+            ws.Cells[selectRow + 2, exportWildcardCol - 2]
+        ].Value2;
+
+        for (int col = 1; col <= baseRangeValue.GetLength(1); col++)
+        {
+            string keyName = baseRangeValue[1, col]?.ToString() ?? "";
+            if (!string.IsNullOrEmpty(keyName) && baseRangeValue[2, col] != null)
+            {
+                int keyCol = Convert.ToInt32(baseRangeValue[2, col]);
+                int keyRowMax = Convert.ToInt32(baseRangeValue[3, col]);
+                exportBaseData[keyName] = Tuple.Create(keyCol, keyRowMax);
+            }
+        }
+
+        // 读取通配符数据
+        var exportWildcardData = new Dictionary<string, string>();
+        int wildcardCount = (int)ws.Cells[selectRow + 1, selectCol].Value2;
+        object[,] wildcardRangeValue = ws.Range[
+            ws.Cells[selectRow, exportWildcardCol],
+            ws.Cells[selectRow + wildcardCount, exportWildcardCol + 1]
+        ].Value2;
+
+        for (int row = 1; row <= wildcardCount; row++)
+        {
+            string wildcardName = wildcardRangeValue[row, 1]?.ToString() ?? "";
+            if (!string.IsNullOrEmpty(wildcardName))
+            {
+                exportWildcardData[wildcardName] = wildcardRangeValue[row, 2].ToString();
+            }
+        }
+
+        return (baseSheetName, selectRow, selectCol, exportBaseData, exportWildcardData);
+    }
     private static Dictionary<string, List<object>> FilterBySpecifiedKeyAndSyncPositions(
         Dictionary<string, List<object>> baseData,
         string targetKey,
@@ -554,6 +496,8 @@ public class LteData
                         );
                     }
 
+                    //整理写入数据
+                    var writeData = new Dictionary<(int row, int col), string>();
                     for (int j = 2; j <= writeCol; j++)
                     {
                         var cellTitle = targetSheet.Cells[2, j].Value?.ToString() ?? "";
@@ -595,19 +539,25 @@ public class LteData
                             var cell = targetSheet.Cells[writeRow, j];
                             if (isFirst)
                             {
-                                cell.Value = cellRealValue;
+                                writeData[(writeRow, j)] = cellRealValue;
                                 dataWritten = true;
                             }
                             else
                             {
                                 if (!cell.Value.Equals(cellRealValue))
                                 {
-                                    cell.Value = cellRealValue;
+                                    writeData[(writeRow, j)] = cellRealValue;
                                     dataWritten = true;
                                 }
                             }
                         }
                     }
+                    //实际写入
+                    foreach (var cell in writeData)
+                    {
+                        targetSheet.Cells[cell.Key.row, cell.Key.col].Value = cell.Value;
+                    }
+
                 }
                 if (dataWritten) // 只有在写入数据时才保存
                 {
@@ -615,8 +565,7 @@ public class LteData
                 }
             }
 
-            if (targetSheet != null)
-                targetSheet.Dispose();
+            targetExcel?.Dispose();
         }
         //输出字典数据
         if (strDictionary.Count > 0)
@@ -636,10 +585,9 @@ public class LteData
     )
     {
         string cellRealValue = cellModelValue;
-        string wildcardPattern = "#(.*?)#";
         string wildcardValuePattern = "#";
 
-        MatchCollection matches = Regex.Matches(cellModelValue, wildcardPattern);
+        MatchCollection matches = WildcardRegex.Matches(cellModelValue);
 
         foreach (Match match in matches)
         {
@@ -1118,16 +1066,16 @@ public class LteData
         var sheetName = "LTE【基础】";
         var rowMax = copyArray.GetLength(0);
 
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, 1, 33, null);
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, 1, 33, copyArray);
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, BaseDataStartCol, BaseDataEndCol, null);
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, BaseDataStartCol, BaseDataEndCol, copyArray);
 
         baseList.Resize(baseList.Range.Resize[rowMax + 1, baseList.Range.Columns.Count]);
 
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, 0, 0, null);
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, BaseDataTagCol, BaseDataTagCol, null);
         object[,] writeArray = new object[rowMax, 1];
         for (int i = 0; i < rowMax; i++)
             writeArray[i, 0] = "+";
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, 0, 0, writeArray);
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, BaseDataTagCol, BaseDataTagCol, writeArray);
 
         ////寻找数据整理
         var findArray = FindData(copyArray, dataTypeList);
@@ -1152,16 +1100,16 @@ public class LteData
         var sheetFindName = "LTE【寻找】";
         var rowFindMax = findArray.GetLength(0);
 
-        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, 10000, 1, 9, null);
-        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, rowFindMax, 1, 9, findArray);
+        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, 10000, FindDataStartCol, FindDataEndCol, null);
+        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, rowFindMax, FindDataStartCol, FindDataEndCol, findArray);
 
         findList.Resize(findList.Range.Resize[rowFindMax + 1, findList.Range.Columns.Count]);
 
         object[,] writeFindArray = new object[rowFindMax, 1];
         for (int i = 0; i < rowFindMax; i++)
             writeFindArray[i, 0] = "+";
-        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, 10000, 0, 0, null);
-        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, rowFindMax, 0, 0, writeFindArray);
+        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, 10000, FindDataTagCol, FindDataTagCol, null);
+        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, rowFindMax, FindDataTagCol, FindDataTagCol, writeFindArray);
 
         sw.Stop();
         var costTime = sw.ElapsedMilliseconds;
@@ -1462,6 +1410,11 @@ public class LteData
             string consumeCountGroup = string.Empty;
             string productCountGroup = string.Empty;
 
+            var consumeIdList = new List<string>();
+            var productIdList = new List<string>();
+            var consumeCountList = new List<string>();
+            var productCountList = new List<string>();
+
             var idNameList = new List<int> { 9, 11, 13, 15, 17, 19, 21, 23 };
             var countNumList = new List<int> { 10, 12, 14, 16, 18, 20, 22, 24 };
 
@@ -1496,44 +1449,28 @@ public class LteData
                         {
                             if (countNum < 4)
                             {
-                                consumeIdGroup += matchId + "#";
-                                consumeCountGroup += baseDic[key][countNumList[countNum]] + "#";
+                                consumeIdList.Add(matchId);
+                                consumeCountList.Add(baseDic[key][countNumList[countNum]]);
                             }
                             else
                             {
-                                productIdGroup += matchId + "#";
-                                productCountGroup += baseDic[key][countNumList[countNum]] + "#";
+                                productIdList.Add(matchId);
+                                productCountList.Add(baseDic[key][countNumList[countNum]]);
                             }
                         }
                     }
                 }
                 countNum++;
             }
-            string consumeIdGroups = string.Empty;
-            string productIdGroups = string.Empty;
-            string consumeCountGroups = string.Empty;
-            string productCountGroups = string.Empty;
+            consumeIdGroup = string.Join("#", consumeIdList);
+            productIdGroup = string.Join("#", productIdList);
+            consumeCountGroup = string.Join("#", consumeCountList);
+            productCountGroup = string.Join("#", productCountList);
 
-            if (consumeIdGroup != string.Empty)
-            {
-                consumeIdGroups = consumeIdGroup.Substring(0, consumeIdGroup.Length - 1);
-            }
-            if (consumeCountGroup != string.Empty)
-            {
-                consumeCountGroups = consumeCountGroup.Substring(0, consumeCountGroup.Length - 1);
-            }
-            if (productIdGroup != string.Empty)
-            {
-                productIdGroups = productIdGroup.Substring(0, productIdGroup.Length - 1);
-            }
-            if (productCountGroup != string.Empty)
-            {
-                productCountGroups = productCountGroup.Substring(0, productCountGroup.Length - 1);
-            }
-            baseDic[key].Add(consumeIdGroups);
-            baseDic[key].Add(productIdGroups);
-            baseDic[key].Add(consumeCountGroups);
-            baseDic[key].Add(productCountGroups);
+            baseDic[key].Add(consumeIdGroup);
+            baseDic[key].Add(productIdGroup);
+            baseDic[key].Add(consumeCountGroup);
+            baseDic[key].Add(productCountGroup);
         }
         var fixArray = PubMetToExcel.DictionaryTo2DArray(
             baseDic,
@@ -1860,16 +1797,16 @@ public class LteData
 
         var rowMax = copyTaskArray.GetLength(0);
 
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, 14, 23, null);
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, 14, 23, copyTaskArray);
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, TaskDataStartCol, TaskDataEndCol, null);
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, TaskDataStartCol, TaskDataEndCol, copyTaskArray);
 
         taskList.Resize(taskList.Range.Resize[rowMax + 1, taskList.Range.Columns.Count]);
 
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, 13, 13, null);
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, TaskDataTagCol, TaskDataTagCol, null);
         object[,] writeArray = new object[rowMax, 1];
         for (int i = 0; i < rowMax; i++)
             writeArray[i, 0] = "+";
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, 13, 13, writeArray);
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, TaskDataTagCol, TaskDataTagCol, writeArray);
 
         sw.Stop();
         var costTime = sw.ElapsedMilliseconds;

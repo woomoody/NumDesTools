@@ -66,17 +66,35 @@ public static class PubMetToExcel
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
         string sheetRealName = "Sheet1";
         string excelRealName = excelName;
-        if (excelName.Contains("#"))
+
+        if (excelName.Contains("##"))
         {
-            var excelRealNameGroup = excelName.Split("#");
-            excelRealName = excelRealNameGroup[0];
-            sheetRealName = excelRealNameGroup[1];
+            var excelRealNameGroup = excelName.Split("##");
+            if (excelRealNameGroup.Length == 3)
+            {
+                excelRealName = excelRealNameGroup[1];
+                sheetRealName = excelRealNameGroup[2];
+            }
+            else
+            {
+                excelRealName = excelRealNameGroup[1];
+            }
+            excelPath = excelPath + @"\" + excelRealNameGroup[0];
         }
-        else if (excelName.Contains("Sharp"))
+        else
         {
-            var excelRealNameGroup = excelName.Split("Sharp");
-            excelRealName = excelRealNameGroup[0].ToString().Replace("Dorllar", "$");
-            sheetRealName = excelRealNameGroup[1];
+            if (excelName.Contains("#"))
+            {
+                var excelRealNameGroup = excelName.Split("#");
+                excelRealName = excelRealNameGroup[0];
+                sheetRealName = excelRealNameGroup[1];
+            }
+            else if (excelName.Contains("Sharp"))
+            {
+                var excelRealNameGroup = excelName.Split("Sharp");
+                excelRealName = excelRealNameGroup[0].ToString().Replace("Dorllar", "$");
+                sheetRealName = excelRealNameGroup[1];
+            }
         }
 
         switch (excelName)
@@ -113,6 +131,9 @@ public static class PubMetToExcel
         {
             errorExcelLog = excelRealName + "#不能创建WorkBook对象" + ex.Message;
             errorList.Add((excelRealName, errorExcelLog, excelRealName));
+
+            excel?.Dispose();
+
             return errorList;
         }
 
@@ -124,10 +145,13 @@ public static class PubMetToExcel
         {
             errorExcelLog = excelRealName + "#不能创建WorkBook对象" + ex.Message;
             errorList.Add((excelRealName, errorExcelLog, excelRealName));
+
+            excel?.Dispose();
             return errorList;
         }
 
         sheet ??= workBook.Worksheets[0];
+
         return errorList;
     }
 
@@ -317,6 +341,7 @@ public static class PubMetToExcel
 
         return rangeValues;
     }
+
     [ExcelFunction(IsHidden = true)]
     public static void WriteExcelDataC(
         string sheetName,
@@ -1509,7 +1534,7 @@ public static class PubMetToExcel
         for (int i = 1; i <= array.GetLength(0); i++)
         {
             string key = array[i, 1]?.ToString();
-            if(key == string.Empty)
+            if (key == string.Empty)
                 continue;
             var row = new List<string>();
             for (int j = 1; j <= array.GetLength(1); j++)
