@@ -1434,7 +1434,7 @@ public static class ExcelDataAutoInsertLanguage
                 targetExcel.Save();
                 NumDesAddIn.App.StatusBar = $"导出：{fixSheetName}";
             }
-            targetSheet.Dispose();
+            targetExcel?.Dispose();
         }
         return error;
     }
@@ -2613,8 +2613,10 @@ public static class ExcelDataAutoInsertMultiNew
         if (excel != null)
         {
             excel.Save();
-            excel.Dispose();
+            
         }
+
+        excel?.Dispose();
 
         errorList.Add(("-1", errorExcelLog, excelName));
         return errorList;
@@ -2841,7 +2843,7 @@ public static class ExcelDataAutoInsertCopyMulti
                 targetExcelPath,
                 excelName,
                 out ExcelWorksheet targetSheet,
-                out ExcelPackage _
+                out ExcelPackage targetExcel
             );
             if (errorList.Count != 0) { }
 
@@ -2849,7 +2851,7 @@ public static class ExcelDataAutoInsertCopyMulti
                 excelPath,
                 excelName,
                 out ExcelWorksheet sourceSheet,
-                out ExcelPackage _
+                out ExcelPackage sourcExcel
             );
             if (errorList.Count != 0) { }
 
@@ -2906,6 +2908,9 @@ public static class ExcelDataAutoInsertCopyMulti
                             );
                     }
             }
+
+            targetExcel?.Dispose();
+            sourcExcel?.Dispose();
 
             NumDesAddIn.App.StatusBar =
                 "遍历表格" + "<" + excelCount + "/" + modelIdNew.Count + ">" + excelName;
@@ -3055,7 +3060,7 @@ public static class ExcelDataAutoInsertCopyMulti
             excelPath,
             excelName,
             out ExcelWorksheet sourceSheet,
-            out ExcelPackage _
+            out ExcelPackage sourceExcel
         );
         if (errorList.Count != 0)
             return errorList;
@@ -3125,7 +3130,10 @@ public static class ExcelDataAutoInsertCopyMulti
         }
 
         targetExcel.Save();
-        targetSheet.Dispose();
+
+        targetExcel?.Dispose();
+        sourceExcel?.Dispose();
+
         return errorList;
     }
 
@@ -3210,7 +3218,7 @@ public static class ExcelDataAutoInsertCopyMulti
             excelPath,
             excelName,
             out ExcelWorksheet sourceSheet,
-            out ExcelPackage _
+            out ExcelPackage sourcExcel
         );
         if (errorList.Count != 0)
             return errorList;
@@ -3261,7 +3269,8 @@ public static class ExcelDataAutoInsertCopyMulti
         }
 
         targetExcel.Save();
-        targetSheet.Dispose();
+        targetExcel?.Dispose();
+        sourcExcel?.Dispose();
 
 
         return errorList;
@@ -3340,7 +3349,7 @@ public static class ExcelDataAutoInsertCopyMulti
             excelPath,
             excelName,
             out ExcelWorksheet sourceSheet,
-            out ExcelPackage _
+            out ExcelPackage sourceExcel
         );
         if (errorList.Count != 0)
             return errorList;
@@ -3374,7 +3383,9 @@ public static class ExcelDataAutoInsertCopyMulti
         }
 
         targetExcel.Save();
-        targetSheet.Dispose();
+        targetExcel?.Dispose();
+        sourceExcel?.Dispose();
+
         return errorList;
     }
 }

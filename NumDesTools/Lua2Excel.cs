@@ -27,7 +27,7 @@ public class Lua2Excel
             );
             errorLogLua += LuaDataExportToExcel(filePath, sheet);
             excel.Save();
-            excel.Dispose();
+            excel?.Dispose();
         }
 
         Debug.Print(errorLogLua);
