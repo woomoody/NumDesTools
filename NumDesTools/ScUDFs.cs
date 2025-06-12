@@ -486,9 +486,12 @@ public class ExcelUdf
         if (!canConvertToInt)
             return "error";
         var value = intValue % 2;
-        range.Interior.Color = ColorTranslator.ToOle(
-            value == 0 ? Color.Aquamarine : Color.BurlyWood
-        );
+
+        int colorCode = value == 0
+             ? 0x7FFFD4 // Aquamarine 的 RGB 值
+             : 0xDEB887; // BurlyWood 的 RGB 值
+
+        range.Interior.Color = colorCode;
         return "^0^";
     }
 
@@ -970,31 +973,33 @@ public class ExcelUdf
             Description = "Range&Cell,eg:A1:A2",
             Name = "第一单元格范围"
         )]
-        object[,] rangeObj1,
-        [ExcelArgument(
-            AllowReference = true,
-            Description = "Range&Cell,eg:A1:A2",
-            Name = "第二单元格范围"
-        )]
-        object[,] rangeObj2
+        object[,] rangeObj
     )
     {
-        // 创建一个包含两个数组的对象
-        var gridDataList = new object[rangeObj1.GetLength(0) * rangeObj1.GetLength(1)];
+        // 创建一个包含N个数组的对象
+        var layers = new object[rangeObj.GetLength(0) * rangeObj.GetLength(1)];
         var index = 0;
-        for (var i = 0; i < rangeObj1.GetLength(0); i++)
-        for (var j = 0; j < rangeObj1.GetLength(1); j++)
-            gridDataList[index++] = new
+        for (var i = 0; i < rangeObj.GetLength(0); i++)
+        for (var j = 0; j < rangeObj.GetLength(1); j++)
+            layers[index++] = new
             {
-                ConfigId = Convert.ToInt32(rangeObj1[i, j]),
-                ObstacleConfigId = Convert.ToInt32(rangeObj2[i, j])
+                Index = index - 1,
+                ConfigId = Convert.ToInt32(rangeObj[i, j]),
+                LinkedIndexes = (object[])null,
+                DisplayRule = 0,
+                LinkedParentIndex = -1,
+                Range = 0,
+                ObstacleConfigId = 0
             };
+        var layers2 = new object[]{ layers };
 
         var combinedData = new
         {
-            GridDataList = gridDataList,
-            Row = rangeObj1.GetLength(0),
-            Col = rangeObj2.GetLength(1)
+            Row = rangeObj.GetLength(0),
+            Col = rangeObj.GetLength(1),
+            GridDataList = (object[])null,
+            Layers = layers2,
+            LayerNames = new object[]{ "棋子层", "蛛网", "关卡入口", "障碍层" }
         };
 
         // 将对象转换为 JSON 格式
