@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
-using MiniExcelLibs.OpenXml;
 using OfficeOpenXml;
 using Match = System.Text.RegularExpressions.Match;
 
@@ -13,17 +12,17 @@ public class LteData
     private static readonly string WkPath = Wk.Path;
 
     private static readonly Regex WildcardRegex = new Regex("#(.*?)#", RegexOptions.Compiled);
-    
-    private static readonly Dictionary<string, (string id, string idType)> SheetTypeMap =
-    new Dictionary<string, (string, string)>(StringComparer.Ordinal)
-    {
-        ["【基础】"] = ("数据编号", "类型"),
-        ["【任务】"] = ("任务编号", "类型"),
-        ["【寻找】"] = ("寻找编号", "类型"),
-        ["【通用】"] = ("数据编号", "类型")
-    };
 
-    private const int BaseDataTagCol = 0; 
+    private static readonly Dictionary<string, (string id, string idType)> SheetTypeMap =
+        new Dictionary<string, (string, string)>(StringComparer.Ordinal)
+        {
+            ["【基础】"] = ("数据编号", "类型"),
+            ["【任务】"] = ("任务编号", "类型"),
+            ["【寻找】"] = ("寻找编号", "类型"),
+            ["【通用】"] = ("数据编号", "类型")
+        };
+
+    private const int BaseDataTagCol = 0;
     private const int BaseDataStartCol = 1;
     private const int BaseDataEndCol = 33;
     private const int FindDataTagCol = 0;
@@ -54,7 +53,7 @@ public class LteData
         //读取【基础/任务……】表数据
         var sheetInfo = ReadExportSheetInfo();
         string baseSheetName = sheetInfo.baseSheetName;
-        
+
         var baseSheet = Wk.Worksheets[baseSheetName];
         var baseData = new Dictionary<string, List<object>>();
         var baseSheetData = sheetInfo.exportBaseData;
@@ -101,7 +100,6 @@ public class LteData
 
         string id;
         string idType;
-
 
         foreach (var kv in SheetTypeMap)
         {
@@ -176,51 +174,37 @@ public class LteData
         string id;
         string idType;
 
-        if (baseSheetName.Contains("【基础】"))
+        foreach (var kv in SheetTypeMap)
         {
-            //走【基础】表逻辑
-            id = "数据编号";
-            idType = "类型";
-
-            //自选新增数据，否则全量数据
-            var keysToFilter = GetCellValuesFromUserInput("【基础】");
-            if (keysToFilter != null)
+            if (baseSheetName.Contains(kv.Key))
             {
-                baseData = FilterBySpecifiedKeyAndSyncPositions(baseData, id, keysToFilter);
+                id = kv.Value.id;
+                idType = kv.Value.idType;
+
+                //自选新增数据，否则全量数据
+                var keysToFilter = GetCellValuesFromUserInput(kv.Key);
+                if (keysToFilter != null)
+                {
+                    baseData = FilterBySpecifiedKeyAndSyncPositions(baseData, id, keysToFilter);
+                }
+
+                BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType,false);
+                break;
             }
-            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
         }
-        else if (baseSheetName.Contains("【任务】"))
-        {
-            //走【任务】表逻辑
-            id = "任务编号";
-            idType = "类型";
-            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
-        }
-        else if (baseSheetName.Contains("【寻找】"))
-        {
-            //走【寻找】表逻辑
-            id = "寻找编号";
-            idType = "类型";
-            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
-        }
-        else if (baseSheetName.Contains("【通用】"))
-        {
-            //走【通用】表逻辑
-            id = "数据编号";
-            idType = "类型";
-            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType);
-        }
+
         sw.Stop();
         var ts2 = sw.ElapsedMilliseconds;
         NumDesAddIn.App.StatusBar = "导出完成，用时：" + ts2;
     }
 
-
-    private static (string baseSheetName, int selectRow, int selectCol,
-               Dictionary<string, Tuple<int, int>> exportBaseData,
-               Dictionary<string, string> exportWildcardData)
-               ReadExportSheetInfo()
+    private static (
+        string baseSheetName,
+        int selectRow,
+        int selectCol,
+        Dictionary<string, Tuple<int, int>> exportBaseData,
+        Dictionary<string, string> exportWildcardData
+    ) ReadExportSheetInfo()
     {
         var ws = Wk.ActiveSheet;
         var selectRange = NumDesAddIn.App.Selection;
@@ -269,6 +253,7 @@ public class LteData
 
         return (baseSheetName, selectRow, selectCol, exportBaseData, exportWildcardData);
     }
+
     private static Dictionary<string, List<object>> FilterBySpecifiedKeyAndSyncPositions(
         Dictionary<string, List<object>> baseData,
         string targetKey,
@@ -444,6 +429,7 @@ public class LteData
                             if ((string)dataStatusListNew[idCount] == "-")
                             {
                                 targetSheet.DeleteRow(rowIndex);
+                                dataWritten = true;
                                 continue;
                             }
 
@@ -535,7 +521,7 @@ public class LteData
                                 //字典型数据判断，需要数据计算完毕后单独写入
                                 dataRepeatWritten.Add(cellRealValue);
                             }
-                            //实际写入
+                            //记录数据
                             var cell = targetSheet.Cells[writeRow, j];
                             if (isFirst)
                             {
@@ -544,7 +530,7 @@ public class LteData
                             }
                             else
                             {
-                                if (!cell.Value.Equals(cellRealValue))
+                                if (cell.Value?.ToString() != cellRealValue)
                                 {
                                     writeData[(writeRow, j)] = cellRealValue;
                                     dataWritten = true;
@@ -557,7 +543,6 @@ public class LteData
                     {
                         targetSheet.Cells[cell.Key.row, cell.Key.col].Value = cell.Value;
                     }
-
                 }
                 if (dataWritten) // 只有在写入数据时才保存
                 {
@@ -1046,7 +1031,16 @@ public class LteData
         }
 
         //基础数据整理
-        copyArray = BaseData(copyArray, dataTypeList);
+        var copyData = BaseData(copyArray, dataTypeList);
+        copyArray = copyData.fixArray;
+        var errorTypeList = copyData.errorTypeList;
+        if(errorTypeList != null)
+        {
+            //基础数据中存在错误类型
+            var errorTypeListOnly = new HashSet<string>(errorTypeList);
+            var errorStr = string.Join(",", errorTypeListOnly);
+            MessageBox.Show($"基础数据中存在以下错误类型：{errorStr}");
+        }
         ////基础List数据清理
         //baseList.DataBodyRange.ClearContents();
         ////基础List行数刷新
@@ -1067,7 +1061,14 @@ public class LteData
         var rowMax = copyArray.GetLength(0);
 
         PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, BaseDataStartCol, BaseDataEndCol, null);
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, BaseDataStartCol, BaseDataEndCol, copyArray);
+        PubMetToExcel.WriteExcelDataC(
+            sheetName,
+            1,
+            rowMax,
+            BaseDataStartCol,
+            BaseDataEndCol,
+            copyArray
+        );
 
         baseList.Resize(baseList.Range.Resize[rowMax + 1, baseList.Range.Columns.Count]);
 
@@ -1075,7 +1076,14 @@ public class LteData
         object[,] writeArray = new object[rowMax, 1];
         for (int i = 0; i < rowMax; i++)
             writeArray[i, 0] = "+";
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, BaseDataTagCol, BaseDataTagCol, writeArray);
+        PubMetToExcel.WriteExcelDataC(
+            sheetName,
+            1,
+            rowMax,
+            BaseDataTagCol,
+            BaseDataTagCol,
+            writeArray
+        );
 
         ////寻找数据整理
         var findArray = FindData(copyArray, dataTypeList);
@@ -1100,16 +1108,44 @@ public class LteData
         var sheetFindName = "LTE【寻找】";
         var rowFindMax = findArray.GetLength(0);
 
-        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, 10000, FindDataStartCol, FindDataEndCol, null);
-        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, rowFindMax, FindDataStartCol, FindDataEndCol, findArray);
+        PubMetToExcel.WriteExcelDataC(
+            sheetFindName,
+            1,
+            10000,
+            FindDataStartCol,
+            FindDataEndCol,
+            null
+        );
+        PubMetToExcel.WriteExcelDataC(
+            sheetFindName,
+            1,
+            rowFindMax,
+            FindDataStartCol,
+            FindDataEndCol,
+            findArray
+        );
 
         findList.Resize(findList.Range.Resize[rowFindMax + 1, findList.Range.Columns.Count]);
 
         object[,] writeFindArray = new object[rowFindMax, 1];
         for (int i = 0; i < rowFindMax; i++)
             writeFindArray[i, 0] = "+";
-        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, 10000, FindDataTagCol, FindDataTagCol, null);
-        PubMetToExcel.WriteExcelDataC(sheetFindName, 1, rowFindMax, FindDataTagCol, FindDataTagCol, writeFindArray);
+        PubMetToExcel.WriteExcelDataC(
+            sheetFindName,
+            1,
+            10000,
+            FindDataTagCol,
+            FindDataTagCol,
+            null
+        );
+        PubMetToExcel.WriteExcelDataC(
+            sheetFindName,
+            1,
+            rowFindMax,
+            FindDataTagCol,
+            FindDataTagCol,
+            writeFindArray
+        );
 
         sw.Stop();
         var costTime = sw.ElapsedMilliseconds;
@@ -1150,7 +1186,17 @@ public class LteData
         }
 
         //基础数据整理
-        copyArray = BaseData(copyArray, dataTypeList);
+        var copyData = BaseData(copyArray, dataTypeList);
+        copyArray = copyData.fixArray;
+        var errorTypeList = copyData.errorTypeList;
+        if (errorTypeList != null)
+        {
+            //基础数据中存在错误类型
+            var errorTypeListOnly = new HashSet<string>(errorTypeList);
+            var errorStr = string.Join(",", errorTypeListOnly);
+            MessageBox.Show($"基础数据中存在以下错误类型：{errorStr}");
+        }
+
         WriteDymaicData(copyArray, list, "LTE【基础】", 1, 33);
 
         //寻找数据整理
@@ -1200,7 +1246,7 @@ public class LteData
     private static Tuple<List<List<string>>, List<string>> TagData(
         Dictionary<string, List<string>> copyDic,
         Dictionary<string, List<string>> oldListDic
-    )
+        )
     {
         // 分类处理
         var added = new List<List<string>>();
@@ -1354,12 +1400,14 @@ public class LteData
     }
 
     //原始数据改造
-    private static object[,] BaseData(object[,] baseArray, ListObject dataTypeList)
+    private static (object[,] fixArray, List<string> errorTypeList) BaseData(object[,] baseArray, ListObject dataTypeList)
     {
         var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(baseArray);
         var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(
             dataTypeList.DataBodyRange.Value2
         );
+
+        var errorTypeList = new List<string>();
 
         foreach (var baseList in baseDic)
         {
@@ -1370,10 +1418,17 @@ public class LteData
             string findDetailType = String.Empty;
 
             string itemType = baseDic[key][6];
+
+            //判断类型是否存在
             if (dataTypeDic.ContainsKey(itemType))
             {
                 findType = dataTypeDic[itemType][2]?.ToString();
                 findDetailType = dataTypeDic[itemType][3]?.ToString();
+            }
+            else
+            {
+                errorTypeList.Add(itemType);
+                continue;
             }
             baseDic[key].Add(findType);
             baseDic[key].Add(findDetailType);
@@ -1381,13 +1436,16 @@ public class LteData
             //链长
             string linkMax = string.Empty;
             string currentName = baseDic[key][4];
-
             int countCurrent = baseDic
                 .Values.Where(list => list.Count > 4)
                 .Count(list => list[4] == currentName);
-            if (countCurrent > 1)
+
+            if (itemType.Contains("链"))
             {
-                linkMax = countCurrent.ToString();
+                if (countCurrent > 1)
+                {
+                    linkMax = countCurrent.ToString();
+                }
             }
             baseDic[key].Add(linkMax);
 
@@ -1478,7 +1536,7 @@ public class LteData
             baseDic[baseDic.Keys.First()].Count
         );
 
-        return fixArray;
+        return (fixArray , errorTypeList);
     }
     #endregion
 
@@ -1552,6 +1610,7 @@ public class LteData
                             findLinksFix += ",{8,9999}";
 
                             findDic[findIdStr].Add(findLinksFix);
+
                         }
                     }
                 }
@@ -1791,14 +1850,30 @@ public class LteData
         var baseArray = baseList.DataBodyRange.Value2;
 
         //任务数据整理
-        copyTaskArray = TaskData(copyTaskArray, taskDataTypeArray, baseArray, activtiyId);
+        var copyTaskData = TaskData(copyTaskArray, taskDataTypeArray, baseArray, activtiyId);
+        copyTaskArray = copyTaskData.taskArray;
+        var errorTypeList = copyTaskData.errorTypeList;
+        if (errorTypeList != null)
+        {
+            //基础数据中存在错误类型
+            var errorTypeListOnly = new HashSet<string>(errorTypeList);
+            var errorStr = string.Join(",", errorTypeListOnly);
+            MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
+        }
 
         //非Com写入数据,索引从0开始,效率确实更高,读取还是ListObject更方便
 
         var rowMax = copyTaskArray.GetLength(0);
 
         PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, TaskDataStartCol, TaskDataEndCol, null);
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, TaskDataStartCol, TaskDataEndCol, copyTaskArray);
+        PubMetToExcel.WriteExcelDataC(
+            sheetName,
+            1,
+            rowMax,
+            TaskDataStartCol,
+            TaskDataEndCol,
+            copyTaskArray
+        );
 
         taskList.Resize(taskList.Range.Resize[rowMax + 1, taskList.Range.Columns.Count]);
 
@@ -1806,7 +1881,14 @@ public class LteData
         object[,] writeArray = new object[rowMax, 1];
         for (int i = 0; i < rowMax; i++)
             writeArray[i, 0] = "+";
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, TaskDataTagCol, TaskDataTagCol, writeArray);
+        PubMetToExcel.WriteExcelDataC(
+            sheetName,
+            1,
+            rowMax,
+            TaskDataTagCol,
+            TaskDataTagCol,
+            writeArray
+        );
 
         sw.Stop();
         var costTime = sw.ElapsedMilliseconds;
@@ -1855,7 +1937,18 @@ public class LteData
         var baseArray = baseList.DataBodyRange.Value2;
 
         //任务数据整理
-        copyTaskArray = TaskData(copyTaskArray, taskDataTypeArray, baseArray, activtiyId);
+        var copyTaskData = TaskData(copyTaskArray, taskDataTypeArray, baseArray, activtiyId);
+        copyTaskArray = copyTaskData.taskArray;
+        var errorTypeList = copyTaskData.errorTypeList;
+
+        if (errorTypeList != null)
+        {
+            //基础数据中存在错误类型
+            var errorTypeListOnly = new HashSet<string>(errorTypeList);
+            var errorStr = string.Join(",", errorTypeListOnly);
+            MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
+        }
+
         WriteDymaicData(copyTaskArray, taskList, "LTE【任务】", 14, 23, 13);
 
         sw.Stop();
@@ -1867,7 +1960,7 @@ public class LteData
     }
 
     //原始数据改造
-    private static object[,] TaskData(
+    private static (object[,] taskArray, List<string> errorTypeList) TaskData(
         object[,] copyTaskArray,
         object[,] taskDataTypeList,
         object[,] baseList,
@@ -1879,6 +1972,9 @@ public class LteData
 
         var taskTaskArrayCount = copyTaskArray.GetLength(0);
         var taskList = new List<List<string>>();
+
+        var errorTypeList = new List<string>();
+
         for (int i = 1; i <= taskTaskArrayCount; i++)
         {
             var taskColDataList = new List<string>();
@@ -1927,6 +2023,11 @@ public class LteData
             //主线数据
             if (taskDes != string.Empty)
             {
+                if(!taskDataTypeDic.ContainsKey(taskTypeName))
+                {
+                    errorTypeList.Add(taskTypeName);
+                    continue;
+                }
                 taskColDataList.Add(taskId);
                 taskColDataList.Add(taskDes);
                 taskColDataList.Add(taskTypeName);
@@ -1988,6 +2089,11 @@ public class LteData
             //支线数据
             if (taskSubId != string.Empty)
             {
+                if (!taskDataTypeDic.ContainsKey(taskSubTypeName))
+                {
+                    errorTypeList.Add(taskSubTypeName);
+                    continue;
+                }
                 taskSubColDataList.Add(taskSubId);
                 taskSubColDataList.Add(taskSubDes);
                 taskSubColDataList.Add(taskSubTypeName);
@@ -2044,7 +2150,7 @@ public class LteData
             }
         }
         var taskArray = PubMetToExcel.ConvertListToArray(taskList);
-        return taskArray;
+        return (taskArray,errorTypeList);
     }
 
     private static List<string> FixTaskData(
