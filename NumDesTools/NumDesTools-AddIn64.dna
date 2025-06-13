@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DnaLibrary RollForward="LatestMajor" Name="NumDesTools" RuntimeVersion="v6.0" xmlns="http://schemas.excel-dna.net/addin/2020/07/dnalibrary">
+  <ExternalLibrary ExplicitRegistration="true" Path="NumDesTools.dll" ExplicitExports="true" LoadFromBytes="true" Pack="true" IncludePdb="false" />
+
+  
+</DnaLibrary>
