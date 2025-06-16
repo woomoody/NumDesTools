@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 using OfficeOpenXml;
-using OfficeOpenXml.Table;
 using Match = System.Text.RegularExpressions.Match;
 
 namespace NumDesTools;
@@ -359,7 +358,7 @@ public class LteData
         bool isFirst = true
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
 
         var strDictionary = new Dictionary<string, Dictionary<string, List<string>>>();
 

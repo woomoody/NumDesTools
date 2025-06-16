@@ -13,33 +13,33 @@
             < ribbon startFromScratch = 'false' >//表示加载时excel原有的选项卡隐藏否
             -->
                 <group id='Group2' label='格式整理'>
-                    <button id='Button4' size='large' label='标准格式&#13;' image='verilog' onAction='CleanCellFormat_Click'
+                    <button id='Button4' size='large' label='标准格式&#13;' image='verilog' onAction='OnButtonClick'
                             screentip='点击整理当前sheet格式，标准化文本和单元格大小' />
                     <button id='Button5' size='large' getLabel='GetLableText' image='redux-reducer'
-                            onAction='ZoomInOut_Click'
+                            onAction='OnButtonClick'
                             screentip='点击开启单元格内容放大功能，再次点击关闭放大功能(创建Form机制)！报错请删除！配置路径：\Documents\NumDesGlobalKey.json' />
                     <button id='FocusLightButton' size='large' getLabel='GetLableText' image='email'
-                            onAction='FocusLight_Click'
+                            onAction='OnButtonClick'
                             screentip='聚光灯效果！报错请删除！配置路径：\Documents\NumDesGlobalKey.json' />
-                    <button id='Button8' size='large' label='公式检查' image='asciidoc' onAction='FormularBaseCheck_Click'
+                    <button id='Button8' size='large' label='公式检查' image='asciidoc' onAction='OnButtonClick'
                             screentip='点击检查当前工作簿所有sheet中的公式，看是否有错误的连接，推荐合完表后进行检查' />
                     <button id='SheetMenu' size='large' getLabel='GetLableText' image='reason'
-                            onAction='SheetMenu_Click'
+                            onAction='OnButtonClick'
                             screentip='点击创建表格目录，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.json' />
                     <button id='CellHiLight' size='large' getLabel='GetLableText' image='reason'
-                            onAction='CellHiLight_Click'
+                            onAction='OnButtonClick'
                             screentip='点击高亮显示一定范围内同值内容，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.json' />
                     <button id='PowerQueryLinksUpdate' size='large' label='更新表格路径' image='verilog'
-                            onAction='PowerQueryLinksUpdate_Click'
+                            onAction='OnButtonClick'
                             screentip='更新PowerQuery表连接路径' />
                     <button id='CheckSheetValue' size='large' getLabel='GetLableText' image='dart'
-                            onAction='CheckSheetValue_Click'
+                            onAction='OnButtonClick'
                             screentip='点击启动表格关闭时数据自检，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.json' />
                     <button id='CheckHiddenCellVsto' size='large' label='检查隐藏' image='reason'
-                            onAction='CheckHiddenCellVsto_Click'
+                            onAction='OnButtonClick'
                             screentip='点击检查当前变动Excel是否有隐藏单元格，VSTO方式需要打开Excel，较慢' />
                     <button id='CheckHiddenCellVstoAll' size='large' label='检查隐藏（全局）' image='font'
-                            onAction='CheckHiddenCellVstoAll_Click'
+                            onAction='OnButtonClick'
                             screentip='点击检查全量Excel是否有隐藏单元格，VSTO方式需要打开Excel，较慢' />
                 </group>
                 <!--
@@ -83,20 +83,20 @@
                     <menu  id ='AutoInsertExcelDataMenu' label ='自动数据&#13;' image ='database' size='large'>
                         <!--Menu中的Button自定义图标不会根据底色自动反色，显示会很奇怪，所以一律用Office内部Icon-->
                         <button id='AutoInsertExcelData'  label='自动数据LTE' imageMso='ConnectedToolSyncMenu'
-                                onAction='AutoInsertExcelData_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI' />
+                                onAction='OnButtonClick' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI' />
                         <button id='AutoInsertExcelDataThread'  label='自动数据LTE(多线程)' imageMso='ConnectionPoints'
-                                onAction='AutoInsertExcelDataThread_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI，多线程更快速' />
+                                onAction='OnButtonClick' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI，多线程更快速' />
                         <button id='AutoInsertExcelDataNew'  label='自动数据LTE（New）' imageMso='ConnectedToolSyncMenu'
-                                onAction='AutoInsertExcelDataNew_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI' />
+                                onAction='OnButtonClick' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI' />
                         <button id='AutoInsertExcelDataThreadNew'  label='自动数据LTE(多线程)（New）' imageMso='ConnectionPoints'
-                                onAction='AutoInsertExcelDataThreadNew_Click' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI，多线程更快速' />
+                                onAction='OnButtonClick' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI，多线程更快速' />
                         <button id='AutoInsertExcelDataModelCreat'  label='特殊写入' imageMso='ConnectedToolSyncMenu'
-                                onAction='AutoInsertExcelDataModelCreat_Click' screentip='修正已存在的表格值（例如：LTE皮肤xxx【模版】），无法自增或者批量替换：EPPlusI' />
+                                onAction='OnButtonClick' screentip='修正已存在的表格值（例如：LTE皮肤xxx【模版】），无法自增或者批量替换：EPPlusI' />
                     </menu>
                     <button id='AutoInsertExcelDialog' size='large' label='自动数据(对话类)' image='ejs'
-                        onAction='AutoInsertExcelDataDialog_Click' screentip='根据模板数据覆写对话数据表格：EPPlusI' />
+                        onAction='OnButtonClick' screentip='根据模板数据覆写对话数据表格：EPPlusI' />
                     <button id='AutoMergeExcel' size='large' label='合并Excel(Alice-Cove)' image='dart'
-                            onAction='AutoMergeExcel_Click' screentip='Alice与Cove表格数据互相拷贝：EPPlusI' />
+                            onAction='OnButtonClick' screentip='Alice与Cove表格数据互相拷贝：EPPlusI' />
                     
                     <!--
                     <button id='AutoLinkExcel' size='large' label='Excel超链接' image='edge'
@@ -108,9 +108,9 @@
                     -->
                     
                     <button id='AutoSeachExcel' size='large' label='查验模版写入数据' image='document'
-                            onAction='AutoSeachExcel_Click' screentip='查看模版表写入后的数据：EPPlus' />
+                            onAction='OnButtonClick' screentip='查看模版表写入后的数据：EPPlus' />
                     <button id='AutoInsertNumChanges' size='large' label='活动奖励写入' image='console'
-                            onAction='AutoInsertNumChanges_Click' screentip='针对各类活动奖励内容反复修改，防止漏填数据的自动化填写工具' />
+                            onAction='OnButtonClick' screentip='针对各类活动奖励内容反复修改，防止漏填数据的自动化填写工具' />
                 </group>
                 <group id="Group8" label="Excel搜索">
                     <labelControl id="SearchLab" label="搜索编号/关键字" />
@@ -119,42 +119,42 @@
                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^………………'/>
                     <menu  id ='ExcelSearchBoxMenu' label ='全局搜索&#13;' image ='key' size='large'>
                         <button id="ExcelSearchBoxButton1" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件'
-                                onAction='ExcelSearchAll_Click' imageMso="RulesInspector" />
+                                onAction='OnButtonClick' imageMso="RulesInspector" />
                         <button id="ExcelSearchBoxButton3" label="全局搜索(多线程)" screentip='全列，按照A-Z的顺序遍历文件'
-                                onAction='ExcelSearchAllMultiThread_Click' imageMso="RulesManageAndCreate" />
+                                onAction='OnButtonClick' imageMso="RulesManageAndCreate" />
                         <button id="ExcelSearchBoxButton2" label="编号搜索(多线程)" screentip='二列，按照A-Z的顺序遍历文件'
-                                onAction='ExcelSearchID_Click' imageMso="RulesOnLoad" />
+                                onAction='OnButtonClick' imageMso="RulesOnLoad" />
                         <button id="ExcelSearchBoxButton4" label="合并数据-关键词" screentip='合并Excel(Alice-Cove)当前关键词'
-                                onAction='ExcelSearchAllToExcel_Click' imageMso="SelectAll" />
+                                onAction='OnButtonClick' imageMso="SelectAll" />
                     </menu>
                     <button id="ExcelSearchBoxButton5" size='large' label="替换文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串并替换'
-                            onAction='CellDataReplace_Click' image="key" /> 
+                            onAction='OnButtonClick' image="key" /> 
                     <button id="ExcelSearchBoxButton6" size='large' label="搜索文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串'
-                            onAction='CellDataSearch_Click' image="dart" />
+                            onAction='OnButtonClick' image="dart" />
                     <menu  id ='AutoInsertExcelDataMenu2' label ='创建数据&#13;' image ='ejs' size='large'>
                         <button id="ModelDataCreat"  label="常规模版" screentip='全局搜索关键词，输出表格数据，常规模版数据，例如：各类LTE、主岛活动常规【模版】'
-                                onAction='ModelDataCreat_Click' imageMso="AdpNewTable" />
+                                onAction='OnButtonClick' imageMso="AdpNewTable" />
                         <button id="ModelDataCreat2"  label="特殊模版" screentip='指定表格搜索关键词，输出表格数据，特殊模版数据，例如：LTE皮肤【模版】'
-                                onAction='ModelDataCreat2_Click' imageMso="Hotspot" />
+                                onAction='OnButtonClick' imageMso="Hotspot" />
                     </menu>
                     <button id="ExcelSearchBoxButton7" size='large' label="搜索Sheet名" screentip='搜索txt导出文件所在工作簿，特别指$开头'
-                            onAction='ExcelSearchAllSheetName_Click' image="verilog" />
+                            onAction='OnButtonClick' image="verilog" />
                 </group>
                 <group id="Group9" label="运营工具">
                     <button id="ActivityServerDataButton1" size='large' label="生成活动(活动名)" screentip='根据运营排期自动生成活动配置'
-                            onAction='ActivityServerData_Click' image="csharp" />
+                            onAction='OnButtonClick' image="csharp" />
                     <button id="ActivityServerDataButton2" size='large' label="生成活动(活动ID)" screentip='根据运营排期自动生成活动配置'
-                            onAction='ActivityServerData2_Click' image="csharp" />
+                            onAction='OnButtonClick' image="csharp" />
                     <button id="CompareExcelButton" size='large' label="对比Excel" screentip='对比不同版本同路径下的非#Excel文件，输出至【文档\#表格比对结果.xlsx】'
-                            onAction='CompareExcel_Click' image="console" />
+                            onAction='OnButtonClick' image="console" />
                     <button id="MapExcelButton" size='large' label="溯源改动" screentip='根据对比结果和【文档\表格关系.json】溯源每条改动最终影响的表格，一般为ActivityClientData.xlsx，输出至【文档\#溯源结果.xlsx】'
-                            onAction='MapExcel_Click' image="video" />
+                            onAction='OnButtonClick' image="video" />
                     <button id="CheckFileFormat" size='large' label="检查数据格式" screentip='手动检查数据格式，取消隐藏，过滤符配置在\Document\NumDesToolsConfig.json'
-                            onAction='CheckFileFormat_Click' image="dart" />
+                            onAction='OnButtonClick' image="dart" />
                 </group>
                 <group id='FileInfo' label='文件信息'>
-                    <button id='CopyFileName' size='large' label='文件名称' image='document' onAction='CopyFileName_Click' />
-                    <button id='CopyFilePath' size='large' label='文件路径' image='file' onAction='CopyFilePath_Click' />
+                    <button id='CopyFileName' size='large' label='文件名称' image='document' onAction='OnButtonClick' />
+                    <button id='CopyFilePath' size='large' label='文件路径' image='file' onAction='OnButtonClick' />
                     <labelControl id="BasePathLab" label=" 源表/目标" />
                     <editBox id="BasePathEdit" getText="GetFileInfo" onChange="FileInfoChanged"
                              sizeString="........................................................................."
@@ -165,9 +165,9 @@
                 </group>
                 <group id='NormalFun' label='杂项'>
                     <button id='ShowDnaLog' size='large' getLabel='GetLableText' image='ejs' 
-                            onAction='ShowDnaLog_Click'   screentip = '展示插件Log'       />
+                            onAction='OnButtonClick'   screentip = '展示插件Log'       />
                     <button id='GlobalVariableDefault' size='large' label='默认配置' image='vscode' 
-                            onAction='GlobalVariableDefault_Click' screentip ='恢复插件配置为默认'     />
+                            onAction='OnButtonClick' screentip ='恢复插件配置为默认'     />
                 </group>
                 <!--
                 <group id='Group4' label='战斗仿真'>控件id不能重复，否则无法加载Ribbon
@@ -176,19 +176,19 @@
             <tab id='SecondTab' label='NumDesToolsPlus' insertBeforeMso='TabHome'>
                 <group id='Group10' label='玩法计算'>
                     <button id='Button15' size='large' label='Alice大富翁' image='dart' screentip='大富翁方案整理'
-                            onAction='AliceBigRicher_Click' />
+                            onAction='OnButtonClick' />
                     <button id='Button16' size='large' label='TM目标元素' image='ejs' screentip='Tm目标元素生成'
-                            onAction='TmTargetEle_Click' />
+                            onAction='OnButtonClick' />
                     <button id='Button17' size='large' label='TM非目标元素' image='email' screentip='Tm非目标元素生成'
-                            onAction='TmNormalEle_Click' />
+                            onAction='OnButtonClick' />
                     <button id='Button_MagicBottle' size='large' label='移动魔瓶' image='cpp' screentip='移动魔瓶消耗模拟计算'
-                            onAction='MagicBottle_Click' />
+                            onAction='OnButtonClick' />
                     <button id='Button_LoopRun' size='large' label='移动转盘' image='key' screentip='移动转盘随机方案机选'
-                            onAction='LoopRun_Click' />
+                            onAction='OnButtonClick' />
                 </group>
                 <group id='GroupAI' label='AI聚合'>
                     <button id='ShowAI' size='large' getLabel='GetLableText' image='csharp' 
-                            onAction='ShowAIText_Click' />
+                            onAction='OnButtonClick' />
                     <dropDown id="AIConfig" label="AI配置选择" onAction="AIConfig_Select"
                               getSelectedItemID ="AIConfig_Select_Default" >
                         <item id="ChatGPT" label="ChatGPT-4o模型" />
@@ -196,8 +196,8 @@
                      </dropDown>
                 </group>
                 <group id='Group9999' label='测试功能区'>
-                    <button id='Button99991' size='large' label='不要点击红色按钮' image='sofa' onAction='TestBar1_Click' />
-                    <button id='Button99992' size='large' label='测试' image='sofa' onAction='TestBar2_Click' />
+                    <button id='Button99991' size='large' label='不要点击红色按钮' image='sofa' onAction='OnButtonClick' />
+                    <button id='Button99992' size='large' label='测试' image='sofa' onAction='OnButtonClick' />
                     <checkBox id='checkbox99991' label='是否后台' />
                 </group>
             </tab>
