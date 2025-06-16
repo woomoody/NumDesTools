@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 using NLua;
-using OfficeOpenXml;
 
 namespace NumDesTools;
 
@@ -9,7 +8,7 @@ public class Lua2Excel
 {
     public static void LuaDataGet()
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
 
         var files = Directory.GetFiles(@"C:\Users\cent\Desktop\Merge2Data", "*.lua.txt");
         var excelFilePath = @"C:\Users\cent\Desktop\Merge2Data\Excel";

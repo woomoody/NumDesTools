@@ -8,7 +8,6 @@ using NLua;
 using NumDesTools.Config;
 using NumDesTools.UI;
 using OfficeOpenXml;
-using LicenseContext = OfficeOpenXml.LicenseContext;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
 using Process = System.Diagnostics.Process;
@@ -539,7 +538,7 @@ public static class PubMetToExcelFunc
 
     public static void OpenBaseLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         var selectCell = NumDesAddIn.App.ActiveCell;
         var basePath = NumDesAddIn.App.ActiveWorkbook.Path;
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(basePath));
@@ -557,7 +556,7 @@ public static class PubMetToExcelFunc
 
     public static void OpenMergeLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         var selectCell = NumDesAddIn.App.ActiveCell;
         var basePath = NumDesAddIn.App.ActiveWorkbook.Path;
         var mergePath = "";
@@ -1992,7 +1991,7 @@ public static class PubMetToExcelFunc
         string findValue
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
 
         var filesCollection = new SelfExcelFileCollector(rootPath);
         var files = filesCollection.GetAllExcelFilesPath();
@@ -2066,7 +2065,7 @@ public static class PubMetToExcelFunc
         string findValue
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
 
         var filesCollection = new SelfExcelFileCollector(rootPath);
         var files = filesCollection.GetAllExcelFilesPath();

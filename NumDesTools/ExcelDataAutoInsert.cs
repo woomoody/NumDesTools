@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
-using LicenseContext = OfficeOpenXml.LicenseContext;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
 
@@ -97,7 +96,7 @@ public static class ExcelDataAutoInsert
 
     public static void ExcelHyperLinks(dynamic excelPath, dynamic sheet)
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         for (var i = 2; i <= 500; i++)
         {
             var modeCol = FindTitle(sheet, 1, "实际模板(上一期)");
@@ -135,7 +134,7 @@ public static class ExcelDataAutoInsert
 
     public static void ExcelHyperLinksNormal(dynamic excelPath, dynamic sheet)
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         for (var i = 2; i <= 500; i++)
         {
             var cell = sheet.Cells[i, 5];
@@ -299,7 +298,7 @@ public static class ExcelDataAutoInsertLanguage
         dynamic app
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
 
         var sourceData = PubMetToExcel.ExcelDataToList(sourceSheet);
 
@@ -761,7 +760,7 @@ public static class ExcelDataAutoInsertLanguage
         dynamic app
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
 
         var sourceData = PubMetToExcel.ExcelDataToListBySelfToEnd(sourceSheet, 0, 1, 1);
         var sourceTitle = sourceData.Item1;
@@ -1260,7 +1259,7 @@ public static class ExcelDataAutoInsertLanguage
     )
     {
         // 替换通配符生成数据
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
 
         var dicValue = new Dictionary<(string, string), List<string>>();
 
@@ -1497,7 +1496,7 @@ public static class ExcelDataAutoInsertLanguage
             if (funDy3 != "0")
             {
                 dicValue[(funDy2, itemValue)] = dicValue[(funDy2, itemValue)]
-                    .Where(new Func<string, bool>(values => !string.IsNullOrEmpty(values))) // 过滤掉 null 和空字符串
+                    .Where(values => !string.IsNullOrEmpty(values)) // 过滤掉 null 和空字符串
                     .Distinct()
                     .ToList();
             }
@@ -1781,7 +1780,7 @@ public static class ExcelDataAutoInsertMulti
         dynamic writeMode
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         var errorExcelLog = "";
         var errorList = new List<(string, string, string)>();
         string path;
@@ -2207,7 +2206,7 @@ public static class ExcelDataAutoInsertMulti
         dynamic modelId
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         var excelFileFixKey = 2;
         var writeIdList = new List<string>();
         var lastRow = 0;
@@ -2399,7 +2398,7 @@ public static class ExcelDataAutoInsertMultiNew
         var excelCount = 1;
         foreach (var key in _modelId)
         {
-            var excelName = key.Key;
+            string excelName = key.Key;
             var ignore = _ignoreExcel[excelName][0].Item1[0, 0];
             if (ignore != null)
             {
@@ -2481,7 +2480,6 @@ public static class ExcelDataAutoInsertMultiNew
 
     public static List<(string, string, string)> CopyData(string excelName)
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         var errorExcelLog = "";
         List<(string, string, string)> errorList = PubMetToExcel.SetExcelObjectEpPlus(
             _excelPath,
@@ -2772,7 +2770,7 @@ public static class ExcelDataAutoInsertMultiNew
         bool isDelete = false
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
 
         var lastRow = 0;
         for (var excelMulti = 0; excelMulti < modelIdnew[excelName].Count; excelMulti++)
@@ -2918,7 +2916,7 @@ public static class ExcelDataAutoInsertCopyMulti
             excelCount++;
         }
 
-        diffList = diffList.Distinct().ToList().ToList();
+        diffList = diffList.Distinct().ToList();
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
@@ -3018,7 +3016,7 @@ public static class ExcelDataAutoInsertCopyMulti
         dynamic cellColor
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         var errorList = new List<(string, string, string)>();
         var targetExcelPath = "";
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -3131,7 +3129,7 @@ public static class ExcelDataAutoInsertCopyMulti
 
         targetExcel.Save();
 
-        targetExcel?.Dispose();
+        targetExcel.Dispose();
         sourceExcel?.Dispose();
 
         return errorList;
@@ -3182,7 +3180,7 @@ public static class ExcelDataAutoInsertCopyMulti
         dynamic sheet
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         var errorList = new List<(string, string, string)>();
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
@@ -3269,7 +3267,7 @@ public static class ExcelDataAutoInsertCopyMulti
         }
 
         targetExcel.Save();
-        targetExcel?.Dispose();
+        targetExcel.Dispose();
         sourcExcel?.Dispose();
 
 
@@ -3313,7 +3311,7 @@ public static class ExcelDataAutoInsertCopyMulti
         dynamic excelName
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         var errorList = new List<(string, string, string)>();
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
@@ -3383,7 +3381,7 @@ public static class ExcelDataAutoInsertCopyMulti
         }
 
         targetExcel.Save();
-        targetExcel?.Dispose();
+        targetExcel.Dispose();
         sourceExcel?.Dispose();
 
         return errorList;
@@ -4306,7 +4304,7 @@ public static class ExcelDataSyncHelper
 
     private static List<Dictionary<string, object>> ReadExcelData(string path, string fileName)
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
 
         var filePath = Path.Combine(path, fileName);
         if (!File.Exists(filePath)) return new List<Dictionary<string, object>>();

@@ -40,7 +40,7 @@ public class JsonToExcelConverter
 
         var excelFilePath = Path.ChangeExtension(jsonFilePath, ".xlsx");
 
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
 
         // 创建Excel文件
         using var package = new ExcelPackage(new FileInfo(excelFilePath));

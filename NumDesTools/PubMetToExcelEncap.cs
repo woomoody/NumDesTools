@@ -16,7 +16,7 @@ public class ExcelDataByEpplus
 
     public bool GetExcelObj(dynamic excelPath, dynamic excelName)
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         ExcelWorksheet sheet;
         ExcelPackage excel;
         string errorExcelLog;
@@ -173,7 +173,7 @@ public class ExcelDataByEpplus
         List<int> usedData
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         Dictionary<string, List<object>> dataDict = new Dictionary<string, List<object>>();
         using ExcelPackage package = new ExcelPackage(new FileInfo(path));
         ExcelWorksheet worksheet = package.Workbook.Worksheets[sheetName];

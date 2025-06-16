@@ -4,7 +4,6 @@ using System.Data.OleDb;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using EnvDTE80;
 using OfficeOpenXml;
 using DataTable = System.Data.DataTable;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
@@ -29,7 +28,7 @@ public static class PubMetToExcel
         out ExcelPackage excel
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         sheet = null;
         excel = null;
         var path = excelFilePath + @"\" + excelName + @".xlsx";
@@ -58,7 +57,7 @@ public static class PubMetToExcel
         out ExcelPackage excel
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         sheet = null;
         excel = null;
         string errorExcelLog;
@@ -164,7 +163,7 @@ public static class PubMetToExcel
         out ExcelPackage excel
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         sheet = null;
         excel = null;
         excel = new ExcelPackage(new FileInfo(excelPath + @"\" + excelName));
@@ -629,7 +628,7 @@ public static class PubMetToExcel
 
     public static DataTable ExcelDataToDataTable(string filePath)
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
         var file = new FileInfo(filePath);
         using (var package = new ExcelPackage(file))
         {
@@ -925,7 +924,7 @@ public static class PubMetToExcel
         string errorValue
     )
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        
 
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
         var mainPath = newPath + @"\Excels\Tables\";
@@ -1019,7 +1018,6 @@ public static class PubMetToExcel
         return color;
     }
 
-    [ExcelFunction(IsHidden = true)]
     public static string ChangeExcelColChar(int col)
     {
         var a = col / 26;
@@ -1054,8 +1052,7 @@ public static class PubMetToExcel
         return textLineList;
     }
 
-    [ExcelFunction(IsHidden = true)]
-    public static string ErrorLogAnalysis(dynamic errorList, dynamic sheet)
+    public static string ErrorLogAnalysis(List<List<(string, string, string)>> errorList, Worksheet sheet)
     {
         var errorLog = "";
         for (var i = 0; i < errorList.Count; i++)
@@ -1073,7 +1070,6 @@ public static class PubMetToExcel
         return errorLog;
     }
 
-    [ExcelFunction(IsHidden = true)]
     public static string ConvertToExcelColumn(int columnNumber)
     {
         var columnName = "";
