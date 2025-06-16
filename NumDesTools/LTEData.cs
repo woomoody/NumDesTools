@@ -1,13 +1,14 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 using OfficeOpenXml;
+using OfficeOpenXml.Table;
 using Match = System.Text.RegularExpressions.Match;
 
 namespace NumDesTools;
 
 public class LteData
 {
-    private static readonly dynamic Wk = NumDesAddIn.App.ActiveWorkbook;
+    private static readonly Workbook Wk = NumDesAddIn.App.ActiveWorkbook;
 
     private static readonly string WkPath = Wk.Path;
 
@@ -16,10 +17,10 @@ public class LteData
     private static readonly Dictionary<string, (string id, string idType)> SheetTypeMap =
         new Dictionary<string, (string, string)>(StringComparer.Ordinal)
         {
-            ["【基础】"] = ("数据编号", "类型"),
-            ["【任务】"] = ("任务编号", "类型"),
-            ["【寻找】"] = ("寻找编号", "类型"),
-            ["【通用】"] = ("数据编号", "类型")
+            ["LTE【基础】"] = ("数据编号", "类型"),
+            ["LTE【任务】"] = ("任务编号", "类型"),
+            ["LTE【寻找】"] = ("寻找编号", "类型"),
+            ["LTE【通用】"] = ("数据编号", "类型")
         };
 
     private const int BaseDataTagCol = 0;
@@ -31,6 +32,11 @@ public class LteData
     private const int TaskDataTagCol = 13;
     private const int TaskDataStartCol = 14;
     private const int TaskDataEndCol = 23;
+
+    private const string ActivityIdIndex = "B1";
+    private const string ActivityDataMinIndex = "C1";
+    private const string ActivityDataMaxIndex = "D1";
+    private const string ActivityNameMinIndex = "E1";
 
     #region LTE数据配置导出
     //导出LTE数据配置
@@ -50,153 +56,169 @@ public class LteData
         var sw = new Stopwatch();
         sw.Start();
 
-        //读取【基础/任务……】表数据
-        var sheetInfo = ReadExportSheetInfo();
-        string baseSheetName = sheetInfo.baseSheetName;
+        //Epplus获取[LTE配置【导出】]表的ListObject
+        var sheet = Wk.ActiveSheet;
+        var sheetName = sheet.Name;
+        var outputData = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "LTE配置【导出】"
+        );
+        var outputWildcardPubArray = outputData["通用通配符"];
+        var outputWildcardPubDic = PubMetToExcel.TwoDArrayToDicFirstKeyStr(outputWildcardPubArray);
+        var outputWildcardArray = outputData[$"{sheetName}_通配符"];
+        var outputWildcardDic = PubMetToExcel.TwoDArrayToDicFirstKeyStr(outputWildcardArray);
+        var outputWildDic = outputWildcardDic
+            .Concat(outputWildcardPubDic)
+            .GroupBy(k => k.Key)
+            .ToDictionary(g => g.Key, g => g.Last().Value);
 
-        var baseSheet = Wk.Worksheets[baseSheetName];
-        var baseData = new Dictionary<string, List<object>>();
-        var baseSheetData = sheetInfo.exportBaseData;
-        var exportWildcardData = sheetInfo.exportWildcardData;
-
-        foreach (var baseElement in baseSheetData)
+        //Epplus获取[#LTE数据模版]表的ListObject
+        if (GetModelValue(out var modelValueAll, "#LTE数据模版"))
         {
-            var range = baseSheet
-                .Range[
-                    baseSheet.Cells[2, baseElement.Value.Item1],
-                    baseSheet.Cells[baseElement.Value.Item2, baseElement.Value.Item1]
-                ]
-                .Value2;
-
-            var dataList = PubMetToExcel.List2DToListRowOrCol(
-                PubMetToExcel.RangeDataToList(range),
-                true
-            );
-
-            baseData[baseElement.Key] = dataList;
+            return;
         }
 
-        //获取【#LTE数据模版】信息
-        var modelSheet = Wk.Worksheets["#LTE数据模版"];
-        var modelListObjects = modelSheet.ListObjects;
-        var modelValueAll = new Dictionary<string, Dictionary<(object, object), string>>();
-
-        foreach (ListObject list in modelListObjects)
+        if (SheetTypeMap.ContainsKey(sheetName))
         {
-            var modelName = list.Name;
-            var modelRangeValue = list.Range.Value2;
-
-            int rowCount = modelRangeValue.GetLength(0);
-            int colCount = modelRangeValue.GetLength(1);
-
-            // 将二维数组的数据存储到字典中
-            var modelValue = PubMetToExcel.Array2DToDic2D(rowCount, colCount, modelRangeValue);
-            if (modelValue == null)
+            var kv = SheetTypeMap[sheetName];
+            string id = kv.Item1;
+            string idType = kv.Item2;
+            //获取【当前表】ListObject
+            var sheetListObject = sheet.ListObjects[sheetName];
+            if(sheetListObject == null)
             {
+                MessageBox.Show($"{sheetName}不存在{sheetName}的名称，请检查");
                 return;
             }
-            modelValueAll[modelName] = modelValue;
+            object[,] sheetBaseArray = sheetListObject.Range.Value2;
+            var sheetBaseDic = PubMetToExcel.TwoDArrayToDictionaryFirstRowKey1(sheetBaseArray);
+            //执行导出逻辑
+            BaseSheet(sheetBaseDic, outputWildDic, modelValueAll, id, idType, isFirst);
         }
-
-        string id;
-        string idType;
-
-        foreach (var kv in SheetTypeMap)
+        else
         {
-            if (baseSheetName.Contains(kv.Key))
-            {
-                id = kv.Value.id;
-                idType = kv.Value.idType;
-                BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType, isFirst);
-                break;
-            }
+            MessageBox.Show($"{sheetName}有误，请对比#【A-LTE】配置模版");
         }
-
         sw.Stop();
         var ts2 = sw.ElapsedMilliseconds;
         NumDesAddIn.App.StatusBar = "导出完成，用时：" + ts2;
+    }
+
+    private static bool GetModelValue(
+        out Dictionary<string, Dictionary<(object, object), string>> modelValueAll,
+        string sheetName
+    )
+    {
+        PubMetToExcel.SetExcelObjectEpPlusNormal(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            sheetName,
+            out ExcelWorksheet modelSheet,
+            out ExcelPackage modelExcel
+        );
+
+        modelValueAll = new Dictionary<string, Dictionary<(object, object), string>>();
+        foreach (var table in modelSheet.Tables)
+        {
+            if (table != null)
+            {
+                var modeName = table.Name;
+
+                object[,] tableData =
+                    modelSheet
+                        .Cells[
+                            table.Address.Start.Row,
+                            table.Address.Start.Column,
+                            table.Address.End.Row,
+                            table.Address.End.Column
+                        ]
+                        .Value as object[,];
+
+                int rowCount = tableData.GetLength(0);
+                int colCount = tableData.GetLength(1);
+
+                // 将二维数组的数据存储到字典中
+                var modelValue = PubMetToExcel.Array2DToDic2D0(rowCount, colCount, tableData);
+                if (modelValue == null)
+                {
+                    return true;
+                }
+                modelValueAll[modeName] = modelValue;
+            }
+            else
+            {
+                Debug.Print("表格不存在");
+            }
+        }
+        modelExcel?.Dispose();
+        return false;
     }
 
     //个别导出LTE数据配置
-    public static void ExportLteDataConfigSelf(CommandBarButton ctrl, ref bool cancelDefault)
-    {
-        NumDesAddIn.App.StatusBar = false;
-        var sw = new Stopwatch();
-        sw.Start();
+    //public static void ExportLteDataConfigSelf(CommandBarButton ctrl, ref bool cancelDefault)
+    //{
+    //    NumDesAddIn.App.StatusBar = false;
+    //    var sw = new Stopwatch();
+    //    sw.Start();
 
-        //读取【基础/任务……】表数据
-        var sheetInfo = ReadExportSheetInfo();
-        string baseSheetName = sheetInfo.baseSheetName;
-        var baseSheet = Wk.Worksheets[baseSheetName];
-        var baseData = new Dictionary<string, List<object>>();
-        var baseSheetData = sheetInfo.exportBaseData;
-        var exportWildcardData = sheetInfo.exportWildcardData;
+    //    //读取【基础/任务……】表数据
+    //    var sheetInfo = ReadExportSheetInfo();
+    //    string baseSheetName = sheetInfo.baseSheetName;
+    //    var baseSheet = Wk.Worksheets[baseSheetName];
+    //    var baseData = new Dictionary<string, List<object>>();
+    //    var baseSheetData = sheetInfo.exportBaseData;
+    //    var exportWildcardData = sheetInfo.exportWildcardData;
 
-        foreach (var baseElement in baseSheetData)
-        {
-            var range = baseSheet
-                .Range[
-                    baseSheet.Cells[2, baseElement.Value.Item1],
-                    baseSheet.Cells[baseElement.Value.Item2, baseElement.Value.Item1]
-                ]
-                .Value2;
+    //    foreach (var baseElement in baseSheetData)
+    //    {
+    //        var range = baseSheet
+    //            .Range[
+    //                baseSheet.Cells[2, baseElement.Value.Item1],
+    //                baseSheet.Cells[baseElement.Value.Item2, baseElement.Value.Item1]
+    //            ]
+    //            .Value2;
 
-            var dataList = PubMetToExcel.List2DToListRowOrCol(
-                PubMetToExcel.RangeDataToList(range),
-                true
-            );
+    //        var dataList = PubMetToExcel.List2DToListRowOrCol(
+    //            PubMetToExcel.RangeDataToList(range),
+    //            true
+    //        );
 
-            baseData[baseElement.Key] = dataList;
-        }
+    //        baseData[baseElement.Key] = dataList;
+    //    }
 
-        //获取【#LTE数据模版】信息
-        var modelSheet = Wk.Worksheets["#LTE数据模版"];
-        var modelListObjects = modelSheet.ListObjects;
-        var modelValueAll = new Dictionary<string, Dictionary<(object, object), string>>();
+    //    //Epplus获取[#LTE数据模版]表的ListObject
+    //    if (GetModelValue(out var modelValueAll, "#LTE数据模版"))
+    //    {
+    //        return;
+    //    }
 
-        foreach (ListObject list in modelListObjects)
-        {
-            var modelName = list.Name;
-            var modelRangeValue = list.Range.Value2;
+    //    string id;
+    //    string idType;
 
-            int rowCount = modelRangeValue.GetLength(0);
-            int colCount = modelRangeValue.GetLength(1);
+    //    foreach (var kv in SheetTypeMap)
+    //    {
+    //        if (baseSheetName.Contains(kv.Key))
+    //        {
+    //            id = kv.Value.id;
+    //            idType = kv.Value.idType;
 
-            // 将二维数组的数据存储到字典中
-            var modelValue = PubMetToExcel.Array2DToDic2D(rowCount, colCount, modelRangeValue);
-            if (modelValue == null)
-            {
-                return;
-            }
-            modelValueAll[modelName] = modelValue;
-        }
+    //            //自选新增数据，否则全量数据
+    //            var keysToFilter = GetCellValuesFromUserInput(kv.Key);
+    //            if (keysToFilter != null)
+    //            {
+    //                baseData = FilterBySpecifiedKeyAndSyncPositions(baseData, id, keysToFilter);
+    //            }
 
-        string id;
-        string idType;
+    //            BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType, false);
+    //            break;
+    //        }
+    //    }
 
-        foreach (var kv in SheetTypeMap)
-        {
-            if (baseSheetName.Contains(kv.Key))
-            {
-                id = kv.Value.id;
-                idType = kv.Value.idType;
-
-                //自选新增数据，否则全量数据
-                var keysToFilter = GetCellValuesFromUserInput(kv.Key);
-                if (keysToFilter != null)
-                {
-                    baseData = FilterBySpecifiedKeyAndSyncPositions(baseData, id, keysToFilter);
-                }
-
-                BaseSheet(baseData, exportWildcardData, modelValueAll, id, idType,false);
-                break;
-            }
-        }
-
-        sw.Stop();
-        var ts2 = sw.ElapsedMilliseconds;
-        NumDesAddIn.App.StatusBar = "导出完成，用时：" + ts2;
-    }
+    //    sw.Stop();
+    //    var ts2 = sw.ElapsedMilliseconds;
+    //    NumDesAddIn.App.StatusBar = "导出完成，用时：" + ts2;
+    //}
 
     private static (
         string baseSheetName,
@@ -206,14 +228,14 @@ public class LteData
         Dictionary<string, string> exportWildcardData
     ) ReadExportSheetInfo()
     {
-        var ws = Wk.ActiveSheet;
+        Worksheet ws = Wk.ActiveSheet;
         var selectRange = NumDesAddIn.App.Selection;
         string baseSheetName = selectRange.Value2.ToString();
         int selectRow = selectRange.Row;
         int selectCol = selectRange.Column;
 
         // 查找通配符列
-        var exportWildcardRange = ws.Range["A1:AZ1"].Value2;
+        object[,] exportWildcardRange = ws.Range["A1:AZ1"].Value2;
         int exportWildcardCol = PubMetToExcel.FindValueIn2DArray(exportWildcardRange, "通配符").Item2;
 
         // 读取基础数据
@@ -329,7 +351,7 @@ public class LteData
     }
 
     private static void BaseSheet(
-        Dictionary<string, List<object>> baseData,
+        Dictionary<string, List<string>> baseData,
         Dictionary<string, string> exportWildcardData,
         Dictionary<string, Dictionary<(object, object), string>> modelValueAll,
         string id,
@@ -345,8 +367,8 @@ public class LteData
         var typeList = baseData[idType];
 
         //过滤id和type，只针对有增删改的数据进行导出
-        List<object> dataStatusList = null;
-        List<object> dataStatusListNew = null;
+        List<string> dataStatusList = null;
+        List<string> dataStatusListNew = null;
         if (!isFirst)
         {
             if (baseData.ContainsKey("数据状态"))
@@ -873,7 +895,7 @@ public class LteData
 
     //获取动态值
     private static void GetDyWildcardValue(
-        Dictionary<string, List<object>> baseData,
+        Dictionary<string, List<string>> baseData,
         Dictionary<string, string> exportWildcardDyData,
         string wildcard,
         string funDepends,
@@ -1008,7 +1030,7 @@ public class LteData
         NumDesAddIn.App.ScreenUpdating = false;
         NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
 
-        object[,] copyArray = FilterRepeatValue("C1", "D1");
+        object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
 
         var baseList = GetExcelListObjects("LTE【基础】", "基础");
         if (baseList == null)
@@ -1023,18 +1045,18 @@ public class LteData
             return;
         }
         //基础数据修改依赖数据
-        var dataTypeList = GetExcelListObjects("#各类枚举", "数据类型");
-        if (dataTypeList == null)
-        {
-            MessageBox.Show("#各类枚举 中的名称表-数据类型-不存在");
-            return;
-        }
+        var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#各类枚举"
+        );
+        var dataTypeArray = listObjectsDic["数据类型"];
 
         //基础数据整理
-        var copyData = BaseData(copyArray, dataTypeList);
+        var copyData = BaseData(copyArray, dataTypeArray);
         copyArray = copyData.fixArray;
         var errorTypeList = copyData.errorTypeList;
-        if(errorTypeList != null)
+        if (errorTypeList.Count != 0)
         {
             //基础数据中存在错误类型
             var errorTypeListOnly = new HashSet<string>(errorTypeList);
@@ -1086,7 +1108,7 @@ public class LteData
         );
 
         ////寻找数据整理
-        var findArray = FindData(copyArray, dataTypeList);
+        var findArray = FindData(copyArray, dataTypeArray);
         ////寻找List数据清理
         //findList.DataBodyRange.ClearContents();
         ////寻找List行数刷新
@@ -1164,7 +1186,7 @@ public class LteData
         NumDesAddIn.App.ScreenUpdating = false;
         NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
 
-        object[,] copyArray = FilterRepeatValue("C1", "D1");
+        object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
         var list = GetExcelListObjects("LTE【基础】", "基础");
         if (list == null)
         {
@@ -1177,16 +1199,17 @@ public class LteData
             MessageBox.Show("LTE【寻找】中的名称表-寻找不存在");
             return;
         }
+
         //基础数据修改依赖数据
-        var dataTypeList = GetExcelListObjects("#各类枚举", "数据类型");
-        if (dataTypeList == null)
-        {
-            MessageBox.Show("#各类枚举 中的名称表-数据类型-不存在");
-            return;
-        }
+        var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#各类枚举"
+        );
+        var dataTypeArray = listObjectsDic["数据类型"];
 
         //基础数据整理
-        var copyData = BaseData(copyArray, dataTypeList);
+        var copyData = BaseData(copyArray, dataTypeArray);
         copyArray = copyData.fixArray;
         var errorTypeList = copyData.errorTypeList;
         if (errorTypeList != null)
@@ -1200,7 +1223,7 @@ public class LteData
         WriteDymaicData(copyArray, list, "LTE【基础】", 1, 33);
 
         //寻找数据整理
-        var findArray = FindData(copyArray, dataTypeList);
+        var findArray = FindData(copyArray, dataTypeArray);
         WriteDymaicData(findArray, findList, "LTE【寻找】", 1, 9);
 
         sw.Stop();
@@ -1246,7 +1269,7 @@ public class LteData
     private static Tuple<List<List<string>>, List<string>> TagData(
         Dictionary<string, List<string>> copyDic,
         Dictionary<string, List<string>> oldListDic
-        )
+    )
     {
         // 分类处理
         var added = new List<List<string>>();
@@ -1400,12 +1423,13 @@ public class LteData
     }
 
     //原始数据改造
-    private static (object[,] fixArray, List<string> errorTypeList) BaseData(object[,] baseArray, ListObject dataTypeList)
+    private static (object[,] fixArray, List<string> errorTypeList) BaseData(
+        object[,] baseArray,
+        object[,] dataTypeArray
+    )
     {
         var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(baseArray);
-        var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(
-            dataTypeList.DataBodyRange.Value2
-        );
+        var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(dataTypeArray);
 
         var errorTypeList = new List<string>();
 
@@ -1536,20 +1560,18 @@ public class LteData
             baseDic[baseDic.Keys.First()].Count
         );
 
-        return (fixArray , errorTypeList);
+        return (fixArray, errorTypeList);
     }
     #endregion
 
     #region LTE寻找数据计算
-    private static object[,] FindData(object[,] copyArray, ListObject dataTypeList)
+    private static object[,] FindData(object[,] copyArray, object[,] dataTypeArray)
     {
         var findDic = new Dictionary<string, List<string>>();
 
         var copyDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(copyArray);
 
-        var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(
-            dataTypeList.DataBodyRange.Value2
-        );
+        var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(dataTypeArray);
 
         foreach (var key in copyDic.Keys)
         {
@@ -1610,7 +1632,6 @@ public class LteData
                             findLinksFix += ",{8,9999}";
 
                             findDic[findIdStr].Add(findLinksFix);
-
                         }
                     }
                 }
@@ -1825,7 +1846,12 @@ public class LteData
         var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
         double activtiyId = (double)colIndexArray[0, 0];
 
-        object[,] copyTaskArray = FilterRepeatValue("C1", "D1", false, false);
+        object[,] copyTaskArray = FilterRepeatValue(
+            ActivityDataMinIndex,
+            ActivityDataMaxIndex,
+            false,
+            false
+        );
 
         var taskList = GetExcelListObjects("LTE【任务】", "任务");
         if (taskList == null)
@@ -1833,27 +1859,28 @@ public class LteData
             MessageBox.Show("LTE【任务】中的名称表-任务不存在");
             return;
         }
-        //任务数据修改依赖数据
-        var taskDataTypeList = GetExcelListObjects("#各类枚举", "任务类型");
-        if (taskDataTypeList == null)
-        {
-            MessageBox.Show("#各类枚举 中的名称表-任务类型-不存在");
-            return;
-        }
-        var taskDataTypeArray = taskDataTypeList.DataBodyRange.Value2;
+
         var baseList = GetExcelListObjects("LTE【基础】", "基础");
         if (baseList == null)
         {
             MessageBox.Show("LTE【基础】中的名称表-基础不存在");
             return;
         }
-        var baseArray = baseList.DataBodyRange.Value2;
+        object[,] baseArray = baseList.DataBodyRange.Value2;
+
+        //基础数据修改依赖数据
+        var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#各类枚举"
+        );
+        object[,] dataTypeArray = listObjectsDic["任务类型"];
 
         //任务数据整理
-        var copyTaskData = TaskData(copyTaskArray, taskDataTypeArray, baseArray, activtiyId);
+        var copyTaskData = TaskData(copyTaskArray, dataTypeArray, baseArray, activtiyId);
         copyTaskArray = copyTaskData.taskArray;
         var errorTypeList = copyTaskData.errorTypeList;
-        if (errorTypeList != null)
+        if (errorTypeList.Count != 0)
         {
             //基础数据中存在错误类型
             var errorTypeListOnly = new HashSet<string>(errorTypeList);
@@ -1912,7 +1939,12 @@ public class LteData
         var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
         double activtiyId = (double)colIndexArray[0, 0];
 
-        object[,] copyTaskArray = FilterRepeatValue("C1", "D1", false, false);
+        object[,] copyTaskArray = FilterRepeatValue(
+            ActivityDataMinIndex,
+            ActivityDataMaxIndex,
+            false,
+            false
+        );
 
         var taskList = GetExcelListObjects("LTE【任务】", "任务");
         if (taskList == null)
@@ -1927,21 +1959,21 @@ public class LteData
             MessageBox.Show("#各类枚举 中的名称表-任务类型-不存在");
             return;
         }
-        var taskDataTypeArray = taskDataTypeList.DataBodyRange.Value2;
+        object[,] taskDataTypeArray = taskDataTypeList.DataBodyRange.Value2;
         var baseList = GetExcelListObjects("LTE【基础】", "基础");
         if (baseList == null)
         {
             MessageBox.Show("LTE【基础】中的名称表-基础不存在");
             return;
         }
-        var baseArray = baseList.DataBodyRange.Value2;
+        object[,] baseArray = baseList.DataBodyRange.Value2;
 
         //任务数据整理
         var copyTaskData = TaskData(copyTaskArray, taskDataTypeArray, baseArray, activtiyId);
         copyTaskArray = copyTaskData.taskArray;
         var errorTypeList = copyTaskData.errorTypeList;
 
-        if (errorTypeList != null)
+        if (errorTypeList.Count != 0)
         {
             //基础数据中存在错误类型
             var errorTypeListOnly = new HashSet<string>(errorTypeList);
@@ -1962,13 +1994,13 @@ public class LteData
     //原始数据改造
     private static (object[,] taskArray, List<string> errorTypeList) TaskData(
         object[,] copyTaskArray,
-        object[,] taskDataTypeList,
+        object[,] taskDataTypeArray,
         object[,] baseList,
         double activtiyId
     )
     {
         var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseList);
-        var taskDataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(taskDataTypeList);
+        var taskDataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(taskDataTypeArray);
 
         var taskTaskArrayCount = copyTaskArray.GetLength(0);
         var taskList = new List<List<string>>();
@@ -2023,7 +2055,7 @@ public class LteData
             //主线数据
             if (taskDes != string.Empty)
             {
-                if(!taskDataTypeDic.ContainsKey(taskTypeName))
+                if (!taskDataTypeDic.ContainsKey(taskTypeName))
                 {
                     errorTypeList.Add(taskTypeName);
                     continue;
@@ -2150,7 +2182,7 @@ public class LteData
             }
         }
         var taskArray = PubMetToExcel.ConvertListToArray(taskList);
-        return (taskArray,errorTypeList);
+        return (taskArray, errorTypeList);
     }
 
     private static List<string> FixTaskData(
