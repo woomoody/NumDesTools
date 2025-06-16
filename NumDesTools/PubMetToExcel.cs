@@ -4,6 +4,7 @@ using System.Data.OleDb;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using EnvDTE80;
 using OfficeOpenXml;
 using DataTable = System.Data.DataTable;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
@@ -153,6 +154,39 @@ public static class PubMetToExcel
         sheet ??= workBook.Worksheets[0];
 
         return errorList;
+    }
+
+    public static void SetExcelObjectEpPlusNormal(
+        string excelPath,
+        string excelName,
+        string sheetName,
+        out ExcelWorksheet sheet,
+        out ExcelPackage excel
+    )
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        sheet = null;
+        excel = null;
+        excel = new ExcelPackage(new FileInfo(excelPath + @"\" + excelName));
+        ExcelWorkbook workBook;
+        try
+        {
+            workBook = excel.Workbook;
+            try
+            {
+                sheet = workBook.Worksheets[sheetName];
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+                excel?.Dispose();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.ToString());
+            excel?.Dispose();
+        }
     }
 
     public static List<int> MergeExcelCol(
@@ -311,6 +345,43 @@ public static class PubMetToExcel
             rowIndex = lastMatch.Start.Row;
         }
         return -1;
+    }
+
+    //获取Excel的ListObject数据并转为数组
+    public static Dictionary<string, object[,]> GetExcelListObjects(
+        string excelPath,
+        string excelName,
+        string sheetName
+    )
+    {
+        PubMetToExcel.SetExcelObjectEpPlusNormal(
+            excelPath,
+            excelName,
+            sheetName,
+            out ExcelWorksheet sheet,
+            out ExcelPackage excel
+        );
+
+        var listObjectDataDic = new Dictionary<string, object[,]>();
+        foreach (var table in sheet.Tables)
+        {
+            if (table != null)
+            {
+                var tableName = table.Name;
+
+                object[,] tableData =
+                    sheet
+                        .Cells[
+                            table.Address.Start.Row,
+                            table.Address.Start.Column,
+                            table.Address.End.Row,
+                            table.Address.End.Column
+                        ]
+                        .Value as object[,];
+                listObjectDataDic[tableName] = tableData;
+            }
+        }
+        return listObjectDataDic;
     }
     #endregion
 
@@ -1527,6 +1598,38 @@ public static class PubMetToExcel
         return dict;
     }
 
+    //二维数组字典化-首列为Key，0开始
+    public static Dictionary<string, string> TwoDArrayToDicFirstKeyStr(object[,] array)
+    {
+        var dict = new Dictionary<string, string>();
+        for (int i = 0; i < array.GetLength(0); i++)
+        {
+            string key = array[i, 0].ToString();
+
+            string row = String.Empty;
+            for (int j = 0; j < array.GetLength(1); j++)
+                row = string.Join("#", array[i,j]?.ToString());
+            dict[key] = row;
+        }
+        return dict;
+    }
+
+    //二维数组字典化-首行为Key，0开始
+    public static Dictionary<string, List<string>> TwoDArrayToDictionaryFirstRowKey(object[,] array)
+    {
+        var dict = new Dictionary<string, List<string>>();
+        for (int j = 0; j < array.GetLength(1); j++)
+        {
+            string key = array[0, j].ToString();
+
+            var col = new List<string>();
+            for (int i = 0; i < array.GetLength(0); i++)
+                col.Add(array[i, j]?.ToString());
+            dict[key] = col;
+        }
+        return dict;
+    }
+    
     //二维数组字典化-首列为Key,ExcelRange对象，1开始
     public static Dictionary<string, List<string>> TwoDArrayToDictionaryFirstKey1(object[,] array)
     {
@@ -1544,11 +1647,42 @@ public static class PubMetToExcel
         return dict;
     }
 
+    //二维数组字典化-首列为Key,ExcelRange对象，1开始
+    public static Dictionary<string, string> TwoDArrayToDicFirstKeyStr1(object[,] array)
+    {
+        var dict = new Dictionary<string, string>();
+        for (int i = 1; i <= array.GetLength(0); i++)
+        {
+            string key = array[i, 1].ToString();
+
+            string row = String.Empty;
+            for (int j = 1; j <= array.GetLength(1); j++)
+                row = string.Join("#", array[i, j]?.ToString());
+            dict[key] = row;
+        }
+        return dict;
+    }
+    //二维数组字典化-首行为Key,ExcelRange对象，1开始
+    public static Dictionary<string, List<string>> TwoDArrayToDictionaryFirstRowKey1(object[,] array)
+    {
+        var dict = new Dictionary<string, List<string>>();
+        for (int j = 1; j <= array.GetLength(1); j++)
+        {
+            string key = array[1, j].ToString();
+
+            var col = new List<string>();
+            for (int i = 1; i <= array.GetLength(0); i++)
+                col.Add(array[i, j]?.ToString());
+            dict[key] = col;
+        }
+        return dict;
+    }
+    
     //二维数组转二维字典
     public static Dictionary<(object, object), string> Array2DToDic2D(
         int rowCount,
         int colCount,
-        dynamic modelRangeValue
+        object[,] modelRangeValue
     )
     {
         var modelValue = new Dictionary<(object, object), string>();
@@ -1565,6 +1699,34 @@ public static class PubMetToExcel
                 }
 
                 string value = modelRangeValue[row, col]?.ToString() ?? "";
+                modelValue[(rowIndex, colIndex)] = value;
+            }
+        }
+
+        return modelValue;
+    }
+
+    public static Dictionary<(object, object), string> Array2DToDic2D0(
+        int rowCount,
+        int colCount,
+        object[,] modelRangeValue
+    )
+    {
+        object[,] modelRangeValues = (object[,])modelRangeValue;
+        var modelValue = new Dictionary<(object, object), string>();
+        for (int row = 1; row < rowCount; row++)
+        {
+            for (int col = 1; col < colCount; col++)
+            {
+                var rowIndex = modelRangeValues[row, 0];
+                var colIndex = modelRangeValues[0, col];
+                if (rowIndex == null || colIndex == null)
+                {
+                    MessageBox.Show(@"模版表中表头有空值，请检查模版数据是否正确！");
+                    return null;
+                }
+
+                string value = modelRangeValues[row, col]?.ToString() ?? "";
                 modelValue[(rowIndex, colIndex)] = value;
             }
         }

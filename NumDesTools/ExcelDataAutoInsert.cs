@@ -1189,7 +1189,7 @@ public static class ExcelDataAutoInsertLanguage
         foreach (ListObject list in fixSheetListObjects)
         {
             var modelName = list.Name;
-            var modelRangeValue = list.Range.Value2;
+            object[,] modelRangeValue = list.Range.Value2;
 
             int rowCount = modelRangeValue.GetLength(0);
             int colCount = modelRangeValue.GetLength(1);
@@ -1211,7 +1211,7 @@ public static class ExcelDataAutoInsertLanguage
         foreach (ListObject list in roleSheetListObjects)
         {
             var modelName = list.Name;
-            var modelRangeValue = list.Range.Value2;
+            object[,] modelRangeValue = list.Range.Value2;
 
             int rowCount = modelRangeValue.GetLength(0);
             int colCount = modelRangeValue.GetLength(1);
