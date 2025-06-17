@@ -96,7 +96,6 @@ public static class ExcelDataAutoInsert
 
     public static void ExcelHyperLinks(dynamic excelPath, dynamic sheet)
     {
-        
         for (var i = 2; i <= 500; i++)
         {
             var modeCol = FindTitle(sheet, 1, "实际模板(上一期)");
@@ -134,7 +133,6 @@ public static class ExcelDataAutoInsert
 
     public static void ExcelHyperLinksNormal(dynamic excelPath, dynamic sheet)
     {
-        
         for (var i = 2; i <= 500; i++)
         {
             var cell = sheet.Cells[i, 5];
@@ -298,8 +296,6 @@ public static class ExcelDataAutoInsertLanguage
         dynamic app
     )
     {
-        
-
         var sourceData = PubMetToExcel.ExcelDataToList(sourceSheet);
 
         var sourceTitle = sourceData.Item1;
@@ -760,8 +756,6 @@ public static class ExcelDataAutoInsertLanguage
         dynamic app
     )
     {
-        
-
         var sourceData = PubMetToExcel.ExcelDataToListBySelfToEnd(sourceSheet, 0, 1, 1);
         var sourceTitle = sourceData.Item1;
         var sourceDataList = sourceData.Item2;
@@ -982,7 +976,7 @@ public static class ExcelDataAutoInsertLanguage
                             if (targetValueKey == sourceValue)
                             {
                                 newId = classDataList[k][scCol + 1]?.ToString();
-                                if(newId == null)
+                                if (newId == null)
                                 {
                                     MessageBox.Show($"{classDataList[k][0]}没有找到对应的ID值");
                                     return null;
@@ -1259,7 +1253,7 @@ public static class ExcelDataAutoInsertLanguage
     )
     {
         // 替换通配符生成数据
-        
+
 
         var dicValue = new Dictionary<(string, string), List<string>>();
 
@@ -1350,7 +1344,7 @@ public static class ExcelDataAutoInsertLanguage
                 out ExcelWorksheet targetSheet,
                 out ExcelPackage targetExcel
             );
-            
+
             //去重更新
             var newIdList = idList.Distinct().ToList();
             var rowsToDelete = new List<int>();
@@ -1674,10 +1668,6 @@ public static class ExcelDataAutoInsertMulti
 
     public static void RightClickInsertData(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        NumDesAddIn.App.StatusBar = false;
-        var sw = new Stopwatch();
-        sw.Start();
-
         var indexWk = NumDesAddIn.App.ActiveWorkbook;
         var sheet = NumDesAddIn.App.ActiveSheet;
         var excelPath = indexWk.Path;
@@ -1754,17 +1744,11 @@ public static class ExcelDataAutoInsertMulti
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
-            sw.Stop();
-            var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-            NumDesAddIn.App.StatusBar = "完成写入，用时：" + ts2.ToString(CultureInfo.InvariantCulture);
             return;
         }
 
         ErrorLogCtp.DisposeCtp();
         ErrorLogCtp.CreateCtpNormal(errorLog);
-        sw.Stop();
-        var ts3 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-        NumDesAddIn.App.StatusBar = "完成写入:有错误，用时：" + ts3.ToString(CultureInfo.InvariantCulture);
     }
 
     public static List<(string, string, string)> ExcelDataWrite(
@@ -1780,7 +1764,6 @@ public static class ExcelDataAutoInsertMulti
         dynamic writeMode
     )
     {
-        
         var errorExcelLog = "";
         var errorList = new List<(string, string, string)>();
         string path;
@@ -2135,7 +2118,11 @@ public static class ExcelDataAutoInsertMulti
                                         {
                                             var pattern = parts[1];
                                             if (cellValue != null)
-                                                cellValue = Regex.Replace(cellValue, pattern, replaceValue);
+                                                cellValue = Regex.Replace(
+                                                    cellValue,
+                                                    pattern,
+                                                    replaceValue
+                                                );
                                         }
 
                                         partCount++;
@@ -2206,7 +2193,6 @@ public static class ExcelDataAutoInsertMulti
         dynamic modelId
     )
     {
-        
         var excelFileFixKey = 2;
         var writeIdList = new List<string>();
         var lastRow = 0;
@@ -2316,35 +2302,51 @@ public static class ExcelDataAutoInsertMultiNew
         _replaceValues = _data[2][_baseIdCol];
 
         //记录日志
-        LogDisplay.RecordLine("[{0}] , 【表名】所在列：{1}",
+        LogDisplay.RecordLine(
+            "[{0}] , 【表名】所在列：{1}",
             DateTime.Now.ToString(CultureInfo.InvariantCulture),
-            _sheetNameCol);
-        LogDisplay.RecordLine("[{0}] , 【初始模板】所在列：{1}",
+            _sheetNameCol
+        );
+        LogDisplay.RecordLine(
+            "[{0}] , 【初始模板】所在列：{1}",
             DateTime.Now.ToString(CultureInfo.InvariantCulture),
-            _sheetNameCol);
-        LogDisplay.RecordLine("[{0}] , 【实际模板(上一期)】所在列：{1}",
+            _sheetNameCol
+        );
+        LogDisplay.RecordLine(
+            "[{0}] , 【实际模板(上一期)】所在列：{1}",
             DateTime.Now.ToString(CultureInfo.InvariantCulture),
-            _sheetNameCol);
-        LogDisplay.RecordLine("[{0}] , 【修改字段】所在列：{1}",
+            _sheetNameCol
+        );
+        LogDisplay.RecordLine(
+            "[{0}] , 【修改字段】所在列：{1}",
             DateTime.Now.ToString(CultureInfo.InvariantCulture),
-            _sheetNameCol);
-        LogDisplay.RecordLine("[{0}] , 【模板期号】所在列：{1}",
+            _sheetNameCol
+        );
+        LogDisplay.RecordLine(
+            "[{0}] , 【模板期号】所在列：{1}",
             DateTime.Now.ToString(CultureInfo.InvariantCulture),
-            _sheetNameCol);
-        LogDisplay.RecordLine("[{0}] , 【创建期号】所在列：{1}",
+            _sheetNameCol
+        );
+        LogDisplay.RecordLine(
+            "[{0}] , 【创建期号】所在列：{1}",
             DateTime.Now.ToString(CultureInfo.InvariantCulture),
-            _sheetNameCol);
-        LogDisplay.RecordLine("[{0}] , 【初始备注】所在列：{1}",
+            _sheetNameCol
+        );
+        LogDisplay.RecordLine(
+            "[{0}] , 【初始备注】所在列：{1}",
             DateTime.Now.ToString(CultureInfo.InvariantCulture),
-            _sheetNameCol);
-        LogDisplay.RecordLine("[{0}] , 【当前备注】所在列：{1}",
+            _sheetNameCol
+        );
+        LogDisplay.RecordLine(
+            "[{0}] , 【当前备注】所在列：{1}",
             DateTime.Now.ToString(CultureInfo.InvariantCulture),
-            _sheetNameCol);
-        LogDisplay.RecordLine("[{0}] , 【专属替换】所在列：{1}",
+            _sheetNameCol
+        );
+        LogDisplay.RecordLine(
+            "[{0}] , 【专属替换】所在列：{1}",
             DateTime.Now.ToString(CultureInfo.InvariantCulture),
-            _sheetNameCol);
-
-
+            _sheetNameCol
+        );
 
         _colorCell = _sheet.Cells[6, 1];
         _cellColor = PubMetToExcel.GetCellBackgroundColor(_colorCell);
@@ -2432,9 +2434,7 @@ public static class ExcelDataAutoInsertMultiNew
     public static void RightClickInsertDataNew(CommandBarButton ctrl, ref bool cancelDefault)
     {
         InitializeVariables();
-        NumDesAddIn.App.StatusBar = false;
-        var sw = new Stopwatch();
-        sw.Start();
+
         var cell = NumDesAddIn.App.Selection;
         var rowStart = cell.Row;
         var rowCountNew = cell.Rows.Count;
@@ -2465,17 +2465,11 @@ public static class ExcelDataAutoInsertMultiNew
         var errorLog = PubMetToExcel.ErrorLogAnalysis(_errorExcelList, _sheet);
         if (errorLog == "")
         {
-            sw.Stop();
-            var ts2 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-            NumDesAddIn.App.StatusBar = "完成写入，用时：" + ts2.ToString(CultureInfo.InvariantCulture);
             return;
         }
 
         ErrorLogCtp.DisposeCtp();
         ErrorLogCtp.CreateCtpNormal(errorLog);
-        sw.Stop();
-        var ts3 = Math.Round(sw.Elapsed.TotalSeconds, 2);
-        NumDesAddIn.App.StatusBar = "完成写入:有错误，用时：" + ts3.ToString(CultureInfo.InvariantCulture);
     }
 
     public static List<(string, string, string)> CopyData(string excelName)
@@ -2611,7 +2605,6 @@ public static class ExcelDataAutoInsertMultiNew
         if (excel != null)
         {
             excel.Save();
-            
         }
 
         excel?.Dispose();
@@ -2770,8 +2763,6 @@ public static class ExcelDataAutoInsertMultiNew
         bool isDelete = false
     )
     {
-        
-
         var lastRow = 0;
         for (var excelMulti = 0; excelMulti < modelIdnew[excelName].Count; excelMulti++)
         {
@@ -2803,6 +2794,7 @@ public static class ExcelDataAutoInsertMultiNew
         return (["查询完毕：正确"], lastRow);
     }
 }
+
 //纯Epplus，不使用Interop，无法针对激活Sheet使用
 public static class ExcelDataAutoInsertCopyMulti
 {
@@ -3016,7 +3008,6 @@ public static class ExcelDataAutoInsertCopyMulti
         dynamic cellColor
     )
     {
-        
         var errorList = new List<(string, string, string)>();
         var targetExcelPath = "";
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -3137,10 +3128,6 @@ public static class ExcelDataAutoInsertCopyMulti
 
     public static void RightClickMergeData(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        NumDesAddIn.App.StatusBar = false;
-        var sw = new Stopwatch();
-        sw.Start();
-
         var indexWk = NumDesAddIn.App.ActiveWorkbook;
         var sheet = NumDesAddIn.App.ActiveSheet;
         var excelPath = indexWk.Path;
@@ -3157,18 +3144,12 @@ public static class ExcelDataAutoInsertCopyMulti
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
-            sw.Stop();
-            var ts1 = sw.ElapsedMilliseconds;
-            NumDesAddIn.App.StatusBar = "完成写入：" + ts1;
             return;
         }
 
         ErrorLogCtp.DisposeCtp();
         ErrorLogCtp.CreateCtpNormal(errorLog);
 
-        sw.Stop();
-        var ts2 = sw.ElapsedMilliseconds;
-        NumDesAddIn.App.StatusBar = "完成写入：" + ts2;
         Marshal.ReleaseComObject(sheet);
         Marshal.ReleaseComObject(indexWk);
     }
@@ -3180,7 +3161,6 @@ public static class ExcelDataAutoInsertCopyMulti
         dynamic sheet
     )
     {
-        
         var errorList = new List<(string, string, string)>();
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
@@ -3270,7 +3250,6 @@ public static class ExcelDataAutoInsertCopyMulti
         targetExcel.Dispose();
         sourcExcel?.Dispose();
 
-
         return errorList;
     }
 
@@ -3311,7 +3290,6 @@ public static class ExcelDataAutoInsertCopyMulti
         dynamic excelName
     )
     {
-        
         var errorList = new List<(string, string, string)>();
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
@@ -3950,7 +3928,9 @@ public static class AutoInsertExcelDataModelCreat
                 modelName = modelName.Replace("_", "##");
             }
             //截取.xlsx之前的字符
-            modelName = modelName.Substring(0, modelName.IndexOf(".xlsx", StringComparison.Ordinal)) + ".xlsx";
+            modelName =
+                modelName.Substring(0, modelName.IndexOf(".xlsx", StringComparison.Ordinal))
+                + ".xlsx";
 
             LogDisplay.RecordLine(
                 "[{0}] , {1}",
@@ -4011,33 +3991,28 @@ public static class ExcelDataAutoInsertCopyActivity
         };
         var defaultValues = new Dictionary<string, List<string>>()
         {
-            {"thirdProductID", new List<string>(){ "com.mergeland.alices.adventure_diamond_", "price_Num"}},
+            {
+                "thirdProductID",
+                new List<string>() { "com.mergeland.alices.adventure_diamond_", "price_Num" }
+            },
         };
 
         var replaceValues = new Dictionary<string, Dictionary<string, List<string>>>()
         {
             {
                 "RechargeIOS.xlsx",
-                new Dictionary<string, List<string>>()  
+                new Dictionary<string, List<string>>()
                 {
                     {
-                        "productID",  
-                        new List<string>()
-                        {
-                            "mergeland.alices.adventure",
-                            "casualgame.type.pipe"
-                        }
+                        "productID",
+                        new List<string>() { "mergeland.alices.adventure", "casualgame.type.pipe" }
                     },
                     {
                         "productID_test",
-                        new List<string>()
-                        {
-                            "mergeland.alices.adventure",
-                            "casualgame.type.pipe"
-                        }
+                        new List<string>() { "mergeland.alices.adventure", "casualgame.type.pipe" }
                     }
-                }  
-            }  
+                }
+            }
         };
 
         ExcelDataSyncHelper.SyncSelectedRows(
@@ -4045,7 +4020,7 @@ public static class ExcelDataAutoInsertCopyActivity
             targetFileNames: excelNames,
             defaultValues: defaultValues,
             replaceValues: replaceValues
-            );
+        );
     }
 
     public static void RightClickCloneAllData(CommandBarButton ctrl, ref bool cancelDefault)
@@ -4061,7 +4036,10 @@ public static class ExcelDataAutoInsertCopyActivity
         };
         var defaultValues = new Dictionary<string, List<string>>()
         {
-            {"thirdProductID", new List<string>(){ "com.mergeland.alices.adventure_diamond_", "price_Num"}},
+            {
+                "thirdProductID",
+                new List<string>() { "com.mergeland.alices.adventure_diamond_", "price_Num" }
+            },
         };
 
         var replaceValues = new Dictionary<string, Dictionary<string, List<string>>>()
@@ -4072,19 +4050,11 @@ public static class ExcelDataAutoInsertCopyActivity
                 {
                     {
                         "productID",
-                        new List<string>()
-                        {
-                            "mergeland.alices.adventure",
-                            "casualgame.type.pipe"
-                        }
+                        new List<string>() { "mergeland.alices.adventure", "casualgame.type.pipe" }
                     },
                     {
                         "productID_test",
-                        new List<string>()
-                        {
-                            "mergeland.alices.adventure",
-                            "casualgame.type.pipe"
-                        }
+                        new List<string>() { "mergeland.alices.adventure", "casualgame.type.pipe" }
                     }
                 }
             }
@@ -4097,10 +4067,7 @@ public static class ExcelDataAutoInsertCopyActivity
             defaultValues: defaultValues,
             replaceValues: replaceValues
         );
-
     }
-
- 
 }
 
 public static class ExcelDataSyncHelper
@@ -4112,9 +4079,12 @@ public static class ExcelDataSyncHelper
     /// <summary>
     /// 同步选中行数据到多个目标工作表
     /// </summary>
-    public static void SyncSelectedRows(string targetPath, List<string> targetFileNames,
+    public static void SyncSelectedRows(
+        string targetPath,
+        List<string> targetFileNames,
         Dictionary<string, List<string>> defaultValues,
-        Dictionary<string, Dictionary<string, List<string>>> replaceValues)
+        Dictionary<string, Dictionary<string, List<string>>> replaceValues
+    )
     {
         NumDesAddIn.App.StatusBar = false;
         var timer = Stopwatch.StartNew();
@@ -4123,15 +4093,23 @@ public static class ExcelDataSyncHelper
         {
             // 获取选中数据
             var selection = ExcelApp.Selection as Range;
-            if (selection == null) return;
+            if (selection == null)
+                return;
 
             var sourceData = GetSelectedData(selection);
-            if (sourceData.Count == 0) return;
+            if (sourceData.Count == 0)
+                return;
 
             // 同步到每个目标文件
             foreach (var fileName in targetFileNames)
             {
-                SyncDataToTargetFile(targetPath, fileName, sourceData, defaultValues, replaceValues);
+                SyncDataToTargetFile(
+                    targetPath,
+                    fileName,
+                    sourceData,
+                    defaultValues,
+                    replaceValues
+                );
                 ExcelApp.StatusBar = $"导出：{targetPath}\\{fileName}";
             }
 
@@ -4146,10 +4124,13 @@ public static class ExcelDataSyncHelper
     /// <summary>
     /// 全量同步源表数据到多个目标工作表(跳过已存在的数据)
     /// </summary>
-    public static void SyncAllRows(string targetPath, List<string> targetFileNames,
+    public static void SyncAllRows(
+        string targetPath,
+        List<string> targetFileNames,
         string sourceFileName,
         Dictionary<string, List<string>> defaultValues,
-        Dictionary<string, Dictionary<string, List<string>>> replaceValues)
+        Dictionary<string, Dictionary<string, List<string>>> replaceValues
+    )
     {
         NumDesAddIn.App.StatusBar = false;
         var timer = Stopwatch.StartNew();
@@ -4158,12 +4139,19 @@ public static class ExcelDataSyncHelper
         {
             // 读取源表所有数据
             var sourceData = ReadExcelData(targetPath, sourceFileName);
-            if (sourceData.Count == 0) return;
+            if (sourceData.Count == 0)
+                return;
 
             // 同步到每个目标文件
             foreach (var fileName in targetFileNames)
             {
-                SyncAllDataToTargetFile(targetPath, fileName, sourceData, defaultValues, replaceValues);
+                SyncAllDataToTargetFile(
+                    targetPath,
+                    fileName,
+                    sourceData,
+                    defaultValues,
+                    replaceValues
+                );
                 ExcelApp.StatusBar = $"导出：{targetPath}\\{fileName}";
             }
 
@@ -4179,35 +4167,49 @@ public static class ExcelDataSyncHelper
 
     #region 核心同步逻辑
 
-    private static void SyncDataToTargetFile(string path, string fileName,
+    private static void SyncDataToTargetFile(
+        string path,
+        string fileName,
         List<Dictionary<string, object>> sourceData,
         Dictionary<string, List<string>> defaultValues,
-        Dictionary<string, Dictionary<string, List<string>>> replaceValues)
+        Dictionary<string, Dictionary<string, List<string>>> replaceValues
+    )
     {
         using var package = new ExcelPackage(new FileInfo(Path.Combine(path, fileName)));
         var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-        if (worksheet == null) return;
+        if (worksheet == null)
+            return;
 
         var headers = GetHeaders(worksheet);
         int startRow = worksheet.Dimension?.End.Row + 1 ?? 1;
 
         foreach (var rowData in sourceData)
         {
-            WriteRowData(worksheet, headers, startRow++, rowData, defaultValues,
-                replaceValues.GetValueOrDefault(fileName));
+            WriteRowData(
+                worksheet,
+                headers,
+                startRow++,
+                rowData,
+                defaultValues,
+                replaceValues.GetValueOrDefault(fileName)
+            );
         }
 
         package.Save();
     }
 
-    private static void SyncAllDataToTargetFile(string path, string fileName,
+    private static void SyncAllDataToTargetFile(
+        string path,
+        string fileName,
         List<Dictionary<string, object>> sourceData,
         Dictionary<string, List<string>> defaultValues,
-        Dictionary<string, Dictionary<string, List<string>>> replaceValues)
+        Dictionary<string, Dictionary<string, List<string>>> replaceValues
+    )
     {
         using var package = new ExcelPackage(new FileInfo(Path.Combine(path, fileName)));
         var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-        if (worksheet == null) return;
+        if (worksheet == null)
+            return;
 
         var headers = GetHeaders(worksheet);
         var idColumnIndex = headers.IndexOf("id") + 1; // 假设id列存在
@@ -4236,8 +4238,14 @@ public static class ExcelDataSyncHelper
                 string id = idObj.ToString();
                 if (!existingIds.Contains(id))
                 {
-                    WriteRowData(worksheet, headers, startRow++, rowData, defaultValues,
-                        replaceValues.GetValueOrDefault(fileName));
+                    WriteRowData(
+                        worksheet,
+                        headers,
+                        startRow++,
+                        rowData,
+                        defaultValues,
+                        replaceValues.GetValueOrDefault(fileName)
+                    );
                 }
             }
         }
@@ -4245,10 +4253,14 @@ public static class ExcelDataSyncHelper
         package.Save();
     }
 
-    private static void WriteRowData(ExcelWorksheet worksheet, List<string> headers, int row,
+    private static void WriteRowData(
+        ExcelWorksheet worksheet,
+        List<string> headers,
+        int row,
         Dictionary<string, object> sourceRow,
         Dictionary<string, List<string>> defaultValues,
-        Dictionary<string, List<string>> replaceRules)
+        Dictionary<string, List<string>> replaceRules
+    )
     {
         for (int col = 0; col < headers.Count; col++)
         {
@@ -4258,8 +4270,11 @@ public static class ExcelDataSyncHelper
             if (sourceRow.TryGetValue(header, out var value))
             {
                 // 应用替换规则
-                if (replaceRules != null && replaceRules.TryGetValue(header, out var replacePair)
-                    && replacePair.Count >= 2)
+                if (
+                    replaceRules != null
+                    && replaceRules.TryGetValue(header, out var replacePair)
+                    && replacePair.Count >= 2
+                )
                 {
                     cell.Value = value?.ToString()?.Replace(replacePair[0], replacePair[1]);
                 }
@@ -4268,9 +4283,11 @@ public static class ExcelDataSyncHelper
                     cell.Value = value;
                 }
             }
-            else if (defaultValues.TryGetValue(header, out var defaultValue)
-                     && defaultValue.Count >= 2
-                     && sourceRow.TryGetValue(defaultValue[1], out var refValue))
+            else if (
+                defaultValues.TryGetValue(header, out var defaultValue)
+                && defaultValue.Count >= 2
+                && sourceRow.TryGetValue(defaultValue[1], out var refValue)
+            )
             {
                 // 应用默认值公式
                 cell.Value = defaultValue[0] + Convert.ToDouble(refValue) / 100;
@@ -4304,10 +4321,9 @@ public static class ExcelDataSyncHelper
 
     private static List<Dictionary<string, object>> ReadExcelData(string path, string fileName)
     {
-        
-
         var filePath = Path.Combine(path, fileName);
-        if (!File.Exists(filePath)) return new List<Dictionary<string, object>>();
+        if (!File.Exists(filePath))
+            return new List<Dictionary<string, object>>();
 
         using var package = new ExcelPackage(new FileInfo(filePath));
         var worksheet = package.Workbook.Worksheets.FirstOrDefault();
@@ -4316,14 +4332,22 @@ public static class ExcelDataSyncHelper
             : ExcelToDictionaryList(worksheet);
     }
 
-    private static List<Dictionary<string, object>> ExcelToDictionaryList(ExcelWorksheet worksheet, int headerRow = 2)
+    private static List<Dictionary<string, object>> ExcelToDictionaryList(
+        ExcelWorksheet worksheet,
+        int headerRow = 2
+    )
     {
         var data = new List<Dictionary<string, object>>();
-        if (worksheet.Dimension == null) return data;
+        if (worksheet.Dimension == null)
+            return data;
 
         // 读取表头
         var headers = new Dictionary<int, string>();
-        for (int col = worksheet.Dimension.Start.Column; col <= worksheet.Dimension.End.Column; col++)
+        for (
+            int col = worksheet.Dimension.Start.Column;
+            col <= worksheet.Dimension.End.Column;
+            col++
+        )
         {
             headers[col] = worksheet.Cells[headerRow, col].Text ?? $"Column{col}";
         }
@@ -4337,11 +4361,13 @@ public static class ExcelDataSyncHelper
             foreach (var header in headers)
             {
                 var value = worksheet.Cells[row, header.Key].Value;
-                if (value != null) hasData = true;
+                if (value != null)
+                    hasData = true;
                 rowData[header.Value] = value;
             }
 
-            if (hasData) data.Add(rowData);
+            if (hasData)
+                data.Add(rowData);
         }
 
         return data;
@@ -4373,7 +4399,8 @@ public static class ExcelDataSyncHelper
 
             return values == null
                 ? new List<string>()
-                : Enumerable.Range(1, values.GetLength(1))
+                : Enumerable
+                    .Range(1, values.GetLength(1))
                     .Select(col => values[1, col]?.ToString() ?? "")
                     .ToList();
         }
@@ -4385,9 +4412,11 @@ public static class ExcelDataSyncHelper
 
     private static List<string> GetEpplusHeaders(ExcelWorksheet worksheet)
     {
-        if (worksheet.Dimension == null) return new List<string>();
+        if (worksheet.Dimension == null)
+            return new List<string>();
 
-        return Enumerable.Range(worksheet.Dimension.Start.Column, worksheet.Dimension.End.Column)
+        return Enumerable
+            .Range(worksheet.Dimension.Start.Column, worksheet.Dimension.End.Column)
             .Select(col => worksheet.Cells[2, col].Text ?? "")
             .ToList();
     }

@@ -28,7 +28,6 @@ using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Office.Core;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using NumDesTools.Com;
@@ -37,7 +36,6 @@ using NumDesTools.UI;
 using OfficeOpenXml;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
-using CommandBar = Microsoft.Office.Core.CommandBar;
 using IRibbonControl = ExcelDna.Integration.CustomUI.IRibbonControl;
 using IRibbonUI = ExcelDna.Integration.CustomUI.IRibbonUI;
 using LicenseContext = OfficeOpenXml.LicenseContext;
@@ -101,10 +99,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private TabControl _tabControl = new();
 
+    //右键事件
+    private ExcelRightClickMenuManager _menuManager;
+
     //构造函数初始化
     public NumDesAddIn()
     {
-        InitializeHandlers();
+        InitializeButtons();
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
     }
 
@@ -218,8 +219,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     // 动态获取按钮点击事件，防止短时间内多次点击
     private Dictionary<string, Action<IRibbonControl>> _handlers;
 
-    private void InitializeHandlers()
+    private void InitializeButtons()
     {
+        //Button初始化
         _handlers = new Dictionary<string, Action<IRibbonControl>>
         {
             ["Button4"] = CleanCellFormat_Click,
@@ -284,6 +286,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         _lastClickTimes[control.Id] = DateTime.Now;
 
         App.StatusBar = false;
+        App.Calculation = XlCalculation.xlCalculationManual;
+        App.ScreenUpdating = false;
+        App.EnableEvents = false;
+
         var sw = new Stopwatch();
         sw.Start();
 
@@ -306,8 +312,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         sw.Stop();
         var ts2 = sw.ElapsedMilliseconds;
-        Debug.Print(ts2.ToString());
-        App.StatusBar = "执行完成，用时：" + ts2 / 1000 + "s";
+        App.ScreenUpdating = true;
+        App.Calculation = XlCalculation.xlCalculationAutomatic;
+        App.EnableEvents = true;
+        App.StatusBar =
+            $"[执行完成] {control.Tag} 耗时： {(double)ts2 / 1000}s";
+        Debug.Print($"[执行完成] {control.Tag} 耗时： {ts2}ms");
     }
 
     private void HandleError(string buttonId, Exception ex, IRibbonControl control)
@@ -381,8 +391,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //注册智能感应
         IntelliSenseServer.Install();
 
+
+        //新的右键管理器
+        _menuManager = new ExcelRightClickMenuManager(App);
+        App.SheetBeforeRightClick += OnSheetRightClick;
+
         //注册Excel事件
-        App.SheetBeforeRightClick += UD_RightClickButton;
         App.WorkbookActivate += ExcelApp_WorkbookActivate;
         App.WorkbookBeforeClose += ExcelApp_WorkbookBeforeClose;
 
@@ -406,7 +420,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     void IExcelAddIn.AutoClose()
     {
         IntelliSenseServer.Uninstall();
-        App.SheetBeforeRightClick -= UD_RightClickButton;
+
+        //新的右键管理器
+        _menuManager.PrintPerformanceReport();
+        _menuManager.Dispose();
+
         App.WorkbookActivate -= ExcelApp_WorkbookActivate;
         App.WorkbookBeforeClose -= ExcelApp_WorkbookBeforeClose;
 
@@ -414,6 +432,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.OnKey("^%l");
     }
 
+    private void OnSheetRightClick(object sh, Range target, ref bool cancel)
+    {
+        _menuManager.UD_RightClickButton(sh, target, ref cancel);
+    }
     #endregion
 
     #region Ribbon快捷键命令，固定快捷键，不可自定义修改
@@ -604,134 +626,134 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     #region Ribbon点击命令
 
-    private void UD_RightClickButton(object sh, Range target, ref bool cancel)
-    {
-        // 防抖逻辑：如果距离上次点击时间过短，则忽略
-        if ((DateTime.Now - _lastClickTime).TotalMilliseconds < ClickDelayMs)
-        {
-            cancel = true;
-            return;
-        }
+    //private void UD_RightClickButton(object sh, Range target, ref bool cancel)
+    //{
+    //    // 防抖逻辑：如果距离上次点击时间过短，则忽略
+    //    if ((DateTime.Now - _lastClickTime).TotalMilliseconds < ClickDelayMs)
+    //    {
+    //        cancel = true;
+    //        return;
+    //    }
 
-        _lastClickTime = DateTime.Now;
+    //    _lastClickTime = DateTime.Now;
 
-        try
-        {
-            CommandBar currentBar;
-            var missing = Type.Missing;
+    //    try
+    //    {
+    //        CommandBar currentBar;
+    //        var missing = Type.Missing;
 
-            // 判断是否是全选列或全选行
-            var isEntireColumn = target.EntireColumn.Address == target.Address;
-            var isEntireRow = target.EntireRow.Address == target.Address;
+    //        // 判断是否是全选列或全选行
+    //        var isEntireColumn = target.EntireColumn.Address == target.Address;
+    //        var isEntireRow = target.EntireRow.Address == target.Address;
 
-            // 根据是否全选列/行选择不同的 CommandBar
-            if (isEntireColumn)
-                currentBar = App.CommandBars["Column"];
-            else if (isEntireRow)
-                currentBar = App.CommandBars["Row"];
-            else
-                currentBar = App.CommandBars["cell"];
+    //        // 根据是否全选列/行选择不同的 CommandBar
+    //        if (isEntireColumn)
+    //            currentBar = App.CommandBars["Column"];
+    //        else if (isEntireRow)
+    //            currentBar = App.CommandBars["Row"];
+    //        else
+    //            currentBar = App.CommandBars["cell"];
 
-            currentBar.Reset();
-            var currentBars = currentBar.Controls;
+    //        currentBar.Reset();
+    //        var currentBars = currentBar.Controls;
 
-            // 删除已有的按钮：每个功能最好使用单独的Tag，否则Debug时某个tag的其中1个命令调用时会触发其他
-            var tagsToDelete = new[]
-            {
-                "自选表格写入",
-                "当前项目Lan",
-                "合并项目Lan",
-                "合并表格Row",
-                "合并表格Col",
-                "打开表格",
-                "对话写入",
-                "对话写入（new）",
-                "打开关联表格",
-                "LTE配置导出-首次",
-                "LTE配置导出-更新",
-                "自选表格写入（new）",
-                "自定义复制",
-                "克隆数据",
-                "克隆数据All",
-                "LTE基础数据-首次",
-                "LTE基础数据-更新",
-                "LTE任务数据-首次",
-                "LTE任务数据-更新"
-            };
+    //        // 删除已有的按钮：每个功能最好使用单独的Tag，否则Debug时某个tag的其中1个命令调用时会触发其他
+    //        var tagsToDelete = new[]
+    //        {
+    //            "自选表格写入",
+    //            "当前项目Lan",
+    //            "合并项目Lan",
+    //            "合并表格Row",
+    //            "合并表格Col",
+    //            "打开表格",
+    //            "对话写入",
+    //            "对话写入（new）",
+    //            "打开关联表格",
+    //            "LTE配置导出-首次",
+    //            "LTE配置导出-更新",
+    //            "自选表格写入（new）",
+    //            "自定义复制",
+    //            "克隆数据",
+    //            "克隆数据All",
+    //            "LTE基础数据-首次",
+    //            "LTE基础数据-更新",
+    //            "LTE任务数据-首次",
+    //            "LTE任务数据-更新"
+    //        };
 
-            foreach (var control in currentBars.Cast<CommandBarControl>().Where(c => tagsToDelete.Contains(c.Tag)))
-                try
-                {
-                    control.Delete();
-                }
-                catch
-                {
-                    /* ignored */
-                }
+    //        foreach (var control in currentBars.Cast<CommandBarControl>().Where(c => tagsToDelete.Contains(c.Tag)))
+    //            try
+    //            {
+    //                control.Delete();
+    //            }
+    //            catch
+    //            {
+    //                /* ignored */
+    //            }
 
-            if (sh is not Worksheet sheet)
-                return;
-            var sheetName = sheet.Name;
-            var book = sheet.Parent as Workbook;
-            if (book != null)
-            {
-                var bookName = book.Name;
-                var bookPath = book.Path;
+    //        if (sh is not Worksheet sheet)
+    //            return;
+    //        var sheetName = sheet.Name;
+    //        var book = sheet.Parent as Workbook;
+    //        if (book != null)
+    //        {
+    //            var bookName = book.Name;
+    //            var bookPath = book.Path;
 
-                // 如果是全选列或全选行，跳过 target.Value2 的检查
-                var targetValue = target.Value2?.ToString();
-                if (!isEntireColumn && !isEntireRow)
-                    if (string.IsNullOrEmpty(targetValue))
-                        return;
+    //            // 如果是全选列或全选行，跳过 target.Value2 的检查
+    //            var targetValue = target.Value2?.ToString();
+    //            if (!isEntireColumn && !isEntireRow)
+    //                if (string.IsNullOrEmpty(targetValue))
+    //                    return;
 
-                // 动态生成按钮
-                void AddDynamicButton(string tag, string caption, MsoButtonStyle style, _CommandBarButtonEvents_ClickEventHandler clickHandler)
-                {
-                    if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton comButton)
-                    {
-                        comButton.Tag = tag;
-                        comButton.Caption = caption;
-                        comButton.Style = style;
-                        comButton.Click += clickHandler;
-                    }
-                }
+    //            // 动态生成按钮
+    //            void AddDynamicButton(string tag, string caption, MsoButtonStyle style, _CommandBarButtonEvents_ClickEventHandler clickHandler)
+    //            {
+    //                if (currentBars.Add(MsoControlType.msoControlButton, missing, missing, 1, true) is CommandBarButton comButton)
+    //                {
+    //                    comButton.Tag = tag;
+    //                    comButton.Caption = caption;
+    //                    comButton.Style = style;
+    //                    comButton.Click += clickHandler;
+    //                }
+    //            }
 
-                // 按钮配置列表
-                var buttonConfigs = new List<( string Tag, string Caption, MsoButtonStyle Style, _CommandBarButtonEvents_ClickEventHandler Handler )>
-                {
-                    // 根据条件添加按钮配置
-                    sheetName.Contains("【模板】") ? ("自选表格写入", "自选表格写入", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertMulti.RightClickInsertData) : default,
-                    bookName.Contains("#【自动填表】多语言对话") ? ("当前项目Lan", "当前项目Lan", MsoButtonStyle.msoButtonIconAndCaption, PubMetToExcelFunc.OpenBaseLanExcel) : default,
-                    bookName.Contains("#【自动填表】多语言对话") ? ("合并项目Lan", "合并项目Lan", MsoButtonStyle.msoButtonIconAndCaption, PubMetToExcelFunc.OpenMergeLanExcel) : default,
-                    (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables")) || bookPath.Contains(@"Public\Excels\Localizations") ? ("合并表格Row", "合并表格Row", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertCopyMulti.RightClickMergeData) : default,
-                    (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables")) || bookPath.Contains(@"Public\Excels\Localizations") ? ("合并表格Col", "合并表格Col", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol) : default,
-                    targetValue != null && targetValue.Contains(".xlsx") ? ("打开表格", "打开表格", MsoButtonStyle.msoButtonIconAndCaption, PubMetToExcelFunc.RightOpenExcelByActiveCell) : default,
-                    sheetName == "多语言对话【模板】" ? ("对话写入", "对话写入(末尾)", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertLanguage.AutoInsertDataByUd) : default,
-                    sheetName == "多语言对话【模板】" ? ("对话写入（new）", "对话写入(末尾)(new)", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertLanguage.AutoInsertDataByUdNew) : default,
-                    !bookName.Contains("#") && target.Column > 2 ? ("打开关联表格", "打开关联表格", MsoButtonStyle.msoButtonIconAndCaption, PubMetToExcelFunc.RightOpenLinkExcelByActiveCell) : default,
-                    sheetName == "LTE【基础】" || sheetName == "LTE【任务】" || sheetName == "LTE【通用】" || sheetName == "LTE【寻找】" ? ("LTE配置导出-首次", "LTE配置导出-首次", MsoButtonStyle.msoButtonIconAndCaption, LteData.ExportLteDataConfigFirst) : default,
-                    sheetName == "LTE【基础】" || sheetName == "LTE【任务】" || sheetName == "LTE【通用】" || sheetName == "LTE【寻找】" ? ("LTE配置导出-更新", "LTE配置导出-更新", MsoButtonStyle.msoButtonIconAndCaption, LteData.ExportLteDataConfigUpdate) : default,
-                    sheetName.Contains("【模板】") ? ("自选表格写入（new）", "自选表格写入（new）", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertMultiNew.RightClickInsertDataNew) : default,
-                    bookName.Contains("RechargeGP") ? ("克隆数据", "克隆数据-Recharge", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertCopyActivity.RightClickCloneData) : default,
-                    bookName.Contains("RechargeGP") ? ("克隆数据All", "克隆数据-Recharge-All", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertCopyActivity.RightClickCloneAllData) : default,
-                    bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【设计】") ? ("LTE基础数据-首次", "LTE基础数据-首次", MsoButtonStyle.msoButtonIconAndCaption, LteData.FirstCopyValue) : default,
-                    bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【设计】") ? ("LTE基础数据-更新", "LTE基础数据-更新", MsoButtonStyle.msoButtonIconAndCaption, LteData.UpdateCopyValue) : default,
-                    bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【任务】") ? ("LTE任务数据-首次", "LTE任务数据-首次", MsoButtonStyle.msoButtonIconAndCaption, LteData.FirstCopyTaskValue) : default,
-                    bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【任务】") ? ("LTE任务数据-更新", "LTE任务数据-更新", MsoButtonStyle.msoButtonIconAndCaption, LteData.UpdateCopyTaskValue) : default,
-                    ("自定义复制", "去重复制", MsoButtonStyle.msoButtonIconAndCaption, LteData.FilterRepeatValueCopy)
-                };
+    //            // 按钮配置列表
+    //            var buttonConfigs = new List<( string Tag, string Caption, MsoButtonStyle Style, _CommandBarButtonEvents_ClickEventHandler Handler )>
+    //            {
+    //                // 根据条件添加按钮配置
+    //                sheetName.Contains("【模板】") ? ("自选表格写入", "自选表格写入", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertMulti.RightClickInsertData) : default,
+    //                bookName.Contains("#【自动填表】多语言对话") ? ("当前项目Lan", "当前项目Lan", MsoButtonStyle.msoButtonIconAndCaption, PubMetToExcelFunc.OpenBaseLanExcel) : default,
+    //                bookName.Contains("#【自动填表】多语言对话") ? ("合并项目Lan", "合并项目Lan", MsoButtonStyle.msoButtonIconAndCaption, PubMetToExcelFunc.OpenMergeLanExcel) : default,
+    //                (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables")) || bookPath.Contains(@"Public\Excels\Localizations") ? ("合并表格Row", "合并表格Row", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertCopyMulti.RightClickMergeData) : default,
+    //                (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables")) || bookPath.Contains(@"Public\Excels\Localizations") ? ("合并表格Col", "合并表格Col", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol) : default,
+    //                targetValue != null && targetValue.Contains(".xlsx") ? ("打开表格", "打开表格", MsoButtonStyle.msoButtonIconAndCaption, PubMetToExcelFunc.RightOpenExcelByActiveCell) : default,
+    //                sheetName == "多语言对话【模板】" ? ("对话写入", "对话写入(末尾)", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertLanguage.AutoInsertDataByUd) : default,
+    //                sheetName == "多语言对话【模板】" ? ("对话写入（new）", "对话写入(末尾)(new)", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertLanguage.AutoInsertDataByUdNew) : default,
+    //                !bookName.Contains("#") && target.Column > 2 ? ("打开关联表格", "打开关联表格", MsoButtonStyle.msoButtonIconAndCaption, PubMetToExcelFunc.RightOpenLinkExcelByActiveCell) : default,
+    //                sheetName == "LTE【基础】" || sheetName == "LTE【任务】" || sheetName == "LTE【通用】" || sheetName == "LTE【寻找】" ? ("LTE配置导出-首次", "LTE配置导出-首次", MsoButtonStyle.msoButtonIconAndCaption, LteData.ExportLteDataConfigFirst) : default,
+    //                sheetName == "LTE【基础】" || sheetName == "LTE【任务】" || sheetName == "LTE【通用】" || sheetName == "LTE【寻找】" ? ("LTE配置导出-更新", "LTE配置导出-更新", MsoButtonStyle.msoButtonIconAndCaption, LteData.ExportLteDataConfigUpdate) : default,
+    //                sheetName.Contains("【模板】") ? ("自选表格写入（new）", "自选表格写入（new）", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertMultiNew.RightClickInsertDataNew) : default,
+    //                bookName.Contains("RechargeGP") ? ("克隆数据", "克隆数据-Recharge", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertCopyActivity.RightClickCloneData) : default,
+    //                bookName.Contains("RechargeGP") ? ("克隆数据All", "克隆数据-Recharge-All", MsoButtonStyle.msoButtonIconAndCaption, ExcelDataAutoInsertCopyActivity.RightClickCloneAllData) : default,
+    //                bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【设计】") ? ("LTE基础数据-首次", "LTE基础数据-首次", MsoButtonStyle.msoButtonIconAndCaption, LteData.FirstCopyValue) : default,
+    //                bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【设计】") ? ("LTE基础数据-更新", "LTE基础数据-更新", MsoButtonStyle.msoButtonIconAndCaption, LteData.UpdateCopyValue) : default,
+    //                bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【任务】") ? ("LTE任务数据-首次", "LTE任务数据-首次", MsoButtonStyle.msoButtonIconAndCaption, LteData.FirstCopyTaskValue) : default,
+    //                bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【任务】") ? ("LTE任务数据-更新", "LTE任务数据-更新", MsoButtonStyle.msoButtonIconAndCaption, LteData.UpdateCopyTaskValue) : default,
+    //                ("自定义复制", "去重复制", MsoButtonStyle.msoButtonIconAndCaption, LteData.FilterRepeatValueCopy)
+    //            };
 
-                // 生成按钮
-                foreach (var (tag, caption, style, handler) in buttonConfigs.Where(b => b != default))
-                    AddDynamicButton(tag, caption, style, handler);
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.Print($"右键菜单错误: {ex.Message}");
-            cancel = true;
-        }
-    }
+    //            // 生成按钮
+    //            foreach (var (tag, caption, style, handler) in buttonConfigs.Where(b => b != default))
+    //                AddDynamicButton(tag, caption, style, handler);
+    //        }
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        Debug.Print($"右键菜单错误: {ex.Message}");
+    //        cancel = true;
+    //    }
+    //}
 
     private void ExcelApp_WorkbookActivate(Workbook wb)
     {
@@ -759,7 +781,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (CheckSheetValueText == "数据自检：开启" && sourceData.Count > 0)
         {
             NumDesCTP.DeleteCTP(true, ctpCheckValueName);
-            _ = (SheetCellSeachResult) NumDesCTP.ShowCTP(550, ctpCheckValueName, true, ctpCheckValueName, new SheetCellSeachResult(sourceData), MsoCTPDockPosition.msoCTPDockPositionRight);
+            _ = (SheetCellSeachResult) NumDesCTP.ShowCTP(800, ctpCheckValueName, true, ctpCheckValueName, new SheetCellSeachResult(sourceData), MsoCTPDockPosition.msoCTPDockPositionRight);
             cancel = true;
         }
 
@@ -1344,7 +1366,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var ctpName = "表格查询结果";
             NumDesCTP.DeleteCTP(true, ctpName);
             var tupleList = targetList.Select(t => (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))).ToList();
-            _ = (SheetSeachResult) NumDesCTP.ShowCTP(400, ctpName, true, ctpName, new SheetSeachResult(tupleList), MsoCTPDockPosition.msoCTPDockPositionRight);
+            _ = (SheetSeachResult) NumDesCTP.ShowCTP(800, ctpName, true, ctpName, new SheetSeachResult(tupleList), MsoCTPDockPosition.msoCTPDockPositionRight);
         }
     }
 
@@ -1363,7 +1385,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var ctpName = "表格查询结果";
             NumDesCTP.DeleteCTP(true, ctpName);
             var tupleList = targetList.Select(t => (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))).ToList();
-            _ = (SheetSeachResult) NumDesCTP.ShowCTP(400, ctpName, true, ctpName, new SheetSeachResult(tupleList), MsoCTPDockPosition.msoCTPDockPositionRight);
+            _ = (SheetSeachResult) NumDesCTP.ShowCTP(800, ctpName, true, ctpName, new SheetSeachResult(tupleList), MsoCTPDockPosition.msoCTPDockPositionRight);
         }
     }
 
@@ -1382,7 +1404,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var ctpName = "表格查询结果";
             NumDesCTP.DeleteCTP(true, ctpName);
             var tupleList = targetList.Select(t => (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))).ToList();
-            _ = (SheetSeachResult) NumDesCTP.ShowCTP(400, ctpName, true, ctpName, new SheetSeachResult(tupleList), MsoCTPDockPosition.msoCTPDockPositionRight);
+            _ = (SheetSeachResult) NumDesCTP.ShowCTP(800, ctpName, true, ctpName, new SheetSeachResult(tupleList), MsoCTPDockPosition.msoCTPDockPositionRight);
         }
     }
 
@@ -1411,7 +1433,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var ctpName = "表格查询结果";
             NumDesCTP.DeleteCTP(true, ctpName);
             var tupleList = targetList.Select(t => (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))).ToList();
-            _ = (SheetSeachResult) NumDesCTP.ShowCTP(400, ctpName, true, ctpName, new SheetSeachResult(tupleList), MsoCTPDockPosition.msoCTPDockPositionRight);
+            _ = (SheetSeachResult) NumDesCTP.ShowCTP(800, ctpName, true, ctpName, new SheetSeachResult(tupleList), MsoCTPDockPosition.msoCTPDockPositionRight);
         }
     }
 
@@ -2478,7 +2500,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         sourceData.AddRange(PubMetToExcelFunc.CheckValueFormat());
 
         NumDesCTP.DeleteCTP(true, ctpCheckValueName);
-        _ = (SheetCellSeachResult) NumDesCTP.ShowCTP(550, ctpCheckValueName, true, ctpCheckValueName, new SheetCellSeachResult(sourceData), MsoCTPDockPosition.msoCTPDockPositionRight);
+        _ = (SheetCellSeachResult) NumDesCTP.ShowCTP(800, ctpCheckValueName, true, ctpCheckValueName, new SheetCellSeachResult(sourceData), MsoCTPDockPosition.msoCTPDockPositionRight);
 
         //取消隐藏
 

@@ -118,7 +118,7 @@ public class CellSelectChangeTip : ClickThroughForm
                     cellStr += "\r\n";
                 }
             else
-                cellStr = arr.ToString() + "\r\n";
+                cellStr = arr?.ToString() + "\r\n";
 
             ShowToolTip(cellStr, target);
         }
