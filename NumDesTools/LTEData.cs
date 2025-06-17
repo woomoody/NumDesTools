@@ -11,7 +11,7 @@ public class LteData
 
     private static readonly string WkPath = Wk.Path;
 
-    private static readonly Regex WildcardRegex = new Regex("#(.*?)#", RegexOptions.Compiled);
+    private static readonly Regex WildcardRegex = new("#(.*?)#", RegexOptions.Compiled);
 
     private static readonly Dictionary<string, (string id, string idType)> SheetTypeMap =
         new(StringComparer.Ordinal)
@@ -59,10 +59,6 @@ public class LteData
 
     public static void ExportLteDataConfig(bool isFirst)
     {
-        NumDesAddIn.App.StatusBar = false;
-        var sw = new Stopwatch();
-        sw.Start();
-
         //Epplus获取[LTE配置【导出】]表的ListObject
         var sheet = Wk.ActiveSheet;
         var sheetName = sheet.Name;
@@ -106,9 +102,6 @@ public class LteData
         {
             MessageBox.Show($"{sheetName}有误，请对比#【A-LTE】配置模版");
         }
-        sw.Stop();
-        var ts2 = sw.ElapsedMilliseconds;
-        NumDesAddIn.App.StatusBar = "导出完成，用时：" + ts2;
     }
 
     private static bool GetModelValue(
@@ -636,7 +629,7 @@ public class LteData
                 "Mer" => Mer(exportWildcardDyData, funDepends, funDy1),
                 "MerB" => MerB(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3),
                 "Ads" => Ads(exportWildcardDyData, funDepends, funDy1),
-                "Arr" => Arr(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3),
+                "Arr" => Arr(exportWildcardDyData, funDepends, funDy1, funDy2),
                 "Get" => Get(exportWildcardDyData, funDepends, funDy1, funDy2),
                 "GetDic"
                     => GetDic(
@@ -800,13 +793,13 @@ public class LteData
         Dictionary<string, string> exportWildcardDyData,
         string funDepends,
         string funDy1,
-        string funDy2,
-        string funDy3
+        string funDy2
+    //string funDy3
     )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "消耗量组" : funDy1;
         funDy2 = string.IsNullOrEmpty(funDy2) ? "" : funDy2;
-        funDy3 = string.IsNullOrEmpty(funDy2) ? "" : funDy3;
+        //funDy3 = string.IsNullOrEmpty(funDy2) ? "" : funDy3;
 
         var funDy1Value = exportWildcardDyData[funDy1];
         var funDependsValue = exportWildcardDyData[funDepends];
@@ -815,11 +808,11 @@ public class LteData
 
         var funDependsValueSplit = Regex.Split(funDependsValue, ",");
 
-        double numBit = 0;
-        if (double.TryParse(funDy3, out double intFunDy3))
-        {
-            numBit = Math.Pow(10, intFunDy3 - 1);
-        }
+        //double numBit = 0;
+        //if (double.TryParse(funDy3, out double intFunDy3))
+        //{
+        //    numBit = Math.Pow(10, intFunDy3 - 1);
+        //}
 
         string result = "";
         if (funDy1ValueSplit.Length == funDependsValueSplit.Length)
@@ -1032,30 +1025,15 @@ public class LteData
     //去重复制
     public static void FilterRepeatValueCopy(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        NumDesAddIn.App.StatusBar = false;
-        var sw = new Stopwatch();
-        sw.Start();
-
         //去重
         var mergedArray = FilterRepeatValue("", "", true);
         //复制
         PubMetToExcel.CopyArrayToClipboard(mergedArray);
-
-        sw.Stop();
-        var costTime = sw.ElapsedMilliseconds;
-        NumDesAddIn.App.StatusBar = $"复制完成，用时{costTime}";
     }
 
     //首次写入数据（指定范围内数据去重）
     public static void FirstCopyValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        NumDesAddIn.App.StatusBar = false;
-        var sw = new Stopwatch();
-        sw.Start();
-
-        NumDesAddIn.App.ScreenUpdating = false;
-        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
-
         object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
 
         var baseList = GetExcelListObjects("LTE【基础】", "LTE【基础】");
@@ -1194,24 +1172,11 @@ public class LteData
             FindDataTagCol,
             writeFindArray
         );
-
-        sw.Stop();
-        var costTime = sw.ElapsedMilliseconds;
-
-        NumDesAddIn.App.StatusBar = $"写入完成，用时{costTime}";
-        NumDesAddIn.App.ScreenUpdating = true;
-        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationAutomatic;
     }
 
     //更新写入数据（指定范围内数据去重），比对数据，更新数据状态
     public static void UpdateCopyValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        var sw = new Stopwatch();
-        sw.Start();
-        NumDesAddIn.App.StatusBar = false;
-        NumDesAddIn.App.ScreenUpdating = false;
-        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
-
         object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
         var list = GetExcelListObjects("LTE【基础】", "LTE【基础】");
         if (list == null)
@@ -1251,12 +1216,6 @@ public class LteData
         //寻找数据整理
         var findArray = FindData(copyArray, dataTypeArray);
         WriteDymaicData(findArray, findList, "LTE【寻找】", 1, 9);
-
-        sw.Stop();
-        var costTime = sw.ElapsedMilliseconds;
-        NumDesAddIn.App.StatusBar = $"写入完成，用时{costTime}";
-        NumDesAddIn.App.ScreenUpdating = true;
-        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationAutomatic;
     }
 
     private static void WriteDymaicData(
@@ -1754,8 +1713,7 @@ public class LteData
                         }
                         else if (findTargetType2 == "1")
                         {
-                            subFindLinks +=
-                                "{" + findTargetType2 + "," + findTargetId2 + "},";
+                            subFindLinks += "{" + findTargetType2 + "," + findTargetId2 + "},";
                         }
                         else
                         {
@@ -1921,13 +1879,6 @@ public class LteData
     //首次写入数据
     public static void FirstCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        NumDesAddIn.App.StatusBar = false;
-        var sw = new Stopwatch();
-        sw.Start();
-
-        NumDesAddIn.App.ScreenUpdating = false;
-        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
-
         var sheetName = "LTE【任务】";
         var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
         double activtiyId = (double)colIndexArray[0, 0];
@@ -2002,25 +1953,11 @@ public class LteData
             TaskDataTagCol,
             writeArray
         );
-
-        sw.Stop();
-        var costTime = sw.ElapsedMilliseconds;
-
-        NumDesAddIn.App.StatusBar = $"写入完成，用时{costTime}";
-        NumDesAddIn.App.ScreenUpdating = true;
-        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationAutomatic;
     }
 
     //更新写入数据
     public static void UpdateCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        NumDesAddIn.App.StatusBar = false;
-        var sw = new Stopwatch();
-        sw.Start();
-
-        NumDesAddIn.App.ScreenUpdating = false;
-        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
-
         var sheetName = "LTE【任务】";
         var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
         double activtiyId = (double)colIndexArray[0, 0];
@@ -2068,13 +2005,6 @@ public class LteData
         }
 
         WriteDymaicData(copyTaskArray, taskList, "LTE【任务】", 14, 23, 13);
-
-        sw.Stop();
-        var costTime = sw.ElapsedMilliseconds;
-
-        NumDesAddIn.App.StatusBar = $"写入完成，用时{costTime}";
-        NumDesAddIn.App.ScreenUpdating = true;
-        NumDesAddIn.App.Calculation = XlCalculation.xlCalculationAutomatic;
     }
 
     //原始数据改造

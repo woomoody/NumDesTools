@@ -22,10 +22,8 @@ public class SelfControl : UserControl, ISelfControl;
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 public class NumDesCTP
 {
-    private static Dictionary<string, CustomTaskPane> ctpsWF =
-        new Dictionary<string, CustomTaskPane>();
-    private static Dictionary<string, CustomTaskPane> ctpsWPF =
-        new Dictionary<string, CustomTaskPane>();
+    private static Dictionary<string, CustomTaskPane> ctpsWF = new();
+    private static Dictionary<string, CustomTaskPane> ctpsWPF = new();
     private static SelfControl LableControlWF;
     private static SelfControl LableControlWPF;
 

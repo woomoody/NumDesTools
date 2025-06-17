@@ -538,7 +538,6 @@ public static class PubMetToExcelFunc
 
     public static void OpenBaseLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        
         var selectCell = NumDesAddIn.App.ActiveCell;
         var basePath = NumDesAddIn.App.ActiveWorkbook.Path;
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(basePath));
@@ -556,7 +555,6 @@ public static class PubMetToExcelFunc
 
     public static void OpenMergeLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        
         var selectCell = NumDesAddIn.App.ActiveCell;
         var basePath = NumDesAddIn.App.ActiveWorkbook.Path;
         var mergePath = "";
@@ -1991,8 +1989,6 @@ public static class PubMetToExcelFunc
         string findValue
     )
     {
-        
-
         var filesCollection = new SelfExcelFileCollector(rootPath);
         var files = filesCollection.GetAllExcelFilesPath();
 
@@ -2065,8 +2061,6 @@ public static class PubMetToExcelFunc
         string findValue
     )
     {
-        
-
         var filesCollection = new SelfExcelFileCollector(rootPath);
         var files = filesCollection.GetAllExcelFilesPath();
 
