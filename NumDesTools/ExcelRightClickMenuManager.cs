@@ -8,7 +8,7 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
 {
     private readonly Application _excelApp =
         excelApp ?? throw new ArgumentNullException(nameof(excelApp));
-    private DateTime _lastClickTime = DateTime.MinValue;
+    private DateTime _lastHandlerClickTime = DateTime.MinValue;
     private const int ClickDelayMs = 500;
 
     // 性能统计
@@ -16,14 +16,6 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
 
     public void UD_RightClickButton(object sender, Range target, ref bool cancel)
     {
-        // 防抖检查
-        if ((DateTime.Now - _lastClickTime).TotalMilliseconds < ClickDelayMs)
-        {
-            cancel = true;
-            return;
-        }
-        _lastClickTime = DateTime.Now;
-
         try
         {
             CommandBar currentBar;
@@ -80,14 +72,17 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
             "LTE任务数据-更新"
         };
 
-        foreach (CommandBarControl control in commandBar.Controls)
+        foreach (var item in commandBar.Controls)
         {
             try
             {
-                if (tagsToDelete.Contains(control.Tag))
+                if (item is CommandBarControl control)
                 {
-                    control.Delete();
-                    Marshal.ReleaseComObject(control);
+                    if (tagsToDelete.Contains(control.Tag))
+                    {
+                        control.Delete();
+                        Marshal.ReleaseComObject(control);
+                    }
                 }
             }
             catch
@@ -256,14 +251,22 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
     {
         try
         {
-            var button = (CommandBarButton)
-                commandBar.Controls.Add(
-                    MsoControlType.msoControlButton,
-                    Type.Missing,
-                    Type.Missing,
-                    1,
-                    true
-                );
+            var control = commandBar.Controls.Add(
+                MsoControlType.msoControlButton,
+                Type.Missing,
+                Type.Missing,
+                1,
+                true
+            );
+
+            var button = control as CommandBarButton;
+            if (button == null)
+            {
+                // 处理转换失败的情况
+                Debug.Print($"添加按钮失败: 无法转换为 CommandBarButton");
+                Marshal.ReleaseComObject(control);
+                return;
+            }
 
             button.Tag = config.Tag;
             button.Caption = config.Caption;
@@ -271,7 +274,17 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
 
             // 包装点击事件
             button.Click += (CommandBarButton btn, ref bool cancel) =>
+            {
+                // 防抖检查 - 针对特定handler
+                if ((DateTime.Now - _lastHandlerClickTime).TotalMilliseconds < ClickDelayMs)
+                {
+                    cancel = true;
+                    return;
+                }
+                _lastHandlerClickTime = DateTime.Now;
+
                 SafeExecuteWithCommonControls(config.Handler, btn, ref cancel);
+            };
         }
         catch (Exception ex)
         {
@@ -308,6 +321,17 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 button.Tag,
                 stopwatch.ElapsedMilliseconds,
                 (_, old) => (old + stopwatch.ElapsedMilliseconds) / 2
+            );
+        }
+        catch (InvalidCastException ex)
+        {
+            cancel = true;
+            Debug.Print($"[{button.Tag}] 类型转换错误: {ex.Message}");
+            MessageBox.Show(
+                $"类型转换错误: {ex.Message}\n\n请检查对象类型是否匹配",
+                "类型错误",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
             );
         }
         catch (Exception ex)
