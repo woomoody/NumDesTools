@@ -1,5 +1,7 @@
-﻿using System.Text;
+﻿using System.Data.SqlTypes;
+using System.Text;
 using System.Text.RegularExpressions;
+using NPOI.SS.Formula.Functions;
 using OfficeOpenXml;
 using Match = System.Text.RegularExpressions.Match;
 
@@ -524,7 +526,10 @@ public class LteData
                                 cellModelValue,
                                 exportWildcardData,
                                 exportWildcardDyData,
-                                strDictionary
+                                strDictionary,
+                                baseData,
+                                id,
+                                itemId
                             );
 
                             //空ID判断
@@ -588,11 +593,15 @@ public class LteData
         string cellModelValue,
         Dictionary<string, string> exportWildcardData,
         Dictionary<string, string> exportWildcardDyData,
-        Dictionary<string, Dictionary<string, List<string>>> strDictionary
+        Dictionary<string, Dictionary<string, List<string>>> strDictionary,
+        Dictionary<string, List<string>> baseData,
+        string id,
+        string itemId
     )
     {
         string cellRealValue = cellModelValue;
         string wildcardValuePattern = "#";
+        List<string> idList = baseData[id];
 
         MatchCollection matches = WildcardRegex.Matches(cellModelValue);
 
@@ -610,45 +619,77 @@ public class LteData
             string funDy1 = wildcardValueSplit.ElementAtOrDefault(2) ?? "";
             string funDy2 = wildcardValueSplit.ElementAtOrDefault(3) ?? "";
             string funDy3 = wildcardValueSplit.ElementAtOrDefault(4) ?? "";
+            string funDy4 = wildcardValueSplit.ElementAtOrDefault(5) ?? "";
+            string funDy5 = wildcardValueSplit.ElementAtOrDefault(6) ?? "";
 
-            string fixWildcardValue = funName switch
+            try
             {
-                //根据动态或静态值计算值
-                "Left" => Left(exportWildcardDyData, funDepends, funDy1),
-                "Right" => Right(exportWildcardDyData, funDepends, funDy1),
-                "Set" => Set(exportWildcardDyData, funDepends, funDy1, funDy2),
-                "SetDic"
-                    => SetDic(
-                        exportWildcardDyData,
-                        strDictionary,
-                        wildcard,
-                        funDepends,
-                        funDy1,
-                        funDy2
-                    ),
-                "Mer" => Mer(exportWildcardDyData, funDepends, funDy1),
-                "MerB" => MerB(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3),
-                "Ads" => Ads(exportWildcardDyData, funDepends, funDy1),
-                "Arr" => Arr(exportWildcardDyData, funDepends, funDy1, funDy2),
-                "Get" => Get(exportWildcardDyData, funDepends, funDy1, funDy2),
-                "GetDic"
-                    => GetDic(
-                        strDictionary,
-                        exportWildcardDyData,
-                        funDepends,
-                        funDy1,
-                        funDy2,
-                        funDy3
-                    ),
-                "GetDicKey" => GetDicKey(funDepends),
-                "SplitArr" => SplitArr(exportWildcardDyData, funDepends, funDy1, funDy2),
-                //获取动态值
-                "Var" => exportWildcardDyData[wildcard],
-                //获取静态值
-                _ => exportWildcardData[wildcard]
-            };
+                string fixWildcardValue = funName switch
+                {
+                    //根据动态或静态值计算值
+                    "Left" => Left(exportWildcardDyData, funDepends, funDy1),
+                    "Right" => Right(exportWildcardDyData, funDepends, funDy1),
+                    "Set" => Set(exportWildcardDyData, funDepends, funDy1, funDy2),
+                    "SetDic"
+                        => SetDic(
+                            exportWildcardDyData,
+                            strDictionary,
+                            wildcard,
+                            funDepends,
+                            funDy1,
+                            funDy2
+                        ),
+                    "Mer" => Mer(exportWildcardDyData, funDepends, itemId, funDy1),
+                    "MerB"
+                        => MerB(exportWildcardDyData, funDepends, itemId, funDy1, funDy2, funDy3),
+                    "MerTry"
+                        => MerTry(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3, idList),
+                    "Ads" => Ads(exportWildcardDyData, funDepends, funDy1),
+                    "Arr" => Arr(exportWildcardDyData, funDepends, funDy1, funDy2),
+                    "Get" => Get(exportWildcardDyData, funDepends, funDy1, funDy2),
+                    "GetDic"
+                        => GetDic(
+                            strDictionary,
+                            exportWildcardDyData,
+                            funDepends,
+                            funDy1,
+                            funDy2,
+                            funDy3
+                        ),
+                    "GetDicKey" => GetDicKey(funDepends),
+                    "SplitArr" => SplitArr(exportWildcardDyData, funDepends, funDy1, funDy2),
+                    "CollectRow"
+                        => CollectRow(
+                            exportWildcardDyData,
+                            funDepends,
+                            funDy1,
+                            funDy2,
+                            funDy3,
+                            funDy4,
+                            funDy5,
+                            baseData,
+                            id
+                        ),
+                    //获取动态值
+                    "Var" => exportWildcardDyData[wildcard],
 
-            cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
+                    //获取静态值
+                    _ => exportWildcardData[wildcard]
+                };
+
+                cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
+            }
+            catch (FormatException ex)
+            {
+                Debug.Print($"通配符解析错误: {wildcard} | 值: {exportWildcardDyData[wildcard]}");
+                LogDisplay.RecordLine(
+                    "[{1}][{0}][{2}]",
+                    $"通配符解析错误: {wildcard} | 值: {exportWildcardDyData[wildcard]}",
+                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                    wildcard
+                );
+                return string.Empty;
+            }
         }
 
         return cellRealValue;
@@ -710,16 +751,32 @@ public class LteData
     private static string Mer(
         Dictionary<string, string> exportWildcardDyData,
         string funDepends,
+        string itemId,
         string funDy1
     )
     {
-        funDy1 = string.IsNullOrEmpty(funDy1) ? "1" : funDy1;
-        return (long.Parse(exportWildcardDyData[funDepends]) + int.Parse(funDy1)).ToString();
+        // 尝试解析动态值
+        if (long.TryParse(exportWildcardDyData[funDepends], out long value))
+        {
+            return (value + int.Parse(funDy1)).ToString();
+        }
+
+        // 如果解析失败，记录错误并返回一个默认值（例如0）或者抛出异常，具体根据业务需求
+        Debug.Print($"Mer: 无法将 '{exportWildcardDyData[funDepends]}' 解析为 long 类型。");
+        LogDisplay.RecordLine(
+            "[{1}][{0}][{2}][{3}]",
+            $"Mer: 无法将 '{exportWildcardDyData[funDepends]}' 解析为 long 类型。",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            funDepends,
+            itemId
+        );
+        return exportWildcardDyData[funDepends]; // 或者 throw new FormatException($"无法将 '{exportWildcardDyData[funDepends]}' 解析为 long 类型。");
     }
 
     private static string MerB(
         Dictionary<string, string> exportWildcardDyData,
         string funDepends,
+        string itemId,
         string funDy1,
         string funDy2,
         string funDy3
@@ -731,17 +788,91 @@ public class LteData
         var baseValue = exportWildcardDyData[funDepends]
             .Substring(exportWildcardDyData[funDepends].Length - 1, 1);
         string result;
-        if (int.Parse(baseValue) + int.Parse(funDy1) <= int.Parse(funDy2))
+
+        if (int.TryParse(baseValue, out int baseValueTry))
         {
-            result = (long.Parse(exportWildcardDyData[funDepends]) + int.Parse(funDy1)).ToString();
+            if (int.TryParse(funDy1, out int funDy1Try))
+            {
+                if (int.TryParse(funDy2, out int funDy2Try))
+                {
+                    if (long.TryParse(exportWildcardDyData[funDepends], out long exValue))
+                    {
+                        if (int.TryParse(funDy3, out int funDy3Try))
+                        {
+                            if (baseValueTry + funDy1Try <= funDy2Try)
+                            {
+                                result = (exValue + funDy1Try).ToString();
+                            }
+                            else
+                            {
+                                result = (exValue + funDy1Try + funDy3Try).ToString();
+                            }
+                            return result;
+                        }
+                        Debug.Print($"MerB: 无法将 '{funDy3}' 解析为 int 类型。");
+                        LogDisplay.RecordLine(
+                            "[{1}][{0}][{2}][{3}]",
+                            $"MerB: 无法将 '{funDy3}' 解析为 int 类型。",
+                            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                            funDy3,
+                            itemId
+                        );
+                    }
+                    Debug.Print($"MerB: 无法将 '{exportWildcardDyData[funDepends]}' 解析为 long 类型。");
+                    LogDisplay.RecordLine(
+                        "[{1}][{0}][{2}][{3}]",
+                        $"MerB: 无法将 '{exportWildcardDyData[funDepends]}' 解析为 long 类型。",
+                        DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                        funDepends,
+                        itemId
+                    );
+                }
+                Debug.Print($"MerB: 无法将 '{funDy2}' 解析为 int 类型。");
+                LogDisplay.RecordLine(
+                    "[{1}][{0}][{2}][{3}]",
+                    $"MerB: 无法将 '{funDy2}' 解析为 int 类型。",
+                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                    funDy2,
+                    itemId
+                );
+            }
+            Debug.Print($"MerB: 无法将 '{funDy1}' 解析为 int 类型。");
+            LogDisplay.RecordLine(
+                "[{1}][{0}][{2}][{3}]",
+                $"MerB: 无法将 '{funDy1}' 解析为 int 类型。",
+                DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                funDy1,
+                itemId
+            );
         }
-        else
-        {
-            result = (
-                long.Parse(exportWildcardDyData[funDepends]) + int.Parse(funDy1) + int.Parse(funDy3)
-            ).ToString();
-        }
-        return result;
+        Debug.Print($"MerB: 无法将 '{baseValue}' 解析为 int 类型。");
+        LogDisplay.RecordLine(
+            "[{1}][{0}][{2}][{3}]",
+            $"MerB: 无法将 '{baseValue}' 解析为 int 类型。",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            baseValue,
+            itemId
+        );
+        return "0";
+    }
+
+    private static string MerTry(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1,
+        string funDy2,
+        string funDy3,
+        List<string> idList
+    )
+    {
+        string itemId = string.Empty;
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "1" : funDy1;
+        funDy2 = string.IsNullOrEmpty(funDy2) ? "3" : funDy2;
+        funDy3 = string.IsNullOrEmpty(funDy3) ? "10" : funDy3;
+        string merB = MerB(exportWildcardDyData, funDepends, itemId, funDy1, funDy2, funDy3);
+        string mer;
+        mer = !idList.Contains(merB) ? Mer(exportWildcardDyData, itemId, funDepends, funDy1) : merB;
+        return mer;
     }
 
     private static string Ads(
@@ -912,6 +1043,129 @@ public class LteData
         return result;
     }
 
+    private static string CollectRow(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1,
+        string funDy2,
+        string funDy3,
+        string funDy4,
+        string funDy5,
+        Dictionary<string, List<string>> baseData,
+        string id
+    )
+    {
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "1" : funDy1;
+        funDy2 = string.IsNullOrEmpty(funDy2) ? "消耗ID组" : funDy2;
+        funDy3 = string.IsNullOrEmpty(funDy3) ? "消耗量组" : funDy3;
+        funDy4 = string.IsNullOrEmpty(funDy4) ? "20" : funDy4;
+        funDy5 = string.IsNullOrEmpty(funDy5) ? "1" : funDy5;
+
+        List<string> idList = baseData[id];
+        List<string> funDy2List = baseData[funDy2];
+        List<string> funDy3List = baseData[funDy3];
+
+        var loopTimes = int.Parse(funDy4);
+        if (long.TryParse(exportWildcardDyData[funDepends], out long collectRowId))
+        {
+            string idCollect = string.Empty;
+            string strCollect = string.Empty;
+            string spawnCollect = string.Empty;
+
+            // 首次的数据
+            idCollect = collectRowId.ToString();
+            int findIndexFirst = idList.FindIndex(f => f == collectRowId.ToString());
+            if (findIndexFirst != -1)
+            {
+                var funDy2Str = funDy2List[findIndexFirst];
+                var funDy3Str = funDy3List[findIndexFirst];
+                if (funDy2Str != String.Empty)
+                {
+                    var funDy2StrSplit = Regex.Split(funDy2Str, ",");
+                    var funDy3StrSplit = Regex.Split(funDy3Str, ",");
+                    if (funDy3StrSplit.Length == funDy2StrSplit.Length)
+                    {
+                        string temp;
+
+                        for (int j = 0; j < funDy3StrSplit.Length; j++)
+                        {
+                            temp =
+                                $"[{funDy2StrSplit[j]},{funDy3StrSplit[j]},{funDy2StrSplit[j]}]";
+                            strCollect += "[" + temp + "],";
+                        }
+                    }
+                }
+            }
+            // 其他次数数据
+            for (int i = 0; i < loopTimes; i++)
+            {
+                collectRowId += int.Parse(funDy1);
+                int findIndex = idList.FindIndex(f => f == collectRowId.ToString());
+                if (findIndex != -1)
+                {
+                    var funDy2Str = funDy2List[findIndex];
+                    var funDy3Str = funDy3List[findIndex];
+                    if (funDy2Str != String.Empty)
+                    {
+                        var funDy2StrSplit = Regex.Split(funDy2Str, ",");
+                        var funDy3StrSplit = Regex.Split(funDy3Str, ",");
+                        if (funDy3StrSplit.Length == funDy2StrSplit.Length)
+                        {
+                            string temp;
+
+                            for (int j = 0; j < funDy3StrSplit.Length; j++)
+                            {
+                                temp =
+                                    $"[{funDy2StrSplit[j]},{funDy3StrSplit[j]},{funDy2StrSplit[j]}]";
+                                strCollect += "[" + temp + "],";
+                            }
+                            idCollect += "," + collectRowId;
+                        }
+                        else
+                        {
+                            spawnCollect = collectRowId.ToString();
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        spawnCollect = collectRowId.ToString();
+                        break;
+                    }
+                }
+                else
+                {
+                    spawnCollect = collectRowId.ToString();
+                    break;
+                }
+            }
+            strCollect = strCollect.Substring(0, strCollect.Length - 1);
+            strCollect = $"[{strCollect}]";
+            idCollect = $"[{idCollect}]";
+            if (funDy5 == "1")
+            {
+                return idCollect;
+            }
+            if (funDy5 == "2")
+            {
+                return strCollect;
+            }
+            if (funDy5 == "3")
+            {
+                return spawnCollect;
+            }
+        }
+        Debug.Print($"MerB: 无法将 '{exportWildcardDyData[funDepends]}' 解析为 long 类型。");
+        LogDisplay.RecordLine(
+            "[{1}][{0}][{2}][{3}]",
+            $"MerB: 无法将 '{exportWildcardDyData[funDepends]}' 解析为 long 类型。",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            exportWildcardDyData[funDepends],
+            funDepends
+        );
+        return exportWildcardDyData[funDepends];
+    }
+
     //获取动态值
     private static void GetDyWildcardValue(
         Dictionary<string, List<string>> baseData,
@@ -921,14 +1175,19 @@ public class LteData
         int idCount
     )
     {
+        var wildcardValuePattern = "#";
+        // 获取有数据源的值
         if (funDepends.Contains("Var"))
         {
-            var wildcardValueSplit = Regex.Split(funDepends, "#");
+            var wildcardValueSplit = Regex.Split(funDepends, wildcardValuePattern);
             string fixWildcardValue = baseData[wildcardValueSplit[1]][idCount] ?? "";
             //ID组关键词替换
             if (wildcardValueSplit.Length == 3)
             {
-                fixWildcardValue = fixWildcardValue.Replace("#", wildcardValueSplit[2]);
+                fixWildcardValue = fixWildcardValue.Replace(
+                    wildcardValuePattern,
+                    wildcardValueSplit[2]
+                );
             }
             exportWildcardDyData[wildcard] = fixWildcardValue;
         }
@@ -1203,7 +1462,7 @@ public class LteData
         var copyData = BaseData(copyArray, dataTypeArray);
         copyArray = copyData.fixArray;
         var errorTypeList = copyData.errorTypeList;
-        if (errorTypeList != null)
+        if (errorTypeList.Count != 0)
         {
             //基础数据中存在错误类型
             var errorTypeListOnly = new HashSet<string>(errorTypeList);
