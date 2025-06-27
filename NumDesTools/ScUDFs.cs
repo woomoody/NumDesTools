@@ -1,6 +1,8 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
+using Markdig.Helpers;
 using Newtonsoft.Json;
+using NPOI.Util;
 using NPOI.XSSF.UserModel;
 using static System.String;
 using Match = System.Text.RegularExpressions.Match;
@@ -989,29 +991,25 @@ public class ExcelUdf
             Name = "第一单元格范围"
         )]
             object[,] rangeObj,
-                   [ExcelArgument(
+        [ExcelArgument(
             AllowReference = true,
             Description = "Range&Cell,eg:A1:A2",
             Name = "第一单元格范围"
         )]
             object[,] rangeObj2,
-                   [ExcelArgument(
+        [ExcelArgument(
             AllowReference = true,
             Description = "Range&Cell,eg:A1:A2",
             Name = "第一单元格范围"
         )]
             object[,] rangeObj3,
-                   [ExcelArgument(
+        [ExcelArgument(
             AllowReference = true,
             Description = "Range&Cell,eg:A1:A2",
             Name = "第一单元格范围"
         )]
             object[,] rangeObj4,
-             [ExcelArgument(
-            AllowReference = true,
-            Description = "文本太长会缓存到我的文档",
-            Name = "存储文件名"
-        )]
+        [ExcelArgument(AllowReference = true, Description = "文本太长会缓存到我的文档", Name = "存储文件名")]
             string fileName = "关卡1"
     )
     {
@@ -1020,11 +1018,41 @@ public class ExcelUdf
         var layers2 = new object[rangeObj2.GetLength(0) * rangeObj2.GetLength(1)];
         var layers3 = new object[rangeObj3.GetLength(0) * rangeObj3.GetLength(1)];
         var layers4 = new object[rangeObj4.GetLength(0) * rangeObj4.GetLength(1)];
+
+        // 关卡入口数据特殊处理
+        var index1List = new List<int>{22,23,30,31};
+        var index2List = new List<int>{-1,22,22,22};
+    
         var index = 0;
         for (var i = 0; i < rangeObj.GetLength(0); i++)
         {
             for (var j = 0; j < rangeObj.GetLength(1); j++)
             {
+                int[] indexLink = null;
+                var linkIndex = -1;
+                var range = 0;
+                foreach (var te in index1List)
+                {
+                    if (te == index)
+                    {
+                        var subIndex = index1List.IndexOf(te);
+                        range = 1;
+                        if (index2List[subIndex] == -1)
+                        {
+                            var tempList = new List<int>(index1List); // 创建副本
+                            tempList.RemoveAt(0); // 修改副本
+                            indexLink = tempList.Select(x => x).ToArray();
+                        }
+                        else
+                        {
+                            linkIndex = Convert.ToInt32(index2List[subIndex]);
+                        }
+                        break;
+                    }
+                }
+                var disrole = 0;
+                if(Convert.ToInt32(rangeObj4[i, j]) != -1)
+                    disrole = 1;
                 layers[index++] = new
                 {
                     Index = index - 1,
@@ -1049,20 +1077,20 @@ public class ExcelUdf
                 {
                     Index = index - 1,
                     ConfigId = Convert.ToInt32(rangeObj3[i, j]),
-                    LinkedIndexes = (object[])null,
+                    LinkedIndexes = indexLink,
                     DisplayRule = 0,
-                    LinkedParentIndex = -1,
-                    Range = 0,
+                    LinkedParentIndex = linkIndex,
+                    Range = range,
                     ObstacleConfigId = 0
                 };
                 layers4[index - 1] = new
                 {
                     Index = index - 1,
                     ConfigId = Convert.ToInt32(rangeObj4[i, j]),
-                    LinkedIndexes = (object[])null,
-                    DisplayRule = 0,
-                    LinkedParentIndex = -1,
-                    Range = 0,
+                    LinkedIndexes = indexLink,
+                    DisplayRule = disrole,
+                    LinkedParentIndex = linkIndex,
+                    Range = range,
                     ObstacleConfigId = 0
                 };
             }
