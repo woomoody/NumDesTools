@@ -770,6 +770,8 @@ public class LteData
             funDepends,
             itemId
         );
+
+
         return exportWildcardDyData[funDepends]; // 或者 throw new FormatException($"无法将 '{exportWildcardDyData[funDepends]}' 解析为 long 类型。");
     }
 
@@ -871,7 +873,7 @@ public class LteData
         funDy3 = string.IsNullOrEmpty(funDy3) ? "10" : funDy3;
         string merB = MerB(exportWildcardDyData, funDepends, itemId, funDy1, funDy2, funDy3);
         string mer;
-        mer = !idList.Contains(merB) ? Mer(exportWildcardDyData, itemId, funDepends, funDy1) : merB;
+        mer = !idList.Contains(merB) ? Mer(exportWildcardDyData, funDepends, itemId, funDy1) : merB;
         return mer;
     }
 
@@ -1138,6 +1140,11 @@ public class LteData
                     spawnCollect = collectRowId.ToString();
                     break;
                 }
+            }
+            if(strCollect == String.Empty)
+            {
+                MessageBox.Show($"{idCollect}消耗数据为空，无法导出");
+                return string.Empty;
             }
             strCollect = strCollect.Substring(0, strCollect.Length - 1);
             strCollect = $"[{strCollect}]";
@@ -1660,6 +1667,13 @@ public class LteData
     //获取指定表的名称表
     private static ListObject GetExcelListObjects(string sheetName, string listName)
     {
+        LogDisplay.RecordLine(
+            "[{1}][{0}][{2}][{3}]",
+            $"获取Excel ListObject: {sheetName} - {listName}",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            sheetName,
+            listName
+        );
         var sheet = Wk.Worksheets[sheetName];
         // 获取ListObject并操作
         ListObject listObj = sheet.ListObjects[listName];
