@@ -989,6 +989,24 @@ public class ExcelUdf
             Name = "第一单元格范围"
         )]
             object[,] rangeObj,
+                   [ExcelArgument(
+            AllowReference = true,
+            Description = "Range&Cell,eg:A1:A2",
+            Name = "第一单元格范围"
+        )]
+            object[,] rangeObj2,
+                   [ExcelArgument(
+            AllowReference = true,
+            Description = "Range&Cell,eg:A1:A2",
+            Name = "第一单元格范围"
+        )]
+            object[,] rangeObj3,
+                   [ExcelArgument(
+            AllowReference = true,
+            Description = "Range&Cell,eg:A1:A2",
+            Name = "第一单元格范围"
+        )]
+            object[,] rangeObj4,
              [ExcelArgument(
             AllowReference = true,
             Description = "文本太长会缓存到我的文档",
@@ -999,7 +1017,9 @@ public class ExcelUdf
     {
         // 创建一个包含N个数组的对象
         var layers = new object[rangeObj.GetLength(0) * rangeObj.GetLength(1)];
-        var layersNull = new object[rangeObj.GetLength(0) * rangeObj.GetLength(1)];
+        var layers2 = new object[rangeObj2.GetLength(0) * rangeObj2.GetLength(1)];
+        var layers3 = new object[rangeObj3.GetLength(0) * rangeObj3.GetLength(1)];
+        var layers4 = new object[rangeObj4.GetLength(0) * rangeObj4.GetLength(1)];
         var index = 0;
         for (var i = 0; i < rangeObj.GetLength(0); i++)
         {
@@ -1015,10 +1035,30 @@ public class ExcelUdf
                     Range = 0,
                     ObstacleConfigId = 0
                 };
-                layersNull[index - 1] = new
+                layers2[index - 1] = new
                 {
                     Index = index - 1,
-                    ConfigId = -1,
+                    ConfigId = Convert.ToInt32(rangeObj2[i, j]),
+                    LinkedIndexes = (object[])null,
+                    DisplayRule = 0,
+                    LinkedParentIndex = -1,
+                    Range = 0,
+                    ObstacleConfigId = 0
+                };
+                layers3[index - 1] = new
+                {
+                    Index = index - 1,
+                    ConfigId = Convert.ToInt32(rangeObj3[i, j]),
+                    LinkedIndexes = (object[])null,
+                    DisplayRule = 0,
+                    LinkedParentIndex = -1,
+                    Range = 0,
+                    ObstacleConfigId = 0
+                };
+                layers4[index - 1] = new
+                {
+                    Index = index - 1,
+                    ConfigId = Convert.ToInt32(rangeObj4[i, j]),
                     LinkedIndexes = (object[])null,
                     DisplayRule = 0,
                     LinkedParentIndex = -1,
@@ -1027,14 +1067,14 @@ public class ExcelUdf
                 };
             }
         }
-        var layers2 = new object[] { layers, layersNull, layersNull, layersNull };
+        var layersOther = new object[] { layers, layers2, layers3, layers4 };
 
         var combinedData = new
         {
             Row = rangeObj.GetLength(0),
             Col = rangeObj.GetLength(1),
             GridDataList = (object[])null,
-            Layers = layers2,
+            Layers = layersOther,
             LayerNames = new object[] { "棋子层", "蛛网", "关卡入口", "障碍层" }
         };
 
