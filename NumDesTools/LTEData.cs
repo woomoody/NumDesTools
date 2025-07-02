@@ -2403,6 +2403,10 @@ public class LteData
                 taskColDataList.Add(taskNextId);
 
                 //目标所在地图
+                if(taskTagetId == null)
+                {
+                    continue;
+                }
                 var taskTargetMapName = baseDic[taskTagetId][1];
                 taskColDataList.Add(taskTargetMapName);
 
@@ -2537,6 +2541,10 @@ public class LteData
         }
 
         fixData.Add(taskTypeId);
+        if(taskTagetId ==null)
+        {
+            MessageBox.Show($"任务目标ID{taskTagetName}不存在");
+        }
         fixData.Add(taskTagetId);
         fixData.Add(taskDialogId);
 
