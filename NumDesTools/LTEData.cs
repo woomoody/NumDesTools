@@ -1,7 +1,5 @@
-﻿using System.Data.SqlTypes;
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
-using NPOI.SS.Formula.Functions;
 using OfficeOpenXml;
 using Match = System.Text.RegularExpressions.Match;
 
@@ -680,7 +678,7 @@ public class LteData
 
                 cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
             }
-            catch (FormatException ex)
+            catch (FormatException)
             {
                 Debug.Print($"通配符解析错误: {wildcard} | 值: {exportWildcardDyData[wildcard]}");
                 LogDisplay.RecordLine(
@@ -1087,13 +1085,12 @@ public class LteData
         var loopTimes = int.Parse(funDy4);
         if (long.TryParse(exportWildcardDyData[funDepends], out long collectRowId))
         {
-            string idCollect = string.Empty;
             string strCollect = string.Empty;
             string stringSubCollect = string.Empty;
             string spawnCollect = string.Empty;
 
             // 首次的数据
-            idCollect = collectRowId.ToString();
+            var idCollect = collectRowId.ToString();
             int findIndexFirst = idList.FindIndex(f => f == collectRowId.ToString());
             if (findIndexFirst != -1)
             {
