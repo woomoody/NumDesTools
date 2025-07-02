@@ -278,7 +278,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["Button_LoopRun"] = LoopRun_Click,
             ["ShowAI"] = ShowAIText_Click,
             ["Button99991"] = TestBar1_Click,
-            ["Button99992"] = TestBar2_Click
+            ["Button99992"] = TestBar2_Click,
+            ["ExcelSearchBoxButton8"] = ExcelSearchAllFormulaName_Click
         };
     }
 
@@ -1602,7 +1603,42 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 );
         }
     }
+    //查询某个公式名字在工作簿哪个位置
+    public void ExcelSearchAllFormulaName_Click(IRibbonControl control)
+    {
+        var targetList = PubMetToExcelFunc.SearchFormularNameFromExcel(_excelSeachStr);
+        if (targetList.Count == 0)
+        {
+            var log = @"没有检查到匹配字符串的公式，字符串可能有误";
 
+            LogDisplay.RecordLine(
+                "[{0}] , {1}",
+                DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                log
+            );
+
+            MessageBox.Show(log);
+        }
+        else
+        {
+            var ctpName = "表格查询结果";
+            NumDesCTP.DeleteCTP(true, ctpName);
+            var tupleList = targetList
+                .Select(t =>
+                    (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
+                )
+                .ToList();
+            _ = (SheetSeachResult)
+                NumDesCTP.ShowCTP(
+                    800,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new SheetSeachResult(tupleList),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+        }
+    }
     public void AutoInsertExcelData_Click(IRibbonControl control)
     {
         var indexWk = App.ActiveWorkbook;
@@ -1929,6 +1965,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void CheckHiddenCellVsto_Click(IRibbonControl control)
     {
+        var wk = App.ActiveWorkbook;
+        var path = wk.FullName;
         try
         {
             _globalValue.ReadOrCreate();
@@ -1936,6 +1974,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var line1 = BasePath;
             var fileList = SvnGitTools.GitDiffFileCount(line1);
             VstoExcel.FixHiddenCellVsto(fileList.ToArray());
+            App.Workbooks.Open(path);
+
         }
         catch (COMException ex)
         {
@@ -1952,6 +1992,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var files = filesCollection.GetAllExcelFilesPath();
 
         VstoExcel.FixHiddenCellVsto(files);
+        App.Workbooks.Open(path);
     }
 
     public void TestBar1_Click(IRibbonControl control)

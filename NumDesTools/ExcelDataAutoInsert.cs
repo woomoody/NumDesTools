@@ -4310,7 +4310,10 @@ public static class ExcelDataSyncHelper
 
             for (int i = 0; i < headers.Count; i++)
             {
-                rowData[headers[i]] = row.Cells[1, i + 1].Value;
+                if(headers[i] != string.Empty)
+                {
+                    rowData[headers[i]] = row.Cells[1, i + 1].Value;
+                }
             }
 
             data.Add(rowData);

@@ -8,7 +8,7 @@ public class VstoExcel
         NumDesAddIn.App.ScreenUpdating = false;
         NumDesAddIn.App.DisplayAlerts = false;
         NumDesAddIn.App.EnableEvents = false;
-        string errorLog = "";
+        string errorLog = String.Empty;
         //取消隐藏
         foreach (var file in files)
         {
@@ -41,7 +41,11 @@ public class VstoExcel
         NumDesAddIn.App.DisplayAlerts = true;
         NumDesAddIn.App.EnableEvents = true;
 
-        ErrorLogCtp.DisposeCtp();
-        ErrorLogCtp.CreateCtpNormal(errorLog);
+        if(!String.IsNullOrEmpty(errorLog))
+        {
+            ErrorLogCtp.DisposeCtp();
+            ErrorLogCtp.CreateCtpNormal(errorLog);
+        }
+        
     }
 }
