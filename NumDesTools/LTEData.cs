@@ -637,7 +637,8 @@ public class LteData
                             wildcard,
                             funDepends,
                             funDy1,
-                            funDy2
+                            funDy2,
+                            funDy3
                         ),
                     "Mer" => Mer(exportWildcardDyData, funDepends, itemId, funDy1),
                     "MerB"
@@ -737,14 +738,27 @@ public class LteData
         string wildcard,
         string funDepends,
         string funDy1,
-        string funDy2
+        string funDy2,
+        string funDy3
     )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "2" : funDy1;
         funDy2 = string.IsNullOrEmpty(funDy2) ? "00" : funDy2;
+        funDy3 = string.IsNullOrEmpty(funDy3) ? "链类最大值" : funDy3;
+
         string fixWildcardValue = Set(exportWildcardDyData, funDepends, funDy1, funDy2);
         InitializeDictionary(strDictionary, wildcard, fixWildcardValue);
-        strDictionary[wildcard][fixWildcardValue].Add(exportWildcardDyData[funDepends]);
+
+        string maxLink = exportWildcardDyData[funDy3];
+        if(maxLink !="")
+        {
+            var linkList = new List<string>();
+            for (int i = 0; i < int.Parse(maxLink); i++)
+            {
+                linkList.Add((long.Parse(fixWildcardValue) + i + 1).ToString());
+            }
+            strDictionary[wildcard][fixWildcardValue] = linkList;
+        }
         return fixWildcardValue;
     }
 
@@ -770,7 +784,6 @@ public class LteData
             funDepends,
             itemId
         );
-
 
         return exportWildcardDyData[funDepends]; // 或者 throw new FormatException($"无法将 '{exportWildcardDyData[funDepends]}' 解析为 long 类型。");
     }
@@ -1011,13 +1024,17 @@ public class LteData
             exportWildcardDyData[funDy1]
                 .Substring(0, exportWildcardDyData[funDy1].Length - int.Parse(funDy2)) + funDy3;
         var dependsDicValue = strDictionary[funDepends];
+
         var dependsValueList = dependsDicValue[baseDicKey];
-        // 去重并按照数字从小到大排序
-        List<string> distinctSortedNumbers = dependsValueList
-            .Distinct() // 去重
-            .OrderBy(n => long.Parse(n)) // 按照数字从小到大排序
-            .ToList(); // 转换回 List
-        return string.Join(",", distinctSortedNumbers);
+
+        var baseNum = exportWildcardDyData[funDy1];
+
+        if(dependsValueList.Contains(baseNum))
+        {
+            return string.Join(",", dependsValueList);
+        }
+        return String.Empty;
+        
     }
 
     private static string GetDicKey(string funDepends)
@@ -1072,6 +1089,7 @@ public class LteData
         {
             string idCollect = string.Empty;
             string strCollect = string.Empty;
+            string stringSubCollect = string.Empty;
             string spawnCollect = string.Empty;
 
             // 首次的数据
@@ -1083,22 +1101,30 @@ public class LteData
                 var funDy3Str = funDy3List[findIndexFirst];
                 if (funDy2Str != String.Empty)
                 {
-                    var funDy2StrSplit = Regex.Split(funDy2Str, ",");
-                    var funDy3StrSplit = Regex.Split(funDy3Str, ",");
+                    var funDy2StrSplit = Regex.Split(funDy2Str, "#");
+                    var funDy3StrSplit = Regex.Split(funDy3Str, "#");
                     if (funDy3StrSplit.Length == funDy2StrSplit.Length)
                     {
                         string temp;
 
                         for (int j = 0; j < funDy3StrSplit.Length; j++)
                         {
-                            temp =
-                                $"[{funDy2StrSplit[j]},{funDy3StrSplit[j]},{funDy2StrSplit[j]}]";
-                            strCollect += "[" + temp + "],";
+                            temp = $"[{funDy2StrSplit[j]},{funDy3StrSplit[j]},{funDy2StrSplit[j]}]";
+
+                            strCollect += temp + ",";
                         }
                     }
                 }
             }
-            // 其他次数数据
+            if (strCollect == String.Empty)
+            {
+                MessageBox.Show($"{idCollect}消耗数据为空，无法导出");
+                return string.Empty;
+            }
+
+            strCollect = $"[{strCollect.Substring(0, strCollect.Length - 1)}]";
+
+            // 其他次数据
             for (int i = 0; i < loopTimes; i++)
             {
                 collectRowId += int.Parse(funDy1);
@@ -1109,8 +1135,8 @@ public class LteData
                     var funDy3Str = funDy3List[findIndex];
                     if (funDy2Str != String.Empty)
                     {
-                        var funDy2StrSplit = Regex.Split(funDy2Str, ",");
-                        var funDy3StrSplit = Regex.Split(funDy3Str, ",");
+                        var funDy2StrSplit = Regex.Split(funDy2Str, "#");
+                        var funDy3StrSplit = Regex.Split(funDy3Str, "#");
                         if (funDy3StrSplit.Length == funDy2StrSplit.Length)
                         {
                             string temp;
@@ -1119,7 +1145,7 @@ public class LteData
                             {
                                 temp =
                                     $"[{funDy2StrSplit[j]},{funDy3StrSplit[j]},{funDy2StrSplit[j]}]";
-                                strCollect += "[" + temp + "],";
+                                stringSubCollect += temp +",";
                             }
                             idCollect += "," + collectRowId;
                         }
@@ -1141,13 +1167,17 @@ public class LteData
                     break;
                 }
             }
-            if(strCollect == String.Empty)
+
+            if (stringSubCollect == String.Empty)
             {
-                MessageBox.Show($"{idCollect}消耗数据为空，无法导出");
-                return string.Empty;
+                strCollect = $"[{strCollect}]";
             }
-            strCollect = strCollect.Substring(0, strCollect.Length - 1);
-            strCollect = $"[{strCollect}]";
+            else
+            {
+                stringSubCollect = $"[{stringSubCollect.Substring(0, stringSubCollect.Length - 1)}]";
+                strCollect = $"[{strCollect},{stringSubCollect}]";
+            }
+
             idCollect = $"[{idCollect}]";
             if (funDy5 == "1")
             {

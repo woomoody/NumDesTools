@@ -2437,6 +2437,37 @@ public static class PubMetToExcelFunc
 
         return targetList.ToList();
     }
+    public static List<(string, string, int, int)> SearchFormularNameFromExcel(
+     string findValue
+ )
+    {
+        var wkPath = Wk.FullName;
+        var targetList = new List<(string, string, int, int)>();
 
+        using (var package = new ExcelPackage(new FileInfo(wkPath)))
+        {
+            var sheetCount = package.Workbook.Worksheets.Count;
+            for (int i = 0; i < sheetCount; i++)
+            {
+                var sheet = package.Workbook.Worksheets[i];
+                var formulaCells = sheet.Cells
+                    .Where(c => c.Formula != null && c.Formula.Contains(findValue))
+                    .Select(c => new
+                    {
+                        Address = c.Address,
+                        Formula = c.Formula,
+                        Row = c.Start.Row,    // 获取行号（基于1）
+                        Column = c.Start.Column // 获取列号（基于1）
+                    });
+
+                foreach (var cell in formulaCells)
+                {
+                    targetList.Add((wkPath, sheet.Name, cell.Row, cell.Column));
+                }
+            }
+        }
+
+        return targetList.ToList();
+    }
     #endregion
 }

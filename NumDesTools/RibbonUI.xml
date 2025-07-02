@@ -139,6 +139,8 @@
                     </menu>
                     <button id="ExcelSearchBoxButton7" size='large' label="搜索Sheet名" screentip='搜索txt导出文件所在工作簿，特别指$开头'
                             onAction='OnButtonClick' image="verilog" tag='搜索Sheet名' />
+					<button id="ExcelSearchBoxButton8" size='large' label="搜索公式名" screentip='搜索当前Excel中使用的公式'
+                            onAction='OnButtonClick' image="ejs" tag='搜索公式名' />
                 </group>
                 <group id="Group9" label="运营工具">
                     <button id="ActivityServerDataButton1" size='large' label="生成活动(活动名)" screentip='根据运营排期自动生成活动配置'
