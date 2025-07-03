@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Input;
 using OfficeOpenXml;
 using Match = System.Text.RegularExpressions.Match;
 
@@ -401,7 +402,8 @@ public class LteData
         //替换通配符生成数据
         foreach (var modelSheet in modelValueAll)
         {
-            string modelSheetName = modelSheet.Key;
+            // 同名表格需要导出多套数据时，需要过滤正确的文件名称
+            string modelSheetName = Regex.Replace(modelSheet.Key, @"No\d+", "");
 
             PubMetToExcel.SetExcelObjectEpPlus(
                 WkPath,
@@ -519,7 +521,7 @@ public class LteData
                         if (containsValue)
                         {
                             var cellModelValue = modelSheet.Value[(itemType, cellTitle)];
-                            //分析cellModelValue中的通配符
+                            // 分析cellModelValue中的通配符
                             var cellRealValue = AnalyzeWildcard(
                                 cellModelValue,
                                 exportWildcardData,
@@ -530,12 +532,12 @@ public class LteData
                                 itemId
                             );
 
-                            //空ID判断
+                            // 空ID判断
                             if (j == 2 && cellRealValue == string.Empty)
                             {
                                 break;
                             }
-                            //重复ID判断
+                            // 重复ID判断
                             if (j == 2 && dataRepeatWritten.Contains(cellRealValue))
                             {
                                 break;
@@ -543,10 +545,10 @@ public class LteData
 
                             if (j == 2)
                             {
-                                //字典型数据判断，需要数据计算完毕后单独写入
+                                // 字典型数据判断，需要数据计算完毕后单独写入
                                 dataRepeatWritten.Add(cellRealValue);
                             }
-                            //记录数据
+                            // 记录数据
                             var cell = targetSheet.Cells[writeRow, j];
                             if (isFirst)
                             {
@@ -563,7 +565,7 @@ public class LteData
                             }
                         }
                     }
-                    //实际写入
+                    // 实际写入
                     foreach (var cell in writeData)
                     {
                         targetSheet.Cells[cell.Key.row, cell.Key.col].Value = cell.Value;
@@ -2073,7 +2075,7 @@ public class LteData
         }
         else if (findTargetType == "1")
         {
-            findLinks += "{" + findTargetType + "," + findTargetId + "},{4,地组ID（没有就删掉）},";
+            findLinks += "{" + findTargetType + "," + findTargetId + "},";
         }
         else
         {
@@ -2138,7 +2140,7 @@ public class LteData
                         else if (findTargetType2 == "1")
                         {
                             findLinks +=
-                                "{" + findTargetType2 + "," + findTargetId2 + "},{4,地组ID（没有就删掉）},";
+                                "{" + findTargetType2 + "," + findTargetId2 + "},";
                         }
                         else
                         {
