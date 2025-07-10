@@ -2,6 +2,8 @@
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+using MiniExcelLibs;
+using NPOI.SS.Formula.Functions;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using Match = System.Text.RegularExpressions.Match;
@@ -3706,6 +3708,23 @@ public static class ExcelDataAutoInsertActivityServer
             ]
         ];
         targetRange.Value = targetDataArr;
+    }
+
+    public static void ModeDataUpdate()
+    {
+        var wk = NumDesAddIn.App.ActiveWorkbook;
+        var basePath = wk.Path;
+
+        var baseFile = basePath + @"\#活动服务端表ActivityServerData.xlsm";
+        var baseSheetName = "活动枚举";
+        var baseData = MiniExcel.Query(
+                        baseFile,
+                        sheetName: baseSheetName,
+                        startCell: "C1",
+                        useHeaderRow: true
+                    );
+
+
     }
 }
 

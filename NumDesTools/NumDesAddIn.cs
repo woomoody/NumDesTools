@@ -264,6 +264,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ExcelSearchBoxButton7"] = ExcelSearchAllSheetName_Click,
             ["ActivityServerDataButton1"] = ActivityServerData_Click,
             ["ActivityServerDataButton2"] = ActivityServerData2_Click,
+            ["ActivityServerDataButton3"] = ActivityServerDataUpadate_Click,
             ["CompareExcelButton"] = CompareExcel_Click,
             ["MapExcelButton"] = MapExcel_Click,
             ["CheckFileFormat"] = CheckFileFormat_Click,
@@ -1743,6 +1744,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         ExcelDataAutoInsertActivityServer.Source(false);
     }
 
+    public void ActivityServerDataUpadate_Click(IRibbonControl control)
+    {
+        ExcelDataAutoInsertActivityServer.ModeDataUpdate();
+    }
     public void AutoMergeExcel_Click(IRibbonControl control)
     {
         ExcelDataAutoInsertCopyMulti.MergeData(true);

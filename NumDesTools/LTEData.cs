@@ -94,8 +94,28 @@ public class LteData
                 MessageBox.Show($"{sheetName}不存在{sheetName}的名称，请检查");
                 return;
             }
-            object[,] sheetBaseArray = sheetListObject.Range.Value2;
-            var sheetBaseDic = PubMetToExcel.TwoDArrayToDictionaryFirstRowKey1(sheetBaseArray);
+
+            Range sheetListObjectRange = sheetListObject.Range;
+
+            // 获取基础数据
+            object[,] sheetBaseArray = sheetListObjectRange.Value2;
+
+            // 获取更新标识数据
+            int isFirstTagStartRow = sheetListObjectRange.Row;
+            int isFirstTagStartCol = sheetListObjectRange.Column;
+            int isFirstTagEndRow = sheetListObjectRange.Rows.Count - 1 + isFirstTagStartRow;
+            
+            Range firstTagRange = sheet.Range[
+                sheet.Cells[isFirstTagStartRow, isFirstTagStartCol -1],
+                sheet.Cells[isFirstTagEndRow, isFirstTagStartCol -1]
+            ];
+
+            object[,] firstTagArray = firstTagRange.Value2;
+
+            // 合并数据
+            var mergeBaseArray = PubMetToExcel.Merge2DArrays1(sheetBaseArray , firstTagArray);
+
+            var sheetBaseDic = PubMetToExcel.TwoDArrayToDictionaryFirstRowKey(mergeBaseArray);
             //执行导出逻辑
             BaseSheet(sheetBaseDic, outputWildDic, modelValueAll, id, idType, isFirst);
         }
@@ -494,6 +514,7 @@ public class LteData
                             }
                         }
                     }
+
                     //更新动态值
                     foreach (var wildcardDy in exportWildcardData)
                     {
@@ -905,7 +926,7 @@ public class LteData
                 .Substring(exportWildcardDyData[funDepends].Length - 1, 1)
         );
         int baseMax = 0;
-        if (funDy1 == "链类最大值")
+        if (funDy1 != "链类最大值")
         {
             return string.Empty;
         }
@@ -1705,8 +1726,24 @@ public class LteData
         );
         var sheet = Wk.Worksheets[sheetName];
         // 获取ListObject并操作
-        ListObject listObj = sheet.ListObjects[listName];
-        return listObj;
+        try
+        {
+            ListObject listObj = sheet.ListObjects[listName];
+            return listObj;
+        }
+        catch (Exception e)
+        {
+            LogDisplay.RecordLine(
+                    "[{1}][{0}][{2}][{3}]",
+                    $"获取Excel ListObject: {sheetName} - {listName} 不存在",
+                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                    sheetName,
+                    listName
+                );
+            throw;
+        }
+        
+        
     }
 
     //原始数据改造
@@ -2271,20 +2308,13 @@ public class LteData
             false
         );
 
-        var taskList = GetExcelListObjects("LTE【任务】", "任务");
+        var taskList = GetExcelListObjects("LTE【任务】", "LTE【任务】");
         if (taskList == null)
         {
             MessageBox.Show("LTE【任务】中的名称表-任务不存在");
             return;
         }
-        //任务数据修改依赖数据
-        var taskDataTypeList = GetExcelListObjects("#各类枚举", "任务类型");
-        if (taskDataTypeList == null)
-        {
-            MessageBox.Show("#各类枚举 中的名称表-任务类型-不存在");
-            return;
-        }
-        object[,] taskDataTypeArray = taskDataTypeList.DataBodyRange.Value2;
+
         var baseList = GetExcelListObjects("LTE【基础】", "LTE【基础】");
         if (baseList == null)
         {
@@ -2293,8 +2323,16 @@ public class LteData
         }
         object[,] baseArray = baseList.DataBodyRange.Value2;
 
+        //基础数据修改依赖数据
+        var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#各类枚举"
+        );
+        object[,] dataTypeArray = listObjectsDic["任务类型"];
+
         //任务数据整理
-        var copyTaskData = TaskData(copyTaskArray, taskDataTypeArray, baseArray, activtiyId);
+        var copyTaskData = TaskData(copyTaskArray, dataTypeArray, baseArray, activtiyId);
         copyTaskArray = copyTaskData.taskArray;
         var errorTypeList = copyTaskData.errorTypeList;
 

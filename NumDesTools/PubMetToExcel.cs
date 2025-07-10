@@ -1584,7 +1584,7 @@ public static class PubMetToExcel
         var dict = new Dictionary<string, List<string>>();
         for (int i = 0; i < array.GetLength(0); i++)
         {
-            string key = array[i, 0].ToString();
+            string key = array[i, 0]?.ToString();
 
             var row = new List<string>();
             for (int j = 0; j < array.GetLength(1); j++)
@@ -1616,10 +1616,12 @@ public static class PubMetToExcel
         var dict = new Dictionary<string, List<string>>();
         for (int j = 0; j < array.GetLength(1); j++)
         {
-            string key = array[0, j].ToString();
+            string key = array[0, j]?.ToString();
 
             var col = new List<string>();
-            for (int i = 0; i < array.GetLength(0); i++)
+
+            // 不保存表头数据
+            for (int i = 1; i < array.GetLength(0); i++)
                 col.Add(array[i, j]?.ToString());
             dict[key] = col;
         }
@@ -2226,6 +2228,69 @@ public static class PubMetToExcel
         return true;
     }
 
+    // 合并二维数组
+    public static object[,] Merge2DArrays0(object[,] array1, object[,] array2)
+    {
+        // 合并数组
+        int rowCount = array1.GetLength(0);
+        int baseColCount = array1.GetLength(1);
+        int tagColCount = array2.GetLength(1);
+
+        if (rowCount != array2.GetLength(0))
+        {
+            throw new InvalidOperationException("两个数组的行数不一致，无法合并！");
+        }
+
+        object[,] mergedArray = new object[rowCount, baseColCount + tagColCount];
+
+        for (int row = 0; row < rowCount; row++)
+        {
+            for (int col = 0; col < baseColCount; col++)
+            {
+                mergedArray[row, col] = array1[row, col];
+            }
+
+            for (int col = 0; col < tagColCount; col++)
+            {
+                mergedArray[row, baseColCount + col] = array2[row, col];
+            }
+        }
+
+        // 输出合并后的数组（示例）
+        Debug.Print("合并成功！");
+        return mergedArray;
+    }
+    public static object[,] Merge2DArrays1(object[,] array1, object[,] array2)
+    {
+        // 合并数组
+        int rowCount = array1.GetLength(0);
+        int baseColCount = array1.GetLength(1);
+        int tagColCount = array2.GetLength(1);
+
+        if (rowCount != array2.GetLength(0))
+        {
+            throw new InvalidOperationException("两个数组的行数不一致，无法合并！");
+        }
+
+        object[,] mergedArray = new object[rowCount, baseColCount + tagColCount];
+
+        for (int row = 0; row < rowCount; row++)
+        {
+            for (int col = 0; col < baseColCount; col++)
+            {
+                mergedArray[row, col] = array1[row + 1, col + 1];
+            }
+
+            for (int col = 0; col < tagColCount; col++)
+            {
+                mergedArray[row, baseColCount + col] = array2[row + 1, col + 1];
+            }
+        }
+
+        // 输出合并后的数组（示例）
+        Debug.Print("合并成功！");
+        return mergedArray;
+    }
     #endregion
 
     //查找资源文件
