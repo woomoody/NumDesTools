@@ -147,7 +147,9 @@
                             onAction='OnButtonClick' image="csharp" tag='生成活动(活动名)' />
                     <button id="ActivityServerDataButton2" size='large' label="生成活动(活动ID)" screentip='根据运营排期自动生成活动配置'
                             onAction='OnButtonClick' image="csharp" tag='生成活动(活动ID)' />
-                    <button id="CompareExcelButton" size='large' label="对比Excel" screentip='对比不同版本同路径下的非#Excel文件，输出至【文档\#表格比对结果.xlsx】'
+                    <button id="ActivityServerDataButton3" size='large' label="更新活动" screentip='根据运营排期自动生成活动配置'
+                            onAction='OnButtonClick' image="log" tag='更新活动' />
+					<button id="CompareExcelButton" size='large' label="对比Excel" screentip='对比不同版本同路径下的非#Excel文件，输出至【文档\#表格比对结果.xlsx】'
                             onAction='OnButtonClick' image="console" tag='对比Excel' />
                     <button id="MapExcelButton" size='large' label="溯源改动" screentip='根据对比结果和【文档\表格关系.json】溯源每条改动最终影响的表格，一般为ActivityClientData.xlsx，输出至【文档\#溯源结果.xlsx】'
                             onAction='OnButtonClick' image="video" tag='溯源改动' />
