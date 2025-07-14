@@ -1,11 +1,10 @@
-﻿using System.Text;
+﻿using MiniExcelLibs;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
-using MiniExcelLibs;
-using NPOI.SS.Formula.Functions;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
 
@@ -3547,17 +3546,19 @@ public static class ExcelDataAutoInsertActivityServer
                         .ToUniversalTime() - unixEpoch
                 ).TotalSeconds;
 
-            string ConvertToDateString(double oaDate, double hoursOffset)
+            string ConvertToDateString(double oaDate, object hoursOffset)
             {
+                double hoursOffsetDou = Convert.ToDouble(hoursOffset);
                 return DateTime
                     .FromOADate(oaDate)
-                    .AddHours(hoursOffset * 24)
+                    .AddHours(hoursOffsetDou * 24)
                     .ToString(CultureInfo.InvariantCulture);
             }
 
-            long ConvertToUnixTime(long baseTime, double hoursOffset)
+            long ConvertToUnixTime(long baseTime, object hoursOffset)
             {
-                return baseTime + (long)(hoursOffset * 24 * 3600);
+                double hoursOffsetDou = Convert.ToDouble(hoursOffset);
+                return baseTime + (long)(hoursOffsetDou * 24 * 3600);
             }
 
             var targetId = fixDataMatch[fixIds].ToString();
@@ -3715,15 +3716,207 @@ public static class ExcelDataAutoInsertActivityServer
         var wk = NumDesAddIn.App.ActiveWorkbook;
         var basePath = wk.Path;
 
-        var baseFile = basePath + @"\#活动服务端表ActivityServerData.xlsm";
-        var baseSheetName = "活动枚举";
-        var baseData = MiniExcel.Query(
-                        baseFile,
-                        sheetName: baseSheetName,
-                        startCell: "C1",
-                        useHeaderRow: true
-                    );
+        var baseList = PubMetToExcel.GetExcelListObjects("活动枚举", "活动枚举");
+        if (baseList == null)
+        {
+            MessageBox.Show("活动枚举 中的名称表-【活动枚举】不存在");
+            return;
+        }
+        object[,] baseArray = baseList.DataBodyRange.Value2;
+        var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseArray);
 
+
+        var activityGroup = basePath + @"\ActivityClientHierarchyGroupData.xlsx";
+        var activityGroupSheetName = "Sheet1";
+        var activityGroupData = MiniExcel.Query(
+            activityGroup,
+            sheetName: activityGroupSheetName,
+            startCell: "B2",
+            useHeaderRow: true
+        );
+        var activityGroupSub = basePath + @"\ActivityClientHierarchyData.xlsx";
+        var activityGroupSubSheetName = "Sheet1";
+        var activityGroupSubData = MiniExcel.Query(
+            activityGroupSub,
+            sheetName: activityGroupSubSheetName,
+            startCell: "B2",
+            useHeaderRow: true
+        );
+        var activty = basePath + @"\ActivityClientData.xlsx";
+        var activtySheetName = "Sheet1";
+        var activtyData = MiniExcel.Query(
+            activty,
+            sheetName: activtySheetName,
+            startCell: "B2",
+            useHeaderRow: true
+        );
+
+        // 预先处理activityData，建立id到type的映射
+        var activityDataMap = new Dictionary<string, List<string>>();
+        foreach (var activtyRow in activtyData.Skip(3))
+        {
+            if (activtyRow is IDictionary<string, object> activtyRowDict)
+            {
+                string id = activtyRowDict["id"]?.ToString();
+                string type = activtyRowDict["type"]?.ToString();
+                string comment = activtyRowDict["#备注"]?.ToString();
+
+                if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(type))
+                {
+                    activityDataMap[id] = new List<string>{comment , type};
+                    
+                }
+            }
+        }
+
+        // 预先处理activityGroupSubData，建立id到activityID的映射
+        var subDataMap = new Dictionary<string, string>();
+        foreach (var subRow in activityGroupSubData.Skip(3))
+        {
+            if (subRow is IDictionary<string, object> subRowDict)
+            {
+                string id = subRowDict["id"]?.ToString();
+                string activityId = subRowDict["activityIds"]?.ToString();
+
+                if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(activityId))
+                {
+                    subDataMap[id] = activityId; // 假设id是唯一的，否则使用Add方法
+                }
+            }
+        }
+
+        var activityInfo = new Dictionary<string , List<string>>();
+
+        // 处理activityGroupData
+        foreach (var row in activityGroupData.Skip(3)) // 跳过前3行标题
+        {
+            if (row is IDictionary<string, object> rowDict)
+            {
+                string activityGroupId = rowDict["id"]?.ToString();
+                string hierarchyActivityIDs = rowDict["hierarchyActivityIDs"]?.ToString();
+                string activityGroupComment = rowDict["#备注"]?.ToString();
+
+                if (!string.IsNullOrEmpty(activityGroupId) && !string.IsNullOrEmpty(hierarchyActivityIDs))
+                {
+                    // 处理hierarchyActivityIDs格式：[id1,id2,id3]
+                    var hierarchyActivityIDsNums = hierarchyActivityIDs
+                        .Trim('[', ']')
+                        .Split(',')
+                        .Select(s => s.Trim())
+                        .Where(s => !string.IsNullOrEmpty(s))
+                        .ToList();
+
+                    foreach (var hierarchyActivityIDsNum in hierarchyActivityIDsNums)
+                    {
+                        // 通过活动id查找具体信息
+
+                        string activityId = String.Empty;
+                        if (subDataMap.ContainsKey(hierarchyActivityIDsNum))
+                        {
+                            activityId = subDataMap[hierarchyActivityIDsNum];
+                        }
+
+                        string activityComment = String.Empty;
+                        string activityType = String.Empty;
+
+                        if (activityDataMap.ContainsKey(activityId))
+                        {
+                            activityComment = activityDataMap[activityId][0];
+                            activityType = activityDataMap[activityId][1];
+                        }
+
+                        var activityBaseInfo = new List<string>();
+                        if (baseDic.ContainsKey(activityType))
+                        {
+                            activityBaseInfo = baseDic[activityType].Skip(1).ToList();
+                        }
+                        else
+                        {
+                            activityBaseInfo = baseDic["通用"].Skip(1).ToList();
+                        }
+                        var activityAllInfo = new List<string>();
+                        activityAllInfo.Add(activityId);
+                        activityAllInfo.Add(activityComment);
+                        activityAllInfo.AddRange(activityBaseInfo);
+                        activityAllInfo.Add(activityType);
+                        activityAllInfo.Add(activityGroupId); // 标记归属的活动组
+                        if (activityAllInfo.Any())
+                        {
+                            activityInfo[activityId] = activityAllInfo;
+                        }
+                    }
+                    if (activityInfo.ContainsKey(hierarchyActivityIDsNums[0]))
+                    {
+                        var activityGroupAllInfo = new List<string>(activityInfo[hierarchyActivityIDsNums[0]]);
+                        activityGroupAllInfo[9] = "1"; // 设置为活动组
+                        activityGroupAllInfo[0] = activityGroupId;
+                        activityGroupAllInfo[1] = activityGroupComment;
+                        if (activityGroupAllInfo.Any())
+                        {
+                            activityInfo[activityGroupId] = activityGroupAllInfo;
+                        }
+                    }
+                    
+                }
+            }
+        }
+
+        // 处理剩余activityData
+        foreach (var activity in activityDataMap)
+        {
+            string activityId = activity.Key;
+            string activityComment = String.Empty;
+            string activityType = String.Empty;
+
+            if (!activityInfo.ContainsKey(activityId))
+            {
+                activityComment = activityDataMap[activityId][0];
+                activityType = activityDataMap[activityId][1];
+                var activityBaseInfo = new List<string>();
+                if (baseDic.ContainsKey(activityType))
+                {
+                    activityBaseInfo = baseDic[activityType].Skip(1).ToList();
+                }
+                else
+                {
+                    activityBaseInfo = baseDic["通用"].Skip(1).ToList();
+                }
+                var activityAllInfo = new List<string>();
+                activityAllInfo.Add(activityId);
+                activityAllInfo.Add(activityComment);
+                activityAllInfo.AddRange(activityBaseInfo);
+                activityAllInfo.Add(activityType);
+                activityAllInfo.Add("无活动组"); // 标记归属的活动组
+                if (activityAllInfo.Any())
+                {
+                    activityInfo[activityId] = activityAllInfo;
+                }
+            }
+
+           
+        }
+        // 写入数据
+        var activityArray = PubMetToExcel.DictionaryTo2DArray(activityInfo);
+
+        var activityList = PubMetToExcel.GetExcelListObjects("活动模板", "活动模板");
+        if (activityList == null)
+        {
+            MessageBox.Show("活动模板 中的名称表-【活动模板】不存在");
+            return;
+        }
+
+        var rowMax = activityArray.GetLength(0);
+        PubMetToExcel.WriteExcelDataC("活动模板", 1, 10000, 0, 13, null);
+        PubMetToExcel.WriteExcelDataC(
+            "活动模板",
+            1,
+            rowMax,
+            0,
+            13,
+            activityArray
+        );
+
+        activityList.Resize(activityList.Range.Resize[rowMax + 1, activityList.Range.Columns.Count]);
 
     }
 }
@@ -4329,7 +4522,7 @@ public static class ExcelDataSyncHelper
 
             for (int i = 0; i < headers.Count; i++)
             {
-                if(headers[i] != string.Empty)
+                if (headers[i] != string.Empty)
                 {
                     rowData[headers[i]] = row.Cells[1, i + 1].Value;
                 }

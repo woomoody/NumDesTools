@@ -137,6 +137,7 @@
       <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
       <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
       <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.1" />
+      <PackageReference Include="System.Text.Encodings.Web" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup>
       <Folder Include="Com\" />

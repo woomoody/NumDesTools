@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
-using System.Windows.Input;
 using OfficeOpenXml;
 using Match = System.Text.RegularExpressions.Match;
 
@@ -591,6 +590,7 @@ public class LteData
                     {
                         targetSheet.Cells[cell.Key.row, cell.Key.col].Value = cell.Value;
                     }
+
                 }
                 if (dataWritten) // 只有在写入数据时才保存
                 {
@@ -713,7 +713,7 @@ public class LteData
                 return string.Empty;
             }
         }
-
+        
         return cellRealValue;
     }
 
@@ -1109,7 +1109,6 @@ public class LteData
         if (long.TryParse(exportWildcardDyData[funDepends], out long collectRowId))
         {
             string strCollect = string.Empty;
-            string stringSubCollect = string.Empty;
             string spawnCollect = string.Empty;
 
             // 首次的数据
@@ -1147,6 +1146,7 @@ public class LteData
             // 其他次数据
             for (int i = 0; i < loopTimes; i++)
             {
+                string stringSubCollect = string.Empty;
                 collectRowId += int.Parse(funDy1);
                 int findIndex = idList.FindIndex(f => f == collectRowId.ToString());
                 if (findIndex != -1)
@@ -1167,6 +1167,7 @@ public class LteData
                                     $"[{funDy2StrSplit[j]},{funDy3StrSplit[j]},{funDy2StrSplit[j]}]";
                                 stringSubCollect += temp +",";
                             }
+                            strCollect += $",[{stringSubCollect.Substring(0, stringSubCollect.Length - 1)}]";
                             idCollect += "," + collectRowId;
                         }
                         else
@@ -1187,17 +1188,7 @@ public class LteData
                     break;
                 }
             }
-
-            if (stringSubCollect == String.Empty)
-            {
-                strCollect = $"[{strCollect}]";
-            }
-            else
-            {
-                stringSubCollect = $"[{stringSubCollect.Substring(0, stringSubCollect.Length - 1)}]";
-                strCollect = $"[{strCollect},{stringSubCollect}]";
-            }
-
+            strCollect = $"[{strCollect}]";
             idCollect = $"[{idCollect}]";
             if (funDy5 == "1")
             {
@@ -1352,13 +1343,13 @@ public class LteData
     {
         object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
 
-        var baseList = GetExcelListObjects("LTE【基础】", "LTE【基础】");
+        var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
         if (baseList == null)
         {
             MessageBox.Show("LTE【基础】中的名称表-基础不存在");
             return;
         }
-        var findList = GetExcelListObjects("LTE【寻找】", "LTE【寻找】");
+        var findList = PubMetToExcel.GetExcelListObjects("LTE【寻找】", "LTE【寻找】");
         if (findList == null)
         {
             MessageBox.Show("LTE【寻找】中的名称表-寻找不存在");
@@ -1494,13 +1485,13 @@ public class LteData
     public static void UpdateCopyValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
         object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
-        var list = GetExcelListObjects("LTE【基础】", "LTE【基础】");
+        var list = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
         if (list == null)
         {
             MessageBox.Show("LTE【基础】中的名称表-基础不存在");
             return;
         }
-        var findList = GetExcelListObjects("LTE【寻找】", "LTE【寻找】");
+        var findList = PubMetToExcel.GetExcelListObjects("LTE【寻找】", "LTE【寻找】");
         if (findList == null)
         {
             MessageBox.Show("LTE【寻找】中的名称表-寻找不存在");
@@ -1712,38 +1703,6 @@ public class LteData
             mergedArray = PubMetToExcel.CleanRepeatValue(mergedArray, index, false, baseIndex);
         }
         return mergedArray;
-    }
-
-    //获取指定表的名称表
-    private static ListObject GetExcelListObjects(string sheetName, string listName)
-    {
-        LogDisplay.RecordLine(
-            "[{1}][{0}][{2}][{3}]",
-            $"获取Excel ListObject: {sheetName} - {listName}",
-            DateTime.Now.ToString(CultureInfo.InvariantCulture),
-            sheetName,
-            listName
-        );
-        var sheet = Wk.Worksheets[sheetName];
-        // 获取ListObject并操作
-        try
-        {
-            ListObject listObj = sheet.ListObjects[listName];
-            return listObj;
-        }
-        catch (Exception e)
-        {
-            LogDisplay.RecordLine(
-                    "[{1}][{0}][{2}][{3}]",
-                    $"获取Excel ListObject: {sheetName} - {listName} 不存在",
-                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                    sheetName,
-                    listName
-                );
-            throw;
-        }
-        
-        
     }
 
     //原始数据改造
@@ -2229,14 +2188,14 @@ public class LteData
             false
         );
 
-        var taskList = GetExcelListObjects("LTE【任务】", "LTE【任务】");
+        var taskList = PubMetToExcel.GetExcelListObjects("LTE【任务】", "LTE【任务】");
         if (taskList == null)
         {
             MessageBox.Show("LTE【任务】中的名称表-任务不存在");
             return;
         }
 
-        var baseList = GetExcelListObjects("LTE【基础】", "LTE【基础】");
+        var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
         if (baseList == null)
         {
             MessageBox.Show("LTE【基础】中的名称表-基础不存在");
@@ -2308,14 +2267,14 @@ public class LteData
             false
         );
 
-        var taskList = GetExcelListObjects("LTE【任务】", "LTE【任务】");
+        var taskList = PubMetToExcel.GetExcelListObjects("LTE【任务】", "LTE【任务】");
         if (taskList == null)
         {
             MessageBox.Show("LTE【任务】中的名称表-任务不存在");
             return;
         }
 
-        var baseList = GetExcelListObjects("LTE【基础】", "LTE【基础】");
+        var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
         if (baseList == null)
         {
             MessageBox.Show("LTE【基础】中的名称表-基础不存在");

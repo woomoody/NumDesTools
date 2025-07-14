@@ -19,6 +19,8 @@ namespace NumDesTools;
 /// </summary>
 public static class PubMetToExcel
 {
+    private static readonly Workbook Wk = NumDesAddIn.App.ActiveWorkbook;
+
     #region EPPlus与Excel
 
     public static List<(string, string, string)> OpenOrCreatExcelByEpPlus(
@@ -346,7 +348,7 @@ public static class PubMetToExcel
         return -1;
     }
 
-    //获取Excel的ListObject数据并转为数组
+    //获取Excel的ListObject数据并转为数组,非当前
     public static Dictionary<string, object[,]> GetExcelListObjects(
         string excelPath,
         string excelName,
@@ -381,6 +383,36 @@ public static class PubMetToExcel
             }
         }
         return listObjectDataDic;
+    }
+
+    //获取指定表的名称表，当前
+    public static ListObject GetExcelListObjects(string sheetName, string listName)
+    {
+        LogDisplay.RecordLine(
+            "[{1}][{0}][{2}][{3}]",
+            $"获取Excel ListObject: {sheetName} - {listName}",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            sheetName,
+            listName
+        );
+        var sheet = Wk.Worksheets[sheetName];
+        // 获取ListObject并操作
+        try
+        {
+            ListObject listObj = sheet.ListObjects[listName];
+            return listObj;
+        }
+        catch (Exception e)
+        {
+            LogDisplay.RecordLine(
+                    "[{1}][{0}][{2}][{3}]",
+                    $"获取Excel ListObject: {sheetName} - {listName} 不存在-{e}",
+                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                    sheetName,
+                    listName
+                );
+            throw;
+        }
     }
     #endregion
 
