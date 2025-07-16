@@ -347,60 +347,60 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     void IExcelAddIn.AutoOpen()
     {
-#if RELEASE
-        string addInPath = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
-        var isInstall = SelfEnvironmentDetector.IsInstalled(
-            _requiredVersion,
-            "Microsoft.NETCore.App",
-            "dotnet",
-            "--list-runtimes"
-        );
-        if (isInstall)
-        {
-            //MessageBox.Show(@$".NET {_requiredVersion} 已安装");
-        }
-        else
-        {
-            // .NET 未安装，执行安装程序
-            MessageBox.Show(@$".NET {_requiredVersion} 未安装，点击安装...");
-            string installerPath = Path.Combine(
-                addInPath,
-                "windowsdesktop-runtime-9.0.7-win-x64.exe"
-            );
+//#if RELEASE
+//        string addInPath = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
+//        var isInstall = SelfEnvironmentDetector.IsInstalled(
+//            _requiredVersion,
+//            "Microsoft.NETCore.App",
+//            "dotnet",
+//            "--list-runtimes"
+//        );
+//        if (isInstall)
+//        {
+//            //MessageBox.Show(@$".NET {_requiredVersion} 已安装");
+//        }
+//        else
+//        {
+//            // .NET 未安装，执行安装程序
+//            MessageBox.Show(@$".NET {_requiredVersion} 未安装，点击安装...");
+//            string installerPath = Path.Combine(
+//                addInPath,
+//                "windowsdesktop-runtime-9.0.7-win-x64.exe"
+//            );
 
-            // 调用安装程序并等待安装完成
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = installerPath,
-                    Arguments = "/quiet /norestart", // 静默安装参数（根据需要调整）
-                    UseShellExecute = false, // 不使用 Shell 执行
-                    CreateNoWindow = true // 不显示窗口
-                }
-            };
+//            // 调用安装程序并等待安装完成
+//            var process = new Process
+//            {
+//                StartInfo = new ProcessStartInfo
+//                {
+//                    FileName = installerPath,
+//                    Arguments = "/quiet /norestart", // 静默安装参数（根据需要调整）
+//                    UseShellExecute = false, // 不使用 Shell 执行
+//                    CreateNoWindow = true // 不显示窗口
+//                }
+//            };
 
-            try
-            {
-                process.Start();
-                process.WaitForExit(); // 等待安装程序完成
-                if (process.ExitCode == 0)
-                {
-                    MessageBox.Show("安装完成！");
-                }
-                else
-                {
-                    MessageBox.Show($"安装程序执行失败，退出代码：{process.ExitCode}");
-                    return; // 如果安装失败，退出后续逻辑
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"安装程序启动失败：{ex.Message}");
-                return; // 如果启动失败，退出后续逻辑
-            }
-        }
-#endif
+//            try
+//            {
+//                process.Start();
+//                process.WaitForExit(); // 等待安装程序完成
+//                if (process.ExitCode == 0)
+//                {
+//                    MessageBox.Show("安装完成！");
+//                }
+//                else
+//                {
+//                    MessageBox.Show($"安装程序执行失败，退出代码：{process.ExitCode}");
+//                    return; // 如果安装失败，退出后续逻辑
+//                }
+//            }
+//            catch (Exception ex)
+//            {
+//                MessageBox.Show($"安装程序启动失败：{ex.Message}");
+//                return; // 如果启动失败，退出后续逻辑
+//            }
+//        }
+//#endif
 
         //注册智能感应
         IntelliSenseServer.Install();
