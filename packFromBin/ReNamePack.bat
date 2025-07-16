@@ -23,8 +23,8 @@ REM 复制bin下新文件
 set "sourceFileName64=NumDesTools-AddIn64-packed.xll"   
 set "sourceFileName32=NumDesTools-AddIn-packed.xll"   
 
-set "sourceFile64=NumDesTools\bin\Release\net6.0-windows\publish\%sourceFileName64%" 
-set "sourceFile32=NumDesTools\bin\Release\net6.0-windows\publish\%sourceFileName32%"   
+set "sourceFile64=NumDesTools\bin\Release\net9.0-windows\publish\%sourceFileName64%" 
+set "sourceFile32=NumDesTools\bin\Release\net9.0-windows\publish\%sourceFileName32%"   
 
 
 set "beforDestination=%destinationFolder:~0,-1%"

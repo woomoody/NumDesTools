@@ -97,7 +97,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     //各类点击事件防抖处理
     private DateTime _lastClickTime = DateTime.MinValue;
 
-    private string _requiredVersion = "6.0.2";
+    private string _requiredVersion = "9.0.7";
     private string _seachStr = string.Empty;
     private SheetListControl _sheetMenuCtp;
 
@@ -110,7 +110,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public NumDesAddIn()
     {
         InitializeButtons();
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        ExcelPackage.License.SetNonCommercialPersonal("cent");
     }
 
     #region 释放COM
@@ -365,7 +365,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             MessageBox.Show(@$".NET {_requiredVersion} 未安装，点击安装...");
             string installerPath = Path.Combine(
                 addInPath,
-                "windowsdesktop-runtime-6.0.20-win-x64.exe"
+                "windowsdesktop-runtime-9.0.7-win-x64.exe"
             );
 
             // 调用安装程序并等待安装完成
