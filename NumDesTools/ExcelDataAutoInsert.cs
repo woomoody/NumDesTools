@@ -3848,7 +3848,7 @@ public static class ExcelDataAutoInsertActivityServer
                     if (activityInfo.ContainsKey(hierarchyActivityIDsNums[0]))
                     {
                         var activityGroupAllInfo = new List<string>(activityInfo[hierarchyActivityIDsNums[0]]);
-                        activityGroupAllInfo[9] = "1"; // 设置为活动组
+                        activityGroupAllInfo[3] = "1"; // 设置为活动组
                         activityGroupAllInfo[0] = activityGroupId;
                         activityGroupAllInfo[1] = activityGroupComment;
                         if (activityGroupAllInfo.Any())
@@ -3906,13 +3906,13 @@ public static class ExcelDataAutoInsertActivityServer
         }
 
         var rowMax = activityArray.GetLength(0);
-        PubMetToExcel.WriteExcelDataC("活动模板", 1, 10000, 0, 13, null);
+        PubMetToExcel.WriteExcelDataC("活动模板", 1, 10000, 0, 8, null);
         PubMetToExcel.WriteExcelDataC(
             "活动模板",
             1,
             rowMax,
             0,
-            13,
+            8,
             activityArray
         );
 
