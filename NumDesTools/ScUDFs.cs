@@ -1114,7 +1114,7 @@ public class ExcelUdf
             string fullPath = Path.Combine(documentsPath, fileNames);
 
             // 确保目录存在
-            Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException());
 
             // 写入文件
             File.WriteAllText(fullPath, json, Encoding.UTF8);
