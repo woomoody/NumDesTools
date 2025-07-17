@@ -38,7 +38,6 @@ using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
 using IRibbonControl = ExcelDna.Integration.CustomUI.IRibbonControl;
 using IRibbonUI = ExcelDna.Integration.CustomUI.IRibbonUI;
-using LicenseContext = OfficeOpenXml.LicenseContext;
 using MsoCTPDockPosition = ExcelDna.Integration.CustomUI.MsoCTPDockPosition;
 using Panel = System.Windows.Forms.Panel;
 using Process = System.Diagnostics.Process;
