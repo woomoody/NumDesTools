@@ -3825,7 +3825,7 @@ public static class ExcelDataAutoInsertActivityServer
                             activityType = activityDataMap[activityId][1];
                         }
 
-                        var activityBaseInfo = new List<string>();
+                        List<string> activityBaseInfo;
                         if (baseDic.ContainsKey(activityType))
                         {
                             activityBaseInfo = baseDic[activityType].Skip(1).ToList();
@@ -3865,14 +3865,14 @@ public static class ExcelDataAutoInsertActivityServer
         foreach (var activity in activityDataMap)
         {
             string activityId = activity.Key;
-            string activityComment = String.Empty;
-            string activityType = String.Empty;
+            string activityComment;
+            string activityType;
 
             if (!activityInfo.ContainsKey(activityId))
             {
                 activityComment = activityDataMap[activityId][0];
                 activityType = activityDataMap[activityId][1];
-                var activityBaseInfo = new List<string>();
+                List<string> activityBaseInfo;
                 if (baseDic.ContainsKey(activityType))
                 {
                     activityBaseInfo = baseDic[activityType].Skip(1).ToList();
