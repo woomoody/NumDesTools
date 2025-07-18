@@ -2822,14 +2822,12 @@ public static class ExcelDataAutoInsertCopyMulti
         var errorExcelList = new List<List<(string, string, string)>>();
         var excelCount = 1;
         var diffList = new List<(string, string, string)>();
-        var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        var filePath = Path.Combine(documentsFolder, "mergePath.txt");
-        var mergePathList = PubMetToExcel.ReadWriteTxt(filePath);
+
         foreach (var key in modelIdNew)
         {
             var excelName = key.Key;
             var targetExcelPath =
-                excelPath != mergePathList[1] ? mergePathList[1] : mergePathList[0];
+                excelPath != NumDesAddIn.TempPath ? NumDesAddIn.TempPath : NumDesAddIn.BasePath;
             List<(string, string, string)> errorList = PubMetToExcel.SetExcelObjectEpPlus(
                 targetExcelPath,
                 excelName,
