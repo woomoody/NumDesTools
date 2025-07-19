@@ -167,12 +167,6 @@
                              sizeString="........................................................................."
                              image="folder-aws" screentip='输入自己本地目录，自动保存' />
                 </group>
-                <group id='NormalFun' label='杂项'>
-                    <button id='ShowDnaLog' size='large' getLabel='GetLableText' image='ejs' 
-                            onAction='OnButtonClick'   screentip = '展示插件Log'    tag ='插件日志开关'   />
-                    <button id='GlobalVariableDefault' size='large' label='默认配置' image='vscode' 
-                            onAction='OnButtonClick' screentip ='恢复插件配置为默认'  tag ='默认配置'   />
-                </group>
                 <!--
                 <group id='Group4' label='战斗仿真'>控件id不能重复，否则无法加载Ribbon
                 -->
@@ -190,6 +184,12 @@
                     <button id='Button_LoopRun' size='large' label='移动转盘' image='key' screentip='移动转盘随机方案机选'
                             onAction='OnButtonClick' tag ='移动转盘' />
                 </group>
+				<group id='NormalFun' label='杂项'>
+					<button id='ShowDnaLog' size='large' getLabel='GetLableText' image='ejs'
+                            onAction='OnButtonClick'   screentip = '展示插件Log'    tag ='插件日志开关'   />
+					<button id='GlobalVariableDefault' size='large' label='默认配置' image='vscode'
+                            onAction='OnButtonClick' screentip ='恢复插件配置为默认'  tag ='默认配置'   />
+				</group>
                 <group id='GroupAI' label='AI聚合'>
                     <button id='ShowAI' size='large' getLabel='GetLableText' image='csharp' 
                             onAction='OnButtonClick' tag ='AI对话开关' />
