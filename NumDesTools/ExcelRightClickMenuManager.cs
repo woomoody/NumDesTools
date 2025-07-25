@@ -196,13 +196,13 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 Handler: ExcelDataAutoInsertMultiNew.RightClickInsertDataNew
             ),
             new(
-                Condition: bookName.Contains("RechargeGP"),
+                Condition: bookName.Contains("RechargeGP") && target.Column == 1,
                 Tag: "克隆数据",
                 Caption: "克隆数据-Recharge",
                 Handler: ExcelDataAutoInsertCopyActivity.RightClickCloneData
             ),
             new(
-                Condition: bookName.Contains("RechargeGP"),
+                Condition: bookName.Contains("RechargeGP") && target.Column == 1,
                 Tag: "克隆数据All",
                 Caption: "克隆数据-Recharge-All",
                 Handler: ExcelDataAutoInsertCopyActivity.RightClickCloneAllData
