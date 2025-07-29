@@ -48,5 +48,20 @@ internal class SvnGitTools
         // 使用按位与检查是否包含 ModifiedInWorkdir 或 ModifiedInIndex
         return (status & FileStatus.ModifiedInWorkdir) != 0 || (status & FileStatus.ModifiedInIndex) != 0;
     }
+    public static (string Name, string Email) GetGitUserInfo()
+    {
+        string configPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".gitconfig");
+
+        if (!File.Exists(configPath))
+            return (null, null);
+
+        var config = Configuration.BuildFrom(configPath);
+        return (
+            config.Get<string>("user.name")?.Value,
+            config.Get<string>("user.email")?.Value
+        );
+    }
 
 }

@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.VisualBasic;
 using OfficeOpenXml;
 using Match = System.Text.RegularExpressions.Match;
 
@@ -44,20 +45,21 @@ public class LteData
             ["活动编号"] = (PubWildSheet.Range[ActivityIdIndex].Value2 / 10000)?.ToString(),
             ["活动备注"] = PubWildSheet.Range[ActivityNameMinIndex].Value2?.ToString(),
         };
+    public static (string Name, string Email) GitConfig = SvnGitTools.GetGitUserInfo();
 
     #region LTE数据配置导出
     //导出LTE数据配置
     public static void ExportLteDataConfigFirst(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        ExportLteDataConfig(true);
+        ExportLteDataConfig(true, GitConfig.Name);
     }
 
     public static void ExportLteDataConfigUpdate(CommandBarButton ctrl, ref bool cancelDefault)
     {
-        ExportLteDataConfig(false);
+        ExportLteDataConfig(false, GitConfig.Name);
     }
 
-    public static void ExportLteDataConfig(bool isFirst)
+    public static void ExportLteDataConfig(bool isFirst, string userName)
     {
         //Epplus获取[LTE配置【导出】]表的ListObject
         var sheet = Wk.ActiveSheet;
@@ -68,7 +70,52 @@ public class LteData
             "LTE配置【导出】"
         );
 
-        var outputWildcardArray = outputData[$"{sheetName}_通配符"];
+        // 自动匹配不同用户名的配置
+        if (userName == null)
+        {
+            userName = String.Empty;
+        }
+        var listName = $"{sheetName}_通配符{userName}";
+        if (!outputData.ContainsKey(listName))
+        {
+            var choose1 = MessageBox.Show(
+                $"配置表没有包含【{userName}】的配置，是否使用默认用户配置Yes",
+                "确认",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+            if (choose1 == DialogResult.Yes)
+            {
+                listName = $"{sheetName}_通配符";
+            }
+            else
+            {
+                var selfInputName = Interaction.InputBox("输入使用的配置用户名", "自定义用户名", "");
+                
+                listName = $"{sheetName}_通配符{selfInputName}";
+                
+                if (!outputData.ContainsKey(listName))
+                {
+                    var choose2 = MessageBox.Show(
+                        $"输入的用户名配置不存在，使用默认配置Yes,终止导出操作No",
+                        "确认",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question
+                    );
+                    if (choose2 == DialogResult.Yes)
+                    {
+                        listName = $"{sheetName}_通配符";
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+                
+            }
+        }
+
+        var outputWildcardArray = outputData[listName];
         var outputWildcardDic = PubMetToExcel.TwoDArrayToDicFirstKeyStr(outputWildcardArray);
         var outputWildDic = outputWildcardDic
             .Concat(OutputWildcardPubDic)
@@ -103,16 +150,16 @@ public class LteData
             int isFirstTagStartRow = sheetListObjectRange.Row;
             int isFirstTagStartCol = sheetListObjectRange.Column;
             int isFirstTagEndRow = sheetListObjectRange.Rows.Count - 1 + isFirstTagStartRow;
-            
+
             Range firstTagRange = sheet.Range[
-                sheet.Cells[isFirstTagStartRow, isFirstTagStartCol -1],
-                sheet.Cells[isFirstTagEndRow, isFirstTagStartCol -1]
+                sheet.Cells[isFirstTagStartRow, isFirstTagStartCol - 1],
+                sheet.Cells[isFirstTagEndRow, isFirstTagStartCol - 1]
             ];
 
             object[,] firstTagArray = firstTagRange.Value2;
 
             // 合并数据
-            var mergeBaseArray = PubMetToExcel.Merge2DArrays1(sheetBaseArray , firstTagArray);
+            var mergeBaseArray = PubMetToExcel.Merge2DArrays1(sheetBaseArray, firstTagArray);
 
             var sheetBaseDic = PubMetToExcel.TwoDArrayToDictionaryFirstRowKey(mergeBaseArray);
             //执行导出逻辑
@@ -590,7 +637,6 @@ public class LteData
                     {
                         targetSheet.Cells[cell.Key.row, cell.Key.col].Value = cell.Value;
                     }
-
                 }
                 if (dataWritten) // 只有在写入数据时才保存
                 {
@@ -713,7 +759,7 @@ public class LteData
                 return string.Empty;
             }
         }
-        
+
         return cellRealValue;
     }
 
@@ -771,7 +817,7 @@ public class LteData
         InitializeDictionary(strDictionary, wildcard, fixWildcardValue);
 
         string maxLink = exportWildcardDyData[funDy3];
-        if(maxLink !="")
+        if (maxLink != "")
         {
             var linkList = new List<string>();
             for (int i = 0; i < int.Parse(maxLink); i++)
@@ -1050,12 +1096,11 @@ public class LteData
 
         var baseNum = exportWildcardDyData[funDy1];
 
-        if(dependsValueList.Contains(baseNum))
+        if (dependsValueList.Contains(baseNum))
         {
             return string.Join(",", dependsValueList);
         }
         return String.Empty;
-        
     }
 
     private static string GetDicKey(string funDepends)
@@ -1165,9 +1210,10 @@ public class LteData
                             {
                                 temp =
                                     $"[{funDy2StrSplit[j]},{funDy3StrSplit[j]},{funDy2StrSplit[j]}]";
-                                stringSubCollect += temp +",";
+                                stringSubCollect += temp + ",";
                             }
-                            strCollect += $",[{stringSubCollect.Substring(0, stringSubCollect.Length - 1)}]";
+                            strCollect +=
+                                $",[{stringSubCollect.Substring(0, stringSubCollect.Length - 1)}]";
                             idCollect += "," + collectRowId;
                         }
                         else
@@ -2135,8 +2181,7 @@ public class LteData
                         }
                         else if (findTargetType2 == "1")
                         {
-                            findLinks +=
-                                "{" + findTargetType2 + "," + findTargetId2 + "},";
+                            findLinks += "{" + findTargetType2 + "," + findTargetId2 + "},";
                         }
                         else
                         {
@@ -2402,7 +2447,7 @@ public class LteData
                 taskColDataList.Add(taskNextId);
 
                 //目标所在地图
-                if(taskTagetId == null)
+                if (taskTagetId == null)
                 {
                     continue;
                 }
@@ -2540,7 +2585,7 @@ public class LteData
         }
 
         fixData.Add(taskTypeId);
-        if(taskTagetId ==null)
+        if (taskTagetId == null)
         {
             MessageBox.Show($"任务目标ID{taskTagetName}不存在");
         }
