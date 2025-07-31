@@ -90,14 +90,14 @@ public class LteData
             }
             else
             {
-                var selfInputName = Interaction.InputBox("输入使用的配置用户名", "自定义用户名", "");
+                var selfInputName = Interaction.InputBox("输入使用的配置用户名", "自定义用户名");
                 
                 listName = $"{sheetName}_通配符{selfInputName}";
                 
                 if (!outputData.ContainsKey(listName))
                 {
                     var choose2 = MessageBox.Show(
-                        $"输入的用户名配置不存在，使用默认配置Yes,终止导出操作No",
+                        $"输入的用户名【{selfInputName}】配置不存在，使用默认配置Yes,终止导出操作No",
                         "确认",
                         MessageBoxButtons.YesNo,
                         MessageBoxIcon.Question

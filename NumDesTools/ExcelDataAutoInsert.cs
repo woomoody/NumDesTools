@@ -1889,9 +1889,12 @@ public static class ExcelDataAutoInsertMulti
             sheet.InsertRow(writeRow + 1, count);
             var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
             var cellTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, colCount];
+            var cellColorTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, 2];
             cellTarget.Value = cellSource.Value;
             cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            cellTarget.Style.Fill.BackgroundColor.SetColor(cellBackColor);
+
+            //只对前2列标色
+            cellColorTarget.Style.Fill.BackgroundColor.SetColor(cellBackColor);
 
             cellTarget.Style.Font.Name = "微软雅黑";
             cellTarget.Style.Font.Size = 10;
