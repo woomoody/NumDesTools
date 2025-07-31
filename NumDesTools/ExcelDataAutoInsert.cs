@@ -1889,16 +1889,18 @@ public static class ExcelDataAutoInsertMulti
             sheet.InsertRow(writeRow + 1, count);
             var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
             var cellTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, colCount];
-            var cellColorTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, 2];
+
             cellTarget.Value = cellSource.Value;
-            cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
-
-            //只对前2列标色
-            cellColorTarget.Style.Fill.BackgroundColor.SetColor(cellBackColor);
-
             cellTarget.Style.Font.Name = "微软雅黑";
             cellTarget.Style.Font.Size = 10;
             cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+
+            //只对前3列标色
+            var cellColorTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, 3];
+            cellColorTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            cellColorTarget.Style.Fill.BackgroundColor.SetColor(cellBackColor);
+
+            
             //修改数据
             var fixItem = fixKey[excelName][excelMulti].Item1;
             errorList = modeThread
@@ -2581,12 +2583,17 @@ public static class ExcelDataAutoInsertMultiNew
                 var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
                 var cellTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, colCount];
                 cellTarget.Value = cellSource.Value;
-                cellTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                cellTarget.Style.Fill.BackgroundColor.SetColor(_cellColor);
+
 
                 cellTarget.Style.Font.Name = "微软雅黑";
                 cellTarget.Style.Font.Size = 10;
                 cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+                
+                //只对前3列标色
+                var cellColorTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, 3];
+                cellColorTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                cellColorTarget.Style.Fill.BackgroundColor.SetColor(_cellColor);
+        
 
                 //修改数据
                 var fixItem = _fixKey[excelName][excelMulti].Item1;
