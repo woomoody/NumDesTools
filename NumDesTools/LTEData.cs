@@ -91,9 +91,9 @@ public class LteData
             else
             {
                 var selfInputName = Interaction.InputBox("输入使用的配置用户名", "自定义用户名");
-                
+
                 listName = $"{sheetName}_通配符{selfInputName}";
-                
+
                 if (!outputData.ContainsKey(listName))
                 {
                     var choose2 = MessageBox.Show(
@@ -111,7 +111,6 @@ public class LteData
                         return;
                     }
                 }
-                
             }
         }
 
@@ -1851,6 +1850,15 @@ public class LteData
                             .Key;
                         if (matchId == null)
                         {
+                            //先在唯一ID中查找 name
+                            matchId = baseDic
+                                .FirstOrDefault(kv =>
+                                    kv.Value.Count > onlyNum && kv.Value[onlyNum] == name
+                                )
+                                .Key;
+                        }
+                        if (matchId == null)
+                        {
                             //后在ID中查找
                             matchId = baseDic
                                 .FirstOrDefault(kv => kv.Value.Count > num && kv.Value[num] == name)
@@ -1969,11 +1977,10 @@ public class LteData
             {
                 continue;
             }
-            //产出组
+            // 消耗组，第1层寻找
             var inputGroup = copyDic[key][29];
             var inputArray = inputGroup.Split("#");
 
-            //正向查找
             for (int i = 0; i < inputArray.Length; i++)
             {
                 //if (double.TryParse(key, out double intKey))
@@ -1998,94 +2005,100 @@ public class LteData
                         copyDic,
                         out var findTips
                     );
+
                     if (findLinks != String.Empty)
                     {
                         var findIdStr = Convert.ToString(findId, CultureInfo.InvariantCulture);
-                        if (!findDic.ContainsKey(findIdStr))
+                        var onlyName = copyDic[findIdStr][2];
+                        if (onlyName != String.Empty)
                         {
-                            findDic.Add(findIdStr, new List<string>());
+                            if (!findDic.ContainsKey(findIdStr))
+                            {
+                                findDic.Add(findIdStr, new List<string>());
+                            }
+
+                            findDic[findIdStr].Add(findIdStr);
+                            findDic[findIdStr].Add(copyDic[findIdStr][1]);
+                            findDic[findIdStr].Add(copyDic[findIdStr][2]);
+                            findDic[findIdStr].Add(copyDic[findIdStr][3]);
+                            findDic[findIdStr].Add(copyDic[findIdStr][4]);
+                            findDic[findIdStr].Add("寻-" + copyDic[key][6]);
+                            findDic[findIdStr].Add(copyDic[findIdStr][7]);
+                            findDic[findIdStr].Add(findTips);
+
+                            var findLinksFix = findLinks.Substring(0, findLinks.Length - 1);
+                            findLinksFix += ",{8,9999}";
+
+                            findDic[findIdStr].Add(findLinksFix);
                         }
-                        findDic[findIdStr].Add(findIdStr);
-                        findDic[findIdStr].Add(copyDic[findIdStr][1]);
-                        findDic[findIdStr].Add(copyDic[findIdStr][2]);
-                        findDic[findIdStr].Add(copyDic[findIdStr][3]);
-                        findDic[findIdStr].Add(copyDic[findIdStr][4]);
-                        findDic[findIdStr].Add("寻-" + copyDic[key][6]);
-                        findDic[findIdStr].Add(copyDic[findIdStr][7]);
-                        findDic[findIdStr].Add(findTips);
-
-                        var findLinksFix = findLinks.Substring(0, findLinks.Length - 1);
-                        findLinksFix += ",{8,9999}";
-
-                        findDic[findIdStr].Add(findLinksFix);
                     }
                 }
                 //}
             }
 
-            //反向查找
-            List<string> subMatchIDs = copyDic
-                .Where(kv => kv.Value.Count > 31 && kv.Value[31].Contains(key))
-                .Select(kv => kv.Key)
-                .ToList();
+            ////反向查找
+            //List<string> subMatchIDs = copyDic
+            //    .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(key))
+            //    .Select(kv => kv.Key)
+            //    .ToList();
 
-            var subFindLinks = string.Empty;
-            foreach (var findTargetId2 in subMatchIDs)
-            {
-                if (findTargetId2 != string.Empty)
-                {
-                    var subFindId = findTargetId2;
-                    var findTargetType2 = copyDic[findTargetId2][25];
-                    var findTargetDetailType2 = copyDic[findTargetId2][26];
+            //var subFindLinks = string.Empty;
+            //foreach (var findTargetId2 in subMatchIDs)
+            //{
+            //    if (findTargetId2 != string.Empty)
+            //    {
+            //        var subFindId = findTargetId2;
+            //        var findTargetType2 = copyDic[findTargetId2][25];
+            //        var findTargetDetailType2 = copyDic[findTargetId2][26];
 
-                    if (findTargetType2 != string.Empty)
-                    {
-                        if (findTargetDetailType2 == string.Empty)
-                        {
-                            findTargetDetailType2 = "未找到细类";
-                        }
-                        if (findTargetType2 == "19")
-                        {
-                            subFindLinks +=
-                                "{"
-                                + findTargetType2
-                                + ","
-                                + findTargetDetailType2
-                                + ","
-                                + findTargetId2
-                                + "},";
-                        }
-                        else if (findTargetType2 == "1")
-                        {
-                            subFindLinks += "{" + findTargetType2 + "," + findTargetId2 + "},";
-                        }
-                        else
-                        {
-                            subFindLinks += "{" + findTargetType2 + "," + findTargetId2 + "},";
-                        }
-                    }
-                    if (subFindLinks != String.Empty)
-                    {
-                        if (!findDic.ContainsKey(subFindId))
-                        {
-                            findDic.Add(subFindId, new List<string>());
-                            findDic[subFindId].Add(subFindId);
-                            findDic[subFindId].Add(copyDic[subFindId][1]);
-                            findDic[subFindId].Add(copyDic[subFindId][2]);
-                            findDic[subFindId].Add(copyDic[subFindId][3]);
-                            findDic[subFindId].Add(copyDic[subFindId][4]);
-                            findDic[subFindId].Add("寻-" + copyDic[key][6]);
-                            findDic[subFindId].Add(copyDic[subFindId][7]);
-                            findDic[subFindId].Add("");
+            //        if (findTargetType2 != string.Empty)
+            //        {
+            //            if (findTargetDetailType2 == string.Empty)
+            //            {
+            //                findTargetDetailType2 = "未找到细类";
+            //            }
+            //            if (findTargetType2 == "19")
+            //            {
+            //                subFindLinks +=
+            //                    "{"
+            //                    + findTargetType2
+            //                    + ","
+            //                    + findTargetDetailType2
+            //                    + ","
+            //                    + findTargetId2
+            //                    + "},";
+            //            }
+            //            else if (findTargetType2 == "1")
+            //            {
+            //                subFindLinks += "{" + findTargetType2 + "," + findTargetId2 + "},";
+            //            }
+            //            else
+            //            {
+            //                subFindLinks += "{" + findTargetType2 + "," + findTargetId2 + "},";
+            //            }
+            //        }
+            //        if (subFindLinks != String.Empty)
+            //        {
+            //            if (!findDic.ContainsKey(subFindId))
+            //            {
+            //                findDic.Add(subFindId, new List<string>());
+            //                findDic[subFindId].Add(subFindId);
+            //                findDic[subFindId].Add(copyDic[subFindId][1]);
+            //                findDic[subFindId].Add(copyDic[subFindId][2]);
+            //                findDic[subFindId].Add(copyDic[subFindId][3]);
+            //                findDic[subFindId].Add(copyDic[subFindId][4]);
+            //                findDic[subFindId].Add("寻-" + copyDic[key][6]);
+            //                findDic[subFindId].Add(copyDic[subFindId][7]);
+            //                findDic[subFindId].Add("");
 
-                            var findLinksFix = subFindLinks.Substring(0, subFindLinks.Length - 1);
-                            findLinksFix += ",{8,9999}";
+            //                var findLinksFix = subFindLinks.Substring(0, subFindLinks.Length - 1);
+            //                findLinksFix += ",{8,9999}";
 
-                            findDic[subFindId].Add(findLinksFix);
-                        }
-                    }
-                }
-            }
+            //                findDic[subFindId].Add(findLinksFix);
+            //            }
+            //        }
+            //    }
+            //}
         }
         var findLinksArray = PubMetToExcel.DictionaryTo2DArray(
             findDic,
@@ -2105,6 +2118,7 @@ public class LteData
     {
         var findLinks = string.Empty;
         findTips = string.Empty;
+
         //1层查找
         if (findTargetDetailType == string.Empty)
         {
@@ -2123,31 +2137,40 @@ public class LteData
         {
             findLinks += "{" + findTargetType + "," + findTargetId + "},";
         }
+
         //2层查找
-        List<string> matchedIDs = copyDic
+        List<string> matchedIDsOri = copyDic
             .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId))
             .Select(kv => kv.Key)
             .ToList();
-        //如果没有直接匹配的说明目标可能是链，需要继续查找
-        if (matchedIDs.Count == 0)
-        {
-            findTargetId = findTargetId.Substring(0, findTargetId.Length - 2) + "01";
-            matchedIDs = copyDic
-                .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId))
-                .Select(kv => kv.Key)
-                .ToList();
-        }
-        if (matchedIDs.Count == 0)
-        {
-            if (double.TryParse(findTargetId, out _))
-            {
-                findTargetId = findTargetId.Substring(0, findTargetId.Length - 2) + "02";
-                matchedIDs = copyDic
-                    .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId))
-                    .Select(kv => kv.Key)
-                    .ToList();
-            }
-        }
+
+        //有没有直接匹配的，都需要需要继续查找（按照链的规则）
+        var findTargetId01 = findTargetId.Substring(0, findTargetId.Length - 2) + "01";
+        List<string> matchedIDs01 = copyDic
+            .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId01))
+            .Select(kv => kv.Key)
+            .ToList();
+
+        var findTargetId02 = findTargetId.Substring(0, findTargetId.Length - 2) + "02";
+        List<string> matchedIDs02 = copyDic
+            .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId02))
+            .Select(kv => kv.Key)
+            .ToList();
+
+        var findTargetId03 = findTargetId.Substring(0, findTargetId.Length - 2) + "03";
+        List<string> matchedIDs03 = copyDic
+            .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId03))
+            .Select(kv => kv.Key)
+            .ToList();
+
+        List<string> matchedIDsEnd = new();
+        matchedIDsEnd.AddRange(matchedIDsOri);
+        matchedIDsEnd.AddRange(matchedIDs01);
+        matchedIDsEnd.AddRange(matchedIDs02);
+        matchedIDsEnd.AddRange(matchedIDs03);
+
+        List<string> matchedIDs = new HashSet<string>(matchedIDsEnd).ToList();
+
         if (matchedIDs.Count == 0)
         {
             findTips = "{1,\"tip_obstacleItem\",2}";
@@ -2191,15 +2214,12 @@ public class LteData
                         {
                             if (findTargetDetailType == "4")
                             {
-                                if (findTargetId is not null)
-                                {
-                                    findTips =
-                                        "{3,"
-                                        + findTargetId.Substring(0, findTargetId.Length - 2)
-                                        + "00,"
-                                        + findTargetId2
-                                        + "}";
-                                }
+                                findTips =
+                                    "{3,"
+                                    + findTargetId.Substring(0, findTargetId.Length - 2)
+                                    + "00,"
+                                    + findTargetId2
+                                    + "}";
                             }
                             else
                             {
