@@ -29,9 +29,9 @@ public class LteData
     private const int FindDataTagCol = 0;
     private const int FindDataStartCol = 1;
     private const int FindDataEndCol = 9;
-    private const int TaskDataTagCol = 13;
-    private const int TaskDataStartCol = 14;
-    private const int TaskDataEndCol = 23;
+    private const int TaskDataTagCol = 15;
+    private const int TaskDataStartCol = 16;
+    private const int TaskDataEndCol = 26;
 
     private const string ActivityIdIndex = "B1";
     private const string ActivityDataMinIndex = "C1";
@@ -2397,12 +2397,14 @@ public class LteData
             var taskTypeName = copyTaskArray[i, 3]?.ToString() ?? String.Empty;
             var taskDialogId = copyTaskArray[i, 4]?.ToString() ?? String.Empty;
             var taskTagetName = copyTaskArray[i, 5]?.ToString() ?? String.Empty;
+            var taskTimeLimit = copyTaskArray[i, 6]?.ToString() ?? String.Empty;
 
-            var taskSubId = copyTaskArray[i, 6]?.ToString() ?? String.Empty;
-            var taskSubDes = copyTaskArray[i, 7]?.ToString() ?? String.Empty;
-            var taskSubTypeName = copyTaskArray[i, 8]?.ToString() ?? String.Empty;
-            var taskSubDialogId = copyTaskArray[i, 9]?.ToString() ?? String.Empty;
-            var taskSubTagetName = copyTaskArray[i, 10]?.ToString() ?? String.Empty;
+            var taskSubId = copyTaskArray[i, 7]?.ToString() ?? String.Empty;
+            var taskSubDes = copyTaskArray[i, 8]?.ToString() ?? String.Empty;
+            var taskSubTypeName = copyTaskArray[i, 9]?.ToString() ?? String.Empty;
+            var taskSubDialogId = copyTaskArray[i, 10]?.ToString() ?? String.Empty;
+            var taskSubTagetName = copyTaskArray[i, 11]?.ToString() ?? String.Empty;
+            var taskSubTimeLimit = copyTaskArray[i, 12]?.ToString() ?? String.Empty;
 
             //改造数据
 
@@ -2499,6 +2501,9 @@ public class LteData
                 findLinks =
                     findLinks + "{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
                 taskColDataList.Add(findLinks);
+
+                // 限时任务数据
+                taskColDataList.Add(taskTimeLimit);
             }
 
             var taskSubNextId = string.Empty;
@@ -2554,6 +2559,9 @@ public class LteData
                 findSubLinks =
                     findSubLinks + "{20,\"UILteMapEntrance\"," + taskSubTargetMapId + "},{8,9999}";
                 taskSubColDataList.Add(findSubLinks);
+
+                // 限时任务数据
+                taskSubColDataList.Add(taskSubTimeLimit);
             }
 
             if (taskColDataList.Count != 0)
