@@ -101,13 +101,33 @@ public class SelfCellData((string, int, int) tuple)
 }
 
 //自定义Com表格-单元格类
-public class SelfSheetCellData((string, int, int, string, string) tuple)
+public class SelfSheetCellData
 {
-    public string Value { get; set; } = tuple.Item1;
-    public int Row { get; set; } = tuple.Item2;
-    public int Column { get; set; } = tuple.Item3;
-    public string SheetName { get; set; } = tuple.Item4;
-    public string Tips { get; set; } = tuple.Item5;
+    public string SheetName { get; }
+    public int Row { get; }
+    public int Column { get; }
+    public string Value { get; }
+    public string Tips { get; }
+    public string FilePath { get; }
+
+    public SelfSheetCellData((string, int, int, string, string) tuple)
+    {
+        Value = tuple.Item1;
+        Row = tuple.Item2;
+        Column = tuple.Item3;
+        SheetName = tuple.Item4;
+        Tips = tuple.Item5;
+    }
+
+    public SelfSheetCellData((string, int, int, string, string, string) tuple)
+    {
+        Value = tuple.Item1;
+        Row = tuple.Item2;
+        Column = tuple.Item3;
+        SheetName = tuple.Item4;
+        Tips = tuple.Item5;
+        FilePath = tuple.Item6;
+    }
 }
 
 //字符串正则转换
@@ -285,6 +305,7 @@ public class ChatApiClient
     {
         Client = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
     }
+
     public static async Task<string> CallApiAsync(object requestBody, string apiKey, string apiUrl)
     {
         if (string.IsNullOrEmpty(apiKey))
@@ -328,13 +349,21 @@ public class ChatApiClient
         string apiKey,
         string apiUrl,
         Action<string> onChunkReceived,
-        Action onCompleted = null)
+        Action onCompleted = null
+    )
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-        request.Content = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, "application/json");
+        request.Content = new StringContent(
+            JsonConvert.SerializeObject(requestBody),
+            Encoding.UTF8,
+            "application/json"
+        );
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-        using var response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        using var response = await Client.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead
+        );
         response.EnsureSuccessStatusCode();
 
         using var stream = await response.Content.ReadAsStreamAsync();
@@ -381,7 +410,7 @@ public class ChatMessage
     public string Message { get; set; } // 消息内容
     public bool IsUser { get; set; } // 是否是用户消息
     public DateTime Timestamp { get; set; } // 消息时间戳
-    public bool IsStreaming { get; set; }    // 新增字段标识流式消息
+    public bool IsStreaming { get; set; } // 新增字段标识流式消息
 }
 
 public class ChatHistoryManager
@@ -525,5 +554,4 @@ public class SelfEnvironmentDetector
             Debug.Print($"执行安装程序时发生错误: {ex.Message}");
         }
     }
-
 }
