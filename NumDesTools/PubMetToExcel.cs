@@ -4,6 +4,8 @@ using System.Data.OleDb;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using NPOI.SS.UserModel;
+using NumDesTools.Config;
 using OfficeOpenXml;
 using DataTable = System.Data.DataTable;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
@@ -30,7 +32,6 @@ public static class PubMetToExcel
         out ExcelPackage excel
     )
     {
-        
         sheet = null;
         excel = null;
         var path = excelFilePath + @"\" + excelName + @".xlsx";
@@ -59,7 +60,6 @@ public static class PubMetToExcel
         out ExcelPackage excel
     )
     {
-        
         sheet = null;
         excel = null;
         string errorExcelLog;
@@ -165,7 +165,6 @@ public static class PubMetToExcel
         out ExcelPackage excel
     )
     {
-        
         sheet = null;
         excel = null;
         excel = new ExcelPackage(new FileInfo(excelPath + @"\" + excelName));
@@ -405,12 +404,12 @@ public static class PubMetToExcel
         catch (Exception e)
         {
             LogDisplay.RecordLine(
-                    "[{1}][{0}][{2}][{3}]",
-                    $"获取Excel ListObject: {sheetName} - {listName} 不存在-{e}",
-                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                    sheetName,
-                    listName
-                );
+                "[{1}][{0}][{2}][{3}]",
+                $"获取Excel ListObject: {sheetName} - {listName} 不存在-{e}",
+                DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                sheetName,
+                listName
+            );
             throw;
         }
     }
@@ -660,7 +659,6 @@ public static class PubMetToExcel
 
     public static DataTable ExcelDataToDataTable(string filePath)
     {
-        
         var file = new FileInfo(filePath);
         using (var package = new ExcelPackage(file))
         {
@@ -956,8 +954,6 @@ public static class PubMetToExcel
         string errorValue
     )
     {
-        
-
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(rootPath));
         var mainPath = newPath + @"\Excels\Tables\";
         var files1 = Directory
@@ -1084,7 +1080,10 @@ public static class PubMetToExcel
         return textLineList;
     }
 
-    public static string ErrorLogAnalysis(List<List<(string, string, string)>> errorList, Worksheet sheet)
+    public static string ErrorLogAnalysis(
+        List<List<(string, string, string)>> errorList,
+        Worksheet sheet
+    )
     {
         var errorLog = "";
         for (var i = 0; i < errorList.Count; i++)
@@ -1636,7 +1635,7 @@ public static class PubMetToExcel
 
             string row = String.Empty;
             for (int j = 0; j < array.GetLength(1); j++)
-                row = string.Join("#", array[i,j]?.ToString());
+                row = string.Join("#", array[i, j]?.ToString());
             dict[key] = row;
         }
         return dict;
@@ -1659,7 +1658,7 @@ public static class PubMetToExcel
         }
         return dict;
     }
-    
+
     //二维数组字典化-首列为Key,ExcelRange对象，1开始
     public static Dictionary<string, List<string>> TwoDArrayToDictionaryFirstKey1(object[,] array)
     {
@@ -1692,8 +1691,11 @@ public static class PubMetToExcel
         }
         return dict;
     }
+
     //二维数组字典化-首行为Key,ExcelRange对象，1开始
-    public static Dictionary<string, List<string>> TwoDArrayToDictionaryFirstRowKey1(object[,] array)
+    public static Dictionary<string, List<string>> TwoDArrayToDictionaryFirstRowKey1(
+        object[,] array
+    )
     {
         var dict = new Dictionary<string, List<string>>();
         for (int j = 1; j <= array.GetLength(1); j++)
@@ -1707,7 +1709,7 @@ public static class PubMetToExcel
         }
         return dict;
     }
-    
+
     //二维数组转二维字典
     public static Dictionary<(object, object), string> Array2DToDic2D(
         int rowCount,
@@ -2292,6 +2294,7 @@ public static class PubMetToExcel
         Debug.Print("合并成功！");
         return mergedArray;
     }
+
     public static object[,] Merge2DArrays1(object[,] array1, object[,] array2)
     {
         // 合并数组
@@ -2396,5 +2399,75 @@ public static class PubMetToExcel
         }
 
         return orderedDict;
+    }
+
+    // 检查Excel单元格值的合法性
+    public static List<(string, int, int, string, string, string)> ExcelCellValueFormatCheck(
+        string cellValue,
+        string typeCell,
+        string sheetName,
+        string filePath,
+        int rowIndex,
+        int colIndex
+    )
+    {
+        var config = new GlobalVariable();
+        var normalCharactersCheck = config.NormaKeyList;
+        var specialCharactersCheck = config.SpecialKeyList;
+        var coupleCharactersCheck = config.CoupleKeyList;
+
+        var sourceData = new List<(string, int, int, string, string, string)>();
+
+        if (cellValue != null)
+        {
+            if (
+                normalCharactersCheck.Any(c => cellValue.Contains(c))
+                && !typeCell.Contains("string")
+            )
+            {
+                sourceData.Add(
+                    (cellValue, rowIndex + 1, colIndex + 1, sheetName, "多逗号或中文逗号", filePath)
+                );
+            }
+
+            if (
+                specialCharactersCheck.Any(c => cellValue.Contains(c))
+                && !typeCell.Contains("string")
+            )
+            {
+                sourceData.Add((cellValue, rowIndex + 1, colIndex + 1, sheetName, "少逗号", filePath));
+            }
+
+            foreach (var (leftString, rightString) in coupleCharactersCheck)
+            {
+                var leftStringCount = Regex
+                    .Matches(cellValue, Regex.Escape(leftString), RegexOptions.IgnoreCase)
+                    .Count;
+                var RightStringCount = Regex
+                    .Matches(cellValue, Regex.Escape(rightString), RegexOptions.IgnoreCase)
+                    .Count;
+                if (leftStringCount != RightStringCount)
+                {
+                    sourceData.Add(
+                        (cellValue, rowIndex + 1, colIndex + 1, sheetName, "括号问题", filePath)
+                    );
+                    break;
+                }
+
+                if (leftString == "\"")
+                {
+                    int isDouble = leftStringCount % 2;
+                    if (isDouble != 0)
+                    {
+                        sourceData.Add(
+                            (cellValue, rowIndex + 1, colIndex + 1, sheetName, "双引号问题", filePath)
+                        );
+                        break;
+                    }
+                }
+            }
+        }
+
+        return sourceData;
     }
 }

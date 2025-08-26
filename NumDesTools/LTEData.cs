@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.VisualBasic;
+using NumDesTools.UI;
 using OfficeOpenXml;
 using Match = System.Text.RegularExpressions.Match;
 
@@ -435,6 +436,10 @@ public class LteData
         //过滤id和type，只针对有增删改的数据进行导出
         List<string> dataStatusList = null;
         List<string> dataStatusListNew = null;
+
+        // 检查Excel单元格值是否非法
+        var checkResult = new List<(string, int, int, string, string, string)>();
+
         if (!isFirst)
         {
             if (baseData.ContainsKey("数据状态"))
@@ -573,7 +578,7 @@ public class LteData
                     }
 
                     //整理写入数据
-                    var writeData = new Dictionary<(int row, int col), string>();
+                    var writeData = new Dictionary<(int row, int col), (string, string)>();
                     for (int j = 2; j <= writeCol; j++)
                     {
                         var cellTitle = targetSheet.Cells[2, j].Value?.ToString() ?? "";
@@ -616,16 +621,19 @@ public class LteData
                             }
                             // 记录数据
                             var cell = targetSheet.Cells[writeRow, j];
+                            // 记录数据类型
+                            var cellType = targetSheet.Cells[3, j].Value?.ToString();
+
                             if (isFirst)
                             {
-                                writeData[(writeRow, j)] = cellRealValue;
+                                writeData[(writeRow, j)] = (cellRealValue, cellType);
                                 dataWritten = true;
                             }
                             else
                             {
                                 if (cell.Value?.ToString() != cellRealValue)
                                 {
-                                    writeData[(writeRow, j)] = cellRealValue;
+                                    writeData[(writeRow, j)] = (cellRealValue, cellType);
                                     dataWritten = true;
                                 }
                             }
@@ -634,7 +642,25 @@ public class LteData
                     // 实际写入
                     foreach (var cell in writeData)
                     {
-                        targetSheet.Cells[cell.Key.row, cell.Key.col].Value = cell.Value;
+                        var sheetName = targetSheet.Name;
+                        var cellType = cell.Value.Item2;
+                        var rowIndex = cell.Key.row;
+                        var colIndex = cell.Key.col;
+                        var cellValue = cell.Value.Item1;
+                        var filePath = targetExcel.File.FullName;
+
+                        checkResult.AddRange(
+                            PubMetToExcel.ExcelCellValueFormatCheck(
+                                cellValue,
+                                cellType,
+                                sheetName,
+                                filePath,
+                                rowIndex - 1,
+                                colIndex - 1
+                            )
+                        );
+
+                        targetSheet.Cells[rowIndex, colIndex].Value = cellValue;
                     }
                 }
                 if (dataWritten) // 只有在写入数据时才保存
@@ -645,7 +671,23 @@ public class LteData
 
             targetExcel?.Dispose();
         }
-        //输出字典数据
+        // 展示Excel单元格数据格式错误
+        if (checkResult.Count > 0)
+        {
+            var ctpCheckValueName = "单元格数据格式检查";
+            NumDesCTP.DeleteCTP(true, ctpCheckValueName);
+            _ = (SheetCellSeachResult)
+                NumDesCTP.ShowCTP(
+                    800,
+                    ctpCheckValueName,
+                    true,
+                    ctpCheckValueName,
+                    new SheetCellSeachResult(checkResult),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+        }
+
+        // 输出字典数据
         if (strDictionary.Count > 0)
         {
             string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
