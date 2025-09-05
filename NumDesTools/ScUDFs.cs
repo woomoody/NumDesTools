@@ -1218,38 +1218,38 @@ public class ExcelUdf
         return result;
     }
 
-    [ExcelFunction(
-        Category = "UDF-数组公式写入",
-        IsVolatile = true,
-        IsMacroType = true,
-        Description = @"针对各种数据公式填充数据慢问题，采用Range写入法",
-        Name = "RangeWriteFast"
-    )]
-    public static object RangeWriteFast(object[,] inputRange)
-    {
-        // 获取当前调用位置及目标区域
-        ExcelReference callerRef = (ExcelReference)XlCall.Excel(XlCall.xlfCaller);
-        int rows = inputRange.GetLength(0);
-        int cols = inputRange.GetLength(1);
+    //[ExcelFunction(
+    //    Category = "UDF-数组公式写入",
+    //    IsVolatile = true,
+    //    IsMacroType = true,
+    //    Description = @"针对各种数据公式填充数据慢问题，采用Range写入法",
+    //    Name = "RangeWriteFast"
+    //)]
+    //public static object RangeWriteFast(object[,] inputRange)
+    //{
+    //    // 获取当前调用位置及目标区域
+    //    ExcelReference callerRef = (ExcelReference)XlCall.Excel(XlCall.xlfCaller);
+    //    int rows = inputRange.GetLength(0);
+    //    int cols = inputRange.GetLength(1);
 
-        string fullName = (string)XlCall.Excel(XlCall.xlSheetNm, callerRef);
-        // 匹配格式：[工作簿名]工作表名
-        Match match = Regex.Match(fullName, @"\]([^!]+)");
-        string sheetName = match.Success ? match.Groups[1].Value.Trim('\'') : "地编关系";
+    //    string fullName = (string)XlCall.Excel(XlCall.xlSheetNm, callerRef);
+    //    // 匹配格式：[工作簿名]工作表名
+    //    Match match = Regex.Match(fullName, @"\]([^!]+)");
+    //    string sheetName = match.Success ? match.Groups[1].Value.Trim('\'') : "地编关系";
 
-        var app = NumDesAddIn.App;
-        Worksheet targetSheet = app.Sheets[sheetName];
+    //    var app = NumDesAddIn.App;
+    //    Worksheet targetSheet = app.Sheets[sheetName];
 
-        Range targetRange = targetSheet.Range[
-            targetSheet.Cells[callerRef.RowFirst + 2, callerRef.ColumnFirst + 1],
-            targetSheet.Cells[callerRef.RowFirst + rows + 1, callerRef.ColumnFirst + cols]
-        ];
+    //    Range targetRange = targetSheet.Range[
+    //        targetSheet.Cells[callerRef.RowFirst + 2, callerRef.ColumnFirst + 1],
+    //        targetSheet.Cells[callerRef.RowFirst + rows + 1, callerRef.ColumnFirst + cols]
+    //    ];
 
-        // 直接写入数据
-        targetRange.Value = inputRange; // 批量写入二维数组
+    //    // 直接写入数据
+    //    targetRange.Value = inputRange; // 批量写入二维数组
 
-        return "最新数据↓";
-    }
+    //    return "最新数据↓";
+    //}
 
     [ExcelFunction(
         Category = "UDF-Excel函数增强",
