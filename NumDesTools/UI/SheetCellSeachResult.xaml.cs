@@ -63,7 +63,7 @@ namespace NumDesTools.UI
                         if (!string.IsNullOrEmpty(data.FilePath))
                         {
                             tempInlines.Add(new LineBreak());
-                            tempInlines.Add(new Run($"附加信息: {data.FilePath}"));
+                            tempInlines.Add(new Run($"文件路径: {data.FilePath}"));
                         }
 
                         textBlock.Inlines.Clear();

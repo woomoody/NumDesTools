@@ -1662,6 +1662,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             MessageBox.Show(@"当前表格不是正确【模板】，不能写入数据");
         }
+
+        ExcelDataAutoInsertMulti.InsertData(true);
     }
 
     public void AutoInsertExcelDataNew_Click(IRibbonControl control)
