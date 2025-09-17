@@ -2568,7 +2568,7 @@ public class LteData
                 //解锁下一个任务ID
                 if (i != taskTaskArrayCount)
                 {
-                    taskSubNextId = copyTaskArray[i + 1, 6]?.ToString() ?? string.Empty;
+                    taskSubNextId = copyTaskArray[i + 1, 7]?.ToString() ?? string.Empty;
                 }
                 taskSubColDataList.Add(taskSubNextId);
 
