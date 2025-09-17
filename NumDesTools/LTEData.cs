@@ -2410,7 +2410,7 @@ public class LteData
             MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
         }
 
-        WriteDymaicData(copyTaskArray, taskList, "LTE【任务】", 14, 23, 13);
+        WriteDymaicData(copyTaskArray, taskList, "LTE【任务】", TaskDataStartCol , TaskDataEndCol, TaskDataTagCol);
     }
 
     //原始数据改造

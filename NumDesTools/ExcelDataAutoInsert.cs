@@ -1,10 +1,11 @@
-﻿using MiniExcelLibs;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
+﻿using System.Diagnostics.Eventing.Reader;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+using MiniExcelLibs;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
 
@@ -1351,9 +1352,12 @@ public static class ExcelDataAutoInsertLanguage
             var rowsToDelete = new List<int>();
             foreach (var newId in newIdList)
             {
-                var reDd = PubMetToExcel.FindSourceRow(targetSheet, 2, newId.ToString());
-                if (reDd != -1)
-                    rowsToDelete.Add(reDd);
+                if (newId != null)
+                {
+                    var reDd = PubMetToExcel.FindSourceRow(targetSheet, 2, newId.ToString());
+                    if (reDd != -1)
+                        rowsToDelete.Add(reDd);
+                }
             }
 
             rowsToDelete.Sort();
@@ -1900,7 +1904,6 @@ public static class ExcelDataAutoInsertMulti
             cellColorTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
             cellColorTarget.Style.Fill.BackgroundColor.SetColor(cellBackColor);
 
-            
             //修改数据
             var fixItem = fixKey[excelName][excelMulti].Item1;
             errorList = modeThread
@@ -2584,16 +2587,14 @@ public static class ExcelDataAutoInsertMultiNew
                 var cellTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, colCount];
                 cellTarget.Value = cellSource.Value;
 
-
                 cellTarget.Style.Font.Name = "微软雅黑";
                 cellTarget.Style.Font.Size = 10;
                 cellTarget.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
-                
+
                 //只对前3列标色
                 var cellColorTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, 3];
                 cellColorTarget.Style.Fill.PatternType = ExcelFillStyle.Solid;
                 cellColorTarget.Style.Fill.BackgroundColor.SetColor(_cellColor);
-        
 
                 //修改数据
                 var fixItem = _fixKey[excelName][excelMulti].Item1;
@@ -3733,7 +3734,6 @@ public static class ExcelDataAutoInsertActivityServer
         object[,] baseArray = baseList.DataBodyRange.Value2;
         var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseArray);
 
-
         var activityGroup = basePath + @"\ActivityClientHierarchyGroupData.xlsx";
         var activityGroupSheetName = "Sheet1";
         var activityGroupData = MiniExcel.Query(
@@ -3771,8 +3771,7 @@ public static class ExcelDataAutoInsertActivityServer
 
                 if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(type))
                 {
-                    activityDataMap[id] = new List<string>{comment , type};
-                    
+                    activityDataMap[id] = new List<string> { comment, type };
                 }
             }
         }
@@ -3793,7 +3792,7 @@ public static class ExcelDataAutoInsertActivityServer
             }
         }
 
-        var activityInfo = new Dictionary<string , List<string>>();
+        var activityInfo = new Dictionary<string, List<string>>();
 
         // 处理activityGroupData
         foreach (var row in activityGroupData.Skip(3)) // 跳过前3行标题
@@ -3804,7 +3803,10 @@ public static class ExcelDataAutoInsertActivityServer
                 string hierarchyActivityIDs = rowDict["hierarchyActivityIDs"]?.ToString();
                 string activityGroupComment = rowDict["#备注"]?.ToString();
 
-                if (!string.IsNullOrEmpty(activityGroupId) && !string.IsNullOrEmpty(hierarchyActivityIDs))
+                if (
+                    !string.IsNullOrEmpty(activityGroupId)
+                    && !string.IsNullOrEmpty(hierarchyActivityIDs)
+                )
                 {
                     // 处理hierarchyActivityIDs格式：[id1,id2,id3]
                     var hierarchyActivityIDsNums = hierarchyActivityIDs
@@ -3855,7 +3857,9 @@ public static class ExcelDataAutoInsertActivityServer
                     }
                     if (activityInfo.ContainsKey(hierarchyActivityIDsNums[0]))
                     {
-                        var activityGroupAllInfo = new List<string>(activityInfo[hierarchyActivityIDsNums[0]]);
+                        var activityGroupAllInfo = new List<string>(
+                            activityInfo[hierarchyActivityIDsNums[0]]
+                        );
                         activityGroupAllInfo[3] = "1"; // 设置为活动组
                         activityGroupAllInfo[0] = activityGroupId;
                         activityGroupAllInfo[1] = activityGroupComment;
@@ -3864,7 +3868,6 @@ public static class ExcelDataAutoInsertActivityServer
                             activityInfo[activityGroupId] = activityGroupAllInfo;
                         }
                     }
-                    
                 }
             }
         }
@@ -3900,8 +3903,6 @@ public static class ExcelDataAutoInsertActivityServer
                     activityInfo[activityId] = activityAllInfo;
                 }
             }
-
-           
         }
         // 写入数据
         var activityArray = PubMetToExcel.DictionaryTo2DArray(activityInfo);
@@ -3915,17 +3916,11 @@ public static class ExcelDataAutoInsertActivityServer
 
         var rowMax = activityArray.GetLength(0);
         PubMetToExcel.WriteExcelDataC("活动模板", 1, 10000, 0, 8, null);
-        PubMetToExcel.WriteExcelDataC(
-            "活动模板",
-            1,
-            rowMax,
-            0,
-            8,
-            activityArray
+        PubMetToExcel.WriteExcelDataC("活动模板", 1, rowMax, 0, 8, activityArray);
+
+        activityList.Resize(
+            activityList.Range.Resize[rowMax + 1, activityList.Range.Columns.Count]
         );
-
-        activityList.Resize(activityList.Range.Resize[rowMax + 1, activityList.Range.Columns.Count]);
-
     }
 }
 
