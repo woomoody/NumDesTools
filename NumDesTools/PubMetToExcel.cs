@@ -1,12 +1,13 @@
-﻿using System.Collections.Concurrent;
+﻿using MiniExcelLibs;
+using NPOI.SS.UserModel;
+using NumDesTools.Config;
+using OfficeOpenXml;
+using System.Collections.Concurrent;
 using System.Data;
 using System.Data.OleDb;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using NPOI.SS.UserModel;
-using NumDesTools.Config;
-using OfficeOpenXml;
 using DataTable = System.Data.DataTable;
 using ExcelReference = ExcelDna.Integration.ExcelReference;
 
@@ -2399,6 +2400,67 @@ public static class PubMetToExcel
         }
 
         return orderedDict;
+    }
+
+    // 检查Excel单元格值是否重复
+    public static List<(string, int, int, string, string ,string)> CheckRepeatValue(string wkFullPath)
+    {
+        var sourceData = new List<(string, int, int, string, string ,string)>();
+
+        if (wkFullPath.Contains("#"))
+        {
+            return sourceData;
+        }
+
+        var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
+
+        foreach (var sheetName in sheetNames)
+        {
+            if (sheetName.Contains("#") || sheetName.Contains("Chart"))
+                continue;
+            var rows = MiniExcel.Query(wkFullPath, sheetName: sheetName).ToList();
+
+            if (rows.Count <= 4)
+            {
+                continue;
+            }
+
+            var dataRows = rows.Skip(3).ToList();
+
+            if (dataRows.Count == 0)
+            {
+                continue;
+            }
+
+            // 检查第 1、2 列第 1 行的值是否为特定字符串，如果是则跳过该工作表
+            if (
+                dataRows.Any() && ((IDictionary<string, object>)dataRows[0])["A"]?.ToString() != "#"
+                || ((IDictionary<string, object>)dataRows[0])["B"]?.ToString() == null
+            )
+            {
+                continue;
+            }
+
+            // 检查 List 中第 2 列是否有重复值，并返回重复值的行列号
+            var duplicates = dataRows
+                .Select((row, index) => new { Row = row, Index = index + 4 }) // 保留行号，+5 是因为跳过了前 4 行
+                .Where(x => ((IDictionary<string, object>)x.Row)["B"] != null) // 忽略 null 值
+                .GroupBy(x => ((IDictionary<string, object>)x.Row)["B"]) // 按第 2 列的值分组
+                .Where(group => group.Count() > 1) // 找出重复值
+                .SelectMany(group => group) // 展开分组
+                .ToList();
+
+            //转换数据格式
+            foreach (var duplicate in duplicates)
+            {
+                var cellValue = ((IDictionary<string, object>)duplicate.Row)["B"].ToString();
+                var cellRow = duplicate.Index;
+                var cellCol = 2; // 第 2 列
+                sourceData.Add((cellValue, cellRow, cellCol, sheetName, "数据重复" , wkFullPath));
+            }
+        }
+
+        return sourceData;
     }
 
     // 检查Excel单元格值的合法性

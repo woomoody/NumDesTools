@@ -1,4 +1,10 @@
-﻿global using System;
+﻿global using ExcelDna.Integration;
+global using ExcelDna.Integration.CustomUI;
+global using ExcelDna.IntelliSense;
+global using ExcelDna.Logging;
+global using ExcelDna.Registration;
+global using Microsoft.Office.Interop.Excel;
+global using System;
 global using System.Collections.Generic;
 global using System.Diagnostics;
 global using System.Drawing;
@@ -8,12 +14,6 @@ global using System.Linq;
 global using System.Reflection;
 global using System.Runtime.InteropServices;
 global using System.Windows.Forms;
-global using ExcelDna.Integration;
-global using ExcelDna.Integration.CustomUI;
-global using ExcelDna.IntelliSense;
-global using ExcelDna.Logging;
-global using ExcelDna.Registration;
-global using Microsoft.Office.Interop.Excel;
 global using Application = Microsoft.Office.Interop.Excel.Application;
 global using Color = System.Drawing.Color;
 global using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
@@ -24,16 +24,18 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
+using MiniExcelLibs;
+using NPOI.SS.Formula.Functions;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using NumDesTools.Com;
 using NumDesTools.Config;
 using NumDesTools.UI;
 using OfficeOpenXml;
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
 using IRibbonControl = ExcelDna.Integration.CustomUI.IRibbonControl;
@@ -279,7 +281,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ShowAI"] = ShowAIText_Click,
             ["Button99991"] = TestBar1_Click,
             ["Button99992"] = TestBar2_Click,
-            ["ExcelSearchBoxButton8"] = ExcelSearchAllFormulaName_Click
+            ["ExcelSearchBoxButton8"] = ExcelSearchAllFormulaName_Click,
+            ["CheckExcelKeyAndValueFormat"] = CheckExcelKeyAndValueFormat_Click
         };
     }
 
@@ -1639,6 +1642,62 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 );
         }
     }
+
+    public void CheckExcelKeyAndValueFormat_Click(IRibbonControl control)
+    {
+        var indexWk = App.ActiveWorkbook;
+        var path = indexWk.Path;
+        var filesCollection = new SelfExcelFileCollector(path);
+        var files = filesCollection.GetAllExcelFilesPath();
+
+        var isMulti = true;
+
+        var targetList = new List<(string, int, int, string, string, string)>();
+     
+
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+        Action<string> processFile = file =>
+        {
+            try
+            {
+                targetList.AddRange(PubMetToExcel.CheckRepeatValue(file));
+            }
+            catch
+            {
+                // 记录异常信息，继续处理下一个文件
+            }
+        };
+
+        if (isMulti)
+        {
+            Parallel.ForEach(files, options, processFile);
+        }
+        else
+        {
+            foreach (var file in files)
+            {
+                processFile(file);
+            }
+        }
+
+        // 展示Excel单元格数据格式错误
+        if (targetList.Count > 0)
+        {
+            var ctpCheckValueName = "单元格数据格式检查";
+            NumDesCTP.DeleteCTP(true, ctpCheckValueName);
+            _ = (SheetCellSeachResult)
+                NumDesCTP.ShowCTP(
+                    800,
+                    ctpCheckValueName,
+                    true,
+                    ctpCheckValueName,
+                    new SheetCellSeachResult(targetList),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+        }
+    }
+
     public void AutoInsertExcelData_Click(IRibbonControl control)
     {
         var indexWk = App.ActiveWorkbook;
