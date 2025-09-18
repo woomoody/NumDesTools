@@ -2036,14 +2036,12 @@ public class LteData
                     continue;
                 }
 
-                var findTargetStrType = copyDic[findTargetId][6];
                 var findTargetType = copyDic[findTargetId][25];
                 var findTargetDetailType = copyDic[findTargetId][26];
 
                 if (findTargetType != String.Empty)
                 {
                     var findLinks = FindLinks(
-                        findTargetStrType,
                         findTargetDetailType,
                         findTargetType,
                         findTargetId,
@@ -2154,7 +2152,6 @@ public class LteData
     }
 
     private static string FindLinks(
-        string findTargetStrType,
         string findTargetDetailType,
         string findTargetType,
         string findTargetId,
@@ -2164,12 +2161,6 @@ public class LteData
     {
         var findLinks = string.Empty;
         findTips = string.Empty;
-
-        double findTargetIdDouble = Convert.ToDouble(findTargetId);
-        if (findTargetStrType.Contains("链"))
-        {
-            findTargetId = (findTargetIdDouble/100 + 1).ToString(CultureInfo.InvariantCulture);
-        }
 
         //1层查找
         if (findTargetDetailType == string.Empty)
@@ -2221,6 +2212,13 @@ public class LteData
         matchedIDsEnd.AddRange(matchedIDs02);
         matchedIDsEnd.AddRange(matchedIDs03);
 
+        // 按照优先级选择第一个匹配项
+        string finalMatchedID = matchedIDs01.FirstOrDefault()
+                             ?? matchedIDs02.FirstOrDefault()
+                             ?? matchedIDs03.FirstOrDefault()
+                             ?? matchedIDsOri.FirstOrDefault()
+                             ??String.Empty;
+
         List<string> matchedIDs = new HashSet<string>(matchedIDsEnd).ToList();
 
         if (matchedIDs.Count == 0)
@@ -2270,12 +2268,12 @@ public class LteData
                                     "{3,"
                                     + findTargetId.Substring(0, findTargetId.Length - 2)
                                     + "00,"
-                                    + findTargetId2
+                                    + finalMatchedID
                                     + "}";
                             }
                             else
                             {
-                                findTips = "{1,\"tip_obstacleItem\",1," + findTargetId2 + "}";
+                                findTips = "{1,\"tip_obstacleItem\",1," + finalMatchedID + "}";
                             }
                         }
                     }
@@ -2420,7 +2418,14 @@ public class LteData
             MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
         }
 
-        WriteDymaicData(copyTaskArray, taskList, "LTE【任务】", TaskDataStartCol , TaskDataEndCol, TaskDataTagCol);
+        WriteDymaicData(
+            copyTaskArray,
+            taskList,
+            "LTE【任务】",
+            TaskDataStartCol,
+            TaskDataEndCol,
+            TaskDataTagCol
+        );
     }
 
     //原始数据改造
@@ -2529,12 +2534,10 @@ public class LteData
                 taskColDataList.Add(taskTargetMapName);
 
                 //目标寻找关系
-                var findTargetTypeString = baseDic[taskTagetId][6];
                 var findTargetType = baseDic[taskTagetId][25];
                 var findTargetDetailType = baseDic[taskTagetId][26];
 
                 var findLinks = FindLinks(
-                    findTargetTypeString,
                     findTargetDetailType,
                     findTargetType,
                     taskTagetId,
@@ -2589,12 +2592,10 @@ public class LteData
                 taskSubColDataList.Add(taskSubTargetMapName);
 
                 //目标寻找关系
-                var findTargetTypeString = baseDic[taskTagetId][6];
                 var findSubTargetType = baseDic[taskSubTagetId][25];
                 var findSubTargetDetailType = baseDic[taskSubTagetId][26];
 
                 var findSubLinks = FindLinks(
-                    findTargetTypeString,
                     findSubTargetDetailType,
                     findSubTargetType,
                     taskSubTagetId,
