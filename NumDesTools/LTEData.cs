@@ -2035,12 +2035,15 @@ public class LteData
                 {
                     continue;
                 }
+
+                var findTargetStrType = copyDic[findTargetId][6];
                 var findTargetType = copyDic[findTargetId][25];
                 var findTargetDetailType = copyDic[findTargetId][26];
 
                 if (findTargetType != String.Empty)
                 {
                     var findLinks = FindLinks(
+                        findTargetStrType,
                         findTargetDetailType,
                         findTargetType,
                         findTargetId,
@@ -2151,6 +2154,7 @@ public class LteData
     }
 
     private static string FindLinks(
+        string findTargetStrType,
         string findTargetDetailType,
         string findTargetType,
         string findTargetId,
@@ -2160,6 +2164,12 @@ public class LteData
     {
         var findLinks = string.Empty;
         findTips = string.Empty;
+
+        double findTargetIdDouble = Convert.ToDouble(findTargetId);
+        if (findTargetStrType.Contains("链"))
+        {
+            findTargetId = (findTargetIdDouble/100 + 1).ToString(CultureInfo.InvariantCulture);
+        }
 
         //1层查找
         if (findTargetDetailType == string.Empty)
@@ -2519,10 +2529,12 @@ public class LteData
                 taskColDataList.Add(taskTargetMapName);
 
                 //目标寻找关系
+                var findTargetTypeString = baseDic[taskTagetId][6];
                 var findTargetType = baseDic[taskTagetId][25];
                 var findTargetDetailType = baseDic[taskTagetId][26];
 
                 var findLinks = FindLinks(
+                    findTargetTypeString,
                     findTargetDetailType,
                     findTargetType,
                     taskTagetId,
@@ -2577,10 +2589,12 @@ public class LteData
                 taskSubColDataList.Add(taskSubTargetMapName);
 
                 //目标寻找关系
+                var findTargetTypeString = baseDic[taskTagetId][6];
                 var findSubTargetType = baseDic[taskSubTagetId][25];
                 var findSubTargetDetailType = baseDic[taskSubTagetId][26];
 
                 var findSubLinks = FindLinks(
+                    findTargetTypeString,
                     findSubTargetDetailType,
                     findSubTargetType,
                     taskSubTagetId,
