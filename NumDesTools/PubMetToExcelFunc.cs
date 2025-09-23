@@ -3,13 +3,11 @@ using NLua;
 using NumDesTools.Config;
 using NumDesTools.UI;
 using OfficeOpenXml;
-using System;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Documents;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
 using Process = System.Diagnostics.Process;
@@ -922,8 +920,6 @@ public static class PubMetToExcelFunc
           5,
           array2D
       );
-
-
     }
 
     //向上获取最接近的key
