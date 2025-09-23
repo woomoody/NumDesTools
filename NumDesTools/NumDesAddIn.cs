@@ -2062,19 +2062,21 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void TestBar1_Click(IRibbonControl control)
     {
-        var files = new List<string>(
-            Directory.GetFiles(
-                @"C:\Users\cent\Downloads\configs_1.1.53\",
-                "*.json",
-                SearchOption.AllDirectories
-            )
-        );
-        var converter = new JsonToExcelConverter();
-        foreach (var jsonFile in files)
-        {
-            converter.ConvertMultipleJsonToExcel(jsonFile);
-        }
-
+        //var files = new List<string>(
+        //    Directory.GetFiles(
+        //        @"C:\Users\cent\Downloads\configs_1.1.53\",
+        //        "*.json",
+        //        SearchOption.AllDirectories
+        //    )
+        //);
+        //var converter = new JsonToExcelConverter();
+        //foreach (var jsonFile in files)
+        //{
+        //    converter.ConvertMultipleJsonToExcel(jsonFile);
+        //}
+        var ws = App.ActiveSheet;
+        var sheetName = ws.Name;
+        PubMetToExcelFunc.PhotoCardRatio(sheetName);
         //App.Visible = false;
         //App.ScreenUpdating = false;
         //App.DisplayAlerts = false;
