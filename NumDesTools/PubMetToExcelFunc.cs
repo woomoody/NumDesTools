@@ -1,13 +1,15 @@
-﻿using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
-using MiniExcelLibs;
+﻿using MiniExcelLibs;
 using NLua;
 using NumDesTools.Config;
 using NumDesTools.UI;
 using OfficeOpenXml;
+using System;
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Documents;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
 using Process = System.Diagnostics.Process;
@@ -849,6 +851,92 @@ public static class PubMetToExcelFunc
         }
     }
 
+    // 抽卡模拟
+    public static void PhotoCardRatio(string sheetName)
+    {
+        var baseName = "相册万能卡";
+        if (!sheetName.Contains(baseName))
+            MessageBox.Show("当前表格不是【相册万能卡**】,无法使用相册万能卡功能");
+        var sourceRatioRange = PubMetToExcel.ReadExcelDataC(sheetName, 1, 100, 1, 2);
+        var loopNumRange = PubMetToExcel.ReadExcelDataC(sheetName, 1, 1, 3, 3);
+
+        var rowCount = sourceRatioRange.GetLength(0);
+
+        var sourceRatioDic = new Dictionary<int , double>();
+        for (int i = 0; i < rowCount; i++)
+        {
+            var sourceRatioRow = sourceRatioRange[i, 0]?.ToString();
+            if(sourceRatioRow == "ExcelDna.Integration.ExcelEmpty")
+            {
+                break;
+            }
+            sourceRatioDic[Convert.ToInt32(sourceRatioRow)] = Convert.ToDouble(sourceRatioRange[i, 1]);
+        }
+
+        //初始化字典
+        var simRatioDic = new Dictionary<int, int>();
+        int maxKey = sourceRatioDic.Keys.Max();
+        for (int i = 1; i <= maxKey; i++)
+        {
+            simRatioDic[i] = 0;
+        }
+        //模拟次数
+        int loopNum = Convert.ToInt32(loopNumRange[0, 0]);
+        for (int i = 0; i < loopNum; i++)
+        {
+            var getNum = 1;
+            bool getIt = false;
+            var random = new Random();
+            while (!getIt)
+            {
+                double randSeed = random.NextDouble();
+                var getNumValue = GetNearKeyValue(sourceRatioDic , getNum);
+                if(randSeed <= getNumValue)
+                {
+                    getIt = true;
+                    simRatioDic[getNum] = simRatioDic[getNum] + 1;
+                }
+                else
+                {
+                    getNum++;
+                }
+                
+            }
+        }
+
+        //输出到表格
+        object[,] array2D = new object[simRatioDic.Count, 2];
+        int row = 0;
+        foreach (var kvp in simRatioDic)
+        {
+            array2D[row, 0] = kvp.Key;   // 第一列放key
+            array2D[row, 1] = kvp.Value;  // 第二列放value
+            row++;
+        }
+
+        PubMetToExcel.WriteExcelDataC(
+          sheetName,
+          1,
+          1 + simRatioDic.Count - 1,
+          4,
+          5,
+          array2D
+      );
+
+
+    }
+
+    //向上获取最接近的key
+    private static double GetNearKeyValue(Dictionary<int, double> dic , int getNum)
+    {
+        double getNumValue = 0;
+        while (!dic.ContainsKey(getNum))
+        {
+            getNum--;
+        }
+        getNumValue = dic[getNum];
+        return getNumValue;
+    }
     //遍历目录文件
     public static void ExcelFolderPath(string[] folder)
     {
