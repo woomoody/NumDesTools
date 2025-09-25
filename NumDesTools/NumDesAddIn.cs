@@ -24,6 +24,8 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
+using MiniExcelLibs;
+using MiniExcelLibs.OpenXml;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using NumDesTools.Com;
@@ -111,6 +113,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         InitializeButtons();
         ExcelPackage.License.SetNonCommercialPersonal("cent");
     }
+
+    // MiniExcel本地缓存管理
+    public static OpenXmlConfiguration OnOffMiniExcelCatches = new OpenXmlConfiguration
+    {
+        EnableSharedStringCache = false
+    };
+    public static OpenXmlConfiguration SelfSizeMiniExcelCatches = new OpenXmlConfiguration
+    {
+        SharedStringCacheSize = 500 * 1024 * 1024
+    };
 
     #region 释放COM
 
@@ -347,60 +359,60 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     void IExcelAddIn.AutoOpen()
     {
-//#if RELEASE
-//        string addInPath = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
-//        var isInstall = SelfEnvironmentDetector.IsInstalled(
-//            _requiredVersion,
-//            "Microsoft.NETCore.App",
-//            "dotnet",
-//            "--list-runtimes"
-//        );
-//        if (isInstall)
-//        {
-//            //MessageBox.Show(@$".NET {_requiredVersion} 已安装");
-//        }
-//        else
-//        {
-//            // .NET 未安装，执行安装程序
-//            MessageBox.Show(@$".NET {_requiredVersion} 未安装，点击安装...");
-//            string installerPath = Path.Combine(
-//                addInPath,
-//                "windowsdesktop-runtime-9.0.7-win-x64.exe"
-//            );
+        //#if RELEASE
+        //        string addInPath = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
+        //        var isInstall = SelfEnvironmentDetector.IsInstalled(
+        //            _requiredVersion,
+        //            "Microsoft.NETCore.App",
+        //            "dotnet",
+        //            "--list-runtimes"
+        //        );
+        //        if (isInstall)
+        //        {
+        //            //MessageBox.Show(@$".NET {_requiredVersion} 已安装");
+        //        }
+        //        else
+        //        {
+        //            // .NET 未安装，执行安装程序
+        //            MessageBox.Show(@$".NET {_requiredVersion} 未安装，点击安装...");
+        //            string installerPath = Path.Combine(
+        //                addInPath,
+        //                "windowsdesktop-runtime-9.0.7-win-x64.exe"
+        //            );
 
-//            // 调用安装程序并等待安装完成
-//            var process = new Process
-//            {
-//                StartInfo = new ProcessStartInfo
-//                {
-//                    FileName = installerPath,
-//                    Arguments = "/quiet /norestart", // 静默安装参数（根据需要调整）
-//                    UseShellExecute = false, // 不使用 Shell 执行
-//                    CreateNoWindow = true // 不显示窗口
-//                }
-//            };
+        //            // 调用安装程序并等待安装完成
+        //            var process = new Process
+        //            {
+        //                StartInfo = new ProcessStartInfo
+        //                {
+        //                    FileName = installerPath,
+        //                    Arguments = "/quiet /norestart", // 静默安装参数（根据需要调整）
+        //                    UseShellExecute = false, // 不使用 Shell 执行
+        //                    CreateNoWindow = true // 不显示窗口
+        //                }
+        //            };
 
-//            try
-//            {
-//                process.Start();
-//                process.WaitForExit(); // 等待安装程序完成
-//                if (process.ExitCode == 0)
-//                {
-//                    MessageBox.Show("安装完成！");
-//                }
-//                else
-//                {
-//                    MessageBox.Show($"安装程序执行失败，退出代码：{process.ExitCode}");
-//                    return; // 如果安装失败，退出后续逻辑
-//                }
-//            }
-//            catch (Exception ex)
-//            {
-//                MessageBox.Show($"安装程序启动失败：{ex.Message}");
-//                return; // 如果启动失败，退出后续逻辑
-//            }
-//        }
-//#endif
+        //            try
+        //            {
+        //                process.Start();
+        //                process.WaitForExit(); // 等待安装程序完成
+        //                if (process.ExitCode == 0)
+        //                {
+        //                    MessageBox.Show("安装完成！");
+        //                }
+        //                else
+        //                {
+        //                    MessageBox.Show($"安装程序执行失败，退出代码：{process.ExitCode}");
+        //                    return; // 如果安装失败，退出后续逻辑
+        //                }
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                MessageBox.Show($"安装程序启动失败：{ex.Message}");
+        //                return; // 如果启动失败，退出后续逻辑
+        //            }
+        //        }
+        //#endif
 
         //注册智能感应
         IntelliSenseServer.Install();
@@ -839,10 +851,35 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
     {
+        var workBook = NumDesAddIn.App.ActiveWorkbook;
+        var wkFullPath = workBook.FullName;
+        var wkFileName = workBook.Name;
+
         //自检工作簿中第2列是否有重复值、单元格值根据2行的数据类型检测是否非法
         var ctpCheckValueName = "错误数据";
-        var sourceData = PubMetToExcelFunc.CheckRepeatValue();
-        sourceData.AddRange(PubMetToExcelFunc.CheckValueFormat());
+
+        List<(string, int, int, string, string)> sourceData = new ();
+
+        if (!wkFileName.Contains("#"))
+        {
+            var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
+            foreach (var sheetName in sheetNames)
+            {
+                if (sheetName.Contains("#") || sheetName.Contains("Chart"))
+                    continue;
+
+                var rows = MiniExcel.Query(wkFullPath, sheetName: sheetName, configuration: OnOffMiniExcelCatches).ToList();
+
+                if(rows.Count <= 4)
+                    continue;
+
+                // 数据查重
+                sourceData = PubMetToExcelFunc.CheckRepeatValue(rows ,sheetName);
+
+                // 数据合法性
+                sourceData.AddRange(PubMetToExcelFunc.CheckValueFormat(rows, sheetName));
+            }
+        }
 
         if (CheckSheetValueText == "数据自检：开启" && sourceData.Count > 0)
         {
@@ -862,9 +899,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //取消隐藏
         if (CheckSheetValueText == "数据自检：开启")
         {
-            var workBook = App.ActiveWorkbook;
-            var workPath = workBook.FullName;
-            var isModified = SvnGitTools.IsFileModified(workPath);
+            var isModified = SvnGitTools.IsFileModified(wkFullPath);
             if (isModified)
                 foreach (Worksheet sheet in workBook.Worksheets)
                 {
@@ -888,6 +923,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     MsoCTPDockPosition.msoCTPDockPositionLeft
                 );
         }
+
+        Marshal.ReleaseComObject(workBook);
     }
 
     public void AllWorkbookOutPut_Click(IRibbonControl control)
@@ -1604,6 +1641,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 );
         }
     }
+
     //查询某个公式名字在工作簿哪个位置
     public void ExcelSearchAllFormulaName_Click(IRibbonControl control)
     {
@@ -1648,10 +1686,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var filesCollection = new SelfExcelFileCollector(path);
         var files = filesCollection.GetAllExcelFilesPath();
 
-        var isMulti = true;
-
         var targetList = new List<(string, int, int, string, string, string)>();
-     
 
         var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
@@ -1667,17 +1702,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
         };
 
-        if (isMulti)
-        {
-            Parallel.ForEach(files, options, processFile);
-        }
-        else
-        {
-            foreach (var file in files)
-            {
-                processFile(file);
-            }
-        }
+        Parallel.ForEach(files, options, processFile);
 
         // 展示Excel单元格数据格式错误
         if (targetList.Count > 0)
@@ -1806,6 +1831,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         ExcelDataAutoInsertActivityServer.ModeDataUpdate();
     }
+
     public void AutoMergeExcel_Click(IRibbonControl control)
     {
         ExcelDataAutoInsertCopyMulti.MergeData(true);
@@ -2038,7 +2064,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var fileList = SvnGitTools.GitDiffFileCount(line1);
             VstoExcel.FixHiddenCellVsto(fileList.ToArray());
             App.Workbooks.Open(path);
-
         }
         catch (COMException ex)
         {
@@ -2826,27 +2851,52 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void CheckFileFormat_Click(IRibbonControl control)
     {
+        var workBook = App.ActiveWorkbook;
+        var wkFullPath = workBook.FullName;
+        var wkFileName = workBook.Name;
+
         //自检工作簿中第2列是否有重复值、单元格值根据2行的数据类型检测是否非法
         var ctpCheckValueName = "错误数据";
-        var sourceData = PubMetToExcelFunc.CheckRepeatValue();
-        sourceData.AddRange(PubMetToExcelFunc.CheckValueFormat());
 
-        NumDesCTP.DeleteCTP(true, ctpCheckValueName);
-        _ = (SheetCellSeachResult)
-            NumDesCTP.ShowCTP(
-                800,
-                ctpCheckValueName,
-                true,
-                ctpCheckValueName,
-                new SheetCellSeachResult(sourceData),
-                MsoCTPDockPosition.msoCTPDockPositionRight
-            );
+        List<(string, int, int, string, string)> sourceData = new();
 
+        if (!wkFileName.Contains("#"))
+        {
+            var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
+            foreach (var sheetName in sheetNames)
+            {
+                if (sheetName.Contains("#") || sheetName.Contains("Chart"))
+                    continue;
+
+                var rows = MiniExcel.Query(wkFullPath, sheetName: sheetName, configuration: OnOffMiniExcelCatches).ToList();
+
+                if (rows.Count <= 4)
+                    continue;
+
+                // 数据查重
+                sourceData = PubMetToExcelFunc.CheckRepeatValue(rows, sheetName);
+
+                // 数据合法性
+                sourceData.AddRange(PubMetToExcelFunc.CheckValueFormat(rows, sheetName));
+            }
+        }
+
+        if(sourceData.Count > 0)
+        {
+            NumDesCTP.DeleteCTP(true, ctpCheckValueName);
+            _ = (SheetCellSeachResult)
+                NumDesCTP.ShowCTP(
+                    800,
+                    ctpCheckValueName,
+                    true,
+                    ctpCheckValueName,
+                    new SheetCellSeachResult(sourceData),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+        }
+        
         //取消隐藏
-
-        var workBook = App.ActiveWorkbook;
-        var workPath = workBook.FullName;
-        var isModified = SvnGitTools.IsFileModified(workPath);
+        var isModified = SvnGitTools.IsFileModified(wkFullPath);
         if (isModified)
             foreach (Worksheet sheet in workBook.Worksheets)
             {
