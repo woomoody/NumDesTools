@@ -1,13 +1,13 @@
-﻿using MiniExcelLibs;
-using NLua;
-using NumDesTools.Config;
-using NumDesTools.UI;
-using OfficeOpenXml;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using MiniExcelLibs;
+using NLua;
+using NumDesTools.Config;
+using NumDesTools.UI;
+using OfficeOpenXml;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
 using Process = System.Diagnostics.Process;
@@ -860,15 +860,17 @@ public static class PubMetToExcelFunc
 
         var rowCount = sourceRatioRange.GetLength(0);
 
-        var sourceRatioDic = new Dictionary<int , double>();
+        var sourceRatioDic = new Dictionary<int, double>();
         for (int i = 0; i < rowCount; i++)
         {
             var sourceRatioRow = sourceRatioRange[i, 0]?.ToString();
-            if(sourceRatioRow == "ExcelDna.Integration.ExcelEmpty")
+            if (sourceRatioRow == "ExcelDna.Integration.ExcelEmpty")
             {
                 break;
             }
-            sourceRatioDic[Convert.ToInt32(sourceRatioRow)] = Convert.ToDouble(sourceRatioRange[i, 1]);
+            sourceRatioDic[Convert.ToInt32(sourceRatioRow)] = Convert.ToDouble(
+                sourceRatioRange[i, 1]
+            );
         }
 
         //初始化字典
@@ -888,8 +890,8 @@ public static class PubMetToExcelFunc
             while (!getIt)
             {
                 double randSeed = random.NextDouble();
-                var getNumValue = GetNearKeyValue(sourceRatioDic , getNum);
-                if(randSeed <= getNumValue)
+                var getNumValue = GetNearKeyValue(sourceRatioDic, getNum);
+                if (randSeed <= getNumValue)
                 {
                     getIt = true;
                     simRatioDic[getNum] = simRatioDic[getNum] + 1;
@@ -898,7 +900,6 @@ public static class PubMetToExcelFunc
                 {
                     getNum++;
                 }
-                
             }
         }
 
@@ -907,23 +908,16 @@ public static class PubMetToExcelFunc
         int row = 0;
         foreach (var kvp in simRatioDic)
         {
-            array2D[row, 0] = kvp.Key;   // 第一列放key
-            array2D[row, 1] = kvp.Value;  // 第二列放value
+            array2D[row, 0] = kvp.Key; // 第一列放key
+            array2D[row, 1] = kvp.Value; // 第二列放value
             row++;
         }
 
-        PubMetToExcel.WriteExcelDataC(
-          sheetName,
-          1,
-          1 + simRatioDic.Count - 1,
-          4,
-          5,
-          array2D
-      );
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, 1 + simRatioDic.Count - 1, 4, 5, array2D);
     }
 
     //向上获取最接近的key
-    private static double GetNearKeyValue(Dictionary<int, double> dic , int getNum)
+    private static double GetNearKeyValue(Dictionary<int, double> dic, int getNum)
     {
         double getNumValue = 0;
         while (!dic.ContainsKey(getNum))
@@ -933,6 +927,7 @@ public static class PubMetToExcelFunc
         getNumValue = dic[getNum];
         return getNumValue;
     }
+
     //遍历目录文件
     public static void ExcelFolderPath(string[] folder)
     {
@@ -1650,91 +1645,58 @@ public static class PubMetToExcelFunc
     }
 
     //数据查重-MiniExcel
-    public static List<(string, int, int, string, string)> CheckRepeatValue()
+    public static List<(string, int, int, string, string)> CheckRepeatValue(
+        IEnumerable<dynamic> rows,
+        string sheetName
+    )
     {
-        var workBook = NumDesAddIn.App.ActiveWorkbook;
-
-        var wkFullPath = workBook.FullName;
-
-        var wkFileName = workBook.Name;
-
         var sourceData = new List<(string, int, int, string, string)>();
 
-        if (wkFileName.Contains("#"))
+        var dataRows = rows.Skip(3).ToList();
+
+        if (dataRows.Count == 0)
         {
             return sourceData;
         }
 
-        var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
-
-        foreach (var sheetName in sheetNames)
+        // 检查第 1、2 列第 1 行的值是否为特定字符串，如果是则跳过该工作表
+        if (
+            dataRows.Any() && ((IDictionary<string, object>)dataRows[0])["A"]?.ToString() != "#"
+            || ((IDictionary<string, object>)dataRows[0])["B"]?.ToString() == null
+        )
         {
-            if (sheetName.Contains("#") || sheetName.Contains("Chart"))
-                continue;
-            var rows = MiniExcel.Query(wkFullPath, sheetName: sheetName).ToList();
-
-            if (rows.Count <= 4)
-            {
-                continue;
-            }
-
-            var dataRows = rows.Skip(3).ToList();
-
-            if (dataRows.Count == 0)
-            {
-                continue;
-            }
-
-            // 检查第 1、2 列第 1 行的值是否为特定字符串，如果是则跳过该工作表
-            if (
-                dataRows.Any() && ((IDictionary<string, object>)dataRows[0])["A"]?.ToString() != "#"
-                || ((IDictionary<string, object>)dataRows[0])["B"]?.ToString() == null
-            )
-            {
-                continue;
-            }
-
-            // 检查 List 中第 2 列是否有重复值，并返回重复值的行列号
-            var duplicates = dataRows
-                .Select((row, index) => new { Row = row, Index = index + 4 }) // 保留行号，+5 是因为跳过了前 4 行
-                .Where(x => ((IDictionary<string, object>)x.Row)["B"] != null) // 忽略 null 值
-                .GroupBy(x => ((IDictionary<string, object>)x.Row)["B"]) // 按第 2 列的值分组
-                .Where(group => group.Count() > 1) // 找出重复值
-                .SelectMany(group => group) // 展开分组
-                .ToList();
-
-            //转换数据格式
-            foreach (var duplicate in duplicates)
-            {
-                var cellValue = ((IDictionary<string, object>)duplicate.Row)["B"].ToString();
-                var cellRow = duplicate.Index;
-                var cellCol = 2; // 第 2 列
-                sourceData.Add((cellValue, cellRow, cellCol, sheetName, "数据重复"));
-            }
+            return sourceData;
         }
 
-        Marshal.ReleaseComObject(workBook);
+        // 检查 List 中第 2 列是否有重复值，并返回重复值的行列号
+        var duplicates = dataRows
+            .AsParallel()
+            .Select((row, index) => new { Row = row, Index = index + 4 }) // 保留行号，+5 是因为跳过了前 4 行
+            .Where(x => ((IDictionary<string, object>)x.Row)["B"] != null) // 忽略 null 值
+            .GroupBy(x => ((IDictionary<string, object>)x.Row)["B"]) // 按第 2 列的值分组
+            .Where(group => group.Count() > 1) // 找出重复值
+            .SelectMany(group => group) // 展开分组
+            .ToList();
+
+        //转换数据格式
+        foreach (var duplicate in duplicates)
+        {
+            var cellValue = ((IDictionary<string, object>)duplicate.Row)["B"].ToString();
+            var cellRow = duplicate.Index;
+            var cellCol = 2; // 第 2 列
+            sourceData.Add((cellValue, cellRow, cellCol, sheetName, "数据重复"));
+        }
 
         return sourceData;
     }
 
     //数据格式检查-MiniExcel
-    public static List<(string, int, int, string, string)> CheckValueFormat()
+    public static List<(string, int, int, string, string)> CheckValueFormat(
+        IEnumerable<dynamic> rows,
+        string sheetName
+    )
     {
-        var workBook = NumDesAddIn.App.ActiveWorkbook;
-
-        var wkFullPath = workBook.FullName;
-
-        var wkFileName = workBook.Name;
-
         var sourceData = new List<(string, int, int, string, string)>();
-
-        if (wkFileName.Contains("#"))
-        {
-            return sourceData;
-        }
-
-        var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
 
         //有可能不需要这么复杂的判断，只判断是否包含常见的错误组合
         //比如【双逗号，中括号+逗号，大括号+逗号】
@@ -1767,109 +1729,91 @@ public static class PubMetToExcelFunc
         var specialCharactersCheck = config.SpecialKeyList;
         var coupleCharactersCheck = config.CoupleKeyList;
 
-        foreach (var sheetName in sheetNames)
+        var dataRows = rows.ToList();
+
+        if (dataRows.Count == 0)
         {
-            if (sheetName.Contains("#"))
-                continue;
+            return sourceData;
+        }
 
-            var rows = MiniExcel.Query(wkFullPath, sheetName: sheetName).ToList();
+        // 检查第 1、2 列第 1 行的值是否为特定字符串，如果是则跳过该工作表
+        if (
+            dataRows.Any() && ((IDictionary<string, object>)dataRows[3])["A"]?.ToString() != "#"
+            || ((IDictionary<string, object>)dataRows[3])["B"]?.ToString() == null
+        )
+        {
+            return sourceData;
+        }
 
-            if (rows.Count <= 4)
+        var keyRow = dataRows[1] as IDictionary<string, object>;
+        var keyType = dataRows[2] as IDictionary<string, object>;
+        var keyCols = new List<string>(keyRow.Keys);
+        for (int rowIndex = 4; rowIndex < dataRows.Count; rowIndex++)
+        {
+            var row = dataRows[rowIndex] as IDictionary<string, object>;
+
+            for (int colIndex = 2; colIndex < keyCols.Count; colIndex++)
             {
-                continue;
-            }
-
-            // 检查第 1、2 列第 1 行的值是否为特定字符串，如果是则跳过该工作表
-            if (
-                rows.Any() && ((IDictionary<string, object>)rows[3])["A"]?.ToString() != "#"
-                || ((IDictionary<string, object>)rows[3])["B"]?.ToString() == null
-            )
-            {
-                continue;
-            }
-
-            var keyRow = rows[1] as IDictionary<string, object>;
-            var keyType = rows[2] as IDictionary<string, object>;
-            var keyCols = new List<string>(keyRow.Keys);
-            for (int rowIndex = 4; rowIndex < rows.Count; rowIndex++)
-            {
-                var row = rows[rowIndex] as IDictionary<string, object>;
-
-                for (int colIndex = 2; colIndex < keyCols.Count; colIndex++)
+                var col = keyCols[colIndex];
+                var keyCell = keyRow[col]?.ToString() ?? "";
+                var typeCell = keyType[col]?.ToString() ?? "";
+                if (keyCell == "" || keyCell.Contains("#"))
                 {
-                    var col = keyCols[colIndex];
-                    var keyCell = keyRow[col]?.ToString() ?? "";
-                    var typeCell = keyType[col]?.ToString() ?? "";
-                    if (keyCell == "" || keyCell.Contains("#"))
+                    continue;
+                }
+
+                var cellValue = row[col]?.ToString();
+                if (cellValue != null)
+                {
+                    if (
+                        normalCharactersCheck.Any(c => cellValue.Contains(c))
+                        && !typeCell.Contains("string")
+                    )
                     {
-                        continue;
+                        sourceData.Add(
+                            (cellValue, rowIndex + 1, colIndex + 1, sheetName, "多逗号或中文逗号")
+                        );
                     }
 
-                    var cellValue = row[col]?.ToString();
-                    if (cellValue != null)
+                    if (
+                        specialCharactersCheck.Any(c => cellValue.Contains(c))
+                        && !typeCell.Contains("string")
+                    )
                     {
-                        if (
-                            normalCharactersCheck.Any(c => cellValue.Contains(c))
-                            && !typeCell.Contains("string")
-                        )
+                        sourceData.Add((cellValue, rowIndex + 1, colIndex + 1, sheetName, "少逗号"));
+                    }
+
+                    foreach (var (leftString, rightString) in coupleCharactersCheck)
+                    {
+                        var leftStringCount = Regex
+                            .Matches(cellValue, Regex.Escape(leftString), RegexOptions.IgnoreCase)
+                            .Count;
+                        var RightStringCount = Regex
+                            .Matches(cellValue, Regex.Escape(rightString), RegexOptions.IgnoreCase)
+                            .Count;
+                        if (leftStringCount != RightStringCount)
                         {
                             sourceData.Add(
-                                (cellValue, rowIndex + 1, colIndex + 1, sheetName, "多逗号或中文逗号")
+                                (cellValue, rowIndex + 1, colIndex + 1, sheetName, "括号问题")
                             );
+                            break;
                         }
 
-                        if (
-                            specialCharactersCheck.Any(c => cellValue.Contains(c))
-                            && !typeCell.Contains("string")
-                        )
+                        if (leftString == "\"")
                         {
-                            sourceData.Add(
-                                (cellValue, rowIndex + 1, colIndex + 1, sheetName, "少逗号")
-                            );
-                        }
-
-                        foreach (var (leftString, rightString) in coupleCharactersCheck)
-                        {
-                            var leftStringCount = Regex
-                                .Matches(
-                                    cellValue,
-                                    Regex.Escape(leftString),
-                                    RegexOptions.IgnoreCase
-                                )
-                                .Count;
-                            var RightStringCount = Regex
-                                .Matches(
-                                    cellValue,
-                                    Regex.Escape(rightString),
-                                    RegexOptions.IgnoreCase
-                                )
-                                .Count;
-                            if (leftStringCount != RightStringCount)
+                            int isDouble = leftStringCount % 2;
+                            if (isDouble != 0)
                             {
                                 sourceData.Add(
-                                    (cellValue, rowIndex + 1, colIndex + 1, sheetName, "括号问题")
+                                    (cellValue, rowIndex + 1, colIndex + 1, sheetName, "双引号问题")
                                 );
                                 break;
-                            }
-
-                            if (leftString == "\"")
-                            {
-                                int isDouble = leftStringCount % 2;
-                                if (isDouble != 0)
-                                {
-                                    sourceData.Add(
-                                        (cellValue, rowIndex + 1, colIndex + 1, sheetName, "双引号问题")
-                                    );
-                                    break;
-                                }
                             }
                         }
                     }
                 }
             }
         }
-
-        Marshal.ReleaseComObject(workBook);
 
         return sourceData;
     }
@@ -2521,9 +2465,8 @@ public static class PubMetToExcelFunc
 
         return targetList.ToList();
     }
-    public static List<(string, string, int, int)> SearchFormularNameFromExcel(
-     string findValue
- )
+
+    public static List<(string, string, int, int)> SearchFormularNameFromExcel(string findValue)
     {
         var wkPath = Wk.FullName;
         var targetList = new List<(string, string, int, int)>();
@@ -2534,13 +2477,13 @@ public static class PubMetToExcelFunc
             for (int i = 0; i < sheetCount; i++)
             {
                 var sheet = package.Workbook.Worksheets[i];
-                var formulaCells = sheet.Cells
-                    .Where(c => c.Formula != null && c.Formula.Contains(findValue))
+                var formulaCells = sheet
+                    .Cells.Where(c => c.Formula != null && c.Formula.Contains(findValue))
                     .Select(c => new
                     {
                         Address = c.Address,
                         Formula = c.Formula,
-                        Row = c.Start.Row,    // 获取行号（基于1）
+                        Row = c.Start.Row, // 获取行号（基于1）
                         Column = c.Start.Column // 获取列号（基于1）
                     });
 
