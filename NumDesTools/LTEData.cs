@@ -746,14 +746,15 @@ public class LteData
                             funDepends,
                             funDy1,
                             funDy2,
-                            funDy3
+                            funDy3,
+                            idList
                         ),
                     "Mer" => Mer(exportWildcardDyData, funDepends, itemId, funDy1),
                     "MerB"
                         => MerB(exportWildcardDyData, funDepends, itemId, funDy1, funDy2, funDy3),
                     "MerTry"
                         => MerTry(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3, idList),
-                    "Ads" => Ads(exportWildcardDyData, funDepends, funDy1),
+                    "Ads" => Ads(exportWildcardDyData, funDepends, funDy1, idList),
                     "Arr" => Arr(exportWildcardDyData, funDepends, funDy1, funDy2),
                     "Get" => Get(exportWildcardDyData, funDepends, funDy1, funDy2),
                     "GetDic"
@@ -847,7 +848,8 @@ public class LteData
         string funDepends,
         string funDy1,
         string funDy2,
-        string funDy3
+        string funDy3,
+        List<string> idList
     )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "2" : funDy1;
@@ -863,7 +865,11 @@ public class LteData
             var linkList = new List<string>();
             for (int i = 0; i < int.Parse(maxLink); i++)
             {
-                linkList.Add((long.Parse(fixWildcardValue) + i + 1).ToString());
+                var tempId = (long.Parse(fixWildcardValue) + i + 1).ToString();
+                if (idList.Contains(tempId))
+                {
+                    linkList.Add(tempId);
+                }
             }
             strDictionary[wildcard][fixWildcardValue] = linkList;
         }
@@ -993,15 +999,17 @@ public class LteData
         funDy2 = string.IsNullOrEmpty(funDy2) ? "3" : funDy2;
         funDy3 = string.IsNullOrEmpty(funDy3) ? "10" : funDy3;
         string merB = MerB(exportWildcardDyData, funDepends, itemId, funDy1, funDy2, funDy3);
-        string mer;
-        mer = !idList.Contains(merB) ? Mer(exportWildcardDyData, funDepends, itemId, funDy1) : merB;
+        var mer = !idList.Contains(merB)
+            ? Mer(exportWildcardDyData, funDepends, itemId, funDy1)
+            : merB;
         return mer;
     }
 
     private static string Ads(
         Dictionary<string, string> exportWildcardDyData,
         string funDepends,
-        string funDy1
+        string funDy1,
+        List<string> idList
     )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "链类最大值" : funDy1;
@@ -1034,7 +1042,11 @@ public class LteData
         foreach (var num in loopNum)
         {
             var digNum = (long.Parse(rootNum) + num).ToString();
-            result += digNum + ",";
+            // 验证ID是否存在
+            if (idList.Contains(digNum))
+            {
+                result += digNum + ",";
+            }
         }
 
         result = result.Substring(0, result.Length - 1);
@@ -2181,13 +2193,13 @@ public class LteData
             findLinks += "{" + findTargetType + "," + findTargetId + "},";
         }
 
-        //2层查找
+        // 2层查找
         List<string> matchedIDsOri = copyDic
             .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId))
             .Select(kv => kv.Key)
             .ToList();
 
-        //有没有直接匹配的，都需要需要继续查找（按照链的规则）
+        //没有直接匹配的，需要继续查找（按照链的规则）
         var findTargetId01 = findTargetId.Substring(0, findTargetId.Length - 2) + "01";
         List<string> matchedIDs01 = copyDic
             .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId01))
@@ -2212,14 +2224,37 @@ public class LteData
         matchedIDsEnd.AddRange(matchedIDs02);
         matchedIDsEnd.AddRange(matchedIDs03);
 
-        // 按照优先级选择第一个匹配项
-        string finalMatchedID = matchedIDs01.FirstOrDefault()
-                             ?? matchedIDs02.FirstOrDefault()
-                             ?? matchedIDs03.FirstOrDefault()
-                             ?? matchedIDsOri.FirstOrDefault()
-                             ??String.Empty;
+        //// 按照优先级选择最后一个匹配项
+        //string finalMatchedId = matchedIDsOri.LastOrDefault()
+        //                     ?? matchedIDs03.LastOrDefault()
+        //                     ?? matchedIDs02.LastOrDefault()
+        //                     ?? matchedIDs01.LastOrDefault()
+        //                     ??String.Empty;
 
+
+
+        // 3层查找
+        List<string> matchedIDsOri3 = new();
+
+        if (matchedIDsEnd.Count > 0)
+        {
+            foreach (var findTargetId2 in matchedIDsEnd)
+            {
+                matchedIDsOri3.AddRange(
+                    copyDic
+                        .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId2))
+                        .Select(kv => kv.Key)
+                        .ToList()
+                );
+            }
+        }
+        matchedIDsEnd.AddRange(matchedIDsOri3);
+
+        // 寻找字符串格式化
         List<string> matchedIDs = new HashSet<string>(matchedIDsEnd).ToList();
+
+        // 寻找界面提示使用最后的id，因为其他id可能没有图片资源
+        string finalMatchedId = matchedIDs.LastOrDefault() ?? string.Empty;
 
         if (matchedIDs.Count == 0)
         {
@@ -2227,13 +2262,19 @@ public class LteData
         }
         else
         {
-            int itemCount = 0;
-            foreach (var findTargetId2 in matchedIDs)
+            // 针对找自己的情况做出区分
+            if (findLinks.Contains("{32,"))
             {
-                if (findTargetId2 != string.Empty)
+                findLinks = string.Empty;
+            }
+
+            int itemCount = 0;
+            foreach (var findTargetId3 in matchedIDs)
+            {
+                if (findTargetId3 != string.Empty)
                 {
-                    var findTargetType2 = copyDic[findTargetId2][25];
-                    var findTargetDetailType2 = copyDic[findTargetId2][26];
+                    var findTargetType2 = copyDic[findTargetId3][25];
+                    var findTargetDetailType2 = copyDic[findTargetId3][26];
 
                     if (findTargetType2 != string.Empty)
                     {
@@ -2249,16 +2290,16 @@ public class LteData
                                 + ","
                                 + findTargetDetailType2
                                 + ","
-                                + findTargetId2
+                                + findTargetId3
                                 + "},";
                         }
                         else if (findTargetType2 == "1")
                         {
-                            findLinks += "{" + findTargetType2 + "," + findTargetId2 + "},";
+                            findLinks += "{" + findTargetType2 + "," + findTargetId3 + "},";
                         }
                         else
                         {
-                            findLinks += "{" + findTargetType2 + "," + findTargetId2 + "},";
+                            findLinks += "{" + findTargetType2 + "," + findTargetId3 + "},";
                         }
                         if (itemCount == 0)
                         {
@@ -2268,12 +2309,12 @@ public class LteData
                                     "{3,"
                                     + findTargetId.Substring(0, findTargetId.Length - 2)
                                     + "00,"
-                                    + finalMatchedID
+                                    + finalMatchedId
                                     + "}";
                             }
                             else
                             {
-                                findTips = "{1,\"tip_obstacleItem\",1," + finalMatchedID + "}";
+                                findTips = "{1,\"tip_obstacleItem\",1," + finalMatchedId + "}";
                             }
                         }
                     }

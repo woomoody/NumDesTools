@@ -1,10 +1,10 @@
-﻿using System.Text;
+﻿using MiniExcelLibs;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
-using MiniExcelLibs;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
 
@@ -4010,6 +4010,7 @@ public class ExcelDataAutoInsertNumChanges
                 {
                     var keyIndexValue = eachExcelData.Value.Item2[i][0]?.ToString();
                     var keyTargetValue = eachExcelData.Value.Item2[i][j]?.ToString();
+
                     if (keyIndexValue != null && keyTargetValue != null && keyIndexValue != "")
                     {
                         var keyIndexRow = excelObj.FindFromRow(

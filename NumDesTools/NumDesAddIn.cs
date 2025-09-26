@@ -851,7 +851,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
     {
-        var workBook = NumDesAddIn.App.ActiveWorkbook;
+        var workBook = App.ActiveWorkbook;
         var wkFullPath = workBook.FullName;
         var wkFileName = workBook.Name;
 
@@ -926,6 +926,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
 
         Marshal.ReleaseComObject(workBook);
+
+        //if (cancel == false)
+        //{
+        //    // 使用Epplus读取保存的形式压缩Excel文件？
+        //    FileInfo file = new FileInfo(wkFullPath);
+        //    using (ExcelPackage package = new ExcelPackage(file))
+        //    {
+        //        package.Save(); // 覆盖原文件
+        //    }
+        //}
     }
 
     public void AllWorkbookOutPut_Click(IRibbonControl control)
