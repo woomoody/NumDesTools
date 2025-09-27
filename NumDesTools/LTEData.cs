@@ -26,7 +26,7 @@ public class LteData
 
     private const int BaseDataTagCol = 0;
     private const int BaseDataStartCol = 1;
-    private const int BaseDataEndCol = 33;
+    private const int BaseDataEndCol = 35;
     private const int FindDataTagCol = 0;
     private const int FindDataStartCol = 1;
     private const int FindDataEndCol = 9;
@@ -1819,11 +1819,23 @@ public class LteData
         {
             var key = baseList.Key;
 
+            // 资源编号和图片编号
+            string prefabId = baseDic[key][1];
+            if (string.IsNullOrEmpty(prefabId))
+            {
+                baseDic[key][1] = key;
+            }
+            string iconId = baseDic[key][2];
+            if (string.IsNullOrEmpty(iconId))
+            {
+                baseDic[key][2] = key;
+            }
+
             //寻找类型、寻找细类
             string findType;
             string findDetailType;
 
-            string itemType = baseDic[key][6];
+            string itemType = baseDic[key][8];
 
             //判断类型是否存在
             if (dataTypeDic.ContainsKey(itemType))
@@ -1841,10 +1853,10 @@ public class LteData
 
             //链长
             string linkMax = string.Empty;
-            string currentName = baseDic[key][4];
+            string currentName = baseDic[key][6];
             int countCurrent = baseDic
-                .Values.Where(list => list.Count > 4)
-                .Count(list => list[4] == currentName);
+                .Values.Where(list => list.Count > 6)
+                .Count(list => list[6] == currentName);
 
             if (itemType.Contains("链"))
             {
@@ -1857,7 +1869,7 @@ public class LteData
 
             //五合提示
             string fiveMergeTip = string.Empty;
-            string rank = baseDic[key][5];
+            string rank = baseDic[key][7];
 
             if (int.TryParse(rank, out int rankNum))
             {
@@ -1869,24 +1881,20 @@ public class LteData
             baseDic[key].Add(fiveMergeTip);
 
             //消耗ID组、产出ID组、消耗量组、产出量组
-            string consumeIdGroup;
-            string productIdGroup;
-            string consumeCountGroup;
-            string productCountGroup;
 
             var consumeIdList = new List<string>();
             var productIdList = new List<string>();
             var consumeCountList = new List<string>();
             var productCountList = new List<string>();
 
-            var idNameList = new List<int> { 9, 11, 13, 15, 17, 19, 21, 23 };
-            var countNumList = new List<int> { 10, 12, 14, 16, 18, 20, 22, 24 };
+            var idNameList = new List<int> { 11, 13, 15, 17, 19, 21, 23 ,25};
+            var countNumList = new List<int> {  12, 14, 16, 18, 20, 22, 24 ,26};
 
-            string firstPos = baseDic[key][1];
+            string firstPos = baseDic[key][3];
             var firstPosPre = firstPos.Split("-")[0];
 
-            int onlyNum = 2;
-            int num = 3;
+            int onlyNum = 4;
+            int num = 5;
 
             int countNum = 0;
             foreach (var idName in idNameList)
@@ -1940,21 +1948,21 @@ public class LteData
             //用来建立道具关系,此时组成的消耗组，只是为了建立寻找关系
             if (consumeIdList.Count == 0)
             {
-                //该UD的代号和唯一代号
+                //该ID的代号和唯一代号
                 var orginNum = baseDic[key][num];
                 var orginOnlyNum = baseDic[key][onlyNum];
                 string matchId = baseDic
                     .FirstOrDefault(kv =>
-                        kv.Value.Count > 15
-                        && kv.Value[1].Split("-")[0] + kv.Value[9] == orginOnlyNum
+                        kv.Value.Count > 17
+                        && kv.Value[3].Split("-")[0] + kv.Value[11] == orginOnlyNum
                     )
                     .Key;
                 if (matchId == null)
                 {
                     matchId = baseDic
                         .FirstOrDefault(kv =>
-                            kv.Value.Count > 15
-                            && kv.Value[1].Split("-")[0] + kv.Value[11] == orginOnlyNum
+                            kv.Value.Count > 17
+                            && kv.Value[3].Split("-")[0] + kv.Value[13] == orginOnlyNum
                         )
                         .Key;
                 }
@@ -1962,8 +1970,8 @@ public class LteData
                 {
                     matchId = baseDic
                         .FirstOrDefault(kv =>
-                            kv.Value.Count > 15
-                            && kv.Value[1].Split("-")[0] + kv.Value[13] == orginOnlyNum
+                            kv.Value.Count > 17
+                            && kv.Value[3].Split("-")[0] + kv.Value[15] == orginOnlyNum
                         )
                         .Key;
                 }
@@ -1971,8 +1979,8 @@ public class LteData
                 {
                     matchId = baseDic
                         .FirstOrDefault(kv =>
-                            kv.Value.Count > 15
-                            && kv.Value[1].Split("-")[0] + kv.Value[15] == orginOnlyNum
+                            kv.Value.Count > 17
+                            && kv.Value[3].Split("-")[0] + kv.Value[17] == orginOnlyNum
                         )
                         .Key;
                 }
@@ -1980,7 +1988,7 @@ public class LteData
                 if (matchId == null)
                 {
                     matchId = baseDic
-                        .FirstOrDefault(kv => kv.Value.Count > 9 && kv.Value[9] == orginNum)
+                        .FirstOrDefault(kv => kv.Value.Count > 11 && kv.Value[11] == orginNum)
                         .Key;
                 }
                 if (matchId != null)
@@ -1990,10 +1998,10 @@ public class LteData
                 }
             }
 
-            consumeIdGroup = string.Join("#", consumeIdList);
-            productIdGroup = string.Join("#", productIdList);
-            consumeCountGroup = string.Join("#", consumeCountList);
-            productCountGroup = string.Join("#", productCountList);
+            var consumeIdGroup = string.Join("#", consumeIdList);
+            var productIdGroup = string.Join("#", productIdList);
+            var consumeCountGroup = string.Join("#", consumeCountList);
+            var productCountGroup = string.Join("#", productCountList);
 
             baseDic[key].Add(consumeIdGroup);
             baseDic[key].Add(productIdGroup);
@@ -2021,7 +2029,7 @@ public class LteData
 
         foreach (var key in copyDic.Keys)
         {
-            var keyType = copyDic[key][6];
+            var keyType = copyDic[key][8];
             if (!dataTypeDic.ContainsKey(keyType))
             {
                 continue;
@@ -2032,7 +2040,7 @@ public class LteData
                 continue;
             }
             // 消耗组，第1层寻找
-            var inputGroup = copyDic[key][29];
+            var inputGroup = copyDic[key][31];
             var inputArray = inputGroup.Split("#");
 
             for (int i = 0; i < inputArray.Length; i++)
@@ -2048,8 +2056,8 @@ public class LteData
                     continue;
                 }
 
-                var findTargetType = copyDic[findTargetId][25];
-                var findTargetDetailType = copyDic[findTargetId][26];
+                var findTargetType = copyDic[findTargetId][27];
+                var findTargetDetailType = copyDic[findTargetId][28];
 
                 if (findTargetType != String.Empty)
                 {
@@ -2064,7 +2072,7 @@ public class LteData
                     if (findLinks != String.Empty)
                     {
                         var findIdStr = Convert.ToString(findId, CultureInfo.InvariantCulture);
-                        var onlyName = copyDic[findIdStr][2];
+                        var onlyName = copyDic[findIdStr][4];
                         if (onlyName != String.Empty)
                         {
                             if (!findDic.ContainsKey(findIdStr))
@@ -2073,12 +2081,12 @@ public class LteData
                             }
 
                             findDic[findIdStr].Add(findIdStr);
-                            findDic[findIdStr].Add(copyDic[findIdStr][1]);
-                            findDic[findIdStr].Add(copyDic[findIdStr][2]);
                             findDic[findIdStr].Add(copyDic[findIdStr][3]);
                             findDic[findIdStr].Add(copyDic[findIdStr][4]);
-                            findDic[findIdStr].Add("寻-" + copyDic[key][6]);
-                            findDic[findIdStr].Add(copyDic[findIdStr][7]);
+                            findDic[findIdStr].Add(copyDic[findIdStr][5]);
+                            findDic[findIdStr].Add(copyDic[findIdStr][6]);
+                            findDic[findIdStr].Add("寻-" + copyDic[key][8]);
+                            findDic[findIdStr].Add(copyDic[findIdStr][9]);
                             findDic[findIdStr].Add(findTips);
 
                             var findLinksFix = findLinks.Substring(0, findLinks.Length - 1);
@@ -2195,26 +2203,26 @@ public class LteData
 
         // 2层查找
         List<string> matchedIDsOri = copyDic
-            .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId))
+            .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId))
             .Select(kv => kv.Key)
             .ToList();
 
         //没有直接匹配的，需要继续查找（按照链的规则）
         var findTargetId01 = findTargetId.Substring(0, findTargetId.Length - 2) + "01";
         List<string> matchedIDs01 = copyDic
-            .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId01))
+            .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId01))
             .Select(kv => kv.Key)
             .ToList();
 
         var findTargetId02 = findTargetId.Substring(0, findTargetId.Length - 2) + "02";
         List<string> matchedIDs02 = copyDic
-            .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId02))
+            .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId02))
             .Select(kv => kv.Key)
             .ToList();
 
         var findTargetId03 = findTargetId.Substring(0, findTargetId.Length - 2) + "03";
         List<string> matchedIDs03 = copyDic
-            .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId03))
+            .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId03))
             .Select(kv => kv.Key)
             .ToList();
 
@@ -2242,7 +2250,7 @@ public class LteData
             {
                 matchedIDsOri3.AddRange(
                     copyDic
-                        .Where(kv => kv.Value.Count > 30 && kv.Value[30].Contains(findTargetId2))
+                        .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId2))
                         .Select(kv => kv.Key)
                         .ToList()
                 );
@@ -2273,8 +2281,8 @@ public class LteData
             {
                 if (findTargetId3 != string.Empty)
                 {
-                    var findTargetType2 = copyDic[findTargetId3][25];
-                    var findTargetDetailType2 = copyDic[findTargetId3][26];
+                    var findTargetType2 = copyDic[findTargetId3][27];
+                    var findTargetDetailType2 = copyDic[findTargetId3][28];
 
                     if (findTargetType2 != string.Empty)
                     {
@@ -2292,10 +2300,6 @@ public class LteData
                                 + ","
                                 + findTargetId3
                                 + "},";
-                        }
-                        else if (findTargetType2 == "1")
-                        {
-                            findLinks += "{" + findTargetType2 + "," + findTargetId3 + "},";
                         }
                         else
                         {
