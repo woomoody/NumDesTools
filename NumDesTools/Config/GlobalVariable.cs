@@ -41,7 +41,9 @@ namespace NumDesTools.Config
                 {
                     "ChatGptSysContentTransferAss",
                     "你是一个助手，特别擅长多种语言的翻译工作,你的回答中只会输出指定的翻译后的内容，不掺杂其他解释， 根据输入内容中的换行符，作为行的分界线，所需要翻译语言的种类为列的分界线，输出的翻译结果格式为Json的嵌套数组，格式如下：[[\"A语言译文1\",\"A语言译文2\"],[\"B语言译文1\",\"B语言译文2\"]]"
-                }
+                },
+                // log retention days configurable
+                { "LogRetentionDays", "30" }
             };
 
         // 默认列表配置
@@ -75,6 +77,17 @@ namespace NumDesTools.Config
         public List<string> NormaKeyList => _configData.NormaKeyList;
         public List<string> SpecialKeyList => _configData.SpecialKeyList;
         public List<CoupleKey> CoupleKeyList => _configData.CoupleKeyList;
+
+        // Expose LogRetentionDays as int with fallback
+        public int LogRetentionDays
+        {
+            get
+            {
+                if (Value != null && Value.TryGetValue("LogRetentionDays", out var s) && int.TryParse(s, out var v))
+                    return Math.Max(1, v);
+                return 30;
+            }
+        }
 
         #endregion
 
