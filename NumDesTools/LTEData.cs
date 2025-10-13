@@ -1,9 +1,7 @@
-﻿using System.Text;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using Microsoft.VisualBasic;
 using NumDesTools.UI;
 using OfficeOpenXml;
-using Match = System.Text.RegularExpressions.Match;
 using System.Runtime.Versioning;
 
 namespace NumDesTools;
@@ -18,7 +16,9 @@ public class LteData
 
     private static string WkPath => Wk.Path;
 
+/*
     private static readonly Regex WildcardRegex = new("#(.*?)#", RegexOptions.Compiled);
+*/
 
     private static readonly Dictionary<string, (string id, string idType)> SheetTypeMap =
         new(StringComparer.Ordinal)
@@ -723,164 +723,6 @@ public class LteData
             id,
             itemId
         );
-    }
-
-    private static string Left(
-        Dictionary<string, string> exportWildcardDyData,
-        string funDepends,
-        string funDy1
-    )
-    {
-        return LteCore.Left(exportWildcardDyData, funDepends, funDy1);
-    }
-
-    private static string Right(
-        Dictionary<string, string> exportWildcardDyData,
-        string funDepends,
-        string funDy1
-    )
-    {
-        return LteCore.Right(exportWildcardDyData, funDepends, funDy1);
-    }
-
-    private static string Set(
-        Dictionary<string, string> exportWildcardDyData,
-        string funDepends,
-        string funDy1,
-        string funDy2
-    )
-    {
-        return LteCore.Set(exportWildcardDyData, funDepends, funDy1, funDy2);
-    }
-
-    private static string SetDic(
-        Dictionary<string, string> exportWildcardDyData,
-        Dictionary<string, Dictionary<string, List<string>>> strDictionary,
-        string wildcard,
-        string funDepends,
-        string funDy1,
-        string funDy2,
-        string funDy3,
-        List<string> idList
-    )
-    {
-        return LteCore.SetDic(
-            exportWildcardDyData,
-            strDictionary,
-            wildcard,
-            funDepends,
-            funDy1,
-            funDy2,
-            funDy3,
-            idList
-        );
-    }
-
-    private static string Mer(
-        Dictionary<string, string> exportWildcardDyData,
-        string funDepends,
-        string itemId,
-        string funDy1
-    )
-    {
-        return LteCore.Mer(exportWildcardDyData, funDepends, itemId, funDy1);
-    }
-
-    private static string MerB(
-        Dictionary<string, string> exportWildcardDyData,
-        string funDepends,
-        string itemId,
-        string funDy1,
-        string funDy2,
-        string funDy3
-    )
-    {
-        return LteCore.MerB(exportWildcardDyData, funDepends, itemId, funDy1, funDy2, funDy3);
-    }
-
-    private static string MerTry(
-        Dictionary<string, string> exportWildcardDyData,
-        string funDepends,
-        string funDy1,
-        string funDy2,
-        string funDy3,
-        List<string> idList
-    )
-    {
-        return LteCore.MerTry(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3, idList);
-    }
-
-    private static string Ads(
-        Dictionary<string, string> exportWildcardDyData,
-        string funDepends,
-        string funDy1,
-        List<string> idList
-    )
-    {
-        return LteCore.Ads(exportWildcardDyData, funDepends, funDy1, idList);
-    }
-
-    private static string Arr(
-        Dictionary<string, string> exportWildcardDyData,
-        string funDepends,
-        string funDy1,
-        string funDy2
-    //string funDy3
-    )
-    {
-        return LteCore.Arr(exportWildcardDyData, funDepends, funDy1, funDy2);
-    }
-
-    private static string Get(
-        Dictionary<string, string> exportWildcardDyData,
-        string funDepends,
-        string funDy1,
-        string funDy2
-    )
-    {
-        return LteCore.Get(exportWildcardDyData, funDepends, funDy1, funDy2);
-    }
-
-    private static string GetDic(
-        Dictionary<string, Dictionary<string, List<string>>> strDictionary,
-        Dictionary<string, string> exportWildcardDyData,
-        string funDepends,
-        string funDy1,
-        string funDy2,
-        string funDy3
-    )
-    {
-        return LteCore.GetDic(strDictionary, exportWildcardDyData, funDepends, funDy1, funDy2, funDy3);
-    }
-
-    private static string GetDicKey(string funDepends)
-    {
-        return LteCore.GetDicKey(funDepends);
-    }
-
-    private static string SplitArr(
-        Dictionary<string, string> exportWildcardDyData,
-        string funDepends,
-        string funDy1,
-        string funDy2
-    )
-    {
-        return LteCore.SplitArr(exportWildcardDyData, funDepends, funDy1, funDy2);
-    }
-
-    private static string CollectRow(
-        Dictionary<string, string> exportWildcardDyData,
-        string funDepends,
-        string funDy1,
-        string funDy2,
-        string funDy3,
-        string funDy4,
-        string funDy5,
-        Dictionary<string, List<string>> baseData,
-        string id
-    )
-    {
-        return LteCore.CollectRow(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3, funDy4, funDy5, baseData, id);
     }
 
     //获取动态值

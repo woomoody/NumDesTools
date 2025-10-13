@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using MiniExcelLibs;
+﻿using MiniExcelLibs;
 using Newtonsoft.Json;
 
 namespace NumDesTools
