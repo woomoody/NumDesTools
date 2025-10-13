@@ -151,9 +151,7 @@
   Dna打包文件移动并重命名
   -->
   <PropertyGroup>
-    <PostBuildEvent>
-      call "$(SolutionDir)packFromBin\ReNamePack.bat" /y
-    </PostBuildEvent>
+    <PostBuildEvent>if exist "$(SolutionDir)packFromBin\ReNamePack.bat" (call "$(SolutionDir)packFromBin\ReNamePack.bat" /y)</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <!--
