@@ -339,11 +339,11 @@ public static class PubMetToExcel
             .Reverse()
             .FirstOrDefault(c => c.Value != null && regexValue.IsMatch(c.Value.ToString()));
 
-        var rowIndex = -1;
         if (lastMatch != null)
         {
-            rowIndex = lastMatch.Start.Row;
+            return lastMatch.Start.Row;
         }
+
         return -1;
     }
 
@@ -1581,7 +1581,9 @@ public static class PubMetToExcel
 
             var schemeString = string.Join(",", scheme);
             if (seenSchemes.Add(schemeString))
-                result.Add([.. scheme]);
+            {
+                result.Add(scheme);
+            }
         }
 
         return result;
@@ -2347,7 +2349,7 @@ public static class PubMetToExcel
         Parallel.ForEach(
             longNumbers,
             kvp =>
-            {
+ {
                 string dictKey = kvp.Key; // 原始 Key
                 List<string> values = kvp.Value; // 该 Key 关联的 List<string>
 
@@ -2440,7 +2442,7 @@ public static class PubMetToExcel
                 continue;
             }
 
-            // 检查 List 中第 2 列是否有重复值，并返回重复值的行列号
+            // 检查 List 中第 2 列 是否有重复值，并返回重复值的行列号
             var duplicates = dataRows
                 .Select((row, index) => new { Row = row, Index = index + 4 }) // 保留行号，+5 是因为跳过了前 4 行
                 .Where(x => ((IDictionary<string, object>)x.Row)["B"] != null) // 忽略 null 值

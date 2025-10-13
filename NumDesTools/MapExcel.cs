@@ -1,9 +1,10 @@
-﻿using MiniExcelLibs;
+﻿using System.Linq;
+using MiniExcelLibs;
 using Newtonsoft.Json;
 
 namespace NumDesTools
 {
-    class MapExcel
+    public class MapExcel
     {
         public static void ExcelToJson(string folderPath)
         {
@@ -39,7 +40,7 @@ namespace NumDesTools
                 {
                     if (activityId != null && !typeDic.ContainsKey(activityId))
                     {
-                        typeDic[activityId] = [];
+                        typeDic[activityId] = new List<string>();
                     }
 
                     if (activityId != null)
@@ -98,7 +99,7 @@ namespace NumDesTools
                         subTable = TablePathFix(type, workbookPath);
                         if (!relations.ContainsKey(subTable))
                         {
-                            relations[subTable] = [];
+                            relations[subTable] = new List<Dictionary<string, string>>();
                         }
                         relations[subTable]
                             .Add(new Dictionary<string, string> { { fieldActivityId, mainTable } });
@@ -110,7 +111,7 @@ namespace NumDesTools
 
                     if (!relations.ContainsKey(subTable))
                     {
-                        relations[subTable] = [];
+                        relations[subTable] = new List<Dictionary<string, string>>();
                     }
 
                     relations[subTable]
@@ -128,7 +129,7 @@ namespace NumDesTools
             TraceMain(@"\表格关系.json", myDocumentsPath);
         }
 
-        private static string TablePathFix(string table, string workbookPath)
+        public static string TablePathFix(string table, string workbookPath)
         {
             if (table != null && table.Contains("克朗代克##"))
             {
@@ -136,7 +137,27 @@ namespace NumDesTools
                 //克朗代克复合表
                 if (table.Contains("$"))
                 {
-                    table = workbookPath + @"\Tables\克朗代克\" + excelSplit[1] + "#" + excelSplit[2];
+                    // excelSplit may be length 2 if the subpart contains '$' instead of a '##' separator
+                    if (excelSplit.Length >= 3)
+                    {
+                        table = workbookPath + @"\Tables\克朗代克\" + excelSplit[1] + "#" + excelSplit[2];
+                    }
+                    else if (excelSplit.Length == 2 && excelSplit[1].Contains("$"))
+                    {
+                        var parts = excelSplit[1].Split('$');
+                        if (parts.Length >= 2)
+                        {
+                            table = workbookPath + @"\Tables\克朗代克\" + parts[0] + "#" + parts[1];
+                        }
+                        else
+                        {
+                            table = workbookPath + @"\Tables\克朗代克\" + excelSplit[1];
+                        }
+                    }
+                    else
+                    {
+                        table = workbookPath + @"\Tables\克朗代克\" + (excelSplit.Length > 1 ? excelSplit[1] : "");
+                    }
                 }
                 //克朗代克单表
                 else
@@ -209,11 +230,11 @@ namespace NumDesTools
                             {
                                 continue;
                             }
-                            var sheetNames = MiniExcel.GetSheetNames(filePath);
+                            var sheetNames = MiniExcel.GetSheetNames(filePath).ToList();
                             //单表只选第1个表
                             if (!filePath.Contains("$"))
                             {
-                                sheetNames = [sheetNames[0]];
+                                sheetNames = new List<string> { sheetNames[0] };
                             }
                             foreach (var sheetName in sheetNames)
                             {

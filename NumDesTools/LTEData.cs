@@ -4,9 +4,11 @@ using Microsoft.VisualBasic;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using Match = System.Text.RegularExpressions.Match;
+using System.Runtime.Versioning;
 
 namespace NumDesTools;
 
+[SupportedOSPlatform("windows")]
 public class LteData
 {
     private static readonly Workbook Wk = NumDesAddIn.App.ActiveWorkbook;
@@ -1072,6 +1074,7 @@ public class LteData
 
         var funDy1ValueSplit = Regex.Split(funDy1Value, ",");
 
+        // 修复: 使用正确的变量名 funDependsValue 而不是未定义的 dependsValue
         var funDependsValueSplit = Regex.Split(funDependsValue, ",");
 
         //double numBit = 0;
@@ -1341,7 +1344,7 @@ public class LteData
     }
 
     //自定义字典初始化
-    private static void InitializeDictionary(
+    internal static void InitializeDictionary(
         Dictionary<string, Dictionary<string, List<string>>> strDictionary,
         string key,
         string subKey
@@ -1353,14 +1356,16 @@ public class LteData
         }
         if (!strDictionary[key].ContainsKey(subKey))
         {
-            strDictionary[key][subKey] = [];
+            // 修复：使用合法的 C# 列表初始化
+            strDictionary[key][subKey] = new List<string>();
         }
     }
 
     //循环数字
-    private static List<int> LoopNumber(int start, int max)
+    internal static List<int> LoopNumber(int start, int max)
     {
-        List<int> sequence = [];
+        // 修复：使用合法的 C# 列表初始化
+        List<int> sequence = new List<int>();
 
         for (int i = 1; i <= max; i++)
         {
@@ -1517,25 +1522,25 @@ public class LteData
             writeArray
         );
 
-        ////寻找数据整理
+        //寻找数据整理
         var findArray = FindData(copyArray, dataTypeArray);
-        ////寻找List数据清理
-        //findList.DataBodyRange.ClearContents();
-        ////寻找List行数刷新
-        //int newFindRowCount = findArray.GetLength(0);
-        //findList.Resize(baseList.Range.Resize[newFindRowCount + 1, findList.Range.Columns.Count]);
-        //findList.DataBodyRange.Value2 = findArray;
+        //寻找List数据清理
+        findList.DataBodyRange.ClearContents();
+        //寻找List行数刷新
+        int newFindRowCount = findArray.GetLength(0);
+        findList.Resize(baseList.Range.Resize[newFindRowCount + 1, findList.Range.Columns.Count]);
+        findList.DataBodyRange.Value2 = findArray;
 
-        ////寻找标记数据删除
-        //var sheetFind = Wk.Worksheets["LTE【寻找】"];
-        //var oldTagFindRange = sheetFind.Range["A2:A10000"];
-        //oldTagFindRange.Value2 = null;
-        ////寻找标记数据写入
-        //var tagFindRange = sheetFind.Range[
-        //    sheetFind.Cells[2, 1],
-        //    sheetFind.Cells[findArray.GetLength(0) + 1, 1]
-        //];
-        //tagFindRange.Value2 = "+";
+        //寻找标记数据删除
+        var sheetFind = Wk.Worksheets["LTE【寻找】"];
+        var oldTagFindRange = sheetFind.Range["A2:A10000"];
+        oldTagFindRange.Value2 = null;
+        //寻找标记数据写入
+        var tagFindRange = sheetFind.Range[
+            sheetFind.Cells[2, 1],
+            sheetFind.Cells[findArray.GetLength(0) + 1, 1]
+        ];
+        tagFindRange.Value2 = "+";
 
         var sheetFindName = "LTE【寻找】";
         var rowFindMax = findArray.GetLength(0);
@@ -2024,7 +2029,6 @@ public class LteData
         var findDic = new Dictionary<string, List<string>>();
 
         var copyDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(copyArray);
-
         var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(dataTypeArray);
 
         foreach (var key in copyDic.Keys)
