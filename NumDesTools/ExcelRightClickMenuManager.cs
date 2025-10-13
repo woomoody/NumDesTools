@@ -1,9 +1,11 @@
 ﻿using System.Collections.Concurrent;
 using Microsoft.Office.Core;
 using CommandBar = Microsoft.Office.Core.CommandBar;
+using System.Runtime.Versioning;
 
 namespace NumDesTools;
 
+[SupportedOSPlatform("windows")]
 public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
 {
     private readonly Application _excelApp =

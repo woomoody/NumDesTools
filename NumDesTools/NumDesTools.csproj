@@ -14,6 +14,8 @@
     <InvariantGlobalization>true</InvariantGlobalization> 
     <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     -->
+    <!-- Suppress platform compatibility warnings while Excel/WinForms interop remains -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
       <LangVersion>12.0</LangVersion>
