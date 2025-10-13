@@ -5,9 +5,11 @@ using System.Windows.Input;
 using Markdig;
 using Brushes = System.Windows.Media.Brushes;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using System.Runtime.Versioning;
 
 namespace NumDesTools.UI;
 
+[SupportedOSPlatform("windows")]
 public partial class AiChatTaskPanel
 {
     private string _apiKey;
