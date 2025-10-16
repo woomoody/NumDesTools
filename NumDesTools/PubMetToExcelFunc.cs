@@ -3,11 +3,13 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using Microsoft.Office.Interop.Excel;
 using MiniExcelLibs;
 using NLua;
 using NumDesTools.Config;
 using NumDesTools.UI;
 using OfficeOpenXml;
+using Clipboard = System.Windows.Forms.Clipboard;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
 using Process = System.Diagnostics.Process;
@@ -2007,6 +2009,174 @@ public static class PubMetToExcelFunc
         // 使用正则表达式提取数字
         var matches = Regex.Matches(input, @"\d+");
         return matches.Cast<Match>().Select(m => m.Value);
+    }
+
+    // 同步Icon修正数据
+    public static void SyncIconFixData(string filePath)
+    {
+        // 检查路径文件是否打开
+        try
+        {
+            // 尝试以读写方式打开文件
+            using (
+                FileStream fs = File.Open(
+                    filePath,
+                    FileMode.Open,
+                    FileAccess.ReadWrite,
+                    FileShare.None
+                )
+            )
+                ;
+        }
+        catch (IOException)
+        {
+            MessageBox.Show($"{filePath}已打开，请关闭");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"检查文件状态时出错: {ex.Message}");
+        }
+
+        // 获取剪切板上的数据
+        var iconFixData = new Dictionary<string, string>();
+
+        if (!Clipboard.ContainsText())
+        {
+            Debug.Print("剪切板中没有文本数据");
+            MessageBox.Show("剪切板中没有文本数据");
+        }
+
+        string clipboardText = Clipboard.GetText();
+        string[] lines = clipboardText.Split(
+            new[] { '\r', '\n' },
+            StringSplitOptions.RemoveEmptyEntries
+        );
+
+        if (lines.Length == 0)
+        {
+            Debug.Print("剪切板中没有有效数据");
+            MessageBox.Show("剪切板中没有有效数据");
+        }
+
+
+
+        foreach (string line in lines)
+        {
+            // 跳过Unity调试日志行
+            if (
+                line.Contains("UnityEngine.Debug:Log")
+                || line.Contains("UIIconImageInEditorScene")
+                || line.Contains("ObjectBuilderEditor")
+                || line.Contains("GUIUtility:ProcessEvent")
+            )
+            {
+                continue;
+            }
+
+            string[] parts = line.Split(new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2)
+            {
+                string id = parts[0];
+                string value = parts[1];
+                iconFixData[id] = value;
+            }
+        }
+
+        if (iconFixData.Count == 0)
+        {
+            Debug.Print("剪切板中没有有效数据");
+            MessageBox.Show("剪切板中没有有效数据");
+            return;
+        }
+        // 按照key列匹配数据写入，根据Key的前缀，只针对当期活动的数据进行写入
+        string fileName = Path.GetFileName(filePath);
+        filePath = Path.GetDirectoryName(filePath);
+
+        PubMetToExcel.SetExcelObjectEpPlus(
+            filePath,
+            fileName,
+            out ExcelWorksheet targetSheet,
+            out ExcelPackage targetExcel
+        );
+
+        int firstMatchRow = -1;
+        int lastMatchRow = -1;
+
+        // 最大行
+        int endRow = targetSheet.Dimension.End.Row;
+
+        // 活动编号
+        string commonPrefix = string.Empty;
+        commonPrefix = iconFixData.Keys.Last().Substring(0,5);
+
+        for (int row = 1; row <= endRow; row++)
+        {
+            string cellValue = targetSheet.Cells[row, 2].Text;
+
+            // 检查前N个字符是否匹配（N = searchPrefix.Length）
+            if (cellValue.StartsWith(commonPrefix))
+            {
+                if (firstMatchRow == -1)
+                    firstMatchRow = row; // 记录第一个匹配行
+
+                lastMatchRow = row; // 更新最后一个匹配行
+            }
+        }
+
+        // 获取字段列
+        var fieldKey = "spriteName";
+        var fieldValue1 = "scale_offset_handbook";
+        var fieldValue2 = "scale_offset_same";
+
+        int fieldKeyCol = -1;
+        int fieldValue1Col = -1;
+        int fieldValue2Col = -1;
+
+        // 最大列
+        int endCol = targetSheet.Dimension.End.Column;
+        for (int col = 1; col <= endCol; col++)
+        {
+            string headerValue = targetSheet.Cells[2, col].Text;
+            if (headerValue == fieldKey)
+            {
+                fieldKeyCol = col;
+            }
+            else if (headerValue == fieldValue1)
+            {
+                fieldValue2Col = col;
+            }
+            else if (headerValue == fieldValue2)
+            {
+                fieldValue1Col = col;
+            }
+        }
+
+        if (firstMatchRow == -1 || lastMatchRow == -1)
+        {
+            Debug.Print("未找到匹配的行");
+            MessageBox.Show("未找到匹配的行");
+            return;
+        }
+        if (fieldKeyCol == -1 || fieldValue1Col == -1 || fieldValue2Col == -1)
+        {
+            Debug.Print("未找到匹配的列");
+            MessageBox.Show("未找到匹配的列");
+            return;
+        }
+
+        for (int row = firstMatchRow; row <= lastMatchRow; row++)
+        {
+            var iconKey = targetSheet.Cells[row, fieldKeyCol].Text;
+            if (iconFixData.ContainsKey(iconKey))
+            {
+                var iconValue1 = iconFixData[iconKey];
+                targetSheet.Cells[row, fieldValue1Col].Value = iconValue1;
+                targetSheet.Cells[row, fieldValue2Col].Value = iconValue1;
+            }
+          
+        }
+
+        targetExcel.Save();
     }
 
     #region Excel数据查找

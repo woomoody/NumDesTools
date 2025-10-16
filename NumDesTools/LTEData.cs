@@ -762,13 +762,6 @@ public class LteData
         LteCore.SaveDictionaryToFile(dictionary, filePath);
     }
 
-    //文件输出到strDic
-    private static Dictionary<string, Dictionary<string, List<string>>> LoadDictionaryFromFile(
-        string filePath
-    )
-    {
-        return LteCore.LoadDictionaryFromFile(filePath);
-    }
     #endregion
 
     #region LTE基础数据计算
@@ -1434,7 +1427,7 @@ public class LteData
                             findDic[findIdStr].Add(findTips);
 
                             var findLinksFix = findLinks.Substring(0, findLinks.Length - 1);
-                            findLinksFix += ",{8,9999}";
+                            findLinksFix += ",{8,9993}";
 
                             findDic[findIdStr].Add(findLinksFix);
                         }
