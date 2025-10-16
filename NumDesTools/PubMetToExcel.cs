@@ -1206,10 +1206,19 @@ public static class PubMetToExcel
         string sheetName = "Sheet1";
         if (isMatch)
         {
+            if (!workbookPath.Contains(@"\Tables"))
+            {
+                workbookPath = workbookPath + @"\Tables\";
+            }
+            else
+            {
+                workbookPath = workbookPath + @"\";
+            }
+
             if (selectSheetName.Contains("#") && !selectSheetName.Contains("##"))
             {
                 var excelSplit = selectSheetName.Split("#");
-                filePath = workbookPath + @"\Tables\" + excelSplit[0];
+                filePath = workbookPath  + excelSplit[0];
                 sheetName = excelSplit[1];
             }
             else if (selectSheetName.Contains("##"))
@@ -1218,12 +1227,12 @@ public static class PubMetToExcel
                 var sharpCount = excelSplit.Length;
                 if (selectSheetName.Contains("克朗代克"))
                 {
-                    filePath = workbookPath + @"\Tables\" + excelSplit[0] + @"\" + excelSplit[1];
+                    filePath = workbookPath + excelSplit[0] + @"\" + excelSplit[1];
                     sheetName = sharpCount == 3 ? excelSplit[2] : "Sheet1";
                 }
                 else
                 {
-                    selectSheetName = workbookPath + @"\Tables\" + excelSplit[0];
+                    selectSheetName = workbookPath  + excelSplit[0];
                     sheetName = excelSplit[1];
                 }
             }

@@ -288,7 +288,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["Button17"] = TmNormalEle_Click,
             ["Button_MagicBottle"] = MagicBottle_Click,
             ["Button_LoopRun"] = LoopRun_Click,
+            ["Button_CardRatioSim"] = CardRatioSim_Click,
             ["ShowAI"] = ShowAIText_Click,
+            ["AutoInsertIconFix"] = AutoInsertIconFix_Click,
             ["Button99991"] = TestBar1_Click,
             ["Button99992"] = TestBar2_Click,
             ["ExcelSearchBoxButton8"] = ExcelSearchAllFormulaName_Click,
@@ -599,7 +601,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
             // 存储ID对应的Type
             Dictionary<string, List<string>> typeDict;
-            var returnColNames = new List<string> { "C", "E", "F" };
+            var returnColNames = new List<string> { "C", "F", "G" };
             typeDict = PubMetToExcelFunc.SearchKeysFrom1ExcelMulti(
                 searchContent,
                 longNumbers,
@@ -1964,6 +1966,21 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         PubMetToExcelFunc.LoopRunCac(sheetName);
     }
 
+    public void CardRatioSim_Click(IRibbonControl control)
+    {
+        var realSheetName = "#相册万能卡";
+        var ws = App.ActiveSheet;
+        var sheetName = ws.Name;
+        if (sheetName.Contains(realSheetName))
+        {
+            PubMetToExcelFunc.PhotoCardRatio(sheetName);
+        }
+        else
+        {
+            MessageBox.Show($"非【{realSheetName}】表格不能使用此功能");
+        }
+    }
+
     public void CellDataReplace_Click(IRibbonControl control)
     {
         PubMetToExcelFunc.ReplaceValueFormat(_excelSeachStr);
@@ -2094,6 +2111,17 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.Workbooks.Open(path);
     }
 
+    public void AutoInsertIconFix_Click(IRibbonControl control)
+    {
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+        var sheetRealName = "Icon.xlsx#Sheet1";
+        var fileInfo = PubMetToExcel.AliceFilePathFix(path, sheetRealName);
+        string filePath = fileInfo.Item1;
+
+        PubMetToExcelFunc.SyncIconFixData(filePath);
+    }
+
     public void TestBar1_Click(IRibbonControl control)
     {
         //var files = new List<string>(
@@ -2108,9 +2136,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //{
         //    converter.ConvertMultipleJsonToExcel(jsonFile);
         //}
-        var ws = App.ActiveSheet;
-        var sheetName = ws.Name;
-        PubMetToExcelFunc.PhotoCardRatio(sheetName);
+
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
+        var sheetRealName = "Icon.xlsx#Sheet1";
+        var fileInfo = PubMetToExcel.AliceFilePathFix(path, sheetRealName);
+        string filePath = fileInfo.Item1;
+
+        PubMetToExcelFunc.SyncIconFixData(filePath);
+
         //App.Visible = false;
         //App.ScreenUpdating = false;
         //App.DisplayAlerts = false;

@@ -114,7 +114,9 @@
                             onAction='OnButtonClick' screentip='查看模版表写入后的数据：EPPlus' tag='查验模版写入数据' />
                     <button id='AutoInsertNumChanges' size='large' label='活动奖励写入' image='console'
                             onAction='OnButtonClick' screentip='针对各类活动奖励内容反复修改，防止漏填数据的自动化填写工具' tag='活动奖励写入' />
-                </group>
+					<button id='AutoInsertIconFix' size='large' label='图片Fix' image='谷歌'
+			                onAction='OnButtonClick' screentip='针对Icon.xlsx表格图片资源修正数据的同步，复制【Ctr+V】点击按钮执行' tag='图片Fix' />
+				</group>
                 <group id="Group8" label="Excel搜索">
                     <labelControl id="SearchLab" label="搜索编号/关键字" />
                     <editBox id="ExcelSearchBoxEdit" label ='输入查找值' onChange="ExcelOnEditBoxTextChanged" sizeString="…………………………………………" 
@@ -186,6 +188,8 @@
                             onAction='OnButtonClick' tag ='移动魔瓶' />
                     <button id='Button_LoopRun' size='large' label='移动转盘' image='key' screentip='移动转盘随机方案机选'
                             onAction='OnButtonClick' tag ='移动转盘' />
+					<button id='Button_CardRatioSim' size='large' label='万能卡概率' image='zip' screentip='相册万能卡概率模拟'
+                            onAction='OnButtonClick' tag ='万能卡概率' />
                 </group>
 				<group id='NormalFun' label='杂项'>
 					<button id='ShowDnaLog' size='large' getLabel='GetLableText' image='ejs'
