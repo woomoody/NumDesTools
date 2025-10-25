@@ -84,6 +84,7 @@ public static class PubMetToExcelFunc
 
     public static void RightOpenExcelByActiveCell(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
         var sheet = NumDesAddIn.App.ActiveSheet;
         var selectCell = NumDesAddIn.App.ActiveCell;
         var workBook = NumDesAddIn.App.ActiveWorkbook;
@@ -155,6 +156,8 @@ public static class PubMetToExcelFunc
 
     public static void RightOpenLinkExcelByActiveCell(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
+
         var sheet = NumDesAddIn.App.ActiveSheet;
         var selectCell = NumDesAddIn.App.ActiveCell;
         var workBook = NumDesAddIn.App.ActiveWorkbook;
@@ -540,6 +543,8 @@ public static class PubMetToExcelFunc
 
     public static void OpenBaseLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
+
         var selectCell = NumDesAddIn.App.ActiveCell;
         var basePath = NumDesAddIn.App.ActiveWorkbook.Path;
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(basePath));
@@ -557,6 +562,8 @@ public static class PubMetToExcelFunc
 
     public static void OpenMergeLanExcel(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
+
         var selectCell = NumDesAddIn.App.ActiveCell;
         var basePath = NumDesAddIn.App.ActiveWorkbook.Path;
         var mergePath = "";
@@ -2354,7 +2361,7 @@ public static class PubMetToExcelFunc
                     if (sheetName.Contains("#"))
                         continue;
 
-                    var rows = MiniExcel.Query(file, sheetName: sheetName);
+                    var rows = MiniExcel.Query(file, sheetName: sheetName, configuration: NumDesAddIn.OnOffMiniExcelCatches);
                     int rowIndex = 1;
                     foreach (var row in rows)
                     {
@@ -2387,6 +2394,9 @@ public static class PubMetToExcelFunc
             {
                 // 记录异常信息，继续处理下一个文件
             }
+
+
+
         };
 
         if (isMulti)

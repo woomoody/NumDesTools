@@ -71,7 +71,8 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
             "LTE基础数据-首次",
             "LTE基础数据-更新",
             "LTE任务数据-首次",
-            "LTE任务数据-更新"
+            "LTE任务数据-更新",
+            "LTE生成地组"
         };
 
         foreach (var item in commandBar.Controls)
@@ -232,6 +233,12 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 Tag: "LTE任务数据-更新",
                 Caption: "LTE任务数据-更新",
                 Handler: LteData.UpdateCopyTaskValue
+            ),
+            new(
+                Condition: bookName.Contains("地上物工具"),
+                Tag: "LTE生成地组",
+                Caption: "LTE生成地组",
+                Handler: LteData.GroundDataSim
             ),
             // 其他按钮配置...
             new(
