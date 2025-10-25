@@ -158,15 +158,22 @@ internal static class LteCore
         if (maxLink != "")
         {
             var linkList = new List<string>();
-            for (int i = 0; i < int.Parse(maxLink); i++)
+
+            var intMaxLink = int.Parse(maxLink);
+
+            if(intMaxLink > 2)
             {
-                var tempId = (long.Parse(fixWildcardValue) + i + 1).ToString();
-                if (idList.Contains(tempId))
+                for (int i = 0; i < intMaxLink; i++)
                 {
-                    linkList.Add(tempId);
+                    var tempId = (long.Parse(fixWildcardValue) + i + 1).ToString();
+                    if (idList.Contains(tempId))
+                    {
+                        linkList.Add(tempId);
+                    }
                 }
+                strDictionary[wildcard][fixWildcardValue] = linkList;
             }
-            strDictionary[wildcard][fixWildcardValue] = linkList;
+         
         }
         return fixWildcardValue;
     }

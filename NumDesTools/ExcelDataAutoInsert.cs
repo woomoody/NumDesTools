@@ -708,6 +708,8 @@ public static class ExcelDataAutoInsertLanguage
 
     public static void AutoInsertDataByUd(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
+
         var workBook = NumDesAddIn.App.ActiveWorkbook;
         var excelPath = workBook.Path;
         var sourceSheet = workBook.Worksheets["多语言对话【模板】"];
@@ -1166,6 +1168,7 @@ public static class ExcelDataAutoInsertLanguage
     //重构的多语言对话写入功能
     public static void AutoInsertDataByUdNew(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
         var workBook = NumDesAddIn.App.ActiveWorkbook;
         var excelPath = workBook.Path;
 
@@ -1672,6 +1675,8 @@ public static class ExcelDataAutoInsertMulti
 
     public static void RightClickInsertData(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
+
         var indexWk = NumDesAddIn.App.ActiveWorkbook;
         var sheet = NumDesAddIn.App.ActiveSheet;
         var excelPath = indexWk.Path;
@@ -2441,6 +2446,7 @@ public static class ExcelDataAutoInsertMultiNew
 
     public static void RightClickInsertDataNew(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
         InitializeVariables();
 
         var cell = NumDesAddIn.App.Selection;
@@ -3137,6 +3143,8 @@ public static class ExcelDataAutoInsertCopyMulti
 
     public static void RightClickMergeData(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
+
         var indexWk = NumDesAddIn.App.ActiveWorkbook;
         var sheet = NumDesAddIn.App.ActiveSheet;
         var excelPath = indexWk.Path;
@@ -3264,6 +3272,8 @@ public static class ExcelDataAutoInsertCopyMulti
 
     public static void RightClickMergeDataCol(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
+
         NumDesAddIn.App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
@@ -4195,6 +4205,7 @@ public static class ExcelDataAutoInsertCopyActivity
 {
     public static void RightClickCloneData(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
         var wkPath = NumDesAddIn.App.ActiveWorkbook.Path;
         var excelNames = new List<string>()
         {
@@ -4240,6 +4251,7 @@ public static class ExcelDataAutoInsertCopyActivity
 
     public static void RightClickCloneAllData(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
         var wkPath = NumDesAddIn.App.ActiveWorkbook.Path;
         var excelNames = new List<string>()
         {

@@ -57,11 +57,13 @@ public class LteData
     //导出LTE数据配置
     public static void ExportLteDataConfigFirst(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
         ExportLteDataConfig(true, GitConfig.Name);
     }
 
     public static void ExportLteDataConfigUpdate(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
         ExportLteDataConfig(false, GitConfig.Name);
     }
 
@@ -768,6 +770,7 @@ public class LteData
     //去重复制
     public static void FilterRepeatValueCopy(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
         //去重
         var mergedArray = FilterRepeatValue("", "", true);
         //复制
@@ -777,6 +780,7 @@ public class LteData
     //首次写入数据（指定范围内数据去重）
     public static void FirstCopyValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
         object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
 
         var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
@@ -920,6 +924,7 @@ public class LteData
     //更新写入数据（指定范围内数据去重），比对数据，更新数据状态
     public static void UpdateCopyValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
         object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
         var list = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
         if (list == null)
@@ -1608,7 +1613,7 @@ public class LteData
         else
         {
             // 针对找自己的情况做出区分
-            if (findLinks.Contains("{32,"))
+            if (findLinks.Contains("{1,"))
             {
                 findLinks = string.Empty;
             }
@@ -1674,6 +1679,7 @@ public class LteData
     //首次写入数据
     public static void FirstCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
         var sheetName = "LTE【任务】";
         var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
         double activtiyId = (double)colIndexArray[0, 0];
@@ -1753,6 +1759,7 @@ public class LteData
     //更新写入数据
     public static void UpdateCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        cancelDefault = true; // 阻止默认事件
         var sheetName = "LTE【任务】";
         var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
         double activtiyId = (double)colIndexArray[0, 0];
@@ -2060,6 +2067,51 @@ public class LteData
         fixData.Add(taskDialogId);
 
         return fixData;
+    }
+    #endregion
+
+    #region LTE地组数据计算
+    public static void GroundDataSim(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        cancelDefault = true; // 阻止默认事件
+        var selectedRange = NumDesAddIn.App.Selection;
+        var targetWorkbookName = "地组工具.xlsx";
+        var selectedSheet = NumDesAddIn.App.ActiveSheet;
+        var targetSheetName = selectedSheet.Name;
+
+        Workbook targetWorkbook = null;
+
+        if (selectedRange == null)
+            throw new InvalidOperationException("没有选中的单元格");
+
+        // 3. 查找已打开的目标工作簿（按名称匹配）
+        foreach (Workbook workbook in NumDesAddIn.App.Workbooks)
+        {
+            if (workbook.Name.Equals(targetWorkbookName, StringComparison.OrdinalIgnoreCase))
+            {
+                targetWorkbook = workbook;
+                break;
+            }
+        }
+
+        if (targetWorkbook == null)
+            throw new FileNotFoundException($"工作簿 '{targetWorkbookName}' 未打开");
+
+        // 4. 获取目标工作表
+        var targetSheet = targetWorkbook.Sheets[targetSheetName] as Worksheet;
+        if (targetSheet == null)
+            throw new ArgumentException($"目标工作表 '{targetSheetName}' 不存在");
+
+        // 5. 写入值和背景色到目标位置
+        var targetRange = targetSheet.Range[selectedRange.Address];
+
+        // 同步值
+        targetRange.Value = "selectedRange.Value";
+
+        // 同步背景色（使用RGB颜色）
+        targetRange.Interior.Color = 0xFFFF00;
+
+        // 颜色和数值怎么同步过去？要兼容target已经填的值和颜色
     }
     #endregion
 }
