@@ -2044,7 +2044,7 @@ public class LteData
         if (taskTagetName != string.Empty)
         {
             taskTagetId = baseDic
-                .FirstOrDefault(kv => kv.Value.Count > 2 && kv.Value[2] == taskTagetName)
+                .FirstOrDefault(kv => kv.Value.Count > 4 && kv.Value[4] == taskTagetName)
                 .Key;
         }
         if (taskDialogId != string.Empty)
