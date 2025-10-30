@@ -64,7 +64,7 @@ internal static class LteCore
                     "MerB"
                         => MerB(exportWildcardDyData, funDepends, itemId, funDy1, funDy2, funDy3),
                     "MerTry"
-                        => MerTry(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3, idList),
+                        => MerTry(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3, idList, baseData),
                     "Ads" => Ads(exportWildcardDyData, funDepends, funDy1, idList),
                     "Arr" => Arr(exportWildcardDyData, funDepends, funDy1, funDy2),
                     "Get" => Get(exportWildcardDyData, funDepends, funDy1, funDy2),
@@ -241,7 +241,8 @@ internal static class LteCore
         string funDy1,
         string funDy2,
         string funDy3,
-        List<string> idList
+        List<string> idList,
+        Dictionary<string, List<string>> baseData
     )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "1" : funDy1;
@@ -249,6 +250,14 @@ internal static class LteCore
         funDy3 = string.IsNullOrEmpty(funDy3) ? "10" : funDy3;
         string merB = MerB(exportWildcardDyData, funDepends, string.Empty, funDy1, funDy2, funDy3);
         var mer = !idList.Contains(merB) ? Mer(exportWildcardDyData, funDepends, string.Empty, funDy1) : merB;
+        
+        var merType = baseData[mer][8];
+
+        if(!merType.Contains("Á´"))
+        {
+            mer = "11010001";
+        }
+
         return mer;
     }
 

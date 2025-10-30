@@ -26,7 +26,7 @@ internal class SvnGitTools
         return fileList;
     }
 
-    static string FindGitRoot(string startPath)
+    public static string FindGitRoot(string startPath)
     {
         var directory = new DirectoryInfo(startPath);
         while (directory != null && !Directory.Exists(Path.Combine(directory.FullName, ".git")))
@@ -43,6 +43,7 @@ internal class SvnGitTools
         {
             return false;
         }
+
         using var repo = new Repository(repoPath);
         var status = repo.RetrieveStatus(filePath);
         // 使用按位与检查是否包含 ModifiedInWorkdir 或 ModifiedInIndex
@@ -63,5 +64,43 @@ internal class SvnGitTools
             config.Get<string>("user.email")?.Value
         );
     }
+    public static (TimeSpan Delta, DateTime LastCommit) GetLastCommitDelta(string authorName, string repoPath = ".")
+    {
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "git",
+                    Arguments = $"log --all --author=\"{authorName}\" -1 --format=%cd --date=iso",
+                    WorkingDirectory = repoPath,
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
 
+            process.Start();
+            string output = process.StandardOutput.ReadToEnd().Trim();
+            process.WaitForExit(3000);
+
+            if (string.IsNullOrEmpty(output))
+                throw new Exception($"未找到作者 '{authorName}' 的提交记录");
+
+            if (DateTime.TryParse(output, out DateTime lastCommit))
+            {
+                TimeSpan delta = DateTime.Now - lastCommit;
+                return (delta, lastCommit);
+            }
+            else
+            {
+                throw new Exception("时间格式解析失败");
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"获取提交时间失败: {ex.Message}");
+        }
+    }
 }

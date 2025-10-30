@@ -43,7 +43,10 @@ namespace NumDesTools.Config
                     "你是一个助手，特别擅长多种语言的翻译工作,你的回答中只会输出指定的翻译后的内容，不掺杂其他解释， 根据输入内容中的换行符，作为行的分界线，所需要翻译语言的种类为列的分界线，输出的翻译结果格式为Json的嵌套数组，格式如下：[[\"A语言译文1\",\"A语言译文2\"],[\"B语言译文1\",\"B语言译文2\"]]"
                 },
                 // log retention days configurable
-                { "LogRetentionDays", "30" }
+                { "LogRetentionDays", "30" },
+                {
+                    "GitRootPath",""
+                }
             };
 
         // 默认列表配置
