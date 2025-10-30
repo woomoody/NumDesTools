@@ -1,8 +1,9 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Runtime.Versioning;
+using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.VisualBasic;
 using NumDesTools.UI;
 using OfficeOpenXml;
-using System.Runtime.Versioning;
 
 namespace NumDesTools;
 
@@ -12,13 +13,14 @@ public class LteData
     // Introduce optional Excel host for easier testing; fall back to NumDesAddIn if not provided
     public static IExcelHost ExcelHostInstance { get; set; }
 
-    private static Workbook Wk => (ExcelHostInstance?.GetActiveWorkbook() as Workbook) ?? NumDesAddIn.App.ActiveWorkbook;
+    private static Workbook Wk =>
+        (ExcelHostInstance?.GetActiveWorkbook() as Workbook) ?? NumDesAddIn.App.ActiveWorkbook;
 
     private static string WkPath => Wk.Path;
 
-/*
-    private static readonly Regex WildcardRegex = new("#(.*?)#", RegexOptions.Compiled);
-*/
+    /*
+        private static readonly Regex WildcardRegex = new("#(.*?)#", RegexOptions.Compiled);
+    */
 
     private static readonly Dictionary<string, (string id, string idType)> SheetTypeMap =
         new(StringComparer.Ordinal)
@@ -43,6 +45,7 @@ public class LteData
     private const string ActivityDataMinIndex = "C1";
     private const string ActivityDataMaxIndex = "D1";
     private const string ActivityNameMinIndex = "E1";
+    private const string ActivityFieldIndex = "G1";
 
     private static readonly Worksheet PubWildSheet = Wk.Worksheets["LTE【设计】"];
     private static readonly Dictionary<string, string> OutputWildcardPubDic =
@@ -50,6 +53,7 @@ public class LteData
         {
             ["活动编号"] = (PubWildSheet.Range[ActivityIdIndex].Value2 / 10000)?.ToString(),
             ["活动备注"] = PubWildSheet.Range[ActivityNameMinIndex].Value2?.ToString(),
+            ["活动地组"] = PubWildSheet.Range[ActivityFieldIndex].Value2?.ToString()
         };
     public static (string Name, string Email) GitConfig = SvnGitTools.GetGitUserInfo();
 
@@ -858,8 +862,16 @@ public class LteData
             writeArray
         );
 
+        var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+        if (fieldGroupList == null)
+        {
+            MessageBox.Show("#道具信息中的名称【道具信息】不存在");
+            return;
+        }
+        object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
+
         //寻找数据整理
-        var findArray = FindData(copyArray, dataTypeArray);
+        var findArray = FindData(copyArray, dataTypeArray, fieldGroupArray);
         //寻找List数据清理
         findList.DataBodyRange.ClearContents();
         //寻找List行数刷新
@@ -962,8 +974,16 @@ public class LteData
 
         WriteDymaicData(copyArray, list, "LTE【基础】", 1, 33);
 
+        var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+        if (fieldGroupList == null)
+        {
+            MessageBox.Show("#道具信息中的名称【道具信息】不存在");
+            return;
+        }
+        object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
+
         //寻找数据整理
-        var findArray = FindData(copyArray, dataTypeArray);
+        var findArray = FindData(copyArray, dataTypeArray, fieldGroupArray);
         WriteDymaicData(findArray, findList, "LTE【寻找】", 1, 9);
     }
 
@@ -1230,8 +1250,8 @@ public class LteData
             var consumeCountList = new List<string>();
             var productCountList = new List<string>();
 
-            var idNameList = new List<int> { 11, 13, 15, 17, 19, 21, 23 ,25};
-            var countNumList = new List<int> {  12, 14, 16, 18, 20, 22, 24 ,26};
+            var idNameList = new List<int> { 11, 13, 15, 17, 19, 21, 23, 25 };
+            var countNumList = new List<int> { 12, 14, 16, 18, 20, 22, 24, 26 };
 
             string firstPos = baseDic[key][3];
             var firstPosPre = firstPos.Split("-")[0];
@@ -1362,12 +1382,17 @@ public class LteData
     #endregion
 
     #region LTE寻找数据计算
-    private static object[,] FindData(object[,] copyArray, object[,] dataTypeArray)
+    private static object[,] FindData(
+        object[,] copyArray,
+        object[,] dataTypeArray,
+        object[,] fieldGroupArray
+    )
     {
         var findDic = new Dictionary<string, List<string>>();
 
         var copyDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(copyArray);
         var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(dataTypeArray);
+        var fieldGroupDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(fieldGroupArray);
 
         foreach (var key in copyDic.Keys)
         {
@@ -1408,7 +1433,8 @@ public class LteData
                         findTargetType,
                         findTargetId,
                         copyDic,
-                        out var findTips
+                        out var findTips,
+                        fieldGroupDic
                     );
 
                     if (findLinks != String.Empty)
@@ -1517,12 +1543,17 @@ public class LteData
         string findTargetDetailType,
         string findTargetType,
         string findTargetId,
-        Dictionary<string, List<string>> copyDic,
-        out string findTips
+        Dictionary<string, List<string>> baseDic,
+        out string findTips,
+        Dictionary<string, List<string>> fieldGroupDic
     )
     {
         var findLinks = string.Empty;
         findTips = string.Empty;
+
+        var findTargetNickName = baseDic[findTargetId][5];
+
+        var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName);
 
         //1层查找
         if (findTargetDetailType == string.Empty)
@@ -1543,27 +1574,32 @@ public class LteData
             findLinks += "{" + findTargetType + "," + findTargetId + "},";
         }
 
+        if(findTaregtfieldLinks != string.Empty)
+        {
+            findLinks += findTaregtfieldLinks + ",";
+        }
+        
         // 2层查找
-        List<string> matchedIDsOri = copyDic
+        List<string> matchedIDsOri = baseDic
             .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId))
             .Select(kv => kv.Key)
             .ToList();
 
         //没有直接匹配的，需要继续查找（按照链的规则）
         var findTargetId01 = findTargetId.Substring(0, findTargetId.Length - 2) + "01";
-        List<string> matchedIDs01 = copyDic
+        List<string> matchedIDs01 = baseDic
             .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId01))
             .Select(kv => kv.Key)
             .ToList();
 
         var findTargetId02 = findTargetId.Substring(0, findTargetId.Length - 2) + "02";
-        List<string> matchedIDs02 = copyDic
+        List<string> matchedIDs02 = baseDic
             .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId02))
             .Select(kv => kv.Key)
             .ToList();
 
         var findTargetId03 = findTargetId.Substring(0, findTargetId.Length - 2) + "03";
-        List<string> matchedIDs03 = copyDic
+        List<string> matchedIDs03 = baseDic
             .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId03))
             .Select(kv => kv.Key)
             .ToList();
@@ -1591,7 +1627,7 @@ public class LteData
             foreach (var findTargetId2 in matchedIDsEnd)
             {
                 matchedIDsOri3.AddRange(
-                    copyDic
+                    baseDic
                         .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId2))
                         .Select(kv => kv.Key)
                         .ToList()
@@ -1623,8 +1659,12 @@ public class LteData
             {
                 if (findTargetId3 != string.Empty)
                 {
-                    var findTargetType2 = copyDic[findTargetId3][27];
-                    var findTargetDetailType2 = copyDic[findTargetId3][28];
+                    var findTargetType2 = baseDic[findTargetId3][27];
+                    var findTargetDetailType2 = baseDic[findTargetId3][28];
+
+                    var findTargetNickName3 = baseDic[findTargetId3][5];
+
+                    var findTaregtfieldLinks3 = FieldGroupLinks(fieldGroupDic, findTargetNickName3);
 
                     if (findTargetType2 != string.Empty)
                     {
@@ -1647,6 +1687,12 @@ public class LteData
                         {
                             findLinks += "{" + findTargetType2 + "," + findTargetId3 + "},";
                         }
+
+                        if (findTaregtfieldLinks3 != string.Empty)
+                        {
+                            findLinks += findTaregtfieldLinks3 + ",";
+                        }
+
                         if (itemCount == 0)
                         {
                             if (findTargetDetailType == "4")
@@ -1672,6 +1718,53 @@ public class LteData
         return findLinks;
     }
 
+    private static string FieldGroupLinks(
+        Dictionary<string, List<string>> fieldGroupDic,
+        string findTargetNickName
+    )
+    {
+        string fieldLinks = String.Empty;
+
+        if (fieldGroupDic.ContainsKey(findTargetNickName))
+        {
+            var count = fieldGroupDic[findTargetNickName].Count;
+            if (count > 2)
+            {
+                var fieldMap = fieldGroupDic[findTargetNickName][1];
+                var fieldPrefix = OutputWildcardPubDic["活动地组"];
+                double fieldIndex = 0;
+                if (double.TryParse(fieldMap, out double fileMapDouble))
+                {
+                    if (double.TryParse(fieldPrefix, out double fieldPrefixDouble))
+                    {
+                        fieldIndex = fileMapDouble * 100 + fieldPrefixDouble;
+                    }
+                }
+
+                if (fieldIndex > 0)
+                {
+                    for (int i = 2; i < count; i++)
+                    {
+                        var fieldValue = fieldGroupDic[findTargetNickName][i];
+                        if (double.TryParse(fieldValue, out double fieldValueDouble))
+                        {
+                            fieldLinks +=
+                                "{4,"
+                                + (fieldIndex + fieldValueDouble).ToString(
+                                    CultureInfo.InvariantCulture
+                                )
+                                + "},";
+                        }
+                    }
+                }
+            }
+        }
+        if (fieldLinks != String.Empty)
+        {
+            fieldLinks = fieldLinks.Substring(0, fieldLinks.Length - 1);
+        }
+        return fieldLinks;
+    }
     #endregion
 
     #region LTE任务数据计算
@@ -1706,6 +1799,14 @@ public class LteData
         }
         object[,] baseArray = baseList.DataBodyRange.Value2;
 
+        var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+        if (fieldGroupList == null)
+        {
+            MessageBox.Show("#道具信息中的名称【道具信息】不存在");
+            return;
+        }
+        object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
+
         //基础数据修改依赖数据
         var listObjectsDic = PubMetToExcel.GetExcelListObjects(
             WkPath,
@@ -1715,7 +1816,13 @@ public class LteData
         object[,] dataTypeArray = listObjectsDic["任务类型"];
 
         //任务数据整理
-        var copyTaskData = TaskData(copyTaskArray, dataTypeArray, baseArray, activtiyId);
+        var copyTaskData = TaskData(
+            copyTaskArray,
+            dataTypeArray,
+            baseArray,
+            activtiyId,
+            fieldGroupArray
+        );
         copyTaskArray = copyTaskData.taskArray;
         var errorTypeList = copyTaskData.errorTypeList;
         if (errorTypeList.Count != 0)
@@ -1786,6 +1893,14 @@ public class LteData
         }
         object[,] baseArray = baseList.DataBodyRange.Value2;
 
+        var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+        if (fieldGroupList == null)
+        {
+            MessageBox.Show("#道具信息中的名称【道具信息】不存在");
+            return;
+        }
+        object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
+
         //基础数据修改依赖数据
         var listObjectsDic = PubMetToExcel.GetExcelListObjects(
             WkPath,
@@ -1795,7 +1910,13 @@ public class LteData
         object[,] dataTypeArray = listObjectsDic["任务类型"];
 
         //任务数据整理
-        var copyTaskData = TaskData(copyTaskArray, dataTypeArray, baseArray, activtiyId);
+        var copyTaskData = TaskData(
+            copyTaskArray,
+            dataTypeArray,
+            baseArray,
+            activtiyId,
+            fieldGroupArray
+        );
         copyTaskArray = copyTaskData.taskArray;
         var errorTypeList = copyTaskData.errorTypeList;
 
@@ -1821,12 +1942,14 @@ public class LteData
     private static (object[,] taskArray, List<string> errorTypeList) TaskData(
         object[,] copyTaskArray,
         object[,] taskDataTypeArray,
-        object[,] baseList,
-        double activtiyId
+        object[,] baseArray,
+        double activtiyId,
+        object[,] fieldGroupArray
     )
     {
-        var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseList);
+        var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseArray);
         var taskDataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(taskDataTypeArray);
+        var fieldGroupDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(fieldGroupArray);
 
         var taskTaskArrayCount = copyTaskArray.GetLength(0);
         var taskList = new List<List<string>>();
@@ -1931,7 +2054,8 @@ public class LteData
                     findTargetType,
                     taskTagetId,
                     baseDic,
-                    out _
+                    out _,
+                    fieldGroupDic
                 );
 
                 taskTargetMapName = taskTargetMapName.Split("-")[0];
@@ -1989,7 +2113,8 @@ public class LteData
                     findSubTargetType,
                     taskSubTagetId,
                     baseDic,
-                    out _
+                    out _,
+                    fieldGroupDic
                 );
 
                 taskSubTargetMapName = taskSubTargetMapName.Split("-")[0];
@@ -2077,7 +2202,7 @@ public class LteData
         var selectedRange = NumDesAddIn.App.Selection;
         var targetWorkbookName = "地组工具.xlsx";
         var selectedSheet = NumDesAddIn.App.ActiveSheet;
-        var targetSheetName = selectedSheet.Name;
+        string targetSheetName = selectedSheet.Name;
 
         Workbook targetWorkbook = null;
 
@@ -2105,13 +2230,96 @@ public class LteData
         // 5. 写入值和背景色到目标位置
         var targetRange = targetSheet.Range[selectedRange.Address];
 
-        // 同步值
-        targetRange.Value = "selectedRange.Value";
+        //// 同步值
+        //targetRange.Value = "1";
 
-        // 同步背景色（使用RGB颜色）
-        targetRange.Interior.Color = 0xFFFF00;
+        //// 同步背景色（使用RGB颜色）
+        //targetRange.Interior.Color = 0xFFFF00;
 
-        // 颜色和数值怎么同步过去？要兼容target已经填的值和颜色
+        //// 颜色和数值怎么同步过去？要兼容target已经填的值和颜色
+
+        var targetSheetNameSplit = targetSheetName.Split("_");
+        var mapIndex = targetSheetNameSplit.Last();
+
+        // 组成导出的字符串并复制到剪切板
+        try
+        {
+            // 使用字典存储每个selectedValue对应的所有targetValue
+            var valueMapping = new Dictionary<string, HashSet<string>>();
+
+            // 遍历所有单元格
+            for (int i = 1; i <= selectedRange.Rows.Count; i++)
+            {
+                for (int j = 1; j <= selectedRange.Columns.Count; j++)
+                {
+                    try
+                    {
+                        // 获取源单元格的值
+                        var cell = selectedRange.Cells[i, j];
+                        var selectedValue = cell.Value?.ToString()?.Trim() ?? "";
+
+                        // 获取目标区域对应单元格的值
+                        var targetCell = targetRange.Cells[i, j];
+                        var targetValue = targetCell.Value?.ToString()?.Trim() ?? "";
+
+                        // 添加到字典
+                        if (!string.IsNullOrEmpty(selectedValue))
+                        {
+                            if (!valueMapping.ContainsKey(selectedValue))
+                            {
+                                valueMapping[selectedValue] = new HashSet<string>();
+                            }
+                            valueMapping[selectedValue].Add(targetValue);
+                        }
+                    }
+                    catch (Exception cellEx)
+                    {
+                        LogDisplay.RecordLine($"处理单元格[{i},{j}]时出错: {cellEx.Message}");
+                    }
+                }
+            }
+
+            // 构建输出字符串
+            var valueString = new StringBuilder();
+
+            foreach (var kvp in valueMapping)
+            {
+                string selectedValue = kvp.Key;
+                var targetValues = kvp.Value;
+
+                if (targetValues.Count == 1)
+                {
+                    // 只有一个对应值
+                    valueString.AppendLine($"{selectedValue}\t{mapIndex}\t{targetValues.First()}");
+                }
+                else
+                {
+                    // 多个对应值，用逗号分隔
+                    string combinedTargetValues = string.Join("\t", targetValues);
+                    valueString.AppendLine($"{selectedValue}\t{mapIndex}\t{combinedTargetValues}");
+                }
+            }
+
+            // 复制到剪切板
+            if (valueString.Length > 0)
+            {
+                Clipboard.SetText(valueString.ToString());
+            }
+            else
+            {
+                MessageBox.Show("没有有效数据可复制", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"复制到剪切板失败: {ex.Message}",
+                "错误",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
+        }
     }
+
     #endregion
 }

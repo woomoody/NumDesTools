@@ -58,34 +58,33 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 {
     public const int LongTextThreshold = 50;
     public const int MaxLineLength = 50;
-    private const int ClickDelayMs = 500;
-    private static GlobalVariable _globalValue = new();
-    public static string LabelText = _globalValue.Value["LabelText"];
-    public static string FocusLabelText = _globalValue.Value["FocusLabelText"];
-    public static string LabelTextRoleDataPreview = _globalValue.Value["LabelTextRoleDataPreview"];
-    public static string SheetMenuText = _globalValue.Value["SheetMenuText"];
-    public static string CellHiLightText = _globalValue.Value["CellHiLightText"];
-    public static string TempPath = _globalValue.Value["TempPath"];
-    public static string BasePath = _globalValue.Value["BasePath"];
-    public static string TargetPath = _globalValue.Value["TargetPath"];
-    public static string CheckSheetValueText = _globalValue.Value["CheckSheetValueText"];
-    public static string ShowDnaLogText = _globalValue.Value["ShowDnaLogText"];
-    public static string ShowAiText = _globalValue.Value["ShowAIText"];
-    public static string ApiKey = _globalValue.Value["ApiKey"];
-    public static string ApiUrl = _globalValue.Value["ApiUrl"];
-    public static string ApiModel = _globalValue.Value["ApiModel"];
-    public static string ChatGptApiKey = _globalValue.Value["ChatGptApiKey"];
-    public static string ChatGptApiUrl = _globalValue.Value["ChatGptApiUrl"];
-    public static string ChatGptApiModel = _globalValue.Value["ChatGptApiModel"];
-    public static string DeepSeektApiKey = _globalValue.Value["DeepSeektApiKey"];
-    public static string DeepSeektApiUrl = _globalValue.Value["DeepSeektApiUrl"];
-    public static string DeepSeektApiModel = _globalValue.Value["DeepSeektApiModel"];
+    public const int ClickDelayMs = 500;
+    public static GlobalVariable GlobalValue = new();
+    public static string LabelText = GlobalValue.Value["LabelText"];
+    public static string FocusLabelText = GlobalValue.Value["FocusLabelText"];
+    public static string LabelTextRoleDataPreview = GlobalValue.Value["LabelTextRoleDataPreview"];
+    public static string SheetMenuText = GlobalValue.Value["SheetMenuText"];
+    public static string CellHiLightText = GlobalValue.Value["CellHiLightText"];
+    public static string TempPath = GlobalValue.Value["TempPath"];
+    public static string BasePath = GlobalValue.Value["BasePath"];
+    public static string TargetPath = GlobalValue.Value["TargetPath"];
+    public static string CheckSheetValueText = GlobalValue.Value["CheckSheetValueText"];
+    public static string ShowDnaLogText = GlobalValue.Value["ShowDnaLogText"];
+    public static string ShowAiText = GlobalValue.Value["ShowAIText"];
+    public static string ApiKey = GlobalValue.Value["ApiKey"];
+    public static string ApiUrl = GlobalValue.Value["ApiUrl"];
+    public static string ApiModel = GlobalValue.Value["ApiModel"];
+    public static string ChatGptApiKey = GlobalValue.Value["ChatGptApiKey"];
+    public static string ChatGptApiUrl = GlobalValue.Value["ChatGptApiUrl"];
+    public static string ChatGptApiModel = GlobalValue.Value["ChatGptApiModel"];
+    public static string DeepSeektApiKey = GlobalValue.Value["DeepSeektApiKey"];
+    public static string DeepSeektApiUrl = GlobalValue.Value["DeepSeektApiUrl"];
+    public static string DeepSeektApiModel = GlobalValue.Value["DeepSeektApiModel"];
+    public static string GitRootPath = GlobalValue.Value["GitRootPath"];
 
-    public static string ChatGptSysContentExcelAss = _globalValue.Value[
-        "ChatGptSysContentExcelAss"
-    ];
+    public static string ChatGptSysContentExcelAss = GlobalValue.Value["ChatGptSysContentExcelAss"];
 
-    public static string ChatGptSysContentTransferAss = _globalValue.Value[
+    public static string ChatGptSysContentTransferAss = GlobalValue.Value[
         "ChatGptSysContentTransferAss"
     ];
 
@@ -115,14 +114,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     }
 
     // MiniExcel本地缓存管理
-    public static OpenXmlConfiguration OnOffMiniExcelCatches = new OpenXmlConfiguration
-    {
-        EnableSharedStringCache = false
-    };
-    public static OpenXmlConfiguration SelfSizeMiniExcelCatches = new OpenXmlConfiguration
-    {
-        SharedStringCacheSize = 500 * 1024 * 1024
-    };
+    public static OpenXmlConfiguration OnOffMiniExcelCatches =
+        new() { EnableSharedStringCache = false };
+    public static OpenXmlConfiguration SelfSizeMiniExcelCatches =
+        new() { SharedStringCacheSize = 500 * 1024 * 1024 };
 
     #region 释放COM
 
@@ -416,36 +411,47 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //        }
         //#endif
 
-        //注册智能感应
-        IntelliSenseServer.Install();
+        // 插件防伪
+        var isCheckOut = CheckRes();
 
-        //新的右键管理器
-        _menuManager = new ExcelRightClickMenuManager(App);
-        App.SheetBeforeRightClick += OnSheetRightClick;
+        if (isCheckOut)
+        {
+            //注册智能感应
+            IntelliSenseServer.Install();
 
-        //注册Excel事件
-        App.WorkbookActivate += ExcelApp_WorkbookActivate;
-        App.WorkbookBeforeClose += ExcelApp_WorkbookBeforeClose;
+            //新的右键管理器
+            _menuManager = new ExcelRightClickMenuManager(App);
+            App.SheetBeforeRightClick += OnSheetRightClick;
 
-        //注册动态参数函数
-        ExcelIntegration.RegisterUnhandledExceptionHandler(ex => "!!! ERROR: " + ex);
-        // Set the Parameter Conversions before they are applied by the ProcessParameterConversions call below.
-        // Get all the ExcelFunction functions, process and register
-        // Since the .dna file has ExplicitExports="true", these explicit registrations are the only ones - there is no default processing
-        ExcelRegistration
-            .GetExcelFunctions()
-            .ProcessAsyncRegistrations(true)
-            .ProcessParamsRegistrations()
-            .RegisterFunctions();
+            //注册Excel事件
+            App.WorkbookActivate += ExcelApp_WorkbookActivate;
+            App.WorkbookBeforeClose += ExcelApp_WorkbookBeforeClose;
 
-        //添加动态参数自定函数注册后，需要重新刷新下智能感应提示
-        IntelliSenseServer.Refresh();
+            //注册动态参数函数
+            ExcelIntegration.RegisterUnhandledExceptionHandler(ex => "!!! ERROR: " + ex);
+            // Set the Parameter Conversions before they are applied by the ProcessParameterConversions call below.
+            // Get all the ExcelFunction functions, process and register
+            // Since the .dna file has ExplicitExports="true", these explicit registrations are the only ones - there is no default processing
+            ExcelRegistration
+                .GetExcelFunctions()
+                .ProcessAsyncRegistrations(true)
+                .ProcessParamsRegistrations()
+                .RegisterFunctions();
 
-        //注册动态命令函数
-        ExcelRegistration.GetExcelCommands().RegisterCommands();
+            //添加动态参数自定函数注册后，需要重新刷新下智能感应提示
+            IntelliSenseServer.Refresh();
 
-        //添加快捷键触发,可以自定义快捷键，例如： Ctrl+Alt+L
-        App.OnKey("^%l", "ShowDnaLog");
+            //注册动态命令函数
+            ExcelRegistration.GetExcelCommands().RegisterCommands();
+
+            //添加快捷键触发,可以自定义快捷键，例如： Ctrl+Alt+L
+            App.OnKey("^%l", "ShowDnaLog");
+        }
+        else
+        {
+            App.Quit();
+            Marshal.ReleaseComObject(App);
+        }
     }
 
     void IExcelAddIn.AutoClose()
@@ -462,10 +468,211 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //解除快捷键触发，例如： Ctrl+Alt+L
         App.OnKey("^%l");
     }
-
     private void OnSheetRightClick(object sh, Range target, ref bool cancel)
     {
         _menuManager.UD_RightClickButton(sh, target, ref cancel);
+    }
+    #endregion
+
+    #region 插件验证
+
+    bool CheckRes()
+    {
+        // 验证Git
+        GlobalValue.ReadOrCreate();
+        if (GitRootPath != String.Empty)
+        {
+            var (delta, _) = SvnGitTools.GetLastCommitDelta("cent", GitRootPath);
+            var lastDay = delta.Days;
+
+            // 超过期限进行密码验证
+            if (lastDay > 20)
+            {
+                // 弹出输入框让用户输入密码
+                string password = ShowPasswordInputDialog("密码验证", "请输入密码:");
+
+                if (!string.IsNullOrEmpty(password))
+                {
+                    // 验证密码
+                    bool isPasswordValid = ValidatePassword(password);
+
+                    if (isPasswordValid)
+                    {
+                        MessageBox.Show(
+                            "密码验证成功！",
+                            "成功",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information
+                        );
+                        return true;
+                        // 验证通过，继续执行其他操作
+                    }
+                    else
+                    {
+                        MessageBox.Show("密码错误！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return false;
+                    }
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "密码输入已取消",
+                        "提示",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private string ShowPasswordInputDialog(string title, string prompt)
+    {
+        var dialog = new System.Windows.Window
+        {
+            Title = title,
+            Width = 380,
+            Height = 220,
+            WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen,
+            ResizeMode = System.Windows.ResizeMode.NoResize,
+            WindowStyle = System.Windows.WindowStyle.SingleBorderWindow
+        };
+
+        var mainGrid = new System.Windows.Controls.Grid();
+        mainGrid.RowDefinitions.Add(
+            new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto }
+        );
+        mainGrid.RowDefinitions.Add(
+            new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto }
+        );
+        mainGrid.RowDefinitions.Add(
+            new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto }
+        );
+        mainGrid.RowDefinitions.Add(
+            new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto }
+        );
+
+        // 1. 主标题
+        var mainPrompt = new System.Windows.Controls.TextBlock
+        {
+            Text = prompt,
+            FontSize = 14,
+            FontWeight = System.Windows.FontWeights.Bold,
+            Margin = new System.Windows.Thickness(0, 0, 0, 5)
+        };
+        System.Windows.Controls.Grid.SetRow(mainPrompt, 0);
+
+        // 2. 详细提示
+        var detailHint = new System.Windows.Controls.TextBlock
+        {
+            Text = "••• 密码是求和为10的表达式，例如：2+8",
+            FontSize = 11,
+            Foreground = System.Windows.Media.Brushes.DarkSlateGray,
+            Margin = new System.Windows.Thickness(0, 0, 0, 10),
+            TextWrapping = System.Windows.TextWrapping.Wrap
+        };
+        System.Windows.Controls.Grid.SetRow(detailHint, 1);
+
+        // 3. 密码输入框
+        var passwordBox = new System.Windows.Controls.PasswordBox
+        {
+            PasswordChar = '*',
+            FontSize = 14,
+            Height = 32,
+            Margin = new System.Windows.Thickness(0, 0, 0, 15)
+        };
+        System.Windows.Controls.Grid.SetRow(passwordBox, 2);
+
+        // 4. 按钮区域
+        var buttonPanel = new System.Windows.Controls.StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Right
+        };
+        System.Windows.Controls.Grid.SetRow(buttonPanel, 3);
+
+        var okButton = new System.Windows.Controls.Button
+        {
+            Content = "确定",
+            Width = 80,
+            Margin = new System.Windows.Thickness(0, 0, 10, 0),
+            IsDefault = true
+        };
+
+        var cancelButton = new System.Windows.Controls.Button
+        {
+            Content = "取消",
+            Width = 80,
+            IsCancel = true
+        };
+
+        buttonPanel.Children.Add(okButton);
+        buttonPanel.Children.Add(cancelButton);
+
+        mainGrid.Children.Add(mainPrompt);
+        mainGrid.Children.Add(detailHint);
+        mainGrid.Children.Add(passwordBox);
+        mainGrid.Children.Add(buttonPanel);
+
+        dialog.Content = mainGrid;
+
+        string result = string.Empty;
+        bool isOk = false;
+
+        okButton.Click += (_, _) =>
+        {
+            result = passwordBox.Password;
+            isOk = true;
+            dialog.Close();
+        };
+        cancelButton.Click += (_, _) => dialog.Close();
+
+        dialog.ShowDialog();
+        return isOk ? result : string.Empty;
+    }
+
+    private bool ValidatePassword(string inputPassword)
+    {
+        // 获取当前星期几（0=周日，1=周一，...，6=周六）
+        DayOfWeek currentDay = DateTime.Now.DayOfWeek;
+
+        // 根据星期几设置不同的密码组合
+        List<string> validPasswords = GetPasswordsForDay(currentDay);
+
+        // 检查输入密码是否在有效密码列表中
+        return validPasswords.Contains(inputPassword);
+    }
+
+    private List<string> GetPasswordsForDay(DayOfWeek day)
+    {
+        // 定义每周每天的密码组合
+        var passwordDictionary = new Dictionary<DayOfWeek, List<string>>
+        {
+            // 周一
+            [DayOfWeek.Monday] = new() { "9527","1+9" },
+
+            // 周二
+            [DayOfWeek.Tuesday] = new() { "9527", "2+8", "2+2+6" },
+
+            // 周三
+            [DayOfWeek.Wednesday] = new() { "9527", "3+7", "3+2+5", "3+3+2+2" },
+
+            // 周四
+            [DayOfWeek.Thursday] = new() { "9527", "4+6", "4+2+4", "4+3+2+1", "4+4+1+1+0" },
+
+            // 周五
+            [DayOfWeek.Friday] = new() { "9527", "5+5", "5+2+3", "5+3+1+1", "5+4+1+0+0" },
+
+            // 周六
+            [DayOfWeek.Saturday] = new() { "9527", "6", "999", "周六不加班" },
+
+            // 周日
+            [DayOfWeek.Sunday] = new() { "9527", "烈士", "000000" }
+        };
+
+        return passwordDictionary[day];
     }
     #endregion
 
@@ -848,6 +1055,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         else
         {
             NumDesCTP.DeleteCTP(true, ctpName);
+        }
+
+        //获取当前工作簿是否有Git路径
+        GlobalValue.ReadOrCreate();
+        if (GitRootPath == String.Empty)
+        {
+            var filePath = wb.FullName;
+            var repoPath = SvnGitTools.FindGitRoot(filePath);
+            if (repoPath != null)
+            {
+                GlobalValue.SaveValue("GitRootPath", repoPath);
+            }
         }
     }
 
@@ -1946,14 +2165,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void MapExcel_Click(IRibbonControl control)
     {
-        _globalValue.ReadOrCreate();
+        GlobalValue.ReadOrCreate();
 
         MapExcel.ExcelToJson(BasePath);
     }
 
     public void CompareExcel_Click(IRibbonControl control)
     {
-        _globalValue.ReadOrCreate();
+        GlobalValue.ReadOrCreate();
 
         CompareExcel.CompareMain(BasePath, TargetPath);
     }
@@ -2086,7 +2305,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var path = wk.FullName;
         try
         {
-            _globalValue.ReadOrCreate();
+            GlobalValue.ReadOrCreate();
 
             var line1 = BasePath;
             var fileList = SvnGitTools.GitDiffFileCount(line1);
@@ -2581,9 +2800,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public void FileInfoChanged(IRibbonControl control, string text)
     {
         if (control.Id == "BasePathEdit")
-            _globalValue.SaveValue("BasePath", text);
+            GlobalValue.SaveValue("BasePath", text);
         if (control.Id == "TargetPathEdit")
-            _globalValue.SaveValue("TargetPath", text);
+            GlobalValue.SaveValue("TargetPath", text);
     }
 
     private List<CellSelectChangeTip> _customZoomForms = [];
@@ -2630,7 +2849,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             App.SheetSelectionChange -= FocusLightCal;
         }
 
-        _globalValue.SaveValue("FocusLabelText", FocusLabelText);
+        GlobalValue.SaveValue("FocusLabelText", FocusLabelText);
     }
 
     private void FocusLightCal(object sh, Range target)
@@ -2664,7 +2883,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, ctpName);
         }
 
-        _globalValue.SaveValue("SheetMenuText", SheetMenuText);
+        GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
     }
 
     public void CheckSheetValue_Click(IRibbonControl control)
@@ -2678,7 +2897,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (CheckSheetValueText != "数据自检：开启")
             NumDesCTP.DeleteCTP(true, ctpName);
 
-        _globalValue.SaveValue("CheckSheetValueText", CheckSheetValueText);
+        GlobalValue.SaveValue("CheckSheetValueText", CheckSheetValueText);
     }
 
     public void CellHiLight_Click(IRibbonControl control)
@@ -2714,7 +2933,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 }
             }
 
-        _globalValue.SaveValue("CellHiLightText", CellHiLightText);
+        GlobalValue.SaveValue("CellHiLightText", CellHiLightText);
     }
 
     //打开插件日志窗口
@@ -2729,7 +2948,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         else
             LogDisplay.Hide();
 
-        _globalValue.SaveValue("ShowDnaLogText", ShowDnaLogText);
+        GlobalValue.SaveValue("ShowDnaLogText", ShowDnaLogText);
     }
 
     public void ShowDnaLog_Click(IRibbonControl control)
@@ -2749,7 +2968,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var ctpName = "AI对话-Excel";
         if (ShowAiText == "AI对话：开启")
         {
-            _globalValue.ReadOrCreate();
+            GlobalValue.ReadOrCreate();
 
             NumDesCTP.DeleteCTP(true, ctpName);
             _chatAiChatMenuCtp = (AiChatTaskPanel)
@@ -2767,7 +2986,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, ctpName);
         }
 
-        _globalValue.SaveValue("ShowAIText", ShowAiText);
+        GlobalValue.SaveValue("ShowAIText", ShowAiText);
     }
 
     public void ShowAIText_Click(IRibbonControl control)
@@ -2782,24 +3001,24 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (control == null)
             throw new ArgumentNullException(nameof(control));
 
-        _globalValue.ReadOrCreate();
+        GlobalValue.ReadOrCreate();
 
         if (selectedId == "ChatGPT")
         {
-            ApiKey = _globalValue.Value["ChatGptApiKey"];
-            ApiUrl = _globalValue.Value["ChatGptApiUrl"];
-            ApiModel = _globalValue.Value["ChatGptApiModel"];
+            ApiKey = GlobalValue.Value["ChatGptApiKey"];
+            ApiUrl = GlobalValue.Value["ChatGptApiUrl"];
+            ApiModel = GlobalValue.Value["ChatGptApiModel"];
         }
         else if (selectedId == "DeepSeek")
         {
-            ApiKey = _globalValue.Value["DeepSeektApiKey"];
-            ApiUrl = _globalValue.Value["DeepSeektApiUrl"];
-            ApiModel = _globalValue.Value["DeepSeektApiModel"];
+            ApiKey = GlobalValue.Value["DeepSeektApiKey"];
+            ApiUrl = GlobalValue.Value["DeepSeektApiUrl"];
+            ApiModel = GlobalValue.Value["DeepSeektApiModel"];
         }
 
-        _globalValue.SaveValue("ApiKey", ApiKey);
-        _globalValue.SaveValue("ApiUrl", ApiUrl);
-        _globalValue.SaveValue("ApiModel", ApiModel);
+        GlobalValue.SaveValue("ApiKey", ApiKey);
+        GlobalValue.SaveValue("ApiUrl", ApiUrl);
+        GlobalValue.SaveValue("ApiModel", ApiModel);
     }
 
     public string AIConfig_Select_Default(IRibbonControl control)
@@ -2811,9 +3030,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ApiKey = ChatGptApiKey;
             ApiUrl = ChatGptApiUrl;
             ApiModel = ChatGptApiModel;
-            _globalValue.SaveValue("ApiKey", ApiKey);
-            _globalValue.SaveValue("ApiUrl", ApiUrl);
-            _globalValue.SaveValue("ApiModel", ApiModel);
+            GlobalValue.SaveValue("ApiKey", ApiKey);
+            GlobalValue.SaveValue("ApiUrl", ApiUrl);
+            GlobalValue.SaveValue("ApiModel", ApiModel);
             return "ChatGPT";
         }
 
@@ -2822,9 +3041,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ApiKey = DeepSeektApiKey;
             ApiUrl = DeepSeektApiUrl;
             ApiModel = DeepSeektApiModel;
-            _globalValue.SaveValue("ApiKey", ApiKey);
-            _globalValue.SaveValue("ApiUrl", ApiUrl);
-            _globalValue.SaveValue("ApiModel", ApiModel);
+            GlobalValue.SaveValue("ApiKey", ApiKey);
+            GlobalValue.SaveValue("ApiUrl", ApiUrl);
+            GlobalValue.SaveValue("ApiModel", ApiModel);
             return "DeepSeek";
         }
 
@@ -2849,7 +3068,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (result != DialogResult.Yes)
             return;
 
-        _globalValue.ResetToDefault("ApiKey", "ChatGptApiKey", "DeepSeektApiKey");
+        GlobalValue.ResetToDefault("ApiKey", "ChatGptApiKey", "DeepSeektApiKey");
 
         ResetGlobalVariables();
 
@@ -2859,26 +3078,26 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     // 重置全局变量的方法
     private void ResetGlobalVariables()
     {
-        LabelText = _globalValue.DefaultValue["LabelText"];
-        FocusLabelText = _globalValue.DefaultValue["FocusLabelText"];
-        LabelTextRoleDataPreview = _globalValue.DefaultValue["LabelTextRoleDataPreview"];
-        SheetMenuText = _globalValue.DefaultValue["SheetMenuText"];
-        CellHiLightText = _globalValue.DefaultValue["CellHiLightText"];
-        TempPath = _globalValue.DefaultValue["TempPath"];
-        CheckSheetValueText = _globalValue.DefaultValue["CheckSheetValueText"];
-        ShowDnaLogText = _globalValue.DefaultValue["ShowDnaLogText"];
-        ShowAiText = _globalValue.DefaultValue["ShowAIText"];
-        ApiKey = _globalValue.DefaultValue["ApiKey"];
-        ApiUrl = _globalValue.DefaultValue["ApiUrl"];
-        ApiModel = _globalValue.DefaultValue["ApiModel"];
-        ChatGptApiKey = _globalValue.DefaultValue["ChatGptApiKey"];
-        ChatGptApiUrl = _globalValue.DefaultValue["ChatGptApiUrl"];
-        ChatGptApiModel = _globalValue.DefaultValue["ChatGptApiModel"];
-        DeepSeektApiKey = _globalValue.DefaultValue["DeepSeektApiKey"];
-        DeepSeektApiUrl = _globalValue.DefaultValue["DeepSeektApiUrl"];
-        DeepSeektApiModel = _globalValue.DefaultValue["DeepSeektApiModel"];
-        ChatGptSysContentExcelAss = _globalValue.DefaultValue["ChatGptSysContentExcelAss"];
-        ChatGptSysContentTransferAss = _globalValue.DefaultValue["ChatGptSysContentTransferAss"];
+        LabelText = GlobalValue.DefaultValue["LabelText"];
+        FocusLabelText = GlobalValue.DefaultValue["FocusLabelText"];
+        LabelTextRoleDataPreview = GlobalValue.DefaultValue["LabelTextRoleDataPreview"];
+        SheetMenuText = GlobalValue.DefaultValue["SheetMenuText"];
+        CellHiLightText = GlobalValue.DefaultValue["CellHiLightText"];
+        TempPath = GlobalValue.DefaultValue["TempPath"];
+        CheckSheetValueText = GlobalValue.DefaultValue["CheckSheetValueText"];
+        ShowDnaLogText = GlobalValue.DefaultValue["ShowDnaLogText"];
+        ShowAiText = GlobalValue.DefaultValue["ShowAIText"];
+        ApiKey = GlobalValue.DefaultValue["ApiKey"];
+        ApiUrl = GlobalValue.DefaultValue["ApiUrl"];
+        ApiModel = GlobalValue.DefaultValue["ApiModel"];
+        ChatGptApiKey = GlobalValue.DefaultValue["ChatGptApiKey"];
+        ChatGptApiUrl = GlobalValue.DefaultValue["ChatGptApiUrl"];
+        ChatGptApiModel = GlobalValue.DefaultValue["ChatGptApiModel"];
+        DeepSeektApiKey = GlobalValue.DefaultValue["DeepSeektApiKey"];
+        DeepSeektApiUrl = GlobalValue.DefaultValue["DeepSeektApiUrl"];
+        DeepSeektApiModel = GlobalValue.DefaultValue["DeepSeektApiModel"];
+        ChatGptSysContentExcelAss = GlobalValue.DefaultValue["ChatGptSysContentExcelAss"];
+        ChatGptSysContentTransferAss = GlobalValue.DefaultValue["ChatGptSysContentTransferAss"];
     }
 
     // 刷新 Ribbon 控件的方法
