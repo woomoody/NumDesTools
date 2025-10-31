@@ -251,9 +251,16 @@ internal static class LteCore
         string merB = MerB(exportWildcardDyData, funDepends, string.Empty, funDy1, funDy2, funDy3);
         var mer = !idList.Contains(merB) ? Mer(exportWildcardDyData, funDepends, string.Empty, funDy1) : merB;
         
-        var merType = baseData[mer][8];
-
-        if(!merType.Contains("链"))
+        var merIndex = idList.IndexOf(mer);
+        if(merIndex != -1)
+        {
+            var merType = baseData["类型"][merIndex];
+            if (!merType.Contains("链"))
+            {
+                mer = "11010001";
+            }
+        }
+        else
         {
             mer = "11010001";
         }
@@ -466,7 +473,6 @@ internal static class LteCore
         // 其他次数据
         for (int i = 0; i < loopTimes; i++)
         {
-            string stringSubCollect = string.Empty;
             collectRowId += int.Parse(funDy1);
             int findIndex = idList.FindIndex(f => f == collectRowId.ToString());
             if (findIndex != -1)
@@ -486,7 +492,7 @@ internal static class LteCore
                             sb.Append(temp).Append(',');
                         }
                         if (sb.Length > 0) sb.Length--;
-                        stringSubCollect = sb.ToString();
+                        var stringSubCollect = sb.ToString();
                         strCollect += $",[{stringSubCollect}]";
                         idCollect += "," + collectRowId;
                     }
