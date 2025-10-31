@@ -32,6 +32,7 @@ using MiniExcelLibs;
 using MiniExcelLibs.OpenXml;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
+using NumDesTools.Advance;
 using NumDesTools.Com;
 using NumDesTools.Config;
 using NumDesTools.UI;
@@ -468,6 +469,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //解除快捷键触发，例如： Ctrl+Alt+L
         App.OnKey("^%l");
     }
+
     private void OnSheetRightClick(object sh, Range target, ref bool cancel)
     {
         _menuManager.UD_RightClickButton(sh, target, ref cancel);
@@ -651,7 +653,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var passwordDictionary = new Dictionary<DayOfWeek, List<string>>
         {
             // 周一
-            [DayOfWeek.Monday] = new() { "9527","1+9" },
+            [DayOfWeek.Monday] = new() { "9527", "1+9" },
 
             // 周二
             [DayOfWeek.Tuesday] = new() { "9527", "2+8", "2+2+6" },
@@ -2355,14 +2357,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //{
         //    converter.ConvertMultipleJsonToExcel(jsonFile);
         //}
-
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
-        var sheetRealName = "Icon.xlsx#Sheet1";
-        var fileInfo = PubMetToExcel.AliceFilePathFix(path, sheetRealName);
-        string filePath = fileInfo.Item1;
 
-        PubMetToExcelFunc.SyncIconFixData(filePath);
+        string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string dbPath = Path.Combine(myDocumentsPath, "Public.db");
+
+        var abc = new ExcelDataToDb();
+
+        abc.ConvertWithSchemaInference(path, dbPath);
+        
 
         //App.Visible = false;
         //App.ScreenUpdating = false;
@@ -2507,64 +2511,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var filesCollection = new SelfExcelFileCollector(path);
-        var files = filesCollection.GetAllExcelFilesPath();
+        string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string dbPath = Path.Combine(myDocumentsPath, "Public.db");
 
-        // 假设 files 是一个包含所有文件路径的集合
-        Parallel.ForEach(
-            files,
-            fileInfo =>
-            {
-                using var fileStream = new FileStream(
-                    fileInfo,
-                    FileMode.Open,
-                    FileAccess.ReadWrite
-                );
-                IWorkbook workbook = new XSSFWorkbook(fileStream);
-                var count = 0;
+        // 很效率
+        var ccc = new ExcelDataToDb();
+        var abc = ccc.SearchAllTables("761701",dbPath);
 
-                foreach (var sheet in workbook)
-                {
-                    if (sheet.SheetName.Contains("#") || sheet.SheetName.Contains("Chart"))
-                        continue;
-
-                    var cellA1 = sheet.GetRow(0)?.GetCell(0);
-                    var cellA1Value = cellA1?.ToString() ?? "";
-                    if (!cellA1Value.Contains("#"))
-                        continue;
-
-                    // 检查隐藏的行
-                    for (var row = 0; row <= sheet.LastRowNum + 1000; row++)
-                    {
-                        var currentRow = sheet.GetRow(row);
-                        if (currentRow != null && currentRow.ZeroHeight)
-                        {
-                            currentRow.ZeroHeight = false;
-                            count++;
-                        }
-                    }
-
-                    // 检查隐藏的列
-                    for (var col = 0; col <= sheet.GetRow(0).LastCellNum + 100; col++)
-                        if (sheet.IsColumnHidden(col))
-                        {
-                            sheet.SetColumnHidden(col, false);
-                            count++;
-                        }
-                }
-
-                if (count > 0)
-                {
-                    using var outputStream = new FileStream(
-                        fileInfo,
-                        FileMode.Create,
-                        FileAccess.Write
-                    );
-                    workbook.Write(outputStream);
-                }
-            }
-        );
-
+        var cde = 0;
         //var lines = File.ReadAllLines(DefaultFilePath);
         //CompareExcel.CompareMain(lines);
 
@@ -2605,6 +2559,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //    sw.Stop();
         //}
     }
+
+
 
     public void CheckHiddenCell_Click(IRibbonControl control)
     {
