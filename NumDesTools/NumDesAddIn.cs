@@ -264,6 +264,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ExcelSearchBoxButton3"] = ExcelSearchAllMultiThread_Click,
             ["ExcelSearchBoxButton2"] = ExcelSearchID_Click,
             ["ExcelSearchBoxButton4"] = ExcelSearchAllToExcel_Click,
+            ["ExcelDataToDb"] = ExcelDataToDb_Click,
             ["ExcelSearchBoxButton5"] = CellDataReplace_Click,
             ["ExcelSearchBoxButton6"] = CellDataSearch_Click,
             ["ModelDataCreat"] = ModelDataCreat_Click,
@@ -1159,6 +1160,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //        package.Save(); // 覆盖原文件
         //    }
         //}
+
+        string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string dbPath = Path.Combine(myDocumentsPath, "Public.db");
+
+        if (File.Exists(dbPath))
+        {
+            var abc = new ExcelDataToDb();
+            abc.UpdateSingleFile(wkFullPath, dbPath);
+        }
     }
 
     public void AllWorkbookOutPut_Click(IRibbonControl control)
@@ -2342,7 +2352,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         PubMetToExcelFunc.SyncIconFixData(filePath);
     }
+    public void ExcelDataToDb_Click(IRibbonControl control)
+    {
+        var wk = App.ActiveWorkbook;
+        var path = wk.Path;
 
+        string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string dbPath = Path.Combine(myDocumentsPath, "Public.db");
+
+        var excelDb = new ExcelDataToDb();
+        excelDb.ConvertWithSchemaInference(path, dbPath);
+
+    }
     public void TestBar1_Click(IRibbonControl control)
     {
         //var files = new List<string>(
@@ -2366,7 +2387,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var abc = new ExcelDataToDb();
 
         abc.ConvertWithSchemaInference(path, dbPath);
-        
 
         //App.Visible = false;
         //App.ScreenUpdating = false;
@@ -2508,17 +2528,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void TestBar2_Click(IRibbonControl control)
     {
-        var wk = App.ActiveWorkbook;
-        var path = wk.Path;
-
-        string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        string dbPath = Path.Combine(myDocumentsPath, "Public.db");
-
-        // 很效率
-        var ccc = new ExcelDataToDb();
-        var abc = ccc.SearchAllTables("761701",dbPath);
-
-        var cde = 0;
+    
         //var lines = File.ReadAllLines(DefaultFilePath);
         //CompareExcel.CompareMain(lines);
 
@@ -2559,8 +2569,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //    sw.Stop();
         //}
     }
-
-
 
     public void CheckHiddenCell_Click(IRibbonControl control)
     {
