@@ -235,7 +235,7 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 Handler: LteData.UpdateCopyTaskValue
             ),
             new(
-                Condition: bookName.Contains("地上物工具"),
+                Condition: bookName.Contains("地上"),
                 Tag: "LTE生成地组",
                 Caption: "LTE生成地组",
                 Handler: LteData.GroundDataSim
