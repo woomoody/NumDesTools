@@ -1,6 +1,7 @@
 ﻿using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
+using Markdig.Helpers;
 using Microsoft.VisualBasic;
 using NumDesTools.UI;
 using OfficeOpenXml;
@@ -1456,11 +1457,7 @@ public class LteData
                             findDic[findIdStr].Add("寻-" + copyDic[key][8]);
                             findDic[findIdStr].Add(copyDic[findIdStr][9]);
                             findDic[findIdStr].Add(findTips);
-
-                            var findLinksFix = findLinks.Substring(0, findLinks.Length - 1);
-                            findLinksFix += ",{8,9993}";
-
-                            findDic[findIdStr].Add(findLinksFix);
+                            findDic[findIdStr].Add(findLinks + ",{8,9993}");
                         }
                     }
                 }
@@ -1574,11 +1571,11 @@ public class LteData
             findLinks += "{" + findTargetType + "," + findTargetId + "},";
         }
 
-        if(findTaregtfieldLinks != string.Empty)
+        if (findTaregtfieldLinks != string.Empty)
         {
             findLinks += findTaregtfieldLinks + ",";
         }
-        
+
         // 2层查找
         List<string> matchedIDsOri = baseDic
             .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId))
@@ -1715,7 +1712,21 @@ public class LteData
             }
         }
 
+        // 去重
+        findLinks = RemoveDuplicateBracketsLinqOrdered(findLinks);
         return findLinks;
+    }
+
+    public static string RemoveDuplicateBracketsLinqOrdered(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return input;
+
+        var matches = Regex.Matches(input, @"{[^}]+}");
+
+        var uniqueItems = matches.Cast<Match>().Select(m => m.Value).Distinct().ToList();
+
+        return string.Join(",", uniqueItems);
     }
 
     private static string FieldGroupLinks(
@@ -1727,10 +1738,11 @@ public class LteData
 
         if (fieldGroupDic.ContainsKey(findTargetNickName))
         {
-            var count = fieldGroupDic[findTargetNickName].Count;
-            if (count > 2)
+            var fieldList = fieldGroupDic[findTargetNickName];
+
+            if (fieldList.Count > 2)
             {
-                var fieldMap = fieldGroupDic[findTargetNickName][1];
+                var fieldMap = fieldList[1];
                 var fieldPrefix = OutputWildcardPubDic["活动地组"];
                 double fieldIndex = 0;
                 if (double.TryParse(fieldMap, out double fileMapDouble))
@@ -1741,11 +1753,18 @@ public class LteData
                     }
                 }
 
+                fieldList = fieldList
+                    .Skip(2)
+                    .Where(str => !string.IsNullOrEmpty(str)) // 过滤空字符串和null
+                    .Where(str => str != "0") // 过滤空字符串和null
+                    .OrderBy(str => str) // 按字母顺序排序
+                    .ToList();
+
                 if (fieldIndex > 0)
                 {
-                    for (int i = 2; i < count; i++)
+                    for (int i = 0; i < fieldList.Count; i++)
                     {
-                        var fieldValue = fieldGroupDic[findTargetNickName][i];
+                        var fieldValue = fieldList[i];
                         if (double.TryParse(fieldValue, out double fieldValueDouble))
                         {
                             fieldLinks +=
@@ -2069,7 +2088,7 @@ public class LteData
                     );
                 }
                 findLinks =
-                    findLinks + "{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
+                    findLinks + ",{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
                 taskColDataList.Add(findLinks);
 
                 // 限时任务数据
@@ -2128,7 +2147,7 @@ public class LteData
                     );
                 }
                 findSubLinks =
-                    findSubLinks + "{20,\"UILteMapEntrance\"," + taskSubTargetMapId + "},{8,9999}";
+                    findSubLinks + ",{20,\"UILteMapEntrance\"," + taskSubTargetMapId + "},{8,9999}";
                 taskSubColDataList.Add(findSubLinks);
 
                 // 限时任务数据
