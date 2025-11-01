@@ -1416,6 +1416,7 @@ public class LteData
                 //{
                 //double findId = intKey + i * 100;
                 var findTargetId = inputArray[i];
+
                 var findId = findTargetId;
 
                 if (findTargetId == string.Empty)
@@ -1551,6 +1552,8 @@ public class LteData
 
         var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName);
 
+        var targetType = baseDic[findTargetId][8];
+
         //1层查找
         if (findTargetDetailType == string.Empty)
         {
@@ -1581,30 +1584,33 @@ public class LteData
             .Select(kv => kv.Key)
             .ToList();
 
-        //没有直接匹配的，需要继续查找（按照链的规则）
-        var findTargetId01 = findTargetId.Substring(0, findTargetId.Length - 2) + "01";
-        List<string> matchedIDs01 = baseDic
-            .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId01))
-            .Select(kv => kv.Key)
-            .ToList();
-
-        var findTargetId02 = findTargetId.Substring(0, findTargetId.Length - 2) + "02";
-        List<string> matchedIDs02 = baseDic
-            .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId02))
-            .Select(kv => kv.Key)
-            .ToList();
-
-        var findTargetId03 = findTargetId.Substring(0, findTargetId.Length - 2) + "03";
-        List<string> matchedIDs03 = baseDic
-            .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId03))
-            .Select(kv => kv.Key)
-            .ToList();
-
+        //没有直接匹配的，需要继续查找（按照链的规则,要验证类型）
         List<string> matchedIDsEnd = new();
-        matchedIDsEnd.AddRange(matchedIDsOri);
-        matchedIDsEnd.AddRange(matchedIDs01);
-        matchedIDsEnd.AddRange(matchedIDs02);
-        matchedIDsEnd.AddRange(matchedIDs03);
+        if (targetType.Contains("链"))
+        {
+            var findTargetId01 = findTargetId.Substring(0, findTargetId.Length - 2) + "01";
+            List<string> matchedIDs01 = baseDic
+                .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId01))
+                .Select(kv => kv.Key)
+                .ToList();
+
+            var findTargetId02 = findTargetId.Substring(0, findTargetId.Length - 2) + "02";
+            List<string> matchedIDs02 = baseDic
+                .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId02))
+                .Select(kv => kv.Key)
+                .ToList();
+
+            var findTargetId03 = findTargetId.Substring(0, findTargetId.Length - 2) + "03";
+            List<string> matchedIDs03 = baseDic
+                .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId03))
+                .Select(kv => kv.Key)
+                .ToList();
+
+            matchedIDsEnd.AddRange(matchedIDsOri);
+            matchedIDsEnd.AddRange(matchedIDs01);
+            matchedIDsEnd.AddRange(matchedIDs02);
+            matchedIDsEnd.AddRange(matchedIDs03);
+        }
 
         //// 按照优先级选择最后一个匹配项
         //string finalMatchedId = matchedIDsOri.LastOrDefault()
@@ -1644,44 +1650,44 @@ public class LteData
         }
         else
         {
-            // 针对找自己的情况做出区分
-            if (findLinks.Contains("{1,"))
-            {
-                findLinks = string.Empty;
-            }
+            //// 针对找自己的情况做出区分
+            //if (findLinks.Contains("{1,"))
+            //{
+            //    findLinks = string.Empty;
+            //}
 
             int itemCount = 0;
             foreach (var findTargetId3 in matchedIDs)
             {
                 if (findTargetId3 != string.Empty)
                 {
-                    var findTargetType2 = baseDic[findTargetId3][27];
-                    var findTargetDetailType2 = baseDic[findTargetId3][28];
+                    var findTargetType3 = baseDic[findTargetId3][27];
+                    var findTargetDetailType3 = baseDic[findTargetId3][28];
 
                     var findTargetNickName3 = baseDic[findTargetId3][5];
 
                     var findTaregtfieldLinks3 = FieldGroupLinks(fieldGroupDic, findTargetNickName3);
 
-                    if (findTargetType2 != string.Empty)
+                    if (findTargetType3 != string.Empty)
                     {
-                        if (findTargetDetailType2 == string.Empty)
+                        if (findTargetDetailType3 == string.Empty)
                         {
-                            findTargetDetailType2 = "未找到细类";
+                            findTargetDetailType3 = "未找到细类";
                         }
-                        if (findTargetType2 == "19")
+                        if (findTargetType3 == "19")
                         {
                             findLinks +=
                                 "{"
-                                + findTargetType2
+                                + findTargetType3
                                 + ","
-                                + findTargetDetailType2
+                                + findTargetDetailType3
                                 + ","
                                 + findTargetId3
                                 + "},";
                         }
                         else
                         {
-                            findLinks += "{" + findTargetType2 + "," + findTargetId3 + "},";
+                            findLinks += "{" + findTargetType3 + "," + findTargetId3 + "},";
                         }
 
                         if (findTaregtfieldLinks3 != string.Empty)
