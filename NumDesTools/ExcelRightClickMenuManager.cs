@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
+using System.Runtime.Versioning;
 using Microsoft.Office.Core;
 using CommandBar = Microsoft.Office.Core.CommandBar;
-using System.Runtime.Versioning;
 
 namespace NumDesTools;
 
