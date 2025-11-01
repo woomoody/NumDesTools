@@ -1,10 +1,4 @@
-﻿global using ExcelDna.Integration;
-global using ExcelDna.Integration.CustomUI;
-global using ExcelDna.IntelliSense;
-global using ExcelDna.Logging;
-global using ExcelDna.Registration;
-global using Microsoft.Office.Interop.Excel;
-global using System;
+﻿global using System;
 global using System.Collections.Generic;
 global using System.Diagnostics;
 global using System.Drawing;
@@ -14,6 +8,12 @@ global using System.Linq;
 global using System.Reflection;
 global using System.Runtime.InteropServices;
 global using System.Windows.Forms;
+global using ExcelDna.Integration;
+global using ExcelDna.Integration.CustomUI;
+global using ExcelDna.IntelliSense;
+global using ExcelDna.Logging;
+global using ExcelDna.Registration;
+global using Microsoft.Office.Interop.Excel;
 global using Application = Microsoft.Office.Interop.Excel.Application;
 global using Color = System.Drawing.Color;
 global using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
@@ -24,6 +24,10 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using MiniExcelLibs;
 using MiniExcelLibs.OpenXml;
 using NPOI.SS.UserModel;
@@ -33,11 +37,6 @@ using NumDesTools.Com;
 using NumDesTools.Config;
 using NumDesTools.UI;
 using OfficeOpenXml;
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using static NumDesTools.Advance.ExcelDataToDb;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
 using IRibbonControl = ExcelDna.Integration.CustomUI.IRibbonControl;
@@ -1160,13 +1159,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //        package.Save(); // 覆盖原文件
         //    }
         //}
-
-        // 更新表到DB
-        string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        string dbPath = Path.Combine(myDocumentsPath, "Public.db");
-        var excelToDb = new ExcelDataToDb();
-        // 单个文件更新（覆盖模式）
-        excelToDb.UpdateSingleFile(wkFullPath, dbPath, UpdateMode.Overwrite);
     }
 
     public void AllWorkbookOutPut_Click(IRibbonControl control)
@@ -1782,42 +1774,20 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        string dbPath = Path.Combine(myDocumentsPath, "Public.db");
-
-        var tupleList = new List<(string, string, int, string)>();
-
-        // db还是excel直接搜索
-        if (File.Exists(dbPath))
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr, true);
+        if (targetList.Count == 0)
         {
-            var targetDb = new ExcelDataToDb();
-            var targetGroup = targetDb.SearchAllTables(_excelSeachStr, dbPath);
-
-            foreach (var group in targetGroup)
-            {
-                var fileName = group.FileName;
-                var tableName = group.TableName;
-                var rowNumber = group.RowNumber;
-                var colName = group.ColumnName;
-                tupleList.Add((fileName, tableName, rowNumber, colName));
-            }
+            MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
         }
         else
         {
-            var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr, true);
-
-            tupleList = targetList
+            var ctpName = "表格查询结果";
+            NumDesCTP.DeleteCTP(true, ctpName);
+            var tupleList = targetList
                 .Select(t =>
                     (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
                 )
                 .ToList();
-        }
-
-        if (tupleList.Count > 0)
-        {
-            var ctpName = "表格查询结果";
-            NumDesCTP.DeleteCTP(true, ctpName);
-
             _ = (SheetSeachResult)
                 NumDesCTP.ShowCTP(
                     800,
@@ -1835,42 +1805,20 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        string dbPath = Path.Combine(myDocumentsPath, "Public.db");
-
-        var tupleList = new List<(string, string, int, string)>();
-
-        // db还是excel直接搜索
-        if (File.Exists(dbPath))
+        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr, true, true);
+        if (targetList.Count == 0)
         {
-            var targetDb = new ExcelDataToDb();
-            var targetGroup = targetDb.SearchInColumns( dbPath, _excelSeachStr ,"B");
-
-            foreach (var group in targetGroup)
-            {
-                var fileName = group.FileName;
-                var tableName = group.TableName;
-                var rowNumber = group.RowNumber;
-                var colName = group.ColumnName;
-                tupleList.Add((fileName, tableName, rowNumber, colName));
-            }
+            MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
         }
         else
         {
-            var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr, true , true);
-
-            tupleList = targetList
+            var ctpName = "表格查询结果";
+            NumDesCTP.DeleteCTP(true, ctpName);
+            var tupleList = targetList
                 .Select(t =>
                     (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
                 )
                 .ToList();
-        }
-
-        if (tupleList.Count > 0)
-        {
-            var ctpName = "表格查询结果";
-            NumDesCTP.DeleteCTP(true, ctpName);
-
             _ = (SheetSeachResult)
                 NumDesCTP.ShowCTP(
                     800,
@@ -2418,6 +2366,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var abc = new ExcelDataToDb();
 
         abc.ConvertWithSchemaInference(path, dbPath);
+        
 
         //App.Visible = false;
         //App.ScreenUpdating = false;
@@ -2567,7 +2516,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         // 很效率
         var ccc = new ExcelDataToDb();
-        var abc = ccc.SearchAllTables("761701", dbPath);
+        var abc = ccc.SearchAllTables("761701",dbPath);
 
         var cde = 0;
         //var lines = File.ReadAllLines(DefaultFilePath);
@@ -2610,6 +2559,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //    sw.Stop();
         //}
     }
+
+
 
     public void CheckHiddenCell_Click(IRibbonControl control)
     {

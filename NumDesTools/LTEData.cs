@@ -1750,7 +1750,7 @@ public class LteData
                         {
                             fieldLinks +=
                                 "{4,"
-                                + (fieldIndex + fieldValueDouble + 1).ToString(
+                                + (fieldIndex + fieldValueDouble).ToString(
                                     CultureInfo.InvariantCulture
                                 )
                                 + "},";
