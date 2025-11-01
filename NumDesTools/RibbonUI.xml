@@ -132,7 +132,9 @@
                         <button id="ExcelSearchBoxButton4" label="合并数据-关键词" screentip='合并Excel(Alice-Cove)当前关键词'
                                 onAction='OnButtonClick' imageMso="SelectAll" tag='合并数据-关键词' />
                     </menu>
-                    <button id="ExcelSearchBoxButton5" size='large' label="替换文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串并替换'
+					<button id="ExcelDataToDb" size='large' label="Excel数据DB化" screentip='备份Public下配置Excel文件数据库化，方便更高效的查询'
+                            onAction='OnButtonClick' image="log" tag='Excel数据DB化' />
+					<button id="ExcelSearchBoxButton5" size='large' label="替换文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串并替换'
                             onAction='OnButtonClick' image="key" tag='替换文本(当前表格)' /> 
                     <button id="ExcelSearchBoxButton6" size='large' label="搜索文本(当前表格)" screentip='搜索当前激活表格中包含特别的字符串'
                             onAction='OnButtonClick' image="dart" tag='替换文本(当前表格)' />
