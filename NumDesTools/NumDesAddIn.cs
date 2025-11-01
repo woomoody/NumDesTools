@@ -1121,9 +1121,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             cancel = true;
         }
 
-        //取消隐藏
+        
         if (CheckSheetValueText == "数据自检：开启")
         {
+            // 取消隐藏
             var isModified = SvnGitTools.IsFileModified(wkFullPath);
             if (isModified)
                 foreach (Worksheet sheet in workBook.Worksheets)
@@ -1131,6 +1132,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     sheet.Rows.Hidden = false;
                     sheet.Columns.Hidden = false;
                 }
+
+            // 同步Excel到数据库
+            string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string dbPath = Path.Combine(myDocumentsPath, "Public.db");
+
+            if (File.Exists(dbPath))
+            {
+                var abc = new ExcelDataToDb();
+                abc.UpdateSingleFile(wkFullPath, dbPath);
+            }
         }
 
         //关闭某个工作簿时，CTP继承到新的工作簿里
@@ -1161,14 +1172,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //    }
         //}
 
-        string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        string dbPath = Path.Combine(myDocumentsPath, "Public.db");
-
-        if (File.Exists(dbPath))
-        {
-            var abc = new ExcelDataToDb();
-            abc.UpdateSingleFile(wkFullPath, dbPath);
-        }
     }
 
     public void AllWorkbookOutPut_Click(IRibbonControl control)
