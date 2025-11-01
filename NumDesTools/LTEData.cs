@@ -1,7 +1,6 @@
 ﻿using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
-using Markdig.Helpers;
 using Microsoft.VisualBasic;
 using NumDesTools.UI;
 using OfficeOpenXml;
@@ -1724,7 +1723,7 @@ public class LteData
 
         var matches = Regex.Matches(input, @"{[^}]+}");
 
-        var uniqueItems = matches.Cast<Match>().Select(m => m.Value).Distinct().ToList();
+        var uniqueItems = matches.Select(m => m.Value).Distinct().ToList();
 
         return string.Join(",", uniqueItems);
     }
@@ -2065,8 +2064,8 @@ public class LteData
                 taskColDataList.Add(taskTargetMapName);
 
                 //目标寻找关系
-                var findTargetType = baseDic[taskTagetId][25];
-                var findTargetDetailType = baseDic[taskTagetId][26];
+                var findTargetType = baseDic[taskTagetId][27];
+                var findTargetDetailType = baseDic[taskTagetId][28];
 
                 var findLinks = FindLinks(
                     findTargetDetailType,
@@ -2124,8 +2123,8 @@ public class LteData
                 taskSubColDataList.Add(taskSubTargetMapName);
 
                 //目标寻找关系
-                var findSubTargetType = baseDic[taskSubTagetId][25];
-                var findSubTargetDetailType = baseDic[taskSubTagetId][26];
+                var findSubTargetType = baseDic[taskSubTagetId][27];
+                var findSubTargetDetailType = baseDic[taskSubTagetId][28];
 
                 var findSubLinks = FindLinks(
                     findSubTargetDetailType,
