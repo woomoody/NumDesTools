@@ -1072,9 +1072,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
         }
 
-
-        // 取消Sheet多选
-        wb.Worksheets[1].Select();
+        if (CheckSheetValueText == "数据自检：开启")
+        {
+            // 取消Sheet多选
+            wb.Worksheets[1].Select();
+        }
     }
 
     private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
@@ -2869,6 +2871,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, ctpName);
 
         GlobalValue.SaveValue("CheckSheetValueText", CheckSheetValueText);
+
+        // 取消Sheet多选
+        var wb = App.ActiveWorkbook;
+        wb.Worksheets[1].Select();
     }
 
     public void CellHiLight_Click(IRibbonControl control)
