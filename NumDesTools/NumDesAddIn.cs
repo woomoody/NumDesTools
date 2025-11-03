@@ -1071,6 +1071,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 GlobalValue.SaveValue("GitRootPath", repoPath);
             }
         }
+
+
+        // 取消Sheet多选
+        wb.Worksheets[1].Select();
     }
 
     private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
