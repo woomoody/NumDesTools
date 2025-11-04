@@ -1060,22 +1060,33 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, ctpName);
         }
 
-        //获取当前工作簿是否有Git路径
+        // 获取当前工作簿是否有Git路径
         GlobalValue.ReadOrCreate();
         if (GitRootPath == String.Empty)
         {
             var filePath = wb.FullName;
-            var repoPath = SvnGitTools.FindGitRoot(filePath);
-            if (repoPath != null)
+            if (filePath.Contains("Excels") && filePath.Contains("Tables"))
             {
-                GlobalValue.SaveValue("GitRootPath", repoPath);
+                var repoPath = SvnGitTools.FindGitRoot(filePath);
+                if (repoPath != null)
+                {
+                    GlobalValue.SaveValue("GitRootPath", repoPath);
+                }
             }
         }
 
         if (CheckSheetValueText == "数据自检：开启")
         {
             // 取消Sheet多选
-            wb.Worksheets[1].Select();
+            if (!wb.Name.Contains("#"))
+            {
+                Debug.Print($"{wb.Name}-{wb.Worksheets[1].Name}");
+                var sheet = wb.Worksheets[1];
+                if (sheet.Visible == -1)
+                {
+                    wb.Worksheets[1].Select();
+                }
+            }
         }
     }
 
@@ -1127,7 +1138,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             cancel = true;
         }
 
-        
         if (CheckSheetValueText == "数据自检：开启")
         {
             // 取消隐藏
@@ -1140,7 +1150,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 }
 
             // 同步Excel到数据库
-            string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string myDocumentsPath = Environment.GetFolderPath(
+                Environment.SpecialFolder.MyDocuments
+            );
             string dbPath = Path.Combine(myDocumentsPath, "Public.db");
 
             if (File.Exists(dbPath))
@@ -1177,7 +1189,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //        package.Save(); // 覆盖原文件
         //    }
         //}
-
     }
 
     public void AllWorkbookOutPut_Click(IRibbonControl control)
@@ -2361,6 +2372,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         PubMetToExcelFunc.SyncIconFixData(filePath);
     }
+
     public void ExcelDataToDb_Click(IRibbonControl control)
     {
         var wk = App.ActiveWorkbook;
@@ -2371,8 +2383,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         var excelDb = new ExcelDataToDb();
         excelDb.ConvertWithSchemaInference(path, dbPath);
-
     }
+
     public void TestBar1_Click(IRibbonControl control)
     {
         //var files = new List<string>(
@@ -2537,7 +2549,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void TestBar2_Click(IRibbonControl control)
     {
-    
         //var lines = File.ReadAllLines(DefaultFilePath);
         //CompareExcel.CompareMain(lines);
 
@@ -2874,7 +2885,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         // 取消Sheet多选
         var wb = App.ActiveWorkbook;
-        wb.Worksheets[1].Select();
+        var wbName = wb.Name;
+        if (!wbName.Contains("#"))
+        {
+            var sheet = wb.Worksheets[1];
+            Debug.Print($"{wbName}-{sheet.Name}");
+            if (sheet.Visible == -1)
+            {
+                wb.Worksheets[1].Select();
+            }
+        }
     }
 
     public void CellHiLight_Click(IRibbonControl control)
