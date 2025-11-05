@@ -1081,10 +1081,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             if (!wb.Name.Contains("#"))
             {
                 Debug.Print($"{wb.Name}-{wb.Worksheets[1].Name}");
-                var sheet = wb.Worksheets[1];
-                if (sheet.Visible == -1)
+                var selectSheets = wb.Windows[1].SelectedSheets;
+                if(selectSheets.Count>1)
                 {
-                    wb.Worksheets[1].Select();
+                    var sheet = wb.ActiveSheet;
+                    sheet.Select();
                 }
             }
         }
@@ -2888,11 +2889,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wbName = wb.Name;
         if (!wbName.Contains("#"))
         {
-            var sheet = wb.Worksheets[1];
-            Debug.Print($"{wbName}-{sheet.Name}");
-            if (sheet.Visible == -1)
+            Debug.Print($"{wb.Name}-{wb.Worksheets[1].Name}");
+            var selectSheets = wb.Windows[1].SelectedSheets;
+            if (selectSheets.Count > 1)
             {
-                wb.Worksheets[1].Select();
+                var sheet = wb.ActiveSheet;
+                sheet.Select();
             }
         }
     }
