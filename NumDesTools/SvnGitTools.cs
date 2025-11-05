@@ -68,39 +68,34 @@ internal class SvnGitTools
     {
         try
         {
-            var process = new Process
+            // 确保仓库路径有效
+            if (!Repository.IsValid(repoPath))
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "git",
-                    Arguments = $"log --all --author=\"{authorName}\" -1 --format=%cd --date=iso",
-                    WorkingDirectory = repoPath,
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-
-            process.Start();
-            string output = process.StandardOutput.ReadToEnd().Trim();
-            process.WaitForExit(3000);
-
-            if (string.IsNullOrEmpty(output))
-                throw new Exception($"未找到作者 '{authorName}' 的提交记录");
-
-            if (DateTime.TryParse(output, out DateTime lastCommit))
-            {
-                TimeSpan delta = DateTime.Now - lastCommit;
-                return (delta, lastCommit);
+                throw new ArgumentException($"提供的路径 '{repoPath}' 不是有效的 Git 仓库。");
             }
-            else
+
+            using (var repo = new Repository(repoPath))
             {
-                throw new Exception("时间格式解析失败");
+                // 查询指定作者的最后一次提交
+                var lastCommit = repo.Commits.QueryBy(new CommitFilter
+                {
+                    SortBy = CommitSortStrategies.Time,
+                    IncludeReachableFrom = repo.Refs // 查询所有分支（类似 --all）
+                }).FirstOrDefault(commit => commit.Author.Name.Contains(authorName)); // 根据需求调整匹配逻辑
+
+                if (lastCommit == null)
+                {
+                    throw new Exception($"在仓库中未找到作者 '{authorName}' 的提交记录。");
+                }
+
+                TimeSpan delta = DateTime.Now - lastCommit.Author.When.DateTime;
+                return (delta, lastCommit.Author.When.DateTime);
             }
         }
         catch (Exception ex)
         {
-            throw new Exception($"获取提交时间失败: {ex.Message}");
+            // 处理异常，例如仓库无效、未找到提交等
+            throw new Exception($"使用 LibGit2Sharp 查询失败: {ex.Message}", ex);
         }
     }
 }
