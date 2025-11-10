@@ -370,7 +370,7 @@ internal static class LteCore
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "ŒÔ∆∑±‡∫≈" : funDy1;
         funDy2 = string.IsNullOrEmpty(funDy2) ? "2" : funDy2;
-        funDy3 = string.IsNullOrEmpty(funDy3) ? funDy1 : funDy3;
+        funDy3 = string.IsNullOrEmpty(funDy3) ? "00" : funDy3;
 
         if (!exportWildcardDyData.TryGetValue(funDy1, out var val)) return string.Empty;
         var baseDicKey = val.Substring(0, val.Length - int.Parse(funDy2)) + funDy3;
