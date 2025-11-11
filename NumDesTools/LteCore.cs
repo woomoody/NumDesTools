@@ -64,7 +64,15 @@ internal static class LteCore
                     "MerB"
                         => MerB(exportWildcardDyData, funDepends, itemId, funDy1, funDy2, funDy3),
                     "MerTry"
-                        => MerTry(exportWildcardDyData, funDepends, funDy1, funDy2, funDy3, idList, baseData),
+                        => MerTry(
+                            exportWildcardDyData,
+                            funDepends,
+                            funDy1,
+                            funDy2,
+                            funDy3,
+                            idList,
+                            baseData
+                        ),
                     "Ads" => Ads(exportWildcardDyData, funDepends, funDy1, idList),
                     "Arr" => Arr(exportWildcardDyData, funDepends, funDy1, funDy2),
                     "Get" => Get(exportWildcardDyData, funDepends, funDy1, funDy2),
@@ -92,17 +100,25 @@ internal static class LteCore
                             id
                         ),
                     //获取动态值
-                    "Var" => exportWildcardDyData.ContainsKey(wildcard) ? exportWildcardDyData[wildcard] : string.Empty,
+                    "Var"
+                        => exportWildcardDyData.ContainsKey(wildcard)
+                            ? exportWildcardDyData[wildcard]
+                            : string.Empty,
 
                     //获取静态值
-                    _ => exportWildcardData.ContainsKey(wildcard) ? exportWildcardData[wildcard] : string.Empty
+                    _
+                        => exportWildcardData.ContainsKey(wildcard)
+                            ? exportWildcardData[wildcard]
+                            : string.Empty
                 };
 
                 cellRealValue = cellRealValue.Replace($"#{wildcard}#", fixWildcardValue);
             }
             catch (FormatException)
             {
-                Debug.Print($"通配符解析错误: {wildcard} | 值: {exportWildcardDyData.GetValueOrDefault(wildcard)}");
+                Debug.Print(
+                    $"通配符解析错误: {wildcard} | 值: {exportWildcardDyData.GetValueOrDefault(wildcard)}"
+                );
                 return string.Empty;
             }
         }
@@ -110,27 +126,43 @@ internal static class LteCore
         return cellRealValue;
     }
 
-    public static string Left(Dictionary<string, string> exportWildcardDyData, string funDepends, string funDy1)
+    public static string Left(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1
+    )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "2" : funDy1;
-        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue)) return string.Empty;
+        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue))
+            return string.Empty;
         var maxCount = Math.Min(dependsValue.Length, int.Parse(funDy1));
         return dependsValue.Substring(0, maxCount);
     }
 
-    public static string Right(Dictionary<string, string> exportWildcardDyData, string funDepends, string funDy1)
+    public static string Right(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1
+    )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "2" : funDy1;
-        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue)) return string.Empty;
+        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue))
+            return string.Empty;
         var maxCount = Math.Min(dependsValue.Length, int.Parse(funDy1));
         return dependsValue.Substring(dependsValue.Length - maxCount, int.Parse(funDy1));
     }
 
-    public static string Set(Dictionary<string, string> exportWildcardDyData, string funDepends, string funDy1, string funDy2)
+    public static string Set(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1,
+        string funDy2
+    )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "2" : funDy1;
         funDy2 = string.IsNullOrEmpty(funDy2) ? "00" : funDy2;
-        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue)) return string.Empty;
+        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue))
+            return string.Empty;
         return dependsValue.Substring(0, dependsValue.Length - int.Parse(funDy1)) + funDy2;
     }
 
@@ -161,7 +193,7 @@ internal static class LteCore
 
             var intMaxLink = int.Parse(maxLink);
 
-            if(intMaxLink > 2)
+            if (intMaxLink > 2)
             {
                 for (int i = 0; i < intMaxLink; i++)
                 {
@@ -173,14 +205,19 @@ internal static class LteCore
                 }
                 strDictionary[wildcard][fixWildcardValue] = linkList;
             }
-         
         }
         return fixWildcardValue;
     }
 
-    public static string Mer(Dictionary<string, string> exportWildcardDyData, string funDepends, string itemId, string funDy1)
+    public static string Mer(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string itemId,
+        string funDy1
+    )
     {
-        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue)) return string.Empty;
+        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue))
+            return string.Empty;
 
         if (long.TryParse(dependsValue, out long value))
         {
@@ -203,7 +240,8 @@ internal static class LteCore
         funDy1 = string.IsNullOrEmpty(funDy1) ? "1" : funDy1;
         funDy2 = string.IsNullOrEmpty(funDy2) ? "3" : funDy2;
         funDy3 = string.IsNullOrEmpty(funDy3) ? "10" : funDy3;
-        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue)) return "0";
+        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue))
+            return "0";
 
         var baseValue = dependsValue.Substring(dependsValue.Length - 1, 1);
 
@@ -249,10 +287,12 @@ internal static class LteCore
         funDy2 = string.IsNullOrEmpty(funDy2) ? "3" : funDy2;
         funDy3 = string.IsNullOrEmpty(funDy3) ? "10" : funDy3;
         string merB = MerB(exportWildcardDyData, funDepends, string.Empty, funDy1, funDy2, funDy3);
-        var mer = !idList.Contains(merB) ? Mer(exportWildcardDyData, funDepends, string.Empty, funDy1) : merB;
-        
+        var mer = !idList.Contains(merB)
+            ? Mer(exportWildcardDyData, funDepends, string.Empty, funDy1)
+            : merB;
+
         var merIndex = idList.IndexOf(mer);
-        if(merIndex != -1)
+        if (merIndex != -1)
         {
             var merType = baseData["类型"][merIndex];
             if (!merType.Contains("链"))
@@ -276,7 +316,8 @@ internal static class LteCore
     )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "链类最大值" : funDy1;
-        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue)) return string.Empty;
+        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue))
+            return string.Empty;
 
         string rootNum = dependsValue.Substring(0, dependsValue.Length - 2) + "00";
         int baseValue = int.Parse(dependsValue.Substring(dependsValue.Length - 1, 1));
@@ -336,7 +377,8 @@ internal static class LteCore
                 string temp;
                 if (funDy2 != "")
                 {
-                    temp = $"[{funDependsValueSplit[i]},{funDy1ValueSplit[i]},{funDependsValueSplit[i]}]";
+                    temp =
+                        $"[{funDependsValueSplit[i]},{funDy1ValueSplit[i]},{funDependsValueSplit[i]}]";
                 }
                 else
                 {
@@ -344,12 +386,18 @@ internal static class LteCore
                 }
                 sb.Append(temp).Append(',');
             }
-            if (sb.Length > 0) sb.Length--; // remove trailing comma
+            if (sb.Length > 0)
+                sb.Length--; // remove trailing comma
         }
         return sb.ToString();
     }
 
-    public static string Get(Dictionary<string, string> exportWildcardDyData, string funDepends, string funDy1, string funDy2)
+    public static string Get(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1,
+        string funDy2
+    )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "1" : funDy1;
         funDy2 = string.IsNullOrEmpty(funDy2) ? "," : funDy2;
@@ -372,10 +420,13 @@ internal static class LteCore
         funDy2 = string.IsNullOrEmpty(funDy2) ? "2" : funDy2;
         funDy3 = string.IsNullOrEmpty(funDy3) ? "00" : funDy3;
 
-        if (!exportWildcardDyData.TryGetValue(funDy1, out var val)) return string.Empty;
+        if (!exportWildcardDyData.TryGetValue(funDy1, out var val))
+            return string.Empty;
         var baseDicKey = val.Substring(0, val.Length - int.Parse(funDy2)) + funDy3;
-        if (!strDictionary.TryGetValue(funDepends, out var dependsDicValue)) return string.Empty;
-        if (!dependsDicValue.TryGetValue(baseDicKey, out var dependsValueList)) return string.Empty;
+        if (!strDictionary.TryGetValue(funDepends, out var dependsDicValue))
+            return string.Empty;
+        if (!dependsDicValue.TryGetValue(baseDicKey, out var dependsValueList))
+            return string.Empty;
 
         var baseNum = val;
 
@@ -391,11 +442,17 @@ internal static class LteCore
         string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         string filePath = Path.Combine(documentsPath, "strDic.csv");
         var fileDicData = LoadDictionaryFromFile(filePath);
-        if (!fileDicData.TryGetValue(funDepends, out var dependsDicValue)) return string.Empty;
+        if (!fileDicData.TryGetValue(funDepends, out var dependsDicValue))
+            return string.Empty;
         return string.Join(",", dependsDicValue.Keys);
     }
 
-    public static string SplitArr(Dictionary<string, string> exportWildcardDyData, string funDepends, string funDy1, string funDy2)
+    public static string SplitArr(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1,
+        string funDy2
+    )
     {
         funDy1 = string.IsNullOrEmpty(funDy1) ? "1" : funDy1;
         funDy2 = string.IsNullOrEmpty(funDy2) ? "#" : funDy2;
@@ -424,11 +481,16 @@ internal static class LteCore
         funDy5 = string.IsNullOrEmpty(funDy5) ? "1" : funDy5;
 
         List<string> idList = baseData.ContainsKey(id) ? baseData[id] : new List<string>();
-        List<string> funDy2List = baseData.ContainsKey(funDy2) ? baseData[funDy2] : new List<string>();
-        List<string> funDy3List = baseData.ContainsKey(funDy3) ? baseData[funDy3] : new List<string>();
+        List<string> funDy2List = baseData.ContainsKey(funDy2)
+            ? baseData[funDy2]
+            : new List<string>();
+        List<string> funDy3List = baseData.ContainsKey(funDy3)
+            ? baseData[funDy3]
+            : new List<string>();
 
         var loopTimes = int.Parse(funDy4);
-        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsVal)) return string.Empty;
+        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsVal))
+            return string.Empty;
         if (!long.TryParse(dependsVal, out long collectRowId))
         {
             Debug.Print($"CollectRow: 无法将 '{dependsVal}' 解析为 long 类型。");
@@ -457,7 +519,8 @@ internal static class LteCore
                         var temp = $"[{funDy2StrSplit[j]},{funDy3StrSplit[j]},{funDy2StrSplit[j]}]";
                         sb.Append(temp).Append(',');
                     }
-                    if (sb.Length > 0) sb.Length--;
+                    if (sb.Length > 0)
+                        sb.Length--;
                     strCollect = sb.ToString();
                 }
             }
@@ -488,10 +551,12 @@ internal static class LteCore
                         var sb = new StringBuilder();
                         for (int j = 0; j < funDy3StrSplit.Length; j++)
                         {
-                            var temp = $"[{funDy2StrSplit[j]},{funDy3StrSplit[j]},{funDy2StrSplit[j]}]";
+                            var temp =
+                                $"[{funDy2StrSplit[j]},{funDy3StrSplit[j]},{funDy2StrSplit[j]}]";
                             sb.Append(temp).Append(',');
                         }
-                        if (sb.Length > 0) sb.Length--;
+                        if (sb.Length > 0)
+                            sb.Length--;
                         var stringSubCollect = sb.ToString();
                         strCollect += $",[{stringSubCollect}]";
                         idCollect += "," + collectRowId;
@@ -515,9 +580,12 @@ internal static class LteCore
             }
         }
 
-        if (funDy5 == "1") return $"[{idCollect}]";
-        if (funDy5 == "2") return $"[{strCollect}]";
-        if (funDy5 == "3") return spawnCollect;
+        if (funDy5 == "1")
+            return $"[{idCollect}]";
+        if (funDy5 == "2")
+            return $"[{strCollect}]";
+        if (funDy5 == "3")
+            return spawnCollect;
 
         return exportWildcardDyData.GetValueOrDefault(funDepends, string.Empty);
     }
@@ -534,10 +602,16 @@ internal static class LteCore
         if (funDepends.Contains("Var"))
         {
             var wildcardValueSplit = Regex.Split(funDepends, wildcardValuePattern);
-            string fixWildcardValue = baseData.GetValueOrDefault(wildcardValueSplit[1], new List<string>()).ElementAtOrDefault(idCount) ?? string.Empty;
+            string fixWildcardValue =
+                baseData
+                    .GetValueOrDefault(wildcardValueSplit[1], new List<string>())
+                    .ElementAtOrDefault(idCount) ?? string.Empty;
             if (wildcardValueSplit.Length == 3)
             {
-                fixWildcardValue = fixWildcardValue.Replace(wildcardValuePattern, wildcardValueSplit[2]);
+                fixWildcardValue = fixWildcardValue.Replace(
+                    wildcardValuePattern,
+                    wildcardValueSplit[2]
+                );
             }
             exportWildcardDyData[wildcard] = fixWildcardValue;
         }
@@ -587,21 +661,27 @@ internal static class LteCore
         }
     }
 
-    public static Dictionary<string, Dictionary<string, List<string>>> LoadDictionaryFromFile(string filePath)
+    public static Dictionary<string, Dictionary<string, List<string>>> LoadDictionaryFromFile(
+        string filePath
+    )
     {
         var dictionary = new Dictionary<string, Dictionary<string, List<string>>>();
-        if (!File.Exists(filePath)) return dictionary;
+        if (!File.Exists(filePath))
+            return dictionary;
 
         using StreamReader reader = new StreamReader(filePath, Encoding.UTF8);
         string line;
         while ((line = reader.ReadLine()) != null)
         {
             var parts = line.Split(',');
-            if (parts.Length < 2) continue;
+            if (parts.Length < 2)
+                continue;
             string outerKey = parts[0];
             string innerKey = parts[1];
-            List<string> values = parts.Length > 2 ? new List<string>(parts[2..]) : new List<string>();
-            if (!dictionary.ContainsKey(outerKey)) dictionary[outerKey] = new Dictionary<string, List<string>>();
+            List<string> values =
+                parts.Length > 2 ? new List<string>(parts[2..]) : new List<string>();
+            if (!dictionary.ContainsKey(outerKey))
+                dictionary[outerKey] = new Dictionary<string, List<string>>();
             dictionary[outerKey][innerKey] = values;
         }
 

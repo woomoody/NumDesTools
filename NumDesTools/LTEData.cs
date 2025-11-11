@@ -2066,7 +2066,7 @@ public class LteData
                 {
                     continue;
                 }
-                var taskTargetMapName = baseDic[taskTagetId][1];
+                var taskTargetMapName = baseDic[taskTagetId][3];
                 taskColDataList.Add(taskTargetMapName);
 
                 //目标寻找关系
