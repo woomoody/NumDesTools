@@ -972,7 +972,7 @@ public class LteData
             MessageBox.Show($"基础数据中存在以下错误类型：{errorStr}");
         }
 
-        WriteDymaicData(copyArray, list, "LTE【基础】", 1, 33);
+        WriteDymaicData(copyArray, list, "LTE【基础】", 1, 35);
 
         var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
         if (fieldGroupList == null)
