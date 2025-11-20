@@ -72,6 +72,8 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
             "LTE基础数据-更新",
             "LTE任务数据-首次",
             "LTE任务数据-更新",
+            "LTE地组数据-首次",
+            "LTE地组数据-更新",
             "LTE生成地组"
         };
 
@@ -178,7 +180,8 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 Condition: sheetName == "LTE【基础】"
                     || sheetName == "LTE【任务】"
                     || sheetName == "LTE【通用】"
-                    || sheetName == "LTE【寻找】",
+                    || sheetName == "LTE【寻找】"
+                    || sheetName == "LTE【地组】",
                 Tag: "LTE配置导出-首次",
                 Caption: "LTE配置导出-首次",
                 Handler: LteData.ExportLteDataConfigFirst
@@ -187,7 +190,8 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 Condition: sheetName == "LTE【基础】"
                     || sheetName == "LTE【任务】"
                     || sheetName == "LTE【通用】"
-                    || sheetName == "LTE【寻找】",
+                    || sheetName == "LTE【寻找】"
+                    || sheetName == "LTE【地组】",
                 Tag: "LTE配置导出-更新",
                 Caption: "LTE配置导出-更新",
                 Handler: LteData.ExportLteDataConfigUpdate
@@ -233,6 +237,18 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 Tag: "LTE任务数据-更新",
                 Caption: "LTE任务数据-更新",
                 Handler: LteData.UpdateCopyTaskValue
+            ),
+            new(
+                Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【地组】"),
+                Tag: "LTE地组数据-首次",
+                Caption: "LTE地组数据-首次",
+                Handler: LteData.FirstCopyFieldValue
+            ),
+            new(
+                Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【地组】"),
+                Tag: "LTE地组数据-更新",
+                Caption: "LTE地组数据-更新",
+                Handler: LteData.UpdateCopyFieldValue
             ),
             new(
                 Condition: bookName.Contains("地上"),

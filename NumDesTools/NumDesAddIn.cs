@@ -1075,20 +1075,21 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
         }
 
+        // 取消Sheet多选
         if (CheckSheetValueText == "数据自检：开启")
         {
-            // 取消Sheet多选
             if (!wb.Name.Contains("#"))
             {
                 Debug.Print($"{wb.Name}-{wb.Worksheets[1].Name}");
                 var selectSheets = wb.Windows[1].SelectedSheets;
-                if(selectSheets.Count>1)
+                if (selectSheets.Count > 1)
                 {
                     var sheet = wb.ActiveSheet;
                     sheet.Select();
                 }
             }
         }
+
     }
 
     private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
@@ -1150,17 +1151,17 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     sheet.Columns.Hidden = false;
                 }
 
-            // 同步Excel到数据库
-            string myDocumentsPath = Environment.GetFolderPath(
-                Environment.SpecialFolder.MyDocuments
-            );
-            string dbPath = Path.Combine(myDocumentsPath, "Public.db");
+            //// 同步Excel到数据库
+            //string myDocumentsPath = Environment.GetFolderPath(
+            //    Environment.SpecialFolder.MyDocuments
+            //);
+            //string dbPath = Path.Combine(myDocumentsPath, "Public.db");
 
-            if (File.Exists(dbPath))
-            {
-                var abc = new ExcelDataToDb();
-                abc.UpdateSingleFile(wkFullPath, dbPath);
-            }
+            //if (File.Exists(dbPath))
+            //{
+            //    var abc = new ExcelDataToDb();
+            //    abc.UpdateSingleFile(wkFullPath, dbPath);
+            //}
         }
 
         //关闭某个工作簿时，CTP继承到新的工作簿里
@@ -1177,6 +1178,43 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     new SheetListControl(),
                     MsoCTPDockPosition.msoCTPDockPositionLeft
                 );
+        }
+
+        // 验证配置表空字段位置是否有数据
+        if (CheckSheetValueText == "数据自检：开启")
+        {
+            var wbPath = wb.FullName;
+            if (wbPath.Contains(@"\Excels\"))
+            {
+                if (!wb.Name.Contains("#"))
+                {
+                    Debug.Print($"{wb.Name}-{wb.Worksheets[1].Name}");
+                    var wss = wb.Sheets;
+                    foreach (Worksheet sheet in wss)
+                    {
+                        if (!sheet.Name.Contains("#"))
+                        {
+                            var usedRange = sheet.UsedRange;
+                            var usedColMax = usedRange.Columns.Count;
+                            for (int i = 1; i <= usedColMax; i++)
+                            {
+                                var fieldRange = sheet.Cells[2, i];
+                                var filedValue = fieldRange.Value2;
+
+                                Debug.Print($"{sheet.Name}-{filedValue}");
+
+                                if (filedValue == null )
+                                {
+                                    var colName = PubMetToExcel.ChangeExcelColChar(i-1);
+                                    MessageBox.Show($"{sheet.Name}-{colName}列字段为空，但有数据，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据");
+                                    cancel = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         Marshal.ReleaseComObject(workBook);

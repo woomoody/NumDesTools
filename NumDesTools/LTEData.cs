@@ -1,6 +1,7 @@
 ﻿using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 using Microsoft.VisualBasic;
 using NumDesTools.UI;
 using OfficeOpenXml;
@@ -28,6 +29,7 @@ public class LteData
             ["LTE【基础】"] = ("数据编号", "类型"),
             ["LTE【任务】"] = ("任务编号", "类型"),
             ["LTE【寻找】"] = ("寻找编号", "类型"),
+            ["LTE【地组】"] = ("地组编号", "类型"),
             ["LTE【通用】"] = ("数据编号", "类型")
         };
 
@@ -40,6 +42,9 @@ public class LteData
     private const int TaskDataTagCol = 15;
     private const int TaskDataStartCol = 16;
     private const int TaskDataEndCol = 26;
+    private const int FieldDataTagCol = 13;
+    private const int FieldDataStartCol = 14;
+    private const int FieldDataEndCol = 23;
 
     private const string ActivityIdIndex = "B1";
     private const string ActivityDataMinIndex = "C1";
@@ -1113,6 +1118,9 @@ public class LteData
 
         var sheet = excel.ActiveSheet as Worksheet;
 
+        var usedRange = sheet.UsedRange;
+        var usedMaxRow = usedRange.Rows.Count;
+
         Range copyRange;
         if (!isSelect)
         {
@@ -1123,7 +1131,10 @@ public class LteData
             }
             var copyColMin = sheet.Range[min].Value2;
             var copyColMax = sheet.Range[max].Value2;
-            copyRange = sheet.Range[sheet.Cells[3, copyColMin], sheet.Cells[10000, copyColMax]];
+            copyRange = sheet.Range[
+                sheet.Cells[3, copyColMin],
+                sheet.Cells[usedMaxRow + 10, copyColMax]
+            ];
         }
         else
         {
@@ -2188,6 +2199,14 @@ public class LteData
 
         if (taskTypeName != string.Empty)
         {
+            if (!taskDataTypeDic.ContainsKey(taskTypeName))
+            {
+                MessageBox.Show($"任务类型{taskTypeName}不存在");
+                return null;
+            }
+        }
+        if (taskTypeName != string.Empty)
+        {
             taskTypeId = taskDataTypeDic[taskTypeName][1] ?? string.Empty;
         }
         if (taskTagetName != string.Empty)
@@ -2343,6 +2362,407 @@ public class LteData
                 MessageBoxIcon.Error
             );
         }
+    }
+
+    //首次写入数据
+    public static void FirstCopyFieldValue(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        cancelDefault = true; // 阻止默认事件
+        var sheetName = "LTE【地组】";
+        var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
+        double activtiyId = (double)colIndexArray[0, 0];
+
+        object[,] copyFieldArray = FilterRepeatValue(
+            ActivityDataMinIndex,
+            ActivityDataMaxIndex,
+            false,
+            false
+        );
+
+        var filedList = PubMetToExcel.GetExcelListObjects("LTE【地组】", "LTE【地组】");
+        if (filedList == null)
+        {
+            MessageBox.Show("LTE【地组】中的名称表-任务不存在");
+            return;
+        }
+
+        var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+        if (baseList == null)
+        {
+            MessageBox.Show("LTE【基础】中的名称表-基础不存在");
+            return;
+        }
+        object[,] baseArray = baseList.DataBodyRange.Value2;
+
+        var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+        if (fieldGroupList == null)
+        {
+            MessageBox.Show("#道具信息中的名称【道具信息】不存在");
+            return;
+        }
+        object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
+
+        //基础数据修改依赖数据
+        var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#各类枚举"
+        );
+        object[,] dataTypeArray = listObjectsDic["地组类型"];
+
+        //地组数据整理
+        var copyFiledData = FiledData(
+            copyFieldArray,
+            dataTypeArray,
+            baseArray,
+            activtiyId,
+            fieldGroupArray
+        );
+        copyFieldArray = copyFiledData.fieldArray;
+        var errorTypeList = copyFiledData.errorTypeList;
+        if (errorTypeList.Count != 0)
+        {
+            //基础数据中存在错误类型
+            var errorTypeListOnly = new HashSet<string>(errorTypeList);
+            var errorStr = string.Join(",", errorTypeListOnly);
+            MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
+        }
+
+        //非Com写入数据,索引从0开始,效率确实更高,读取还是ListObject更方便
+
+        var rowMax = copyFieldArray.GetLength(0);
+
+        PubMetToExcel.WriteExcelDataC(
+            sheetName,
+            1,
+            10000,
+            FieldDataStartCol,
+            FieldDataEndCol,
+            null
+        );
+        PubMetToExcel.WriteExcelDataC(
+            sheetName,
+            1,
+            rowMax,
+            FieldDataStartCol,
+            FieldDataEndCol,
+            copyFieldArray
+        );
+
+        filedList.Resize(filedList.Range.Resize[rowMax + 1, filedList.Range.Columns.Count]);
+
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, FieldDataTagCol, FieldDataTagCol, null);
+        object[,] writeArray = new object[rowMax, 1];
+        for (int i = 0; i < rowMax; i++)
+            writeArray[i, 0] = "+";
+        PubMetToExcel.WriteExcelDataC(
+            sheetName,
+            1,
+            rowMax,
+            FieldDataTagCol,
+            FieldDataTagCol,
+            writeArray
+        );
+    }
+
+    //更新写入数据
+    public static void UpdateCopyFieldValue(CommandBarButton ctrl, ref bool cancelDefault)
+    {
+        cancelDefault = true; // 阻止默认事件
+        var sheetName = "LTE【地组】";
+        var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
+        double activtiyId = (double)colIndexArray[0, 0];
+
+        object[,] copyFieldArray = FilterRepeatValue(
+            ActivityDataMinIndex,
+            ActivityDataMaxIndex,
+            false,
+            false
+        );
+
+        var fieldList = PubMetToExcel.GetExcelListObjects("LTE【地组】", "LTE【地组】");
+        if (fieldList == null)
+        {
+            MessageBox.Show("LTE【任务】中的名称表-任务不存在");
+            return;
+        }
+
+        var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+        if (baseList == null)
+        {
+            MessageBox.Show("LTE【基础】中的名称表-基础不存在");
+            return;
+        }
+        object[,] baseArray = baseList.DataBodyRange.Value2;
+
+        var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+        if (fieldGroupList == null)
+        {
+            MessageBox.Show("#道具信息中的名称【道具信息】不存在");
+            return;
+        }
+        object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
+
+        //基础数据修改依赖数据
+        var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#各类枚举"
+        );
+        object[,] dataTypeArray = listObjectsDic["地组类型"];
+
+        //任务数据整理
+        var copyFiledData = FiledData(
+            copyFieldArray,
+            dataTypeArray,
+            baseArray,
+            activtiyId,
+            fieldGroupArray
+        );
+        copyFieldArray = copyFiledData.fieldArray;
+        var errorTypeList = copyFiledData.errorTypeList;
+
+        if (errorTypeList.Count != 0)
+        {
+            //基础数据中存在错误类型
+            var errorTypeListOnly = new HashSet<string>(errorTypeList);
+            var errorStr = string.Join(",", errorTypeListOnly);
+            MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
+        }
+
+        WriteDymaicData(
+            copyFieldArray,
+            fieldList,
+            "LTE【地组】",
+            FieldDataStartCol,
+            FieldDataEndCol,
+            FieldDataTagCol
+        );
+    }
+
+    //原始数据改造
+    private static (object[,] fieldArray, List<string> errorTypeList) FiledData(
+        object[,] copyFieldArray,
+        object[,] filedDataTypeArray,
+        object[,] baseArray,
+        double activtiyId,
+        object[,] fieldGroupArray
+    )
+    {
+        var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseArray);
+        var fieldDataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(filedDataTypeArray);
+        var fieldGroupDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(fieldGroupArray);
+
+        var fieldFieldArrayCount = copyFieldArray.GetLength(0);
+        var fieldList = new List<List<string>>();
+
+        var errorTypeList = new List<string>();
+
+        var fieldIdList = new List<string>();
+        for (int i = 1; i <= fieldFieldArrayCount; i++)
+        {
+            var fieldId = copyFieldArray[i, 1]?.ToString() ?? String.Empty;
+            if (fieldId != string.Empty)
+            {
+                fieldIdList.Add(fieldId);
+            }
+        }
+
+        for (int i = 1; i <= fieldFieldArrayCount; i++)
+        {
+            var fieldColDataList = new List<string>();
+
+            var fieldId = copyFieldArray[i, 1]?.ToString() ?? String.Empty;
+
+            if(fieldId == string.Empty){break;}
+
+            var matchFieldIdEnd = fieldId.Substring(8, 1);
+            var fieldCount = string.Empty;
+            if (matchFieldIdEnd == "1")
+            {
+                var matchFieldId = fieldId.Substring(0, 8);
+                var matchCount = fieldIdList.Count(id => id.StartsWith(matchFieldId));
+
+                if (matchCount > 1)
+                {
+                    if (double.TryParse(fieldId, out double fieldIdDouble))
+                    {
+                        for (int j = 1; j < matchCount; j++)
+                        {
+                            fieldCount += (fieldIdDouble + j) + ",";
+                        }
+                    }
+                }
+            }
+            if (fieldCount != string.Empty)
+            {
+                fieldCount = fieldCount.Substring(0, fieldCount.Length - 1);
+            }
+
+            var fieldDes = copyFieldArray[i, 2]?.ToString() ?? String.Empty;
+            var fieldType = copyFieldArray[i, 3]?.ToString() ?? String.Empty;
+
+            if (fieldType != string.Empty)
+            {
+                if (!fieldDataTypeDic.ContainsKey(fieldType))
+                {
+                    MessageBox.Show($"地组类型{fieldType}不存在");
+                    return (null, null);
+                }
+            }
+
+            var fieldConditonTarget = copyFieldArray[i, 8]?.ToString() ?? String.Empty;
+            var fieldConditonTargetRank = copyFieldArray[i, 5]?.ToString() ?? String.Empty;
+            var fieldConditonTargetType = copyFieldArray[i, 9]?.ToString() ?? String.Empty;
+
+            var fieldCost = copyFieldArray[i, 11]?.ToString() ?? String.Empty;
+
+            //改造数据
+
+            var fieldFix = FixFieldData(
+                fieldConditonTarget,
+                fieldConditonTargetRank,
+                fieldConditonTargetType,
+                baseDic
+            );
+            string fieldConditon = fieldFix.fixData;
+            string fieldFindId = fieldFix.findData;
+            string fieldConditonTargetId = fieldFix.fieldConditonTargetId;
+
+            //目标寻找关系
+            var findTargetType = baseDic[fieldConditonTargetId][27];
+            var findTargetDetailType = baseDic[fieldConditonTargetId][28];
+
+            var findLinks = FindLinks(
+                findTargetDetailType,
+                findTargetType,
+                fieldConditonTargetId,
+                baseDic,
+                out _,
+                fieldGroupDic
+            );
+            var taskTargetMapName = baseDic[fieldConditonTargetId][3];
+            taskTargetMapName = taskTargetMapName.Split("-")[0];
+            var match = Regex.Match(taskTargetMapName, @"\d+");
+            var taskTargetMapId = match.Success ? match.Value : "0";
+
+            if (double.TryParse(taskTargetMapId, out double taskTargetMapIdDouble))
+            {
+                taskTargetMapId = (taskTargetMapIdDouble + activtiyId).ToString(
+                    CultureInfo.InvariantCulture
+                );
+            }
+            findLinks = findLinks + ",{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
+
+            // 消耗寻找
+            var fieldCostTarget = copyFieldArray[i, 10]?.ToString() ?? String.Empty;
+            string fieldFindId2 = baseDic
+                .FirstOrDefault(kv => kv.Value.Count > 4 && kv.Value[4] == fieldCostTarget)
+                .Key;
+
+            string findLinks2 = string.Empty;
+
+            if (fieldFindId2 != fieldFindId && fieldCostTarget != string.Empty)
+            {
+                var findTarget2Type = baseDic[fieldFindId2][27];
+                var findTarget2DetailType = baseDic[fieldFindId2][28];
+
+                findLinks2 = FindLinks(
+                    findTarget2DetailType,
+                    findTarget2Type,
+                    fieldFindId2,
+                    baseDic,
+                    out _,
+                    fieldGroupDic
+                );
+                var taskTarget2MapName = baseDic[fieldFindId2][3];
+                taskTarget2MapName = taskTarget2MapName.Split("-")[0];
+                var match2 = Regex.Match(taskTarget2MapName, @"\d+");
+                var taskTarget2MapId = match2.Success ? match2.Value : "0";
+
+                if (double.TryParse(taskTarget2MapId, out double taskTarget2MapIdDouble))
+                {
+                    taskTarget2MapId = (taskTarget2MapIdDouble + activtiyId).ToString(
+                        CultureInfo.InvariantCulture
+                    );
+                }
+                findLinks2 =
+                    findLinks2 + ",{20,\"UILteMapEntrance\"," + taskTarget2MapId + "},{8,9999}";
+            }
+            else
+            {
+                fieldFindId2 = string.Empty;
+            }
+
+            if (fieldId != string.Empty)
+            {
+                fieldColDataList.Add(fieldId);
+                fieldColDataList.Add(fieldType);
+                fieldColDataList.Add(fieldDes);
+                fieldColDataList.Add(fieldConditon);
+                fieldColDataList.Add(fieldCost);
+                fieldColDataList.Add(fieldFindId);
+                fieldColDataList.Add(findLinks);
+                fieldColDataList.Add(fieldFindId2);
+                fieldColDataList.Add(findLinks2);
+                fieldColDataList.Add(fieldCount);
+            }
+
+            if (fieldColDataList.Count != 0)
+            {
+                fieldList.Add(fieldColDataList);
+            }
+        }
+        var fieldArray = PubMetToExcel.ConvertListToArray(fieldList);
+        return (fieldArray, errorTypeList);
+    }
+
+    private static (string fixData, string findData, string fieldConditonTargetId) FixFieldData(
+        string fieldConditonTarget,
+        string fieldConditonTargetRank,
+        string fieldConditonTargetType,
+        Dictionary<string, List<string>> baseDic
+    )
+    {
+        var fixData = string.Empty;
+        var findData = string.Empty;
+        var fixIcon = string.Empty;
+
+        var fieldConditonTargetId = baseDic
+            .FirstOrDefault(kv => kv.Value.Count > 4 && kv.Value[4] == fieldConditonTarget)
+            .Key;
+
+        var fieldConditonTargetPic = fieldConditonTargetId.Substring(0, 8) + "00";
+
+        if (fieldConditonTargetRank != string.Empty || fieldConditonTarget != String.Empty)
+        {
+            if (double.TryParse(fieldConditonTargetRank, out double fieldConditonTargetRankDouble))
+            {
+                if (double.TryParse(fieldConditonTargetId, out double fieldConditonTargetIDDouble))
+                {
+                    fixIcon = Convert.ToString(
+                        fieldConditonTargetIDDouble + fieldConditonTargetRankDouble,
+                        CultureInfo.InvariantCulture
+                    );
+                }
+            }
+
+            if (fieldConditonTargetType.Contains("地标"))
+            {
+                fixData = $"[[14,{fieldConditonTargetId},{fieldConditonTargetRank},{fixIcon}]]";
+                findData = fieldConditonTargetId;
+            }
+            else if (fieldConditonTargetType.Contains("链"))
+            {
+                fixData = $"[[7,{fieldConditonTargetId},{fieldConditonTargetPic}]]";
+            }
+            else
+            {
+                fixData = $"[[7,{fieldConditonTargetId}]]";
+                findData = fieldConditonTargetId;
+            }
+        }
+        return (fixData, findData, fieldConditonTargetId);
     }
 
     #endregion
