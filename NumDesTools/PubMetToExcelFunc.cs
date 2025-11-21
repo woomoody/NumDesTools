@@ -2064,8 +2064,6 @@ public static class PubMetToExcelFunc
             MessageBox.Show("剪切板中没有有效数据");
         }
 
-
-
         foreach (string line in lines)
         {
             // 跳过Unity调试日志行
@@ -2105,29 +2103,27 @@ public static class PubMetToExcelFunc
             out ExcelPackage targetExcel
         );
 
-        int firstMatchRow = -1;
-        int lastMatchRow = -1;
-
+        int firstMatchRow = 5;
         // 最大行
         int endRow = targetSheet.Dimension.End.Row;
 
-        // 活动编号
-        string commonPrefix = string.Empty;
-        commonPrefix = iconFixData.Keys.Last().Substring(0,5);
+        //// 活动编号
+        //string commonPrefix = string.Empty;
+        //commonPrefix = iconFixData.Keys.Last().Substring(0,5);
 
-        for (int row = 1; row <= endRow; row++)
-        {
-            string cellValue = targetSheet.Cells[row, 2].Text;
+        //for (int row = 1; row <= endRow; row++)
+        //{
+        //    string cellValue = targetSheet.Cells[row, 2].Text;
 
-            // 检查前N个字符是否匹配（N = searchPrefix.Length）
-            if (cellValue.StartsWith(commonPrefix))
-            {
-                if (firstMatchRow == -1)
-                    firstMatchRow = row; // 记录第一个匹配行
+        //    // 检查前N个字符是否匹配（N = searchPrefix.Length）
+        //    if (cellValue.StartsWith(commonPrefix))
+        //    {
+        //        if (firstMatchRow == -1)
+        //            firstMatchRow = row; // 记录第一个匹配行
 
-                lastMatchRow = row; // 更新最后一个匹配行
-            }
-        }
+        //        lastMatchRow = row; // 更新最后一个匹配行
+        //    }
+        //}
 
         // 获取字段列
         var fieldKey = "spriteName";
@@ -2157,12 +2153,13 @@ public static class PubMetToExcelFunc
             }
         }
 
-        if (firstMatchRow == -1 || lastMatchRow == -1)
-        {
-            Debug.Print("未找到匹配的行");
-            MessageBox.Show("未找到匹配的行");
-            return;
-        }
+        //if (firstMatchRow == -1 || lastMatchRow == -1)
+        //{
+        //    Debug.Print("未找到匹配的行");
+        //    MessageBox.Show("未找到匹配的行");
+        //    return;
+        //}
+
         if (fieldKeyCol == -1 || fieldValue1Col == -1 || fieldValue2Col == -1)
         {
             Debug.Print("未找到匹配的列");
@@ -2170,7 +2167,9 @@ public static class PubMetToExcelFunc
             return;
         }
 
-        for (int row = firstMatchRow; row <= lastMatchRow; row++)
+        bool isWrite = false;
+
+        for (int row = firstMatchRow; row <= endRow; row++)
         {
             var iconKey = targetSheet.Cells[row, fieldKeyCol].Text;
             if (iconFixData.ContainsKey(iconKey))
@@ -2178,11 +2177,20 @@ public static class PubMetToExcelFunc
                 var iconValue1 = iconFixData[iconKey];
                 targetSheet.Cells[row, fieldValue1Col].Value = iconValue1;
                 targetSheet.Cells[row, fieldValue2Col].Value = iconValue1;
+                isWrite = true;
             }
-          
         }
 
-        targetExcel.Save();
+        if (isWrite)
+        {
+            MessageBox.Show($"已全量匹配所有目标Id的图片，提交时注意分辨是否为自己主观更改！！！");
+
+            targetExcel.Save();
+        }
+        else
+        {
+            MessageBox.Show($"没找到匹配的图片Id");
+        }
     }
 
     #region Excel数据查找
@@ -2360,7 +2368,11 @@ public static class PubMetToExcelFunc
                     if (sheetName.Contains("#"))
                         continue;
 
-                    var rows = MiniExcel.Query(file, sheetName: sheetName, configuration: NumDesAddIn.OnOffMiniExcelCatches);
+                    var rows = MiniExcel.Query(
+                        file,
+                        sheetName: sheetName,
+                        configuration: NumDesAddIn.OnOffMiniExcelCatches
+                    );
                     int rowIndex = 1;
                     foreach (var row in rows)
                     {
@@ -2393,9 +2405,6 @@ public static class PubMetToExcelFunc
             {
                 // 记录异常信息，继续处理下一个文件
             }
-
-
-
         };
 
         if (isMulti)
@@ -2676,6 +2685,4 @@ public static class PubMetToExcelFunc
         return targetList.ToList();
     }
     #endregion
-
-
 }
