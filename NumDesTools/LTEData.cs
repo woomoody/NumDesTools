@@ -2574,7 +2574,10 @@ public class LteData
 
             var fieldId = copyFieldArray[i, 1]?.ToString() ?? String.Empty;
 
-            if(fieldId == string.Empty){break;}
+            if (fieldId == string.Empty)
+            {
+                break;
+            }
 
             var matchFieldIdEnd = fieldId.Substring(8, 1);
             var fieldCount = string.Empty;
@@ -2618,41 +2621,50 @@ public class LteData
             var fieldCost = copyFieldArray[i, 11]?.ToString() ?? String.Empty;
 
             //改造数据
+            string fieldConditon = string.Empty;
+            string fieldFindId = string.Empty;
+            string fieldConditonTargetId = string.Empty;
 
-            var fieldFix = FixFieldData(
-                fieldConditonTarget,
-                fieldConditonTargetRank,
-                fieldConditonTargetType,
-                baseDic
-            );
-            string fieldConditon = fieldFix.fixData;
-            string fieldFindId = fieldFix.findData;
-            string fieldConditonTargetId = fieldFix.fieldConditonTargetId;
+            string findLinks = String.Empty;
 
-            //目标寻找关系
-            var findTargetType = baseDic[fieldConditonTargetId][27];
-            var findTargetDetailType = baseDic[fieldConditonTargetId][28];
-
-            var findLinks = FindLinks(
-                findTargetDetailType,
-                findTargetType,
-                fieldConditonTargetId,
-                baseDic,
-                out _,
-                fieldGroupDic
-            );
-            var taskTargetMapName = baseDic[fieldConditonTargetId][3];
-            taskTargetMapName = taskTargetMapName.Split("-")[0];
-            var match = Regex.Match(taskTargetMapName, @"\d+");
-            var taskTargetMapId = match.Success ? match.Value : "0";
-
-            if (double.TryParse(taskTargetMapId, out double taskTargetMapIdDouble))
+            if (fieldConditonTarget != String.Empty)
             {
-                taskTargetMapId = (taskTargetMapIdDouble + activtiyId).ToString(
-                    CultureInfo.InvariantCulture
+                var fieldFix = FixFieldData(
+                    fieldConditonTarget,
+                    fieldConditonTargetRank,
+                    fieldConditonTargetType,
+                    baseDic
                 );
+                fieldConditon = fieldFix.fixData;
+                fieldFindId = fieldFix.findData;
+                fieldConditonTargetId = fieldFix.fieldConditonTargetId;
+
+                //目标寻找关系
+                var findTargetType = baseDic[fieldConditonTargetId][27];
+                var findTargetDetailType = baseDic[fieldConditonTargetId][28];
+
+                findLinks = FindLinks(
+                    findTargetDetailType,
+                    findTargetType,
+                    fieldConditonTargetId,
+                    baseDic,
+                    out _,
+                    fieldGroupDic
+                );
+                var taskTargetMapName = baseDic[fieldConditonTargetId][3];
+                taskTargetMapName = taskTargetMapName.Split("-")[0];
+                var match = Regex.Match(taskTargetMapName, @"\d+");
+                var taskTargetMapId = match.Success ? match.Value : "0";
+
+                if (double.TryParse(taskTargetMapId, out double taskTargetMapIdDouble))
+                {
+                    taskTargetMapId = (taskTargetMapIdDouble + activtiyId).ToString(
+                        CultureInfo.InvariantCulture
+                    );
+                }
+                findLinks =
+                    findLinks + ",{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
             }
-            findLinks = findLinks + ",{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
 
             // 消耗寻找
             var fieldCostTarget = copyFieldArray[i, 10]?.ToString() ?? String.Empty;
