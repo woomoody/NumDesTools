@@ -1,7 +1,6 @@
 ﻿using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using Microsoft.VisualBasic;
 using NumDesTools.UI;
 using OfficeOpenXml;
@@ -1118,17 +1117,20 @@ public class LteData
 
         var sheet = excel.ActiveSheet as Worksheet;
 
-        var usedRange = sheet.UsedRange;
+        var usedRange = sheet?.UsedRange;
+        Debug.Assert(usedRange != null, nameof(usedRange) + " != null");
         var usedMaxRow = usedRange.Rows.Count;
 
         Range copyRange;
         if (!isSelect)
         {
-            if (sheet == null)
+/*
+            if (false)
             {
                 MessageBox.Show("未找到表");
                 return null;
             }
+*/
             var copyColMin = sheet.Range[min].Value2;
             var copyColMax = sheet.Range[max].Value2;
             copyRange = sheet.Range[
@@ -2623,7 +2625,6 @@ public class LteData
             //改造数据
             string fieldConditon = string.Empty;
             string fieldFindId = string.Empty;
-            string fieldConditonTargetId = string.Empty;
 
             string findLinks = String.Empty;
 
@@ -2637,7 +2638,7 @@ public class LteData
                 );
                 fieldConditon = fieldFix.fixData;
                 fieldFindId = fieldFix.findData;
-                fieldConditonTargetId = fieldFix.fieldConditonTargetId;
+                var fieldConditonTargetId = fieldFix.fieldConditonTargetId;
 
                 //目标寻找关系
                 var findTargetType = baseDic[fieldConditonTargetId][27];
@@ -2750,10 +2751,10 @@ public class LteData
         {
             if (double.TryParse(fieldConditonTargetRank, out double fieldConditonTargetRankDouble))
             {
-                if (double.TryParse(fieldConditonTargetId, out double fieldConditonTargetIDDouble))
+                if (double.TryParse(fieldConditonTargetId, out double fieldConditonTargetIdDouble))
                 {
                     fixIcon = Convert.ToString(
-                        fieldConditonTargetIDDouble + fieldConditonTargetRankDouble,
+                        fieldConditonTargetIdDouble + fieldConditonTargetRankDouble,
                         CultureInfo.InvariantCulture
                     );
                 }

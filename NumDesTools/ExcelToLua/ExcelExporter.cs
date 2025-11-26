@@ -9,49 +9,49 @@ namespace NumDesTools.ExcelToLua
     public class ExcelExporter
     {
         //excel文件夹
-        public static string excelFolder =>
+        public static string ExcelFolder =>
             Path.Combine(NumDesAddIn.BasePath, "./../../public/Excels/")
                 .Replace("\\", "/");
 
-        static string localizationOutputTempFolder =>
+        static string LocalizationOutputTempFolder =>
             Path.Combine(NumDesAddIn.BasePath, "./..//Localizations/Lua/")
                 .Replace("\\", "/");
 
         //lua文件夹
-        static string luaOutputFolder => $"{NumDesAddIn.BasePath}/LuaScripts/Tables";
+        static string LuaOutputFolder => $"{NumDesAddIn.BasePath}/LuaScripts/Tables";
 
-        static string localizationOutputFolder =>
+        static string LocalizationOutputFolder =>
             $"{NumDesAddIn.BasePath}/LuaScripts/Localizations";
 
         //json文件夹
-        static string jsonOutputFolder => $"{NumDesAddIn.BasePath}/Game/Jsons";
+        static string JsonOutputFolder => $"{NumDesAddIn.BasePath}/Game/Jsons";
 
         //导出json的excel列表
-        static List<string> toJsonExcels = new List<string>() { "Configs", "LocalizationFonts" };
+        static List<string> _toJsonExcels = new List<string>() { "Configs", "LocalizationFonts" };
 
         //c#多语言表
-        static string cLocalizationExcelFile => "LocalizationDefault";
+        static string CLocalizationExcelFile => "LocalizationDefault";
 
         //lua多语言表
-        static string luaLocalizationExcelFile => "Localizations";
+        static string LuaLocalizationExcelFile => "Localizations";
 
         //UI配置表
-        static string uiconfigExcelFile => "UIConfigs";
+        static string UiconfigExcelFile => "UIConfigs";
 
         //UI配置表
-        static string uiItemconfigExcelFile => "UIItemConfigs";
+        static string UiItemconfigExcelFile => "UIItemConfigs";
 
         //三方支付配表
-        private static string rechargeGlobalOfficial => "RechargeGlobalOfficial";
+        private static string RechargeGlobalOfficial => "RechargeGlobalOfficial";
 
         //Config配置表
-        static string configExcelFile => "Configs";
+        static string ConfigExcelFile => "Configs";
 
-        private static string ExcelWriteMD5Path =>
+        private static string ExcelWriteMd5Path =>
             Path.Combine(NumDesAddIn.BasePath, "./../../public/Excels/");
-        private static string ExcelMD5Path => ExcelWriteMD5Path.Replace("\\", "/");
+        private static string ExcelMd5Path => ExcelWriteMd5Path.Replace("\\", "/");
 
-        private static string[] Localizations =
+        private static string[] _localizations =
         {
             "ChineseSimplified",
             "English",
@@ -66,28 +66,28 @@ namespace NumDesTools.ExcelToLua
             "Italian",
         };
 
-        private static string[] LocalizationsExcludeFileName =
+        private static string[] _localizationsExcludeFileName =
         {
             "LocalizationDefault",
             "LocalizationFonts",
         };
 
-        private static bool needMergeLocalization = false;
+        private static bool _needMergeLocalization = false;
 
-        class MD5Info
+        class Md5Info
         {
             public string md5;
             public string path;
         }
 
-        class ExcelMD5Info
+        class ExcelMd5Info
         {
             public string md5;
             public List<string> infos;
         }
 
-        private static Dictionary<string, MD5Info> MD5Dir;
-        private static Dictionary<string, ExcelMD5Info> ExcelMD5Dir;
+        private static Dictionary<string, Md5Info> _md5Dir;
+        private static Dictionary<string, ExcelMd5Info> _excelMd5Dir;
 
         public static void ExportAllExcel()
         {
@@ -106,7 +106,7 @@ namespace NumDesTools.ExcelToLua
         public static void ExportAll(string[] files)
         {
             List<FieldData> luaTableFields = new List<FieldData>();
-            InitExcelMD5();
+            InitExcelMd5();
             string md5Value = null;
             for (int i = 0; i < files.Length; i++)
             {
@@ -115,7 +115,7 @@ namespace NumDesTools.ExcelToLua
                 if (fileName.Contains("#") || fileName.Contains("~"))
                     continue;
 
-                if (ComparisonMD5(file, fileName, true))
+                if (ComparisonMd5(file, fileName, true))
                 {
                     continue;
                 }
@@ -130,17 +130,17 @@ namespace NumDesTools.ExcelToLua
                 );
                 if (list != null)
                 {
-                    SaveExcelMD5(fileName, file, list);
+                    SaveExcelMd5(fileName, file, list);
                 }
             }
 
-            if (needMergeLocalization)
+            if (_needMergeLocalization)
             {
                 MergeLocalizationLuaFile();
             }
 
             Debug.Print("导表完成!");
-            SaveAllMD5();
+            SaveAllMd5();
         }
 
         //[MenuItem("Tools/导出Excel(只导出Git变更)", false, 2001)]
@@ -159,7 +159,7 @@ namespace NumDesTools.ExcelToLua
                 Export(file, fileName, luaTableFields, isAll, fileName.Contains("$$"), false);
             }
 
-            if (needMergeLocalization)
+            if (_needMergeLocalization)
             {
                 MergeLocalizationLuaFile();
             }
@@ -215,24 +215,24 @@ namespace NumDesTools.ExcelToLua
 
         static void ExportAll()
         {
-            string[] files = Directory.GetFiles(excelFolder, "*.xls?", SearchOption.AllDirectories);
+            string[] files = Directory.GetFiles(ExcelFolder, "*.xls?", SearchOption.AllDirectories);
             ExportAll(files);
         }
 
         #region MD5处理
 
-        static void SaveAllMD5()
+        static void SaveAllMd5()
         {
-            var path = GetExcelMD5Path(true, false);
+            var path = GetExcelMd5Path(true, false);
             if (File.Exists(path))
             {
                 File.Delete(path);
             }
             var fileStream = File.Create(path);
             fileStream.Close();
-            string[] md5List = new string[MD5Dir.Count];
+            string[] md5List = new string[_md5Dir.Count];
             int index = 0;
-            foreach (var md5 in MD5Dir)
+            foreach (var md5 in _md5Dir)
             {
                 md5List[index++] = string.Format(
                     "{0}|{1}|{2}",
@@ -243,17 +243,17 @@ namespace NumDesTools.ExcelToLua
             }
             File.WriteAllLines(path, md5List);
 
-            path = GetExcelMD5Path(true, true);
+            path = GetExcelMd5Path(true, true);
             if (File.Exists(path))
             {
                 File.Delete(path);
             }
             fileStream = File.Create(path);
             fileStream.Close();
-            md5List = new string[ExcelMD5Dir.Count];
+            md5List = new string[_excelMd5Dir.Count];
             index = 0;
             StringBuilder sb = new StringBuilder();
-            foreach (var md5 in ExcelMD5Dir)
+            foreach (var md5 in _excelMd5Dir)
             {
                 foreach (var str in md5.Value.infos)
                 {
@@ -270,35 +270,35 @@ namespace NumDesTools.ExcelToLua
             File.WriteAllLines(path, md5List);
         }
 
-        static bool ComparisonMD5(string path, string key, bool isExcel = false)
+        static bool ComparisonMd5(string path, string key, bool isExcel = false)
         {
             if (!File.Exists(path))
             {
                 return false;
             }
-            string newMD5 = null;
+            string newMd5 = null;
             if (!isExcel)
             {
-                if (MD5Dir != null)
+                if (_md5Dir != null)
                 {
-                    newMD5 = MD5Helper.FileMD5(path);
-                    MD5Info md5Value;
-                    if (MD5Dir.TryGetValue(key, out md5Value) && md5Value.md5.Equals(newMD5))
+                    newMd5 = Md5Helper.FileMd5(path);
+                    Md5Info md5Value;
+                    if (_md5Dir.TryGetValue(key, out md5Value) && md5Value.md5.Equals(newMd5))
                         return true;
                 }
             }
             else
             {
-                if (ExcelMD5Dir != null)
+                if (_excelMd5Dir != null)
                 {
-                    newMD5 = MD5Helper.FileMD5(path);
-                    ExcelMD5Info md5Value;
-                    if (ExcelMD5Dir.TryGetValue(key, out md5Value) && md5Value.md5.Equals(newMD5))
+                    newMd5 = Md5Helper.FileMd5(path);
+                    ExcelMd5Info md5Value;
+                    if (_excelMd5Dir.TryGetValue(key, out md5Value) && md5Value.md5.Equals(newMd5))
                     {
                         foreach (var info in md5Value.infos)
                         {
                             if (
-                                !MD5Dir.ContainsKey(info) || !ComparisonMD5(MD5Dir[info].path, info)
+                                !_md5Dir.ContainsKey(info) || !ComparisonMd5(_md5Dir[info].path, info)
                             )
                             {
                                 return false;
@@ -311,75 +311,75 @@ namespace NumDesTools.ExcelToLua
             return false;
         }
 
-        static void SaveExcelMD5(string key, string path, List<string> infos)
+        static void SaveExcelMd5(string key, string path, List<string> infos)
         {
-            if (!ExcelMD5Dir.ContainsKey(key))
+            if (!_excelMd5Dir.ContainsKey(key))
             {
-                ExcelMD5Dir[key] = new ExcelMD5Info();
+                _excelMd5Dir[key] = new ExcelMd5Info();
             }
 
-            ExcelMD5Info info = ExcelMD5Dir[key];
-            info.md5 = MD5Helper.FileMD5(path);
+            ExcelMd5Info info = _excelMd5Dir[key];
+            info.md5 = Md5Helper.FileMd5(path);
             info.infos = infos;
         }
 
-        static void SaveMD5(string path, string key)
+        static void SaveMd5(string path, string key)
         {
-            if (MD5Dir == null)
+            if (_md5Dir == null)
                 return;
 
-            if (!MD5Dir.ContainsKey(key))
+            if (!_md5Dir.ContainsKey(key))
             {
-                MD5Dir[key] = new MD5Info();
+                _md5Dir[key] = new Md5Info();
             }
 
-            MD5Info info = MD5Dir[key];
-            info.md5 = MD5Helper.FileMD5(path);
+            Md5Info info = _md5Dir[key];
+            info.md5 = Md5Helper.FileMd5(path);
             info.path = path;
         }
 
-        static string GetExcelMD5Path(bool isWrite, bool isExcel)
+        static string GetExcelMd5Path(bool isWrite, bool isExcel)
         {
             string fileName = isExcel ? "ExcelRelationPath" : "ExcelMD5Path";
-            return $"{(isWrite ? ExcelWriteMD5Path : ExcelMD5Path)}{fileName}.txt";
+            return $"{(isWrite ? ExcelWriteMd5Path : ExcelMd5Path)}{fileName}.txt";
         }
 
-        static void InitExcelMD5()
+        static void InitExcelMd5()
         {
-            if (MD5Dir != null)
-                MD5Dir.Clear();
+            if (_md5Dir != null)
+                _md5Dir.Clear();
             else
-                MD5Dir = new Dictionary<string, MD5Info>();
-            var path = GetExcelMD5Path(false, false);
+                _md5Dir = new Dictionary<string, Md5Info>();
+            var path = GetExcelMd5Path(false, false);
             var splitStrList = new string[] { "|" };
             var splitStrList1 = new string[] { "," };
             if (File.Exists(path))
             {
-                var _md5Paths = File.ReadAllLines(path);
-                foreach (var md5 in _md5Paths)
+                var md5Paths = File.ReadAllLines(path);
+                foreach (var md5 in md5Paths)
                 {
                     var value = md5.Split(splitStrList, StringSplitOptions.RemoveEmptyEntries);
                     if (value.Length == 3)
                     {
-                        MD5Dir[value[0]] = new MD5Info() { md5 = value[1], path = value[2], };
+                        _md5Dir[value[0]] = new Md5Info() { md5 = value[1], path = value[2], };
                     }
                 }
             }
 
-            if (ExcelMD5Dir != null)
-                ExcelMD5Dir.Clear();
+            if (_excelMd5Dir != null)
+                _excelMd5Dir.Clear();
             else
-                ExcelMD5Dir = new Dictionary<string, ExcelMD5Info>();
-            path = GetExcelMD5Path(false, true);
+                _excelMd5Dir = new Dictionary<string, ExcelMd5Info>();
+            path = GetExcelMd5Path(false, true);
             if (File.Exists(path))
             {
-                var _md5Paths = File.ReadAllLines(path);
-                foreach (var md5 in _md5Paths)
+                var md5Paths = File.ReadAllLines(path);
+                foreach (var md5 in md5Paths)
                 {
                     var value = md5.Split(splitStrList, StringSplitOptions.RemoveEmptyEntries);
                     if (value.Length == 3)
                     {
-                        ExcelMD5Dir[value[0]] = new ExcelMD5Info()
+                        _excelMd5Dir[value[0]] = new ExcelMd5Info()
                         {
                             md5 = value[1],
                             infos = new List<string>(
@@ -422,26 +422,26 @@ namespace NumDesTools.ExcelToLua
                     fileName = data.name;
                 }
                 if (
-                    Path.GetFileName(Path.GetDirectoryName(file)) == luaLocalizationExcelFile
-                    && !LocalizationsExcludeFileName.Contains(fileName)
+                    Path.GetFileName(Path.GetDirectoryName(file)) == LuaLocalizationExcelFile
+                    && !_localizationsExcludeFileName.Contains(fileName)
                 )
                 {
                     //localization to lua table
-                    string output = $"{localizationOutputTempFolder}";
+                    string output = $"{LocalizationOutputTempFolder}";
                     ExportLuaLocationTables(data, output, isExcelMd5Change, infoMd5Key);
                     //clear Editor Localization Data
                     //LocalizationManager.Instance.ClearLocalizationData();
                 }
-                else if (fileName == cLocalizationExcelFile)
+                else if (fileName == CLocalizationExcelFile)
                 {
                     //localization to json
-                    string output = $"{jsonOutputFolder}";
+                    string output = $"{JsonOutputFolder}";
                     ExportCLocationTables(data, output, isExcelMd5Change, infoMd5Key);
                 }
-                else if (fileName == uiconfigExcelFile)
+                else if (fileName == UiconfigExcelFile)
                 {
                     //ui config to lua table
-                    string output = $"{luaOutputFolder}/UIs.lua.txt";
+                    string output = $"{LuaOutputFolder}/UIs.lua.txt";
                     md5Key = "UIs";
                     if (
                         !ExportLuaTable(
@@ -458,10 +458,10 @@ namespace NumDesTools.ExcelToLua
                         continue;
                     }
                 }
-                else if (fileName == uiItemconfigExcelFile)
+                else if (fileName == UiItemconfigExcelFile)
                 {
                     //ui config to lua table
-                    string output = $"{luaOutputFolder}/UIAppendItems.lua.txt";
+                    string output = $"{LuaOutputFolder}/UIAppendItems.lua.txt";
                     md5Key = "UIAppendItems";
                     if (
                         !ExportLuaTable(
@@ -479,14 +479,14 @@ namespace NumDesTools.ExcelToLua
                     }
                     // ExportLuaTable(output, data, "UIAppendItems", data.fields[1]);
                 }
-                else if (fileName == configExcelFile)
+                else if (fileName == ConfigExcelFile)
                 {
                     //config to json
-                    string output = $"{jsonOutputFolder}";
+                    string output = $"{JsonOutputFolder}";
                     string outputWritePath = $"{output}/{fileName}.json";
                     if (isExcelMd5Change)
                     {
-                        if (ComparisonMD5(outputWritePath, fileName))
+                        if (ComparisonMd5(outputWritePath, fileName))
                             continue;
                     }
 
@@ -496,18 +496,18 @@ namespace NumDesTools.ExcelToLua
                     File.WriteAllText(outputWritePath, jsonValue);
 
                     // MD5Dir[fileName] = MD5Helper.FileMD5(outputWritePath);
-                    SaveMD5(outputWritePath, fileName);
+                    SaveMd5(outputWritePath, fileName);
                     md5Key = fileName;
                 }
-                else if (toJsonExcels.Contains(fileName))
+                else if (_toJsonExcels.Contains(fileName))
                 {
                     //excel to json
-                    string output = $"{jsonOutputFolder}";
+                    string output = $"{JsonOutputFolder}";
                     string outputWritePath = $"{output}/{fileName}.json";
 
                     if (isExcelMd5Change)
                     {
-                        if (ComparisonMD5(fileName, outputWritePath))
+                        if (ComparisonMd5(fileName, outputWritePath))
                         {
                             continue;
                         }
@@ -517,7 +517,7 @@ namespace NumDesTools.ExcelToLua
                     if (!Directory.Exists(output))
                         Directory.CreateDirectory(output);
                     File.WriteAllText(outputWritePath, jsonValue);
-                    SaveMD5(outputWritePath, fileName);
+                    SaveMd5(outputWritePath, fileName);
                     md5Key = fileName;
                     // MD5Dir[fileName] = MD5Helper.FileMD5(outputWritePath);
                 }
@@ -535,7 +535,7 @@ namespace NumDesTools.ExcelToLua
                     }
 
                     //excel to lua table
-                    string output = $"{luaOutputFolder}/{fileName}.lua.txt";
+                    string output = $"{LuaOutputFolder}/{fileName}.lua.txt";
                     if (fileName == "Constant")
                     {
                         if (!ExportConstantLuaTable(data, output, isExcelMd5Change))
@@ -572,14 +572,14 @@ namespace NumDesTools.ExcelToLua
                 }
 
                 //三方支付表单独超导一份Json
-                if (fileName == rechargeGlobalOfficial)
+                if (fileName == RechargeGlobalOfficial)
                 {
                     //config to json
-                    string output = $"{jsonOutputFolder}";
+                    string output = $"{JsonOutputFolder}";
                     string outputWritePath = $"{output}/{fileName}.json";
                     if (isExcelMd5Change)
                     {
-                        if (ComparisonMD5(outputWritePath, fileName))
+                        if (ComparisonMd5(outputWritePath, fileName))
                             continue;
                     }
 
@@ -589,7 +589,7 @@ namespace NumDesTools.ExcelToLua
                     File.WriteAllText(outputWritePath, jsonValue);
 
                     // MD5Dir[fileName] = MD5Helper.FileMD5(outputWritePath);
-                    SaveMD5(outputWritePath, fileName);
+                    SaveMd5(outputWritePath, fileName);
                     md5Key = fileName;
                 }
 
@@ -613,7 +613,7 @@ namespace NumDesTools.ExcelToLua
         {
             string tableName = $"Tables.{data.name}";
 
-            if (!isExcelMd5Change && ComparisonMD5(tableName, output))
+            if (!isExcelMd5Change && ComparisonMd5(tableName, output))
             {
                 return false;
             }
@@ -633,7 +633,7 @@ namespace NumDesTools.ExcelToLua
             if (!fileInfo.Directory.Exists)
                 fileInfo.Directory.Create();
             FileWriteLuaText(data.name, output, luaTableValue);
-            SaveMD5(output, data.name);
+            SaveMd5(output, data.name);
             return true;
         }
 
@@ -649,7 +649,7 @@ namespace NumDesTools.ExcelToLua
         {
             FileInfo file = new FileInfo(outputFile);
 
-            if (!isExcelMd5Change && ComparisonMD5(tableName, outputFile))
+            if (!isExcelMd5Change && ComparisonMd5(tableName, outputFile))
             {
                 return false;
             }
@@ -684,7 +684,7 @@ namespace NumDesTools.ExcelToLua
                     string curOutputFile = outputFile.Replace(mainTxtPath, curTxtPath); //当前输出路径
                     string subTabName = $"Tables.{valuePair.Key}"; // 子表名称
                     FileWriteLuaText(subTabName, curOutputFile, valuePair.Value, luaCheck);
-                    SaveMD5(curOutputFile, subTabName);
+                    SaveMd5(curOutputFile, subTabName);
                     infoMd5Key.Add(subTabName);
                 }
             }
@@ -697,7 +697,7 @@ namespace NumDesTools.ExcelToLua
                     isIgnoreCheckNullValue
                 );
                 FileWriteLuaText(tableName, outputFile, luaTableValue, luaCheck);
-                SaveMD5(outputFile, tableName);
+                SaveMd5(outputFile, tableName);
             }
             luaCheck.Dispose();
 
@@ -720,7 +720,7 @@ namespace NumDesTools.ExcelToLua
             {
                 string locationName = $"{data.fields[i].name}";
                 string outputFile = $"{output}/{data.name}{locationName}.lua.txt";
-                if (!isExcelMd5Change && ComparisonMD5(locationName, outputFile))
+                if (!isExcelMd5Change && ComparisonMd5(locationName, outputFile))
                 {
                     continue;
                 }
@@ -742,15 +742,15 @@ namespace NumDesTools.ExcelToLua
                 if (!Directory.Exists(output))
                     Directory.CreateDirectory(output);
                 File.WriteAllText($"{output}/{data.name}{locationName}.lua.txt", luaTableValue);
-                SaveMD5(outputFile, locationName);
+                SaveMd5(outputFile, locationName);
                 if (keyList != null)
                 {
                     keyList.Add(locationName);
                 }
             }
 
-            needMergeLocalization = true;
-            if (File.Exists($"{localizationOutputFolder}/{luaLocalizationExcelFile}.lua.txt"))
+            _needMergeLocalization = true;
+            if (File.Exists($"{LocalizationOutputFolder}/{LuaLocalizationExcelFile}.lua.txt"))
             {
                 return;
             }
@@ -758,7 +758,7 @@ namespace NumDesTools.ExcelToLua
             //Localizations.lua.txt
             string value = LuaCodeGenerator.FieldsToLuaTable(
                 data.fields,
-                luaLocalizationExcelFile,
+                LuaLocalizationExcelFile,
                 2,
                 "本地化配置"
             );
@@ -806,7 +806,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
             );
 
             File.WriteAllText(
-                $"{localizationOutputFolder}/{luaLocalizationExcelFile}.lua.txt",
+                $"{LocalizationOutputFolder}/{LuaLocalizationExcelFile}.lua.txt",
                 text.ToString()
             );
         }
@@ -839,7 +839,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                 if (!Directory.Exists(output))
                     Directory.CreateDirectory(output);
                 File.WriteAllText(outputFile, jsonValue);
-                SaveMD5(outputFile, outputFile);
+                SaveMd5(outputFile, outputFile);
                 if (keyList != null)
                 {
                     keyList.Add(outputFile);
@@ -901,15 +901,15 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
 
         public static void MergeLocalizationLuaFile()
         {
-            foreach (var language in Localizations)
+            foreach (var language in _localizations)
             {
                 string originPath = Path.Combine(
-                    localizationOutputFolder,
-                    $"{luaLocalizationExcelFile}{language}.lua.txt"
+                    LocalizationOutputFolder,
+                    $"{LuaLocalizationExcelFile}{language}.lua.txt"
                 );
-                string[] content = new[] { $"{luaLocalizationExcelFile}.{language} = {{" };
+                string[] content = new[] { $"{LuaLocalizationExcelFile}.{language} = {{" };
                 string[] files = Directory.GetFiles(
-                    localizationOutputTempFolder,
+                    LocalizationOutputTempFolder,
                     $"*{language}.lua.txt",
                     SearchOption.AllDirectories
                 );
@@ -926,14 +926,14 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
             }
 
             CheckLocalizationLuaDuplicateKeys();
-            needMergeLocalization = false;
+            _needMergeLocalization = false;
         }
 
         public static void CheckLocalizationLuaDuplicateKeys()
         {
             string originPath = Path.Combine(
-                localizationOutputFolder,
-                $"{luaLocalizationExcelFile}English.lua.txt"
+                LocalizationOutputFolder,
+                $"{LuaLocalizationExcelFile}English.lua.txt"
             );
             string[] content = File.ReadAllLines(originPath);
             HashSet<string> map = new HashSet<string>(content.Length);
@@ -963,7 +963,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
             if (duplicatekeys.Count > 0)
             {
                 string[] files = Directory.GetFiles(
-                    localizationOutputTempFolder,
+                    LocalizationOutputTempFolder,
                     $"*English.lua.txt",
                     SearchOption.AllDirectories
                 );
@@ -993,8 +993,8 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
         public static void CheckLocalizationLuaDuplicateValues()
         {
             string originPath = Path.Combine(
-                localizationOutputFolder,
-                $"{luaLocalizationExcelFile}ChineseSimplified.lua.txt"
+                LocalizationOutputFolder,
+                $"{LuaLocalizationExcelFile}ChineseSimplified.lua.txt"
             );
             string[] content = File.ReadAllLines(originPath);
             Dictionary<string, int> map = new Dictionary<string, int>(content.Length);
@@ -1041,14 +1041,14 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
         }
     }
 
-    public static class MD5Helper
+    public static class Md5Helper
     {
         /// <summary>
         /// 计算文件的MD5哈希值
         /// </summary>
         /// <param name="filePath">文件完整路径</param>
         /// <returns>32位小写MD5字符串</returns>
-        public static string FileMD5(string filePath)
+        public static string FileMd5(string filePath)
         {
             if (string.IsNullOrEmpty(filePath))
                 throw new ArgumentException("文件路径不能为空");

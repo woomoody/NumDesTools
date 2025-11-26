@@ -267,12 +267,12 @@ namespace NumDesTools.Config
                     else
                     {
                         var lines = new List<string>();
-                        for (int i = 0; i < kvp.Value.Length; i += NumDesAddIn.MaxLineLength)
+                        for (int i = 0; i < kvp.Value.Length; i += NumDesAddIn.MAX_LINE_LENGTH)
                         {
                             lines.Add(
                                 kvp.Value.Substring(
                                     i,
-                                    Math.Min(NumDesAddIn.MaxLineLength, kvp.Value.Length - i)
+                                    Math.Min(NumDesAddIn.MAX_LINE_LENGTH, kvp.Value.Length - i)
                                 )
                             );
                         }
@@ -371,7 +371,7 @@ namespace NumDesTools.Config
         // 判断是否为长文本
         private bool IsLongText(string text)
         {
-            return text?.Length > NumDesAddIn.LongTextThreshold;
+            return text?.Length > NumDesAddIn.LONG_TEXT_THRESHOLD;
         }
 
         #endregion
