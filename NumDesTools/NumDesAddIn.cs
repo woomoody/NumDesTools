@@ -57,9 +57,9 @@ namespace NumDesTools;
 [ComVisible(true)]
 public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 {
-    public const int LongTextThreshold = 50;
-    public const int MaxLineLength = 50;
-    public const int ClickDelayMs = 500;
+    public const int LONG_TEXT_THRESHOLD = 50;
+    public const int MAX_LINE_LENGTH = 50;
+    public const int CLICK_DELAY_MS = 500;
     public static GlobalVariable GlobalValue = new();
     public static string LabelText = GlobalValue.Value["LabelText"];
     public static string FocusLabelText = GlobalValue.Value["FocusLabelText"];
@@ -302,7 +302,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         // 防抖检查（500ms内不重复处理）
         if (
             _lastClickTimes.TryGetValue(control.Id, out var lastTime)
-            && (DateTime.Now - lastTime).TotalMilliseconds < ClickDelayMs
+            && (DateTime.Now - lastTime).TotalMilliseconds < CLICK_DELAY_MS
         )
         {
             Debug.Print($"{control.Id}1s内有2+次点击，不响应");
@@ -1198,8 +1198,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                             var usedColMax = usedRange.Columns.Count;
                             for (int i = 1; i <= usedColMax; i++)
                             {
-                                var fieldRange = sheet.Cells[2, i];
-                                var filedValue = fieldRange.Value2;
+                                var filedRange = sheet.Cells[2, i];
+                                var filedValue = filedRange.Value2;
 
                                 Debug.Print($"{sheet.Name}-{filedValue}");
 

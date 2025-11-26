@@ -322,22 +322,22 @@ namespace NumDesTools.ExcelToLua
         return string.Empty;
     }
 
-    private static Regex rewardRegex = new Regex(@"^\{\d+(,\s*\d+)*\}$");
+    private static Regex _rewardRegex = new Regex(@"^\{\d+(,\s*\d+)*\}$");
     private static bool ValidReward(string value)
     {
         if (string.IsNullOrEmpty(value) || value == "{}")
             return true;
 
-        return rewardRegex.IsMatch(value);
+        return _rewardRegex.IsMatch(value);
     }
 
-    private static Regex rewardArrayRegex = new Regex(@"^\{(\{\d+(,\s*\d+)*\})(\s*,\{\d+(,\s*\d+)*\})*\}$");
+    private static Regex _rewardArrayRegex = new Regex(@"^\{(\{\d+(,\s*\d+)*\})(\s*,\{\d+(,\s*\d+)*\})*\}$");
     private static bool ValidRewardArray(string value)
     {
         if (string.IsNullOrEmpty(value) || value == "{{}}" || value == "{}")
             return true;
         
-        return rewardArrayRegex.IsMatch(value);
+        return _rewardArrayRegex.IsMatch(value);
     }
     
     /// <summary>
