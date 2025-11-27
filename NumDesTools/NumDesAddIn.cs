@@ -2447,7 +2447,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             false
         );
 
-        if (ExcelExporter._needMergeLocalization)
+        if (ExcelExporter.NeedMergeLocalization)
         {
             ExcelExporter.MergeLocalizationLuaFile();
         }
@@ -2486,7 +2486,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             false
         );
 
-        if (ExcelExporter._needMergeLocalization)
+        if (ExcelExporter.NeedMergeLocalization)
         {
             ExcelExporter.MergeLocalizationLuaFile();
         }

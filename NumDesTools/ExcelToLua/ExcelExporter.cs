@@ -15,7 +15,7 @@ namespace NumDesTools.ExcelToLua
             get
             {
                 var basePath = NumDesAddIn.BasePath;
-                string jsonBaseFolder = "";
+                string jsonBaseFolder;
 
                 if (
                     basePath.Contains("Lte资源映射")
@@ -99,7 +99,7 @@ namespace NumDesTools.ExcelToLua
             "LocalizationFonts",
         };
 
-        public static bool _needMergeLocalization = false;
+        public static bool NeedMergeLocalization = false;
 
         class Md5Info
         {
@@ -134,7 +134,6 @@ namespace NumDesTools.ExcelToLua
         {
             List<FieldData> luaTableFields = new List<FieldData>();
             InitExcelMd5();
-            string md5Value = null;
             for (int i = 0; i < files.Length; i++)
             {
                 string file = files[i].Replace('\\', '/');
@@ -161,7 +160,7 @@ namespace NumDesTools.ExcelToLua
                 }
             }
 
-            if (_needMergeLocalization)
+            if (NeedMergeLocalization)
             {
                 MergeLocalizationLuaFile();
             }
@@ -186,7 +185,7 @@ namespace NumDesTools.ExcelToLua
                 Export(file, fileName, luaTableFields, isAll, fileName.Contains("$$"), false);
             }
 
-            if (_needMergeLocalization)
+            if (NeedMergeLocalization)
             {
                 MergeLocalizationLuaFile();
             }
@@ -771,7 +770,7 @@ namespace NumDesTools.ExcelToLua
                 }
             }
 
-            _needMergeLocalization = true;
+            NeedMergeLocalization = true;
             if (File.Exists($"{LocalizationOutputFolder}/{LuaLocalizationExcelFile}.lua.txt"))
             {
                 return;
@@ -948,7 +947,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
             }
 
             CheckLocalizationLuaDuplicateKeys();
-            _needMergeLocalization = false;
+            NeedMergeLocalization = false;
         }
 
         public static void CheckLocalizationLuaDuplicateKeys()
@@ -1081,20 +1080,20 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
             try
             {
                 using (var md5 = MD5.Create())
-                using (
-                    var stream = new FileStream(
-                        filePath,
-                        FileMode.Open,
-                        FileAccess.Read,
-                        FileShare.Read,
-                        4096,
-                        FileOptions.SequentialScan
+                    using (
+                        var stream = new FileStream(
+                            filePath,
+                            FileMode.Open,
+                            FileAccess.Read,
+                            FileShare.Read,
+                            4096,
+                            FileOptions.SequentialScan
+                        )
                     )
-                )
-                {
-                    byte[] hashBytes = md5.ComputeHash(stream);
-                    return ByteArrayToHexString(hashBytes);
-                }
+                    {
+                        byte[] hashBytes = md5.ComputeHash(stream);
+                        return ByteArrayToHexString(hashBytes);
+                    }
             }
             catch (Exception ex)
             {
