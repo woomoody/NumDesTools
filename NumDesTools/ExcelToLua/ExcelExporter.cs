@@ -9,22 +9,49 @@ namespace NumDesTools.ExcelToLua
     public class ExcelExporter
     {
         //excel文件夹
-        public static string ExcelFolder =>
-            Path.Combine(NumDesAddIn.BasePath, "./../../public/Excels/")
-                .Replace("\\", "/");
 
-        static string LocalizationOutputTempFolder =>
-            Path.Combine(NumDesAddIn.BasePath, "./..//Localizations/Lua/")
-                .Replace("\\", "/");
+        static string JsonBaseFolder
+        {
+            get
+            {
+                var basePath = NumDesAddIn.BasePath;
+                string jsonBaseFolder = "";
+
+                if (
+                    basePath.Contains("Lte资源映射")
+                    || basePath.Contains("二合")
+                    || basePath.Contains("工会")
+                    || basePath.Contains("克朗代克")
+                )
+                {
+                    jsonBaseFolder = Path.GetFullPath(Path.Combine(basePath, "./../../../../"));
+                }
+                else if (
+                    basePath.Contains("Configs")
+                    || basePath.Contains("UIs")
+                    || basePath.Contains("Localizations")
+                )
+                {
+                    jsonBaseFolder = Path.GetFullPath(Path.Combine(basePath, "./../../"));
+                }
+                else
+                {
+                    jsonBaseFolder = Path.GetFullPath(Path.Combine(basePath, "./../../../"));
+                }
+                return jsonBaseFolder.Replace("\\", "/");
+            }
+        }
+
+        static string LocalizationOutputTempFolder => $"{JsonBaseFolder}Code/Localizations/Lua";
 
         //lua文件夹
-        static string LuaOutputFolder => $"{NumDesAddIn.BasePath}/LuaScripts/Tables";
+        static string LuaOutputFolder => $"{JsonBaseFolder}Code/Assets/LuaScripts/Tables";
 
         static string LocalizationOutputFolder =>
-            $"{NumDesAddIn.BasePath}/LuaScripts/Localizations";
+            $"{JsonBaseFolder}Code/Asests/LuaScripts/Localizations";
 
         //json文件夹
-        static string JsonOutputFolder => $"{NumDesAddIn.BasePath}/Game/Jsons";
+        static string JsonOutputFolder => $"{JsonBaseFolder}Code/Assets/Game/Jsons";
 
         //导出json的excel列表
         static List<string> _toJsonExcels = new List<string>() { "Configs", "LocalizationFonts" };
@@ -72,7 +99,7 @@ namespace NumDesTools.ExcelToLua
             "LocalizationFonts",
         };
 
-        private static bool _needMergeLocalization = false;
+        public static bool _needMergeLocalization = false;
 
         class Md5Info
         {
@@ -213,12 +240,6 @@ namespace NumDesTools.ExcelToLua
             return results;
         }
 
-        static void ExportAll()
-        {
-            string[] files = Directory.GetFiles(ExcelFolder, "*.xls?", SearchOption.AllDirectories);
-            ExportAll(files);
-        }
-
         #region MD5处理
 
         static void SaveAllMd5()
@@ -298,7 +319,8 @@ namespace NumDesTools.ExcelToLua
                         foreach (var info in md5Value.infos)
                         {
                             if (
-                                !_md5Dir.ContainsKey(info) || !ComparisonMd5(_md5Dir[info].path, info)
+                                !_md5Dir.ContainsKey(info)
+                                || !ComparisonMd5(_md5Dir[info].path, info)
                             )
                             {
                                 return false;
@@ -393,7 +415,7 @@ namespace NumDesTools.ExcelToLua
 
         #endregion MD5处理
 
-        static List<string> Export(
+        public static List<string> Export(
             string file,
             string fileName,
             List<FieldData> luaTableFields,
