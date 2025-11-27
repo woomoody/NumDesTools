@@ -35,6 +35,7 @@ using NPOI.XSSF.UserModel;
 using NumDesTools.Advance;
 using NumDesTools.Com;
 using NumDesTools.Config;
+using NumDesTools.ExcelToLua;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using Button = System.Windows.Forms.Button;
@@ -291,7 +292,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["Button99991"] = TestBar1_Click,
             ["Button99992"] = TestBar2_Click,
             ["ExcelSearchBoxButton8"] = ExcelSearchAllFormulaName_Click,
-            ["CheckExcelKeyAndValueFormat"] = CheckExcelKeyAndValueFormat_Click
+            ["CheckExcelKeyAndValueFormat"] = CheckExcelKeyAndValueFormat_Click,
+            ["OutPutExcelDataToLua"] = OutPutExcelDataToLua_Click
         };
     }
 
@@ -1089,7 +1091,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 }
             }
         }
-
     }
 
     private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
@@ -1203,10 +1204,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
                                 Debug.Print($"{sheet.Name}-{filedValue}");
 
-                                if (filedValue == null )
+                                if (filedValue == null)
                                 {
-                                    var colName = PubMetToExcel.ChangeExcelColChar(i-1);
-                                    MessageBox.Show($"{sheet.Name}-{colName}列字段为空，但有数据，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据");
+                                    var colName = PubMetToExcel.ChangeExcelColChar(i - 1);
+                                    MessageBox.Show(
+                                        $"{sheet.Name}-{colName}列字段为空，但有数据，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
+                                    );
                                     cancel = true;
                                     break;
                                 }
@@ -2424,6 +2427,33 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         excelDb.ConvertWithSchemaInference(path, dbPath);
     }
 
+    public void OutPutExcelDataToLua_Click(IRibbonControl control)
+    {
+        var wk = App.ActiveWorkbook;
+        var path = wk.FullName;
+        if (path.Contains("#") || path.Contains("~"))
+            return;
+
+        var isAll = path.Contains("$");
+
+        List<FieldData> luaTableFields = new List<FieldData>();
+
+        var abc = ExcelExporter.Export(
+            path,
+            Path.GetFileNameWithoutExtension(path),
+            luaTableFields,
+            isAll,
+            path.Contains("$$"),
+            false
+        );
+
+        if (ExcelExporter._needMergeLocalization)
+        {
+            ExcelExporter.MergeLocalizationLuaFile();
+        }
+
+    }
+
     public void TestBar1_Click(IRibbonControl control)
     {
         //var files = new List<string>(
@@ -2439,14 +2469,34 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //    converter.ConvertMultipleJsonToExcel(jsonFile);
         //}
         var wk = App.ActiveWorkbook;
-        var path = wk.Path;
+        var path = wk.FullName;
+        if (path.Contains("#") || path.Contains("~"))
+            return;
 
-        string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        string dbPath = Path.Combine(myDocumentsPath, "Public.db");
+        var isAll = path.Contains("$");
 
-        var abc = new ExcelDataToDb();
+        List<FieldData> luaTableFields = new List<FieldData>();
 
-        abc.ConvertWithSchemaInference(path, dbPath);
+        var abc = ExcelExporter.Export(
+            path,
+            Path.GetFileNameWithoutExtension(path),
+            luaTableFields,
+            isAll,
+            path.Contains("$$"),
+            false
+        );
+
+        if (ExcelExporter._needMergeLocalization)
+        {
+            ExcelExporter.MergeLocalizationLuaFile();
+        }
+
+        //string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        //string dbPath = Path.Combine(myDocumentsPath, "Public.db");
+
+        //var abc = new ExcelDataToDb();
+
+        //abc.ConvertWithSchemaInference(path, dbPath);
 
         //App.Visible = false;
         //App.ScreenUpdating = false;

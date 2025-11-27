@@ -44,6 +44,9 @@
 					<button id='CheckExcelKeyAndValueFormat' size='large' label='检查表格式' image='log'
                             onAction='OnButtonClick'
                             screentip='点击检查全量Excel是否有重复Key，单元格格式是否合法' tag='检查格式' />
+                    <button id='OutPutExcelDataToLua' size='large' label='Lua表格' image='scheme'
+                            onAction='OnButtonClick'
+                            screentip='将当前表格数据导出为Lua' tag='导出Lua数据' />
                 </group>
                 <!--
                 <group id='Group3' label='SVN功能'>
