@@ -3770,6 +3770,7 @@ public static class ExcelDataAutoInsertActivityServer
 
         // 预先处理activityData，建立id到type的映射
         var activityDataMap = new Dictionary<string, List<string>>();
+        var activityIdList = new List<string>();
         foreach (var activtyRow in activtyData.Skip(3))
         {
             if (activtyRow is IDictionary<string, object> activtyRowDict)
@@ -3782,6 +3783,8 @@ public static class ExcelDataAutoInsertActivityServer
                 {
                     activityDataMap[id] = new List<string> { comment, type };
                 }
+
+                activityIdList.Add(id);
             }
         }
 
@@ -3802,7 +3805,7 @@ public static class ExcelDataAutoInsertActivityServer
         }
 
         var activityInfo = new Dictionary<string, List<string>>();
-
+        var activityGroupIdList = new List<string>();
         // 处理activityGroupData
         foreach (var row in activityGroupData.Skip(3)) // 跳过前3行标题
         {
@@ -3812,11 +3815,14 @@ public static class ExcelDataAutoInsertActivityServer
                 string hierarchyActivityIDs = rowDict["hierarchyActivityIDs"]?.ToString();
                 string activityGroupComment = rowDict["#备注"]?.ToString();
 
+                
                 if (
                     !string.IsNullOrEmpty(activityGroupId)
                     && !string.IsNullOrEmpty(hierarchyActivityIDs)
                 )
                 {
+                    activityGroupIdList.Add(activityGroupId);
+
                     // 处理hierarchyActivityIDs格式：[id1,id2,id3]
                     var hierarchyActivityIDsNums = hierarchyActivityIDs
                         .Trim('[', ']')
@@ -3824,6 +3830,9 @@ public static class ExcelDataAutoInsertActivityServer
                         .Select(s => s.Trim())
                         .Where(s => !string.IsNullOrEmpty(s))
                         .ToList();
+
+                    if (hierarchyActivityIDsNums.Count == 0)
+                        continue;
 
                     foreach (var hierarchyActivityIDsNum in hierarchyActivityIDsNums)
                     {
@@ -3879,6 +3888,15 @@ public static class ExcelDataAutoInsertActivityServer
                     }
                 }
             }
+        }
+
+        // 检查重复ID
+        var repeatKeyList = activityIdList.Intersect(activityGroupIdList).ToList();
+        if (repeatKeyList.Count > 0)
+        {
+            string repeatKeys = string.Join(", ", repeatKeyList);
+            MessageBox.Show($"存在重复活动ID，无法继续写入：{repeatKeys}");
+            return;
         }
 
         // 处理剩余activityData
