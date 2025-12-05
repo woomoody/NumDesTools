@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -1824,6 +1825,96 @@ public static class PubMetToExcelFunc
         }
 
         return sourceData;
+    }
+
+    //数组数据格式检查-MiniExcel
+    public static string CheckArrayValueFormat(
+        string sheetName,
+        string checkCol,
+        string wkFullPath,
+        string targetWkName,
+        string targetSheetName,
+        string checkTargetCol,
+        string errorTips
+    )
+    {
+        string result = string.Empty;
+
+        var rows = MiniExcel
+            .Query(
+                wkFullPath,
+                sheetName: sheetName,
+                configuration: NumDesAddIn.OnOffMiniExcelCatches,
+                startCell: "A2",
+                useHeaderRow: true
+            )
+            .ToList();
+
+        if (rows.Count == 0)
+            return null;
+
+        var targetPath = Path.Combine(Path.GetDirectoryName(wkFullPath), targetWkName);
+        var rowsTarget = MiniExcel
+            .Query(
+                targetPath,
+                sheetName: targetSheetName,
+                configuration: NumDesAddIn.OnOffMiniExcelCatches,
+                startCell: "A2",
+                useHeaderRow: true
+            )
+            .ToList();
+        if (rowsTarget.Count == 0)
+            return null;
+
+        // 遍历指定字段的数组数据
+        for (int rowIndex = 2; rowIndex < rows.Count; rowIndex++)
+        {
+            var row = rows[rowIndex] as IDictionary<string, object>;
+
+            var cellIndex = row["id"]?.ToString();
+            var cellComment = row["#备注"]?.ToString();
+            var cellValue = row[checkCol]?.ToString();
+
+            if(cellValue == null)
+                continue;
+
+            cellValue = cellValue.Replace("[", "");
+            cellValue = cellValue.Replace("]", "");
+
+            if (cellValue == "")
+                continue;
+
+            var cellValueGroup = cellValue.Split(",");
+
+            var resultList = new List<string>();
+
+            foreach (var checkId in cellValueGroup)
+            {
+                // 目标数据中检查是否合法
+                for (int i = 2; i < rowsTarget.Count; i++)
+                {
+                    var rowTarget = rowsTarget[i] as IDictionary<string, object>;
+                    var cellTargetIndex = rowTarget["id"]?.ToString();
+                    if (checkId == cellTargetIndex)
+                    {
+                        var cellTargetValue = rowTarget[checkTargetCol]?.ToString();
+                        if (!string.IsNullOrEmpty(cellTargetValue))
+                        {
+                            resultList.Add(cellTargetIndex);
+                        }
+                        break;
+                    }
+
+                }
+            }
+
+            if (resultList.Count > 0)
+            {
+                result += $"id:{cellIndex}#:{cellComment}# {errorTips}:{string.Join(",", resultList)}\n";
+            }
+        }
+
+        return result;
     }
 
     //Excel名称表数据写入
