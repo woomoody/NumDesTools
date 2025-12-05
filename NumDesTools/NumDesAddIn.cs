@@ -1123,6 +1123,33 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
                 // 数据合法性
                 sourceData.AddRange(PubMetToExcelFunc.CheckValueFormat(rows, sheetName));
+
+                // 数组类ID合法性验证
+                if(wkFileName.Contains("MapTaskGiftData"))
+                {
+                    var checkCol = "astrictTasks";
+                    var targetWkName = "Mission.xlsx";
+                    var targetSheetName = "Sheet1";
+                    var checkTargetCol = "limitedTime";
+
+                    var checkResult = PubMetToExcelFunc.CheckArrayValueFormat(sheetName, checkCol, wkFullPath, targetWkName, targetSheetName, checkTargetCol, "有限时任务");
+                    if (checkResult != "")
+                        MessageBox.Show(checkResult);
+                    
+                }
+                if (wkFileName.Contains("LteData"))
+                {
+                    var checkCol = "allTasks";
+                    var targetWkName = "Mission.xlsx";
+                    var targetSheetName = "Sheet1";
+                    var checkTargetCol = "limitedTime";
+
+                    var checkResult = PubMetToExcelFunc.CheckArrayValueFormat(sheetName, checkCol, wkFullPath, targetWkName, targetSheetName, checkTargetCol, "有限时任务");
+                    if (checkResult != "")
+                        MessageBox.Show(checkResult);
+
+                }
+
             }
         }
 
@@ -2438,7 +2465,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         List<FieldData> luaTableFields = new List<FieldData>();
 
-        var abc = ExcelExporter.Export(
+        ExcelExporter.Export(
             path,
             Path.GetFileNameWithoutExtension(path),
             luaTableFields,
@@ -2477,7 +2504,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         List<FieldData> luaTableFields = new List<FieldData>();
 
-        var abc = ExcelExporter.Export(
+        ExcelExporter.Export(
             path,
             Path.GetFileNameWithoutExtension(path),
             luaTableFields,
