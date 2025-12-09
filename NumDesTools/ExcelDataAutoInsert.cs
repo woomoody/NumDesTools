@@ -1,10 +1,12 @@
-﻿using System.Text;
+﻿using MiniExcelLibs;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
-using MiniExcelLibs;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
+using System.Windows.Media.Media3D;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
 
@@ -1773,6 +1775,9 @@ public static class ExcelDataAutoInsertMulti
         dynamic writeMode
     )
     {
+        var wk = NumDesAddIn.App.ActiveWorkbook;
+        var wkPath = wk.Path;
+
         var errorExcelLog = "";
         var errorList = new List<(string, string, string)>();
         string path;
@@ -1854,11 +1859,59 @@ public static class ExcelDataAutoInsertMulti
         }
         writeIdList = ExcelDataWriteIdGroup(excelName, addValue, sheet, fixKey, modelId);
         var writeRow = writeIdList.Item2;
+
+        ExcelPackage excelNew = null;
+        ExcelWorksheet sheetModel = sheet;
+
         if (writeRow == -1)
         {
-            errorExcelLog = excelName + "#找不到" + writeIdList.Item1[0];
-            errorList.Add((excelName, errorExcelLog, excelName));
-            return errorList;
+            // 原始表没数据需要额外判断是否有分表，分表名字和原始名字十分相似
+            (string, string) fileInfor = PubMetToExcel.AliceFilePathFix(wkPath, excelName);
+
+            var filePath = Path.GetDirectoryName(fileInfor.Item1);
+            var fileName = Path.GetFileNameWithoutExtension(excelName);
+
+            var otherFiles = Directory.GetFiles(
+                filePath,
+                $"{fileName}_*.xlsx",
+                SearchOption.TopDirectoryOnly
+            );
+            if (otherFiles.Length != 0)
+            {
+                foreach (var newFile in otherFiles)
+                {
+                    var newFileName = Path.GetFileName(newFile);
+
+                    errorList = PubMetToExcel.SetExcelObjectEpPlus(
+                        wkPath,
+                        newFileName,
+                        out ExcelWorksheet sheetNew,
+                        out excelNew
+                    );
+
+                    writeIdList = ExcelDataWriteIdGroup(excelName, addValue, sheetNew, fixKey, modelId); ;
+                    writeRow = writeIdList.Item2;
+
+                    if (writeRow != -1)
+                    {
+                        sheetModel = sheetNew;
+                        break;
+                    }
+
+                    excelNew?.Dispose();
+
+                    errorExcelLog = excelName + "#找不到" + writeIdList.Item1[0];
+                    errorList.Add((excelName, errorExcelLog, excelName));
+
+                }
+            }
+            else
+            {
+                errorExcelLog = excelName + "#找不到" + writeIdList.Item1[0];
+                errorList.Add((excelName, errorExcelLog, excelName));
+                return errorList;
+            }
+
         }
 
         for (var excelMulti = 0; excelMulti < modelId[excelName].Count; excelMulti++)
@@ -1866,7 +1919,7 @@ public static class ExcelDataAutoInsertMulti
             var startValue = modelId[excelName][excelMulti].Item1[0, 0].ToString();
             var endValue = modelId[excelName][excelMulti].Item1[1, 0].ToString();
 
-            var startRowSource = PubMetToExcel.FindSourceRow(sheet, 2, startValue);
+            var startRowSource = PubMetToExcel.FindSourceRow(sheetModel, 2, startValue);
             if (startRowSource == -1)
             {
                 errorExcelLog = excelName + "#【初始模板】#[" + startValue + "]未找到(序号出错)";
@@ -1874,7 +1927,7 @@ public static class ExcelDataAutoInsertMulti
                 return errorList;
             }
 
-            var endRowSource = PubMetToExcel.FindSourceRow(sheet, 2, endValue);
+            var endRowSource = PubMetToExcel.FindSourceRow(sheetModel, 2, endValue);
             if (endRowSource == -1)
             {
                 errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]未找到(序号出错)";
@@ -1889,13 +1942,13 @@ public static class ExcelDataAutoInsertMulti
                 return errorList;
             }
             //复制数据
-            if (excelRealName.Contains("Recharge"))
+            if (excelRealName.Contains("Recharge") || sheetModel != sheet)
             {
                 writeRow = sheet.Dimension.End.Row;
             }
             var count = endRowSource - startRowSource + 1;
             sheet.InsertRow(writeRow + 1, count);
-            var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
+            var cellSource = sheetModel.Cells[startRowSource, 1, endRowSource, colCount];
             var cellTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, colCount];
 
             cellTarget.Value = cellSource.Value;
@@ -1939,7 +1992,9 @@ public static class ExcelDataAutoInsertMulti
         }
 
         excel.Save();
-        excel.Dispose();
+        excel?.Dispose();
+        excelNew?.Dispose();
+
         errorList.Add(("-1", errorExcelLog, excelName));
         return errorList;
     }
@@ -2495,6 +2550,9 @@ public static class ExcelDataAutoInsertMultiNew
             out ExcelWorksheet sheet,
             out ExcelPackage excel
         );
+
+        ExcelPackage excelNew = null;
+
         if (excel == null)
         {
             LogDisplay.RecordLine(
@@ -2539,11 +2597,58 @@ public static class ExcelDataAutoInsertMultiNew
             writeIdList = GetElementIdGroup(excelName, sheet, _modelId);
 
             writeRow = writeIdList.Item2;
+
+            var sheetModel = sheet;
+
             if (writeRow == -1)
             {
-                errorExcelLog = excelName + "#找不到" + writeIdList.Item1[0];
-                errorList.Add((excelName, errorExcelLog, excelName));
-                return errorList;
+                // 原始表没数据需要额外判断是否有分表，分表名字和原始名字十分相似
+                (string, string) fileInfor = PubMetToExcel.AliceFilePathFix(_excelPath, excelName);
+
+                var filePath = Path.GetDirectoryName(fileInfor.Item1);
+                var fileName = Path.GetFileNameWithoutExtension(excelName);
+
+                var otherFiles = Directory.GetFiles(
+                    filePath,
+                    $"{fileName}_*.xlsx",
+                    SearchOption.TopDirectoryOnly
+                );
+                if (otherFiles.Length != 0)
+                {
+                    foreach (var newFile in otherFiles)
+                    {
+                        var newFileName = Path.GetFileName(newFile);
+
+                        errorList = PubMetToExcel.SetExcelObjectEpPlus(
+                            _excelPath,
+                            newFileName,
+                            out ExcelWorksheet sheetNew,
+                            out excelNew
+                        );
+                        
+                        writeIdList = GetElementIdGroup(excelName, sheetNew, _modelId);
+                        writeRow = writeIdList.Item2;
+
+                        if(writeRow != -1)
+                        {
+                            sheetModel = sheetNew;
+                            
+                            break;
+                        }
+
+                        excelNew?.Dispose();
+
+                        errorExcelLog = excelName + "#找不到" + writeIdList.Item1[0];
+                        errorList.Add((excelName, errorExcelLog, excelName));
+
+                    }
+                }
+                else
+                {
+                    errorExcelLog = excelName + "#找不到" + writeIdList.Item1[0];
+                    errorList.Add((excelName, errorExcelLog, excelName));
+                    return errorList;
+                }
             }
 
             for (var excelMulti = 0; excelMulti < _modelId[excelName].Count; excelMulti++)
@@ -2558,7 +2663,7 @@ public static class ExcelDataAutoInsertMultiNew
                     return errorList;
                 }
 
-                var startRowSource = PubMetToExcel.FindSourceRow(sheet, 2, startValue);
+                var startRowSource = PubMetToExcel.FindSourceRow(sheetModel, 2, startValue);
                 if (startRowSource == -1)
                 {
                     errorExcelLog = excelName + "#【初始模板】#[" + startValue + "]未找到(序号出错)";
@@ -2566,7 +2671,7 @@ public static class ExcelDataAutoInsertMultiNew
                     return errorList;
                 }
 
-                var endRowSource = PubMetToExcel.FindSourceRow(sheet, 2, endValue);
+                var endRowSource = PubMetToExcel.FindSourceRow(sheetModel, 2, endValue);
                 if (endRowSource == -1)
                 {
                     errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]未找到(序号出错)";
@@ -2582,13 +2687,13 @@ public static class ExcelDataAutoInsertMultiNew
                 }
 
                 //复制数据
-                if (excelRealName.Contains("Recharge"))
+                if (excelRealName.Contains("Recharge") || sheetModel != sheet)
                 {
                     writeRow = sheet.Dimension.End.Row;
                 }
                 var count = endRowSource - startRowSource + 1;
                 sheet.InsertRow(writeRow + 1, count);
-                var cellSource = sheet.Cells[startRowSource, 1, endRowSource, colCount];
+                var cellSource = sheetModel.Cells[startRowSource, 1, endRowSource, colCount];
                 var cellTarget = sheet.Cells[writeRow + 1, 1, writeRow + count, colCount];
                 cellTarget.Value = cellSource.Value;
 
@@ -2625,6 +2730,7 @@ public static class ExcelDataAutoInsertMultiNew
         }
 
         excel?.Dispose();
+        excelNew?.Dispose();
 
         errorList.Add(("-1", errorExcelLog, excelName));
         return errorList;
@@ -2780,7 +2886,7 @@ public static class ExcelDataAutoInsertMultiNew
         bool isDelete = false
     )
     {
-        var lastRow = 0;
+        var lastRow = -1;
         for (var excelMulti = 0; excelMulti < modelIdnew[excelName].Count; excelMulti++)
         {
             var startValue = modelIdnew[excelName][excelMulti].Item1[0, 0].ToString();
@@ -3815,7 +3921,6 @@ public static class ExcelDataAutoInsertActivityServer
                 string hierarchyActivityIDs = rowDict["hierarchyActivityIDs"]?.ToString();
                 string activityGroupComment = rowDict["#备注"]?.ToString();
 
-                
                 if (
                     !string.IsNullOrEmpty(activityGroupId)
                     && !string.IsNullOrEmpty(hierarchyActivityIDs)
