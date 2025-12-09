@@ -1442,7 +1442,7 @@ public class LteData
 
                 if (findTargetType != String.Empty)
                 {
-                    var findLinks = FindLinks(
+                    var findLinksGroup = FindLinks(
                         findTargetDetailType,
                         findTargetType,
                         findTargetId,
@@ -1450,6 +1450,8 @@ public class LteData
                         out var findTips,
                         fieldGroupDic
                     );
+                    var findLinks = findLinksGroup.findLinks;
+                    var findLinks31 = findLinksGroup.findLinks31;
 
                     if (findLinks != String.Empty)
                     {
@@ -1470,7 +1472,7 @@ public class LteData
                             findDic[findIdStr].Add("寻-" + copyDic[key][8]);
                             findDic[findIdStr].Add(copyDic[findIdStr][9]);
                             findDic[findIdStr].Add(findTips);
-                            findDic[findIdStr].Add(findLinks + ",{8,9993}");
+                            findDic[findIdStr].Add(findLinks + "," +findLinks31 + "{8,9993}");
                         }
                     }
                 }
@@ -1549,7 +1551,7 @@ public class LteData
         return findLinksArray;
     }
 
-    private static string FindLinks(
+    private static (string findLinks, string findLinks31) FindLinks(
         string findTargetDetailType,
         string findTargetType,
         string findTargetId,
@@ -1559,6 +1561,8 @@ public class LteData
     )
     {
         var findLinks = string.Empty;
+        var findLinks31 = string.Empty;
+
         findTips = string.Empty;
 
         var findTargetNickName = baseDic[findTargetId][5];
@@ -1580,6 +1584,7 @@ public class LteData
         else if (findTargetType == "1")
         {
             findLinks += "{" + findTargetType + "," + findTargetId + "},";
+            findLinks31 += "{" + 31 + "," + findTargetId + "},";
         }
         else
         {
@@ -1698,6 +1703,11 @@ public class LteData
                                 + findTargetId3
                                 + "},";
                         }
+                        else if(findTargetType3 == "1")
+                        {
+                            findLinks += "{" + findTargetType3 + "," + findTargetId3 + "},";
+                            findLinks31 += "{" + 31 + "," + findTargetId3 + "},";
+                        }
                         else
                         {
                             findLinks += "{" + findTargetType3 + "," + findTargetId3 + "},";
@@ -1732,7 +1742,7 @@ public class LteData
 
         // 去重
         findLinks = RemoveDuplicateBracketsLinqOrdered(findLinks);
-        return findLinks;
+        return (findLinks,findLinks31);
     }
 
     public static string RemoveDuplicateBracketsLinqOrdered(string input)
@@ -2086,7 +2096,7 @@ public class LteData
                 var findTargetType = baseDic[taskTagetId][27];
                 var findTargetDetailType = baseDic[taskTagetId][28];
 
-                var findLinks = FindLinks(
+                var findLinksGroup = FindLinks(
                     findTargetDetailType,
                     findTargetType,
                     taskTagetId,
@@ -2094,6 +2104,8 @@ public class LteData
                     out _,
                     fieldGroupDic
                 );
+                var findLinks = findLinksGroup.findLinks;
+                var findLinks31 = findLinksGroup.findLinks31;
 
                 taskTargetMapName = taskTargetMapName.Split("-")[0];
                 var match = Regex.Match(taskTargetMapName, @"\d+");
@@ -2105,8 +2117,9 @@ public class LteData
                         CultureInfo.InvariantCulture
                     );
                 }
+
                 findLinks =
-                    findLinks + ",{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
+                    findLinks + "," + findLinks31 + "{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
                 taskColDataList.Add(findLinks);
 
                 // 限时任务数据
@@ -2145,7 +2158,7 @@ public class LteData
                 var findSubTargetType = baseDic[taskSubTagetId][27];
                 var findSubTargetDetailType = baseDic[taskSubTagetId][28];
 
-                var findSubLinks = FindLinks(
+                var findSubLinksGroup = FindLinks(
                     findSubTargetDetailType,
                     findSubTargetType,
                     taskSubTagetId,
@@ -2153,6 +2166,8 @@ public class LteData
                     out _,
                     fieldGroupDic
                 );
+                var findSubLinks = findSubLinksGroup.findLinks;
+                var findSubLinks31 = findSubLinksGroup.findLinks31;
 
                 taskSubTargetMapName = taskSubTargetMapName.Split("-")[0];
                 var match = Regex.Match(taskSubTargetMapName, @"\d+");
@@ -2165,7 +2180,7 @@ public class LteData
                     );
                 }
                 findSubLinks =
-                    findSubLinks + ",{20,\"UILteMapEntrance\"," + taskSubTargetMapId + "},{8,9999}";
+                    findSubLinks + "," + findSubLinks31 + "{20,\"UILteMapEntrance\"," + taskSubTargetMapId + "},{8,9999}";
                 taskSubColDataList.Add(findSubLinks);
 
                 // 限时任务数据
@@ -2644,7 +2659,7 @@ public class LteData
                 var findTargetType = baseDic[fieldConditonTargetId][27];
                 var findTargetDetailType = baseDic[fieldConditonTargetId][28];
 
-                findLinks = FindLinks(
+                var findLinksGroup = FindLinks(
                     findTargetDetailType,
                     findTargetType,
                     fieldConditonTargetId,
@@ -2652,6 +2667,9 @@ public class LteData
                     out _,
                     fieldGroupDic
                 );
+                findLinks = findLinksGroup.findLinks;
+                var findLinks31 = findLinksGroup.findLinks31;
+
                 var taskTargetMapName = baseDic[fieldConditonTargetId][3];
                 taskTargetMapName = taskTargetMapName.Split("-")[0];
                 var match = Regex.Match(taskTargetMapName, @"\d+");
@@ -2664,7 +2682,7 @@ public class LteData
                     );
                 }
                 findLinks =
-                    findLinks + ",{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
+                    findLinks + "," + findLinks31 +  "{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
             }
 
             // 消耗寻找
@@ -2680,7 +2698,7 @@ public class LteData
                 var findTarget2Type = baseDic[fieldFindId2][27];
                 var findTarget2DetailType = baseDic[fieldFindId2][28];
 
-                findLinks2 = FindLinks(
+                var findLinks2Group = FindLinks(
                     findTarget2DetailType,
                     findTarget2Type,
                     fieldFindId2,
@@ -2688,6 +2706,9 @@ public class LteData
                     out _,
                     fieldGroupDic
                 );
+                findLinks2 = findLinks2Group.findLinks;
+                var findLinks231 = findLinks2Group.findLinks31;
+
                 var taskTarget2MapName = baseDic[fieldFindId2][3];
                 taskTarget2MapName = taskTarget2MapName.Split("-")[0];
                 var match2 = Regex.Match(taskTarget2MapName, @"\d+");
@@ -2700,7 +2721,7 @@ public class LteData
                     );
                 }
                 findLinks2 =
-                    findLinks2 + ",{20,\"UILteMapEntrance\"," + taskTarget2MapId + "},{8,9999}";
+                    findLinks2 + "," + findLinks231 + "{20,\"UILteMapEntrance\"," + taskTarget2MapId + "},{8,9999}";
             }
             else
             {
