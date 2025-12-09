@@ -98,21 +98,24 @@ public static class PubMetToExcel
                 sheetRealName = excelRealNameGroup[1];
             }
         }
-
-        switch (excelName)
+        if (excelName.Contains("Localizations"))
         {
-            case "Localizations.xlsx":
-                path = newPath + @"\Excels\Localizations\Localizations.xlsx";
-                break;
-            case "UIConfigs.xlsx":
-                path = newPath + @"\Excels\UIs\UIConfigs.xlsx";
-                break;
-            case "UIItemConfigs.xlsx":
-                path = newPath + @"\Excels\UIs\UIItemConfigs.xlsx";
-                break;
-            default:
-                path = excelPath + @"\" + excelRealName;
-                break;
+            path = newPath + $@"\Excels\Localizations\{excelName}";
+        }
+        else
+        {
+            switch (excelName)
+            {
+                case "UIConfigs.xlsx":
+                    path = newPath + @"\Excels\UIs\UIConfigs.xlsx";
+                    break;
+                case "UIItemConfigs.xlsx":
+                    path = newPath + @"\Excels\UIs\UIItemConfigs.xlsx";
+                    break;
+                default:
+                    path = excelPath + @"\" + excelRealName;
+                    break;
+            }
         }
 
         var fileExists = File.Exists(path);
@@ -1218,7 +1221,7 @@ public static class PubMetToExcel
             if (selectSheetName.Contains("#") && !selectSheetName.Contains("##"))
             {
                 var excelSplit = selectSheetName.Split("#");
-                filePath = workbookPath  + excelSplit[0];
+                filePath = workbookPath + excelSplit[0];
                 sheetName = excelSplit[1];
             }
             else if (selectSheetName.Contains("##"))
@@ -1232,12 +1235,17 @@ public static class PubMetToExcel
                 }
                 else
                 {
-                    selectSheetName = workbookPath  + excelSplit[0];
+                    selectSheetName = workbookPath + excelSplit[0];
                     sheetName = excelSplit[1];
                 }
             }
             else
             {
+                while (workbookPath.Contains(@"\Tables"))
+                {
+                    workbookPath = Path.GetDirectoryName(workbookPath);
+                }
+
                 switch (selectSheetName)
                 {
                     case "Localizations.xlsx":
@@ -2358,7 +2366,7 @@ public static class PubMetToExcel
         Parallel.ForEach(
             longNumbers,
             kvp =>
- {
+            {
                 string dictKey = kvp.Key; // 原始 Key
                 List<string> values = kvp.Value; // 该 Key 关联的 List<string>
 
@@ -2413,9 +2421,11 @@ public static class PubMetToExcel
     }
 
     // 检查Excel单元格值是否重复
-    public static List<(string, int, int, string, string ,string)> CheckRepeatValue(string wkFullPath)
+    public static List<(string, int, int, string, string, string)> CheckRepeatValue(
+        string wkFullPath
+    )
     {
-        var sourceData = new List<(string, int, int, string, string ,string)>();
+        var sourceData = new List<(string, int, int, string, string, string)>();
 
         if (wkFullPath.Contains("#"))
         {
@@ -2466,7 +2476,7 @@ public static class PubMetToExcel
                 var cellValue = ((IDictionary<string, object>)duplicate.Row)["B"].ToString();
                 var cellRow = duplicate.Index;
                 var cellCol = 2; // 第 2 列
-                sourceData.Add((cellValue, cellRow, cellCol, sheetName, "数据重复" , wkFullPath));
+                sourceData.Add((cellValue, cellRow, cellCol, sheetName, "数据重复", wkFullPath));
             }
         }
 
