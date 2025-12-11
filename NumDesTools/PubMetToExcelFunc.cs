@@ -1093,11 +1093,13 @@ public static class PubMetToExcelFunc
                     Range usedRange = worksheet.UsedRange;
                     foreach (Range cell in usedRange)
                     {
+                      
+
                         if (cell.HasFormula)
                         {
                             // 获取原始公式
-                            string originalFormula = cell.Formula;
-                            string newFormula = originalFormula;
+                            var originalFormula = cell.Formula;
+                            var newFormula = originalFormula;
                             for (int indexFor = 0; indexFor < needFixLinks.Count; indexFor++)
                             {
                                 var oldFor = needFixLinks[indexFor];
@@ -1108,6 +1110,10 @@ public static class PubMetToExcelFunc
                                 {
                                     // 替换公式样式
                                     newFormula = newFormula.Replace(oldFor, newFor);
+
+                                    // 不带[]替换
+                                    var checkOldFor = oldFor.Replace("[", "").Replace("]", "");
+                                    newFormula = newFormula.Replace(checkOldFor, checkNewFor);
                                 }
                                 else
                                 {
@@ -1116,6 +1122,14 @@ public static class PubMetToExcelFunc
                                     return;
                                 }
                             }
+
+                            if (wsName.Contains("LTE【通用】"))
+                            {
+                                Debug.Print($"{wsName}:{cell.Address}");
+                                Debug.Print($"原公式:{originalFormula}");
+                                Debug.Print($"新公式:{newFormula}");
+                            }
+
 
                             if (originalFormula != newFormula)
                             {

@@ -416,6 +416,40 @@ public static class PubMetToExcel
             throw;
         }
     }
+
+    public static ListObject GetExcelListObjects2(Workbook workbook, string listName)
+    {
+        foreach (Worksheet sheet in workbook.Worksheets)
+        {
+            try
+            {
+                foreach (ListObject listObj in sheet.ListObjects)
+                {
+                    if (listObj.Name == listName)
+                        return listObj;
+                }
+            }
+            catch { /* 跳过错误的工作表 */ }
+        }
+        return null;
+    }
+    public static ListObject GetExcelListObjectsBloor(Worksheet sheet , string listName)
+    {
+        try
+        {
+            foreach (ListObject listObj in sheet.ListObjects)
+            {
+                if (listObj.Name.Contains(listName))
+                {
+                    return listObj;
+                }
+            }
+        }
+        catch { /* 忽略不存在的错误 */ }
+
+        return null;
+    }
+
     #endregion
 
     #region C-API与Excel

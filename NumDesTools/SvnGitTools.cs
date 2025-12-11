@@ -74,6 +74,9 @@ internal class SvnGitTools
                 throw new ArgumentException($"提供的路径 '{repoPath}' 不是有效的 Git 仓库。");
             }
 
+            // 禁用所有权验证
+            GlobalSettings.SetOwnerValidation(false); 
+            
             using (var repo = new Repository(repoPath))
             {
                 // 查询指定作者的最后一次提交

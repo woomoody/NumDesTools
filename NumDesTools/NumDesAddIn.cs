@@ -1125,17 +1125,24 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 sourceData.AddRange(PubMetToExcelFunc.CheckValueFormat(rows, sheetName));
 
                 // 数组类ID合法性验证
-                if(wkFileName.Contains("MapTaskGiftData"))
+                if (wkFileName.Contains("MapTaskGiftData"))
                 {
                     var checkCol = "astrictTasks";
                     var targetWkName = "Mission.xlsx";
                     var targetSheetName = "Sheet1";
                     var checkTargetCol = "limitedTime";
 
-                    var checkResult = PubMetToExcelFunc.CheckArrayValueFormat(sheetName, checkCol, wkFullPath, targetWkName, targetSheetName, checkTargetCol, "有限时任务");
+                    var checkResult = PubMetToExcelFunc.CheckArrayValueFormat(
+                        sheetName,
+                        checkCol,
+                        wkFullPath,
+                        targetWkName,
+                        targetSheetName,
+                        checkTargetCol,
+                        "有限时任务"
+                    );
                     if (checkResult != "")
                         MessageBox.Show(checkResult);
-                    
                 }
                 //if (wkFileName.Contains("LteData"))
                 //{
@@ -1149,7 +1156,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 //        MessageBox.Show(checkResult);
 
                 //}
-
             }
         }
 
@@ -2478,7 +2484,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             ExcelExporter.MergeLocalizationLuaFile();
         }
-
     }
 
     public void TestBar1_Click(IRibbonControl control)
@@ -2497,26 +2502,34 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //}
         var wk = App.ActiveWorkbook;
         var path = wk.FullName;
-        if (path.Contains("#") || path.Contains("~"))
-            return;
+        var sheet = wk.ActiveSheet;
 
-        var isAll = path.Contains("$");
+        //var sourceListName = "LTE【通用】";
 
-        List<FieldData> luaTableFields = new List<FieldData>();
+        //if (path.Contains("#【A-LTE】配置模版") && sheet.Name.Contains("LTE【通用】"))
+        //{
+        //    var rootPath = Path.GetDirectoryName(path);
+        //    var baseWkPath = Path.Combine(rootPath, "#【A-LTE】配置模版.xlsx");
+        //    var baseWk = App.Workbooks.Open(baseWkPath);
+        //    var sourceListObj = PubMetToExcel.GetExcelListObjects2(baseWk, sourceListName);
+        //    if (sourceListObj == null)
+        //        throw new Exception($"在源工作簿中未找到ListObject: {sourceListName}");
 
-        ExcelExporter.Export(
-            path,
-            Path.GetFileNameWithoutExtension(path),
-            luaTableFields,
-            isAll,
-            path.Contains("$$"),
-            false
-        );
+        //    var targetListObj = PubMetToExcel.GetExcelListObjectsBloor(sheet, sourceListName);
+        //    if(targetListObj == null)
+        //    {
+        //        MessageBox.Show($"{path} 中没有包含名称表：{sourceListName}");
+        //        return;
+        //    }
 
-        if (ExcelExporter.NeedMergeLocalization)
-        {
-            ExcelExporter.MergeLocalizationLuaFile();
-        }
+        //    targetListObj.Range.Value = sourceListObj.Range.Value;
+
+        //    baseWk.Close();
+        //}
+        //else
+        //{
+        //    MessageBox.Show($"当前表不是，#【A-LTE】配置模版类表；或sheet:{sourceListName}不是 LTE【通用】，无法同步");
+        //}
 
         //string myDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         //string dbPath = Path.Combine(myDocumentsPath, "Public.db");
