@@ -1974,7 +1974,8 @@ public static class ExcelDataAutoInsertMulti
                         startRowSource,
                         errorList,
                         commentValue,
-                        writeRow
+                        writeRow,
+                        sheetModel
                     )
                 : (List<(string, string, string)>)
                     SingleWrite(
@@ -1986,7 +1987,8 @@ public static class ExcelDataAutoInsertMulti
                         startRowSource,
                         errorList,
                         commentValue,
-                        writeRow
+                        writeRow,
+                        sheetModel
                     );
             writeRow += count;
         }
@@ -2008,7 +2010,8 @@ public static class ExcelDataAutoInsertMulti
         dynamic startRowSource,
         List<(string, string, string)> errorList,
         dynamic commentValue,
-        int writeRow
+        int writeRow,
+        ExcelWorksheet sheetModel
     )
     {
         for (var colMulti = 0; colMulti < fixItem.GetLength(1); colMulti++)
@@ -2028,8 +2031,8 @@ public static class ExcelDataAutoInsertMulti
             string excelKeyMethod = fixItem[1, colMulti]?.ToString();
             for (var i = 0; i < count; i++)
             {
-                var cellSource = sheet.Cells[startRowSource + i, excelFileFixKey];
-                var rowId = sheet.Cells[startRowSource + i, 2];
+                var cellSource = sheetModel.Cells[startRowSource + i, excelFileFixKey];
+                var rowId = sheetModel.Cells[startRowSource + i, 2];
                 var cellCol = sheet.Cells[2, excelFileFixKey].Value?.ToString();
                 var cellFix = sheet.Cells[writeRow + 1 + i, excelFileFixKey];
 
@@ -2113,7 +2116,8 @@ public static class ExcelDataAutoInsertMulti
         dynamic startRowSource,
         List<(string, string, string)> errorList,
         dynamic commentValue,
-        int writeRow
+        int writeRow,
+        ExcelWorksheet sheetModel
     )
     {
         var colCoinMulti = fixItem.GetLength(1);
@@ -2157,8 +2161,8 @@ public static class ExcelDataAutoInsertMulti
 
                             for (var j = startCol; j < endCol; j++)
                             {
-                                var cellSource = sheet.Cells[startRowSource + j, excelFileFixKey];
-                                var cellCol = sheet.Cells[2, excelFileFixKey].Value?.ToString();
+                                var cellSource = sheetModel.Cells[startRowSource + j, excelFileFixKey];
+                                var cellCol = sheetModel.Cells[2, excelFileFixKey].Value?.ToString();
                                 var cellFix = sheet.Cells[writeRow + j + 1, excelFileFixKey];
                                 var rowId = sheet.Cells[startRowSource + j, 2];
 
@@ -2718,7 +2722,8 @@ public static class ExcelDataAutoInsertMultiNew
                     startRowSource,
                     writeRow,
                     errorList,
-                    specialValue
+                    specialValue,
+                    sheetModel
                 );
                 writeRow += count;
             }
@@ -2744,7 +2749,8 @@ public static class ExcelDataAutoInsertMultiNew
         dynamic startRowSource,
         int writeRow,
         dynamic errorList,
-        dynamic specialValue
+        dynamic specialValue,
+        ExcelWorksheet wkSheetModel
     )
     {
         // 获取工作表的行数和列数
@@ -2803,8 +2809,9 @@ public static class ExcelDataAutoInsertMultiNew
                 var excelFileFixKey = PubMetToExcel.FindSourceCol(wkSheet, 2, cellKey);
                 for (var i = 0; i < count; i++)
                 {
-                    var cellSource = wkSheet.Cells[startRowSource + i, excelFileFixKey];
-                    var rowId = wkSheet.Cells[startRowSource + i, 2];
+                    var cellSource = wkSheetModel.Cells[startRowSource + i, excelFileFixKey];
+                    var rowId = wkSheetModel.Cells[startRowSource + i, 2];
+
                     var cellFix = wkSheet.Cells[writeRow + 1 + i, excelFileFixKey];
 
                     string cellFixValue;
