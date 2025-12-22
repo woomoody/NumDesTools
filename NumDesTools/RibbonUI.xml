@@ -47,6 +47,9 @@
                     <button id='OutPutExcelDataToLua' size='large' label='Lua表格' image='scheme'
                             onAction='OnButtonClick'
                             screentip='将当前表格数据导出为Lua' tag='导出Lua数据' />
+                    <button id='OutPutExcelDataToLuaAll' size='large' label='Lua表格All' image='diff'
+                            onAction='OnButtonClick'
+                            screentip='将当前表格数据导出为Lua' tag='导出Lua数据All' />
                 </group>
                 <!--
                 <group id='Group3' label='SVN功能'>
