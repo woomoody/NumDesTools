@@ -1,4 +1,6 @@
-﻿using System.Security.Cryptography;
+﻿using Microsoft.Office.Interop.Excel;
+using NPOI.SS.Formula.Functions;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Lua = NLua.Lua;
@@ -165,6 +167,11 @@ namespace NumDesTools.ExcelToLua
                 MergeLocalizationLuaFile();
             }
 
+            LogDisplay.RecordLine(
+                 "[{0}] ,{1}",
+                 DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                 "导表完成"
+             );
             Debug.Print("导表完成!");
             SaveAllMd5();
         }
@@ -190,6 +197,11 @@ namespace NumDesTools.ExcelToLua
                 MergeLocalizationLuaFile();
             }
 
+            LogDisplay.RecordLine(
+                  "[{0}] ,{1}",
+                  DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                  "导表完成"
+              );
             Debug.Print("导表完成!");
         }
 
@@ -551,6 +563,12 @@ namespace NumDesTools.ExcelToLua
 
                     if (!Regex.IsMatch(fileName, "^[a-zA-Z_0-9]+$"))
                     {
+                        LogDisplay.RecordLine(
+                            "[{0}] , {1}表名非法",
+                            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                            fileName
+                        );
+
                         Debug.Print($"配表名称非法 ：<<{fileName}>> 已跳过该表，相关策划需确认");
                         continue;
                     }
@@ -619,6 +637,11 @@ namespace NumDesTools.ExcelToLua
                     infoMd5Key.Add(md5Key);
                 }
 
+                LogDisplay.RecordLine(
+                    "[{0}] , {1}完成导表",
+                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                    fileName
+                );
                 Debug.Print($"{fileName} done.");
             }
 
@@ -909,6 +932,12 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                 }
                 catch (Exception e)
                 {
+                    LogDisplay.RecordLine(
+                        "[{0}] ,配表导出文件无法正确编译，请检查配置。   :{1}",
+                        DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                        name
+                    );
+
                     Debug.Print($"配表导出文件无法正确编译，请检查配置。   : {name}\n{e.Message}"); //
                 }
                 if (createLua)
@@ -998,16 +1027,34 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                 }
                 foreach (var key in duplicatekeys)
                 {
+                    LogDisplay.RecordLine(
+                        "[{0}] , ===key duplicate{1}",
+                        DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                        key
+                    );
+
                     Debug.Print("===key duplicate :" + key);
                     for (int i = 0; i < contents.Count; i++)
                     {
                         if (contents[i].Contains($"\"{key}\""))
                         {
+                            LogDisplay.RecordLine(
+                                "[{0}] , ===key duplicate in :{1}",
+                                DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                                fileNames[i]
+                            );
                             Debug.Print("===key duplicate in :" + fileNames[i]);
                         }
                     }
                 }
             }
+
+            LogDisplay.RecordLine(
+                "[{0}] , ===lacalization count :{1}",
+                DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                count
+            );
+
             Debug.Print("===lacalization count:" + count);
         }
 
@@ -1048,6 +1095,13 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
             {
                 if (item.Value > 1)
                 {
+                    LogDisplay.RecordLine(
+                        "[{0}] , ===v:{1}，duplicate count:{2}",
+                        DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                        item.Key,
+                        item.Value
+                    );
+
                     Debug.Print($"===v:{item.Key} duplicate count:{item.Value}");
                     count++;
                 }
@@ -1057,6 +1111,17 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                 }
             }
 
+            LogDisplay.RecordLine(
+                "[{0}] , ===lacalization  duplicate value count:{1}",
+                DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                count
+            );
+
+            LogDisplay.RecordLine(
+                "[{0}] , ===lacalization  duplicate value total count{1}",
+                DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                countAll
+            );
             Debug.Print("===lacalization  duplicate value count:" + count);
             Debug.Print("===lacalization  duplicate value total count:" + countAll);
         }
@@ -1080,20 +1145,20 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
             try
             {
                 using (var md5 = MD5.Create())
-                    using (
-                        var stream = new FileStream(
-                            filePath,
-                            FileMode.Open,
-                            FileAccess.Read,
-                            FileShare.Read,
-                            4096,
-                            FileOptions.SequentialScan
-                        )
+                using (
+                    var stream = new FileStream(
+                        filePath,
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.Read,
+                        4096,
+                        FileOptions.SequentialScan
                     )
-                    {
-                        byte[] hashBytes = md5.ComputeHash(stream);
-                        return ByteArrayToHexString(hashBytes);
-                    }
+                )
+                {
+                    byte[] hashBytes = md5.ComputeHash(stream);
+                    return ByteArrayToHexString(hashBytes);
+                }
             }
             catch (Exception ex)
             {

@@ -1,4 +1,10 @@
-﻿global using System;
+﻿global using ExcelDna.Integration;
+global using ExcelDna.Integration.CustomUI;
+global using ExcelDna.IntelliSense;
+global using ExcelDna.Logging;
+global using ExcelDna.Registration;
+global using Microsoft.Office.Interop.Excel;
+global using System;
 global using System.Collections.Generic;
 global using System.Diagnostics;
 global using System.Drawing;
@@ -8,12 +14,6 @@ global using System.Linq;
 global using System.Reflection;
 global using System.Runtime.InteropServices;
 global using System.Windows.Forms;
-global using ExcelDna.Integration;
-global using ExcelDna.Integration.CustomUI;
-global using ExcelDna.IntelliSense;
-global using ExcelDna.Logging;
-global using ExcelDna.Registration;
-global using Microsoft.Office.Interop.Excel;
 global using Application = Microsoft.Office.Interop.Excel.Application;
 global using Color = System.Drawing.Color;
 global using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
@@ -24,10 +24,7 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
+using LibGit2Sharp;
 using MiniExcelLibs;
 using MiniExcelLibs.OpenXml;
 using NPOI.SS.UserModel;
@@ -38,6 +35,11 @@ using NumDesTools.Config;
 using NumDesTools.ExcelToLua;
 using NumDesTools.UI;
 using OfficeOpenXml;
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Shapes;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
 using IRibbonControl = ExcelDna.Integration.CustomUI.IRibbonControl;
@@ -293,7 +295,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["Button99992"] = TestBar2_Click,
             ["ExcelSearchBoxButton8"] = ExcelSearchAllFormulaName_Click,
             ["CheckExcelKeyAndValueFormat"] = CheckExcelKeyAndValueFormat_Click,
-            ["OutPutExcelDataToLua"] = OutPutExcelDataToLua_Click
+            ["OutPutExcelDataToLua"] = OutPutExcelDataToLua_Click,
+            ["OutPutExcelDataToLuaAll"] = OutPutExcelDataToLuaAll_Click
         };
     }
 
@@ -2484,6 +2487,52 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             ExcelExporter.MergeLocalizationLuaFile();
         }
+    }
+
+    public void OutPutExcelDataToLuaAll_Click(IRibbonControl control)
+    {
+        GlobalValue.ReadOrCreate();
+
+        var line1 = BasePath;
+        var fileList = SvnGitTools.GitDiffFileCount(line1);
+
+        var countFile = 0;
+        foreach (var path in fileList)
+        {
+            LogDisplay.RecordLine(
+                           "[{0}] , {1}",
+                           DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                           $"{Path.GetFileName(path)}开始导表： "
+                       );
+
+
+            App.StatusBar = $"{countFile}/{fileList.Count},正在导出{path}";
+
+            if (path.Contains("#") || path.Contains("~") || path.Contains(".xlsm") | path.Contains(".xll"))
+                continue;
+
+            var isAll = path.Contains("$");
+
+            List<FieldData> luaTableFields = new List<FieldData>();
+
+            ExcelExporter.Export(
+                path,
+                Path.GetFileNameWithoutExtension(path),
+                luaTableFields,
+                isAll,
+                path.Contains("$$"),
+                false
+            );
+
+            countFile++;
+
+        }
+
+        LogDisplay.RecordLine(
+                           "[{0}] , {1}",
+                           DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                           $"导出结束 "
+                       );
     }
 
     public void TestBar1_Click(IRibbonControl control)
