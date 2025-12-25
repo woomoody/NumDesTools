@@ -1018,9 +1018,9 @@ public class ExcelUdf
         var layers4 = new object[rangeObj4.GetLength(0) * rangeObj4.GetLength(1)];
 
         // 关卡入口数据特殊处理
-        var index1List = new List<int>{22,23,30,31};
-        var index2List = new List<int>{-1,22,22,22};
-    
+        var index1List = new List<int> { 22, 23, 30, 31 };
+        var index2List = new List<int> { -1, 22, 22, 22 };
+
         var index = 0;
         for (var i = 0; i < rangeObj.GetLength(0); i++)
         {
@@ -1049,7 +1049,7 @@ public class ExcelUdf
                     }
                 }
                 var disrole = 0;
-                if(Convert.ToInt32(rangeObj4[i, j]) != -1)
+                if (Convert.ToInt32(rangeObj4[i, j]) != -1)
                     disrole = 1;
                 layers[index++] = new
                 {
@@ -1114,7 +1114,206 @@ public class ExcelUdf
             string fullPath = Path.Combine(documentsPath, fileNames);
 
             // 确保目录存在
-            Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException());
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException()
+            );
+
+            // 写入文件
+            File.WriteAllText(fullPath, json, Encoding.UTF8);
+
+            Debug.Print($"JSON 文件已保存到: {fullPath}");
+        }
+        catch (Exception ex)
+        {
+            Debug.Print($"保存 JSON 文件失败: {ex.Message}");
+        }
+        return json;
+    }
+
+    [ExcelFunction(
+        Category = "UDF-组装字符串",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "拼接Range：Range数据转为Json"
+    )]
+    public static string CreatRangeToJsonV5(
+        [ExcelArgument(
+            AllowReference = true,
+            Description = "Range&Cell,eg:A1:A2",
+            Name = "第一单元格范围"
+        )]
+            object[,] rangeObj,
+        [ExcelArgument(
+            AllowReference = true,
+            Description = "Range&Cell,eg:A1:A2",
+            Name = "第一单元格范围"
+        )]
+            object[,] rangeObj2,
+        [ExcelArgument(
+            AllowReference = true,
+            Description = "Range&Cell,eg:A1:A2",
+            Name = "第一单元格范围"
+        )]
+            object[,] rangeObj3,
+        [ExcelArgument(
+            AllowReference = true,
+            Description = "Range&Cell,eg:A1:A2",
+            Name = "第一单元格范围"
+        )]
+            object[,] rangeObj4,
+        [ExcelArgument(
+            AllowReference = true,
+            Description = "Range&Cell,eg:A1:A2",
+            Name = "第一单元格范围"
+        )]
+            object[,] rangeObjLock,
+        [ExcelArgument(AllowReference = true, Description = "文本太长会缓存到我的文档", Name = "存储文件名")]
+            string fileName = "关卡1"
+    )
+    {
+        // 创建一个包含N个数组的对象
+        var layers = new object[rangeObj.GetLength(0) * rangeObj.GetLength(1)];
+        var layers2 = new object[rangeObj2.GetLength(0) * rangeObj2.GetLength(1)];
+        var layers3 = new object[rangeObj3.GetLength(0) * rangeObj3.GetLength(1)];
+        var layers4 = new object[rangeObj4.GetLength(0) * rangeObj4.GetLength(1)];
+
+        // 关卡入口数据特殊处理
+        var index1List = new List<int>();
+        var index2List = new List<int>();
+        index2List.Add(-1);
+        foreach (var lockItem in rangeObjLock)
+        {   if(lockItem is ExcelEmpty)
+            {
+                continue;
+            }
+            int value = Convert.ToInt32(lockItem);
+            index1List.Add(value);
+        }
+        if (index1List.Count == 0)
+        {
+            index1List = null;
+            index2List = null;
+        }
+        else
+        {
+            for (int i = 0; i < index1List.Count - 1; i++)
+            {
+                index2List.Add(index1List[0]);
+            }
+        }
+
+        var index = 0;
+        for (var i = 0; i < rangeObj.GetLength(0); i++)
+        {
+            for (var j = 0; j < rangeObj.GetLength(1); j++)
+            {
+                object indexLink = (object[])null;
+                var linkIndex = -1;
+                var range = 0;
+
+                if (index1List != null)
+                {
+                    foreach (var te in index1List)
+                    {
+                        if (te == index)
+                        {
+                            var subIndex = index1List.IndexOf(te);
+                            range = 1;
+                            if (index2List[subIndex] == -1)
+                            {
+                                var tempList = new List<int>(index1List); // 创建副本
+                                tempList.RemoveAt(0); // 修改副本
+                                indexLink = tempList.Select(x => x).ToArray();
+                            }
+                            else
+                            {
+                                linkIndex = Convert.ToInt32(index2List[subIndex]);
+                            }
+                            break;
+                        }
+                    }
+                }
+                var is0layer = 1;
+                if (Convert.ToInt32(rangeObj[i, j]) == -1)
+                {
+                    is0layer = 0;
+                }
+                var is0layer2 = 1;
+                if (Convert.ToInt32(rangeObj2[i, j]) == -1)
+                {
+                    is0layer2 = 0;
+                }
+                var is0layer3 = 1;
+                if (Convert.ToInt32(rangeObj3[i, j]) == -1)
+                {
+                    is0layer3 = 0;
+                }
+                layers[index++] = new
+                {
+                    Index = index - 1,
+                    ConfigId = Convert.ToInt32(rangeObj[i, j]),
+                    LinkedIndexes = (object[])null,
+                    DisplayRule = is0layer,
+                    LinkedParentIndex = -1,
+                    Range = 0,
+                    ObstacleConfigId = 0
+                };
+                layers2[index - 1] = new
+                {
+                    Index = index - 1,
+                    ConfigId = Convert.ToInt32(rangeObj2[i, j]),
+                    LinkedIndexes = (object[])null,
+                    DisplayRule = is0layer2,
+                    LinkedParentIndex = -1,
+                    Range = 0,
+                    ObstacleConfigId = 0
+                };
+                layers3[index - 1] = new
+                {
+                    Index = index - 1,
+                    ConfigId = Convert.ToInt32(rangeObj3[i, j]),
+                    LinkedIndexes = (object[])null,
+                    DisplayRule = is0layer3,
+                    LinkedParentIndex = -1,
+                    Range = range,
+                    ObstacleConfigId = 0
+                };
+                layers4[index - 1] = new
+                {
+                    Index = index - 1,
+                    ConfigId = Convert.ToInt32(rangeObj4[i, j]),
+                    LinkedIndexes = indexLink,
+                    DisplayRule = 0,
+                    LinkedParentIndex = linkIndex,
+                    Range = range,
+                    ObstacleConfigId = 0
+                };
+            }
+        }
+        var layersOther = new object[] { layers, layers2, layers3, layers4 };
+
+        var combinedData = new
+        {
+            Row = rangeObj.GetLength(0),
+            Col = rangeObj.GetLength(1),
+            GridDataList = (object[])null,
+            Layers = layersOther,
+            LayerNames = new object[] { "棋子层", "蛛网", "障碍物", "特殊障碍物" }
+        };
+
+        // 将对象转换为 JSON 格式
+        var json = JsonConvert.SerializeObject(combinedData, Formatting.None);
+        try
+        {
+            // 获取"我的文档"文件夹路径
+            string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            string fileNames = $"{fileName}.json";
+            string fullPath = Path.Combine(documentsPath, fileNames);
+
+            // 确保目录存在
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(fullPath) ?? throw new InvalidOperationException()
+            );
 
             // 写入文件
             File.WriteAllText(fullPath, json, Encoding.UTF8);
@@ -1372,19 +1571,20 @@ public class ExcelUdf
         var colCount = rangeObj1.GetLength(1);
 
         for (var col = 0; col < colCount; col++)
-            for (var row = 0; row < rowCount; row++)
-            {
-                var value = rangeObj1[row, col];
-                if(value is ExcelEmpty)
-                    continue; // 跳过空值
-                if (ignoreEmpty && (value == null || IsNullOrEmpty(value.ToString())))
-                    continue; // 跳过空值
+        for (var row = 0; row < rowCount; row++)
+        {
+            var value = rangeObj1[row, col];
+            if (value is ExcelEmpty)
+                continue; // 跳过空值
+            if (ignoreEmpty && (value == null || IsNullOrEmpty(value.ToString())))
+                continue; // 跳过空值
 
-                uniqueValues.Add(value);
-            }
+            uniqueValues.Add(value);
+        }
 
         return uniqueValues.ToArray();
     }
+
     [ExcelFunction(
         Category = "UDF-Alice专属函数",
         IsVolatile = true,

@@ -2766,6 +2766,11 @@ public class LteData
             .FirstOrDefault(kv => kv.Value.Count > 4 && kv.Value[4] == fieldConditonTarget)
             .Key;
 
+        if(fieldConditonTargetId == null)
+        {
+            MessageBox.Show($"{fieldConditonTarget}:找不到ID，检查【基础】表");
+        }
+
         var fieldConditonTargetPic = fieldConditonTargetId.Substring(0, 8) + "00";
 
         if (fieldConditonTargetRank != string.Empty || fieldConditonTarget != String.Empty)
