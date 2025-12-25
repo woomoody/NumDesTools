@@ -384,8 +384,11 @@ namespace NumDesTools.ExcelToLua
                                 DateTime.Now.ToString(CultureInfo.InvariantCulture),
                                 $"{sheet.SheetName} 第{i + 1}行, ID为空!"
                             );
-                            
+
+                            LogDisplay.Show();
+
                             throw new Exception($"{sheet.SheetName} 第{i + 1}行, ID为空!");
+                            
                         }
 
                         if (!idset.Add(id))
@@ -395,7 +398,9 @@ namespace NumDesTools.ExcelToLua
                               DateTime.Now.ToString(CultureInfo.InvariantCulture),
                               $"{sheet.SheetName} 第{i + 1}行, ID重复:{id}!"
                           );
-                            
+
+                            LogDisplay.Show();
+
                             throw new Exception($"{sheet.SheetName} 第{i + 1}行, ID重复:{id}!");
                         }
                     }

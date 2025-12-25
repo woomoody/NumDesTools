@@ -1124,13 +1124,13 @@ public class LteData
         Range copyRange;
         if (!isSelect)
         {
-/*
-            if (false)
-            {
-                MessageBox.Show("未找到表");
-                return null;
-            }
-*/
+            /*
+                        if (false)
+                        {
+                            MessageBox.Show("未找到表");
+                            return null;
+                        }
+            */
             var copyColMin = sheet.Range[min].Value2;
             var copyColMax = sheet.Range[max].Value2;
             copyRange = sheet.Range[
@@ -1472,7 +1472,7 @@ public class LteData
                             findDic[findIdStr].Add("寻-" + copyDic[key][8]);
                             findDic[findIdStr].Add(copyDic[findIdStr][9]);
                             findDic[findIdStr].Add(findTips);
-                            findDic[findIdStr].Add(findLinks + "," +findLinks31 + "{8,9993}");
+                            findDic[findIdStr].Add(findLinks + "," + findLinks31 + "{8,9993}");
                         }
                     }
                 }
@@ -1703,7 +1703,7 @@ public class LteData
                                 + findTargetId3
                                 + "},";
                         }
-                        else if(findTargetType3 == "1")
+                        else if (findTargetType3 == "1")
                         {
                             findLinks += "{" + findTargetType3 + "," + findTargetId3 + "},";
                             findLinks31 += "{" + 31 + "," + findTargetId3 + "},";
@@ -1742,7 +1742,7 @@ public class LteData
 
         // 去重
         findLinks = RemoveDuplicateBracketsLinqOrdered(findLinks);
-        return (findLinks,findLinks31);
+        return (findLinks, findLinks31);
     }
 
     public static string RemoveDuplicateBracketsLinqOrdered(string input)
@@ -2119,7 +2119,12 @@ public class LteData
                 }
 
                 findLinks =
-                    findLinks + "," + findLinks31 + "{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
+                    findLinks
+                    + ","
+                    + findLinks31
+                    + "{20,\"UILteMapEntrance\","
+                    + taskTargetMapId
+                    + "},{8,9999}";
                 taskColDataList.Add(findLinks);
 
                 // 限时任务数据
@@ -2180,7 +2185,12 @@ public class LteData
                     );
                 }
                 findSubLinks =
-                    findSubLinks + "," + findSubLinks31 + "{20,\"UILteMapEntrance\"," + taskSubTargetMapId + "},{8,9999}";
+                    findSubLinks
+                    + ","
+                    + findSubLinks31
+                    + "{20,\"UILteMapEntrance\","
+                    + taskSubTargetMapId
+                    + "},{8,9999}";
                 taskSubColDataList.Add(findSubLinks);
 
                 // 限时任务数据
@@ -2682,7 +2692,12 @@ public class LteData
                     );
                 }
                 findLinks =
-                    findLinks + "," + findLinks31 +  "{20,\"UILteMapEntrance\"," + taskTargetMapId + "},{8,9999}";
+                    findLinks
+                    + ","
+                    + findLinks31
+                    + "{20,\"UILteMapEntrance\","
+                    + taskTargetMapId
+                    + "},{8,9999}";
             }
 
             // 消耗寻找
@@ -2721,7 +2736,12 @@ public class LteData
                     );
                 }
                 findLinks2 =
-                    findLinks2 + "," + findLinks231 + "{20,\"UILteMapEntrance\"," + taskTarget2MapId + "},{8,9999}";
+                    findLinks2
+                    + ","
+                    + findLinks231
+                    + "{20,\"UILteMapEntrance\","
+                    + taskTarget2MapId
+                    + "},{8,9999}";
             }
             else
             {
@@ -2766,10 +2786,15 @@ public class LteData
             .FirstOrDefault(kv => kv.Value.Count > 4 && kv.Value[4] == fieldConditonTarget)
             .Key;
 
-        if(fieldConditonTargetId == null)
+        if (fieldConditonTargetId == null)
         {
             MessageBox.Show($"{fieldConditonTarget}:找不到ID，检查【基础】表");
         }
+
+        var fieldConditonTargetName = baseDic[fieldConditonTargetId][6];
+        var fieldConditonTargetLast = baseDic
+            .LastOrDefault(kv => kv.Value.Count > 4 && kv.Value[6] == fieldConditonTargetName)
+            .Key;
 
         var fieldConditonTargetPic = fieldConditonTargetId.Substring(0, 8) + "00";
 
@@ -2794,6 +2819,10 @@ public class LteData
             else if (fieldConditonTargetType.Contains("链"))
             {
                 fixData = $"[[7,{fieldConditonTargetId},{fieldConditonTargetPic}]]";
+            }
+            else if (fieldConditonTargetType.StartsWith("修"))
+            {
+                fixData = $"[[8,{fieldConditonTargetId},{fieldConditonTargetLast}]]";
             }
             else
             {
