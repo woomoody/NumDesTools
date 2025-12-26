@@ -34,7 +34,7 @@ public class LteData
 
     private const int BaseDataTagCol = 0;
     private const int BaseDataStartCol = 1;
-    private const int BaseDataEndCol = 35;
+    private const int BaseDataEndCol = 37;
     private const int FindDataTagCol = 0;
     private const int FindDataStartCol = 1;
     private const int FindDataEndCol = 9;
@@ -790,7 +790,8 @@ public class LteData
     {
         cancelDefault = true; // 阻止默认事件
         object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
-
+        object[,] copyTilteArray = ColTitleValue(ActivityDataMinIndex, ActivityDataMaxIndex);
+        
         var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
         if (baseList == null)
         {
@@ -812,9 +813,12 @@ public class LteData
         var dataTypeArray = listObjectsDic["数据类型"];
 
         //基础数据整理
-        var copyData = BaseData(copyArray, dataTypeArray);
+        var copyData = BaseData(copyArray, dataTypeArray , copyTilteArray);
         copyArray = copyData.fixArray;
+        copyTilteArray = copyData.fixTitleArray;
+        var colCount = copyTilteArray.Length;
         var errorTypeList = copyData.errorTypeList;
+
         if (errorTypeList.Count != 0)
         {
             //基础数据中存在错误类型
@@ -841,14 +845,24 @@ public class LteData
         var sheetName = "LTE【基础】";
         var rowMax = copyArray.GetLength(0);
 
-        PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, BaseDataStartCol, BaseDataEndCol, null);
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, BaseDataStartCol, colCount, null);
         PubMetToExcel.WriteExcelDataC(
             sheetName,
             1,
             rowMax,
             BaseDataStartCol,
-            BaseDataEndCol,
+            colCount,
             copyArray
+        );
+
+        PubMetToExcel.WriteExcelDataC(sheetName, 0, 0, BaseDataStartCol, colCount, null);
+        PubMetToExcel.WriteExcelDataC(
+            sheetName,
+            0,
+            0,
+            BaseDataStartCol,
+            colCount,
+            copyTilteArray
         );
 
         baseList.Resize(baseList.Range.Resize[rowMax + 1, baseList.Range.Columns.Count]);
@@ -875,7 +889,7 @@ public class LteData
         object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
 
         //寻找数据整理
-        var findArray = FindData(copyArray, dataTypeArray, fieldGroupArray);
+        var findArray = FindData(copyArray, dataTypeArray, fieldGroupArray , copyTilteArray);
         //寻找List数据清理
         findList.DataBodyRange.ClearContents();
         //寻找List行数刷新
@@ -942,6 +956,8 @@ public class LteData
     {
         cancelDefault = true; // 阻止默认事件
         object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
+        object[,] copyTitleArray = ColTitleValue(ActivityDataMinIndex, ActivityDataMaxIndex);
+
         var list = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
         if (list == null)
         {
@@ -964,8 +980,10 @@ public class LteData
         var dataTypeArray = listObjectsDic["数据类型"];
 
         //基础数据整理
-        var copyData = BaseData(copyArray, dataTypeArray);
+        var copyData = BaseData(copyArray, dataTypeArray , copyTitleArray);
         copyArray = copyData.fixArray;
+        copyTitleArray = copyData.fixTitleArray;
+        var colCount = copyTitleArray.Length;
         var errorTypeList = copyData.errorTypeList;
 
         if (errorTypeList.Count != 0)
@@ -976,7 +994,17 @@ public class LteData
             MessageBox.Show($"基础数据中存在以下错误类型：{errorStr}");
         }
 
-        WriteDymaicData(copyArray, list, "LTE【基础】", 1, 35);
+        WriteDymaicData(copyArray, list, "LTE【基础】", 1, colCount);
+
+        PubMetToExcel.WriteExcelDataC("LTE【基础】", 0, 0, BaseDataStartCol, colCount, null);
+        PubMetToExcel.WriteExcelDataC(
+             "LTE【基础】",
+            0,
+            0,
+            BaseDataStartCol,
+            colCount,
+            copyTitleArray
+        );
 
         var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
         if (fieldGroupList == null)
@@ -987,7 +1015,7 @@ public class LteData
         object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
 
         //寻找数据整理
-        var findArray = FindData(copyArray, dataTypeArray, fieldGroupArray);
+        var findArray = FindData(copyArray, dataTypeArray, fieldGroupArray , copyTitleArray);
         WriteDymaicData(findArray, findList, "LTE【寻找】", 1, 9);
     }
 
@@ -1180,20 +1208,50 @@ public class LteData
         return mergedArray;
     }
 
+    //指定列范围的数据[字段名]
+    private static object[,] ColTitleValue(string min, string max)
+    {
+        var excel = NumDesAddIn.App;
+
+        var sheet = excel.ActiveSheet as Worksheet;
+
+        var copyColMin = sheet.Range[min].Value2;
+        var copyColMax = sheet.Range[max].Value2;
+
+        Range colTitleRange = sheet.Range[sheet.Cells[2, copyColMin], sheet.Cells[2, copyColMax]];
+        object[,] colTitleArray = colTitleRange.Value2;
+
+        return colTitleArray;
+    }
+
     //原始数据改造
-    private static (object[,] fixArray, List<string> errorTypeList) BaseData(
+    private static (object[,] fixArray, List<string> errorTypeList,object[,] fixTitleArray) BaseData(
         object[,] baseArray,
-        object[,] dataTypeArray
+        object[,] dataTypeArray,
+        object[,] baseTilteArray
     )
     {
         var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(baseArray);
         var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(dataTypeArray);
+        var baseTitleDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseTilteArray);
+
+        baseTitleDic["数据编号"].Add("寻找类型");
+        baseTitleDic["数据编号"].Add("寻找细类");
+        baseTitleDic["数据编号"].Add("链长");
+        baseTitleDic["数据编号"].Add("五合提示");
+        baseTitleDic["数据编号"].Add("消耗ID组");
+        baseTitleDic["数据编号"].Add("产出ID组");
+        baseTitleDic["数据编号"].Add("消耗量组");
+        baseTitleDic["数据编号"].Add("产出量组");
+        baseTitleDic["数据编号"].Add("转化ID组");
 
         var errorTypeList = new List<string>();
 
         foreach (var baseList in baseDic)
         {
             var key = baseList.Key;
+
+            Debug.Print($"数据编号：{key}");
 
             // 资源编号和图片编号
             string prefabId = baseDic[key][1];
@@ -1383,6 +1441,35 @@ public class LteData
             baseDic[key].Add(productIdGroup);
             baseDic[key].Add(consumeCountGroup);
             baseDic[key].Add(productCountGroup);
+
+            // 转换组
+            var spawnIndex = 27;
+            var spawnName = baseDic[key][spawnIndex];
+
+            //先在唯一ID中查找
+            var spawnMatchId = baseDic
+                .FirstOrDefault(kv =>
+                    kv.Value.Count > onlyNum && kv.Value[onlyNum] == firstPosPre + spawnName
+                )
+                .Key;
+            if (spawnMatchId == null)
+            {
+                //先在唯一ID中查找 name
+                spawnMatchId = baseDic
+                    .FirstOrDefault(kv =>
+                        kv.Value.Count > onlyNum && kv.Value[onlyNum] == spawnName
+                    )
+                    .Key;
+            }
+            if (spawnMatchId == null)
+            {
+                //后在ID中查找
+                spawnMatchId = baseDic
+                    .FirstOrDefault(kv => kv.Value.Count > num && kv.Value[num] == spawnName)
+                    .Key;
+            }
+
+            baseDic[key].Add(spawnMatchId);
         }
         var fixArray = PubMetToExcel.DictionaryTo2DArray(
             baseDic,
@@ -1390,7 +1477,12 @@ public class LteData
             baseDic[baseDic.Keys.First()].Count
         );
 
-        return (fixArray, errorTypeList);
+        var fixTitleArray = PubMetToExcel.DictionaryTo2DArray(
+          baseTitleDic,
+          baseTitleDic.Count,
+          baseTitleDic[baseTitleDic.Keys.First()].Count
+      );
+        return (fixArray, errorTypeList , fixTitleArray);
     }
     #endregion
 
@@ -1398,7 +1490,8 @@ public class LteData
     private static object[,] FindData(
         object[,] copyArray,
         object[,] dataTypeArray,
-        object[,] fieldGroupArray
+        object[,] fieldGroupArray,
+        object[,] copyTitleArray
     )
     {
         var findDic = new Dictionary<string, List<string>>();
@@ -1406,10 +1499,13 @@ public class LteData
         var copyDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(copyArray);
         var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(dataTypeArray);
         var fieldGroupDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(fieldGroupArray);
+        var copyTitleDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(copyTitleArray);
+
+        var titleList = copyTitleDic["数据编号"];
 
         foreach (var key in copyDic.Keys)
         {
-            var keyType = copyDic[key][8];
+            var keyType = copyDic[key][titleList.IndexOf("类型")];
             if (!dataTypeDic.ContainsKey(keyType))
             {
                 continue;
@@ -1420,7 +1516,7 @@ public class LteData
                 continue;
             }
             // 消耗组，第1层寻找
-            var inputGroup = copyDic[key][31];
+            var inputGroup = copyDic[key][titleList.IndexOf("消耗ID组")];
             var inputArray = inputGroup.Split("#");
 
             for (int i = 0; i < inputArray.Length; i++)
@@ -1437,8 +1533,8 @@ public class LteData
                     continue;
                 }
 
-                var findTargetType = copyDic[findTargetId][27];
-                var findTargetDetailType = copyDic[findTargetId][28];
+                var findTargetType = copyDic[findTargetId][titleList.IndexOf("寻找类型")];
+                var findTargetDetailType = copyDic[findTargetId][titleList.IndexOf("寻找细类")];
 
                 if (findTargetType != String.Empty)
                 {
@@ -1456,7 +1552,7 @@ public class LteData
                     if (findLinks != String.Empty)
                     {
                         var findIdStr = Convert.ToString(findId, CultureInfo.InvariantCulture);
-                        var onlyName = copyDic[findIdStr][4];
+                        var onlyName = copyDic[findIdStr][titleList.IndexOf("唯一代号")];
                         if (onlyName != String.Empty)
                         {
                             if (!findDic.ContainsKey(findIdStr))
@@ -1465,12 +1561,12 @@ public class LteData
                             }
 
                             findDic[findIdStr].Add(findIdStr);
-                            findDic[findIdStr].Add(copyDic[findIdStr][3]);
-                            findDic[findIdStr].Add(copyDic[findIdStr][4]);
-                            findDic[findIdStr].Add(copyDic[findIdStr][5]);
-                            findDic[findIdStr].Add(copyDic[findIdStr][6]);
-                            findDic[findIdStr].Add("寻-" + copyDic[key][8]);
-                            findDic[findIdStr].Add(copyDic[findIdStr][9]);
+                            findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("首次出现")]);
+                            findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("唯一代号")]);
+                            findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("代号")]);
+                            findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("当前包装")]);
+                            findDic[findIdStr].Add("寻-" + copyDic[key][titleList.IndexOf("类型")]);
+                            findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("备注名称")]);
                             findDic[findIdStr].Add(findTips);
                             findDic[findIdStr].Add(findLinks + "," + findLinks31 + "{8,9993}");
                         }
@@ -2791,7 +2887,9 @@ public class LteData
             MessageBox.Show($"{fieldConditonTarget}:找不到ID，检查【基础】表");
         }
 
-        var fieldConditonTargetName = baseDic[fieldConditonTargetId][6];
+        var fieldConditonTargetName = baseDic[
+            fieldConditonTargetId ?? throw new InvalidOperationException()
+        ][6];
         var fieldConditonTargetLast = baseDic
             .LastOrDefault(kv => kv.Value.Count > 4 && kv.Value[6] == fieldConditonTargetName)
             .Key;
