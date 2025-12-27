@@ -34,7 +34,6 @@ public class LteData
 
     private const int BaseDataTagCol = 0;
     private const int BaseDataStartCol = 1;
-    private const int BaseDataEndCol = 37;
     private const int FindDataTagCol = 0;
     private const int FindDataStartCol = 1;
     private const int FindDataEndCol = 9;

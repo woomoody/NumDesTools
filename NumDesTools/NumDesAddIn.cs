@@ -1240,7 +1240,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
                                 Debug.Print($"{sheet.Name}-{filedValue}");
 
-                                if (filedValue == null)
+                                if (filedValue == null || filedValue == string.Empty)
                                 {
                                     var colName = PubMetToExcel.ChangeExcelColChar(i - 1);
                                     MessageBox.Show(
