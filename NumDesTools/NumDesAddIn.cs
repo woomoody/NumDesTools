@@ -1244,7 +1244,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                                 {
                                     var colName = PubMetToExcel.ChangeExcelColChar(i - 1);
                                     MessageBox.Show(
-                                        $"{sheet.Name}-{colName}列字段为空，但有数据，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
+                                        $"{sheet.Name}-{colName}列（或之后）字段为空，但有数据，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
                                     );
                                     cancel = true;
                                     break;

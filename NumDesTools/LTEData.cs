@@ -2251,7 +2251,7 @@ public class LteData
                 taskSubColDataList.Add(taskSubNextId);
 
                 //目标所在地图
-                var taskSubTargetMapName = baseDic[taskSubTagetId][1];
+                var taskSubTargetMapName = baseDic[taskSubTagetId][3];
                 taskSubColDataList.Add(taskSubTargetMapName);
 
                 //目标寻找关系
