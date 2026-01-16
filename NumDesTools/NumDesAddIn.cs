@@ -1107,7 +1107,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         List<(string, int, int, string, string)> sourceData = new();
 
-        if (!wkFileName.Contains("#"))
+        if (!wkFileName.Contains("#") && !wkFileName.Contains("Config"))
         {
             var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
             foreach (var sheetName in sheetNames)
@@ -1223,7 +1223,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var wbPath = wb.FullName;
             if (wbPath.Contains(@"\Excels\"))
             {
-                if (!wb.Name.Contains("#"))
+                if (!wb.Name.Contains("#") && !wb.Name.Contains("Config"))
                 {
                     Debug.Print($"{wb.Name}-{wb.Worksheets[1].Name}");
                     var wss = wb.Sheets;

@@ -509,6 +509,10 @@ public class LteData
             {
                 NumDesAddIn.App.StatusBar = $"导出：{modelSheetName}";
 
+                if(modelSheetName.Contains("FindTarget"))
+                {
+                    var abc = 1;
+                }
                 var writeCol = targetSheet.Dimension.End.Column;
 
                 var exportWildcardDyData = new Dictionary<string, string>(exportWildcardData);
@@ -1543,7 +1547,8 @@ public class LteData
                         findTargetId,
                         copyDic,
                         out var findTips,
-                        fieldGroupDic
+                        fieldGroupDic,
+                        titleList
                     );
                     var findLinks = findLinksGroup.findLinks;
                     var findLinks31 = findLinksGroup.findLinks31;
@@ -1652,7 +1657,8 @@ public class LteData
         string findTargetId,
         Dictionary<string, List<string>> baseDic,
         out string findTips,
-        Dictionary<string, List<string>> fieldGroupDic
+        Dictionary<string, List<string>> fieldGroupDic,
+        List<string>  titleList
     )
     {
         var findLinks = string.Empty;
@@ -1660,11 +1666,11 @@ public class LteData
 
         findTips = string.Empty;
 
-        var findTargetNickName = baseDic[findTargetId][5];
+        var findTargetNickName = baseDic[findTargetId][titleList.IndexOf("代号")];
 
         var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName);
 
-        var targetType = baseDic[findTargetId][8];
+        var targetType = baseDic[findTargetId][titleList.IndexOf("类型")];
 
         //1层查找
         if (findTargetDetailType == string.Empty)
@@ -1691,9 +1697,10 @@ public class LteData
             findLinks += findTaregtfieldLinks + ",";
         }
 
+        int outPutIdGroupIndex = titleList.IndexOf("产出ID组");
         // 2层查找
         List<string> matchedIDsOri = baseDic
-            .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId))
+            .Where(kv => kv.Value.Count > outPutIdGroupIndex && kv.Value[outPutIdGroupIndex].Contains(findTargetId))
             .Select(kv => kv.Key)
             .ToList();
 
@@ -1703,19 +1710,19 @@ public class LteData
         {
             var findTargetId01 = findTargetId.Substring(0, findTargetId.Length - 2) + "01";
             List<string> matchedIDs01 = baseDic
-                .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId01))
+                .Where(kv => kv.Value.Count > outPutIdGroupIndex && kv.Value[outPutIdGroupIndex].Contains(findTargetId01))
                 .Select(kv => kv.Key)
                 .ToList();
 
             var findTargetId02 = findTargetId.Substring(0, findTargetId.Length - 2) + "02";
             List<string> matchedIDs02 = baseDic
-                .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId02))
+                .Where(kv => kv.Value.Count > outPutIdGroupIndex && kv.Value[outPutIdGroupIndex].Contains(findTargetId02))
                 .Select(kv => kv.Key)
                 .ToList();
 
             var findTargetId03 = findTargetId.Substring(0, findTargetId.Length - 2) + "03";
             List<string> matchedIDs03 = baseDic
-                .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId03))
+                .Where(kv => kv.Value.Count > outPutIdGroupIndex && kv.Value[outPutIdGroupIndex].Contains(findTargetId03))
                 .Select(kv => kv.Key)
                 .ToList();
 
@@ -1743,7 +1750,7 @@ public class LteData
             {
                 matchedIDsOri3.AddRange(
                     baseDic
-                        .Where(kv => kv.Value.Count > 32 && kv.Value[32].Contains(findTargetId2))
+                        .Where(kv => kv.Value.Count > outPutIdGroupIndex && kv.Value[outPutIdGroupIndex].Contains(findTargetId2))
                         .Select(kv => kv.Key)
                         .ToList()
                 );
@@ -1774,10 +1781,10 @@ public class LteData
             {
                 if (findTargetId3 != string.Empty)
                 {
-                    var findTargetType3 = baseDic[findTargetId3][27];
-                    var findTargetDetailType3 = baseDic[findTargetId3][28];
+                    var findTargetType3 = baseDic[findTargetId3][titleList.IndexOf("寻找类型")];
+                    var findTargetDetailType3 = baseDic[findTargetId3][titleList.IndexOf("寻找细类")];
 
-                    var findTargetNickName3 = baseDic[findTargetId3][5];
+                    var findTargetNickName3 = baseDic[findTargetId3][titleList.IndexOf("代号")];
 
                     var findTaregtfieldLinks3 = FieldGroupLinks(fieldGroupDic, findTargetNickName3);
 
@@ -1925,6 +1932,7 @@ public class LteData
             false,
             false
         );
+        
 
         var taskList = PubMetToExcel.GetExcelListObjects("LTE【任务】", "LTE【任务】");
         if (taskList == null)
@@ -1940,6 +1948,7 @@ public class LteData
             return;
         }
         object[,] baseArray = baseList.DataBodyRange.Value2;
+        object[,] baseTitleArray = baseList.HeaderRowRange.Value2;
 
         var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
         if (fieldGroupList == null)
@@ -1963,7 +1972,8 @@ public class LteData
             dataTypeArray,
             baseArray,
             activtiyId,
-            fieldGroupArray
+            fieldGroupArray,
+            baseTitleArray
         );
         copyTaskArray = copyTaskData.taskArray;
         var errorTypeList = copyTaskData.errorTypeList;
@@ -2019,6 +2029,7 @@ public class LteData
             false,
             false
         );
+       
 
         var taskList = PubMetToExcel.GetExcelListObjects("LTE【任务】", "LTE【任务】");
         if (taskList == null)
@@ -2034,6 +2045,7 @@ public class LteData
             return;
         }
         object[,] baseArray = baseList.DataBodyRange.Value2;
+        object[,] baseTitleArray = baseList.HeaderRowRange.Value2;
 
         var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
         if (fieldGroupList == null)
@@ -2057,7 +2069,8 @@ public class LteData
             dataTypeArray,
             baseArray,
             activtiyId,
-            fieldGroupArray
+            fieldGroupArray,
+            baseTitleArray
         );
         copyTaskArray = copyTaskData.taskArray;
         var errorTypeList = copyTaskData.errorTypeList;
@@ -2086,12 +2099,17 @@ public class LteData
         object[,] taskDataTypeArray,
         object[,] baseArray,
         double activtiyId,
-        object[,] fieldGroupArray
+        object[,] fieldGroupArray,
+        object[,] baseTitleArray
     )
     {
         var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseArray);
         var taskDataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(taskDataTypeArray);
         var fieldGroupDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(fieldGroupArray);
+
+        var baseTitleDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseTitleArray);
+
+        var titleList = baseTitleDic["数据编号"];
 
         var taskTaskArrayCount = copyTaskArray.GetLength(0);
         var taskList = new List<List<string>>();
@@ -2184,12 +2202,12 @@ public class LteData
                 {
                     continue;
                 }
-                var taskTargetMapName = baseDic[taskTagetId][3];
+                var taskTargetMapName = baseDic[taskTagetId][titleList.IndexOf("首次出现")];
                 taskColDataList.Add(taskTargetMapName);
 
                 //目标寻找关系
-                var findTargetType = baseDic[taskTagetId][27];
-                var findTargetDetailType = baseDic[taskTagetId][28];
+                var findTargetType = baseDic[taskTagetId][titleList.IndexOf("寻找类型")];
+                var findTargetDetailType = baseDic[taskTagetId][titleList.IndexOf("寻找细类")];
 
                 var findLinksGroup = FindLinks(
                     findTargetDetailType,
@@ -2197,7 +2215,8 @@ public class LteData
                     taskTagetId,
                     baseDic,
                     out _,
-                    fieldGroupDic
+                    fieldGroupDic,
+                    titleList
                 );
                 var findLinks = findLinksGroup.findLinks;
                 var findLinks31 = findLinksGroup.findLinks31;
@@ -2251,12 +2270,12 @@ public class LteData
                 taskSubColDataList.Add(taskSubNextId);
 
                 //目标所在地图
-                var taskSubTargetMapName = baseDic[taskSubTagetId][3];
+                var taskSubTargetMapName = baseDic[taskSubTagetId][titleList.IndexOf("首次出现")];
                 taskSubColDataList.Add(taskSubTargetMapName);
 
                 //目标寻找关系
-                var findSubTargetType = baseDic[taskSubTagetId][27];
-                var findSubTargetDetailType = baseDic[taskSubTagetId][28];
+                var findSubTargetType = baseDic[taskSubTagetId][titleList.IndexOf("寻找类型")];
+                var findSubTargetDetailType = baseDic[taskSubTagetId][titleList.IndexOf("寻找细类")];
 
                 var findSubLinksGroup = FindLinks(
                     findSubTargetDetailType,
@@ -2264,7 +2283,8 @@ public class LteData
                     taskSubTagetId,
                     baseDic,
                     out _,
-                    fieldGroupDic
+                    fieldGroupDic,
+                    titleList
                 );
                 var findSubLinks = findSubLinksGroup.findLinks;
                 var findSubLinks31 = findSubLinksGroup.findLinks31;
@@ -2515,6 +2535,7 @@ public class LteData
             return;
         }
         object[,] baseArray = baseList.DataBodyRange.Value2;
+        object[,] baseTitleArray = baseList.HeaderRowRange.Value2;
 
         var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
         if (fieldGroupList == null)
@@ -2538,7 +2559,8 @@ public class LteData
             dataTypeArray,
             baseArray,
             activtiyId,
-            fieldGroupArray
+            fieldGroupArray,
+            baseTitleArray
         );
         copyFieldArray = copyFiledData.fieldArray;
         var errorTypeList = copyFiledData.errorTypeList;
@@ -2616,6 +2638,7 @@ public class LteData
             return;
         }
         object[,] baseArray = baseList.DataBodyRange.Value2;
+        object[,] baseTitleArray = baseList.HeaderRowRange.Value2;
 
         var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
         if (fieldGroupList == null)
@@ -2639,7 +2662,8 @@ public class LteData
             dataTypeArray,
             baseArray,
             activtiyId,
-            fieldGroupArray
+            fieldGroupArray,
+            baseTitleArray
         );
         copyFieldArray = copyFiledData.fieldArray;
         var errorTypeList = copyFiledData.errorTypeList;
@@ -2668,12 +2692,17 @@ public class LteData
         object[,] filedDataTypeArray,
         object[,] baseArray,
         double activtiyId,
-        object[,] fieldGroupArray
+        object[,] fieldGroupArray,
+        object[,] baseTitleArray
     )
     {
         var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseArray);
         var fieldDataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(filedDataTypeArray);
         var fieldGroupDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(fieldGroupArray);
+        
+        var baseTitleDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseTitleArray);
+
+        var titleList = baseTitleDic["数据编号"];
 
         var fieldFieldArrayCount = copyFieldArray.GetLength(0);
         var fieldList = new List<List<string>>();
@@ -2761,8 +2790,8 @@ public class LteData
                 var fieldConditonTargetId = fieldFix.fieldConditonTargetId;
 
                 //目标寻找关系
-                var findTargetType = baseDic[fieldConditonTargetId][27];
-                var findTargetDetailType = baseDic[fieldConditonTargetId][28];
+                var findTargetType = baseDic[fieldConditonTargetId][titleList.IndexOf("寻找类型")];
+                var findTargetDetailType = baseDic[fieldConditonTargetId][titleList.IndexOf("寻找细类")];
 
                 var findLinksGroup = FindLinks(
                     findTargetDetailType,
@@ -2770,12 +2799,13 @@ public class LteData
                     fieldConditonTargetId,
                     baseDic,
                     out _,
-                    fieldGroupDic
+                    fieldGroupDic,
+                    titleList
                 );
                 findLinks = findLinksGroup.findLinks;
                 var findLinks31 = findLinksGroup.findLinks31;
 
-                var taskTargetMapName = baseDic[fieldConditonTargetId][3];
+                var taskTargetMapName = baseDic[fieldConditonTargetId][titleList.IndexOf("首次出现")];
                 taskTargetMapName = taskTargetMapName.Split("-")[0];
                 var match = Regex.Match(taskTargetMapName, @"\d+");
                 var taskTargetMapId = match.Success ? match.Value : "0";
@@ -2805,8 +2835,8 @@ public class LteData
 
             if (fieldFindId2 != fieldFindId && fieldCostTarget != string.Empty)
             {
-                var findTarget2Type = baseDic[fieldFindId2][27];
-                var findTarget2DetailType = baseDic[fieldFindId2][28];
+                var findTarget2Type = baseDic[fieldFindId2][titleList.IndexOf("寻找类型")];
+                var findTarget2DetailType = baseDic[fieldFindId2][titleList.IndexOf("寻找细类")];
 
                 var findLinks2Group = FindLinks(
                     findTarget2DetailType,
@@ -2814,12 +2844,13 @@ public class LteData
                     fieldFindId2,
                     baseDic,
                     out _,
-                    fieldGroupDic
+                    fieldGroupDic,
+                    titleList
                 );
                 findLinks2 = findLinks2Group.findLinks;
                 var findLinks231 = findLinks2Group.findLinks31;
 
-                var taskTarget2MapName = baseDic[fieldFindId2][3];
+                var taskTarget2MapName = baseDic[fieldFindId2][titleList.IndexOf("首次出现")];
                 taskTarget2MapName = taskTarget2MapName.Split("-")[0];
                 var match2 = Regex.Match(taskTarget2MapName, @"\d+");
                 var taskTarget2MapId = match2.Success ? match2.Value : "0";
