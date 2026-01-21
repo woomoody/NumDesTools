@@ -1562,17 +1562,16 @@ public class LteData
                             if (!findDic.ContainsKey(findIdStr))
                             {
                                 findDic.Add(findIdStr, new List<string>());
+                                findDic[findIdStr].Add(findIdStr);
+                                findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("首次出现")]);
+                                findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("唯一代号")]);
+                                findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("代号")]);
+                                findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("当前包装")]);
+                                findDic[findIdStr].Add("寻-" + copyDic[key][titleList.IndexOf("类型")]);
+                                findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("备注名称")]);
+                                findDic[findIdStr].Add(findTips);
+                                findDic[findIdStr].Add(findLinks + "," + findLinks31 + "{8,9993}");
                             }
-
-                            findDic[findIdStr].Add(findIdStr);
-                            findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("首次出现")]);
-                            findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("唯一代号")]);
-                            findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("代号")]);
-                            findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("当前包装")]);
-                            findDic[findIdStr].Add("寻-" + copyDic[key][titleList.IndexOf("类型")]);
-                            findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("备注名称")]);
-                            findDic[findIdStr].Add(findTips);
-                            findDic[findIdStr].Add(findLinks + "," + findLinks31 + "{8,9993}");
                         }
                     }
                 }
