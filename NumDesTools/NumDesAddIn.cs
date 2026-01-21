@@ -24,7 +24,6 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
-using LibGit2Sharp;
 using MiniExcelLibs;
 using MiniExcelLibs.OpenXml;
 using NPOI.SS.UserModel;
@@ -296,7 +295,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ExcelSearchBoxButton8"] = ExcelSearchAllFormulaName_Click,
             ["CheckExcelKeyAndValueFormat"] = CheckExcelKeyAndValueFormat_Click,
             ["OutPutExcelDataToLua"] = OutPutExcelDataToLua_Click,
-            ["OutPutExcelDataToLuaAll"] = OutPutExcelDataToLuaAll_Click
+            ["OutPutExcelDataToLuaAll"] = OutPutExcelDataToLuaAll_Click,
+            ["CheckColFromExcelMulti"] = CheckColFromExcelMulti_Click
         };
     }
 
@@ -2535,6 +2535,38 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                        );
     }
 
+    public void CheckColFromExcelMulti_Click(IRibbonControl control)
+    {
+
+        var wk = App.ActiveWorkbook;
+        var path = wk.FullName;
+        var targetList = PubMetToExcelFunc.CheckColFromExcelMulti(path);
+        if (targetList.Count == 0)
+        {
+            MessageBox.Show(@"表格格式正确，没有处理任何表格");
+        }
+        else
+        {
+            var ctpName = "整理表格格式记录";
+            NumDesCTP.DeleteCTP(true, ctpName);
+            var tupleList = targetList
+                .Select(t =>
+                    (t.Item1, t.Item2, t.Item3, PubMetToExcel.ConvertToExcelColumn(t.Item4))
+                )
+                .ToList();
+            _ = (SheetSeachResult)
+                NumDesCTP.ShowCTP(
+                    800,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new SheetSeachResult(tupleList),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+        }
+
+    }
+
     public void TestBar1_Click(IRibbonControl control)
     {
         //var files = new List<string>(
@@ -2551,7 +2583,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //}
         var wk = App.ActiveWorkbook;
         var path = wk.FullName;
-        var sheet = wk.ActiveSheet;
+   
 
         //var sourceListName = "LTE【通用】";
 

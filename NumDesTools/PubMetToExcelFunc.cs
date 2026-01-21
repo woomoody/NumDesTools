@@ -1,14 +1,18 @@
-﻿using System.Collections.Concurrent;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using Microsoft.Office.Interop.Excel;
 using MiniExcelLibs;
 using NLua;
 using NumDesTools.Config;
 using NumDesTools.UI;
 using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System.Collections.Concurrent;
+using System.Security.Policy;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using static NPOI.HSSF.Util.HSSFColor;
 using Clipboard = System.Windows.Forms.Clipboard;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
@@ -1093,8 +1097,6 @@ public static class PubMetToExcelFunc
                     Range usedRange = worksheet.UsedRange;
                     foreach (Range cell in usedRange)
                     {
-                      
-
                         if (cell.HasFormula)
                         {
                             // 获取原始公式
@@ -1129,7 +1131,6 @@ public static class PubMetToExcelFunc
                                 Debug.Print($"原公式:{originalFormula}");
                                 Debug.Print($"新公式:{newFormula}");
                             }
-
 
                             if (originalFormula != newFormula)
                             {
@@ -1889,7 +1890,7 @@ public static class PubMetToExcelFunc
             var cellComment = row["#备注"]?.ToString();
             var cellValue = row[checkCol]?.ToString();
 
-            if(cellValue == null)
+            if (cellValue == null)
                 continue;
 
             cellValue = cellValue.Replace("[", "");
@@ -1918,13 +1919,13 @@ public static class PubMetToExcelFunc
                         }
                         break;
                     }
-
                 }
             }
 
             if (resultList.Count > 0)
             {
-                result += $"id:{cellIndex}#:{cellComment}# {errorTips}:{string.Join(",", resultList)}\n";
+                result +=
+                    $"id:{cellIndex}#:{cellComment}# {errorTips}:{string.Join(",", resultList)}\n";
             }
         }
 
@@ -2300,7 +2301,7 @@ public static class PubMetToExcelFunc
 
     #region Excel数据查找
 
-    //Epplus
+    //Epplus搜索
     public static List<(string, string, int, int)> SearchKeyFromExcel(
         string rootPath,
         string findValue
@@ -2442,6 +2443,143 @@ public static class PubMetToExcelFunc
                 }
             }
         );
+        return targetList;
+    }
+
+    //Epplus检查是否包含多余列
+    public static List<(string, string, int, int)> CheckColFromExcelMulti(
+        string rootPath,
+        bool isMulti = true
+    )
+    {
+        var filesCollection = new SelfExcelFileCollector(rootPath);
+        var files = filesCollection.GetAllExcelFilesPath();
+
+        var targetList = new List<(string, string, int, int)>();
+
+        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+        Action<string> processFile = file =>
+        {
+            try
+            {
+                using (var package = new ExcelPackage(new FileInfo(file)))
+                {
+                    if (file.Contains("#"))
+                    {
+                        return;
+                    }
+
+                    Debug.Print($"检查：{file}");
+                    //if (file.Contains("$多人建造活动.xlsx"))
+                    //{
+                    //    var ac = 1;
+                    //}
+                    try
+                    {
+                        var wk = package.Workbook;
+
+                        var isWrite = false;
+
+                        for (var sheetIndex = 0; sheetIndex < wk.Worksheets.Count; sheetIndex++)
+                        {
+                            var sheet = wk.Worksheets[sheetIndex];
+                            if (sheet.Name.Contains("#"))
+                                continue;
+                            if( sheet.Name == "Chart1")
+                            {
+                                //删除多余列
+                                targetList.Add((file, sheet.Name + "：非法表", 2, 1));
+                                wk.Worksheets.Delete(sheet.Name);
+                                isWrite = true;
+
+                                continue;
+                            }
+                            if (sheet.Name.Contains("Sheet") && file.Contains("$"))
+                                continue;
+                            if (sheet.Cells[2, 1].Value?.ToString() != "#")
+                                continue;
+                            int colMax = Math.Max(sheet.Dimension.End.Column, 2);
+
+                            for (var col = colMax; col >= 1; col--)
+                            {
+                                // 空列检测
+                                var cellValue = sheet.Cells[2, col].Value;
+                                if (
+                                    ReferenceEquals(cellValue, "")
+                                    || ReferenceEquals(cellValue, " ") 
+                                )
+                                {
+                                    Debug.Print($"{file}:[{sheet.Name}]冗余列{col}/{colMax}");
+                                    //删除多余列
+                                    targetList.Add((file, sheet.Name + "：冗余列", 2, col));
+
+                                    sheet.DeleteColumn(col);
+
+                                    isWrite = true;
+
+                                }
+
+                                // 隐藏列检测
+                                var colObj = sheet.Column(col);
+                                if (colObj.Hidden)
+                                {
+                                    Debug.Print($"{file}:[{sheet.Name}]隐藏列{col}/{colMax}");
+                                    
+                                    targetList.Add((file, sheet.Name + "：隐藏列", 2, col));
+
+                                    colObj.Hidden = false;
+
+                                    isWrite = true;
+                                }
+                                    
+                            }
+
+                            // 整理格式
+                            if(isWrite)
+                            {
+                                var range =  sheet.Cells[sheet.Dimension.Address];
+                                // 设置字体格式
+                                range.Style.Font.Name = "微软雅黑";
+                                range.Style.Font.Size = 10;
+
+                                // 设置对齐方式
+                                range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+                                range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+
+                                targetList.Add((file, sheet.Name + "：整理格式", 2, 2));
+                            }
+
+                        }
+                        if(isWrite)
+                        {
+                            package.Save();
+                        }
+                        
+                    }
+                    catch
+                    {
+                        // 记录异常信息，继续处理下一个文件
+                    }
+                }
+            }
+            catch
+            {
+                // 记录异常信息，继续处理下一个文件
+            }
+        };
+
+        if (isMulti)
+        {
+            Parallel.ForEach(files, options, processFile);
+        }
+        else
+        {
+            foreach (var file in files)
+            {
+                processFile(file);
+            }
+        }
         return targetList;
     }
 
