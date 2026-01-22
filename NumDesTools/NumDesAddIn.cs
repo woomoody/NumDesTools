@@ -38,7 +38,6 @@ using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Shapes;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
 using IRibbonControl = ExcelDna.Integration.CustomUI.IRibbonControl;
@@ -2479,8 +2478,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             Path.GetFileNameWithoutExtension(path),
             luaTableFields,
             isAll,
-            path.Contains("$$"),
-            false
+            path.Contains("$$")
         );
 
         if (ExcelExporter.NeedMergeLocalization)
@@ -2520,8 +2518,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 Path.GetFileNameWithoutExtension(path),
                 luaTableFields,
                 isAll,
-                path.Contains("$$"),
-                false
+                path.Contains("$$")
             );
 
             countFile++;
