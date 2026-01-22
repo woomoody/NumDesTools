@@ -50,9 +50,6 @@
                     <button id='OutPutExcelDataToLuaAll' size='large' label='Lua表格All' image='diff'
                             onAction='OnButtonClick'
                             screentip='将当前表格数据导出为Lua' tag='导出Lua数据All' />
-                    <button id='CheckColFromExcelMulti' size='large' label='删除冗余列' image='font'
-                            onAction='OnButtonClick'
-                            screentip='删除表格冗余列，以及Chart1类的非法配置表，打开的表格不能格式错误' tag='批量整理表格格式' />
                 </group>
                 <!--
                 <group id='Group3' label='SVN功能'>
@@ -201,6 +198,8 @@
                             onAction='OnButtonClick' tag ='移动转盘' />
 					<button id='Button_CardRatioSim' size='large' label='万能卡概率' image='zip' screentip='相册万能卡概率模拟'
                             onAction='OnButtonClick' tag ='万能卡概率' />
+                    <button id='CheckColFromExcelMulti' size='large' label='删除冗余列' image='font'
+                            onAction='OnButtonClick' screentip='删除表格冗余列，以及Chart1类的非法配置表，打开的表格不能格式错误' tag='批量整理表格格式' />
                 </group>
 				<group id='NormalFun' label='杂项'>
 					<button id='ShowDnaLog' size='large' getLabel='GetLableText' image='ejs'

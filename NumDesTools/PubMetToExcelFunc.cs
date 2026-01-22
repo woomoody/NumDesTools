@@ -1,18 +1,14 @@
-﻿using Microsoft.Office.Interop.Excel;
-using MiniExcelLibs;
+﻿using MiniExcelLibs;
 using NLua;
 using NumDesTools.Config;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using System.Collections.Concurrent;
-using System.Security.Policy;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using static NPOI.HSSF.Util.HSSFColor;
 using Clipboard = System.Windows.Forms.Clipboard;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
@@ -2479,6 +2475,10 @@ public static class PubMetToExcelFunc
                     {
                         var wk = package.Workbook;
 
+                        // 获取当前活动工作表
+                        var activeSheetIndex = wk.View.ActiveTab;
+                        var activeSheet = wk.Worksheets[activeSheetIndex + 1]; 
+
                         var isWrite = false;
 
                         for (var sheetIndex = 0; sheetIndex < wk.Worksheets.Count; sheetIndex++)
@@ -2548,11 +2548,15 @@ public static class PubMetToExcelFunc
                                 range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
 
                                 targetList.Add((file, sheet.Name + "：整理格式", 2, 2));
+
+                                // 检测是否有多个Sheet被选中
+                                sheet.View.TabSelected = false;
                             }
 
                         }
                         if(isWrite)
                         {
+                            activeSheet.View.TabSelected = true;
                             package.Save();
                         }
                         

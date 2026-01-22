@@ -66,7 +66,9 @@ namespace NumDesTools.ExcelToLua
             "Tables.LteIconIdMapping_",
             "Tables.LteElementPrefabMapping_",
             "Tables.LteStringKeyMapping_",
-            "Tables.EventTriggerMainStoryLevelData"
+            "Tables.EventTriggerMainStoryLevelData",
+            "Tables.US_ADS_Country",
+            "Tables.US_ADS_Campaign"
         };
 
         private static bool IsNotAddCheckNullValue(string tableName)
