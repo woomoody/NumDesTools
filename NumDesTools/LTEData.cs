@@ -509,10 +509,6 @@ public class LteData
             {
                 NumDesAddIn.App.StatusBar = $"导出：{modelSheetName}";
 
-                if(modelSheetName.Contains("FindTarget"))
-                {
-                    var abc = 1;
-                }
                 var writeCol = targetSheet.Dimension.End.Column;
 
                 var exportWildcardDyData = new Dictionary<string, string>(exportWildcardData);
@@ -794,7 +790,7 @@ public class LteData
         cancelDefault = true; // 阻止默认事件
         object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
         object[,] copyTilteArray = ColTitleValue(ActivityDataMinIndex, ActivityDataMaxIndex);
-        
+
         var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
         if (baseList == null)
         {
@@ -816,7 +812,7 @@ public class LteData
         var dataTypeArray = listObjectsDic["数据类型"];
 
         //基础数据整理
-        var copyData = BaseData(copyArray, dataTypeArray , copyTilteArray);
+        var copyData = BaseData(copyArray, dataTypeArray, copyTilteArray);
         copyArray = copyData.fixArray;
         copyTilteArray = copyData.fixTitleArray;
         var colCount = copyTilteArray.Length;
@@ -849,24 +845,10 @@ public class LteData
         var rowMax = copyArray.GetLength(0);
 
         PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, BaseDataStartCol, colCount, null);
-        PubMetToExcel.WriteExcelDataC(
-            sheetName,
-            1,
-            rowMax,
-            BaseDataStartCol,
-            colCount,
-            copyArray
-        );
+        PubMetToExcel.WriteExcelDataC(sheetName, 1, rowMax, BaseDataStartCol, colCount, copyArray);
 
         PubMetToExcel.WriteExcelDataC(sheetName, 0, 0, BaseDataStartCol, colCount, null);
-        PubMetToExcel.WriteExcelDataC(
-            sheetName,
-            0,
-            0,
-            BaseDataStartCol,
-            colCount,
-            copyTilteArray
-        );
+        PubMetToExcel.WriteExcelDataC(sheetName, 0, 0, BaseDataStartCol, colCount, copyTilteArray);
 
         baseList.Resize(baseList.Range.Resize[rowMax + 1, baseList.Range.Columns.Count]);
 
@@ -891,8 +873,22 @@ public class LteData
         }
         object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
 
+        // 寻找优先级数据
+        var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#寻找优先级"
+        );
+        var findRankDataArray = findRanklistObjectsDic["寻找方案"];
+
         //寻找数据整理
-        var findArray = FindData(copyArray, dataTypeArray, fieldGroupArray , copyTilteArray);
+        var findArray = FindData(
+            copyArray,
+            dataTypeArray,
+            fieldGroupArray,
+            copyTilteArray,
+            findRankDataArray
+        );
         //寻找List数据清理
         findList.DataBodyRange.ClearContents();
         //寻找List行数刷新
@@ -983,7 +979,7 @@ public class LteData
         var dataTypeArray = listObjectsDic["数据类型"];
 
         //基础数据整理
-        var copyData = BaseData(copyArray, dataTypeArray , copyTitleArray);
+        var copyData = BaseData(copyArray, dataTypeArray, copyTitleArray);
         copyArray = copyData.fixArray;
         copyTitleArray = copyData.fixTitleArray;
         var colCount = copyTitleArray.Length;
@@ -1000,14 +996,7 @@ public class LteData
         WriteDymaicData(copyArray, list, "LTE【基础】", 1, colCount);
 
         PubMetToExcel.WriteExcelDataC("LTE【基础】", 0, 0, BaseDataStartCol, colCount, null);
-        PubMetToExcel.WriteExcelDataC(
-             "LTE【基础】",
-            0,
-            0,
-            BaseDataStartCol,
-            colCount,
-            copyTitleArray
-        );
+        PubMetToExcel.WriteExcelDataC("LTE【基础】", 0, 0, BaseDataStartCol, colCount, copyTitleArray);
 
         var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
         if (fieldGroupList == null)
@@ -1017,8 +1006,22 @@ public class LteData
         }
         object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
 
+        // 寻找优先级数据
+        var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#寻找优先级"
+        );
+        var findRankDataArray = findRanklistObjectsDic["寻找方案"];
+
         //寻找数据整理
-        var findArray = FindData(copyArray, dataTypeArray, fieldGroupArray , copyTitleArray);
+        var findArray = FindData(
+            copyArray,
+            dataTypeArray,
+            fieldGroupArray,
+            copyTitleArray,
+            findRankDataArray
+        );
         WriteDymaicData(findArray, findList, "LTE【寻找】", 1, 9);
     }
 
@@ -1218,21 +1221,28 @@ public class LteData
 
         var sheet = excel.ActiveSheet as Worksheet;
 
-        var copyColMin = sheet.Range[min].Value2;
-        var copyColMax = sheet.Range[max].Value2;
+        if (sheet is not null)
+        {
+            var copyColMin = sheet.Range[min].Value2;
+            var copyColMax = sheet.Range[max].Value2;
 
-        Range colTitleRange = sheet.Range[sheet.Cells[2, copyColMin], sheet.Cells[2, copyColMax]];
-        object[,] colTitleArray = colTitleRange.Value2;
+            Range colTitleRange = sheet.Range[
+                sheet.Cells[2, copyColMin],
+                sheet.Cells[2, copyColMax]
+            ];
+            object[,] colTitleArray = colTitleRange.Value2;
 
-        return colTitleArray;
+            return colTitleArray;
+        }
+        return null;
     }
 
     //原始数据改造
-    private static (object[,] fixArray, List<string> errorTypeList,object[,] fixTitleArray) BaseData(
-        object[,] baseArray,
-        object[,] dataTypeArray,
-        object[,] baseTilteArray
-    )
+    private static (
+        object[,] fixArray,
+        List<string> errorTypeList,
+        object[,] fixTitleArray
+    ) BaseData(object[,] baseArray, object[,] dataTypeArray, object[,] baseTilteArray)
     {
         var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(baseArray);
         var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(dataTypeArray);
@@ -1481,11 +1491,11 @@ public class LteData
         );
 
         var fixTitleArray = PubMetToExcel.DictionaryTo2DArray(
-          baseTitleDic,
-          baseTitleDic.Count,
-          baseTitleDic[baseTitleDic.Keys.First()].Count
-      );
-        return (fixArray, errorTypeList , fixTitleArray);
+            baseTitleDic,
+            baseTitleDic.Count,
+            baseTitleDic[baseTitleDic.Keys.First()].Count
+        );
+        return (fixArray, errorTypeList, fixTitleArray);
     }
     #endregion
 
@@ -1494,7 +1504,8 @@ public class LteData
         object[,] copyArray,
         object[,] dataTypeArray,
         object[,] fieldGroupArray,
-        object[,] copyTitleArray
+        object[,] copyTitleArray,
+        object[,] findRankDataArray
     )
     {
         var findDic = new Dictionary<string, List<string>>();
@@ -1503,6 +1514,8 @@ public class LteData
         var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(dataTypeArray);
         var fieldGroupDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(fieldGroupArray);
         var copyTitleDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(copyTitleArray);
+
+        var findRankDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(findRankDataArray);
 
         var titleList = copyTitleDic["数据编号"];
 
@@ -1518,6 +1531,7 @@ public class LteData
             {
                 continue;
             }
+
             // 消耗组，第1层寻找
             var inputGroup = copyDic[key][titleList.IndexOf("消耗ID组")];
             var inputArray = inputGroup.Split("#");
@@ -1548,7 +1562,9 @@ public class LteData
                         copyDic,
                         out var findTips,
                         fieldGroupDic,
-                        titleList
+                        titleList,
+                        findRankDic,
+                        dataTypeDic
                     );
                     var findLinks = findLinksGroup.findLinks;
                     var findLinks31 = findLinksGroup.findLinks31;
@@ -1563,14 +1579,19 @@ public class LteData
                             {
                                 findDic.Add(findIdStr, new List<string>());
                                 findDic[findIdStr].Add(findIdStr);
-                                findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("首次出现")]);
-                                findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("唯一代号")]);
+                                findDic[findIdStr]
+                                    .Add(copyDic[findIdStr][titleList.IndexOf("首次出现")]);
+                                findDic[findIdStr]
+                                    .Add(copyDic[findIdStr][titleList.IndexOf("唯一代号")]);
                                 findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("代号")]);
-                                findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("当前包装")]);
-                                findDic[findIdStr].Add("寻-" + copyDic[key][titleList.IndexOf("类型")]);
-                                findDic[findIdStr].Add(copyDic[findIdStr][titleList.IndexOf("备注名称")]);
+                                findDic[findIdStr]
+                                    .Add(copyDic[findIdStr][titleList.IndexOf("当前包装")]);
+                                findDic[findIdStr]
+                                    .Add("寻-" + copyDic[key][titleList.IndexOf("类型")]);
+                                findDic[findIdStr]
+                                    .Add(copyDic[findIdStr][titleList.IndexOf("备注名称")]);
                                 findDic[findIdStr].Add(findTips);
-                                findDic[findIdStr].Add(findLinks + "," + findLinks31 + "{8,9993}");
+                                findDic[findIdStr].Add(findLinks + "," + findLinks31 + ",{8,9993}");
                             }
                         }
                     }
@@ -1657,7 +1678,9 @@ public class LteData
         Dictionary<string, List<string>> baseDic,
         out string findTips,
         Dictionary<string, List<string>> fieldGroupDic,
-        List<string>  titleList
+        List<string> titleList,
+        Dictionary<string, List<string>> findRankDic,
+        Dictionary<string, List<string>> dataTypeDic
     )
     {
         var findLinks = string.Empty;
@@ -1665,185 +1688,515 @@ public class LteData
 
         findTips = string.Empty;
 
+        var findTargetDetailTypeIndex = titleList.IndexOf("寻找细类");
+        var findTargetTypeIndex = titleList.IndexOf("寻找类型");
+
         var findTargetNickName = baseDic[findTargetId][titleList.IndexOf("代号")];
 
         var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName);
 
-        var targetType = baseDic[findTargetId][titleList.IndexOf("类型")];
+        var targetTypeIndex = titleList.IndexOf("类型");
 
-        //1层查找
-        if (findTargetDetailType == string.Empty)
+        var targetType = baseDic[findTargetId][targetTypeIndex];
+
+        if (findRankDic.TryGetValue(targetType, out var findTargetRankList))
         {
-            findTargetDetailType = "未找到细类";
-        }
-        if (findTargetType == "19")
-        {
-            findLinks +=
-                "{" + findTargetType + "," + findTargetDetailType + "," + findTargetId + "},";
-        }
-        else if (findTargetType == "1")
-        {
-            findLinks += "{" + findTargetType + "," + findTargetId + "},";
-            findLinks31 += "{" + 31 + "," + findTargetId + "},";
-        }
-        else
-        {
-            findLinks += "{" + findTargetType + "," + findTargetId + "},";
-        }
+            var testId = "8010010603";
 
-        if (findTaregtfieldLinks != string.Empty)
-        {
-            findLinks += findTaregtfieldLinks + ",";
-        }
-
-        int outPutIdGroupIndex = titleList.IndexOf("产出ID组");
-        // 2层查找
-        List<string> matchedIDsOri = baseDic
-            .Where(kv => kv.Value.Count > outPutIdGroupIndex && kv.Value[outPutIdGroupIndex].Contains(findTargetId))
-            .Select(kv => kv.Key)
-            .ToList();
-
-        //没有直接匹配的，需要继续查找（按照链的规则,要验证类型）
-        List<string> matchedIDsEnd = new();
-        if (targetType.Contains("链"))
-        {
-            var findTargetId01 = findTargetId.Substring(0, findTargetId.Length - 2) + "01";
-            List<string> matchedIDs01 = baseDic
-                .Where(kv => kv.Value.Count > outPutIdGroupIndex && kv.Value[outPutIdGroupIndex].Contains(findTargetId01))
-                .Select(kv => kv.Key)
-                .ToList();
-
-            var findTargetId02 = findTargetId.Substring(0, findTargetId.Length - 2) + "02";
-            List<string> matchedIDs02 = baseDic
-                .Where(kv => kv.Value.Count > outPutIdGroupIndex && kv.Value[outPutIdGroupIndex].Contains(findTargetId02))
-                .Select(kv => kv.Key)
-                .ToList();
-
-            var findTargetId03 = findTargetId.Substring(0, findTargetId.Length - 2) + "03";
-            List<string> matchedIDs03 = baseDic
-                .Where(kv => kv.Value.Count > outPutIdGroupIndex && kv.Value[outPutIdGroupIndex].Contains(findTargetId03))
-                .Select(kv => kv.Key)
-                .ToList();
-
-            matchedIDsEnd.AddRange(matchedIDsOri);
-            matchedIDsEnd.AddRange(matchedIDs01);
-            matchedIDsEnd.AddRange(matchedIDs02);
-            matchedIDsEnd.AddRange(matchedIDs03);
-        }
-
-        //// 按照优先级选择最后一个匹配项
-        //string finalMatchedId = matchedIDsOri.LastOrDefault()
-        //                     ?? matchedIDs03.LastOrDefault()
-        //                     ?? matchedIDs02.LastOrDefault()
-        //                     ?? matchedIDs01.LastOrDefault()
-        //                     ??String.Empty;
-
-
-
-        // 3层查找
-        List<string> matchedIDsOri3 = new();
-
-        if (matchedIDsEnd.Count > 0)
-        {
-            foreach (var findTargetId2 in matchedIDsEnd)
+            if (findTargetId == testId)
             {
-                matchedIDsOri3.AddRange(
-                    baseDic
-                        .Where(kv => kv.Value.Count > outPutIdGroupIndex && kv.Value[outPutIdGroupIndex].Contains(findTargetId2))
-                        .Select(kv => kv.Key)
-                        .ToList()
-                );
+                var abc = "1";
+            }
+
+            // 1层寻找
+            var findRankLinks1 = FindRankLinks(
+                findTargetId,
+                baseDic,
+                titleList,
+                dataTypeDic,
+                findTargetRankList,
+                targetTypeIndex,
+                findTargetDetailTypeIndex,
+                findTargetTypeIndex
+            );
+
+            if(findRankLinks1.Count > 0)
+            {
+                findLinks += LinksBuild(findRankLinks1, fieldGroupDic , baseDic , titleList).findLinks;
+                findLinks31 += LinksBuild(findRankLinks1,null, null, null).findLinks31;
+            }
+
+            // 2层寻找
+            var findRankLinks2 = new List<(string, string, string, string)>();
+            foreach (var rankLinks1 in findRankLinks1)
+            {
+                if (rankLinks1.hasFind != "1")
+                {
+                    var target2Id = rankLinks1.targetId;
+                    if(target2Id == findTargetId)
+                        continue;
+                    var target2Type = baseDic[target2Id][targetTypeIndex];
+                    if (findRankDic.TryGetValue(target2Type, out var findTarget2RankList))
+                    {
+                        var findRankLinksTemp = FindRankLinks(
+                            target2Id,
+                            baseDic,
+                            titleList,
+                            dataTypeDic,
+                            findTarget2RankList,
+                            targetTypeIndex,
+                            findTargetDetailTypeIndex,
+                            findTargetTypeIndex
+                        );
+
+                        findRankLinks2.Union(findRankLinksTemp);
+                    }
+                }
+            }
+
+            if (findRankLinks2.Count > 0)
+            {
+                findLinks += LinksBuild(findRankLinks2, fieldGroupDic, baseDic, titleList).findLinks;
+                findLinks31 += LinksBuild(findRankLinks2, null, null, null).findLinks31;
+            }
+
+            // 寻找界面提示使用最后的id，因为其他id可能没有图片资源
+            var finalMatch = findRankLinks1.LastOrDefault();
+            if (findRankLinks1.Count == 0)
+            {
+                findTips = "{1,\"tip_obstacleItem\",2}";
+            }
+            if (findTargetDetailType == "4")
+            {
+                findTips =
+                    "{3,"
+                    + findTargetId.Substring(0, findTargetId.Length - 2)
+                    + "00,"
+                    + finalMatch.targetId
+                    + "}";
+            }
+            else
+            {
+                findTips = "{1,\"tip_obstacleItem\",1," + finalMatch.targetId + "}";
             }
         }
-        matchedIDsEnd.AddRange(matchedIDsOri3);
-
-        // 寻找字符串格式化
-        List<string> matchedIDs = new HashSet<string>(matchedIDsEnd).ToList();
-
-        // 寻找界面提示使用最后的id，因为其他id可能没有图片资源
-        string finalMatchedId = matchedIDs.LastOrDefault() ?? string.Empty;
-
-        if (matchedIDs.Count == 0)
-        {
-            findTips = "{1,\"tip_obstacleItem\",2}";
-        }
         else
         {
-            //// 针对找自己的情况做出区分
-            //if (findLinks.Contains("{1,"))
-            //{
-            //    findLinks = string.Empty;
-            //}
+            // 传统寻找--无优先级
+            Debug.Print($"【#寻找优先级】表中不存在：{targetType}");
 
-            int itemCount = 0;
-            foreach (var findTargetId3 in matchedIDs)
+            //1层查找
+            if (findTargetDetailType == string.Empty)
             {
-                if (findTargetId3 != string.Empty)
+                findTargetDetailType = "未找到细类";
+            }
+            if (findTargetType == "19")
+            {
+                findLinks +=
+                    "{" + findTargetType + "," + findTargetDetailType + "," + findTargetId + "},";
+            }
+            else if (findTargetType == "1")
+            {
+                findLinks += "{" + findTargetType + "," + findTargetId + "},";
+                findLinks31 += "{" + 31 + "," + findTargetId + "},";
+            }
+            else
+            {
+                findLinks += "{" + findTargetType + "," + findTargetId + "},";
+            }
+
+            if (findTaregtfieldLinks != string.Empty)
+            {
+                findLinks += findTaregtfieldLinks + ",";
+            }
+
+            int outPutIdGroupIndex = titleList.IndexOf("产出ID组");
+            // 2层查找
+            List<string> matchedIDsOri = baseDic
+                .Where(kv =>
+                    kv.Value.Count > outPutIdGroupIndex
+                    && kv.Value[outPutIdGroupIndex].Contains(findTargetId)
+                )
+                .Select(kv => kv.Key)
+                .ToList();
+
+            //没有直接匹配的，需要继续查找（按照链的规则,要验证类型）
+            List<string> matchedIDsEnd = new();
+            if (targetType.Contains("链"))
+            {
+                var findTargetId01 = findTargetId.Substring(0, findTargetId.Length - 2) + "01";
+                List<string> matchedIDs01 = baseDic
+                    .Where(kv =>
+                        kv.Value.Count > outPutIdGroupIndex
+                        && kv.Value[outPutIdGroupIndex].Contains(findTargetId01)
+                    )
+                    .Select(kv => kv.Key)
+                    .ToList();
+
+                var findTargetId02 = findTargetId.Substring(0, findTargetId.Length - 2) + "02";
+                List<string> matchedIDs02 = baseDic
+                    .Where(kv =>
+                        kv.Value.Count > outPutIdGroupIndex
+                        && kv.Value[outPutIdGroupIndex].Contains(findTargetId02)
+                    )
+                    .Select(kv => kv.Key)
+                    .ToList();
+
+                var findTargetId03 = findTargetId.Substring(0, findTargetId.Length - 2) + "03";
+                List<string> matchedIDs03 = baseDic
+                    .Where(kv =>
+                        kv.Value.Count > outPutIdGroupIndex
+                        && kv.Value[outPutIdGroupIndex].Contains(findTargetId03)
+                    )
+                    .Select(kv => kv.Key)
+                    .ToList();
+
+                matchedIDsEnd.AddRange(matchedIDsOri);
+                matchedIDsEnd.AddRange(matchedIDs01);
+                matchedIDsEnd.AddRange(matchedIDs02);
+                matchedIDsEnd.AddRange(matchedIDs03);
+            }
+
+            //// 按照优先级选择最后一个匹配项
+            //string finalMatchedId = matchedIDsOri.LastOrDefault()
+            //                     ?? matchedIDs03.LastOrDefault()
+            //                     ?? matchedIDs02.LastOrDefault()
+            //                     ?? matchedIDs01.LastOrDefault()
+            //                     ??String.Empty;
+
+
+
+            // 3层查找
+            List<string> matchedIDsOri3 = new();
+
+            if (matchedIDsEnd.Count > 0)
+            {
+                foreach (var findTargetId2 in matchedIDsEnd)
                 {
-                    var findTargetType3 = baseDic[findTargetId3][titleList.IndexOf("寻找类型")];
-                    var findTargetDetailType3 = baseDic[findTargetId3][titleList.IndexOf("寻找细类")];
+                    matchedIDsOri3.AddRange(
+                        baseDic
+                            .Where(kv =>
+                                kv.Value.Count > outPutIdGroupIndex
+                                && kv.Value[outPutIdGroupIndex].Contains(findTargetId2)
+                            )
+                            .Select(kv => kv.Key)
+                            .ToList()
+                    );
+                }
+            }
+            matchedIDsEnd.AddRange(matchedIDsOri3);
 
-                    var findTargetNickName3 = baseDic[findTargetId3][titleList.IndexOf("代号")];
+            // 寻找字符串格式化
+            List<string> matchedIDs = new HashSet<string>(matchedIDsEnd).ToList();
 
-                    var findTaregtfieldLinks3 = FieldGroupLinks(fieldGroupDic, findTargetNickName3);
+            // 寻找界面提示使用最后的id，因为其他id可能没有图片资源
+            string finalMatchedId = matchedIDs.LastOrDefault() ?? string.Empty;
 
-                    if (findTargetType3 != string.Empty)
+            if (matchedIDs.Count == 0)
+            {
+                findTips = "{1,\"tip_obstacleItem\",2}";
+            }
+            else
+            {
+                //// 针对找自己的情况做出区分
+                //if (findLinks.Contains("{1,"))
+                //{
+                //    findLinks = string.Empty;
+                //}
+
+                int itemCount = 0;
+                foreach (var findTargetId3 in matchedIDs)
+                {
+                    if (findTargetId3 != string.Empty)
                     {
-                        if (findTargetDetailType3 == string.Empty)
-                        {
-                            findTargetDetailType3 = "未找到细类";
-                        }
-                        if (findTargetType3 == "19")
-                        {
-                            findLinks +=
-                                "{"
-                                + findTargetType3
-                                + ","
-                                + findTargetDetailType3
-                                + ","
-                                + findTargetId3
-                                + "},";
-                        }
-                        else if (findTargetType3 == "1")
-                        {
-                            findLinks += "{" + findTargetType3 + "," + findTargetId3 + "},";
-                            findLinks31 += "{" + 31 + "," + findTargetId3 + "},";
-                        }
-                        else
-                        {
-                            findLinks += "{" + findTargetType3 + "," + findTargetId3 + "},";
-                        }
+                        var findTargetType3 = baseDic[findTargetId3][titleList.IndexOf("寻找类型")];
+                        var findTargetDetailType3 = baseDic[findTargetId3][
+                            titleList.IndexOf("寻找细类")
+                        ];
 
-                        if (findTaregtfieldLinks3 != string.Empty)
-                        {
-                            findLinks += findTaregtfieldLinks3 + ",";
-                        }
+                        var findTargetNickName3 = baseDic[findTargetId3][titleList.IndexOf("代号")];
 
-                        if (itemCount == 0)
+                        var findTaregtfieldLinks3 = FieldGroupLinks(
+                            fieldGroupDic,
+                            findTargetNickName3
+                        );
+
+                        if (findTargetType3 != string.Empty)
                         {
-                            if (findTargetDetailType == "4")
+                            if (findTargetDetailType3 == string.Empty)
                             {
-                                findTips =
-                                    "{3,"
-                                    + findTargetId.Substring(0, findTargetId.Length - 2)
-                                    + "00,"
-                                    + finalMatchedId
-                                    + "}";
+                                findTargetDetailType3 = "未找到细类";
+                            }
+                            if (findTargetType3 == "19")
+                            {
+                                findLinks +=
+                                    "{"
+                                    + findTargetType3
+                                    + ","
+                                    + findTargetDetailType3
+                                    + ","
+                                    + findTargetId3
+                                    + "},";
+                            }
+                            else if (findTargetType3 == "1")
+                            {
+                                findLinks += "{" + findTargetType3 + "," + findTargetId3 + "},";
+                                findLinks31 += "{" + 31 + "," + findTargetId3 + "},";
                             }
                             else
                             {
-                                findTips = "{1,\"tip_obstacleItem\",1," + finalMatchedId + "}";
+                                findLinks += "{" + findTargetType3 + "," + findTargetId3 + "},";
+                            }
+
+                            if (findTaregtfieldLinks3 != string.Empty)
+                            {
+                                findLinks += findTaregtfieldLinks3 + ",";
+                            }
+
+                            if (itemCount == 0)
+                            {
+                                if (findTargetDetailType == "4")
+                                {
+                                    findTips =
+                                        "{3,"
+                                        + findTargetId.Substring(0, findTargetId.Length - 2)
+                                        + "00,"
+                                        + finalMatchedId
+                                        + "}";
+                                }
+                                else
+                                {
+                                    findTips = "{1,\"tip_obstacleItem\",1," + finalMatchedId + "}";
+                                }
+                            }
+                        }
+                    }
+                    itemCount++;
+                }
+            }
+        }
+        // 去重
+        findLinks = RemoveDuplicateBracketsLinqOrdered(findLinks);
+
+        findLinks31 = RemoveDuplicateBracketsLinqOrdered(findLinks31);
+
+        return (findLinks, findLinks31);
+    }
+
+    private static (string findLinks, string findLinks31) LinksBuild(
+        List<(
+            string targetId,
+            string targetFindType,
+            string targetFindDetailType,
+            string hasFind
+        )> findRankLinks,
+        Dictionary<string, List<string>> fieldGroupDic ,
+        Dictionary<string, List<string>> baseDic ,
+        List<string> titleList
+        )
+    {
+        var findLinks = string.Empty;
+        var findLinks31 = string.Empty;
+
+        foreach (var rankLinks in findRankLinks)
+        {
+            if (rankLinks.targetFindType == "1")
+            {
+                findLinks += "{" + rankLinks.targetFindType + "," + rankLinks.targetId + "},";
+                findLinks31 += "{31," + rankLinks.targetId + "},";
+            }
+            else
+            {
+                findLinks +=
+                    "{"
+                    + rankLinks.targetFindType
+                    + ","
+                    + rankLinks.targetFindDetailType
+                    + ","
+                    + rankLinks.targetId
+                    + "},";
+            }
+
+            if (fieldGroupDic != null)
+            {
+                var findTargetNickName = baseDic[rankLinks.targetId][titleList.IndexOf("代号")];
+
+                var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName);
+
+                if (findTaregtfieldLinks != string.Empty)
+                    findLinks += findTaregtfieldLinks + ",";
+            }
+        }
+
+        return (findLinks, findLinks31);
+    }
+
+    private static List<(
+        string targetId,
+        string targetFindType,
+        string targetFindDetailType,
+        string hasFind
+    )> FindRankLinks(
+        string findTargetId,
+        Dictionary<string, List<string>> baseDic,
+        List<string> titleList,
+        Dictionary<string, List<string>> dataTypeDic,
+        List<string> findTargetRankList,
+        int targetTypeIndex,
+        int findTargetDetailTypeIndex,
+        int findTargetTypeIndex
+    )
+    {
+        var findItemListTuple = new List<(string, string, string, string)>();
+
+        var targetType = baseDic[findTargetId][targetTypeIndex];
+
+        // 优先级寻找
+        foreach (var findTargetRank in findTargetRankList.Skip(1))
+        {
+            if (findTargetRank == null)
+                continue;
+
+            var rankParts = findTargetRank.Split('#');
+
+            var findRankType = rankParts[0];
+            var findRankParams1 = string.Empty;
+            if (rankParts.Length >= 2)
+            {
+                findRankParams1 = rankParts[1];
+            }
+
+            int outPutIdGroupIndex = titleList.IndexOf("产出ID组");
+
+            List<string> targetIdGroup = null;
+
+            if(findRankType != "Any")
+            {
+                targetIdGroup = baseDic
+                .Where(kv =>
+                    kv.Value.Count > outPutIdGroupIndex
+                    && kv.Value[outPutIdGroupIndex].Contains(findTargetId)
+                    && kv.Value[targetTypeIndex] == findRankType
+                )
+                .Select(kv => kv.Key)
+                .ToList();
+            }
+            else
+            {
+                targetIdGroup = baseDic
+                              .Where(kv =>
+                                  kv.Value.Count > outPutIdGroupIndex
+                                  && kv.Value[outPutIdGroupIndex].Contains(findTargetId)
+                              )
+                              .Select(kv => kv.Key)
+                              .ToList();
+            }
+            // 来源：非计算类型（查询）
+            if (targetIdGroup.Count > 0)
+            {
+                foreach (var targetIdSource in targetIdGroup)
+                {
+                    var targetId = targetIdSource;
+                    if (findRankParams1 != string.Empty)
+                    {
+                        if (findRankType.Contains("地标"))
+                        {
+                            var targetLevel = baseDic[targetIdSource][
+                                titleList.IndexOf(findRankParams1)
+                            ];
+                            targetId = (
+                                Convert.ToDouble(targetId) - Convert.ToDouble(targetLevel) + 1
+                            ).ToString(CultureInfo.InvariantCulture);
+                        }
+                    }
+                    var targetFindType = baseDic[targetId][findTargetTypeIndex];
+                    var targetFindDetailType = baseDic[targetId][findTargetDetailTypeIndex];
+                    var targetTypeNew = baseDic[targetId][targetTypeIndex];
+                    var hasFind = dataTypeDic[targetTypeNew][4];
+
+                    findItemListTuple.Add(
+                        (targetId, targetFindType, targetFindDetailType, hasFind)
+                    );
+                }
+            }
+            // 来源：计算类型
+            else
+            {
+                var targetId = string.Empty;
+
+                // 来源：链-建类型需要计算ID
+                if (findRankType == "链-建")
+                {
+                    targetId = (Convert.ToDouble(findTargetId) + 10).ToString(
+                        CultureInfo.CurrentCulture
+                    );
+                    if (!baseDic.ContainsKey(targetId))
+                        targetId = (Convert.ToDouble(findTargetId) + 70).ToString(
+                            CultureInfo.CurrentCulture
+                        );
+                    if (!baseDic.ContainsKey(targetId))
+                    {
+                        targetId = string.Empty;
+                    }
+                    else
+                    {
+                        var targetTypeNew = baseDic[targetId][targetTypeIndex];
+                        if(!targetTypeNew.Contains("链"))
+                        {
+                            targetId = string.Empty;
+                        }
+                    }
+                }
+                // 来源：链-网需要寻找上1个网Id或不变
+                else if (findRankType == "链-网")
+                {
+                    targetId = (
+                        Convert.ToDouble(findTargetId) + 30 + Convert.ToDouble(findRankParams1)
+                    ).ToString(CultureInfo.CurrentCulture);
+                    if (!baseDic.ContainsKey(targetId))
+                    {
+                        targetId = (
+                            Convert.ToDouble(findTargetId) + 60 + Convert.ToDouble(findRankParams1)
+                        ).ToString(CultureInfo.CurrentCulture);
+                        if (!baseDic.ContainsKey(targetId))
+                            targetId = (
+                                Convert.ToDouble(findTargetId)
+                                + 80
+                                + Convert.ToDouble(findRankParams1)
+                            ).ToString(CultureInfo.CurrentCulture);
+                        if (!baseDic.ContainsKey(targetId))
+                        {
+                            targetId = string.Empty;
+                        }
+                        else
+                        {
+                            var targetTypeNew = baseDic[targetId][targetTypeIndex];
+                            if (!targetTypeNew.Contains("链"))
+                            {
+                                targetId = string.Empty;
                             }
                         }
                     }
                 }
-                itemCount++;
+                else if (findRankType == targetType)
+                {
+                    targetId = findTargetId;
+                }
+
+                if (targetId != string.Empty)
+                {
+                    var targetFindType = baseDic[targetId][findTargetTypeIndex];
+                    var targetFindDetailType = baseDic[targetId][findTargetDetailTypeIndex];
+                    var targetTypeNew = baseDic[targetId][targetTypeIndex];
+                    var hasFind = dataTypeDic[targetTypeNew][4];
+
+                    findItemListTuple.Add(
+                        (targetId, targetFindType, targetFindDetailType, hasFind)
+                    );
+                }
             }
         }
-
-        // 去重
-        findLinks = RemoveDuplicateBracketsLinqOrdered(findLinks);
-        return (findLinks, findLinks31);
+        return findItemListTuple;
     }
 
     public static string RemoveDuplicateBracketsLinqOrdered(string input)
@@ -1931,7 +2284,6 @@ public class LteData
             false,
             false
         );
-        
 
         var taskList = PubMetToExcel.GetExcelListObjects("LTE【任务】", "LTE【任务】");
         if (taskList == null)
@@ -1963,16 +2315,27 @@ public class LteData
             "#【A-LTE】数值大纲.xlsx",
             "#各类枚举"
         );
-        object[,] dataTypeArray = listObjectsDic["任务类型"];
+        object[,] taskDataTypeArray = listObjectsDic["任务类型"];
+        object[,] dataTypeArray = listObjectsDic["数据类型"];
+
+        // 寻找优先级数据
+        var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#寻找优先级"
+        );
+        var findRankDataArray = findRanklistObjectsDic["寻找方案"];
 
         //任务数据整理
         var copyTaskData = TaskData(
             copyTaskArray,
-            dataTypeArray,
+            taskDataTypeArray,
             baseArray,
             activtiyId,
             fieldGroupArray,
-            baseTitleArray
+            baseTitleArray,
+            findRankDataArray,
+            dataTypeArray
         );
         copyTaskArray = copyTaskData.taskArray;
         var errorTypeList = copyTaskData.errorTypeList;
@@ -2028,7 +2391,6 @@ public class LteData
             false,
             false
         );
-       
 
         var taskList = PubMetToExcel.GetExcelListObjects("LTE【任务】", "LTE【任务】");
         if (taskList == null)
@@ -2060,16 +2422,27 @@ public class LteData
             "#【A-LTE】数值大纲.xlsx",
             "#各类枚举"
         );
-        object[,] dataTypeArray = listObjectsDic["任务类型"];
+        object[,] taskDataTypeArray = listObjectsDic["任务类型"];
+        object[,] dataTypeArray = listObjectsDic["数据类型"];
+
+        // 寻找优先级数据
+        var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#寻找优先级"
+        );
+        var findRankDataArray = findRanklistObjectsDic["寻找方案"];
 
         //任务数据整理
         var copyTaskData = TaskData(
             copyTaskArray,
-            dataTypeArray,
+            taskDataTypeArray,
             baseArray,
             activtiyId,
             fieldGroupArray,
-            baseTitleArray
+            baseTitleArray,
+            findRankDataArray,
+            dataTypeArray
         );
         copyTaskArray = copyTaskData.taskArray;
         var errorTypeList = copyTaskData.errorTypeList;
@@ -2099,14 +2472,19 @@ public class LteData
         object[,] baseArray,
         double activtiyId,
         object[,] fieldGroupArray,
-        object[,] baseTitleArray
+        object[,] baseTitleArray,
+        object[,] findRankDataArray,
+        object[,] dataTypeArray
     )
     {
         var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseArray);
         var taskDataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(taskDataTypeArray);
         var fieldGroupDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(fieldGroupArray);
+        var findRankDataDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(findRankDataArray);
 
         var baseTitleDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseTitleArray);
+
+        var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(dataTypeArray);
 
         var titleList = baseTitleDic["数据编号"];
 
@@ -2215,7 +2593,9 @@ public class LteData
                     baseDic,
                     out _,
                     fieldGroupDic,
-                    titleList
+                    titleList,
+                    findRankDataDic,
+                    dataTypeDic
                 );
                 var findLinks = findLinksGroup.findLinks;
                 var findLinks31 = findLinksGroup.findLinks31;
@@ -2283,7 +2663,9 @@ public class LteData
                     baseDic,
                     out _,
                     fieldGroupDic,
-                    titleList
+                    titleList,
+                    findRankDataDic,
+                    dataTypeDic
                 );
                 var findSubLinks = findSubLinksGroup.findLinks;
                 var findSubLinks31 = findSubLinksGroup.findLinks31;
@@ -2550,16 +2932,28 @@ public class LteData
             "#【A-LTE】数值大纲.xlsx",
             "#各类枚举"
         );
-        object[,] dataTypeArray = listObjectsDic["地组类型"];
+
+        object[,] fieldDataTypeArray = listObjectsDic["地组类型"];
+        object[,] dataTypeArray = listObjectsDic["数据类型"];
+
+        // 寻找优先级数据
+        var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#寻找优先级"
+        );
+        var findRankDataArray = findRanklistObjectsDic["寻找方案"];
 
         //地组数据整理
         var copyFiledData = FiledData(
             copyFieldArray,
-            dataTypeArray,
+            fieldDataTypeArray,
             baseArray,
             activtiyId,
             fieldGroupArray,
-            baseTitleArray
+            baseTitleArray,
+            findRankDataArray,
+            dataTypeArray
         );
         copyFieldArray = copyFiledData.fieldArray;
         var errorTypeList = copyFiledData.errorTypeList;
@@ -2653,16 +3047,27 @@ public class LteData
             "#【A-LTE】数值大纲.xlsx",
             "#各类枚举"
         );
-        object[,] dataTypeArray = listObjectsDic["地组类型"];
+        object[,] fieldDataTypeArray = listObjectsDic["地组类型"];
+        object[,] dataTypeArray = listObjectsDic["数据类型"];
+
+        // 寻找优先级数据
+        var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#寻找优先级"
+        );
+        var findRankDataArray = findRanklistObjectsDic["寻找方案"];
 
         //任务数据整理
         var copyFiledData = FiledData(
             copyFieldArray,
-            dataTypeArray,
+            fieldDataTypeArray,
             baseArray,
             activtiyId,
             fieldGroupArray,
-            baseTitleArray
+            baseTitleArray,
+            findRankDataArray,
+            dataTypeArray
         );
         copyFieldArray = copyFiledData.fieldArray;
         var errorTypeList = copyFiledData.errorTypeList;
@@ -2692,14 +3097,19 @@ public class LteData
         object[,] baseArray,
         double activtiyId,
         object[,] fieldGroupArray,
-        object[,] baseTitleArray
+        object[,] baseTitleArray,
+        object[,] findRankDataArray,
+        object[,] dataTypeArray
     )
     {
         var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseArray);
         var fieldDataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(filedDataTypeArray);
         var fieldGroupDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(fieldGroupArray);
-        
+        var findRankDataDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(findRankDataArray);
+
         var baseTitleDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseTitleArray);
+
+        var dataTypeDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(dataTypeArray);
 
         var titleList = baseTitleDic["数据编号"];
 
@@ -2790,7 +3200,9 @@ public class LteData
 
                 //目标寻找关系
                 var findTargetType = baseDic[fieldConditonTargetId][titleList.IndexOf("寻找类型")];
-                var findTargetDetailType = baseDic[fieldConditonTargetId][titleList.IndexOf("寻找细类")];
+                var findTargetDetailType = baseDic[fieldConditonTargetId][
+                    titleList.IndexOf("寻找细类")
+                ];
 
                 var findLinksGroup = FindLinks(
                     findTargetDetailType,
@@ -2799,7 +3211,9 @@ public class LteData
                     baseDic,
                     out _,
                     fieldGroupDic,
-                    titleList
+                    titleList,
+                    findRankDataDic,
+                    dataTypeDic
                 );
                 findLinks = findLinksGroup.findLinks;
                 var findLinks31 = findLinksGroup.findLinks31;
@@ -2844,7 +3258,9 @@ public class LteData
                     baseDic,
                     out _,
                     fieldGroupDic,
-                    titleList
+                    titleList,
+                    findRankDataDic,
+                    dataTypeDic
                 );
                 findLinks2 = findLinks2Group.findLinks;
                 var findLinks231 = findLinks2Group.findLinks31;

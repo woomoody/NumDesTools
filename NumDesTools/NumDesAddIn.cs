@@ -1180,7 +1180,19 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             // 取消隐藏
             var isModified = SvnGitTools.IsFileModified(wkFullPath);
-            if (isModified)
+            bool isTargetWk = true;
+            if(wb.Name.Contains("配置"))
+            {
+                isTargetWk = false;
+            }
+            else
+            {
+                if (wb.Name.Contains("数值"))
+                {
+                    isTargetWk = false;
+                }
+            }
+            if (isModified && isTargetWk)
                 foreach (Worksheet sheet in workBook.Worksheets)
                 {
                     sheet.Rows.Hidden = false;
@@ -2579,6 +2591,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //    converter.ConvertMultipleJsonToExcel(jsonFile);
         //}
         var wk = App.ActiveWorkbook;
+        // ReSharper disable once UnusedVariable
         var path = wk.FullName;
    
 
