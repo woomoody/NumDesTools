@@ -1786,7 +1786,8 @@ public static class PubMetToExcelFunc
                 if (cellValue != null)
                 {
                     // int数据判断
-                    if (typeCell.Contains("int"))
+                    var types = typeCell.Split('=');
+                    if (types[0] == "int" || types[0] == "int[]")
                     {
                         var cellValueSplit = cellValue
                             .Split(',', StringSplitOptions.RemoveEmptyEntries)
