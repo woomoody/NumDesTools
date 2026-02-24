@@ -18,6 +18,8 @@ namespace NumDesTools.UI
             List<string> charactersToCheck = [];
             charactersToCheck.AddRange(normalCharactersCheck);
             charactersToCheck.AddRange(specialCharactersCheck);
+            // 浮点数的点高亮
+            charactersToCheck.AddRange(new List<string> { "." });
 
             if (value is string text)
             {

@@ -1,14 +1,14 @@
-﻿using MiniExcelLibs;
+﻿using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using MiniExcelLibs;
 using NLua;
 using NumDesTools.Config;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
 using Clipboard = System.Windows.Forms.Clipboard;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
@@ -1785,6 +1785,42 @@ public static class PubMetToExcelFunc
                 var cellValue = row[col]?.ToString();
                 if (cellValue != null)
                 {
+                    // int数据判断
+                    if (typeCell.Contains("int"))
+                    {
+                        var cellValueSplit = cellValue
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s =>
+                            {
+                                var match = Regex.Match(s, @"\d+(?:\.\d+)?");
+                                return match.Success ? match.Value : null;
+                            })
+                            .Where(s => !string.IsNullOrEmpty(s))
+                            .ToList();
+
+                        foreach (var cellSplit in cellValueSplit)
+                        {
+                            // 尝试解析为浮点数，判断是否为整数
+                            if (double.TryParse(cellSplit, out double cellSplitDouble))
+                            {
+                                // 检查是否为整数（浮点数的小数部分为0）
+                                if (cellSplitDouble % 1 != 0)
+                                {
+                                    sourceData.Add(
+                                        (
+                                            cellValue,
+                                            rowIndex + 1,
+                                            colIndex + 1,
+                                            sheetName,
+                                            $"【{typeCell}】格式错误"
+                                        )
+                                    );
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    // 其他非法字符
                     if (
                         normalCharactersCheck.Any(c => cellValue.Contains(c))
                         && !typeCell.Contains("string")
@@ -2477,7 +2513,7 @@ public static class PubMetToExcelFunc
 
                         // 获取当前活动工作表
                         var activeSheetIndex = wk.View.ActiveTab;
-                        var activeSheet = wk.Worksheets[activeSheetIndex + 1]; 
+                        var activeSheet = wk.Worksheets[activeSheetIndex + 1];
 
                         var isWrite = false;
 
@@ -2486,7 +2522,7 @@ public static class PubMetToExcelFunc
                             var sheet = wk.Worksheets[sheetIndex];
                             if (sheet.Name.Contains("#"))
                                 continue;
-                            if( sheet.Name == "Chart1")
+                            if (sheet.Name == "Chart1")
                             {
                                 //删除多余列
                                 targetList.Add((file, sheet.Name + "：非法表", 2, 1));
@@ -2507,7 +2543,7 @@ public static class PubMetToExcelFunc
                                 var cellValue = sheet.Cells[2, col].Value;
                                 if (
                                     ReferenceEquals(cellValue, "")
-                                    || ReferenceEquals(cellValue, " ") 
+                                    || ReferenceEquals(cellValue, " ")
                                 )
                                 {
                                     Debug.Print($"{file}:[{sheet.Name}]冗余列{col}/{colMax}");
@@ -2517,7 +2553,6 @@ public static class PubMetToExcelFunc
                                     sheet.DeleteColumn(col);
 
                                     isWrite = true;
-
                                 }
 
                                 // 隐藏列检测
@@ -2525,20 +2560,19 @@ public static class PubMetToExcelFunc
                                 if (colObj.Hidden)
                                 {
                                     Debug.Print($"{file}:[{sheet.Name}]隐藏列{col}/{colMax}");
-                                    
+
                                     targetList.Add((file, sheet.Name + "：隐藏列", 2, col));
 
                                     colObj.Hidden = false;
 
                                     isWrite = true;
                                 }
-                                    
                             }
 
                             // 整理格式
-                            if(isWrite)
+                            if (isWrite)
                             {
-                                var range =  sheet.Cells[sheet.Dimension.Address];
+                                var range = sheet.Cells[sheet.Dimension.Address];
                                 // 设置字体格式
                                 range.Style.Font.Name = "微软雅黑";
                                 range.Style.Font.Size = 10;
@@ -2552,14 +2586,12 @@ public static class PubMetToExcelFunc
                                 // 检测是否有多个Sheet被选中
                                 sheet.View.TabSelected = false;
                             }
-
                         }
-                        if(isWrite)
+                        if (isWrite)
                         {
                             activeSheet.View.TabSelected = true;
                             package.Save();
                         }
-                        
                     }
                     catch
                     {
