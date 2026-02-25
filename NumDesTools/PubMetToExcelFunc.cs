@@ -1785,38 +1785,42 @@ public static class PubMetToExcelFunc
                 var cellValue = row[col]?.ToString();
                 if (cellValue != null)
                 {
-                    // int数据判断
-                    var types = typeCell.Split('=');
-                    if (types[0] == "int" || types[0] == "int[]")
+                    // 针对特殊表
+                    if (sheetName == "RandomAwardModelData")
                     {
-                        var cellValueSplit = cellValue
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                            .Select(s =>
-                            {
-                                var match = Regex.Match(s, @"\d+(?:\.\d+)?");
-                                return match.Success ? match.Value : null;
-                            })
-                            .Where(s => !string.IsNullOrEmpty(s))
-                            .ToList();
-
-                        foreach (var cellSplit in cellValueSplit)
+                        // int数据判断
+                        var types = typeCell.Split('=');
+                        if (types[0] == "int" || types[0] == "int[]")
                         {
-                            // 尝试解析为浮点数，判断是否为整数
-                            if (double.TryParse(cellSplit, out double cellSplitDouble))
-                            {
-                                // 检查是否为整数（浮点数的小数部分为0）
-                                if (cellSplitDouble % 1 != 0)
+                            var cellValueSplit = cellValue
+                                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(s =>
                                 {
-                                    sourceData.Add(
-                                        (
-                                            cellValue,
-                                            rowIndex + 1,
-                                            colIndex + 1,
-                                            sheetName,
-                                            $"【{typeCell}】格式错误"
-                                        )
-                                    );
-                                    break;
+                                    var match = Regex.Match(s, @"\d+(?:\.\d+)?");
+                                    return match.Success ? match.Value : null;
+                                })
+                                .Where(s => !string.IsNullOrEmpty(s))
+                                .ToList();
+
+                            foreach (var cellSplit in cellValueSplit)
+                            {
+                                // 尝试解析为浮点数，判断是否为整数
+                                if (double.TryParse(cellSplit, out double cellSplitDouble))
+                                {
+                                    // 检查是否为整数（浮点数的小数部分为0）
+                                    if (cellSplitDouble % 1 != 0)
+                                    {
+                                        sourceData.Add(
+                                            (
+                                                cellValue,
+                                                rowIndex + 1,
+                                                colIndex + 1,
+                                                sheetName,
+                                                $"【{typeCell}】格式错误"
+                                            )
+                                        );
+                                        break;
+                                    }
                                 }
                             }
                         }
