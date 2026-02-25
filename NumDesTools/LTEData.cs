@@ -2151,7 +2151,7 @@ public class LteData
                 else if (findRankType == "链-网")
                 {
                     targetId = (
-                        Convert.ToDouble(findTargetId) + 30 * Convert.ToDouble(findRankParams1)
+                        Convert.ToDouble(findTargetId) + 30 + Convert.ToDouble(findRankParams1)
                     ).ToString(CultureInfo.CurrentCulture);
 
                     Debug.Print($"谁找1：{findTargetId},找谁：{targetId}");
@@ -2159,7 +2159,7 @@ public class LteData
                     if (!baseDic.ContainsKey(targetId))
                     {
                         targetId = (
-                            Convert.ToDouble(findTargetId) + 60 * Convert.ToDouble(findRankParams1)
+                            Convert.ToDouble(findTargetId) + 60 + Convert.ToDouble(findRankParams1)
                         ).ToString(CultureInfo.CurrentCulture);
 
                         Debug.Print($"谁找2：{findTargetId},找谁：{targetId}");
@@ -2167,7 +2167,7 @@ public class LteData
                         if (!baseDic.ContainsKey(targetId))
                             targetId = (
                                 Convert.ToDouble(findTargetId)
-                                * 80
+                                + 80
                                 + Convert.ToDouble(findRankParams1)
                             ).ToString(CultureInfo.CurrentCulture);
 
