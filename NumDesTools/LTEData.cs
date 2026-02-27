@@ -1391,57 +1391,63 @@ public class LteData
                 countNum++;
             }
 
-            //如果没有消耗ID组则尝试查找谁消耗该ID
+            //如果没有消耗ID组则尝试查找谁消耗该ID(只针对确定需要寻找的物品）
             //用来建立道具关系,此时组成的消耗组，只是为了建立寻找关系
+
             if (consumeIdList.Count == 0)
             {
-                //该ID的代号和唯一代号
-                var orginNum = baseDic[key][num];
-                var orginOnlyNum = baseDic[key][onlyNum];
-                string matchId = baseDic
-                    .FirstOrDefault(kv =>
-                        kv.Value.Count > 17
-                        && kv.Value[3].Split("-")[0] + kv.Value[11] == orginOnlyNum
-                    )
-                    .Key;
-                if (matchId == null)
+                // 该ID的类型是否需要寻找（针对修复物）
+                var isFind = dataTypeDic[itemType][4]?.ToString();
+                if (isFind == "1" && itemType.Contains("修"))
                 {
-                    matchId = baseDic
+                    // 该ID的代号和唯一代号
+                    var orginNum = baseDic[key][num];
+                    var orginOnlyNum = baseDic[key][onlyNum];
+                    string matchId = baseDic
                         .FirstOrDefault(kv =>
                             kv.Value.Count > 17
-                            && kv.Value[3].Split("-")[0] + kv.Value[13] == orginOnlyNum
+                            && kv.Value[3].Split("-")[0] + kv.Value[11] == orginOnlyNum
                         )
                         .Key;
-                }
-                if (matchId == null)
-                {
-                    matchId = baseDic
-                        .FirstOrDefault(kv =>
-                            kv.Value.Count > 17
-                            && kv.Value[3].Split("-")[0] + kv.Value[15] == orginOnlyNum
-                        )
-                        .Key;
-                }
-                if (matchId == null)
-                {
-                    matchId = baseDic
-                        .FirstOrDefault(kv =>
-                            kv.Value.Count > 17
-                            && kv.Value[3].Split("-")[0] + kv.Value[17] == orginOnlyNum
-                        )
-                        .Key;
-                }
-                //唯一代号找不到尝试寻找代号
-                if (matchId == null)
-                {
-                    matchId = baseDic
-                        .FirstOrDefault(kv => kv.Value.Count > 11 && kv.Value[11] == orginNum)
-                        .Key;
-                }
-                if (matchId != null)
-                {
-                    consumeIdList.Add(matchId);
-                    consumeCountList.Add("1");
+                    if (matchId == null)
+                    {
+                        matchId = baseDic
+                            .FirstOrDefault(kv =>
+                                kv.Value.Count > 17
+                                && kv.Value[3].Split("-")[0] + kv.Value[13] == orginOnlyNum
+                            )
+                            .Key;
+                    }
+                    if (matchId == null)
+                    {
+                        matchId = baseDic
+                            .FirstOrDefault(kv =>
+                                kv.Value.Count > 17
+                                && kv.Value[3].Split("-")[0] + kv.Value[15] == orginOnlyNum
+                            )
+                            .Key;
+                    }
+                    if (matchId == null)
+                    {
+                        matchId = baseDic
+                            .FirstOrDefault(kv =>
+                                kv.Value.Count > 17
+                                && kv.Value[3].Split("-")[0] + kv.Value[17] == orginOnlyNum
+                            )
+                            .Key;
+                    }
+                    //唯一代号找不到尝试寻找代号
+                    if (matchId == null)
+                    {
+                        matchId = baseDic
+                            .FirstOrDefault(kv => kv.Value.Count > 11 && kv.Value[11] == orginNum)
+                            .Key;
+                    }
+                    if (matchId != null)
+                    {
+                        consumeIdList.Add(matchId);
+                        consumeCountList.Add("1");
+                    }
                 }
             }
 
@@ -1591,7 +1597,7 @@ public class LteData
                                 findDic[findIdStr]
                                     .Add(copyDic[findIdStr][titleList.IndexOf("备注名称")]);
                                 findDic[findIdStr].Add(findTips);
-                                findDic[findIdStr].Add(findLinks + "," + findLinks31 + ",{8,9993}");
+                                findDic[findIdStr].Add(findLinks  + findLinks31 + "{8,9993}");
                             }
                         }
                     }
@@ -1701,13 +1707,6 @@ public class LteData
 
         if (findRankDic.TryGetValue(targetType, out var findTargetRankList))
         {
-            var testId = "8010010603";
-
-            if (findTargetId == testId)
-            {
-                var abc = "1";
-            }
-
             // 1层寻找
             var findRankLinks1 = FindRankLinks(
                 findTargetId,
@@ -1720,10 +1719,15 @@ public class LteData
                 findTargetTypeIndex
             );
 
-            if(findRankLinks1.Count > 0)
+            if (findRankLinks1.Count > 0)
             {
-                findLinks += LinksBuild(findRankLinks1, fieldGroupDic , baseDic , titleList).findLinks;
-                findLinks31 += LinksBuild(findRankLinks1,null, null, null).findLinks31;
+                findLinks += LinksBuild(
+                    findRankLinks1,
+                    fieldGroupDic,
+                    baseDic,
+                    titleList
+                ).findLinks;
+                findLinks31 += LinksBuild(findRankLinks1, null, null, null).findLinks31;
             }
 
             // 2层寻找
@@ -1733,7 +1737,7 @@ public class LteData
                 if (rankLinks1.hasFind != "1")
                 {
                     var target2Id = rankLinks1.targetId;
-                    if(target2Id == findTargetId)
+                    if (target2Id == findTargetId)
                         continue;
                     var target2Type = baseDic[target2Id][targetTypeIndex];
                     if (findRankDic.TryGetValue(target2Type, out var findTarget2RankList))
@@ -1756,7 +1760,12 @@ public class LteData
 
             if (findRankLinks2.Count > 0)
             {
-                findLinks += LinksBuild(findRankLinks2, fieldGroupDic, baseDic, titleList).findLinks;
+                findLinks += LinksBuild(
+                    findRankLinks2,
+                    fieldGroupDic,
+                    baseDic,
+                    titleList
+                ).findLinks;
                 findLinks31 += LinksBuild(findRankLinks2, null, null, null).findLinks31;
             }
 
@@ -1807,7 +1816,7 @@ public class LteData
 
             if (findTaregtfieldLinks != string.Empty)
             {
-                findLinks += findTaregtfieldLinks + ",";
+                findLinks += findTaregtfieldLinks;
             }
 
             int outPutIdGroupIndex = titleList.IndexOf("产出ID组");
@@ -1950,7 +1959,7 @@ public class LteData
 
                             if (findTaregtfieldLinks3 != string.Empty)
                             {
-                                findLinks += findTaregtfieldLinks3 + ",";
+                                findLinks += findTaregtfieldLinks3;
                             }
 
                             if (itemCount == 0)
@@ -1980,6 +1989,15 @@ public class LteData
 
         findLinks31 = RemoveDuplicateBracketsLinqOrdered(findLinks31);
 
+        if (findLinks != string.Empty)
+        {
+            findLinks += ",";
+        }
+        if (findLinks31 != string.Empty)
+        {
+            findLinks31 += ",";
+        }
+
         return (findLinks, findLinks31);
     }
 
@@ -1990,10 +2008,10 @@ public class LteData
             string targetFindDetailType,
             string hasFind
         )> findRankLinks,
-        Dictionary<string, List<string>> fieldGroupDic ,
-        Dictionary<string, List<string>> baseDic ,
+        Dictionary<string, List<string>> fieldGroupDic,
+        Dictionary<string, List<string>> baseDic,
         List<string> titleList
-        )
+    )
     {
         var findLinks = string.Empty;
         var findLinks31 = string.Empty;
@@ -2005,7 +2023,7 @@ public class LteData
                 findLinks += "{" + rankLinks.targetFindType + "," + rankLinks.targetId + "},";
                 findLinks31 += "{31," + rankLinks.targetId + "},";
             }
-            else
+            else if(rankLinks.targetFindType == "19")
             {
                 findLinks +=
                     "{"
@@ -2016,7 +2034,15 @@ public class LteData
                     + rankLinks.targetId
                     + "},";
             }
-
+            else if (rankLinks.targetFindType == "18")
+            {
+                findLinks +=
+                    "{"
+                    + rankLinks.targetFindType
+                    + ","
+                    + rankLinks.targetId
+                    + "},";
+            }
             if (fieldGroupDic != null)
             {
                 var findTargetNickName = baseDic[rankLinks.targetId][titleList.IndexOf("代号")];
@@ -2024,7 +2050,7 @@ public class LteData
                 var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName);
 
                 if (findTaregtfieldLinks != string.Empty)
-                    findLinks += findTaregtfieldLinks + ",";
+                    findLinks += findTaregtfieldLinks;
             }
         }
 
@@ -2070,26 +2096,26 @@ public class LteData
 
             List<string> targetIdGroup = null;
 
-            if(findRankType != "Any")
+            if (findRankType != "Any")
             {
                 targetIdGroup = baseDic
-                .Where(kv =>
-                    kv.Value.Count > outPutIdGroupIndex
-                    && kv.Value[outPutIdGroupIndex].Contains(findTargetId)
-                    && kv.Value[targetTypeIndex] == findRankType
-                )
-                .Select(kv => kv.Key)
-                .ToList();
+                    .Where(kv =>
+                        kv.Value.Count > outPutIdGroupIndex
+                        && kv.Value[outPutIdGroupIndex].Contains(findTargetId)
+                        && kv.Value[targetTypeIndex] == findRankType
+                    )
+                    .Select(kv => kv.Key)
+                    .ToList();
             }
             else
             {
                 targetIdGroup = baseDic
-                              .Where(kv =>
-                                  kv.Value.Count > outPutIdGroupIndex
-                                  && kv.Value[outPutIdGroupIndex].Contains(findTargetId)
-                              )
-                              .Select(kv => kv.Key)
-                              .ToList();
+                    .Where(kv =>
+                        kv.Value.Count > outPutIdGroupIndex
+                        && kv.Value[outPutIdGroupIndex].Contains(findTargetId)
+                    )
+                    .Select(kv => kv.Key)
+                    .ToList();
             }
             // 来源：非计算类型（查询）
             if (targetIdGroup.Count > 0)
@@ -2141,7 +2167,7 @@ public class LteData
                     else
                     {
                         var targetTypeNew = baseDic[targetId][targetTypeIndex];
-                        if(!targetTypeNew.Contains("链"))
+                        if (!targetTypeNew.Contains("链"))
                         {
                             targetId = string.Empty;
                         }
@@ -2219,7 +2245,8 @@ public class LteData
 
         var uniqueItems = matches.Select(m => m.Value).Distinct().ToList();
 
-        return string.Join(",", uniqueItems);
+        var returnValue = string.Join(",", uniqueItems);
+        return returnValue;
     }
 
     private static string FieldGroupLinks(
@@ -2271,10 +2298,7 @@ public class LteData
                 }
             }
         }
-        if (fieldLinks != String.Empty)
-        {
-            fieldLinks = fieldLinks.Substring(0, fieldLinks.Length - 1);
-        }
+       
         return fieldLinks;
     }
     #endregion
@@ -2624,7 +2648,6 @@ public class LteData
 
                 findLinks =
                     findLinks
-                    + ","
                     + findLinks31
                     + "{20,\"UILteMapEntrance\","
                     + taskTargetMapId
@@ -2693,7 +2716,6 @@ public class LteData
                 }
                 findSubLinks =
                     findSubLinks
-                    + ","
                     + findSubLinks31
                     + "{20,\"UILteMapEntrance\","
                     + taskSubTargetMapId
@@ -3242,7 +3264,6 @@ public class LteData
                 }
                 findLinks =
                     findLinks
-                    + ","
                     + findLinks31
                     + "{20,\"UILteMapEntrance\","
                     + taskTargetMapId
@@ -3289,7 +3310,6 @@ public class LteData
                 }
                 findLinks2 =
                     findLinks2
-                    + ","
                     + findLinks231
                     + "{20,\"UILteMapEntrance\","
                     + taskTarget2MapId
