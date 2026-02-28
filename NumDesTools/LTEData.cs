@@ -1597,7 +1597,7 @@ public class LteData
                                 findDic[findIdStr]
                                     .Add(copyDic[findIdStr][titleList.IndexOf("备注名称")]);
                                 findDic[findIdStr].Add(findTips);
-                                findDic[findIdStr].Add(findLinks  + findLinks31 + "{8,9993}");
+                                findDic[findIdStr].Add(findLinks + findLinks31 + "{8,9993}");
                             }
                         }
                     }
@@ -2023,7 +2023,7 @@ public class LteData
                 findLinks += "{" + rankLinks.targetFindType + "," + rankLinks.targetId + "},";
                 findLinks31 += "{31," + rankLinks.targetId + "},";
             }
-            else if(rankLinks.targetFindType == "19")
+            else if (rankLinks.targetFindType == "19")
             {
                 findLinks +=
                     "{"
@@ -2036,12 +2036,7 @@ public class LteData
             }
             else if (rankLinks.targetFindType == "18")
             {
-                findLinks +=
-                    "{"
-                    + rankLinks.targetFindType
-                    + ","
-                    + rankLinks.targetId
-                    + "},";
+                findLinks += "{" + rankLinks.targetFindType + "," + rankLinks.targetId + "},";
             }
             if (fieldGroupDic != null)
             {
@@ -2298,7 +2293,7 @@ public class LteData
                 }
             }
         }
-       
+
         return fieldLinks;
     }
     #endregion
@@ -3176,7 +3171,7 @@ public class LteData
             var fieldCount = string.Empty;
             if (matchFieldIdEnd == "1")
             {
-                var matchFieldId = fieldId.Substring(0, 8);
+                var matchFieldId = fieldId.Substring(0, 7);
                 var matchCount = fieldIdList.Count(id => id.StartsWith(matchFieldId));
 
                 if (matchCount > 1)
