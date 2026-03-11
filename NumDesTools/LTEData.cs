@@ -1466,26 +1466,31 @@ public class LteData
             var spawnName = baseDic[key][spawnIndex];
 
             //先在唯一ID中查找
-            var spawnMatchId = baseDic
-                .FirstOrDefault(kv =>
-                    kv.Value.Count > onlyNum && kv.Value[onlyNum] == firstPosPre + spawnName
-                )
-                .Key;
-            if (spawnMatchId == null)
+            var spawnMatchId = string.Empty;
+
+            if (spawnName != null)
             {
-                //先在唯一ID中查找 name
                 spawnMatchId = baseDic
                     .FirstOrDefault(kv =>
-                        kv.Value.Count > onlyNum && kv.Value[onlyNum] == spawnName
+                        kv.Value.Count > onlyNum && kv.Value[onlyNum] == firstPosPre + spawnName
                     )
                     .Key;
-            }
-            if (spawnMatchId == null)
-            {
-                //后在ID中查找
-                spawnMatchId = baseDic
-                    .FirstOrDefault(kv => kv.Value.Count > num && kv.Value[num] == spawnName)
-                    .Key;
+                if (spawnMatchId == null)
+                {
+                    //先在唯一ID中查找 name
+                    spawnMatchId = baseDic
+                        .FirstOrDefault(kv =>
+                            kv.Value.Count > onlyNum && kv.Value[onlyNum] == spawnName
+                        )
+                        .Key;
+                }
+                if (spawnMatchId == null)
+                {
+                    //后在ID中查找
+                    spawnMatchId = baseDic
+                        .FirstOrDefault(kv => kv.Value.Count > num && kv.Value[num] == spawnName)
+                        .Key;
+                }
             }
 
             baseDic[key].Add(spawnMatchId);
