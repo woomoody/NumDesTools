@@ -1397,7 +1397,7 @@ public class LteData
             if (consumeIdList.Count == 0)
             {
                 // 该ID的类型是否需要寻找（针对修复物）
-                var isFind = dataTypeDic[itemType][4]?.ToString();
+                var isFind = dataTypeDic[itemType][4];
                 if (isFind == "1" && itemType.Contains("修"))
                 {
                     // 该ID的代号和唯一代号
@@ -1758,6 +1758,7 @@ public class LteData
                             findTargetTypeIndex
                         );
 
+                        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
                         findRankLinks2.Union(findRankLinksTemp);
                     }
                 }
@@ -2094,7 +2095,7 @@ public class LteData
 
             int outPutIdGroupIndex = titleList.IndexOf("产出ID组");
 
-            List<string> targetIdGroup = null;
+            List<string> targetIdGroup;
 
             if (findRankType != "Any")
             {
