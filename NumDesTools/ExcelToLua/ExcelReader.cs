@@ -235,6 +235,9 @@ namespace NumDesTools.ExcelToLua
                     DateTime.Now.ToString(CultureInfo.InvariantCulture),
                     $"{e} ~!: {row.Sheet.SheetName} {row.GetCell(i)}"
                 );
+
+                LogDisplay.Show();
+
                 Debug.Print($"{e} ~!: {row.Sheet.SheetName} {row.GetCell(i)}");
                 throw;
             }

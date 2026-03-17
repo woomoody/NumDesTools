@@ -322,6 +322,8 @@ namespace NumDesTools.ExcelToLua
                             fileName
                         );
 
+                        LogDisplay.Show();
+
                         Debug.Print($"配表名称非法 ：<<{fileName}>> 已跳过该表，相关策划需确认");
                         continue;
                     }
@@ -642,6 +644,8 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                         name
                     );
 
+                    LogDisplay.Show();
+
                     Debug.Print($"配表导出文件无法正确编译，请检查配置。   : {name}\n{e.Message}"); //
                 }
                 if (createLua)
@@ -737,6 +741,8 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                         key
                     );
 
+                    LogDisplay.Show();
+
                     Debug.Print("===多语言存在重复key:" + key);
                     for (int i = 0; i < contents.Count; i++)
                     {
@@ -747,6 +753,9 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                                 DateTime.Now.ToString(CultureInfo.InvariantCulture),
                                 fileNames[i]
                             );
+
+                            LogDisplay.Show();
+
                             Debug.Print("===重复key字段在表:" + fileNames[i]);
                         }
                     }
@@ -805,6 +814,8 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                         item.Key,
                         item.Value
                     );
+
+                    LogDisplay.Show();
 
                     Debug.Print($"=== 多语言值:{item.Key} 重复数量:{item.Value}");
                     count++;
