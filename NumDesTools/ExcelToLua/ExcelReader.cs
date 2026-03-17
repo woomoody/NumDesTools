@@ -28,6 +28,7 @@ namespace NumDesTools.ExcelToLua
         public const int OBJECT_ARRAY2 = 401; //List<List<object>>
         public const int REWARD = 501; //奖励: List<int>
         public const int REWARD_ARRAY = 502; //奖励: List<List<int>>
+        public const int ANY = 600;    //任意类型，常量表专用
     }
 
     public class FieldData
@@ -310,6 +311,8 @@ namespace NumDesTools.ExcelToLua
                     return FieldTypeDefine.REWARD_ARRAY;
                 case "reward":
                     return FieldTypeDefine.REWARD;
+                case "any":
+                    return FieldTypeDefine.ANY;
                 default:
                     throw new Exception($"不支持此类型: {type}");
             }
