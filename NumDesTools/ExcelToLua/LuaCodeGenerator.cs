@@ -68,7 +68,8 @@ namespace NumDesTools.ExcelToLua
             "Tables.LteStringKeyMapping_",
             "Tables.EventTriggerMainStoryLevelData",
             "Tables.US_ADS_Country",
-            "Tables.US_ADS_Campaign"
+            "Tables.US_ADS_Campaign",
+            "Tables.ActivityWeeklyTaskReplaceInfos",
         };
 
         private static bool IsNotAddCheckNullValue(string tableName)
@@ -149,7 +150,7 @@ namespace NumDesTools.ExcelToLua
                 var row = data.rows[i];
                 string key = row.cells[keyField.index].value;
                 string comment = row.cells[commentField.index].value;
-                string value = Cell2LuaValue(row.cells[valueField.index], valueField); //row.cells[valueField.index].value;
+                string value = Cell2LuaValue(row.cells[valueField.index], valueField, tableName); //row.cells[valueField.index].value;
 
                 text.AppendLine($"\t-- {comment}");
                 text.AppendLine($"\t[\"{key}\"] = {value},");
@@ -201,7 +202,7 @@ namespace NumDesTools.ExcelToLua
         {
             var cells = row.cells;
             //解析key
-            string key = Cell2LuaValue(cells[0], sheet.fields[0]);
+            string key = Cell2LuaValue(cells[0], sheet.fields[0], sheet.name);
             if (commentField != null && sheet.fields.Contains(commentField))
             {
                 text.AppendLine($"\t-- {cells[commentField.index].value}");
@@ -249,7 +250,7 @@ namespace NumDesTools.ExcelToLua
                 text.Append(" ");
                 text.Append(field.name);
                 text.Append(" = ");
-                text.Append(Cell2LuaValue(cell, field));
+                text.Append(Cell2LuaValue(cell, field, sheet.name));
 
                 #endregion 解析具体数据列
                 if (i < cells.Count - 1)
@@ -312,12 +313,14 @@ namespace NumDesTools.ExcelToLua
                     return "table";
                 case FieldTypeDefine.REWARD:
                     return "table";
+                case FieldTypeDefine.ANY:
+                    return "table";
             }
 
             return string.Empty;
         }
 
-        private static string Cell2LuaValue(CellData cell, FieldData field)
+        private static string Cell2LuaValue(CellData cell, FieldData field, string tableName)
         {
             //支持字段激活默认值则当前未赋值直接返回
             if (field.activeDefaultValue && string.IsNullOrEmpty(cell.value))
@@ -330,7 +333,24 @@ namespace NumDesTools.ExcelToLua
                 && string.IsNullOrEmpty(cell.value)
             )
             {
-                throw new Exception($"{field.desc}字段,第{(cell.row + 1)}行无效!");
+                throw new Exception(
+                    $"配表 [ {tableName} ] - [ {field.desc} ] 字段,第{(cell.row + 1)}行无效!"
+                );
+            }
+            //lua类型需要检测数据格式是否正确
+            if (field.type == FieldTypeDefine.LUA_TABLE && !string.IsNullOrEmpty(cell.value))
+            {
+                if (!ValidLuaTableStructure(cell.value, out string errorMsg))
+                {
+                    LogDisplay.RecordLine(
+                        "[{0}] ,{1}",
+                        DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                        $"配表 [ {tableName} ] - [ {field.desc} ] 字段,第{(cell.row + 1)}行 LuaTable格式非法: {errorMsg}"
+                    );
+                    Debug.Print(
+                        $"配表 [ {tableName} ] - [ {field.desc} ] 字段,第{(cell.row + 1)}行 LuaTable格式非法: {errorMsg}"
+                    );
+                }
             }
 
             return GetLuaValueByType(cell.value, field.type);
@@ -413,6 +433,8 @@ namespace NumDesTools.ExcelToLua
                     if (string.IsNullOrEmpty(v))
                         return "nil";
                     return v;
+                case FieldTypeDefine.ANY:
+                    return v;
             }
             return string.Empty;
         }
@@ -437,6 +459,147 @@ namespace NumDesTools.ExcelToLua
                 return true;
 
             return _rewardArrayRegex.IsMatch(value);
+        }
+
+        /// <summary>
+        /// 校验value是否为可导出为合法Lua Table的字符串。确保策划配置能生成可被Lua解析的结构。
+        /// </summary>
+        private static bool ValidLuaTableStructure(string value, out string errorMsg)
+        {
+            errorMsg = null;
+            if (string.IsNullOrEmpty(value))
+                return true;
+
+            // 检测全角符号（全角空格、CJK标点、全角ASCII等，避免导出后Lua解析失败）
+            for (int i = 0; i < value.Length; i++)
+            {
+                char c = value[i];
+                if (
+                    c == '\u3000'
+                    || (c >= '\u3001' && c <= '\u303F')
+                    || c == '\uFF00'
+                    || (c >= '\uFF01' && c <= '\uFF5E')
+                    || (c >= '\uFF61' && c <= '\uFF65')
+                )
+                {
+                    errorMsg = $"包含全角符号: '{c}' (U+{(int)c:X4})";
+                    return false;
+                }
+            }
+
+            // 检测括号平衡及结构，需正确跳过字符串、长括号内容
+            int braceCount = 0;
+            int len = value.Length;
+            int idx = 0;
+            while (idx < len)
+            {
+                char c = value[idx];
+                if (c == '"')
+                {
+                    idx++;
+                    while (idx < len)
+                    {
+                        if (value[idx] == '\\')
+                        {
+                            idx = idx + 1 < len ? idx + 2 : idx + 1;
+                            continue;
+                        }
+                        if (value[idx] == '"')
+                        {
+                            idx++;
+                            break;
+                        }
+                        idx++;
+                    }
+                    continue;
+                }
+                if (c == '\'')
+                {
+                    idx++;
+                    while (idx < len)
+                    {
+                        if (value[idx] == '\\')
+                        {
+                            idx = idx + 1 < len ? idx + 2 : idx + 1;
+                            continue;
+                        }
+                        if (value[idx] == '\'')
+                        {
+                            idx++;
+                            break;
+                        }
+                        idx++;
+                    }
+                    continue;
+                }
+                if (c == '[')
+                {
+                    // 仅当 [ 后紧跟 [ 或 = 时才为长括号 [[...]] 或 [=[...]=]
+                    if (idx + 1 < len && (value[idx + 1] == '[' || value[idx + 1] == '='))
+                    {
+                        idx++;
+                        int eqCount = 0;
+                        while (idx < len && value[idx] == '=')
+                        {
+                            eqCount++;
+                            idx++;
+                        }
+                        if (idx < len && value[idx] == '[')
+                            idx++;
+                        while (idx < len)
+                        {
+                            if (value[idx] == ']')
+                            {
+                                int j = idx + 1;
+                                while (j < len && value[j] == '=')
+                                    j++;
+                                if (j < len && value[j] == ']' && (j - idx - 1) == eqCount)
+                                {
+                                    idx = j + 1;
+                                    break;
+                                }
+                            }
+                            idx++;
+                        }
+                    }
+                    else
+                    {
+                        idx++; // 表索引 [1] 或 ["key"]，不跳过
+                    }
+                    continue;
+                }
+                if (c == '{')
+                {
+                    braceCount++;
+                    idx++;
+                    continue;
+                }
+                if (c == '}')
+                {
+                    braceCount--;
+                    if (braceCount < 0)
+                    {
+                        errorMsg = "花括号不匹配，多出'}'";
+                        return false;
+                    }
+                    idx++;
+                    continue;
+                }
+                idx++;
+            }
+            if (braceCount != 0)
+            {
+                errorMsg = "花括号不匹配，未闭合";
+                return false;
+            }
+
+            string trimmed = value.Trim();
+            if (trimmed.Length > 0 && (trimmed[0] != '{' || trimmed[trimmed.Length - 1] != '}'))
+            {
+                errorMsg = "Lua Table必须以'{'开头、'}'结尾";
+                return false;
+            }
+            return true;
         }
 
         /// <summary>
@@ -579,7 +742,7 @@ namespace NumDesTools.ExcelToLua
             {
                 if (
                     int.TryParse(
-                        Cell2LuaValue(data.rows[i].cells[splitField.index], splitField),
+                        Cell2LuaValue(data.rows[i].cells[splitField.index], splitField, data.name),
                         out int subId
                     )
                 )
@@ -718,9 +881,9 @@ namespace NumDesTools.ExcelToLua
         {
             var cells = row.cells;
             //解析key
-            string key = Cell2LuaValue(cells[0], sheet.fields[0]);
+            string key = Cell2LuaValue(cells[0], sheet.fields[0], sheet.name);
             //解析子表id
-            string subTableId = Cell2LuaValue(cells[subfields.index], subfields);
+            string subTableId = Cell2LuaValue(cells[subfields.index], subfields, sheet.name);
             text.Append($"\t[{key}] = {subTableId}");
         }
 
