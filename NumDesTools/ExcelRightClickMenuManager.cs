@@ -192,8 +192,8 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                     || sheetName == "LTE【通用】"
                     || sheetName == "LTE【寻找】"
                     || sheetName == "LTE【地组】",
-                Tag: "LTE配置导出-更新",
-                Caption: "LTE配置导出-更新",
+                Tag: "LTE配置导出-更新（不稳定慎用）",
+                Caption: "LTE配置导出-更新（不稳定慎用）",
                 Handler: LteData.ExportLteDataConfigUpdate
             ),
             new(
