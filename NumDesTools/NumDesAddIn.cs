@@ -2556,7 +2556,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
         else
         {
-            var ctpName = "整理表格格式记录";
+            var ctpName = "有改动的表格文件";
             NumDesCTP.DeleteCTP(true, ctpName);
             var tupleList = targetList
                 .Select(t =>
