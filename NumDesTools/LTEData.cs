@@ -39,10 +39,26 @@ public class LteData
     private const int FindDataEndCol = 9;
     private const int TaskDataTagCol = 15;
     private const int TaskDataStartCol = 16;
-    private const int TaskDataEndCol = 26;
+    private const int TaskDataEndCol = 27;
     private const int FieldDataTagCol = 13;
     private const int FieldDataStartCol = 14;
     private const int FieldDataEndCol = 23;
+
+    private static readonly List<object> TaskTitleArray = new List<object>()
+    {
+        "任务编号",
+        "任务描述",
+        "类型",
+        "任务目标",
+        "触发对话",
+        "类型ID",
+        "任务目标ID",
+        "解锁任务",
+        "所在地图",
+        "寻找关系",
+        "任务时间",
+        "目标等级",
+    };
 
     private const string ActivityIdIndex = "B1";
     private const string ActivityDataMinIndex = "C1";
@@ -504,7 +520,6 @@ public class LteData
 
             if (targetSheet != null)
             {
-
                 if (modelSheetName.Contains("FindTarget"))
                 {
                     var abc = 111;
@@ -2388,7 +2403,6 @@ public class LteData
         //非Com写入数据,索引从0开始,效率确实更高,读取还是ListObject更方便
 
         var rowMax = copyTaskArray.GetLength(0);
-
         PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, TaskDataStartCol, TaskDataEndCol, null);
         PubMetToExcel.WriteExcelDataC(
             sheetName,
@@ -2398,6 +2412,17 @@ public class LteData
             TaskDataEndCol,
             copyTaskArray
         );
+
+        // 标题更新
+        object[,] newTitleArray = PubMetToExcel.ConvertList1ToArrayRow(TaskTitleArray);
+        PubMetToExcel.WriteExcelDataC(
+           sheetName,
+           0,
+           0,
+           TaskDataStartCol,
+           TaskDataEndCol,
+           newTitleArray
+       );
 
         taskList.Resize(taskList.Range.Resize[rowMax + 1, taskList.Range.Columns.Count]);
 
@@ -2558,11 +2583,13 @@ public class LteData
                 taskTagetName,
                 activtiyId,
                 taskDataTypeDic,
-                baseDic
+                baseDic,
+                titleList
             );
             string taskTypeId = fixMainData[0];
             string taskTagetId = fixMainData[1];
             taskDialogId = fixMainData[2];
+            string taskTagetRank = fixMainData[3];
 
             var fixSubData = FixTaskData(
                 taskSubTypeName,
@@ -2570,11 +2597,13 @@ public class LteData
                 taskSubTagetName,
                 activtiyId,
                 taskDataTypeDic,
-                baseDic
+                baseDic,
+                titleList
             );
             string taskSubTypeId = fixSubData[0];
             string taskSubTagetId = fixSubData[1];
             taskSubDialogId = fixSubData[2];
+            string taskSubTagetRank = fixSubData[3];
 
             var taskNextId = string.Empty;
 
@@ -2659,6 +2688,8 @@ public class LteData
 
                 // 限时任务数据
                 taskColDataList.Add(taskTimeLimit);
+
+                taskColDataList.Add(taskTagetRank);
             }
 
             var taskSubNextId = string.Empty;
@@ -2727,6 +2758,8 @@ public class LteData
 
                 // 限时任务数据
                 taskSubColDataList.Add(taskSubTimeLimit);
+
+                taskSubColDataList.Add(taskSubTagetRank);
             }
 
             if (taskColDataList.Count != 0)
@@ -2748,13 +2781,15 @@ public class LteData
         string taskTagetName,
         double activtiyId,
         Dictionary<string, List<string>> taskDataTypeDic,
-        Dictionary<string, List<string>> baseDic
+        Dictionary<string, List<string>> baseDic,
+        List<string> titleList
     )
     {
         var fixData = new List<string>();
 
         string taskTypeId = string.Empty;
         string taskTagetId = string.Empty;
+        string taskTagetRank = string.Empty;
 
         if (taskTypeName != string.Empty)
         {
@@ -2773,6 +2808,26 @@ public class LteData
             taskTagetId = baseDic
                 .FirstOrDefault(kv => kv.Value.Count > 4 && kv.Value[4] == taskTagetName)
                 .Key;
+            var taskTagetType = baseDic.ContainsKey(taskTagetId)
+                ? baseDic[taskTagetId][titleList.IndexOf("类型")]
+                : string.Empty;
+
+            Debug.Print($"原始目标ID：{taskTagetId}");
+
+            if (
+                taskTagetType.Contains("地标-3")
+                || taskTagetType == "地标"
+                || taskTagetType == "地标-结果"
+                || taskTagetType == "地标-结束"
+            )
+            {
+                taskTagetRank = baseDic[taskTagetId][titleList.IndexOf("级别")];
+                taskTagetId = (
+                    Convert.ToDouble(taskTagetId) - Convert.ToDouble(taskTagetRank) + 1
+                ).ToString();
+
+                Debug.Print($"改造目标ID：{taskTagetId}");
+            }
         }
         if (taskDialogId != string.Empty)
         {
@@ -2786,12 +2841,14 @@ public class LteData
         }
 
         fixData.Add(taskTypeId);
-        if (taskTagetId == null)
-        {
-            MessageBox.Show($"任务目标ID{taskTagetName}不存在");
-        }
         fixData.Add(taskTagetId);
         fixData.Add(taskDialogId);
+
+        if (taskTagetRank != string.Empty)
+        {
+            taskTagetRank = $"[{taskTagetRank}]";
+        }
+        fixData.Add(taskTagetRank);
 
         return fixData;
     }

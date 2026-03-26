@@ -1471,23 +1471,23 @@ public static class PubMetToExcel
     }
 
     //一维List转二维数组
-    public static object[,] ConvertList1ToArray(List<object> listOfLists)
+    public static object[,] ConvertList1ToArrayRow(List<object> listOfLists)
     {
-        // 获取行数
-        var rowCount = listOfLists.Count;
+        // 获取列数
+        var colCount = listOfLists.Count;
 
-        // 获取最大列数（找出最长的子列表）
-        int colCount = 1;
+        // 获取最大行数（找出最长的子列表）
+        int rowCount = 1;
 
         // 初始化二维数组
         var twoDArray = new object[rowCount, colCount];
 
         // 遍历每个子列表
-        for (var i = 0; i < rowCount; i++)
+        for (var i = 0; i < colCount; i++)
         {
             var innerList = listOfLists[i];
 
-            twoDArray[i, colCount - 1] = innerList;
+            twoDArray[rowCount - 1, i] = innerList;
         }
 
         return twoDArray;
