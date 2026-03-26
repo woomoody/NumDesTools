@@ -99,7 +99,7 @@ internal static class LteCore
                             baseData,
                             id
                         ),
-                    //获取动态值
+                    //获取动态值---非更新模式下成立，更新模式下因为顺序问题会出错！！！
                     "Var"
                         => exportWildcardDyData.ContainsKey(wildcard)
                             ? exportWildcardDyData[wildcard]

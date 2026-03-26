@@ -63,7 +63,7 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
             "对话写入（new）",
             "打开关联表格",
             "LTE配置导出-首次",
-            "LTE配置导出-更新",
+            "LTE配置导出-更新（-*#）",
             "自选表格写入（new）",
             "自定义复制",
             "克隆数据",
@@ -192,8 +192,8 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                     || sheetName == "LTE【通用】"
                     || sheetName == "LTE【寻找】"
                     || sheetName == "LTE【地组】",
-                Tag: "LTE配置导出-更新（不稳定慎用）",
-                Caption: "LTE配置导出-更新（不稳定慎用）",
+                Tag: "LTE配置导出-更新（-*#）",
+                Caption: "LTE配置导出-更新（-*#）",
                 Handler: LteData.ExportLteDataConfigUpdate
             ),
             new(
