@@ -520,10 +520,7 @@ public class LteData
 
             if (targetSheet != null)
             {
-                if (modelSheetName.Contains("FindTarget"))
-                {
-                    var abc = 111;
-                }
+                
                 NumDesAddIn.App.StatusBar = $"导出：{modelSheetName}";
 
                 var writeCol = targetSheet.Dimension.End.Column;
@@ -2824,7 +2821,7 @@ public class LteData
                 taskTagetRank = baseDic[taskTagetId][titleList.IndexOf("级别")];
                 taskTagetId = (
                     Convert.ToDouble(taskTagetId) - Convert.ToDouble(taskTagetRank) + 1
-                ).ToString();
+                ).ToString(CultureInfo.InvariantCulture);
 
                 Debug.Print($"改造目标ID：{taskTagetId}");
             }
@@ -2844,7 +2841,7 @@ public class LteData
         fixData.Add(taskTagetId);
         fixData.Add(taskDialogId);
 
-        if(taskTagetRank == string.Empty || taskTagetRank == null)
+        if(string.IsNullOrEmpty(taskTagetRank))
         {
             taskTagetRank = "1";
         }
