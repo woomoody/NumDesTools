@@ -1167,6 +1167,7 @@ public class LteData
 
         var usedRange = sheet?.UsedRange;
         Debug.Assert(usedRange != null, nameof(usedRange) + " != null");
+        // ReSharper disable once PossibleNullReferenceException
         var usedMaxRow = usedRange.Rows.Count;
 
         Range copyRange;
@@ -1179,6 +1180,7 @@ public class LteData
                             return null;
                         }
             */
+            // ReSharper disable once PossibleNullReferenceException
             var copyColMin = sheet.Range[min].Value2;
             var copyColMax = sheet.Range[max].Value2;
             copyRange = sheet.Range[
