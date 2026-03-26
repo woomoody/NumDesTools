@@ -476,9 +476,6 @@ public class LteData
                     )
                     .Where(x => x.status?.ToString() is "+" or "-" or "*")
                     .ToList();
-
-                idList = combined.Select(x => x.id).ToList();
-                typeList = combined.Select(x => x.type).ToList();
                 dataStatusListNew = combined.Select(x => x.status).ToList();
             }
         }
@@ -507,6 +504,11 @@ public class LteData
 
             if (targetSheet != null)
             {
+
+                if (modelSheetName.Contains("FindTarget"))
+                {
+                    var abc = 111;
+                }
                 NumDesAddIn.App.StatusBar = $"导出：{modelSheetName}";
 
                 var writeCol = targetSheet.Dimension.End.Column;
@@ -534,14 +536,14 @@ public class LteData
                         //如果存在且标识为删除，则删除，不进行写入，标识为修改则进行写入
                         if (rowIndex != -1)
                         {
-                            if (dataStatusListNew[idCount] == "-")
+                            if (dataStatusList[idCount] == "-")
                             {
                                 targetSheet.DeleteRow(rowIndex);
                                 dataWritten = true;
                                 continue;
                             }
 
-                            if (dataStatusListNew[idCount] == "*")
+                            if (dataStatusList[idCount] == "*")
                             {
                                 writeRow = rowIndex;
                             }
@@ -554,7 +556,7 @@ public class LteData
                         //如果不存在，则需要寻找本表相似ID最大行，依次写入
                         else
                         {
-                            if (dataStatusListNew[idCount] == "-")
+                            if (dataStatusList[idCount] == "-")
                             {
                                 //跳过标记为删除，但目标表也不存在的数据
                                 continue;
@@ -571,9 +573,9 @@ public class LteData
                             {
                                 if (writeRow != baseWriteRow + 1)
                                 {
-                                    //需要插入行
-                                    targetSheet.InsertRow(baseWriteRow, 1);
+                                    //需要插入行（向下插入）
                                     writeRow = baseWriteRow + 1;
+                                    targetSheet.InsertRow(writeRow, 1);
                                 }
                             }
                         }
