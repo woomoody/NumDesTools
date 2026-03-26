@@ -2844,10 +2844,11 @@ public class LteData
         fixData.Add(taskTagetId);
         fixData.Add(taskDialogId);
 
-        if (taskTagetRank != string.Empty)
+        if(taskTagetRank == string.Empty || taskTagetRank == null)
         {
-            taskTagetRank = $"[{taskTagetRank}]";
+            taskTagetRank = "1";
         }
+
         fixData.Add(taskTagetRank);
 
         return fixData;
