@@ -2645,6 +2645,15 @@ public class LteData
                 {
                     continue;
                 }
+
+                // 检查地标类ID经过修正后是否真实存在
+                if(!baseDic.ContainsKey(taskTagetId))
+                {
+                    var taskTagetSourceId = Convert.ToDouble(taskTagetId) + Convert.ToDouble(taskTagetRank) - 1;
+                    MessageBox.Show($"{taskTagetSourceId}物品的级别标错了");
+                    continue;
+                }
+
                 var taskTargetMapName = baseDic[taskTagetId][titleList.IndexOf("首次出现")];
                 taskColDataList.Add(taskTargetMapName);
 
@@ -2714,6 +2723,14 @@ public class LteData
                     taskSubNextId = copyTaskArray[i + 1, 7]?.ToString() ?? string.Empty;
                 }
                 taskSubColDataList.Add(taskSubNextId);
+
+                // 检查地标类ID经过修正后是否真实存在
+                if (!baseDic.ContainsKey(taskSubTagetId))
+                {
+                    var taskTagetSubSourceId = Convert.ToDouble(taskSubTagetId) + Convert.ToDouble(taskSubTagetRank) - 1;
+                    MessageBox.Show($"{taskTagetSubSourceId}物品的级别标错了");
+                    continue;
+                }
 
                 //目标所在地图
                 var taskSubTargetMapName = baseDic[taskSubTagetId][titleList.IndexOf("首次出现")];
