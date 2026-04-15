@@ -3393,14 +3393,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         var wk = App.ActiveWorkbook;
         var ws = wk.ActiveSheet;
-        var formula = "=A1=";
+        var formula = "=EXACT(A1,";
         if (wk.Name.Contains("A大型活动") || wk.Name.Contains("【A-LTE】配置模版"))
         {
             if (ws.Name.Contains("【设计】"))
             {
                 ConditionFormat.Delete(ws, formula);
                 var rangeAddress = target.Address;
-                ConditionFormat.Add(ws, formula + rangeAddress);
+                ConditionFormat.Add(ws, formula + rangeAddress + ")");
                 ws.Calculate();
             }
         }
