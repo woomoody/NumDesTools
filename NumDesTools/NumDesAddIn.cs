@@ -1,10 +1,4 @@
-﻿global using ExcelDna.Integration;
-global using ExcelDna.Integration.CustomUI;
-global using ExcelDna.IntelliSense;
-global using ExcelDna.Logging;
-global using ExcelDna.Registration;
-global using Microsoft.Office.Interop.Excel;
-global using System;
+﻿global using System;
 global using System.Collections.Generic;
 global using System.Diagnostics;
 global using System.Drawing;
@@ -14,6 +8,12 @@ global using System.Linq;
 global using System.Reflection;
 global using System.Runtime.InteropServices;
 global using System.Windows.Forms;
+global using ExcelDna.Integration;
+global using ExcelDna.Integration.CustomUI;
+global using ExcelDna.IntelliSense;
+global using ExcelDna.Logging;
+global using ExcelDna.Registration;
+global using Microsoft.Office.Interop.Excel;
 global using Application = Microsoft.Office.Interop.Excel.Application;
 global using Color = System.Drawing.Color;
 global using CommandBarButton = Microsoft.Office.Core.CommandBarButton;
@@ -24,6 +24,10 @@ global using MsoControlType = Microsoft.Office.Core.MsoControlType;
 global using Path = System.IO.Path;
 global using Point = System.Drawing.Point;
 global using Range = Microsoft.Office.Interop.Excel.Range;
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using MiniExcelLibs;
 using MiniExcelLibs.OpenXml;
 using NPOI.SS.UserModel;
@@ -34,10 +38,6 @@ using NumDesTools.Config;
 using NumDesTools.ExcelToLua;
 using NumDesTools.UI;
 using OfficeOpenXml;
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using Button = System.Windows.Forms.Button;
 using CheckBox = System.Windows.Forms.CheckBox;
 using IRibbonControl = ExcelDna.Integration.CustomUI.IRibbonControl;
@@ -1179,9 +1179,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (CheckSheetValueText == "数据自检：开启")
         {
             // 取消隐藏
+
+            // 为了规避非更改的非配置文件合法隐藏？
             var isModified = SvnGitTools.IsFileModified(wkFullPath);
+
             bool isTargetWk = true;
-            if(wb.Name.Contains("配置"))
+            if (wb.Name.Contains("配置"))
             {
                 isTargetWk = false;
             }
@@ -1192,7 +1195,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     isTargetWk = false;
                 }
             }
-            if (isModified && isTargetWk)
+            if (isTargetWk && isModified)
                 foreach (Worksheet sheet in workBook.Worksheets)
                 {
                     sheet.Rows.Hidden = false;
@@ -1246,19 +1249,35 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                             var usedColMax = usedRange.Columns.Count;
                             for (int i = 1; i <= usedColMax; i++)
                             {
-                                var filedRange = sheet.Cells[2, i];
-                                var filedValue = filedRange.Value2;
+                                var firstFiledRange = sheet.Cells[2, 1];
+                                var firstFiledValue = firstFiledRange.Value2;
 
-                                Debug.Print($"{sheet.Name}-{filedValue}");
+                                Debug.Print($"{sheet.Name}-{firstFiledValue}");
 
-                                if (filedValue == null || filedValue == string.Empty)
+                                if (firstFiledValue != "#")
                                 {
-                                    var colName = PubMetToExcel.ChangeExcelColChar(i - 1);
                                     MessageBox.Show(
-                                        $"{sheet.Name}-{colName}列（或之后）字段为空，但有数据，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
+                                        $"{sheet.Name}-A列没有#，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
                                     );
                                     cancel = true;
                                     break;
+                                }
+                                else
+                                {
+                                    var filedRange = sheet.Cells[2, i];
+                                    var filedValue = filedRange.Value2;
+
+                                    Debug.Print($"{sheet.Name}-{filedValue}");
+
+                                    if (filedValue == null || filedValue == string.Empty)
+                                    {
+                                        var colName = PubMetToExcel.ChangeExcelColChar(i - 1);
+                                        MessageBox.Show(
+                                            $"{sheet.Name}-{colName}列（或之后）字段为空，但有数据，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
+                                        );
+                                        cancel = true;
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -2510,15 +2529,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         foreach (var path in fileList)
         {
             LogDisplay.RecordLine(
-                           "[{0}] , {1}",
-                           DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                           $"{Path.GetFileName(path)}开始导表： "
-                       );
-
+                "[{0}] , {1}",
+                DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                $"{Path.GetFileName(path)}开始导表： "
+            );
 
             App.StatusBar = $"{countFile}/{fileList.Count},正在导出{path}";
 
-            if (path.Contains("#") || path.Contains("~") || path.Contains(".xlsm") | path.Contains(".xll"))
+            if (
+                path.Contains("#")
+                || path.Contains("~")
+                || path.Contains(".xlsm") | path.Contains(".xll")
+            )
                 continue;
 
             var isAll = path.Contains("$");
@@ -2534,19 +2556,17 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             );
 
             countFile++;
-
         }
 
         LogDisplay.RecordLine(
-                           "[{0}] , {1}",
-                           DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                           $"导出结束 "
-                       );
+            "[{0}] , {1}",
+            DateTime.Now.ToString(CultureInfo.InvariantCulture),
+            $"导出结束 "
+        );
     }
 
     public void CheckColFromExcelMulti_Click(IRibbonControl control)
     {
-
         var wk = App.ActiveWorkbook;
         var path = wk.FullName;
         var targetList = PubMetToExcelFunc.CheckColFromExcelMulti(path);
@@ -2573,7 +2593,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     MsoCTPDockPosition.msoCTPDockPositionRight
                 );
         }
-
     }
 
     public void TestBar1_Click(IRibbonControl control)
@@ -2593,7 +2612,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         // ReSharper disable once UnusedVariable
         var path = wk.FullName;
-   
 
         //var sourceListName = "LTE【通用】";
 
@@ -3127,8 +3145,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         var wk = App.ActiveWorkbook;
         var ws = wk.ActiveSheet;
-        var formula = "=A1=";
-
+        var formula = "=EXACT(A1,";
+        
         if (wk.Name.Contains("A大型活动") || wk.Name.Contains("【A-LTE】配置模版"))
             if (ws.Name.Contains("【设计】"))
             {
