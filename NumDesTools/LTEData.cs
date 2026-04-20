@@ -2527,6 +2527,14 @@ public class LteData
         );
     }
 
+    private static bool CheckLandmarkIdExists(Dictionary<string, List<string>> baseDic, string id, string rank)
+    {
+        if (baseDic.ContainsKey(id)) return true;
+        var sourceId = Convert.ToDouble(id) + Convert.ToDouble(rank) - 1;
+        MessageBox.Show($"{sourceId}物品的级别标错了");
+        return false;
+    }
+
     //原始数据改造
     private static (object[,] taskArray, List<string> errorTypeList) TaskData(
         object[,] copyTaskArray,
@@ -2647,12 +2655,8 @@ public class LteData
                 }
 
                 // 检查地标类ID经过修正后是否真实存在
-                if(!baseDic.ContainsKey(taskTagetId))
-                {
-                    var taskTagetSourceId = Convert.ToDouble(taskTagetId) + Convert.ToDouble(taskTagetRank) - 1;
-                    MessageBox.Show($"{taskTagetSourceId}物品的级别标错了");
+                if (!CheckLandmarkIdExists(baseDic, taskTagetId, taskTagetRank))
                     continue;
-                }
 
                 var taskTargetMapName = baseDic[taskTagetId][titleList.IndexOf("首次出现")];
                 taskColDataList.Add(taskTargetMapName);
@@ -2725,12 +2729,8 @@ public class LteData
                 taskSubColDataList.Add(taskSubNextId);
 
                 // 检查地标类ID经过修正后是否真实存在
-                if (!baseDic.ContainsKey(taskSubTagetId))
-                {
-                    var taskTagetSubSourceId = Convert.ToDouble(taskSubTagetId) + Convert.ToDouble(taskSubTagetRank) - 1;
-                    MessageBox.Show($"{taskTagetSubSourceId}物品的级别标错了");
+                if (!CheckLandmarkIdExists(baseDic, taskSubTagetId, taskSubTagetRank))
                     continue;
-                }
 
                 //目标所在地图
                 var taskSubTargetMapName = baseDic[taskSubTagetId][titleList.IndexOf("首次出现")];
