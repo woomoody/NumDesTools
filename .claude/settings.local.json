@@ -7,7 +7,12 @@
       "Bash(grep -c \"NumDesAddIn\\\\\\\\.App\" c:/Pro/ExcelToolsAlbum/ExcelDna-Pro/NumDesTools/NumDesTools/*.cs)",
       "Bash(dotnet build *)",
       "Bash(grep -v \"//\")",
-      "Bash(grep -n \"Regex\\\\.Match\\\\b.*\\\\\\\\\\\\\\\\d\" NumDesTools/LTEData.cs)"
+      "Bash(grep -n \"Regex\\\\.Match\\\\b.*\\\\\\\\\\\\\\\\d\" NumDesTools/LTEData.cs)",
+      "Bash(awk -F: '{print $1}')",
+      "Bash(sed -n '970,995p' NumDesTools/PubMetToExcel.cs)",
+      "Bash(sed -n '1190,1210p' NumDesTools/PubMetToExcel.cs)",
+      "Bash(sed -n '1365,1385p' NumDesTools/ExcelDataAutoInsert.cs)",
+      "Bash(sed -n '1888,1908p' NumDesTools/ScUDFs.cs)"
     ]
   }
 }

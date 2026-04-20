@@ -99,7 +99,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     //各类点击事件防抖处理
     private DateTime _lastClickTime = DateTime.MinValue;
 
-    private string _requiredVersion = "9.0.7";
     private string _seachStr = string.Empty;
     private SheetListControl _sheetMenuCtp;
 

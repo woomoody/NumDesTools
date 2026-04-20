@@ -2175,7 +2175,7 @@ public static class PubMetToExcelFunc
                     FileShare.None
                 )
             )
-                ;
+            { }
         }
         catch (IOException)
         {
