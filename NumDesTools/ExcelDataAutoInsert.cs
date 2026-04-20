@@ -1370,12 +1370,12 @@ public static class ExcelDataAutoInsertLanguage
                 {
                     targetSheet.DeleteRow(rowToDelete, 1);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     LogDisplay.RecordLine(
                         "[{0}] , {1}",
                         DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                        "sheet表有问题无法删除"
+                        $"sheet表有问题无法删除: {e.Message}"
                     );
                 }
 
