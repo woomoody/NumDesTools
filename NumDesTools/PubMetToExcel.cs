@@ -429,7 +429,7 @@ public static class PubMetToExcel
                         return listObj;
                 }
             }
-            catch { /* 跳过错误的工作表 */ }
+            catch (COMException) { }
         }
         return null;
     }
@@ -445,7 +445,7 @@ public static class PubMetToExcel
                 }
             }
         }
-        catch { /* 忽略不存在的错误 */ }
+        catch (COMException) { }
 
         return null;
     }
@@ -977,9 +977,9 @@ public static class PubMetToExcel
                 {
                     sheet.DeleteRow(rowToDelete[0], rowToDelete[1] - rowToDelete[0] + 1);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    errorLog += $"Error {sheet.Name}:#行号{rowToDelete}背景格式问题，更改背景色重试\n";
+                    errorLog += $"Error {sheet.Name}:#行号{rowToDelete}背景格式问题，更改背景色重试 ({e.Message})\n";
                 }
         }
 
@@ -1194,10 +1194,10 @@ public static class PubMetToExcel
 
             NumDesAddIn.App.ScreenUpdating = true;
         }
-        // ReSharper disable EmptyGeneralCatchClause
-        catch (Exception)
-        // ReSharper restore EmptyGeneralCatchClause
-        { }
+        catch (Exception e)
+        {
+            MessageBox.Show($"打开文件失败: {e.Message}");
+        }
 
         GC.Collect();
     }

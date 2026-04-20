@@ -1893,7 +1893,7 @@ public class ExcelUdf
             if (files.Length > 0)
                 return true;
         }
-        catch (Exception)
+        catch (IOException)
         {
             return false;
         }
