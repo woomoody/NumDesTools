@@ -18,9 +18,7 @@ public class LteData
 
     private static string WkPath => Wk.Path;
 
-    /*
-        private static readonly Regex WildcardRegex = new("#(.*?)#", RegexOptions.Compiled);
-    */
+    private static readonly Regex DigitsRegex = new(@"\d+", RegexOptions.Compiled);
 
     private static readonly Dictionary<string, (string id, string idType)> SheetTypeMap =
         new(StringComparer.Ordinal)
@@ -2680,7 +2678,7 @@ public class LteData
                 var findLinks31 = findLinksGroup.findLinks31;
 
                 taskTargetMapName = taskTargetMapName.Split("-")[0];
-                var match = Regex.Match(taskTargetMapName, @"\d+");
+                var match = DigitsRegex.Match(taskTargetMapName);
                 var taskTargetMapId = match.Success ? match.Value : "0";
 
                 if (double.TryParse(taskTargetMapId, out double taskTargetMapIdDouble))
@@ -2755,7 +2753,7 @@ public class LteData
                 var findSubLinks31 = findSubLinksGroup.findLinks31;
 
                 taskSubTargetMapName = taskSubTargetMapName.Split("-")[0];
-                var match = Regex.Match(taskSubTargetMapName, @"\d+");
+                var match = DigitsRegex.Match(taskSubTargetMapName);
                 var taskSubTargetMapId = match.Success ? match.Value : "0";
 
                 if (double.TryParse(taskSubTargetMapId, out double taskSubTargetMapIdDouble))
@@ -3330,7 +3328,7 @@ public class LteData
 
                 var taskTargetMapName = baseDic[fieldConditonTargetId][titleList.IndexOf("首次出现")];
                 taskTargetMapName = taskTargetMapName.Split("-")[0];
-                var match = Regex.Match(taskTargetMapName, @"\d+");
+                var match = DigitsRegex.Match(taskTargetMapName);
                 var taskTargetMapId = match.Success ? match.Value : "0";
 
                 if (double.TryParse(taskTargetMapId, out double taskTargetMapIdDouble))
@@ -3376,7 +3374,7 @@ public class LteData
 
                 var taskTarget2MapName = baseDic[fieldFindId2][titleList.IndexOf("首次出现")];
                 taskTarget2MapName = taskTarget2MapName.Split("-")[0];
-                var match2 = Regex.Match(taskTarget2MapName, @"\d+");
+                var match2 = DigitsRegex.Match(taskTarget2MapName);
                 var taskTarget2MapId = match2.Success ? match2.Value : "0";
 
                 if (double.TryParse(taskTarget2MapId, out double taskTarget2MapIdDouble))

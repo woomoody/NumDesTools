@@ -12,7 +12,8 @@
       "Bash(sed -n '970,995p' NumDesTools/PubMetToExcel.cs)",
       "Bash(sed -n '1190,1210p' NumDesTools/PubMetToExcel.cs)",
       "Bash(sed -n '1365,1385p' NumDesTools/ExcelDataAutoInsert.cs)",
-      "Bash(sed -n '1888,1908p' NumDesTools/ScUDFs.cs)"
+      "Bash(sed -n '1888,1908p' NumDesTools/ScUDFs.cs)",
+      "Bash(grep -n 'Regex\\\\.Match.*\\\\\\\\\\\\\\\\d\\\\+\\\\|@\"\\\\\\\\\\\\\\\\d\\\\+\"' NumDesTools/LTEData.cs)"
     ]
   }
 }
