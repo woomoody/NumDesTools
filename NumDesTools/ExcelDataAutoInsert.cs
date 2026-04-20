@@ -89,7 +89,8 @@ public static class ExcelDataAutoInsert
 
     public static void ExcelHyperLinks(dynamic excelPath, dynamic sheet)
     {
-        for (var i = 2; i <= 500; i++)
+        var lastRow = sheet.UsedRange.Rows.Count;
+        for (var i = 2; i <= lastRow; i++)
         {
             var modeCol = FindTitle(sheet, 1, "实际模板(上一期)");
             var excelName = FindTitle(sheet, 1, "表名");
@@ -126,7 +127,8 @@ public static class ExcelDataAutoInsert
 
     public static void ExcelHyperLinksNormal(dynamic excelPath, dynamic sheet)
     {
-        for (var i = 2; i <= 500; i++)
+        var lastRow = sheet.UsedRange.Rows.Count;
+        for (var i = 2; i <= lastRow; i++)
         {
             var cell = sheet.Cells[i, 5];
             if (cell.value == null || !cell.value.ToString().Contains(".xlsx"))

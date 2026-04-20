@@ -1,3 +1,4 @@
+using System.Text;
 using MiniExcelLibs;
 using MessageBox = System.Windows.MessageBox;
 
@@ -137,7 +138,7 @@ public static class ExcelDataAutoInsertActivityServer
         }
 
         var targetDataList = new List<List<string>>();
-        var errorLog = "";
+        var errorLog = new StringBuilder();
         var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         foreach (var a in sourceData)
@@ -150,7 +151,7 @@ public static class ExcelDataAutoInsertActivityServer
                 {
                     activeName = $"{a.Item7}：{a.Item1}";
                 }
-                errorLog += $"运营排期-未找到-活动模版【{nameOrIdString}】：{activeName}\r\n";
+                errorLog.Append($"运营排期-未找到-活动模版【{nameOrIdString}】：{activeName}\r\n");
                 targetDataList.Add(
                     [
                         "targetId",
@@ -275,10 +276,7 @@ public static class ExcelDataAutoInsertActivityServer
                     {
                         activeName = $"{a.Item7}：{a.Item1}";
                     }
-                    errorLog +=
-                        $"运营排期-活动模版【{nameOrIdString}】："
-                        + activeName
-                        + $"**生命周期类型错误[{targetLifeType}]，搜索不到\r\n";
+                    errorLog.Append($"运营排期-活动模版【{nameOrIdString}】：{activeName}**生命周期类型错误[{targetLifeType}]，搜索不到\r\n");
                     targetLifeValue = "targetLifeValue";
                 }
                 else
@@ -309,10 +307,10 @@ public static class ExcelDataAutoInsertActivityServer
             );
         }
 
-        if (!string.IsNullOrEmpty(errorLog))
+        if (errorLog.Length > 0)
         {
             ErrorLogCtp.DisposeCtp();
-            ErrorLogCtp.CreateCtp(errorLog);
+            ErrorLogCtp.CreateCtp(errorLog.ToString());
             MessageBox.Show(@"有活动找不到，查看错误日志");
             sourceSheet.Select();
         }

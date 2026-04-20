@@ -133,6 +133,9 @@ public class SelfSheetCellData
 //字符串正则转换
 public class SelfStringRegexConverter : IValueConverter
 {
+    private string _cachedPattern;
+    private Regex _cachedRegex;
+
     public string RegexPattern { get; set; }
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -141,8 +144,12 @@ public class SelfStringRegexConverter : IValueConverter
         if (inputString == null)
             return null;
 
-        var regex = new Regex(RegexPattern);
-        var match = regex.Match(inputString);
+        if (_cachedRegex == null || _cachedPattern != RegexPattern)
+        {
+            _cachedPattern = RegexPattern;
+            _cachedRegex = new Regex(RegexPattern);
+        }
+        var match = _cachedRegex.Match(inputString);
 
         // 返回第一个匹配的结果
         if (match.Success)

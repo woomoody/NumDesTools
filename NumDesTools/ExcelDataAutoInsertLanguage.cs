@@ -1237,7 +1237,7 @@ public static class ExcelDataAutoInsertLanguage
         string Dic(string funDy1, string funDy2, string funDy3)
         {
             var itemValue = sourceDataList[idCount][sourceTitle.IndexOf(funDy1)];
-            itemValue = itemValue != null ? itemValue.ToString() : string.Empty;
+            itemValue = itemValue?.ToString() ?? string.Empty;
 
             if (!dicValue.ContainsKey((funDy2, itemValue)))
             {
@@ -1245,7 +1245,7 @@ public static class ExcelDataAutoInsertLanguage
             }
 
             var rawValue = sourceDataList[idCount][sourceTitle.IndexOf(funDy2)];
-            string value = rawValue != null ? rawValue.ToString() : string.Empty;
+            string value = rawValue?.ToString() ?? string.Empty;
             dicValue[(funDy2, itemValue)].Add(value);
 
             if (funDy3 != "0")
