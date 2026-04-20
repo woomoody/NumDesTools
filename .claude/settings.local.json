@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep \"\\\\.cs$\")",
+      "Bash(xargs wc *)",
+      "Bash(xargs grep *)",
+      "Bash(grep -c \"NumDesAddIn\\\\\\\\.App\" c:/Pro/ExcelToolsAlbum/ExcelDna-Pro/NumDesTools/NumDesTools/*.cs)",
+      "Bash(dotnet build *)"
+    ]
+  }
+}

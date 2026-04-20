@@ -1247,28 +1247,19 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         {
                             var usedRange = sheet.UsedRange;
                             var usedColMax = usedRange.Columns.Count;
-                            for (int i = 1; i <= usedColMax; i++)
+                            var firstFiledValue = (sheet.Cells[2, 1] as Range)?.Value2;
+                            if (firstFiledValue?.ToString() != "#")
                             {
-                                var firstFiledRange = sheet.Cells[2, 1];
-                                var firstFiledValue = firstFiledRange.Value2;
-
-                                Debug.Print($"{sheet.Name}-{firstFiledValue}");
-
-                                if (firstFiledValue != "#")
+                                MessageBox.Show(
+                                    $"{sheet.Name}-A列没有#，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
+                                );
+                                cancel = true;
+                            }
+                            else
+                            {
+                                for (int i = 1; i <= usedColMax; i++)
                                 {
-                                    MessageBox.Show(
-                                        $"{sheet.Name}-A列没有#，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
-                                    );
-                                    cancel = true;
-                                    break;
-                                }
-                                else
-                                {
-                                    var filedRange = sheet.Cells[2, i];
-                                    var filedValue = filedRange.Value2;
-
-                                    Debug.Print($"{sheet.Name}-{filedValue}");
-
+                                    var filedValue = (sheet.Cells[2, i] as Range)?.Value2;
                                     if (filedValue == null || filedValue == string.Empty)
                                     {
                                         var colName = PubMetToExcel.ChangeExcelColChar(i - 1);
@@ -2539,7 +2530,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             if (
                 path.Contains("#")
                 || path.Contains("~")
-                || path.Contains(".xlsm") | path.Contains(".xll")
+                || path.Contains(".xlsm") || path.Contains(".xll")
             )
                 continue;
 
