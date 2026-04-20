@@ -1179,7 +1179,6 @@ public static class PubMetToExcel
                 worksheet = (Worksheet)workbook.Sheets[1];
             }
 
-            var regex = new Regex(@"^[A-Za-z]+\d+$");
             var cellAddressDefault = "1";
             if (cellAddress != null)
             {

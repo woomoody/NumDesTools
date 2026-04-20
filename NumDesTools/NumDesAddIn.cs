@@ -1247,8 +1247,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         {
                             var usedRange = sheet.UsedRange;
                             var usedColMax = usedRange.Columns.Count;
-                            var firstFiledValue = (sheet.Cells[2, 1] as Range)?.Value2;
-                            if (firstFiledValue?.ToString() != "#")
+                            var firstFiledValue = (sheet.Cells[2, 1] as Range)?.Value2?.ToString();
+                            if (firstFiledValue != "#")
                             {
                                 MessageBox.Show(
                                     $"{sheet.Name}-A列没有#，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
@@ -1259,8 +1259,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                             {
                                 for (int i = 1; i <= usedColMax; i++)
                                 {
-                                    var filedValue = (sheet.Cells[2, i] as Range)?.Value2;
-                                    if (filedValue == null || filedValue == string.Empty)
+                                    var filedValue = (sheet.Cells[2, i] as Range)?.Value2?.ToString();
+                                    if (string.IsNullOrEmpty(filedValue))
                                     {
                                         var colName = PubMetToExcel.ChangeExcelColChar(i - 1);
                                         MessageBox.Show(
