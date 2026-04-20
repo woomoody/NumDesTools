@@ -531,7 +531,7 @@ public static class ExcelDataAutoInsertLanguage
 
                         var sourceStr = cellTarget.Value?.ToString();
                         var reg = "\\d+";
-                        if (sourceStr == null || sourceStr == "")
+                        if (string.IsNullOrEmpty(sourceStr))
                             continue;
                         var matches = Regex.Matches(sourceStr, reg);
 
@@ -565,7 +565,7 @@ public static class ExcelDataAutoInsertLanguage
                         var sourceValue = sourceDataList[m]
                             [sourceTitle.IndexOf(source)]
                             ?.ToString();
-                        if (sourceValue == null || sourceValue == "" || sourceValue == "0")
+                        if (string.IsNullOrEmpty(sourceValue) || sourceValue == "0")
                         {
                             sourceCount++;
                             continue;
@@ -578,7 +578,7 @@ public static class ExcelDataAutoInsertLanguage
                             var repeatValue = sourceDataList[k]
                                 [sourceTitle.IndexOf("分支归属")]
                                 ?.ToString();
-                            if (repeatValue == null || repeatValue == "")
+                            if (string.IsNullOrEmpty(repeatValue))
                                 continue;
                             if (repeatValue == sourceValue)
                             {
@@ -1024,7 +1024,7 @@ public static class ExcelDataAutoInsertLanguage
                         var sourceValue = sourceDataList[m]
                             [sourceTitle.IndexOf(source)]
                             ?.ToString();
-                        if (sourceValue == null || sourceValue == "" || sourceValue == "0")
+                        if (string.IsNullOrEmpty(sourceValue) || sourceValue == "0")
                         {
                             sourceCount++;
                             continue;
@@ -1037,7 +1037,7 @@ public static class ExcelDataAutoInsertLanguage
                             var repeatValue = sourceDataList[k]
                                 [sourceTitle.IndexOf("分支归属")]
                                 ?.ToString();
-                            if (repeatValue == null || repeatValue == "")
+                            if (string.IsNullOrEmpty(repeatValue))
                                 continue;
                             if (repeatValue == sourceValue)
                             {
