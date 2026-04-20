@@ -740,11 +740,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 // 将二维数组赋值回选中区域
                 selectedRange.Value2 = updatedValues;
 
-                LogDisplay.RecordLine(
-                    "[{0}] , {1}",
-                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                    $"替换完成，共处理{selectedRange.Count} 个单元格"
-                );
+                LogDisplay.RecordLine($"[{DateTime.Now}] , 替换完成，共处理{selectedRange.Count} 个单元格");
 
                 sw.Stop();
                 var ts2 = sw.ElapsedMilliseconds;
@@ -753,11 +749,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
         catch (Exception ex)
         {
-            LogDisplay.RecordLine(
-                "[{0}] , {1}",
-                DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                $"替换失败，错误信息：{ex.Message}"
-            );
+            LogDisplay.RecordLine($"[{DateTime.Now}] , 替换失败，错误信息：{ex.Message}");
             MessageBox.Show(ex.Message);
         }
     }
@@ -1261,7 +1253,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                                     var filedValue = (sheet.Cells[2, i] as Range)?.Value2?.ToString();
                                     if (string.IsNullOrEmpty(filedValue))
                                     {
-                                        var colName = PubMetToExcel.ChangeExcelColChar(i - 1);
+                                        var colName = PubMetToExcel.ConvertToExcelColumn(i);
                                         MessageBox.Show(
                                             $"{sheet.Name}-{colName}列（或之后）字段为空，但有数据，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
                                         );
@@ -1975,11 +1967,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             var log = @"没有检查到匹配字符串的Sheet，字符串可能有误";
 
-            LogDisplay.RecordLine(
-                "[{0}] , {1}",
-                DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                log
-            );
+            LogDisplay.RecordLine($"[{DateTime.Now}] , {log}");
 
             MessageBox.Show(log);
         }
@@ -2012,11 +2000,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             var log = @"没有检查到匹配字符串的公式，字符串可能有误";
 
-            LogDisplay.RecordLine(
-                "[{0}] , {1}",
-                DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                log
-            );
+            LogDisplay.RecordLine($"[{DateTime.Now}] , {log}");
 
             MessageBox.Show(log);
         }
@@ -2518,11 +2502,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var countFile = 0;
         foreach (var path in fileList)
         {
-            LogDisplay.RecordLine(
-                "[{0}] , {1}",
-                DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                $"{Path.GetFileName(path)}开始导表： "
-            );
+            LogDisplay.RecordLine($"[{DateTime.Now}] , {$"{Path.GetFileName(path)}开始导表： "}");
 
             App.StatusBar = $"{countFile}/{fileList.Count},正在导出{path}";
 
@@ -2548,11 +2528,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             countFile++;
         }
 
-        LogDisplay.RecordLine(
-            "[{0}] , {1}",
-            DateTime.Now.ToString(CultureInfo.InvariantCulture),
-            $"导出结束 "
-        );
+        LogDisplay.RecordLine($"[{DateTime.Now}] , {$"导出结束 "}");
     }
 
     public void CheckColFromExcelMulti_Click(IRibbonControl control)

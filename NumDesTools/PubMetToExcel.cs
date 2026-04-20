@@ -390,13 +390,7 @@ public static class PubMetToExcel
     //获取指定表的名称表，当前
     public static ListObject GetExcelListObjects(string sheetName, string listName)
     {
-        LogDisplay.RecordLine(
-            "[{1}][{0}][{2}][{3}]",
-            $"获取Excel ListObject: {sheetName} - {listName}",
-            DateTime.Now.ToString(CultureInfo.InvariantCulture),
-            sheetName,
-            listName
-        );
+        LogDisplay.RecordLine($"[{DateTime.Now}] 获取Excel ListObject: {sheetName} - {listName}");
         var sheet = Wk.Worksheets[sheetName];
         // 获取ListObject并操作
         try
@@ -406,13 +400,7 @@ public static class PubMetToExcel
         }
         catch (Exception e)
         {
-            LogDisplay.RecordLine(
-                "[{1}][{0}][{2}][{3}]",
-                $"获取Excel ListObject: {sheetName} - {listName} 不存在-{e}",
-                DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                sheetName,
-                listName
-            );
+            LogDisplay.RecordLine($"[{DateTime.Now}] 获取Excel ListObject: {sheetName} - {listName} 不存在-{e}");
             throw;
         }
     }
@@ -888,7 +876,7 @@ public static class PubMetToExcel
         {
             var value = data[i][dicKeyCol];
 
-            if (value == null || value == string.Empty)
+            if (string.IsNullOrEmpty(value?.ToString()))
                 continue;
 
             var values = new object[valueRowCount, valueColCount];
@@ -1081,17 +1069,6 @@ public static class PubMetToExcel
         }
 
         return color;
-    }
-
-    public static string ChangeExcelColChar(int col)
-    {
-        var a = col / 26;
-        var b = col % 26;
-
-        if (a > 0)
-            return ChangeExcelColChar(a - 1) + (char)(b + 65);
-
-        return ((char)(b + 65)).ToString();
     }
 
     public static List<string> ReadWriteTxt(string filePath)

@@ -1,4 +1,4 @@
-using System.Runtime.Versioning;
+﻿using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.VisualBasic;
@@ -509,11 +509,7 @@ public class LteData
 
             if (targetSheet == null)
             {
-                LogDisplay.RecordLine(
-                    "[{0}] , {1}【#LTE数据模版】中创建的文件名不存在",
-                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                    modelSheetName
-                );
+                LogDisplay.RecordLine($"[{DateTime.Now}] , {modelSheetName}【#LTE数据模版】中创建的文件名不存在");
             }
 
             if (targetSheet != null)
