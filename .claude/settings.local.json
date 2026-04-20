@@ -16,7 +16,15 @@
       "Bash(grep -n 'Regex\\\\.Match.*\\\\\\\\\\\\\\\\d\\\\+\\\\|@\"\\\\\\\\\\\\\\\\d\\\\+\"' NumDesTools/LTEData.cs)",
       "Bash(python -c ' *)",
       "Bash(git show *)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(grep -v \"//.*//\")",
+      "Bash(grep -rn \"\\\\+ \\\\\"\\\\\\\\\\\\\\\\\" NumDesTools/*.cs)",
+      "Bash(grep -rn \"\\\\.Add\\\\b.*;\\\\s*$\" NumDesTools/PubMetToExcel.cs)",
+      "Bash(grep -rn '+ @\"\\\\\\\\' NumDesTools/*.cs)",
+      "Bash(grep -rn '\"[^\"]*\\\\\\\\\\\\\\\\[^\"]*\"' NumDesTools/*.cs)",
+      "Bash(grep -v '^\\\\$\\\\|\"\\\\[{')",
+      "Bash(grep -v \"^\\\\$\\\\|DateTime\\\\.Now\\\\b\")",
+      "Bash(grep -v \"^--$\")"
     ]
   }
 }

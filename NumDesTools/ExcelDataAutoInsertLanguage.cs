@@ -1,4 +1,4 @@
-using OfficeOpenXml;
+﻿using OfficeOpenXml;
 using System.Text.RegularExpressions;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
@@ -1078,11 +1078,7 @@ public static class ExcelDataAutoInsertLanguage
                     if (fixValue.ToString().Contains("Error"))
                     {
                         error += fixValue + "\n";
-                        LogDisplay.RecordLine(
-                            "[{0}] , {1}【角色数据】中不存在",
-                            DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                            fixValue
-                        );
+                        LogDisplay.RecordLine($"[{DateTime.Now}] , {fixValue}【角色数据】中不存在");
                     }
                     // 检查 fixValue 是否为空，避免覆盖已有数据
                     if (fixValue != null && !string.IsNullOrEmpty(fixValue.ToString()))
@@ -1134,11 +1130,7 @@ public static class ExcelDataAutoInsertLanguage
                 }
                 catch (Exception e)
                 {
-                    LogDisplay.RecordLine(
-                        "[{0}] , {1}",
-                        DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                        $"sheet表有问题无法删除: {e.Message}"
-                    );
+                    LogDisplay.RecordLine($"[{DateTime.Now}] , {$"sheet表有问题无法删除: {e.Message}"}");
                 }
 
             var writeCol = targetSheet.Dimension.End.Column;
@@ -1284,11 +1276,7 @@ public static class ExcelDataAutoInsertLanguage
             }
             catch
             {
-                LogDisplay.RecordLine(
-                    "[{0}] , {1}【角色数据】中不存在",
-                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                    findValue
-                );
+                LogDisplay.RecordLine($"[{DateTime.Now}] , {findValue}【角色数据】中不存在");
                 result = $"Error#{findValue}#在【角色数据】中不存在";
             }
             return result;

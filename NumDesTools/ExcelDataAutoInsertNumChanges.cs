@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using MessageBox = System.Windows.MessageBox;
 
 #pragma warning disable CA1416
@@ -100,19 +100,11 @@ public class ExcelDataAutoInsertNumChanges
                             keyIndexCol,
                             keyIndexValue
                         );
-                        LogDisplay.RecordLine(
-                            "[{0}] , {1}",
-                            DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                            keyIndexValue
-                        );
+                        LogDisplay.RecordLine($"[{DateTime.Now}] , {keyIndexValue}");
                         if (keyIndexRow == -1)
                         {
                             MessageBox.Show($"{workBookName} 找不到Id：{keyIndexValue}");
-                            LogDisplay.RecordLine(
-                                "[{0}] , {1}",
-                                DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                                $"{workBookName} 找不到Id：{keyIndexValue}"
-                            );
+                            LogDisplay.RecordLine($"[{DateTime.Now}] , {$"{workBookName} 找不到Id：{keyIndexValue}"}");
                             return;
                         }
                         var baseValue = sheetTarget

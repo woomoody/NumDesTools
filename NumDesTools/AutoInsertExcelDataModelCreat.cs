@@ -1,4 +1,4 @@
-using MessageBox = System.Windows.MessageBox;
+﻿using MessageBox = System.Windows.MessageBox;
 
 #pragma warning disable CA1416
 
@@ -52,11 +52,7 @@ public static class AutoInsertExcelDataModelCreat
                 modelName.Substring(0, modelName.IndexOf(".xlsx", StringComparison.Ordinal))
                 + ".xlsx";
 
-            LogDisplay.RecordLine(
-                "[{0}] , {1}",
-                DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                modelName
-            );
+            LogDisplay.RecordLine($"[{DateTime.Now}] , {modelName}");
 
             // 获取列标题
             var headers = new List<object>();
