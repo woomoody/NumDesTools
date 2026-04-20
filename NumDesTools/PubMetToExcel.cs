@@ -904,7 +904,7 @@ public static class PubMetToExcel
 
     public static string RepeatValue(ExcelWorksheet sheet, int row, int col, string repeatValue)
     {
-        var errorLog = "";
+        var errorLog = new StringBuilder();
         for (var r = sheet.Dimension.End.Row; r >= row; r--)
         {
             var colA = sheet.Cells[r, col].Value?.ToString();
@@ -915,11 +915,11 @@ public static class PubMetToExcel
                 }
                 catch (Exception ex)
                 {
-                    errorLog += $"Error {repeatValue}: {ex.Message}\n";
+                    errorLog.Append($"Error {repeatValue}: {ex.Message}\n");
                 }
         }
 
-        return errorLog;
+        return errorLog.ToString();
     }
 
     public static string RepeatValue2(
@@ -929,7 +929,7 @@ public static class PubMetToExcel
         List<string> repeatValue
     )
     {
-        var errorLog = "";
+        var errorLog = new StringBuilder();
         var sourceValues = sheet
             .Cells[row, col, sheet.Dimension.End.Row, col]
             .Select(c => c.Value.ToString())
@@ -967,11 +967,11 @@ public static class PubMetToExcel
                 }
                 catch (Exception e)
                 {
-                    errorLog += $"Error {sheet.Name}:#行号{rowToDelete}背景格式问题，更改背景色重试 ({e.Message})\n";
+                    errorLog.Append($"Error {sheet.Name}:#行号{rowToDelete}背景格式问题，更改背景色重试 ({e.Message})\n");
                 }
         }
 
-        return errorLog;
+        return errorLog.ToString();
     }
 
     public static (string file, string Name, int cellRow, int cellCol) ErrorKeyFromExcelId(

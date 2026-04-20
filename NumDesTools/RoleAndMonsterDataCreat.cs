@@ -1,4 +1,5 @@
-﻿using NPOI.SS.UserModel;
+﻿using System.Text;
+using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
 // ReSharper disable All
@@ -204,7 +205,7 @@ public class RoleDataPro
         dynamic roleDataRoleName
     )
     {
-        var errorLog = "";
+        var errorLog = new StringBuilder();
         if (File.Exists(filePath))
         {
             Workbook book = App.Workbooks.Open(
@@ -248,7 +249,7 @@ public class RoleDataPro
                     }
                     else
                     {
-                        errorLog += roleDataRoleName[i];
+                        errorLog.Append(roleDataRoleName[i]);
                     }
                 }
 
@@ -280,7 +281,7 @@ public class RoleDataPro
             book.Close(false);
         }
 
-        return errorLog;
+        return errorLog.ToString();
     }
 
     public static List<List<List<string>>> StateCalculate()
