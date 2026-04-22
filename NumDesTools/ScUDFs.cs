@@ -2028,4 +2028,47 @@ public class ExcelUdf
 
         return Join(delimiter, result);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // LTE【设计】表数值计算函数
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [ExcelFunction(
+        Category = "UDF-Alice专属函数",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "LTE设计表：计算某层链的所需数量。" +
+                      "合成链：ceil((上层所需 - 非矿额外产出) × 2.5)，再扣除地图统计数。" +
+                      "采集链：ceil(上层所需 / 产出数量)，BY列矿数量仅作参考不参与计算。",
+        Name = "LteChainRequiredCount"
+    )]
+    public static double LteChainRequiredCount(
+        [ExcelArgument(AllowReference = true, Description = "上层物品所需数量（本层需要满足的目标）", Name = "上层所需数量")]
+            double upperNeeded,
+        [ExcelArgument(AllowReference = true, Description = "本层在地图上的统计数量（BY列），合成链时从结果中扣除", Name = "地图统计数量")]
+            double mapStatCount,
+        [ExcelArgument(AllowReference = true, Description = "非挖矿的额外产出（合成链时扣除，采集链填0）", Name = "非矿额外产出")]
+            double nonMineExtra,
+        [ExcelArgument(AllowReference = true, Description = "true=合成链(×2.5)，false=采集链(÷产出量)", Name = "是否合成链")]
+            bool isMergeChain,
+        [ExcelArgument(AllowReference = true, Description = "每次采集/生产的产出数量（合成链填1）", Name = "产出数量")]
+            double outputQty
+    )
+    {
+        if (isMergeChain)
+        {
+            // 合成链：先扣非矿额外产出，乘2.5上取整，再扣地图已有
+            double netNeeded = upperNeeded - nonMineExtra;
+            if (netNeeded <= 0) return 0;
+            return Math.Max(0, Math.Ceiling(netNeeded * 2.5) - mapStatCount);
+        }
+        else
+        {
+            // 采集链：直接除以产出量上取整，地图矿数量不参与计算
+            if (outputQty <= 0) outputQty = 1;
+            if (upperNeeded <= 0) return 0;
+            return Math.Ceiling(upperNeeded / outputQty);
+        }
+    }
+
 }

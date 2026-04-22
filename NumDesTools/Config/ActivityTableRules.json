@@ -1,0 +1,405 @@
+{
+  "_comment": [
+    "活动配置验证规则映射。由 AI 分析 Code 业务代码后生成，供 ActivityConfigTester.cs 使用。",
+    "人工可直接编辑扩展，无需修改 C# 代码。",
+    "",
+    "── 验证逻辑说明 ──",
+    "  1. 静态规则校验：tables[].fields 的 required / type / refTable 检查（全量）",
+    "  2. 配置链追踪（指定ID）：",
+    "     ① ActivityClientData[id] 必须存在（组活动也必须有，因为活动组有的活动表必然有）",
+    "     ② 若 ActivityClientHierarchyGroupData[id] 存在，则追踪层级链：",
+    "        hierarchyActivityIDs[] → ActivityClientHierarchyData[v].activityIds → ActivityClientData",
+    "     ③ 根据 ActivityClientData[id].type 查 typeSubTableRules（优先）或 typeTableMap",
+    "     ④ type=2(LteActivity)：LteData[activityID] → mapData/mapIdList → MapDataProto → prefab 文件存在"
+  ],
+
+  "tables": [
+    {
+      "name": "ActivityClientData",
+      "luaKey": "Tables.ActivityClientData",
+      "excelFile": "ActivityClientData.xlsx",
+      "desc": "客户端活动主表，每条记录对应一个具体活动实例",
+      "keyField": "id",
+      "fields": [
+        { "name": "id",              "desc": "活动唯一ID",                         "required": true,  "type": "number" },
+        { "name": "type",            "desc": "活动类型枚举(EnumCmds.ActivityType)", "required": true,  "type": "number" },
+        { "name": "activityID",      "desc": "活动数据ID，各LogicBase通过此字段查子表", "required": true, "type": "number" },
+        { "name": "isActivityGroup", "desc": "是否活动组",                         "required": false, "type": "number" },
+        { "name": "mutexWeight",     "desc": "互斥权重",                           "required": false, "type": "number" },
+        { "name": "conditions",      "desc": "开启条件数组",                       "required": false, "type": "table"  },
+        { "name": "stopTime",        "desc": "停止开启时间(秒)",                   "required": false, "type": "number" },
+        { "name": "childActivity",   "desc": "子活动ID列表",                       "required": false, "type": "table"  },
+        { "name": "mainActivityID",  "desc": "主活动ID，引用 ActivityClientData",  "required": false, "type": "number",
+          "refTable": "Tables.ActivityClientData" },
+        { "name": "minVersion",      "desc": "活动最低版本号",                     "required": false, "type": "string" },
+        { "name": "bundleGroupsKey", "desc": "依赖资源组key列表",                  "required": false, "type": "table"  }
+      ]
+    },
+    {
+      "name": "ActivityClientHierarchyData",
+      "luaKey": "Tables.ActivityClientHierarchyData",
+      "excelFile": "ActivityClientHierarchyData.xlsx",
+      "desc": "活动等级子表，activityIds 引用主表活动 ID",
+      "keyField": "id",
+      "fields": [
+        { "name": "id",              "desc": "子级唯一ID",                         "required": true,  "type": "number" },
+        { "name": "activityIds",     "desc": "引用 ActivityClientData 的活动 ID",  "required": true,  "type": "number",
+          "refTable": "Tables.ActivityClientData", "refIsArray": false },
+        { "name": "openConditions",  "desc": "开启条件数组",                       "required": false, "type": "table"  },
+        { "name": "closeConditions", "desc": "关闭条件数组",                       "required": false, "type": "table"  }
+      ]
+    },
+    {
+      "name": "ActivityClientHierarchyGroupData",
+      "luaKey": "Tables.ActivityClientHierarchyGroupData",
+      "excelFile": "ActivityClientHierarchyGroupData.xlsx",
+      "desc": "活动组顶层表，hierarchyActivityIDs 列出组内各等级 ID",
+      "keyField": "id",
+      "fields": [
+        { "name": "id",                   "desc": "活动组唯一ID", "required": true, "type": "number" },
+        { "name": "hierarchyActivityIDs", "desc": "数组，引用 ActivityClientHierarchyData 的 id 列表",
+          "required": true, "type": "table",
+          "refTable": "Tables.ActivityClientHierarchyData", "refIsArray": true }
+      ]
+    },
+    {
+      "name": "ActivityServerData",
+      "luaKey": "Tables.ActivityServerData",
+      "excelFile": "ActivityServerData.xlsx",
+      "desc": "服务端活动配置，id 必须在 ActivityClientData 中存在",
+      "keyField": "id",
+      "fields": [
+        { "name": "id", "desc": "活动ID，必须与 ActivityClientData.id 对应",
+          "required": true, "type": "number",
+          "refTable": "Tables.ActivityClientData", "refIsArray": false }
+      ]
+    }
+  ],
+
+  "_comment_typeTableMap": [
+    "活动类型值 → 对应子表的 luaKey（存在性检查，兼容旧逻辑）。",
+    "typeSubTableRules 中已有深度规则的 type 会优先使用 typeSubTableRules；",
+    "仅 typeTableMap 有、typeSubTableRules 没有的 type 才走简单存在性检查。",
+    "注意：type=2(LteActivity) 由代码内置 LTE 链验证处理，不在此配置。"
+  ],
+  "typeTableMap": {
+    "1":   "Tables.ActivityBpData",
+    "3":   "Tables.FlotageActivityData",
+    "5":   "Tables.RankClientData",
+    "6":   "Tables.ActivitySeasonData",
+    "7":   "Tables.ActivityLinearPackageData",
+    "8":   "Tables.ActivityLinearPackageData",
+    "9":   "Tables.ActivityLinearPackageData",
+    "10":  "Tables.ActivityPiggyBankData",
+    "11":  "Tables.LuckyDrawData",
+    "12":  "Tables.ActivityMiniGame",
+    "13":  "Tables.ActivityLinearPackageData",
+    "14":  "Tables.ActivityFestivalData",
+    "16":  "Tables.ActivityPiggyBankData",
+    "18":  "Tables.ActivityLoginData",
+    "19":  "Tables.ActivityLinearPackageData",
+    "20":  "Tables.ActivityBumperHarvestData",
+    "22":  "Tables.ActivityLinearPackageData",
+    "23":  "Tables.ActivityEnergySprintData",
+    "26":  "Tables.ActivitySeasonData",
+    "27":  "Tables.ActivityLinearPackageData",
+    "29":  "Tables.ActivityDressUpData",
+    "33":  "Tables.ActivityLinearPackageData",
+    "34":  "Tables.ActivityLinearPackageData",
+    "36":  "Tables.ActivityBalloon",
+    "37":  "Tables.ActivityCatRaceGroups",
+    "39":  "Tables.ActivityBattlePass",
+    "40":  "Tables.ShopDiamondActivityGift",
+    "48":  "Tables.ActivityPinataData",
+    "50":  "Tables.ActivityIceClimberData",
+    "52":  "Tables.ActivityLoginContinueData",
+    "53":  "Tables.ActivityCarData",
+    "57":  "Tables.TaskActivityData",
+    "61":  "Tables.KlondikeActivityData",
+    "63":  "Tables.ActivityPinBallData",
+    "64":  "Tables.KlondikeEnergyActivityData",
+    "68":  "Tables.ActivityFishingData",
+    "71":  "Tables.ActivityRunData",
+    "73":  "Tables.ActivityLinearPackageData",
+    "74":  "Tables.MiniBoardActivityData",
+    "75":  "Tables.ActivityEnergyConsumeData",
+    "76":  "Tables.CommonRankActivityData",
+    "78":  "Tables.ActivityPuzzleGroups",
+    "82":  "Tables.ActivityClawDollData",
+    "83":  "Tables.ActivityLinearPackageData",
+    "84":  "Tables.ActivityConstellationGroups",
+    "85":  "Tables.ActivityPairRacingGroups",
+    "89":  "Tables.NewBpActivityData",
+    "90":  "Tables.ActivityLinearPackageData",
+    "91":  "Tables.TaskActivitySEData",
+    "92":  "Tables.ActivityPiggyBankData",
+    "93":  "Tables.ActivityEnergyFund",
+    "98":  "Tables.ActivityLteEnergyConsumeData",
+    "99":  "Tables.ActivityLinearPackageData",
+    "101": "Tables.ActivityDrawDiscoData",
+    "103": "Tables.ActivityRaceChallengeGroups",
+    "105": "Tables.ActivityDrawEnergyData",
+    "106": "Tables.IslandDecorationData",
+    "117": "Tables.ActivityLinearPackageData",
+    "118": "Tables.ActivityLinearPackageData",
+    "120": "Tables.ActivityGalaxyData",
+    "121": "Tables.RoyalPyramid",
+    "122": "Tables.ActivityWeeklyDifficultyModel",
+    "124": "Tables.TokenLinearGiftPack",
+    "125": "Tables.Match3ActData",
+    "126": "Tables.PairMatchingData",
+    "128": "Tables.ActivityEnergyBarData",
+    "129": "Tables.ActivityWanderRaceGroups"
+  },
+
+  "_comment_typeSubTableRules": [
+    "每种 type 的子表深度字段校验规则（优先于 typeTableMap 中同 type 的配置）。",
+    "lookupField: 子表中用于查找记录的字段（默认 activityID）。",
+    "sceneValidation: true = 对该子表额外执行场景 prefab 文件检查（仅 type=2 LTE 链）。",
+    "fields: 支持 required / type / refTable / refIsArray / customCheck，与 tables[].fields 格式相同。",
+    "",
+    "字段规则来源：读取 Code/Assets/LuaScripts/Tables/*.lua.txt 中 dataCellMetaTable.__index 默认值块，",
+    "结合 LogicBase 构造函数中实际访问的字段，提取 required 字段及重要引用字段。"
+  ],
+  "typeSubTableRules": {
+    "1": {
+      "table": "Tables.ActivityBpData",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "subType",        "desc": "BP活动子类型(1=普通/2=Premium等)",    "required": true,  "type": "number" },
+        { "name": "stage_score",    "desc": "各阶段所需积分数组，至少1个元素",      "required": true,  "type": "table",
+          "customCheck": "if type(row.stage_score)=='table' and #row.stage_score < 1 then err('stage_score','积分阶段数组不能为空') end" },
+        { "name": "BPView",         "desc": "BP主界面预制体名称",                  "required": true,  "type": "string" },
+        { "name": "scoreTriggerId", "desc": "积分触发器ID",                        "required": false, "type": "number" },
+        { "name": "scoreIconId",    "desc": "积分图标资源ID",                      "required": false, "type": "number" },
+        { "name": "showPictureId",  "desc": "展示图ID，引用图片资源",              "required": false, "type": "number" },
+        { "name": "bpRewardId",     "desc": "BP奖励组ID",                          "required": false, "type": "number" }
+      ]
+    },
+    "2": {
+      "table": "Tables.LteData",
+      "lookupField": "activityID",
+      "sceneValidation": true,
+      "fields": [
+        { "name": "bpData",            "desc": "BP数据ID，引用 ActivityBpData",   "required": true,  "type": "number",
+          "refTable": "Tables.ActivityBpData" },
+        { "name": "mapData",           "desc": "主场景ID，引用 MapDataProto",     "required": true,  "type": "number",
+          "refTable": "Tables.MapDataProto" },
+        { "name": "lteEnergyRewardId", "desc": "消耗体力奖励ID",                  "required": true,  "type": "number" },
+        { "name": "lteType",           "desc": "LTE类型(1=普通)",                 "required": false, "type": "number" }
+      ]
+    },
+    "5": {
+      "table": "Tables.RankClientData",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "actionType",      "desc": "游戏行为类型，决定积分来源",         "required": true,  "type": "number" },
+        { "name": "reward",          "desc": "各段位奖励数组 {rank, rewardGroupId}", "required": true, "type": "table",
+          "customCheck": "if type(row.reward)=='table' and #row.reward < 1 then err('reward','奖励数组不能为空') end" },
+        { "name": "scoreTriggerId",  "desc": "积分触发器ID",                       "required": false, "type": "number" },
+        { "name": "scoreIconId",     "desc": "积分图标ID",                         "required": false, "type": "number" },
+        { "name": "rankIconId",      "desc": "排行榜图标ID",                       "required": false, "type": "number" }
+      ]
+    },
+    "6": {
+      "table": "Tables.ActivitySeasonData",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "scoreTriggerId",     "desc": "积分触发器ID",                    "required": true,  "type": "number" },
+        { "name": "seasonbox_group_id", "desc": "季节奖励宝箱组ID数组",            "required": true,  "type": "table",
+          "customCheck": "if type(row.seasonbox_group_id)=='table' and #row.seasonbox_group_id < 1 then err('seasonbox_group_id','奖励宝箱组不能为空') end" },
+        { "name": "activity_ui",        "desc": "活动主UI预制体名称",              "required": true,  "type": "string" },
+        { "name": "mission_id",         "desc": "任务ID",                          "required": false, "type": "number" },
+        { "name": "activity_pop_icon",  "desc": "活动弹窗图标ID",                  "required": false, "type": "number" },
+        { "name": "seasonitem_group_id","desc": "赛季道具组ID",                    "required": false, "type": "number" }
+      ]
+    },
+    "7": {
+      "table": "Tables.ActivityLinearPackageData",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "rewards",             "desc": "礼包ID数组（必填，至少1个礼包）", "required": true, "type": "table",
+          "customCheck": "if type(row.rewards)=='table' and #row.rewards < 1 then err('rewards','礼包ID数组不能为空') end" },
+        { "name": "activity_main_panel", "desc": "活动主UI预制体名称",              "required": true, "type": "string" }
+      ]
+    },
+    "8":  { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+            "fields": [
+              { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+              { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+            ]},
+    "9":  { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+            "fields": [
+              { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+              { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+            ]},
+    "10": {
+      "table": "Tables.ActivityPiggyBankData",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "scoreTriggerId",    "desc": "积分触发器ID",                     "required": true,  "type": "number" },
+        { "name": "point_upper_limit", "desc": "[可购买积分上限, 存钱罐积分上限]",  "required": true,  "type": "table",
+          "customCheck": "if type(row.point_upper_limit)=='table' and #row.point_upper_limit < 2 then err('point_upper_limit','数组元素不足2个，需要[可购买积分,积分上限]') end" },
+        { "name": "gift_price",        "desc": "礼包价格ID",                       "required": false, "type": "number" },
+        { "name": "award_type",        "desc": "奖励道具类型ID",                   "required": false, "type": "number" }
+      ]
+    },
+    "13": { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+            "fields": [
+              { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+              { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+            ]},
+    "16": {
+      "table": "Tables.ActivityPiggyBankData",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "scoreTriggerId",    "desc": "积分触发器ID",                     "required": true,  "type": "number" },
+        { "name": "point_upper_limit", "desc": "[可购买积分上限, 存钱罐积分上限]",  "required": true,  "type": "table",
+          "customCheck": "if type(row.point_upper_limit)=='table' and #row.point_upper_limit < 2 then err('point_upper_limit','数组元素不足2个') end" }
+      ]
+    },
+    "19": { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+            "fields": [
+              { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+              { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+            ]},
+    "22": { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+            "fields": [
+              { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+              { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+            ]},
+    "26": {
+      "table": "Tables.ActivitySeasonData",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "scoreTriggerId",     "desc": "积分触发器ID",     "required": true, "type": "number" },
+        { "name": "seasonbox_group_id", "desc": "奖励宝箱组ID数组", "required": true, "type": "table"  },
+        { "name": "activity_ui",        "desc": "活动主UI名称",     "required": true, "type": "string" }
+      ]
+    },
+    "27": { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+            "fields": [
+              { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+              { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+            ]},
+    "33": { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+            "fields": [
+              { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+              { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+            ]},
+    "34": { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+            "fields": [
+              { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+              { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+            ]},
+    "39": {
+      "table": "Tables.ActivityBattlePass",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "id", "desc": "BattlePass配置唯一ID", "required": true, "type": "number" }
+      ]
+    },
+    "73": { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+            "fields": [
+              { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+              { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+            ]},
+    "76": {
+      "table": "Tables.CommonRankActivityData",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "rankType", "desc": "排行榜类型，决定互斥分组", "required": true, "type": "number" }
+      ]
+    },
+    "83": { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+            "fields": [
+              { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+              { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+            ]},
+    "85": {
+      "table": "Tables.ActivityPairRacingGroups",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "activityType", "desc": "活动类型标识", "required": true, "type": "number" }
+      ]
+    },
+    "90": { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+            "fields": [
+              { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+              { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+            ]},
+    "92": {
+      "table": "Tables.ActivityPiggyBankData",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "scoreTriggerId",    "desc": "积分触发器ID",  "required": true, "type": "number" },
+        { "name": "point_upper_limit", "desc": "积分上限数组",  "required": true, "type": "table",
+          "customCheck": "if type(row.point_upper_limit)=='table' and #row.point_upper_limit < 2 then err('point_upper_limit','数组元素不足2个') end" }
+      ]
+    },
+    "99": { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+            "fields": [
+              { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+              { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+            ]},
+    "101": {
+      "table": "Tables.ActivityDrawDiscoData",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "rewardIds",     "desc": "奖励ID范围数组 {start, end}，至少1组", "required": true,  "type": "table",
+          "customCheck": "if type(row.rewardIds)=='table' and #row.rewardIds < 1 then err('rewardIds','奖励ID数组不能为空') end" },
+        { "name": "rechargeInfos", "desc": "充值信息 {rechargeItemId, rewardGroupId}", "required": true, "type": "table" },
+        { "name": "ui_view",       "desc": "主UI预制体名称",                           "required": true, "type": "string" },
+        { "name": "helpId",        "desc": "帮助弹窗ID",                               "required": false, "type": "number" }
+      ]
+    },
+    "106": {
+      "table": "Tables.IslandDecorationData",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "id", "desc": "岛屿装饰配置ID", "required": true, "type": "number" }
+      ]
+    },
+    "117": { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+             "fields": [
+               { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+               { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+             ]},
+    "118": { "table": "Tables.ActivityLinearPackageData", "lookupField": "activityID",
+             "fields": [
+               { "name": "rewards",             "desc": "礼包ID数组", "required": true, "type": "table" },
+               { "name": "activity_main_panel", "desc": "活动主UI",   "required": true, "type": "string" }
+             ]},
+    "125": {
+      "table": "Tables.Match3ActData",
+      "lookupField": "activityID",
+      "fields": [
+        { "name": "id", "desc": "三消活动配置ID", "required": true, "type": "number" }
+      ]
+    }
+  },
+
+  "_comment_typeMultiSubTableRules": [
+    "一个 type 需要同时验证多张子表时使用（存在性检查）。",
+    "type=106 IslandDecoration 需要同时检查主表/视图表/红点表。"
+  ],
+  "typeMultiSubTableRules": {
+    "106": [
+      { "table": "Tables.IslandDecorationData",    "lookupField": "activityID", "desc": "岛屿装饰主表"   },
+      { "table": "Tables.IslandDecorationView",    "lookupField": "activityID", "desc": "岛屿装饰视图表" },
+      { "table": "Tables.IslandDecorationRedPoint","lookupField": "activityID", "desc": "岛屿装饰红点表" }
+    ]
+  },
+
+  "codeFiles": [],
+  "activityTestEntry": "",
+  "entryPoints": [],
+
+  "_comment_globalStubExtras": [
+    "追加到全局桩的额外 Lua 代码，用于模拟游戏引擎提供的全局 API。",
+    "内置桩已包含：Debug/print/class/handler/require/ArchiveManager/EventManager/CS/UnityEngine/SolarRoot 等。",
+    "若业务代码还用到其他全局对象，在此补充。",
+    "示例：\"Localization = { GetText = function(k) return k end }\""
+  ],
+  "globalStubExtras": ""
+}
