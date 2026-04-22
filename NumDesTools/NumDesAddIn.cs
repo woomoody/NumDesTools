@@ -294,7 +294,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["CheckExcelKeyAndValueFormat"] = CheckExcelKeyAndValueFormat_Click,
             ["OutPutExcelDataToLua"] = OutPutExcelDataToLua_Click,
             ["OutPutExcelDataToLuaAll"] = OutPutExcelDataToLuaAll_Click,
-            ["CheckColFromExcelMulti"] = CheckColFromExcelMulti_Click
+            ["CheckColFromExcelMulti"] = CheckColFromExcelMulti_Click,
+            ["ActivityTestAll"] = ActivityTestAll_Click,
+            ["ActivityTestById"] = ActivityTestById_Click,
+            ["ActivityTestGitChanged"] = ActivityTestGitChanged_Click
         };
     }
 
@@ -3391,4 +3394,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     }
 
     #endregion
+
+    public void ActivityTestAll_Click(IRibbonControl control)
+        => ActivityConfigTester.TestAll();
+
+    public void ActivityTestById_Click(IRibbonControl control)
+    {
+        var input = Microsoft.VisualBasic.Interaction.InputBox(
+            "请输入活动ID（多个用英文逗号分隔）：", "验证指定活动");
+        if (string.IsNullOrWhiteSpace(input)) return;
+        ActivityConfigTester.TestByIds(input);
+    }
+
+    public void ActivityTestGitChanged_Click(IRibbonControl control)
+        => ActivityConfigTester.TestGitChanged();
 }
