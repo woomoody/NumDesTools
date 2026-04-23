@@ -26,21 +26,21 @@
                             screentip='点击启动表格关闭时数据自检，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.json' tag='数据自检开关' />
                     <separator id='Sep1' />
                     <menu id='CheckMenu' label='检查工具&#13;' image='log' size='large'>
-                        <button id='Button8' label='公式检查' imageMso='ReviewShowMarkup' onAction='OnButtonClick'
+                        <button id='Button8' label='公式检查' imageMso='FormulaEvaluate' onAction='OnButtonClick'
                                 screentip='点击检查当前工作簿所有sheet中的公式，看是否有错误的连接，推荐合完表后进行检查' tag='公式检查开关' />
-                        <button id='CheckHiddenCellVsto' label='检查隐藏(当前)' imageMso='ReviewTrackChanges' onAction='OnButtonClick'
+                        <button id='CheckHiddenCellVsto' label='检查隐藏(当前)' imageMso='FileDocumentInspect' onAction='OnButtonClick'
                                 screentip='点击检查当前变动Excel是否有隐藏单元格，VSTO方式需要打开Excel，较慢' tag='检查隐藏' />
-                        <button id='CheckHiddenCellVstoAll' label='检查隐藏(全局)' imageMso='ReviewCompareDocuments' onAction='OnButtonClick'
+                        <button id='CheckHiddenCellVstoAll' label='检查隐藏(全局)' imageMso='ErrorChecking' onAction='OnButtonClick'
                                 screentip='点击检查全量Excel是否有隐藏单元格，VSTO方式需要打开Excel，较慢' tag='检查隐藏（全局）' />
-                        <button id='CheckExcelKeyAndValueFormat' label='检查表格式' imageMso='ReviewCheckDocument' onAction='OnButtonClick'
+                        <button id='CheckExcelKeyAndValueFormat' label='检查表格式' imageMso='SpellingAndGrammar' onAction='OnButtonClick'
                                 screentip='点击检查全量Excel是否有重复Key，单元格格式是否合法' tag='检查格式' />
-                        <button id='PowerQueryLinksUpdate' label='更新表格路径' imageMso='RefreshAll' onAction='OnButtonClick'
+                        <button id='PowerQueryLinksUpdate' label='更新表格路径' imageMso='DataRefreshAll' onAction='OnButtonClick'
                                 screentip='更新PowerQuery表连接路径' tag='更新表格路径' />
                     </menu>
                     <menu id='LuaExportMenu' label='导出Lua&#13;' image='scheme' size='large'>
-                        <button id='OutPutExcelDataToLua' label='Lua表格(当前)' imageMso='ExportExcel' onAction='OnButtonClick'
+                        <button id='OutPutExcelDataToLua' label='Lua表格(当前)' imageMso='FileSave' onAction='OnButtonClick'
                                 screentip='将当前表格数据导出为Lua' tag='导出Lua数据' />
-                        <button id='OutPutExcelDataToLuaAll' label='Lua表格(全量)' imageMso='ExportToExcel' onAction='OnButtonClick'
+                        <button id='OutPutExcelDataToLuaAll' label='Lua表格(全量)' imageMso='ExportExcel' onAction='OnButtonClick'
                                 screentip='将当前表格数据导出为Lua' tag='导出Lua数据All' />
                     </menu>
                 </group>
@@ -80,29 +80,29 @@
                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^………………'/>
                     <menu id='ExcelSearchBoxMenu' label='全局搜索&#13;' image='key' size='large'>
                         <button id="ExcelSearchBoxButton1" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件'
-                                onAction='OnButtonClick' imageMso="RulesInspector" tag='全局搜索' />
+                                onAction='OnButtonClick' imageMso="FindDialogExcel" tag='全局搜索' />
                         <button id="ExcelSearchBoxButton3" label="全局搜索(多线程)" screentip='全列，按照A-Z的顺序遍历文件'
-                                onAction='OnButtonClick' imageMso="RulesManageAndCreate" tag='全局搜索(多线程)' />
+                                onAction='OnButtonClick' imageMso="FindDialog" tag='全局搜索(多线程)' />
                         <button id="ExcelSearchBoxButton2" label="编号搜索(多线程)" screentip='二列，按照A-Z的顺序遍历文件'
-                                onAction='OnButtonClick' imageMso="RulesOnLoad" tag='编号搜索(多线程)' />
+                                onAction='OnButtonClick' imageMso="FindDialogExcel" tag='编号搜索(多线程)' />
                         <button id="ExcelSearchBoxButton4" label="合并数据-关键词" screentip='合并Excel(Alice-Cove)当前关键词'
-                                onAction='OnButtonClick' imageMso="SelectAll" tag='合并数据-关键词' />
+                                onAction='OnButtonClick' imageMso="AdpNewTable" tag='合并数据-关键词' />
                     </menu>
                     <menu id='AutoInsertExcelDataMenu2' label='创建数据&#13;' image='ejs' size='large'>
                         <button id="ModelDataCreat" label="常规模版" screentip='全局搜索关键词，输出表格数据，常规模版数据，例如：各类LTE、主岛活动常规【模版】'
-                                onAction='OnButtonClick' imageMso="AdpNewTable" tag='常规模版' />
+                                onAction='OnButtonClick' imageMso="TableInsert" tag='常规模版' />
                         <button id="ModelDataCreat2" label="特殊模版" screentip='指定表格搜索关键词，输出表格数据，特殊模版数据，例如：LTE皮肤【模版】'
-                                onAction='OnButtonClick' imageMso="Hotspot" tag='特殊模版' />
+                                onAction='OnButtonClick' imageMso="SheetInsert" tag='特殊模版' />
                     </menu>
                     <menu id='CurrentSheetMenu' label='当前表操作&#13;' image='verilog' size='large'>
                         <button id="ExcelSearchBoxButton5" label="替换文本" screentip='搜索当前激活表格中包含特别的字符串并替换'
-                                onAction='OnButtonClick' imageMso="FindAndReplace" tag='替换文本(当前表格)' />
+                                onAction='OnButtonClick' imageMso="ReplaceDialog" tag='替换文本(当前表格)' />
                         <button id="ExcelSearchBoxButton6" label="搜索文本" screentip='搜索当前激活表格中包含特别的字符串'
-                                onAction='OnButtonClick' imageMso="FindDialog" tag='替换文本(当前表格)' />
+                                onAction='OnButtonClick' imageMso="FindDialogExcel" tag='替换文本(当前表格)' />
                         <button id="ExcelSearchBoxButton7" label="搜索Sheet名" screentip='搜索txt导出文件所在工作簿，特别指$开头'
                                 onAction='OnButtonClick' imageMso="SheetInsert" tag='搜索Sheet名' />
                         <button id="ExcelSearchBoxButton8" label="搜索公式名" screentip='搜索当前Excel中使用的公式'
-                                onAction='OnButtonClick' imageMso="FormulaMoreFunctions" tag='搜索公式名' />
+                                onAction='OnButtonClick' imageMso="FormulaEvaluate" tag='搜索公式名' />
                     </menu>
                     <button id="ExcelDataToDb" size='large' label="数据DB化" screentip='备份Public下配置Excel文件数据库化，方便更高效的查询'
                             onAction='OnButtonClick' image="log" tag='Excel数据DB化' />
@@ -114,9 +114,9 @@
                         <button id="ActivityServerDataButton1" label="生成活动(活动名)" screentip='根据运营排期自动生成活动配置'
                                 onAction='OnButtonClick' imageMso="TableInsert" tag='生成活动(活动名)' />
                         <button id="ActivityServerDataButton2" label="生成活动(活动ID)" screentip='根据运营排期自动生成活动配置'
-                                onAction='OnButtonClick' imageMso="TableInsert" tag='生成活动(活动ID)' />
+                                onAction='OnButtonClick' imageMso="AdpNewTable" tag='生成活动(活动ID)' />
                         <button id="ActivityServerDataButton3" label="更新活动" screentip='根据运营排期自动更新活动配置'
-                                onAction='OnButtonClick' imageMso="RefreshAll" tag='更新活动' />
+                                onAction='OnButtonClick' imageMso="DataRefreshAll" tag='更新活动' />
                     </menu>
                     <button id="CompareExcelButton" size='large' label="对比Excel" screentip='对比不同版本同路径下的非#Excel文件，输出至【文档\#表格比对结果.xlsx】'
                             onAction='OnButtonClick' image="console" tag='对比Excel' />
@@ -126,11 +126,11 @@
                             onAction='OnButtonClick' image="dart" tag='检查数据格式' />
                     <menu id='ActivityValidateMenu' label='验证活动&#13;' image='codecov' size='large'>
                         <button id="ActivityTestAll" label="验证活动(全量)" screentip='验证所有活动配置表的跨表引用和字段规则'
-                                onAction='OnButtonClick' imageMso="ValidationCircleInvalid" tag='验证活动(全量)' />
+                                onAction='OnButtonClick' imageMso="DataValidation" tag='验证活动(全量)' />
                         <button id="ActivityTestById" label="验证活动(指定ID)" screentip='输入活动ID验证配置链完整性'
-                                onAction='OnButtonClick' imageMso="ValidationDelete" tag='验证活动(指定ID)' />
+                                onAction='OnButtonClick' imageMso="ErrorChecking" tag='验证活动(指定ID)' />
                         <button id="ActivityTestGitChanged" label="验证活动(Git改动)" screentip='只验证当前Git工作区有改动的活动表'
-                                onAction='OnButtonClick' imageMso="ValidationHighlightInvalid" tag='验证活动(Git改动)' />
+                                onAction='OnButtonClick' imageMso="FieldsUpdate" tag='验证活动(Git改动)' />
                     </menu>
                 </group>
 
