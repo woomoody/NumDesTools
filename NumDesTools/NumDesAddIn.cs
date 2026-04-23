@@ -297,7 +297,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["CheckColFromExcelMulti"] = CheckColFromExcelMulti_Click,
             ["ActivityTestAll"] = ActivityTestAll_Click,
             ["ActivityTestById"] = ActivityTestById_Click,
-            ["ActivityTestGitChanged"] = ActivityTestGitChanged_Click
+            ["ActivityTestGitChanged"] = ActivityTestGitChanged_Click,
+            ["ActivityCloneButton"] = ActivityClone_Click,
+            ["ActivityRulesUpdateButton"] = ActivityRulesUpdate_Click
         };
     }
 
@@ -3408,4 +3410,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void ActivityTestGitChanged_Click(IRibbonControl control)
         => ActivityConfigTester.TestGitChanged();
+
+    public void ActivityClone_Click(IRibbonControl control)
+        => ActivityDataCloner.RunDialog();
+
+    public void ActivityRulesUpdate_Click(IRibbonControl control)
+        => ActivityRulesUpdater.Run();
 }

@@ -2071,4 +2071,68 @@ public class ExcelUdf
         }
     }
 
+    [ExcelFunction(
+        Category = "UDF-Alice专属函数",
+        IsVolatile = true,
+        IsMacroType = true,
+        Description = "计算范围内每个非空单元格相对于炸弹点的坐标偏移，格式：[-1,0][1,2]...（[0,0]为炸弹点自身，省略）",
+        Name = "BombOffsets"
+    )]
+    public static string BombOffsets(
+        [ExcelArgument(AllowReference = true, Description = "炸弹点单元格", Name = "炸弹点")]
+            object bombCell,
+        [ExcelArgument(AllowReference = true, Description = "true=过滤空单元格，false=空单元格也输出（默认）", Name = "过滤空值")]
+            bool ignoreEmpty = false,
+        [ExcelArgument(AllowReference = true, Description = "范围1", Name = "范围1")]
+            object range1 = null,
+        [ExcelArgument(AllowReference = true, Description = "范围2（可选）", Name = "范围2")]
+            object range2 = null,
+        [ExcelArgument(AllowReference = true, Description = "范围3（可选）", Name = "范围3")]
+            object range3 = null,
+        [ExcelArgument(AllowReference = true, Description = "范围4（可选）", Name = "范围4")]
+            object range4 = null,
+        [ExcelArgument(AllowReference = true, Description = "范围5（可选）", Name = "范围5")]
+            object range5 = null,
+        [ExcelArgument(AllowReference = true, Description = "范围6（可选）", Name = "范围6")]
+            object range6 = null,
+        [ExcelArgument(AllowReference = true, Description = "范围7（可选）", Name = "范围7")]
+            object range7 = null,
+        [ExcelArgument(AllowReference = true, Description = "范围8（可选）", Name = "范围8")]
+            object range8 = null
+    )
+    {
+        var bombRef = bombCell as ExcelReference;
+        if (bombRef == null) return "#炸弹点需为单元格引用";
+        int bombRow = bombRef.RowFirst;
+        int bombCol = bombRef.ColumnFirst;
+
+        var ranges = new[] { range1, range2, range3, range4, range5, range6, range7, range8 };
+        var areas = ranges
+            .Select(r => r as ExcelReference)
+            .Where(r => r != null)
+            .ToList();
+        if (areas.Count == 0) return "#至少需要一个范围";
+
+        var parts = new List<string>();
+        foreach (var area in areas)
+        for (int r = area.RowFirst; r <= area.RowLast; r++)
+        for (int c = area.ColumnFirst; c <= area.ColumnLast; c++)
+        {
+            if (r == bombRow && c == bombCol) continue;
+
+            if (ignoreEmpty)
+            {
+                var cellRef = new ExcelReference(r, r, c, c, area.SheetId);
+                var val = XlCall.Excel(XlCall.xlCoerce, cellRef);
+                if (val == null || val is ExcelEmpty || val is ExcelError) continue;
+            }
+
+            int dx = c - bombCol;
+            int dy = bombRow - r;   // 上为正，下为负
+            parts.Add($"[{dx},{dy}]");
+        }
+
+        return "[" + Join(",", parts) + "]";
+    }
+
 }

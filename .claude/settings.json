@@ -86,7 +86,17 @@
       "Bash(cd \"C:/Users/cent/StockReport\" *)",
       "WebFetch(domain:www.investopedia.com)",
       "WebFetch(domain:zh.wikipedia.org)",
-      "WebFetch(domain:en.wikipedia.org)"
+      "WebFetch(domain:en.wikipedia.org)",
+      "Read(//tmp/template2_extract/xl/worksheets/**)",
+      "Read(//c/tmp/template2_extract/xl/worksheets/**)",
+      "Read(//tmp/file1_extract/xl/**)",
+      "Read(//c/tmp/file1_extract/xl/**)",
+      "Read(//tmp/file2_extract/xl/**)",
+      "Read(//c/tmp/file2_extract/xl/**)",
+      "mcp__FeishuProjectMcp__search_user_info",
+      "mcp__FeishuProjectMcp__list_workitem_role_config",
+      "mcp__FeishuProjectMcp__create_workitem",
+      "mcp__FeishuProjectMcp__add_comment"
     ],
     "additionalDirectories": [
       "C:\\Users\\cent\\Documents\\NumDesTools\\Config",
