@@ -124,6 +124,10 @@
                             onAction='OnButtonClick' image="video" tag='溯源改动' />
                     <button id="CheckFileFormat" size='large' label="检查数据&#13;格式" screentip='手动检查数据格式，取消隐藏，过滤符配置在\Document\NumDesToolsConfig.json'
                             onAction='OnButtonClick' image="dart" tag='检查数据格式' />
+                    <button id="ActivityCloneButton" size='large' label="克隆活动&#13;" screentip='根据ActivityTableRules规则，以指定源活动ID为模板克隆新期次数据到所有相关表'
+                            onAction='OnButtonClick' imageMso="RecordsCopyMoveField" tag='克隆活动' />
+                    <button id="ActivityRulesUpdateButton" size='large' label="更新活动&#13;规则" screentip='扫描 EnumCmds/ActivityManager/LogicBase 自动补全 ActivityTableRules.json 的 typeTableMap（只增不改）'
+                            onAction='OnButtonClick' imageMso="DataRefreshAll" tag='更新活动规则' />
                     <menu id='ActivityValidateMenu' label='验证活动&#13;' image='codecov' size='large'>
                         <button id="ActivityTestAll" label="验证活动(全量)" screentip='验证所有活动配置表的跨表引用和字段规则'
                                 onAction='OnButtonClick' imageMso="DataValidation" tag='验证活动(全量)' />
