@@ -34,10 +34,10 @@ public class LteCoreUnitTests
     {
         var dic = new Dictionary<string, string>
         {
-            ["ÏûºÄÁ¿×é"] = "1,2",
-            ["ÎïÆ·±àºÅ"] = "a,b"
+            ["ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"] = "1,2",
+            ["ï¿½ï¿½Æ·ï¿½ï¿½ï¿½"] = "a,b"
         };
-        var result = LteCore.Arr(dic, "ÎïÆ·±àºÅ", "ÏûºÄÁ¿×é", "");
+        var result = LteCore.Arr(dic, "ï¿½ï¿½Æ·ï¿½ï¿½ï¿½", "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½", "");
         Assert.Equal("[a,1],[b,2]", result);
     }
 
@@ -52,14 +52,14 @@ public class LteCoreUnitTests
     [Fact]
     public void AnalyzeWildcard_ReplacesStaticWildcard()
     {
-        var exportWildcardData = new Dictionary<string, string> { ["X"] = "¾²Ì¬Öµ" };
+        var exportWildcardData = new Dictionary<string, string> { ["X"] = "ï¿½ï¿½Ì¬Öµ" };
         var exportWildcardDyData = new Dictionary<string, string>();
         var strDic = new Dictionary<string, Dictionary<string, List<string>>>();
         var baseData = new Dictionary<string, List<string>>();
         var input = "prefix #X# suffix";
 
         var result = LteCore.AnalyzeWildcard(input, exportWildcardData, exportWildcardDyData, strDic, baseData, "id", "itemId");
-        Assert.Equal("prefix ¾²Ì¬Öµ suffix", result);
+        Assert.Equal("prefix ï¿½ï¿½Ì¬Öµ suffix", result);
     }
 
     [Fact]
@@ -94,7 +94,8 @@ public class LteCoreUnitTests
     {
         var dy = new Dictionary<string, string> { ["dep"] = "200" };
         var ids = new List<string> { "201" };
-        var result = LteCore.MerTry(dy, "dep", "1", "3", "10", ids);
+        var baseData = new Dictionary<string, List<string>>();
+        var result = LteCore.MerTry(dy, "dep", "1", "3", "10", ids, baseData);
         Assert.Equal(LteCore.Mer(dy, "dep", string.Empty, "1"), result);
     }
 
@@ -103,8 +104,8 @@ public class LteCoreUnitTests
     {
         var strDic = new Dictionary<string, Dictionary<string, List<string>>>();
         strDic["d"] = new Dictionary<string, List<string>> { ["10A"] = new List<string> { "100", "101" } };
-        var dy = new Dictionary<string, string> { ["ÎïÆ·±àºÅ"] = "100" };
-        var res = LteCore.GetDic(strDic, dy, "d", "ÎïÆ·±àºÅ", "2", "00");
+        var dy = new Dictionary<string, string> { ["ï¿½ï¿½Æ·ï¿½ï¿½ï¿½"] = "100" };
+        var res = LteCore.GetDic(strDic, dy, "d", "ï¿½ï¿½Æ·ï¿½ï¿½ï¿½", "2", "00");
         Assert.Equal("100,101", res);
     }
 
@@ -113,10 +114,10 @@ public class LteCoreUnitTests
     {
         var baseData = new Dictionary<string, List<string>>();
         baseData["id"] = new List<string> { "100", "101", "102" };
-        baseData["ÏûºÄID×é"] = new List<string> { "1#2", "1#2", "1#2" };
-        baseData["ÏûºÄÁ¿×é"] = new List<string> { "1#1", "1#1", "1#1" };
+        baseData["ï¿½ï¿½ï¿½ï¿½IDï¿½ï¿½"] = new List<string> { "1#2", "1#2", "1#2" };
+        baseData["ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"] = new List<string> { "1#1", "1#1", "1#1" };
         var dy = new Dictionary<string, string> { ["dep"] = "100" };
-        var res = LteCore.CollectRow(dy, "dep", "1", "ÏûºÄID×é", "ÏûºÄÁ¿×é", "2", "1", baseData, "id");
+        var res = LteCore.CollectRow(dy, "dep", "1", "ï¿½ï¿½ï¿½ï¿½IDï¿½ï¿½", "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½", "2", "1", baseData, "id");
         Assert.StartsWith("[", res);
     }
 

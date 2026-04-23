@@ -2,6 +2,7 @@
 using System.Data.OleDb;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Win32;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using stdole;
@@ -36,10 +37,47 @@ public static class ErrorLogCtp
     public static CustomTaskPane Ctp;
     public static LabelControl LabelControl;
 
+    private static bool IsSystemDarkMode()
+    {
+        try
+        {
+            var v = Registry.GetValue(
+                @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                "AppsUseLightTheme", 1);
+            return v is int i && i == 0;
+        }
+        catch { return true; }
+    }
+
+    // 返回 (控件背景色, 控件前景色, 面板背景色)
+    internal static (Color back, Color fore, Color panelBack) GetThemeColors()
+    {
+        return IsSystemDarkMode()
+            ? (Color.FromArgb(30, 30, 30), Color.FromArgb(220, 220, 220), Color.FromArgb(45, 45, 45))
+            : (Color.FromArgb(250, 250, 250), Color.FromArgb(30, 30, 30), Color.FromArgb(235, 235, 235));
+    }
+
+    // 根据文本内容计算合适的 CTP 宽度：自适应最长行，上限为屏幕宽度的一半
+    private static int CalcCtpWidth(string text, Font font)
+    {
+        var maxLineWidth = 0;
+        using var g = Graphics.FromHwnd(IntPtr.Zero);
+        foreach (var line in text.Split('\n'))
+        {
+            var w = (int)g.MeasureString(line.TrimEnd('\r'), font).Width;
+            if (w > maxLineWidth) maxLineWidth = w;
+        }
+        var screenHalf = Screen.PrimaryScreen?.WorkingArea.Width / 2 ?? 800;
+        return Math.Max(350, Math.Min(maxLineWidth + 30, screenHalf));
+    }
+
     public static void CreateCtp(string errorLog)
     {
         LabelControl = new LabelControl();
+        var (back, fore, panelBack) = GetThemeColors();
+        LabelControl.BackColor = panelBack;
         var strErrorFilter = Regex.Split(errorLog, "\r\n", RegexOptions.IgnoreCase);
+        var font = new Font("微软雅黑", 9, FontStyle.Regular);
         var i = 0;
         foreach (var unused in strErrorFilter)
         {
@@ -56,8 +94,11 @@ public static class ErrorLogCtp
                         Height = 20,
                         Width = 550,
                         Location = new Point(10, 40 + (i - 1) * 20),
-                        ReadOnly = true, // 设置为只读
-                        BorderStyle = BorderStyle.None // 去掉边框
+                        ReadOnly = true,
+                        BorderStyle = BorderStyle.None,
+                        Font = font,
+                        BackColor = back,
+                        ForeColor = fore
                     };
                     LabelControl.Controls.Add(errorTextBox);
                 }
@@ -71,37 +112,39 @@ public static class ErrorLogCtp
             i < 46 ? "单元格错误集合" : "部分错误：错误大于45个"
         );
         Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
-        Ctp.Width = 600;
+        Ctp.Width = CalcCtpWidth(errorLog, font);
         Ctp.Visible = true;
     }
 
     public static void CreateCtpNormal(string errorLog)
     {
         LabelControl = new LabelControl();
+        var (back, fore, panelBack) = GetThemeColors();
+        LabelControl.BackColor = panelBack;
+        var font = new Font("微软雅黑", 9, FontStyle.Bold);
         var errorLinkLable = new RichTextBox
         {
             Text = errorLog,
             Location = new Point(10, 40),
             ScrollBars = (RichTextBoxScrollBars)ScrollBars.Vertical,
-            Font = new Font("微软雅黑", 9, FontStyle.Bold),
+            Font = font,
             Dock = DockStyle.Fill,
-            BackColor = Color.Gray,
-            ForeColor = Color.GhostWhite
+            BackColor = back,
+            ForeColor = fore
         };
 
         LabelControl.Controls.Add(errorLinkLable);
 
         Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(LabelControl, "写入错误日志");
         Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
-        Ctp.Width = 450;
+        Ctp.Width = CalcCtpWidth(errorLog, font);
         LabelControl.Dock = DockStyle.Fill;
         Ctp.Visible = true;
     }
 
     public static void DisposeCtp()
     {
-        if (Ctp is not { Title: "表格目录" })
-            return;
+        if (Ctp == null) return;
         Ctp.Delete();
         Ctp = null;
     }
@@ -619,15 +662,29 @@ public static class PreviewTableCtp
 
     public static void CreateCtpTable(string filePath, string sheetName)
     {
-        Uc = new UserControl();
+        var (back, fore, panelBack) = ErrorLogCtp.GetThemeColors();
+        Uc = new UserControl { BackColor = panelBack };
         Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(Uc, filePath + @"\" + sheetName);
         Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
-        Ctp.Width = 700;
-        Ctp.Visible = true;
-        var dgv = new DataGridView();
+        var dgv = new DataGridView
+        {
+            BackgroundColor = panelBack,
+            GridColor = fore,
+            DefaultCellStyle = { BackColor = back, ForeColor = fore, SelectionBackColor = Color.FromArgb(70, 130, 180), SelectionForeColor = Color.White },
+            ColumnHeadersDefaultCellStyle = { BackColor = panelBack, ForeColor = fore },
+            EnableHeadersVisualStyles = false
+        };
         dgv.DataSource = ExcelToDataGridView.SheetDataToDataGridView(filePath, sheetName);
-        dgv.Width = 680;
+        dgv.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);
         dgv.Height = 900;
+        var totalColWidth = 0;
+        foreach (DataGridViewColumn col in dgv.Columns)
+            totalColWidth += col.Width;
+        var screenHalf = Screen.PrimaryScreen?.WorkingArea.Width / 2 ?? 800;
+        var ctpWidth = Math.Max(400, Math.Min(totalColWidth + 30, screenHalf));
+        dgv.Width = ctpWidth - 20;
+        Ctp.Width = ctpWidth;
+        Ctp.Visible = true;
         Uc.Controls.Add(dgv);
     }
 }
