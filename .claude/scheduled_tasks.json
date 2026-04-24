@@ -1,0 +1,22 @@
+{
+  "tasks": [
+    {
+      "id": "188c912c",
+      "cron": "30 9 * * 1-5",
+      "prompt": "执行飞书需求配置表格每日扫描：\n运行命令：python \"C:\\Users\\cent\\Documents\\NumDesTools\\Config\\feishu_table_comment.py\" --all\n将输出保存到 C:\\Users\\cent\\Documents\\NumDesTools\\Config\\scan_log_{today}.txt（today替换为今日日期如2026-04-24）。\n扫描完成后：\n- 如果有新增待写入项（输出中含\"新增待写入\"字样），告知用户发现了几条，并提示\"如需写入飞书，请双击 run_release.bat 确认\"。\n- 如果没有新增待写入项（输出末尾是\"无待写入项\"），则静默，不要通知用户。",
+      "createdAt": 1776939198301,
+      "recurring": true,
+      "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
+      "createdByPid": 48144,
+      "lastFiredAt": 1776996190720
+    },
+    {
+      "id": "9665d04a",
+      "cron": "30 9 30 4 *",
+      "prompt": "飞书每日扫描定时任务（job: 188c912c）即将在今天到期，请续期：重新创建 Cron，每周一到周五 09:30 运行 feishu_table_comment.py --all，有新增才通知用户。",
+      "createdAt": 1776939313273,
+      "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
+      "createdByPid": 48144
+    }
+  ]
+}
