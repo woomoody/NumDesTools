@@ -40,6 +40,9 @@ public static class ActivityDataCloner
 
         [JsonProperty("typeSubTableRules")]
         public Dictionary<string, SubTableRule> TypeSubTableRules { get; set; } = new();
+
+        [JsonProperty("typeMultiSubTableRules")]
+        public Dictionary<string, List<string>> TypeMultiSubTableRules { get; set; } = new();
     }
 
     private class TableDef
@@ -245,12 +248,58 @@ public static class ActivityDataCloner
             report.AppendLine($"⚠ ActivityTableRules.json 中没有 type={activityType} 的子表规则，仅克隆主表和服务端表");
         }
 
+        // 追加 typeMultiSubTableRules 中的多张附属表
+        if (rules.TypeMultiSubTableRules.TryGetValue(typeKey, out var multiTables))
+        {
+            foreach (var excelName in multiTables)
+            {
+                // 自动探测该表用 activityID 还是 id 作为关联字段
+                var detectedField = DetectLookupField(excelPath, excelName, activityDataId.ToString());
+                if (detectedField == null)
+                {
+                    report.AppendLine($"⚠ {excelName}  未找到包含 activityID={activityDataId} 的关联列，跳过");
+                    continue;
+                }
+                targets.Add(new(excelName, detectedField, activityDataId.ToString()));
+            }
+        }
+
         report.AppendLine($"克隆目标表（共 {targets.Count} 张）：");
         foreach (var t in targets)
             report.AppendLine($"  • {t.ExcelName}  [查找字段={t.LookupField}  源值={t.LookupValue}]");
         report.AppendLine();
 
         return targets;
+    }
+
+    /// <summary>
+    /// 自动探测该表中用于关联 activityID 的字段名：
+    /// 优先找名为 "activityID" 的列，其次找 "id" 列，
+    /// 并验证该列中确实存在 lookupValue 的数据行。
+    /// 找不到返回 null。
+    /// </summary>
+    private static string DetectLookupField(string excelDir, string excelName, string lookupValue)
+    {
+        var path = ResolveFilePath(excelDir, excelName);
+        if (!File.Exists(path)) return null;
+
+        try
+        {
+            using var pkg = new ExcelPackage(new FileInfo(path));
+            var sheet = pkg.Workbook.Worksheets["Sheet1"] ?? pkg.Workbook.Worksheets[0];
+            if (sheet?.Dimension == null) return null;
+
+            foreach (var candidate in new[] { "activityID", "id" })
+            {
+                var col = FindHeaderCol(sheet, candidate);
+                if (col < 0) continue;
+                if (FindRowByValue(sheet, col, lookupValue) >= 0)
+                    return candidate;
+            }
+        }
+        catch { /* 打开失败时跳过 */ }
+
+        return null;
     }
 
     /// <summary>

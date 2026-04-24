@@ -96,7 +96,8 @@
       "mcp__FeishuProjectMcp__search_user_info",
       "mcp__FeishuProjectMcp__list_workitem_role_config",
       "mcp__FeishuProjectMcp__create_workitem",
-      "mcp__FeishuProjectMcp__add_comment"
+      "mcp__FeishuProjectMcp__add_comment",
+      "mcp__FeishuProjectMcp__list_workitem_comments"
     ],
     "additionalDirectories": [
       "C:\\Users\\cent\\Documents\\NumDesTools\\Config",
