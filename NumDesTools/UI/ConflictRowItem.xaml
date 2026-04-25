@@ -1,0 +1,59 @@
+<UserControl
+    x:Class="NumDesTools.UI.ConflictRowItem"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Border BorderBrush="#333" BorderThickness="0,0,0,1" Margin="0,0,0,2">
+        <StackPanel>
+
+            <!-- 行头：ID + 类型 + 操作按钮 -->
+            <Grid x:Name="HeaderGrid" Background="#2A2A2A" MinHeight="28">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,3">
+                    <TextBlock Text="ID: " Foreground="#888" FontSize="11"/>
+                    <TextBlock x:Name="RowKeyText" Foreground="White" FontWeight="Bold" FontSize="11"/>
+                    <Border x:Name="BadgeBorder" CornerRadius="3" Margin="8,0,0,0" Padding="4,1">
+                        <TextBlock x:Name="DiffTypeBadge" FontSize="10"/>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel x:Name="BatchButtons" Grid.Column="1" Orientation="Horizontal"
+                            Margin="0,2,8,2" VerticalAlignment="Center">
+                    <Button Content="全取我的"  Tag="Ours"   Click="BatchChoice_Click"
+                            Padding="6,2" Margin="0,0,4,0"
+                            Background="#1A3A6E" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                    <Button Content="全取他的" Tag="Theirs" Click="BatchChoice_Click"
+                            Padding="6,2"
+                            Background="#1A5C3A" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                </StackPanel>
+
+                <StackPanel x:Name="RowChoicePanel" Grid.Column="1" Orientation="Horizontal"
+                            Margin="0,2,8,2" VerticalAlignment="Center" Visibility="Collapsed">
+                    <RadioButton Content="保留我的" IsChecked="{Binding RowChoiceOurs,   Mode=TwoWay}"
+                                 Foreground="#A8C8FF" Margin="0,0,8,0"/>
+                    <RadioButton Content="用他的"   IsChecked="{Binding RowChoiceTheirs, Mode=TwoWay}"
+                                 Foreground="#A8FFCA"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- OURS 行 -->
+            <ScrollViewer x:Name="OursScroll"
+                          HorizontalScrollBarVisibility="Hidden"
+                          VerticalScrollBarVisibility="Disabled">
+                <Grid x:Name="OursGrid" MinHeight="24"/>
+            </ScrollViewer>
+
+            <!-- THEIRS 行（OnlyOurs 时隐藏） -->
+            <ScrollViewer x:Name="TheirsScroll"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled">
+                <Grid x:Name="TheirsGrid" MinHeight="24"/>
+            </ScrollViewer>
+
+        </StackPanel>
+    </Border>
+</UserControl>

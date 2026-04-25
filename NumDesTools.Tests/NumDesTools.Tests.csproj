@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NumDesTools\NumDesTools.csproj" />
+    <ProjectReference Include="..\NumDesTools.Scanner\NumDesTools.Scanner.csproj" />
   </ItemGroup>
 
 </Project>

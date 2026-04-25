@@ -277,39 +277,94 @@ namespace NumDesTools.Advance
         public void ConvertWithSchemaInference(string rootPath, string dbPath)
         {
             var filesCollection = new SelfExcelFileCollector(rootPath);
-            var files = filesCollection.GetAllExcelFilesPath();
+            var files = filesCollection.GetAllExcelFilesPath()
+                .Where(f => !f.Contains("#"))
+                .ToList();
+            SyncDirectory(files, dbPath);
+        }
 
-            if (File.Exists(dbPath))
-                File.Delete(dbPath);
+        /// <summary>
+        /// 增量同步文件列表到数据库。只更新比 DB 记录 mtime 更新的文件，其余跳过。
+        /// DB 不存在时自动创建。
+        /// </summary>
+        public void SyncDirectory(IEnumerable<string> filePaths, string dbPath)
+        {
+            EnsureDatabaseExists(dbPath);
 
             using var connection = new SqliteConnection($"Data Source={dbPath}");
             connection.Open();
 
-            // 第一步：创建元数据表和行号映射表
             CreateMetadataTable(connection);
+            EnsureMtimeColumn(connection);
 
-            foreach (var file in files)
+            // 读取已有 mtime 记录
+            var dbMtimes = LoadMtimes(connection);
+
+            int updated = 0, skipped = 0;
+            foreach (var file in filePaths)
             {
-                if (!File.Exists(file))
+                if (!File.Exists(file) || file.Contains("#") || Path.GetFileName(file).StartsWith('~'))
                 {
-                    Debug.Print($"文件不存在，跳过: {file}");
+                    skipped++;
                     continue;
                 }
 
-                if (file.Contains("#"))
+                var fullPath = Path.GetFullPath(file);
+                var mtime    = new FileInfo(file).LastWriteTimeUtc.Ticks;
+
+                if (dbMtimes.TryGetValue(fullPath, out var stored) && stored == mtime)
                 {
-                    Debug.Print($"[#]文件，跳过: {file}");
+                    skipped++;
                     continue;
                 }
 
-                Debug.Print($"处理文件: {file}");
-                NumDesAddIn.App.StatusBar = $"处理文件: {file}";
-
-                ProcessSingleExcelFile(connection, file);
+                NumDesAddIn.App.StatusBar = $"DB同步: {Path.GetFileName(file)}";
+                UpdateSingleExcelFile(connection, file, UpdateMode.Overwrite);
+                StoreMtime(connection, fullPath, mtime);
+                updated++;
             }
 
-            // 验证行号映射
+            NumDesAddIn.App.StatusBar = $"DB同步完成（更新{updated}，跳过{skipped}）";
             VerifyRowMappings(dbPath);
+        }
+
+        private static void EnsureMtimeColumn(SqliteConnection connection)
+        {
+            try
+            {
+                using var cmd = new SqliteCommand(
+                    "ALTER TABLE _file_metadata ADD COLUMN mtime INTEGER DEFAULT 0", connection);
+                cmd.ExecuteNonQuery();
+            }
+            catch { /* 列已存在 */ }
+        }
+
+        private static Dictionary<string, long> LoadMtimes(SqliteConnection connection)
+        {
+            var dict = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                using var cmd = new SqliteCommand(
+                    "SELECT file_full_path, COALESCE(mtime,0) FROM _file_metadata", connection);
+                using var rdr = cmd.ExecuteReader();
+                while (rdr.Read())
+                    dict[rdr.GetString(0)] = rdr.GetInt64(1);
+            }
+            catch { }
+            return dict;
+        }
+
+        private static void StoreMtime(SqliteConnection connection, string fullPath, long mtime)
+        {
+            try
+            {
+                using var cmd = new SqliteCommand(
+                    "UPDATE _file_metadata SET mtime=@m WHERE file_full_path=@p", connection);
+                cmd.Parameters.AddWithValue("@m", mtime);
+                cmd.Parameters.AddWithValue("@p", fullPath);
+                cmd.ExecuteNonQuery();
+            }
+            catch { }
         }
 
         private void CreateMetadataTable(SqliteConnection connection)
