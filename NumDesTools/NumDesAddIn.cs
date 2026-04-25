@@ -35,6 +35,7 @@ using NPOI.XSSF.UserModel;
 using NumDesTools.Advance;
 using NumDesTools.Com;
 using NumDesTools.Config;
+using NumDesTools.ConflictResolver;
 using NumDesTools.ExcelToLua;
 using NumDesTools.UI;
 using OfficeOpenXml;
@@ -299,7 +300,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ActivityTestById"] = ActivityTestById_Click,
             ["ActivityTestGitChanged"] = ActivityTestGitChanged_Click,
             ["ActivityCloneButton"] = ActivityClone_Click,
-            ["ActivityRulesUpdateButton"] = ActivityRulesUpdate_Click
+            ["ActivityRulesUpdateButton"] = ActivityRulesUpdate_Click,
+            ["ExcelConflictGit"]    = _ => ExcelConflictEntry.OpenGitConflict(),
+            ["ExcelConflictManual"] = _ => ExcelConflictEntry.OpenManualCompare()
         };
     }
 

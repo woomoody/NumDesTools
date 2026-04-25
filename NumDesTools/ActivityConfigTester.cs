@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NumDesTools.ExcelToLua;
 using Lua = NLua.Lua;
 using MessageBox = System.Windows.MessageBox;
@@ -86,6 +87,7 @@ public static class ActivityConfigTester
         /// 一个 type 需要同时验证多张子表时使用（如 type=106 IslandDecoration）。
         /// </summary>
         [JsonProperty("typeMultiSubTableRules")]
+        [JsonConverter(typeof(MultiSubTableRulesConverter))]
         public Dictionary<string, List<MultiSubTableEntry>> TypeMultiSubTableRules { get; set; } = new();
 
         /// <summary>追加到全局桩的额外 Lua 代码（模拟引擎 API）。</summary>
@@ -106,6 +108,47 @@ public static class ActivityConfigTester
         [JsonProperty("table")]       public string Table       { get; set; }
         [JsonProperty("lookupField")] public string LookupField { get; set; } = "activityID";
         [JsonProperty("desc")]        public string Desc        { get; set; }
+    }
+
+    // 兼容两种格式：字符串数组（"ActivityBpRewardData.xlsx"）或对象数组（{table, lookupField}）
+    private class MultiSubTableRulesConverter : JsonConverter<Dictionary<string, List<MultiSubTableEntry>>>
+    {
+        public override Dictionary<string, List<MultiSubTableEntry>> ReadJson(
+            JsonReader reader, Type objectType, Dictionary<string, List<MultiSubTableEntry>>? existingValue,
+            bool hasExistingValue, JsonSerializer serializer)
+        {
+            var result = new Dictionary<string, List<MultiSubTableEntry>>();
+            var obj = JObject.Load(reader);
+            foreach (var prop in obj.Properties())
+            {
+                var entries = new List<MultiSubTableEntry>();
+                foreach (var token in prop.Value)
+                {
+                    if (token.Type == JTokenType.String)
+                    {
+                        // 字符串：从 xlsx 文件名推断 LuaKey
+                        var xlsx = token.Value<string>() ?? "";
+                        var name = Path.GetFileNameWithoutExtension(xlsx);
+                        entries.Add(new MultiSubTableEntry
+                        {
+                            Table       = "Tables." + name,
+                            LookupField = "activityID",
+                            Desc        = name
+                        });
+                    }
+                    else
+                    {
+                        var e = token.ToObject<MultiSubTableEntry>(serializer);
+                        if (e != null) entries.Add(e);
+                    }
+                }
+                result[prop.Name] = entries;
+            }
+            return result;
+        }
+
+        public override void WriteJson(JsonWriter writer, Dictionary<string, List<MultiSubTableEntry>>? value, JsonSerializer serializer)
+            => serializer.Serialize(writer, value);
     }
 
     private class TableRule

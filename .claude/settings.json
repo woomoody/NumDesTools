@@ -97,13 +97,20 @@
       "mcp__FeishuProjectMcp__list_workitem_role_config",
       "mcp__FeishuProjectMcp__create_workitem",
       "mcp__FeishuProjectMcp__add_comment",
-      "mcp__FeishuProjectMcp__list_workitem_comments"
+      "mcp__FeishuProjectMcp__list_workitem_comments",
+      "mcp__FeishuProjectMcp__get_workitem_brief",
+      "mcp__FeishuProjectMcp__get_download_url",
+      "Read(//tmp/**)",
+      "Read(//c/tmp/**)",
+      "mcp__FeishuProjectMcp__update_field"
     ],
     "additionalDirectories": [
       "C:\\Users\\cent\\Documents\\NumDesTools\\Config",
       "C:\\Users\\cent\\.claude",
       "C:\\Users\\cent\\.claude\\projects\\c--NumDesToolsCentTest",
-      "C:\\Users\\cent\\StockReport"
+      "C:\\Users\\cent\\StockReport",
+      "\\tmp\\xlsm_reader",
+      "c:\\tmp\\xlsm_reader"
     ]
   }
 }

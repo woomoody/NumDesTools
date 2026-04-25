@@ -120,6 +120,15 @@
                     </menu>
                     <button id="CompareExcelButton" size='large' label="对比Excel" screentip='对比不同版本同路径下的非#Excel文件，输出至【文档\#表格比对结果.xlsx】'
                             onAction='OnButtonClick' image="console" tag='对比Excel' />
+                    <menu id='ExcelConflictMenu' label='xlsx冲突&#13;解决' image='diff' size='large'
+                          screentip='解决 xlsx 文件的 Git 合并冲突，或手动对比两个 xlsx 文件'>
+                        <button id="ExcelConflictGit"    label="解决Git冲突"   imageMso="MergeDocument"
+                                onAction='OnButtonClick' screentip='自动检测 Git 冲突的 xlsx，逐格选择保留哪一方'
+                                tag='解决Git冲突' />
+                        <button id="ExcelConflictManual" label="手动两文件对比" imageMso="FileMerge"
+                                onAction='OnButtonClick' screentip='选择两个 xlsx 文件，逐格对比并选择合并结果'
+                                tag='手动两文件对比' />
+                    </menu>
                     <button id="MapExcelButton" size='large' label="溯源改动" screentip='根据对比结果和【文档\表格关系.json】溯源每条改动最终影响的表格，一般为ActivityClientData.xlsx，输出至【文档\#溯源结果.xlsx】'
                             onAction='OnButtonClick' image="video" tag='溯源改动' />
                     <button id="CheckFileFormat" size='large' label="检查数据&#13;格式" screentip='手动检查数据格式，取消隐藏，过滤符配置在\Document\NumDesToolsConfig.json'
