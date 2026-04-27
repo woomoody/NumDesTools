@@ -261,13 +261,14 @@ public static class ExcelDataAutoInsertCopyMulti
         );
         if (errorList.Count != 0)
             return errorList;
-        foreach (var cell in targetSheet.Cells)
-        {
-            if (cell.Formula is not { Length: > 0 })
-                continue;
-            errorList.Add((excelName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
-            return errorList;
-        }
+        if (PubMetToExcel.ShouldCheckFormula(targetExcelPath, targetSheet.Name))
+            foreach (var cell in targetSheet.Cells)
+            {
+                if (cell.Formula is not { Length: > 0 })
+                    continue;
+                errorList.Add((excelName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
+                return errorList;
+            }
 
         for (var excelMulti = 0; excelMulti < modelIdNew[excelName].Count; excelMulti++)
         {
@@ -410,12 +411,13 @@ public static class ExcelDataAutoInsertCopyMulti
         );
         if (errorList.Count != 0)
             return errorList;
-        foreach (var cell in targetSheet.Cells)
-            if (cell.Formula is { Length: > 0 })
-            {
-                errorList.Add((excelName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
-                return errorList;
-            }
+        if (PubMetToExcel.ShouldCheckFormula(targetExcelPath, targetSheet.Name))
+            foreach (var cell in targetSheet.Cells)
+                if (cell.Formula is { Length: > 0 })
+                {
+                    errorList.Add((excelName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
+                    return errorList;
+                }
 
         var targetMaxCol = targetSheet.Dimension.Columns;
         var sourceMaxCol = sourceSheet.Dimension.Columns;
@@ -541,12 +543,13 @@ public static class ExcelDataAutoInsertCopyMulti
         );
         if (errorList.Count != 0)
             return errorList;
-        foreach (var cell in targetSheet.Cells)
-            if (cell.Formula is { Length: > 0 })
-            {
-                errorList.Add((excelName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
-                return errorList;
-            }
+        if (PubMetToExcel.ShouldCheckFormula(targetExcelPath, targetSheet.Name))
+            foreach (var cell in targetSheet.Cells)
+                if (cell.Formula is { Length: > 0 })
+                {
+                    errorList.Add((excelName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
+                    return errorList;
+                }
 
         var targetMaxRow = targetSheet.Dimension.Rows;
         var sourceMaxRow = sourceSheet.Dimension.Rows;

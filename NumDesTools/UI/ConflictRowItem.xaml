@@ -21,6 +21,7 @@
                     </Border>
                 </StackPanel>
 
+                <!-- Modified 行：格级全取按钮 -->
                 <StackPanel x:Name="BatchButtons" Grid.Column="1" Orientation="Horizontal"
                             Margin="0,2,8,2" VerticalAlignment="Center">
                     <Button Content="全取我的"  Tag="Ours"   Click="BatchChoice_Click"
@@ -31,12 +32,15 @@
                             Background="#1A5C3A" Foreground="White" BorderThickness="0" Cursor="Hand"/>
                 </StackPanel>
 
+                <!-- OnlyOurs / OnlyTheirs 行：行级选择 -->
                 <StackPanel x:Name="RowChoicePanel" Grid.Column="1" Orientation="Horizontal"
                             Margin="0,2,8,2" VerticalAlignment="Center" Visibility="Collapsed">
-                    <RadioButton Content="保留我的" IsChecked="{Binding RowChoiceOurs,   Mode=TwoWay}"
-                                 Foreground="#A8C8FF" Margin="0,0,8,0"/>
-                    <RadioButton Content="用他的"   IsChecked="{Binding RowChoiceTheirs, Mode=TwoWay}"
-                                 Foreground="#A8FFCA"/>
+                    <CheckBox x:Name="RowChoiceOursRb"   Content="保留我的"
+                              Foreground="#A8C8FF" Margin="0,0,10,0" FontSize="11"
+                              Background="Transparent" BorderBrush="#A8C8FF"/>
+                    <CheckBox x:Name="RowChoiceTheirsRb" Content="用他的"
+                              Foreground="#A8FFCA" FontSize="11"
+                              Background="Transparent" BorderBrush="#A8FFCA"/>
                 </StackPanel>
             </Grid>
 

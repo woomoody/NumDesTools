@@ -19,11 +19,12 @@ internal class Program
     private const string ActivityXlsx    = @"C:\M1Work\public\Excels\Tables\ActivityClientData.xlsx";
     private const string RulesPath       = ConfigDir + @"\ActivityTableRules.json";
 
-    private const string McpToken        = "m-002580b6-b3db-405a-aab8-007f927ef4eb";
-    private const string ProjectKey      = "t89j73";
-    private const string WrittenItemsPath = ConfigDir + @"\written_items.json";
+    private const string McpToken           = "m-002580b6-b3db-405a-aab8-007f927ef4eb";
+    private const string ProjectKey         = "t89j73";
+    private const string WrittenItemsPath   = ConfigDir + @"\written_items.json";
+    private const string NoPermItemsPath    = ConfigDir + @"\no_permission_items.json";
 
-    // 本地已写入记录：workItemId → 写入日期，避免依赖飞书 API 一致性延迟
+    // ── 已写入记录 ───────────────────────────────────────────────────────────
     private static HashSet<string> LoadWrittenItems()
     {
         if (!File.Exists(WrittenItemsPath)) return [];
@@ -45,6 +46,35 @@ internal class Program
         dict[itemId] = DateTime.Today.ToString("yyyy-MM-dd");
         File.WriteAllText(WrittenItemsPath, JsonConvert.SerializeObject(dict, Formatting.Indented));
     }
+
+    // ── 无权限记录（workItemId → 首次发现日期）───────────────────────────────
+    private static HashSet<string> LoadNoPermItems()
+    {
+        if (!File.Exists(NoPermItemsPath)) return [];
+        try
+        {
+            var dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(
+                File.ReadAllText(NoPermItemsPath)) ?? [];
+            return dict.Keys.ToHashSet();
+        }
+        catch { return []; }
+    }
+
+    private static void SaveNoPermItem(string itemId)
+    {
+        Dictionary<string, string> dict = [];
+        if (File.Exists(NoPermItemsPath))
+            try { dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(NoPermItemsPath)) ?? []; }
+            catch { }
+        if (!dict.ContainsKey(itemId))
+        {
+            dict[itemId] = DateTime.Today.ToString("yyyy-MM-dd");
+            File.WriteAllText(NoPermItemsPath, JsonConvert.SerializeObject(dict, Formatting.Indented));
+        }
+    }
+
+    private static bool IsPermissionError(Exception ex)
+        => ex.Message.Contains("1000052092") || ex.Message.Contains("无权编辑");
 
     private static readonly int ConfirmTimeoutSec = 30 * 60;
 
@@ -83,13 +113,14 @@ internal class Program
         }
 
         var writtenItems = LoadWrittenItems();
+        var noPermItems  = LoadNoPermItems();
 
         // ── 缺陷分析模式 ─────────────────────────────────────────────────────
         if (bugsMode)
         {
             Console.WriteLine($"\n[{Now()}] {(itemIds != null ? $"缺陷分析 指定ID {string.Join(",", itemIds)}" : "缺陷全量分析")}...");
             var kb      = reviewer.LoadKnowledge();
-            var pending = await ScanIssuesAsync(rules, typeIndex, reviewer, kb, itemIds, fetchAll: true, force: forceMode, writtenItems: writtenItems);
+            var pending = await ScanIssuesAsync(rules, typeIndex, reviewer, kb, itemIds, fetchAll: true, force: forceMode, writtenItems: writtenItems, noPermItems: noPermItems);
             if (pending.Count == 0) { Console.WriteLine("[INFO] 无待分析缺陷。"); return 0; }
 
             var docPath = WriteBugDoc(pending);
@@ -112,7 +143,7 @@ internal class Program
             Console.WriteLine($"\n[{Now()}] {label}...");
             var kb      = reviewer.LoadKnowledge();
             var seen    = new HashSet<string>();
-            var pending = await ScanStoriesAsync(rules, typeIndex, reviewer, kb, seen, itemIds, fetchAll, forceMode, writtenItems);
+            var pending = await ScanStoriesAsync(rules, typeIndex, reviewer, kb, seen, itemIds, fetchAll, forceMode, writtenItems, noPermItems);
             if (pending.Count > 0)
                 await PromptAndWrite(pending, releaseMode, confirmMode);
             else
@@ -130,7 +161,7 @@ internal class Program
         ActivityTableRules rules, ActivityTypeIndex typeIndex,
         KnowledgeReviewer reviewer, KnowledgeBase kb,
         HashSet<string> seenIds, List<string>? itemIds, bool fetchAll, bool force = false,
-        HashSet<string>? writtenItems = null)
+        HashSet<string>? writtenItems = null, HashSet<string>? noPermItems = null)
     {
         var stories = await FeishuWorkItemFetcher.FetchStoriesAsync(itemIds, fetchAll);
         Console.WriteLine($"  开始分析 {stories.Count} 条需求...\n");
@@ -158,18 +189,30 @@ internal class Program
             var historyNotes = reviewer.QueryKnowledge(typeNums, kb);
             var phaseTag     = phase > 1 ? $"第{phase}期续期" : "首期/全新";
 
-            Console.WriteLine($"  新增待写入[{phaseTag}]：{Truncate(s.Name, 40)}");
+            // 从人工评论中提取 git commit SHA 并分析
+            List<string> humanComments = [];
+            try { humanComments = (await FeishuWorkItemFetcher.GetCommentsAsync(s.Id)).Select(c => c.Content).ToList(); }
+            catch { }
+            var gitAnalysis = GitCommitAnalyzer.Analyze(s.Name, s.Desc, humanComments);
+
+            var noPerm = noPermItems?.Contains(s.Id) == true;
+            Console.WriteLine(noPerm
+                ? $"  新增待分析[{phaseTag}]（无写入权限）：{Truncate(s.Name, 40)}"
+                : $"  新增待写入[{phaseTag}]：{Truncate(s.Name, 40)}");
             Console.WriteLine($"    涉及表格：{string.Join(", ", tables.Select(t => t.Excel))}");
             if (historyNotes.Count > 0) Console.WriteLine($"    引用历史经验：{historyNotes.Count} 条");
+            if (gitAnalysis != null) Console.WriteLine($"    关联 Git 提交：已提取");
 
             pending.Add(new PendingItem
             {
                 Id           = s.Id,
                 Name         = s.Name,
                 Tables       = tables.Select(t => t.Excel).ToList(),
-                Comment      = CommentBuilder.BuildStoryComment(s, tables, phase, historyNotes),
+                Comment      = CommentBuilder.BuildStoryComment(s, tables, phase, historyNotes, gitAnalysis),
                 ItemType     = "story",
                 OriginalDesc = s.Desc,
+                SkipComment  = noPerm,
+                SkipReason   = noPerm ? "无编辑权限" : "",
             });
         }
         return pending;
@@ -181,7 +224,7 @@ internal class Program
         ActivityTableRules rules, ActivityTypeIndex typeIndex,
         KnowledgeReviewer reviewer, KnowledgeBase kb,
         List<string>? itemIds, bool fetchAll, bool force = false,
-        HashSet<string>? writtenItems = null)
+        HashSet<string>? writtenItems = null, HashSet<string>? noPermItems = null)
     {
         var issues = await FeishuWorkItemFetcher.FetchIssuesAsync(itemIds, fetchAll);
         var findAnalyzer = new FindChainAnalyzer();
@@ -222,23 +265,37 @@ internal class Program
             var findChain    = findAnalyzer.Analyze(issue.Name, issue.Desc);
             var (_, _, hintMatched) = CommentBuilder.InferBugHints(issue.Name);
 
-            if (hintMatched)
+            // 从人工评论中提取 git commit SHA 并分析
+            List<string> humanComments = [];
+            try { humanComments = (await FeishuWorkItemFetcher.GetCommentsAsync(issue.Id)).Select(c => c.Content).ToList(); }
+            catch { }
+            var gitAnalysis = GitCommitAnalyzer.Analyze(issue.Name, issue.Desc, humanComments);
+
+            var noPerm = noPermItems?.Contains(issue.Id) == true;
+            // SkipComment = 无权限 OR 关键词未命中（两者都不写飞书，但都参与分析）
+            var skipWrite  = noPerm || !hintMatched;
+            var skipReason = noPerm ? "无编辑权限" : (hintMatched ? "" : "标题关键词未匹配到已知配置规则");
+
+            if (noPerm)
+                Console.WriteLine($"  新增缺陷（无写入权限）：{Truncate(issue.Name, 40)}");
+            else if (hintMatched)
                 Console.WriteLine($"  新增缺陷待写入：{Truncate(issue.Name, 40)}");
             else
                 Console.WriteLine($"  新增缺陷（仅报告，关键词未命中）：{Truncate(issue.Name, 40)}");
             Console.WriteLine($"    activityID={actId}, type={typeNum?.ToString() ?? "?"}");
             if (historyNotes.Count > 0) Console.WriteLine($"    引用历史经验：{historyNotes.Count} 条");
-            if (findChain != null) Console.WriteLine($"    寻找链分析：已提取到ID追溯");
+            if (findChain != null)  Console.WriteLine($"    寻找链分析：已提取到ID追溯");
+            if (gitAnalysis != null) Console.WriteLine($"    关联 Git 提交：已提取");
 
             pending.Add(new PendingItem
             {
                 Id           = issue.Id,
                 Name         = issue.Name,
                 Tables       = tables.Select(t => t.Excel).ToList(),
-                Comment      = CommentBuilder.BuildIssueComment(issue, tables, actId, typeNum, typeNote, historyNotes, findChain),
+                Comment      = CommentBuilder.BuildIssueComment(issue, tables, actId, typeNum, typeNote, historyNotes, findChain, gitAnalysis),
                 ItemType     = "issue",
-                SkipComment  = !hintMatched,
-                SkipReason   = hintMatched ? "" : "标题关键词未匹配到已知配置规则",
+                SkipComment  = skipWrite,
+                SkipReason   = skipReason,
                 OriginalDesc = issue.Desc,
             });
         }
@@ -301,9 +358,14 @@ internal class Program
 
         if (answer != "y") { Console.WriteLine("[INFO] 已取消。"); return; }
 
+        var noPermItems = LoadNoPermItems();
+
         int skipped = pending.Count(p => p.SkipComment);
+        int noPerm  = pending.Count(p => !p.SkipComment && noPermItems.Contains(p.Id));
         if (skipped > 0)
             Console.WriteLine($"[INFO] 跳过 {skipped} 条关键词未命中的缺陷（仅报告不写飞书）");
+        if (noPerm > 0)
+            Console.WriteLine($"[INFO] 跳过 {noPerm} 条无编辑权限的工作项（已记录在 no_permission_items.json）");
 
         Console.WriteLine("\n[INFO] 开始写入飞书正文...");
         int ok = 0, fail = 0;
@@ -311,6 +373,12 @@ internal class Program
         foreach (var item in pending)
         {
             if (item.SkipComment) continue;
+            if (noPermItems.Contains(item.Id))
+            {
+                Console.WriteLine($"  [SKIP/无权限] {Truncate(item.Name, 50)}");
+                continue;
+            }
+
             var typeKey = item.ItemType == "story" ? "story" : "issue";
             try
             {
@@ -320,13 +388,8 @@ internal class Program
 
                 // 实时拉当前正文，剥离旧 AI 块后追加，避免重复叠加
                 var current   = await FeishuMcpClient.GetCurrentFieldValueAsync(item.Id, fieldKey);
-                // 飞书可能将换行规范化，用宽松正则找分割线
-                var sepMatch  = System.Text.RegularExpressions.Regex.Match(
-                    current, @"\n+---+\n+");
-                var humanPart = sepMatch.Success
-                    ? current[..sepMatch.Index].Trim()
-                    : current.Trim();
-                // 若人工原文本身就是 AI 内容（旧单子无人工原文），则置空
+                var sepMatch  = System.Text.RegularExpressions.Regex.Match(current, @"\n+---+\n+");
+                var humanPart = sepMatch.Success ? current[..sepMatch.Index].Trim() : current.Trim();
                 var aiMarkers = new[] { CommentBuilder.StoryMarker, CommentBuilder.IssueMarker };
                 if (aiMarkers.Any(m => humanPart.StartsWith(m))) humanPart = "";
 
@@ -341,7 +404,16 @@ internal class Program
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"  [FAIL] {Truncate(item.Name, 50)} -- {ex.Message}");
+                if (IsPermissionError(ex))
+                {
+                    SaveNoPermItem(item.Id);
+                    noPermItems.Add(item.Id);
+                    Console.WriteLine($"  [无权限] {Truncate(item.Name, 50)}（已记录，后续自动跳过写入）");
+                }
+                else
+                {
+                    Console.WriteLine($"  [FAIL] {Truncate(item.Name, 50)} -- {ex.Message}");
+                }
                 fail++;
             }
         }

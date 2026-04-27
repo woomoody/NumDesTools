@@ -16,10 +16,25 @@ public class CellConflict : INotifyPropertyChanged
     public object? TheirsValue { get; init; }
 
     private ConflictChoice _choice = ConflictChoice.Ours;
+    private bool _isExplicit = false;
+
     public ConflictChoice Choice
     {
         get => _choice;
         set { _choice = value; OnPropertyChanged(); OnPropertyChanged(nameof(ChoiceOurs)); OnPropertyChanged(nameof(ChoiceTheirs)); }
+    }
+
+    /// <summary>用户已明确做出选择（true=已选，false=待选）</summary>
+    public bool IsExplicit
+    {
+        get => _isExplicit;
+        set { _isExplicit = value; OnPropertyChanged(); }
+    }
+
+    public void ClearChoice()
+    {
+        _isExplicit = false;
+        OnPropertyChanged(nameof(IsExplicit));
     }
 
     public bool ChoiceOurs  { get => Choice == ConflictChoice.Ours;   set { if (value) Choice = ConflictChoice.Ours; } }
@@ -75,7 +90,7 @@ public class RowConflict : INotifyPropertyChanged
     /// <summary>将该行所有单元格冲突批量设置为同一选择</summary>
     public void SetAllCells(ConflictChoice choice)
     {
-        foreach (var c in Cells) c.Choice = choice;
+        foreach (var c in Cells) { c.Choice = choice; c.IsExplicit = true; }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -103,7 +118,7 @@ public record SheetDiff(string SheetName, List<RowConflict> Rows)
             if (row.DiffType == RowDiffType.Modified)
             {
                 var cell = row.Cells.FirstOrDefault(c => c.ColName == colName);
-                if (cell != null) cell.Choice = choice;
+                if (cell != null) { cell.Choice = choice; cell.IsExplicit = true; }
             }
             else
             {

@@ -160,6 +160,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         CustomRibbon = ribbon;
         CustomRibbon.ActivateTab("MainTab");
+
+        if (FocusLabelText == "聚光灯：开启")
+            CrosslightController.Enable(App);
     }
 
     public override string GetCustomUI(string ribbonId)
@@ -301,8 +304,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ActivityTestGitChanged"] = ActivityTestGitChanged_Click,
             ["ActivityCloneButton"] = ActivityClone_Click,
             ["ActivityRulesUpdateButton"] = ActivityRulesUpdate_Click,
-            ["ExcelConflictGit"]    = _ => ExcelConflictEntry.OpenGitConflict(),
-            ["ExcelConflictManual"] = _ => ExcelConflictEntry.OpenManualCompare()
+            ["ExcelConflictGit"]     = _ => ExcelConflictEntry.OpenGitConflict(),
+            ["ExcelConflictManual"]  = _ => ExcelConflictEntry.OpenManualCompare(),
+            ["ExcelConflictHistory"] = _ => ExcelConflictEntry.OpenGitHistory(),
+            ["HelpButton"]           = _ => new NumDesTools.UI.HelpWindow().Show()
         };
     }
 
@@ -3035,22 +3040,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         CustomRibbon.InvalidateControl("FocusLightButton");
         if (FocusLabelText == "聚光灯：开启")
         {
-            App.SheetSelectionChange += FocusLightCal;
+            CrosslightController.Enable(App);
         }
         else
         {
-            foreach (Workbook workbook in App.Workbooks)
-            foreach (Worksheet worksheet in workbook.Worksheets)
-                FocusLight.DeleteCondition(worksheet);
-            App.SheetSelectionChange -= FocusLightCal;
+            CrosslightController.Disable();
         }
 
         GlobalValue.SaveValue("FocusLabelText", FocusLabelText);
-    }
-
-    private void FocusLightCal(object sh, Range target)
-    {
-        FocusLight.Calculate();
     }
 
     public void SheetMenu_Click(IRibbonControl control)

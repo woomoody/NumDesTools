@@ -2,7 +2,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using NumDesTools.ConflictResolver;
+using Border           = System.Windows.Controls.Border;
 using Button           = System.Windows.Controls.Button;
+using CheckBox         = System.Windows.Controls.CheckBox;
 using RadioButton      = System.Windows.Controls.RadioButton;
 using UserControl      = System.Windows.Controls.UserControl;
 using WpfBrushes       = System.Windows.Media.Brushes;
@@ -26,9 +28,13 @@ public partial class ConflictRowItem : UserControl
     private static readonly SolidColorBrush BgDiff         = Brush("#5A1A1A");
     private static readonly SolidColorBrush BgOnlyOurs     = Brush("#3A1A1A");
     private static readonly SolidColorBrush BgOnlyTheirs   = Brush("#1A3A1A");
+    private static readonly SolidColorBrush BgChosenOurs   = Brush("#0A3A6E");
+    private static readonly SolidColorBrush BgChosenTheirs = Brush("#0A4A2A");
+    private static readonly SolidColorBrush BgRejected     = Brush("#2A2A2A");
     private static readonly SolidColorBrush FgOurs         = Brush("#A8C8FF");
     private static readonly SolidColorBrush FgTheirs       = Brush("#A8FFCA");
     private static readonly SolidColorBrush FgDiff         = Brush("#FF8888");
+    private static readonly SolidColorBrush FgRejected     = Brush("#555555");
 
     public static readonly RoutedEvent CellSelectedEvent =
         EventManager.RegisterRoutedEvent("CellSelected", RoutingStrategy.Bubble,
@@ -71,8 +77,18 @@ public partial class ConflictRowItem : UserControl
                                  : isOnlyOurs   ? Brush("#FF8888")
                                  :                Brush("#88FF88");
 
-        BatchButtons.Visibility   = isModified ? Visibility.Visible   : Visibility.Collapsed;
-        RowChoicePanel.Visibility = isModified ? Visibility.Collapsed : Visibility.Visible;
+        BatchButtons.Visibility   = isModified                  ? Visibility.Visible : Visibility.Collapsed;
+        RowChoicePanel.Visibility = isOnlyOurs || isOnlyTheirs ? Visibility.Visible : Visibility.Collapsed;
+
+        if (isOnlyOurs || isOnlyTheirs)
+        {
+            var bindOurs = new System.Windows.Data.Binding(nameof(RowConflict.RowChoiceOurs))
+                { Source = rc, Mode = System.Windows.Data.BindingMode.TwoWay };
+            var bindTheirs = new System.Windows.Data.Binding(nameof(RowConflict.RowChoiceTheirs))
+                { Source = rc, Mode = System.Windows.Data.BindingMode.TwoWay };
+            RowChoiceOursRb.SetBinding(CheckBox.IsCheckedProperty,   bindOurs);
+            RowChoiceTheirsRb.SetBinding(CheckBox.IsCheckedProperty, bindTheirs);
+        }
 
         var cols = rc.AllColumns.Count > 0 ? rc.AllColumns : DeriveColumns(rc);
         if (cols.Count == 0)
@@ -85,7 +101,7 @@ public partial class ConflictRowItem : UserControl
         var colWidths = (sharedWidths != null && sharedWidths.Length >= cols.Count)
             ? sharedWidths
             : FallbackColWidths(cols, rc);
-        var diffCols  = new HashSet<string>(rc.Cells.Select(c => c.ColName), StringComparer.Ordinal);
+        var diffCols = new HashSet<string>(rc.Cells.Select(c => c.ColName), StringComparer.Ordinal);
 
         SyncScroll(OursScroll, TheirsScroll);
 
@@ -99,16 +115,21 @@ public partial class ConflictRowItem : UserControl
             var col  = cols[i];
             var val  = rc.OursFullRow != null && rc.OursFullRow.TryGetValue(col, out var v) ? v?.ToString() ?? "" : "";
             var diff = diffCols.Contains(col);
-            var tb   = MakeCell(val, diff ? FgDiff : FgOurs, diff ? BgDiff : rowBgOurs, colWidths[i]);
-            tb.MouseLeftButtonDown += (_, _) => RaiseDetailEvent(rc);
-            Grid.SetColumn(tb, i);
-            OursGrid.Children.Add(tb);
-
             if (isModified && diff)
             {
                 var cell = rc.Cells.FirstOrDefault(c => c.ColName == col);
-                if (cell != null) OursGrid.Children.Add(MakeCellRadio(cell, isOurs: true, i));
+                if (cell != null)
+                {
+                    var container = MakeCellContainer(cell, isOurs: true, val, colWidths[i], rc);
+                    Grid.SetColumn(container, i);
+                    OursGrid.Children.Add(container);
+                    continue;
+                }
             }
+            var tb = MakeCell(val, diff ? FgDiff : FgOurs, diff ? BgDiff : rowBgOurs, colWidths[i]);
+            tb.MouseLeftButtonDown += (_, _) => RaiseDetailEvent(rc);
+            Grid.SetColumn(tb, i);
+            OursGrid.Children.Add(tb);
         }
 
         // THEIRS 行
@@ -127,16 +148,21 @@ public partial class ConflictRowItem : UserControl
                 var col  = cols[i];
                 var val  = rc.TheirsFullRow != null && rc.TheirsFullRow.TryGetValue(col, out var v) ? v?.ToString() ?? "" : "";
                 var diff = diffCols.Contains(col);
-                var tb   = MakeCell(val, diff ? FgDiff : FgTheirs, diff ? BgDiff : rowBgTheirs, colWidths[i]);
-                tb.MouseLeftButtonDown += (_, _) => RaiseDetailEvent(rc);
-                Grid.SetColumn(tb, i);
-                TheirsGrid.Children.Add(tb);
-
                 if (isModified && diff)
                 {
                     var cell = rc.Cells.FirstOrDefault(c => c.ColName == col);
-                    if (cell != null) TheirsGrid.Children.Add(MakeCellRadio(cell, isOurs: false, i));
+                    if (cell != null)
+                    {
+                        var container = MakeCellContainer(cell, isOurs: false, val, colWidths[i], rc);
+                        Grid.SetColumn(container, i);
+                        TheirsGrid.Children.Add(container);
+                        continue;
+                    }
                 }
+                var tb = MakeCell(val, diff ? FgDiff : FgTheirs, diff ? BgDiff : rowBgTheirs, colWidths[i]);
+                tb.MouseLeftButtonDown += (_, _) => RaiseDetailEvent(rc);
+                Grid.SetColumn(tb, i);
+                TheirsGrid.Children.Add(tb);
             }
         }
     }
@@ -187,26 +213,95 @@ public partial class ConflictRowItem : UserControl
             Cursor            = System.Windows.Input.Cursors.Hand,
         };
 
-    private static RadioButton MakeCellRadio(CellConflict cell, bool isOurs, int colIdx)
+    // 冲突格容器：未选时显示选择按钮，已选后背景变色并显示×撤销按钮
+    // 点击文本区域或×按钮均触发详情面板
+    private Grid MakeCellContainer(CellConflict cell, bool isOurs, string val, double colWidth, RowConflict rc)
     {
-        var rb = new RadioButton
+        var container = new Grid { Width = colWidth };
+
+        void Refresh()
         {
-            GroupName           = $"cell_{cell.ColName}_{(isOurs ? "o" : "t")}",
-            Content             = isOurs ? "我的" : "他的",
-            Foreground          = isOurs ? FgOurs : FgTheirs,
-            FontSize            = 9,
-            HorizontalAlignment = HAlign.Right,
-            VerticalAlignment   = VAlign.Bottom,
-            Margin              = new Thickness(0, 0, 2, 1),
-            Background          = WpfBrushes.Transparent,
-            BorderThickness     = new Thickness(0),
-            Padding             = new Thickness(2, 0, 2, 0),
+            container.Children.Clear();
+            bool chosen   = cell.IsExplicit;
+            bool thisWon  = chosen && (isOurs ? cell.Choice == ConflictChoice.Ours : cell.Choice == ConflictChoice.Theirs);
+            bool otherWon = chosen && !thisWon;
+
+            var bgBrush = thisWon  ? (isOurs ? BgChosenOurs : BgChosenTheirs)
+                        : otherWon ? BgRejected
+                        :            BgDiff;
+            var fgBrush = otherWon ? FgRejected : (isOurs ? FgOurs : FgTheirs);
+
+            var tb = new TextBlock
+            {
+                Text              = val,
+                Foreground        = fgBrush,
+                Background        = bgBrush,
+                Padding           = new Thickness(5, 3, 5, 3),
+                FontSize          = 11,
+                TextTrimming      = TextTrimming.CharacterEllipsis,
+                ToolTip           = string.IsNullOrEmpty(val) ? null : val,
+                VerticalAlignment = VerticalAlignment.Stretch,
+                Width             = colWidth,
+                Cursor            = System.Windows.Input.Cursors.Hand,
+            };
+            tb.MouseLeftButtonDown += (_, _) => RaiseDetailEvent(rc);
+            container.Children.Add(tb);
+
+            if (!chosen)
+            {
+                var btn = new Button
+                {
+                    Content             = isOurs ? "我的" : "他的",
+                    Foreground          = isOurs ? FgOurs : FgTheirs,
+                    FontSize            = 9,
+                    HorizontalAlignment = HAlign.Right,
+                    VerticalAlignment   = VAlign.Bottom,
+                    Margin              = new Thickness(0, 0, 2, 1),
+                    Background          = WpfBrushes.Transparent,
+                    BorderBrush         = isOurs ? FgOurs : FgTheirs,
+                    BorderThickness     = new Thickness(1),
+                    Padding             = new Thickness(2, 0, 2, 0),
+                    Cursor              = System.Windows.Input.Cursors.Hand,
+                };
+                btn.Click += (_, _) =>
+                {
+                    cell.Choice     = isOurs ? ConflictChoice.Ours : ConflictChoice.Theirs;
+                    cell.IsExplicit = true;
+                    RaiseDetailEvent(rc);
+                };
+                container.Children.Add(btn);
+            }
+            else if (thisWon)
+            {
+                var xBtn = new Button
+                {
+                    Content             = "×",
+                    Foreground          = WpfBrushes.White,
+                    FontSize            = 9,
+                    HorizontalAlignment = HAlign.Right,
+                    VerticalAlignment   = VAlign.Top,
+                    Margin              = new Thickness(0, 1, 2, 0),
+                    Background          = WpfBrushes.Transparent,
+                    BorderThickness     = new Thickness(0),
+                    Padding             = new Thickness(2, 0, 2, 0),
+                    Cursor              = System.Windows.Input.Cursors.Hand,
+                };
+                xBtn.Click += (_, _) =>
+                {
+                    cell.ClearChoice();
+                    RaiseDetailEvent(rc);
+                };
+                container.Children.Add(xBtn);
+            }
+        }
+
+        Refresh();
+        cell.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(CellConflict.IsExplicit) or nameof(CellConflict.Choice))
+                Refresh();
         };
-        var binding = new System.Windows.Data.Binding(isOurs ? nameof(CellConflict.ChoiceOurs) : nameof(CellConflict.ChoiceTheirs))
-            { Source = cell, Mode = System.Windows.Data.BindingMode.TwoWay };
-        rb.SetBinding(RadioButton.IsCheckedProperty, binding);
-        Grid.SetColumn(rb, colIdx);
-        return rb;
+        return container;
     }
 
     private static void SyncScroll(ScrollViewer ours, ScrollViewer theirs)

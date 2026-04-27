@@ -7,6 +7,7 @@ using NumDesTools.ConflictResolver;
 using Action     = System.Action;
 using Border     = System.Windows.Controls.Border;
 using Button     = System.Windows.Controls.Button;
+using CheckBox   = System.Windows.Controls.CheckBox;
 using MessageBox = System.Windows.MessageBox;
 using Window     = System.Windows.Window;
 using WpfColor   = System.Windows.Media.Color;
@@ -27,7 +28,11 @@ public partial class ExcelConflictWindow : Window
         _outPath    = outPath ?? diff.OursPath;
 
         FileNameText.Text = Path.GetFileName(diff.OursPath);
-        ConflictRowItem.OnScrollOffsetChanged = offset => MetaScroll.ScrollToHorizontalOffset(offset);
+        ConflictRowItem.OnScrollOffsetChanged = offset =>
+        {
+            MetaScroll.ScrollToHorizontalOffset(offset);
+            BatchScroll.ScrollToHorizontalOffset(offset);
+        };
         BuildSheetTabs();
         UpdateStats();
         ApplyButton.IsEnabled = diff.TotalConflictRows > 0;
@@ -219,47 +224,59 @@ public partial class ExcelConflictWindow : Window
 
     private void BuildColBatchBar(SheetDiff sheet)
     {
-        // 收集当前 sheet 所有 Modified 行里出现的冲突列
-        var conflictCols = sheet.Rows
+        // 冲突列（Modified 行中出现过的列）
+        var conflictColSet = sheet.Rows
             .Where(r => r.DiffType == RowDiffType.Modified)
             .SelectMany(r => r.Cells.Select(c => c.ColName))
-            .Distinct()
-            .ToList();
+            .ToHashSet(StringComparer.Ordinal);
 
-        // 加上 OnlyTheirs 中 OURS 没有的新增列
-        var newCols = sheet.Rows
-            .Where(r => r.DiffType == RowDiffType.OnlyTheirs || r.DiffType == RowDiffType.OnlyOurs)
-            .Take(1)
-            .SelectMany(r => (r.TheirsFullRow ?? r.OursFullRow ?? new Dictionary<string, object?>()).Keys)
-            .Except(sheet.Rows.Where(r => r.OursFullRow != null).SelectMany(r => r.OursFullRow!.Keys))
-            .ToList();
+        var cols = sheet.AllColumns;
+        if (cols.Count == 0 || (_currentColWidths.Length == 0))
+        {
+            ColBatchBar.Visibility = Visibility.Collapsed;
+            return;
+        }
 
-        var allBatchCols = conflictCols.Concat(newCols).Distinct().ToList();
-
-        if (allBatchCols.Count == 0)
+        // 是否存在任何可批量操作的列
+        bool anyBatch = cols.Any(c => conflictColSet.Contains(c));
+        if (!anyBatch)
         {
             ColBatchBar.Visibility = Visibility.Collapsed;
             return;
         }
 
         ColBatchBar.Visibility = Visibility.Visible;
-        ColBatchPanel.Children.Clear();
-        ColBatchPanel.Children.Add(new TextBlock
-        {
-            Text = "列批量:", Foreground = new SolidColorBrush(Color(0x88, 0x88, 0x88)),
-            FontSize = 10, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0)
-        });
 
-        foreach (var col in allBatchCols)
+        // 用和 MetaHeader 完全一致的 Grid，按列对齐放两个小按钮
+        var grid = new Grid { Height = 30 };
+        for (int i = 0; i < cols.Count; i++)
         {
-            var colCapture = col;
-            // 短标签：列名超过8字符截断
-            var label = col.Length > 8 ? col[..8] + "…" : col;
-            ColBatchPanel.Children.Add(MakeColBatchBtn($"{label}↑我", Color(0x1A, 0x3A, 0x6E),
-                () => SetColumnChoiceAndRefresh(colCapture, ConflictChoice.Ours)));
-            ColBatchPanel.Children.Add(MakeColBatchBtn($"{label}↓他", Color(0x1A, 0x5C, 0x3A),
-                () => SetColumnChoiceAndRefresh(colCapture, ConflictChoice.Theirs)));
+            var w = i < _currentColWidths.Length ? _currentColWidths[i] : 130.0;
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(w) });
         }
+
+        for (int i = 0; i < cols.Count; i++)
+        {
+            var col = cols[i];
+            if (!conflictColSet.Contains(col)) continue;
+
+            var colCapture = col;
+            var cell = new StackPanel
+            {
+                Orientation       = System.Windows.Controls.Orientation.Horizontal,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment   = System.Windows.VerticalAlignment.Center,
+            };
+            cell.Children.Add(MakeColBatchBtn("↑我", Color(0x1A, 0x3A, 0x6E),
+                () => SetColumnChoiceAndRefresh(colCapture, ConflictChoice.Ours)));
+            cell.Children.Add(MakeColBatchBtn("↓他", Color(0x1A, 0x5C, 0x3A),
+                () => SetColumnChoiceAndRefresh(colCapture, ConflictChoice.Theirs)));
+            Grid.SetColumn(cell, i);
+            grid.Children.Add(cell);
+        }
+
+        ColBatchPanel.Children.Clear();
+        ColBatchPanel.Children.Add(grid);
     }
 
     private void BuildDetailPanel(List<CellConflict> items)
@@ -329,7 +346,7 @@ public partial class ExcelConflictWindow : Window
 
     private static Button MakeColBatchBtn(string label, WpfColor bg, Action onClick)
     {
-        var btn = new System.Windows.Controls.Button
+        var btn = new Button
         {
             Content         = label,
             FontSize        = 9,
@@ -350,6 +367,7 @@ public partial class ExcelConflictWindow : Window
         var sheetName = tab.Tag?.ToString() ?? string.Empty;
         var sheetDiff = _diff.Sheets.FirstOrDefault(s => s.SheetName == sheetName);
         sheetDiff?.SetColumnChoice(colName, choice);
+        RefreshConflictList();
     }
 
     // 构建带字符级高亮的 TextBlock：公共前缀/后缀正常色，差异段黄色加粗

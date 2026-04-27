@@ -6,6 +6,7 @@
     Title="Excel 冲突解决"
     Width="1100" Height="760" MinWidth="800" MinHeight="560"
     WindowStartupLocation="CenterScreen"
+    WindowState="Maximized"
     Background="#1E1E1E">
 
     <Window.Resources>
@@ -80,14 +81,15 @@
             <TabControl x:Name="SheetTabs" Grid.Row="0" Background="#1E1E1E" BorderThickness="0"
                         SelectionChanged="SheetTabs_SelectionChanged"/>
 
-            <!-- 列批量选择栏 -->
+            <!-- 列批量选择栏（与 MetaScroll 水平同步） -->
             <Border Grid.Row="1" x:Name="ColBatchBar" Background="#1A1A2A"
-                    BorderBrush="#333" BorderThickness="0,0,0,1" Padding="8,4"
+                    BorderBrush="#333" BorderThickness="0,0,0,1"
                     Visibility="Collapsed">
-                <WrapPanel x:Name="ColBatchPanel" VerticalAlignment="Center">
-                    <TextBlock Text="列批量:" Foreground="#888" FontSize="10"
-                               VerticalAlignment="Center" Margin="0,0,6,0"/>
-                </WrapPanel>
+                <ScrollViewer x:Name="BatchScroll"
+                              HorizontalScrollBarVisibility="Hidden"
+                              VerticalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="ColBatchPanel" Orientation="Vertical"/>
+                </ScrollViewer>
             </Border>
 
             <!-- 置顶 Meta 头 -->

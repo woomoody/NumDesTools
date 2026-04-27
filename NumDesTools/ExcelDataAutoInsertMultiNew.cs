@@ -215,14 +215,15 @@ public static class ExcelDataAutoInsertMultiNew
         {
             var excelRealName = excel.File.Name;
 
-            foreach (var cell in sheet.Cells)
-                if (cell.Formula is { Length: > 0 })
-                {
-                    errorList.Add(
-                        ($"{excelRealName}#{sheet.Name}", @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@")
-                    );
-                    return errorList;
-                }
+            if (PubMetToExcel.ShouldCheckFormula(excel.File.FullName, sheet.Name))
+                foreach (var cell in sheet.Cells)
+                    if (cell.Formula is { Length: > 0 })
+                    {
+                        errorList.Add(
+                            ($"{excelRealName}#{sheet.Name}", @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@")
+                        );
+                        return errorList;
+                    }
 
             //查找是否已经写入过新ID，如果写入过，则删除
             var writeIdList = GetElementIdGroup(excelName, sheet, _modelIdNew, true);

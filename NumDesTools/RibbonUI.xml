@@ -128,6 +128,9 @@
                         <button id="ExcelConflictManual" label="手动两文件对比" imageMso="FileMerge"
                                 onAction='OnButtonClick' screentip='选择两个 xlsx 文件，逐格对比并选择合并结果'
                                 tag='手动两文件对比' />
+                        <button id="ExcelConflictHistory" label="查看历史版本对比" imageMso="RevisionsShowMarkup"
+                                onAction='OnButtonClick' screentip='浏览某个 xlsx 的 Git 提交历史，选历史版本与工作区或另一历史版本对比'
+                                tag='查看历史版本对比' />
                     </menu>
                     <button id="MapExcelButton" size='large' label="溯源改动" screentip='根据对比结果和【文档\表格关系.json】溯源每条改动最终影响的表格，一般为ActivityClientData.xlsx，输出至【文档\#溯源结果.xlsx】'
                             onAction='OnButtonClick' image="video" tag='溯源改动' />
@@ -158,6 +161,13 @@
                     <editBox id="TargetPathEdit" getText="GetFileInfo" onChange="FileInfoChanged"
                              sizeString="........................................................................."
                              image="folder-aws" screentip='输入自己本地目录，自动保存' />
+                </group>
+
+                <!-- ══ 帮助 ══ -->
+                <group id='GroupHelp' label='帮助'>
+                    <button id='HelpButton' size='large' label='功能说明书' imageMso='Help'
+                            onAction='OnButtonClick'
+                            screentip='打开 NumDesTools 图文帮助，查看各功能说明与使用步骤' tag='帮助' />
                 </group>
 
             </tab>
