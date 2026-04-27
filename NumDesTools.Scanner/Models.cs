@@ -31,8 +31,12 @@ public class TableDef
 
 public class FieldDef
 {
-    [JsonProperty("name")]     public string Name     { get; set; } = "";
-    [JsonProperty("required")] public bool   Required { get; set; }
+    [JsonProperty("name")]       public string Name       { get; set; } = "";
+    [JsonProperty("required")]   public bool   Required   { get; set; }
+    [JsonProperty("type")]       public string Type       { get; set; } = "";
+    [JsonProperty("refTable")]   public string RefTable   { get; set; } = "";
+    [JsonProperty("refIsArray")] public bool   RefIsArray { get; set; }
+    [JsonProperty("desc")]       public string Desc       { get; set; } = "";
 }
 
 public class SubTableRule

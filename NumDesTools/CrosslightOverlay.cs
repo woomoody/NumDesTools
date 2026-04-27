@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using ExcelDna.Integration;
 
 namespace NumDesTools;
 
@@ -113,7 +114,51 @@ internal sealed class CrosslightOverlay : Form
 }
 
 /// <summary>
-/// 聚光灯控制器：挂接 Excel 事件，计算色条位置并驱动 CrosslightOverlay。
+/// Win32：找 EXCEL7 窗口并获取其屏幕客户区原点（即单元格网格区域左上角，含行号/列标头）。
+/// </summary>
+internal static class ExcelGridWin32
+{
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string cls, string? title);
+
+    [DllImport("user32.dll")]
+    private static extern bool ClientToScreen(IntPtr hWnd, ref POINT pt);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetClientRect(IntPtr hWnd, out RECT rc);
+
+    [StructLayout(LayoutKind.Sequential)] private struct POINT { public int X, Y; }
+    [StructLayout(LayoutKind.Sequential)] private struct RECT  { public int L, T, R, B; }
+
+    /// <summary>EXCEL7 客户区左上角的屏幕坐标。</summary>
+    public static (int X, int Y)? GetExcel7Origin(IntPtr xlMainHwnd)
+    {
+        var desk = FindWindowEx(xlMainHwnd, IntPtr.Zero, "XLDESK", null);
+        if (desk == IntPtr.Zero) return null;
+        var e7 = FindWindowEx(desk, IntPtr.Zero, "EXCEL7", null);
+        if (e7 == IntPtr.Zero) return null;
+        var pt = new POINT();
+        return ClientToScreen(e7, ref pt) ? (pt.X, pt.Y) : null;
+    }
+
+    /// <summary>EXCEL7 客户区尺寸（像素）。</summary>
+    public static (int W, int H)? GetExcel7Size(IntPtr xlMainHwnd)
+    {
+        var desk = FindWindowEx(xlMainHwnd, IntPtr.Zero, "XLDESK", null);
+        if (desk == IntPtr.Zero) return null;
+        var e7 = FindWindowEx(desk, IntPtr.Zero, "EXCEL7", null);
+        if (e7 == IntPtr.Zero) return null;
+        return GetClientRect(e7, out var rc) ? (rc.R - rc.L, rc.B - rc.T) : null;
+    }
+}
+
+/// <summary>
+/// 聚光灯控制器。
+/// 坐标方案：
+///   xlfGetCell(42~45) 在宏上下文中返回单元格相对于 EXCEL7 客户区左上角的 points 偏移。
+///   ExcelGridWin32.GetExcel7Origin 用 Win32 ClientToScreen 取 EXCEL7 客户区左上角屏幕坐标。
+///   pixels-per-point 通过两次 PointsToScreenPixelsX 调用之差倒推（含 DPI + Zoom）。
+///   三者共享 EXCEL7 客户区作为原点，叠加即为单元格屏幕绝对坐标。
 /// </summary>
 internal static class CrosslightController
 {
@@ -134,7 +179,7 @@ internal static class CrosslightController
         app.WindowActivate       += OnWindowActivate;
         app.WindowDeactivate     += OnWindowDeactivate;
 
-        TryRefresh();
+        QueueRefresh();
     }
 
     public static void Disable()
@@ -152,11 +197,13 @@ internal static class CrosslightController
         _app = null;
     }
 
-    private static void OnSelectionChange(object sh, Range target) => TryRefresh();
-    private static void OnWorkbookActivate(object wb)              => TryRefresh();
+    private static void OnSelectionChange(object sh, Range target) => QueueRefresh();
+    private static void OnWorkbookActivate(object wb)              => QueueRefresh();
     private static void OnWorkbookDeactivate(object wb)            => CrosslightOverlay.Instance.ClearBands();
-    private static void OnWindowActivate(object wb, object wn)     => TryRefresh();
+    private static void OnWindowActivate(object wb, object wn)     => QueueRefresh();
     private static void OnWindowDeactivate(object wb, object wn)   => CrosslightOverlay.Instance.ClearBands();
+
+    private static void QueueRefresh() => ExcelAsyncUtil.QueueAsMacro(TryRefresh);
 
     private static void TryRefresh()
     {
@@ -169,60 +216,62 @@ internal static class CrosslightController
             var sel = _app.Selection as Range;
             if (sel == null) { CrosslightOverlay.Instance.ClearBands(); return; }
 
-            var ws = (Worksheet)_app.ActiveSheet;
+            // ── 1. EXCEL7 客户区屏幕原点 ──────────────────────────────────────────
+            // EXCEL7 是 Excel 单元格网格窗口（含行号列+列标题，不含 Ribbon/公式栏）。
+            // ClientToScreen(0,0) 精确定位其屏幕位置，与 xlfGetCell 共享同一原点。
+            var origin = ExcelGridWin32.GetExcel7Origin((IntPtr)win.Hwnd);
+            if (origin == null) { CrosslightOverlay.Instance.ClearBands(); return; }
+            int originX = origin.Value.X;
+            int originY = origin.Value.Y;
 
-            // 冻结行/列的分割位置（0 = 无冻结）
-            int splitRow = win.FreezePanes ? (int)win.SplitRow : 0;
-            int splitCol = win.FreezePanes ? (int)win.SplitColumn : 0;
+            // ── 2. pixels-per-point（DPI × Zoom，通过 PointsToScreenPixels 差值倒推）────
+            double pxPerPtX = (win.PointsToScreenPixelsX(100) - win.PointsToScreenPixelsX(0)) / 100.0;
+            double pxPerPtY = (win.PointsToScreenPixelsY(100) - win.PointsToScreenPixelsY(0)) / 100.0;
 
-            // 冻结区域的物理尺寸（points）= 第一可滚动行/列的绝对坐标
-            double frozenH = splitRow > 0 ? ((Range)ws.Cells[splitRow + 1, 1]).Top  : 0.0;
-            double frozenW = splitCol > 0 ? ((Range)ws.Cells[1, splitCol + 1]).Left : 0.0;
+            // ── 3. xlfGetCell(42~45)：单元格相对于 EXCEL7 客户区左上角的 points ──────
+            // 在 QueueAsMacro 宏上下文中调用，不会抛 XlCallException。
+            var sheetRef = (ExcelReference)XlCall.Excel(XlCall.xlSheetId);
+            var cellRef  = new ExcelReference(
+                sel.Row    - 1, sel.Row    - 1 + sel.Rows.Count    - 1,
+                sel.Column - 1, sel.Column - 1 + sel.Columns.Count - 1,
+                sheetRef.SheetId);
 
-            // 可滚动窗格第一可见行/列的绝对坐标
-            double scrollTop  = ((Range)ws.Cells[win.ScrollRow, 1]).Top;
-            double scrollLeft = ((Range)ws.Cells[1, win.ScrollColumn]).Left;
-
-            // PointsToScreenPixelsX/Y(0) 对应可滚动窗格的屏幕原点（冻结区之下/右）。
-            // 冻结区内的单元格偏移量 = sel.Top - frozenH（负值，在原点之上）。
-            // 可滚动区的单元格偏移量 = sel.Top - scrollTop。
-            double viewTop, viewBottom, viewLeft, viewRight;
-
-            if (sel.Row <= splitRow)
+            if (XlCall.Excel(XlCall.xlfGetCell, 42, cellRef) is not double ptLeft   ||
+                XlCall.Excel(XlCall.xlfGetCell, 43, cellRef) is not double ptTop    ||
+                XlCall.Excel(XlCall.xlfGetCell, 44, cellRef) is not double ptRight  ||
+                XlCall.Excel(XlCall.xlfGetCell, 45, cellRef) is not double ptBottom)
             {
-                viewTop    = sel.Top              - frozenH;
-                viewBottom = sel.Top + sel.Height - frozenH;
-            }
-            else
-            {
-                viewTop    = sel.Top              - scrollTop;
-                viewBottom = sel.Top + sel.Height - scrollTop;
-            }
-
-            if (sel.Column <= splitCol)
-            {
-                viewLeft  = sel.Left             - frozenW;
-                viewRight = sel.Left + sel.Width - frozenW;
-            }
-            else
-            {
-                viewLeft  = sel.Left             - scrollLeft;
-                viewRight = sel.Left + sel.Width - scrollLeft;
+                CrosslightOverlay.Instance.ClearBands();
+                return;
             }
 
-            int rowTop    = win.PointsToScreenPixelsY((int)viewTop);
-            int rowBottom = win.PointsToScreenPixelsY((int)viewBottom);
-            int colLeft   = win.PointsToScreenPixelsX((int)viewLeft);
-            int colRight  = win.PointsToScreenPixelsX((int)viewRight);
+            // ── 4. 诊断：把关键数值写到状态栏，帮助找出坐标系偏差 ──────────────
+            int p2spY0   = win.PointsToScreenPixelsY(0);
+            int p2spY100 = win.PointsToScreenPixelsY(100);
+            int p2spX0   = win.PointsToScreenPixelsX(0);
+            int p2spX100 = win.PointsToScreenPixelsX(100);
+            _app.StatusBar = $"Cell[{sel.Row},{sel.Column}] " +
+                             $"xcell_pt=({ptLeft:F1},{ptTop:F1}) " +
+                             $"P2SP_Y(0)={p2spY0} P2SP_Y(100)={p2spY100} " +
+                             $"P2SP_X(0)={p2spX0} P2SP_X(100)={p2spX100} " +
+                             $"E7origin=({originX},{originY}) " +
+                             $"pxPerPt=({pxPerPtX:F3},{pxPerPtY:F3})";
+
+            // ── 5. 屏幕坐标 = EXCEL7原点 + cell_points × pxPerPt ────────────────
+            int screenTop    = originY + (int)(ptTop    * pxPerPtY);
+            int screenBottom = originY + (int)(ptBottom * pxPerPtY);
+            int screenLeft   = originX + (int)(ptLeft   * pxPerPtX);
+            int screenRight  = originX + (int)(ptRight  * pxPerPtX);
 
             var vs = SystemInformation.VirtualScreen;
 
             CrosslightOverlay.Instance.UpdateBands(
-                new System.Drawing.Rectangle(0, rowTop - vs.Top, vs.Width, Math.Max(2, rowBottom - rowTop)),
-                new System.Drawing.Rectangle(colLeft - vs.Left, 0, Math.Max(2, colRight - colLeft), vs.Height));
+                new System.Drawing.Rectangle(0, screenTop - vs.Top, vs.Width, Math.Max(2, screenBottom - screenTop)),
+                new System.Drawing.Rectangle(screenLeft - vs.Left, 0, Math.Max(2, screenRight - screenLeft), vs.Height));
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[Crosslight] {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
             CrosslightOverlay.Instance.ClearBands();
         }
     }
