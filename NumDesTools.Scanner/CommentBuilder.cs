@@ -11,7 +11,8 @@ public static class CommentBuilder
     // ── 需求分析 ─────────────────────────────────────────────────────────────
 
     public static string BuildStoryComment(
-        WorkItem story, List<TableMatch> tables, int phase, List<string>? historyNotes = null)
+        WorkItem story, List<TableMatch> tables, int phase,
+        List<string>? historyNotes = null, string? gitAnalysis = null)
     {
         var sb = new StringBuilder();
         bool isFollowup = phase > 1;
@@ -46,6 +47,13 @@ public static class CommentBuilder
             sb.AppendLine("历史经验：");
             foreach (var note in historyNotes)
                 sb.AppendLine($"• {note}");
+        }
+
+        if (!string.IsNullOrEmpty(gitAnalysis))
+        {
+            sb.AppendLine();
+            sb.AppendLine("关联 Git 提交：");
+            sb.AppendLine(gitAnalysis);
         }
 
         return sb.ToString().TrimEnd();
@@ -118,7 +126,7 @@ public static class CommentBuilder
     public static string BuildIssueComment(
         WorkItem issue, List<TableMatch> tables, string activityId,
         int? typeNum, string typeNote, List<string>? historyNotes = null,
-        string? findChainAnalysis = null)
+        string? findChainAnalysis = null, string? gitAnalysis = null)
     {
         var (locationExcels, fixSuggestion, _) = InferBugHints(issue.Name);
         var sb = new StringBuilder();
@@ -157,6 +165,13 @@ public static class CommentBuilder
             sb.AppendLine("历史经验：");
             foreach (var note in historyNotes)
                 sb.AppendLine($"• {note}");
+        }
+
+        if (!string.IsNullOrEmpty(gitAnalysis))
+        {
+            sb.AppendLine();
+            sb.AppendLine("关联 Git 提交：");
+            sb.AppendLine(gitAnalysis);
         }
 
         return sb.ToString().TrimEnd();

@@ -2562,4 +2562,25 @@ public static class PubMetToExcel
 
         return sourceData;
     }
+
+    // 判断某个工作表是否需要做公式检测。
+    // 规则：只对 ...\Public\Excels\Tables\ 目录下的合法配置表做检测；
+    //   - 工作簿文件名含 # → 非配置文件，跳过检测
+    //   - Sheet 名含 #     → 辅助/非配置 Sheet，跳过检测
+    //   - 工作簿文件名含 $ → 多 Sheet 配置工作簿，所有 Sheet 均为合法配置，需检测
+    //   - 其余             → 仅 Sheet1 是合法配置 Sheet，其他 Sheet 跳过检测
+    public static bool ShouldCheckFormula(string workbookFilePath, string sheetName)
+    {
+        if (!workbookFilePath.Contains(@"\Public\Excels\Tables\",
+                StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var fileName = Path.GetFileNameWithoutExtension(workbookFilePath);
+        if (fileName.Contains('#')) return false;
+        if (sheetName.Contains('#'))  return false;
+
+        if (fileName.Contains('$')) return true;
+
+        return string.Equals(sheetName, "Sheet1", StringComparison.OrdinalIgnoreCase);
+    }
 }

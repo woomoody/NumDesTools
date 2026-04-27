@@ -179,10 +179,268 @@ public static class ExcelConflictEntry
             }
 
             var workingFilePath = Path.Combine(gitRoot, chosen.Replace('/', Path.DirectorySeparatorChar));
-            ExtractAndOpen(gitRoot, chosen, workingFilePath, autoGitAdd: true);
+            var applied = ExtractAndOpen(gitRoot, chosen, workingFilePath, autoGitAdd: true);
+            if (!applied) break; // 用户点了取消，退出整个循环
         }
 
         picker?.Dispose();
+    }
+
+    /// <summary>
+    /// 让用户选择一个 xlsx 文件，浏览其 Git 提交历史，
+    /// 可选 "历史版本 vs 工作区"（支持写回 + git add）
+    /// 或 "任意两个历史版本对比"（不写回）。
+    /// </summary>
+    public static void OpenGitHistory()
+    {
+        var gitRoot = NumDesAddIn.GitRootPath;
+        if (string.IsNullOrEmpty(gitRoot) || !Directory.Exists(gitRoot))
+        {
+            MessageBox.Show("未配置 GitRootPath，请在 NumDesToolsConfig.json 中设置。",
+                "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        // 选文件
+        using var dlg = new OpenFileDialog
+        {
+            Title            = "选择要查看历史的 xlsx 文件",
+            Filter           = "Excel 文件|*.xlsx",
+            InitialDirectory = gitRoot,
+        };
+        if (dlg.ShowDialog() != DialogResult.OK) return;
+
+        var absPath      = dlg.FileName;
+        var relativePath = Path.GetRelativePath(gitRoot, absPath).Replace('\\', '/');
+
+        // 读取该文件的提交历史
+        List<(string sha, string shortSha, string date, string author, string message)> commits;
+        try
+        {
+            using var repo = new Repository(gitRoot);
+            commits = repo.Commits
+                .QueryBy(relativePath)
+                .Select(e => e.Commit)
+                .Select(c => (
+                    c.Sha,
+                    c.Sha[..8],
+                    c.Author.When.LocalDateTime.ToString("yyyy-MM-dd HH:mm"),
+                    c.Author.Name,
+                    c.MessageShort
+                ))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"读取 Git 历史失败：{ex.Message}", "错误",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        if (commits.Count == 0)
+        {
+            MessageBox.Show("该文件没有 Git 提交历史。", "提示",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        // 提交历史选择窗口
+        var picker = new Form
+        {
+            Text            = $"选择历史版本 — {Path.GetFileName(absPath)}",
+            StartPosition   = FormStartPosition.CenterScreen,
+            FormBorderStyle = FormBorderStyle.Sizable,
+            MinimumSize     = new System.Drawing.Size(700, 400),
+            BackColor       = System.Drawing.Color.FromArgb(30, 30, 30),
+            ForeColor       = System.Drawing.Color.FromArgb(220, 220, 220),
+        };
+
+        var lb = new ListBox
+        {
+            Dock                = DockStyle.Fill,
+            Font                = new Font("Consolas", 9.5f),
+            BackColor           = System.Drawing.Color.FromArgb(37, 37, 40),
+            ForeColor           = System.Drawing.Color.FromArgb(220, 220, 220),
+            BorderStyle         = BorderStyle.None,
+            SelectionMode       = SelectionMode.One,
+            HorizontalScrollbar = true,
+            IntegralHeight      = false,
+        };
+
+        foreach (var (_, shortSha, date, author, message) in commits)
+            lb.Items.Add($"{shortSha}  {date}  {author,-16}  {message}");
+
+        if (lb.Items.Count > 0) lb.SelectedIndex = 0;
+
+        var bottomPanel = new Panel
+        {
+            Dock      = DockStyle.Bottom,
+            Height    = 44,
+            BackColor = System.Drawing.Color.FromArgb(37, 37, 40),
+            Padding   = new Padding(10, 6, 10, 6),
+        };
+
+        var btnVsWorking = new Button
+        {
+            Text      = "与当前工作区对比",
+            Height    = 32,
+            Width     = 160,
+            Left      = 10,
+            Top       = 6,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = System.Drawing.Color.FromArgb(0, 122, 204),
+            ForeColor = System.Drawing.Color.White,
+            Font      = new Font("微软雅黑", 9.5f, System.Drawing.FontStyle.Bold),
+            Cursor    = Cursors.Hand,
+            Tag       = "working",
+        };
+        btnVsWorking.FlatAppearance.BorderSize = 0;
+
+        var btnVsAnother = new Button
+        {
+            Text      = "与另一历史版本对比",
+            Height    = 32,
+            Width     = 168,
+            Left      = 180,
+            Top       = 6,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = System.Drawing.Color.FromArgb(60, 80, 60),
+            ForeColor = System.Drawing.Color.White,
+            Font      = new Font("微软雅黑", 9.5f, System.Drawing.FontStyle.Bold),
+            Cursor    = Cursors.Hand,
+            Tag       = "another",
+        };
+        btnVsAnother.FlatAppearance.BorderSize = 0;
+
+        btnVsWorking.Click += (_, _) => { if (lb.SelectedItem != null) { picker.Tag = "working"; picker.DialogResult = DialogResult.OK; } };
+        btnVsAnother.Click += (_, _) => { if (lb.SelectedItem != null) { picker.Tag = "another"; picker.DialogResult = DialogResult.OK; } };
+
+        bottomPanel.Controls.Add(btnVsWorking);
+        bottomPanel.Controls.Add(btnVsAnother);
+        picker.Controls.Add(lb);
+        picker.Controls.Add(bottomPanel);
+
+        // 自动宽度
+        using (var g = lb.CreateGraphics())
+        {
+            var maxW = lb.Items.Cast<string>().Select(s => (int)g.MeasureString(s, lb.Font).Width).DefaultIfEmpty(0).Max();
+            picker.ClientSize = new System.Drawing.Size(
+                Math.Max(700, Math.Min(1100, maxW + 40)),
+                Math.Min(commits.Count * (lb.ItemHeight + 0) + 44 + 16, 600));
+        }
+
+        if (picker.ShowDialog() != DialogResult.OK) { picker.Dispose(); return; }
+
+        var selectedIdx = lb.SelectedIndex;
+        var mode        = picker.Tag?.ToString() ?? "working";
+        picker.Dispose();
+
+        var selectedSha = commits[selectedIdx].sha;
+
+        var tmpDir = Path.Combine(Path.GetTempPath(), "NumDesExcelDiff");
+        Directory.CreateDirectory(tmpDir);
+
+        var fileName = Path.GetFileName(relativePath);
+
+        if (mode == "working")
+        {
+            // 历史版本（OURS）vs 工作区（THEIRS）
+            var histPath = Path.Combine(tmpDir, $"hist_{commits[selectedIdx].shortSha}_{fileName}");
+            try
+            {
+                GitShowBySha(gitRoot, selectedSha, relativePath, histPath);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"提取历史版本失败：{ex.Message}", "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            // histPath=OURS(历史), absPath=THEIRS(工作区), outPath=工作区文件(可写回)
+            OpenWindow(histPath, absPath, outPath: absPath, autoGitAdd: true);
+        }
+        else
+        {
+            // 需要再选第二个版本
+            var picker2 = new Form
+            {
+                Text            = $"选择第二个历史版本 — {fileName}（第一个：{commits[selectedIdx].shortSha}）",
+                StartPosition   = FormStartPosition.CenterScreen,
+                FormBorderStyle = FormBorderStyle.Sizable,
+                MinimumSize     = new System.Drawing.Size(700, 400),
+                BackColor       = System.Drawing.Color.FromArgb(30, 30, 30),
+                ForeColor       = System.Drawing.Color.FromArgb(220, 220, 220),
+            };
+            var lb2 = new ListBox
+            {
+                Dock                = DockStyle.Fill,
+                Font                = new Font("Consolas", 9.5f),
+                BackColor           = System.Drawing.Color.FromArgb(37, 37, 40),
+                ForeColor           = System.Drawing.Color.FromArgb(220, 220, 220),
+                BorderStyle         = BorderStyle.None,
+                SelectionMode       = SelectionMode.One,
+                HorizontalScrollbar = true,
+                IntegralHeight      = false,
+            };
+            foreach (var (_, shortSha, date, author, message) in commits)
+                lb2.Items.Add($"{shortSha}  {date}  {author,-16}  {message}");
+            lb2.SelectedIndex = Math.Min(selectedIdx + 1, commits.Count - 1);
+
+            var bottomPanel2 = new Panel
+            {
+                Dock      = DockStyle.Bottom,
+                Height    = 44,
+                BackColor = System.Drawing.Color.FromArgb(37, 37, 40),
+                Padding   = new Padding(10, 6, 10, 6),
+            };
+            var btnOk2 = new Button
+            {
+                Text      = "开始对比",
+                Height    = 32,
+                Width     = 110,
+                Left      = 10,
+                Top       = 6,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = System.Drawing.Color.FromArgb(0, 122, 204),
+                ForeColor = System.Drawing.Color.White,
+                Font      = new Font("微软雅黑", 9.5f, System.Drawing.FontStyle.Bold),
+                Cursor    = Cursors.Hand,
+            };
+            btnOk2.FlatAppearance.BorderSize = 0;
+            btnOk2.Click += (_, _) => { if (lb2.SelectedItem != null) picker2.DialogResult = DialogResult.OK; };
+            bottomPanel2.Controls.Add(btnOk2);
+            picker2.Controls.Add(lb2);
+            picker2.Controls.Add(bottomPanel2);
+
+            using (var g = lb2.CreateGraphics())
+            {
+                var maxW = lb2.Items.Cast<string>().Select(s => (int)g.MeasureString(s, lb2.Font).Width).DefaultIfEmpty(0).Max();
+                picker2.ClientSize = new System.Drawing.Size(
+                    Math.Max(700, Math.Min(1100, maxW + 40)),
+                    Math.Min(commits.Count * (lb2.ItemHeight + 0) + 44 + 16, 600));
+            }
+
+            if (picker2.ShowDialog() != DialogResult.OK) { picker2.Dispose(); return; }
+            var selectedIdx2 = lb2.SelectedIndex;
+            picker2.Dispose();
+
+            var sha2      = commits[selectedIdx2].sha;
+            var histPath  = Path.Combine(tmpDir, $"hist_{commits[selectedIdx].shortSha}_{fileName}");
+            var histPath2 = Path.Combine(tmpDir, $"hist_{commits[selectedIdx2].shortSha}_{fileName}");
+            try
+            {
+                GitShowBySha(gitRoot, selectedSha, relativePath, histPath);
+                GitShowBySha(gitRoot, sha2,         relativePath, histPath2);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"提取历史版本失败：{ex.Message}", "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            // 两个历史版本对比，不写回（outPath=histPath 只读），不 git add
+            OpenWindow(histPath, histPath2, outPath: null, autoGitAdd: false);
+        }
     }
 
     /// <summary>
@@ -234,7 +492,8 @@ public static class ExcelConflictEntry
         catch { /* 单个文件失败不中断整体流程 */ }
     }
 
-    private static void ExtractAndOpen(string gitRoot, string relativePath,
+    // 返回 true=已应用/完成，false=用户取消
+    private static bool ExtractAndOpen(string gitRoot, string relativePath,
                                         string workingFilePath, bool autoGitAdd)
     {
         var tmpDir  = Path.Combine(Path.GetTempPath(), "NumDesExcelDiff");
@@ -253,10 +512,10 @@ public static class ExcelConflictEntry
             MessageBox.Show($"提取 Git 版本失败：{ex.Message}\n\n" +
                             "请确认当前处于 merge 冲突状态（ORIG_HEAD 和 MERGE_HEAD 都存在）。",
                 "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
+            return false;
         }
 
-        OpenWindow(oursPath, theirsPath, outPath: workingFilePath, autoGitAdd: autoGitAdd);
+        return OpenWindow(oursPath, theirsPath, outPath: workingFilePath, autoGitAdd: autoGitAdd);
     }
 
     private static void GitShow(string gitRoot, string rev, string relativePath, string outFile)
@@ -272,7 +531,21 @@ public static class ExcelConflictEntry
         src.CopyTo(dst);
     }
 
-    private static void OpenWindow(string oursPath, string theirsPath,
+    private static void GitShowBySha(string gitRoot, string sha, string relativePath, string outFile)
+    {
+        using var repo   = new Repository(gitRoot);
+        var commit = repo.Lookup<Commit>(sha)
+                     ?? throw new InvalidOperationException($"找不到提交：{sha[..8]}");
+        var entry  = commit[relativePath.Replace('\\', '/')]
+                     ?? throw new InvalidOperationException($"提交 {sha[..8]} 中找不到文件：{relativePath}");
+        var blob   = (Blob)entry.Target;
+        using var src = blob.GetContentStream();
+        using var dst = new FileStream(outFile, FileMode.Create, FileAccess.Write);
+        src.CopyTo(dst);
+    }
+
+    // 返回 true=已应用，false=用户取消
+    private static bool OpenWindow(string oursPath, string theirsPath,
                                     string? outPath, bool autoGitAdd)
     {
         FileDiff diff;
@@ -284,18 +557,17 @@ public static class ExcelConflictEntry
         {
             MessageBox.Show($"解析文件失败：{ex.Message}", "错误",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
+            return false;
         }
 
         if (diff.TotalConflictRows == 0)
         {
             MessageBox.Show("两个文件内容完全一致，没有需要解决的冲突。",
                 "无差异", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
+            return true; // 视为处理完毕，继续下一个文件
         }
 
-        // WPF 窗口需在 STA 线程上运行；ExcelDna 主线程已是 STA
         var win = new ExcelConflictWindow(diff, outPath, autoGitAdd);
-        win.ShowDialog();
+        return win.ShowDialog() == true;
     }
 }

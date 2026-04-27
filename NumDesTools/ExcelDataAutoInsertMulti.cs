@@ -264,12 +264,13 @@ public static class ExcelDataAutoInsertMulti
         }
 
         sheet ??= workBook.Worksheets[0];
-        foreach (var cell in sheet.Cells)
-            if (cell.Formula is { Length: > 0 })
-            {
-                errorList.Add((excelRealName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
-                return errorList;
-            }
+        if (PubMetToExcel.ShouldCheckFormula(path, sheet.Name))
+            foreach (var cell in sheet.Cells)
+                if (cell.Formula is { Length: > 0 })
+                {
+                    errorList.Add((excelRealName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
+                    return errorList;
+                }
 
         var writeIdList = ExcelDataWriteIdGroup(excelName, addValue, sheet, fixKey, modelId);
         PubMetToExcel.RepeatValue2(sheet, 4, 2, writeIdList.Item1);
