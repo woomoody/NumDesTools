@@ -82,6 +82,10 @@ internal class Program
     {
         Console.OutputEncoding = Encoding.UTF8;
 
+        // ── 配置自检模式（独立，不依赖飞书）────────────────────────────────────
+        if (args.Contains("--validate"))
+            return ConfigValidator.Run(args);
+
         // 解析参数
         bool releaseMode = args.Contains("--release");
         bool confirmMode = args.Contains("--confirm");
