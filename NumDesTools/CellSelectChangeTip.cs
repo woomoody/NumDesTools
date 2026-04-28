@@ -1,228 +1,150 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using ExcelDna.Integration;
 using Font = System.Drawing.Font;
-using IWin32Window = System.Windows.Forms.IWin32Window;
 
 #pragma warning disable CA1416
-#pragma warning disable CA1416
-
 
 namespace NumDesTools;
 
-public class CellSelectChangeTip : ClickThroughForm
+/// <summary>
+/// 跟随光标的单元格值气泡提示，小窗口方案。
+/// 定位：Cursor.Position 直接作为 Form.Location，两者都是 WinForms 物理坐标，无需换算。
+/// </summary>
+public sealed class CellSelectChangeTip : Form
 {
-    private string _displayText;
-    private int _currentLeft;
-    private int _currentTop;
+    private string? _text;
+    private static readonly Font TipFont = new Font("微软雅黑", 11);
+    private const int Pad = 8;
 
-    private Win32Window _owner;
+    private static CellSelectChangeTip? _instance;
+    public  static CellSelectChangeTip  Instance => _instance ??= new CellSelectChangeTip();
 
-    public CellSelectChangeTip()
+    private CellSelectChangeTip()
     {
-        InitializeComponent();
-    }
-
-    private void InitializeComponent()
-    {
-        SuspendLayout();
-        AutoScaleMode = AutoScaleMode.None;   // 禁止 WinForms 按字体DPI缩放 Location 坐标
-        AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        BackColor = Color.Black;
-        ClientSize = new Size(300, 200);
-        ControlBox = false;
         FormBorderStyle = FormBorderStyle.None;
-        ShowInTaskbar = false;
-        TopMost = true;
-        StartPosition = FormStartPosition.Manual;  // 防止 Show() 重置 Location
-        Name = "CellSelectChangeTip";
-        Load += CellSelectChangeTip_Load;
-        ResumeLayout(false);
+        ShowInTaskbar   = false;
+        TopMost         = true;
+        BackColor       = Color.FromArgb(40, 40, 40);
+        ForeColor       = Color.White;
+        AutoScaleMode   = AutoScaleMode.None;
+        StartPosition   = FormStartPosition.Manual;
+
+        SetStyle(ControlStyles.OptimizedDoubleBuffer
+               | ControlStyles.AllPaintingInWmPaint
+               | ControlStyles.UserPaint, true);
+
+        // 穿透鼠标点击
+        var ex = GetWindowLong(Handle, GWL_EXSTYLE);
+        SetWindowLong(Handle, GWL_EXSTYLE, ex | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
     }
 
-    private void TargetStrWrite(object sender, PaintEventArgs e)
+    protected override void OnPaint(PaintEventArgs e)
     {
-#pragma warning disable CA1416
-        using var brush = new SolidBrush(Color.White);
-#pragma warning restore CA1416
-#pragma warning disable CA1416
-        e.Graphics.DrawString(_displayText, new Font("微软雅黑", 13), brush, new PointF(10, 10));
-#pragma warning restore CA1416
+        e.Graphics.Clear(BackColor);
+        if (_text == null) return;
+        using var brush = new SolidBrush(ForeColor);
+        e.Graphics.DrawString(_text, TipFont, brush, new PointF(Pad, Pad));
     }
 
-    public void ShowToolTip(string text, Range target)
+    public void ShowBubble(string text)
     {
-        _displayText = text;
-        if (_displayText == null)
-        {
-            HideToolTip();
-            return;
-        }
+        _text = text;
+        var sz = TextRenderer.MeasureText(text, TipFont);
+        int w  = sz.Width  + Pad * 2;
+        int h  = sz.Height + Pad * 2;
 
-#pragma warning disable CA1416
-        var size = TextRenderer.MeasureText(_displayText, new Font("微软雅黑", 13));
-#pragma warning restore CA1416
-        var tipWidth = size.Width + 10;
-        var tipHeight = size.Height + 10;
+        // Cursor.Position 与 Form.Location 同为 WinForms 物理坐标，直接相加偏移 14px
+        var cursor = Cursor.Position;
+        int x = cursor.X + 14;
+        int y = cursor.Y + 14;
 
-        if (!CalcScreenPos(target, ref tipWidth, ref tipHeight, out _currentLeft, out _currentTop))
-            return;
+        // 边界检测：用当前光标所在屏幕的工作区
+        var wa = Screen.FromPoint(cursor).WorkingArea;
+        if (x + w > wa.Right)  x = cursor.X - w - 2;
+        if (y + h > wa.Bottom) y = cursor.Y - h - 2;
+        if (x < wa.Left) x = wa.Left;
+        if (y < wa.Top)  y = wa.Top;
 
-        Paint -= TargetStrWrite;
-        Paint += TargetStrWrite;
-        var excelHandle = (IntPtr)NumDesAddIn.App.Hwnd;
-        _owner = new Win32Window(excelHandle);
-        if (!Visible)
-            Show(_owner);
-        ClientSize = new Size(tipWidth, tipHeight);
-        Location = new Point(_currentLeft, _currentTop);
+        ClientSize = new Size(w, h);
+        Location   = new Point(x, y);
+
         GetWindowRect(Handle, out var rc);
-        var scr = Screen.FromHandle(Handle);
         System.Diagnostics.Debug.WriteLine(
-            $"[CellTip] setLoc=({_currentLeft},{_currentTop}) → WinRect=({rc.Left},{rc.Top},{rc.Right},{rc.Bottom})" +
-            $" | DeviceDpi={DeviceDpi} ScreenBounds={scr.Bounds} WorkingArea={scr.WorkingArea}");
+            $"[CellTip] cursor=({cursor.X},{cursor.Y}) → loc=({x},{y}) WinRect=({rc.Left},{rc.Top})");
+
+        if (!Visible) Show();
         Invalidate();
     }
 
-    public void HideToolTip()
+    public void ClearBubble()
     {
-        Hide();
+        if (Visible) Hide();
     }
 
-    // COM Range.Left/Top + PointsToScreenPixels，再乘 DPI scale 转物理像素给 SetWindowPos
-    private static bool CalcScreenPos(Range target, ref int tipWidth, ref int tipHeight,
-        out int left, out int top)
+    public static void DisposeInstance()
     {
-        left = top = 0;
+        if (_instance is { IsDisposed: false })
+        {
+            _instance.Close();
+            _instance.Dispose();
+        }
+        _instance = null;
+    }
+
+    public static void OnSelectionChange(object sh, Range target)
+    {
+        ExcelAsyncUtil.QueueAsMacro(() => TryShow(target));
+    }
+
+    private static void TryShow(Range target)
+    {
         try
         {
-            var win = NumDesAddIn.App.ActiveWindow;
+            if (target.Rows.Count >= 100 || target.Columns.Count >= 10)
+            {
+                Instance.ClearBubble();
+                return;
+            }
 
-            // PointsToScreenPixels 与 Form.Location / SetWindowPos 坐标系一致，直接使用
-            int scrLeft   = win.PointsToScreenPixelsX((int)target.Left);
-            int scrTop    = win.PointsToScreenPixelsY((int)target.Top);
-            int scrRight  = win.PointsToScreenPixelsX((int)(target.Left + target.Width));
-            int scrBottom = win.PointsToScreenPixelsY((int)(target.Top  + target.Height));
-
-            left = scrRight;
-            top  = scrBottom;
-
-            var vs = SystemInformation.VirtualScreen;
-            if (left + tipWidth  > vs.Right)  left = scrLeft - tipWidth;
-            if (top  + tipHeight > vs.Bottom) top  = scrTop  - tipHeight;
-
-            System.Diagnostics.Debug.WriteLine(
-                $"[CellTip] addr={target.Address}" +
-                $" | scr L={scrLeft} T={scrTop} R={scrRight} B={scrBottom}" +
-                $" | finalPos ({left},{top}) size ({tipWidth}x{tipHeight})");
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private class Win32Window : IWin32Window
-    {
-        public IntPtr Handle { get; private set; }
-#pragma warning disable IDE0290
-        public Win32Window(IntPtr handle)
-#pragma warning restore IDE0290
-        {
-            Handle = handle;
-        }
-    }
-
-    public void GetCellValue(object sh, Range target)
-    {
-        HideToolTip();
-        var rngRow = target.Rows.Count;
-        var rngCol = target.Columns.Count;
-
-        if (rngRow < 100 && rngCol < 10)
-        {
-            var cellStr = "";
             object rawVal = target.Value;
+            if (rawVal == null) { Instance.ClearBubble(); return; }
+
+            string text;
             if (rawVal is object[,] arr)
             {
-                for (var i = 1; i <= arr.GetLength(0); i++)
+                var sb = new System.Text.StringBuilder();
+                for (int i = 1; i <= arr.GetLength(0); i++)
                 {
-                    for (var j = 1; j <= arr.GetLength(1); j++)
-                        cellStr += (arr[i, j]?.ToString() ?? string.Empty) + "#";
-                    cellStr += "\r\n";
+                    for (int j = 1; j <= arr.GetLength(1); j++)
+                    {
+                        if (j > 1) sb.Append("  ");
+                        sb.Append(arr[i, j]?.ToString() ?? "");
+                    }
+                    sb.AppendLine();
                 }
+                text = sb.ToString().TrimEnd();
             }
             else
-                cellStr = (rawVal?.ToString() ?? string.Empty) + "\r\n";
+                text = rawVal.ToString() ?? "";
 
-            ShowToolTip(cellStr, target);
+            if (string.IsNullOrEmpty(text)) { Instance.ClearBubble(); return; }
+
+            Instance.ShowBubble(text);
         }
-        else
+        catch (Exception ex)
         {
-            MessageBox.Show(@"选的格子太多了，重选" + @"\n" + @"最大99行，9列！");
-            HideToolTip();
+            System.Diagnostics.Debug.WriteLine($"[CellTip] {ex.GetType().Name}: {ex.Message}");
+            Instance.ClearBubble();
         }
     }
 
-    private void CellSelectChangeTip_Load(object sender, EventArgs e)
-    {
-        var target = NumDesAddIn.App.ActiveCell;
-#pragma warning disable CA1416
-        var size = TextRenderer.MeasureText(_displayText, new Font("微软雅黑", 13));
-#pragma warning restore CA1416
-        var tipWidth = size.Width + 10;
-        var tipHeight = size.Height + 10;
+    private const int GWL_EXSTYLE       = -20;
+    private const int WS_EX_TRANSPARENT = 0x00000020;
+    private const int WS_EX_NOACTIVATE  = 0x08000000;
 
-        if (!CalcScreenPos(target, ref tipWidth, ref tipHeight, out _currentLeft, out _currentTop))
-            return;
-
-        ClientSize = new Size(tipWidth, tipHeight);
-        Location = new Point(_currentLeft, _currentTop);
-    }
-
-    [DllImport("user32.dll")]
-    private static extern uint GetDpiForWindow(IntPtr hWnd);
-    [DllImport("user32.dll")]
-    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-    [DllImport("user32.dll")]
-    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
-        int x, int y, int cx, int cy, uint uFlags);
-    private const uint SWP_NOZORDER   = 0x0004;
-    private const uint SWP_NOACTIVATE = 0x0010;
+    [DllImport("user32.dll")] static extern int  GetWindowLong(IntPtr h, int i);
+    [DllImport("user32.dll")] static extern int  SetWindowLong(IntPtr h, int i, int v);
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT { public int Left, Top, Right, Bottom; }
-}
-
-public class ClickThroughForm : Form
-{
-    private const int WmNchittest = 0x84;
-
-    private const int Httransparent = -1;
-
-    public ClickThroughForm()
-    {
-        SetStyle(ControlStyles.SupportsTransparentBackColor, true);
-        BackColor = Color.Transparent;
-    }
-
-    protected override void WndProc(ref Message m)
-    {
-        if (m.Msg == WmNchittest)
-        {
-            m.Result = (IntPtr)Httransparent;
-            return;
-        }
-
-        base.WndProc(ref m);
-    }
-
-    protected override CreateParams CreateParams
-    {
-        get
-        {
-            var createParams = base.CreateParams;
-            createParams.ExStyle |= 0x00000020;
-            return createParams;
-        }
-    }
 }

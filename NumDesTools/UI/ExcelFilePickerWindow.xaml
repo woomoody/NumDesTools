@@ -30,7 +30,7 @@
                          BorderBrush="#555" BorderThickness="1"
                          Padding="6,4" FontSize="13"
                          TextChanged="SearchBox_TextChanged"
-                         KeyDown="SearchBox_KeyDown"
+                         PreviewKeyDown="SearchBox_KeyDown"
                          GotFocus="SearchBox_GotFocus"
                          LostFocus="SearchBox_LostFocus">
                     <TextBox.Resources>
@@ -113,10 +113,11 @@
                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
                  MouseDoubleClick="FileList_DoubleClick"
                  KeyDown="FileList_KeyDown"
-                 SelectionChanged="FileList_SelectionChanged">
+                 SelectionChanged="FileList_SelectionChanged"
+                 PreviewMouseWheel="List_PreviewMouseWheel">
             <ListBox.Resources>
                 <Style TargetType="ListBoxItem">
-                    <Setter Property="Padding" Value="8,4"/>
+                    <Setter Property="Padding" Value="8,3"/>
                     <Setter Property="Background" Value="Transparent"/>
                     <Setter Property="Foreground" Value="#DDDDDD"/>
                     <Style.Triggers>
@@ -132,10 +133,7 @@
             </ListBox.Resources>
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding RelPath}" ToolTip="{Binding FullPath}"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
+                    <TextBlock Text="{Binding RelPath}" ToolTip="{Binding FullPath}"/>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>

@@ -1110,6 +1110,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         List<(string, int, int, string, string)> sourceData = new();
 
+        // 只检测工程配置路径
+        if(!wkFullPath.Contains(@"\Excels\"))
+        {
+            return;
+        }
+
         if (!wkFileName.Contains("#") && !wkFileName.Contains("Config"))
         {
             var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
@@ -3001,8 +3007,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             GlobalValue.SaveValue("TargetPath", text);
     }
 
-    private List<CellSelectChangeTip> _customZoomForms = [];
-
     public void ZoomInOut_Click(IRibbonControl control)
     {
         if (control == null)
@@ -3010,22 +3014,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         LabelText = LabelText == "放大镜：开启" ? "放大镜：关闭" : "放大镜：开启";
         var isOpening = LabelText == "放大镜：开启";
         CustomRibbon.InvalidateControl("Button5");
-        var rangeValueTip = new CellSelectChangeTip();
-        System.Diagnostics.Debug.WriteLine($"[CellTip] ZoomInOut_Click isOpening={isOpening} LabelText={LabelText}");
         if (isOpening)
-        {
-            App.SheetSelectionChange += rangeValueTip.GetCellValue;
-            _customZoomForms.Add(rangeValueTip);
-        }
+            App.SheetSelectionChange += CellSelectChangeTip.OnSelectionChange;
         else
         {
-            foreach (var form in _customZoomForms)
-                if (form is { IsDisposed: false })
-                {
-                    App.SheetSelectionChange -= form.GetCellValue;
-                    form.HideToolTip();
-                    form.Close();
-                }
+            App.SheetSelectionChange -= CellSelectChangeTip.OnSelectionChange;
+            CellSelectChangeTip.Instance.ClearBubble();
         }
     }
 
