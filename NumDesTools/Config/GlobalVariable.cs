@@ -248,6 +248,9 @@ namespace NumDesTools.Config
             // 序列化回文件
             var updatedJson = JsonConvert.SerializeObject(orderedDictAsDict, Formatting.Indented);
             File.WriteAllText(FilePath, updatedJson, Encoding.UTF8);
+
+            // 同步内存
+            Value[key] = value;
         }
 
         public void SaveConfig()

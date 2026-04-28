@@ -5,10 +5,10 @@
       "cron": "32 9 * * 1-5",
       "prompt": "执行飞书需求配置表格每日扫描：\n在终端运行以下命令（需求扫描，含写入确认）：\n```\ncd \"C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\NumDesTools.Scanner\"\ndotnet run --project NumDesTools.Scanner.csproj -- --all --release\n```\n扫描完成后会停在 y/N 确认提示，输入 y 写入飞书，N 跳过。\n如需同时跑缺陷扫描：dotnet run --project NumDesTools.Scanner.csproj -- --bugs --release\n也可直接双击 scan_stories.bat 或 scan_bugs.bat。",
       "createdAt": 1777012416581,
+      "lastFiredAt": 1777341720649,
       "recurring": true,
       "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
-      "createdByPid": 48144,
-      "lastFiredAt": 1777255445127
+      "createdByPid": 48144
     },
     {
       "id": "49a8e926",

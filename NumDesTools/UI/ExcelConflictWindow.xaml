@@ -7,7 +7,8 @@
     Width="1100" Height="760" MinWidth="800" MinHeight="560"
     WindowStartupLocation="CenterScreen"
     WindowState="Maximized"
-    Background="#1E1E1E">
+    Background="#1E1E1E"
+    KeyDown="Window_EscClose">
 
     <Window.Resources>
         <Style TargetType="Button" x:Key="ActionBtn">
@@ -35,12 +36,13 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>   <!-- 顶部工具栏 -->
-            <RowDefinition Height="Auto"/>   <!-- Sheet Tabs + 列头 -->
-            <RowDefinition Height="*"/>      <!-- 主列表 -->
-            <RowDefinition Height="Auto"/>   <!-- 分隔拖拽条 -->
-            <RowDefinition x:Name="DetailRow" Height="160" MinHeight="60" MaxHeight="360"/> <!-- 详情面板 -->
-            <RowDefinition Height="Auto"/>   <!-- 底部状态栏 -->
+            <RowDefinition Height="Auto"/>   <!-- 0: 顶部工具栏 -->
+            <RowDefinition Height="Auto"/>   <!-- 1: Sheet Tabs + 列头 -->
+            <RowDefinition Height="*"/>      <!-- 2: 主列表 -->
+            <RowDefinition Height="Auto"/>   <!-- 3: 共享横向滚动条 -->
+            <RowDefinition Height="5"/>      <!-- 4: 分隔拖拽条 -->
+            <RowDefinition x:Name="DetailRow" Height="160" MinHeight="60" MaxHeight="360"/> <!-- 5: 详情面板 -->
+            <RowDefinition Height="Auto"/>   <!-- 6: 底部状态栏 -->
         </Grid.RowDefinitions>
 
         <!-- 顶部工具栏 -->
@@ -59,13 +61,30 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- 视图模式：垂直堆叠的三档切换 -->
+                    <Border Background="#1A1A1A" CornerRadius="3" Margin="0,0,8,0"
+                            BorderBrush="#444" BorderThickness="1">
+                        <StackPanel Orientation="Vertical">
+                            <ToggleButton x:Name="ViewConflictOnly" Content="仅冲突"
+                                          IsChecked="True"
+                                          Foreground="White" Background="#1A3A6E" BorderThickness="0"
+                                          Padding="10,3" Cursor="Hand" FontSize="11"
+                                          Checked="ViewMode_Changed" Unchecked="ViewMode_Changed"/>
+                            <Separator Height="1" Background="#333" Margin="0"/>
+                            <ToggleButton x:Name="ViewContext" Content="冲突±5行"
+                                          Foreground="#AAAAAA" Background="Transparent" BorderThickness="0"
+                                          Padding="10,3" Cursor="Hand" FontSize="11"
+                                          Checked="ViewMode_Changed" Unchecked="ViewMode_Changed"/>
+                            <Separator Height="1" Background="#333" Margin="0"/>
+                            <ToggleButton x:Name="ViewAll" Content="加载全部"
+                                          Foreground="#AAAAAA" Background="Transparent" BorderThickness="0"
+                                          Padding="10,3" Cursor="Hand" FontSize="11"
+                                          Checked="ViewMode_Changed" Unchecked="ViewMode_Changed"/>
+                        </StackPanel>
+                    </Border>
+                    <Separator Width="1" Background="#555" Margin="0,0,8,0"/>
                     <Button Content="全文件取我的"  Style="{StaticResource ActionBtn}" Click="AllOurs_Click"/>
                     <Button Content="全文件取他的"  Style="{StaticResource ActionBtn}" Click="AllTheirs_Click"/>
-                    <Separator Width="1" Background="#555" Margin="8,0"/>
-                    <ToggleButton x:Name="OnlyConflictToggle" Content="仅看冲突行"
-                                  Foreground="White" Background="#333" BorderThickness="0"
-                                  Padding="10,4" Margin="4,0" Cursor="Hand"
-                                  Checked="FilterToggle_Changed" Unchecked="FilterToggle_Changed"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -105,28 +124,87 @@
             </Border>
         </Grid>
 
-        <!-- 冲突行列表 -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled"
-                      Background="#1E1E1E">
-            <ItemsControl x:Name="ConflictList" Margin="0,4"
-                          ui:ConflictRowItem.CellSelected="OnCellSelected">
-                <ItemsControl.ItemTemplate>
+        <!-- 冲突行列表（VirtualizingStackPanel 保证大数据不卡） -->
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <ListBox x:Name="ConflictList" Grid.Row="0"
+                     Background="#1E1E1E" BorderThickness="0"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.VirtualizationMode="Standard"
+                     VirtualizingPanel.ScrollUnit="Item"
+                     ui:ConflictRowItem.CellSelected="OnCellSelected">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Padding"                    Value="0"/>
+                        <Setter Property="Background"                 Value="Transparent"/>
+                        <Setter Property="BorderThickness"            Value="0"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <!-- 去掉选中高亮，内容直接透传 -->
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <ContentPresenter/>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
                     <DataTemplate>
                         <ui:ConflictRowItem DataContext="{Binding}"
                                             ui:ConflictRowItem.CellSelected="OnCellSelected"/>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- 全量模式分批加载工具栏 -->
+            <Border x:Name="LoadMoreBar" Grid.Row="1" Visibility="Collapsed"
+                    Background="#1E1E2E" BorderBrush="#333" BorderThickness="0,1,0,0"
+                    Padding="6,4" Margin="0,2,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="LoadMoreStatus" Grid.Column="0"
+                               Foreground="#AAAACC" FontSize="11"
+                               VerticalAlignment="Center" Margin="4,0"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button x:Name="LoadMoreBtn"    Content="加载更多(200行)"
+                                Click="LoadMore_Click"
+                                Background="#2A2A3A" Foreground="#AAAACC"
+                                BorderThickness="0" Padding="10,4" Margin="0,0,4,0"
+                                Cursor="Hand" FontSize="11"/>
+<Button x:Name="LoadAllBtn"     Content="加载全部"
+                                Click="LoadAll_Click"
+                                Background="#3A2A2A" Foreground="#FFAAAA"
+                                BorderThickness="0" Padding="10,4"
+                                Cursor="Hand" FontSize="11"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 共享横向滚动条（所有冲突行公用） -->
+        <ScrollBar x:Name="SharedHScrollBar" Grid.Row="3"
+                   Orientation="Horizontal" Height="12"
+                   Minimum="0" Maximum="0" ViewportSize="100"
+                   Background="#1A1A1A"
+                   Scroll="SharedHScrollBar_Scroll"/>
 
         <!-- 可拖拽分隔条 -->
-        <GridSplitter Grid.Row="3" Height="5" HorizontalAlignment="Stretch"
+        <GridSplitter Grid.Row="4" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                       Background="#444" Cursor="SizeNS" ResizeDirection="Rows"
                       ResizeBehavior="PreviousAndNext"/>
 
         <!-- 详情面板 -->
-        <Border Grid.Row="4" Background="#161616" BorderBrush="#333" BorderThickness="0,1,0,0">
+        <Border Grid.Row="5" Background="#161616" BorderBrush="#333" BorderThickness="0,1,0,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -145,16 +223,64 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 详情内容：由 code-behind 动态构建，支持字符级高亮 -->
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Auto">
-                    <StackPanel x:Name="DetailPanel" Margin="4"/>
-                </ScrollViewer>
+                <!-- 详情内容：左侧变更导航 + 右侧字段对比 -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="280" MinWidth="150" MaxWidth="500"/>
+                        <ColumnDefinition Width="4"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 左侧变更导航 -->
+                    <Border Grid.Column="0" Background="#111" BorderBrush="#333" BorderThickness="0,0,1,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Background="#1A1A1A" Padding="6,4">
+                                <TextBlock Foreground="#888" FontSize="10">变更导航（当前Sheet）</TextBlock>
+                            </Border>
+                            <ListBox x:Name="ChangeNavList" Grid.Row="1"
+                                     Background="Transparent" BorderThickness="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     SelectionChanged="ChangeNavList_SelectionChanged">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Padding"     Value="0"/>
+                                        <Setter Property="Background"  Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="Background" Value="#1A3A6E"/>
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#252535"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
+                        </Grid>
+                    </Border>
+
+                    <!-- 拖拽分隔 -->
+                    <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch"
+                                  Background="#2A2A2A" Cursor="SizeWE" ResizeDirection="Columns"/>
+
+                    <!-- 右侧字段对比 -->
+                    <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="DetailPanel" Margin="4"/>
+                    </ScrollViewer>
+                </Grid>
             </Grid>
         </Border>
 
         <!-- 底部状态栏 -->
-        <Border Grid.Row="5" Background="#252525" Padding="10,6">
+        <Border Grid.Row="6" Background="#252525" Padding="10,6">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

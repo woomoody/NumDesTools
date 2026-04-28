@@ -162,7 +162,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         CustomRibbon.ActivateTab("MainTab");
 
         if (FocusLabelText == "聚光灯：开启")
-            CrosslightController.Enable(App);
+            FocusLight.Calculate();
     }
 
     public override string GetCustomUI(string ribbonId)
@@ -2509,39 +2509,34 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         GlobalValue.ReadOrCreate();
 
-        var line1 = BasePath;
-        var fileList = SvnGitTools.GitDiffFileCount(line1);
+        var (gitAuthor, _) = SvnGitTools.GetGitUserInfo();
+        var win = new NumDesTools.UI.GitExportSelectWindow(BasePath, gitAuthor ?? string.Empty);
+        if (win.ShowDialog() != true || win.SelectedPaths == null || win.SelectedPaths.Count == 0)
+            return;
 
+        var fileList  = win.SelectedPaths;
         var countFile = 0;
         foreach (var path in fileList)
         {
             LogDisplay.RecordLine($"[{DateTime.Now}] , {$"{Path.GetFileName(path)}开始导表： "}");
-
-            App.StatusBar = $"{countFile}/{fileList.Count},正在导出{path}";
-
-            if (
-                path.Contains("#")
-                || path.Contains("~")
-                || path.Contains(".xlsm") || path.Contains(".xll")
-            )
-                continue;
+            App.StatusBar = $"{countFile}/{fileList.Count},正在导出{Path.GetFileName(path)}";
 
             var isAll = path.Contains("$");
-
-            List<FieldData> luaTableFields = new List<FieldData>();
-
             ExcelExporter.Export(
                 path,
                 Path.GetFileNameWithoutExtension(path),
-                luaTableFields,
+                new List<FieldData>(),
                 isAll,
                 path.Contains("$$")
             );
-
             countFile++;
         }
 
-        LogDisplay.RecordLine($"[{DateTime.Now}] , {$"导出结束 "}");
+        if (ExcelExporter.NeedMergeLocalization)
+            ExcelExporter.MergeLocalizationLuaFile();
+
+        LogDisplay.RecordLine($"[{DateTime.Now}] , 导出结束，共 {countFile} 个文件");
+        App.StatusBar = $"导出完成，共 {countFile} 个文件";
     }
 
     public void CheckColFromExcelMulti_Click(IRibbonControl control)
@@ -3013,9 +3008,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (control == null)
             throw new ArgumentNullException(nameof(control));
         LabelText = LabelText == "放大镜：开启" ? "放大镜：关闭" : "放大镜：开启";
+        var isOpening = LabelText == "放大镜：开启";
         CustomRibbon.InvalidateControl("Button5");
         var rangeValueTip = new CellSelectChangeTip();
-        if (LabelText == "放大镜：开启")
+        System.Diagnostics.Debug.WriteLine($"[CellTip] ZoomInOut_Click isOpening={isOpening} LabelText={LabelText}");
+        if (isOpening)
         {
             App.SheetSelectionChange += rangeValueTip.GetCellValue;
             _customZoomForms.Add(rangeValueTip);
@@ -3040,15 +3037,22 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         CustomRibbon.InvalidateControl("FocusLightButton");
         if (FocusLabelText == "聚光灯：开启")
         {
-            CrosslightController.Enable(App);
+            FocusLight.Calculate();
+            App.SheetSelectionChange += FocusLightSelectionChange;
+            App.SheetActivate        += FocusLightSheetActivate;
         }
         else
         {
-            CrosslightController.Disable();
+            App.SheetSelectionChange -= FocusLightSelectionChange;
+            App.SheetActivate        -= FocusLightSheetActivate;
+            FocusLight.DeleteCondition(App.ActiveSheet);
         }
 
         GlobalValue.SaveValue("FocusLabelText", FocusLabelText);
     }
+
+    private void FocusLightSelectionChange(object sh, Range target) => FocusLight.Calculate();
+    private void FocusLightSheetActivate(object sh)                 => FocusLight.Calculate();
 
     public void SheetMenu_Click(IRibbonControl control)
     {

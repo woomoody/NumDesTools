@@ -7,14 +7,6 @@
 
                 <!-- ══ 格式检查 ══ 常用开关大按钮 + 检查类归入下拉 -->
                 <group id='Group2' label='格式检查'>
-                    <button id='Button4' size='large' label='标准格式&#13;' image='verilog' onAction='OnButtonClick'
-                            screentip='点击整理当前sheet格式，标准化文本和单元格大小' />
-                    <button id='Button5' size='large' getLabel='GetLableText' image='redux-reducer'
-                            onAction='OnButtonClick'
-                            screentip='点击开启单元格内容放大功能，再次点击关闭放大功能(创建Form机制)！报错请删除！配置路径：\Documents\NumDesGlobalKey.json' tag='放大镜开关' />
-                    <button id='FocusLightButton' size='large' getLabel='GetLableText' image='email'
-                            onAction='OnButtonClick'
-                            screentip='聚光灯效果！报错请删除！配置路径：\Documents\NumDesGlobalKey.json' tag='聚光灯' />
                     <button id='SheetMenu' size='large' getLabel='GetLableText' image='reason'
                             onAction='OnButtonClick'
                             screentip='点击创建表格目录，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.json' tag='表格目录开关' />
@@ -41,7 +33,7 @@
                         <button id='OutPutExcelDataToLua' label='Lua表格(当前)' imageMso='FileSave' onAction='OnButtonClick'
                                 screentip='将当前表格数据导出为Lua' tag='导出Lua数据' />
                         <button id='OutPutExcelDataToLuaAll' label='Lua表格(全量)' imageMso='ExportExcel' onAction='OnButtonClick'
-                                screentip='将当前表格数据导出为Lua' tag='导出Lua数据All' />
+                                screentip='导出Git变更+暂存区文件，可选追加近期提交，先弹文件确认列表' tag='导出Lua数据All' />
                     </menu>
                 </group>
 
@@ -61,24 +53,17 @@
                     </menu>
                     <button id='AutoInsertExcelDialog' size='large' label='自动数据&#13;(对话类)' image='ejs'
                             onAction='OnButtonClick' screentip='根据模板数据覆写对话数据表格：EPPlusI' tag='自动数据(对话类)' />
-                    <button id='AutoMergeExcel' size='large' label='合并Excel&#13;(Alice-Cove)' image='dart'
-                            onAction='OnButtonClick' screentip='Alice与Cove表格数据互相拷贝：EPPlusI' tag='合并Excel(Alice-Cove)' />
-                    <button id='AutoSeachExcel' size='large' label='查验模版&#13;写入数据' image='document'
-                            onAction='OnButtonClick' screentip='查看模版表写入后的数据：EPPlus' tag='查验模版写入数据' />
-                    <button id='AutoInsertNumChanges' size='large' label='活动奖励&#13;写入' image='console'
-                            onAction='OnButtonClick' screentip='针对各类活动奖励内容反复修改，防止漏填数据的自动化填写工具' tag='活动奖励写入' />
                     <button id='AutoInsertIconFix' size='large' label='图片Fix' image='谷歌'
                             onAction='OnButtonClick' screentip='针对Icon.xlsx表格图片资源修正数据的同步，复制【Ctr+V】点击按钮执行' tag='图片Fix' />
                 </group>
 
-                <!-- ══ Excel搜索 ══ 搜索框 + 全局搜索菜单，当前表操作归入下拉 -->
+                <!-- ══ Excel搜索 ══ -->
                 <group id="Group8" label="Excel搜索">
-                    <labelControl id="SearchLab" label="搜索编号/关键字" />
-                    <editBox id="ExcelSearchBoxEdit" label='输入查找值' onChange="ExcelOnEditBoxTextChanged" sizeString="…………………………………………"
-                             screentip='需要模糊搜索时关键词前加：*' getText='GetEditBoxDefaultText'
-                             supertip='测试长提示……………………………………………………………………………………………………
-                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^………………'/>
-                    <menu id='ExcelSearchBoxMenu' label='全局搜索&#13;' image='key' size='large'>
+                    <labelControl id='SearchLab' label='搜索编号/关键字' />
+                    <editBox id="ExcelSearchBoxEdit" label='输入查找值' onChange="ExcelOnEditBoxTextChanged"
+                             sizeString="………………………………………………………"
+                             screentip='前缀加*表示模糊搜索' getText='GetEditBoxDefaultText'/>
+                    <menu id='ExcelSearchBoxMenu' label='全局搜索' image='key' size='large'>
                         <button id="ExcelSearchBoxButton1" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件'
                                 onAction='OnButtonClick' imageMso="FindDialogExcel" tag='全局搜索' />
                         <button id="ExcelSearchBoxButton3" label="全局搜索(多线程)" screentip='全列，按照A-Z的顺序遍历文件'
@@ -88,13 +73,13 @@
                         <button id="ExcelSearchBoxButton4" label="合并数据-关键词" screentip='合并Excel(Alice-Cove)当前关键词'
                                 onAction='OnButtonClick' imageMso="AdpNewTable" tag='合并数据-关键词' />
                     </menu>
-                    <menu id='AutoInsertExcelDataMenu2' label='创建数据&#13;' image='ejs' size='large'>
+                    <menu id='AutoInsertExcelDataMenu2' label='创建数据' image='ejs' size='large'>
                         <button id="ModelDataCreat" label="常规模版" screentip='全局搜索关键词，输出表格数据，常规模版数据，例如：各类LTE、主岛活动常规【模版】'
                                 onAction='OnButtonClick' imageMso="TableInsert" tag='常规模版' />
                         <button id="ModelDataCreat2" label="特殊模版" screentip='指定表格搜索关键词，输出表格数据，特殊模版数据，例如：LTE皮肤【模版】'
                                 onAction='OnButtonClick' imageMso="SheetInsert" tag='特殊模版' />
                     </menu>
-                    <menu id='CurrentSheetMenu' label='当前表操作&#13;' image='verilog' size='large'>
+                    <menu id='CurrentSheetMenu' label='当前表操作' image='verilog' size='large'>
                         <button id="ExcelSearchBoxButton5" label="替换文本" screentip='搜索当前激活表格中包含特别的字符串并替换'
                                 onAction='OnButtonClick' imageMso="ReplaceDialog" tag='替换文本(当前表格)' />
                         <button id="ExcelSearchBoxButton6" label="搜索文本" screentip='搜索当前激活表格中包含特别的字符串'
@@ -120,7 +105,17 @@
                     </menu>
                     <button id="CompareExcelButton" size='large' label="对比Excel" screentip='对比不同版本同路径下的非#Excel文件，输出至【文档\#表格比对结果.xlsx】'
                             onAction='OnButtonClick' image="console" tag='对比Excel' />
-                    <menu id='ExcelConflictMenu' label='xlsx冲突&#13;解决' image='diff' size='large'
+                    <button id="MapExcelButton" size='large' label="溯源改动" screentip='根据对比结果和【文档\表格关系.json】溯源每条改动最终影响的表格，一般为ActivityClientData.xlsx，输出至【文档\#溯源结果.xlsx】'
+                            onAction='OnButtonClick' image="video" tag='溯源改动' />
+                    <button id="CheckFileFormat" size='large' label="检查数据&#13;格式" screentip='手动检查数据格式，取消隐藏，过滤符配置在\Document\NumDesToolsConfig.json'
+                            onAction='OnButtonClick' image="dart" tag='检查数据格式' />
+                    <button id="ActivityRulesUpdateButton" size='large' label="更新活动&#13;规则" screentip='扫描 EnumCmds/ActivityManager/LogicBase 自动补全 ActivityTableRules.json 的 typeTableMap（只增不改）'
+                            onAction='OnButtonClick' imageMso="DataRefreshAll" tag='更新活动规则' />
+                </group>
+
+                <!-- ══ 冲突与活动 ══ -->
+                <group id='GroupConflictMain' label='冲突与活动'>
+                    <menu id='ExcelConflictMenuMain' label='xlsx冲突&#13;解决' image='diff' size='large'
                           screentip='解决 xlsx 文件的 Git 合并冲突，或手动对比两个 xlsx 文件'>
                         <button id="ExcelConflictGit"    label="解决Git冲突"   imageMso="MergeDocument"
                                 onAction='OnButtonClick' screentip='自动检测 Git 冲突的 xlsx，逐格选择保留哪一方'
@@ -132,15 +127,9 @@
                                 onAction='OnButtonClick' screentip='浏览某个 xlsx 的 Git 提交历史，选历史版本与工作区或另一历史版本对比'
                                 tag='查看历史版本对比' />
                     </menu>
-                    <button id="MapExcelButton" size='large' label="溯源改动" screentip='根据对比结果和【文档\表格关系.json】溯源每条改动最终影响的表格，一般为ActivityClientData.xlsx，输出至【文档\#溯源结果.xlsx】'
-                            onAction='OnButtonClick' image="video" tag='溯源改动' />
-                    <button id="CheckFileFormat" size='large' label="检查数据&#13;格式" screentip='手动检查数据格式，取消隐藏，过滤符配置在\Document\NumDesToolsConfig.json'
-                            onAction='OnButtonClick' image="dart" tag='检查数据格式' />
                     <button id="ActivityCloneButton" size='large' label="克隆活动&#13;" screentip='根据ActivityTableRules规则，以指定源活动ID为模板克隆新期次数据到所有相关表'
                             onAction='OnButtonClick' imageMso="Copy" tag='克隆活动' />
-                    <button id="ActivityRulesUpdateButton" size='large' label="更新活动&#13;规则" screentip='扫描 EnumCmds/ActivityManager/LogicBase 自动补全 ActivityTableRules.json 的 typeTableMap（只增不改）'
-                            onAction='OnButtonClick' imageMso="DataRefreshAll" tag='更新活动规则' />
-                    <menu id='ActivityValidateMenu' label='验证活动&#13;' image='codecov' size='large'>
+                    <menu id='ActivityValidateMenuMain' label='验证活动&#13;' image='codecov' size='large'>
                         <button id="ActivityTestAll" label="验证活动(全量)" screentip='验证所有活动配置表的跨表引用和字段规则'
                                 onAction='OnButtonClick' imageMso="DataValidation" tag='验证活动(全量)' />
                         <button id="ActivityTestById" label="验证活动(指定ID)" screentip='输入活动ID验证配置链完整性'
@@ -172,6 +161,20 @@
 
             </tab>
             <tab id='SecondTab' label='NumDesToolsPlus' insertBeforeMso='TabHome'>
+                <group id='GroupMoved' label='常用工具'>
+                    <button id='Button4' size='large' label='标准格式' image='verilog'
+                            onAction='OnButtonClick' screentip='将选中单元格修改为标准格式' tag='标准格式' />
+                    <button id='Button5' size='large' getLabel='GetLableText' image='redux-reducer'
+                            onAction='OnButtonClick' screentip='放大镜开关，对当前选中单元格进行放大显示' tag='放大镜开关' />
+                    <button id='FocusLightButton' size='large' getLabel='GetLableText' image='email'
+                            onAction='OnButtonClick' screentip='聚光灯开关，高亮显示当前行列' tag='聚光灯' />
+                    <button id='AutoMergeExcel' size='large' label='合并Excel&#13;(Alice-Cove)' image='dart'
+                            onAction='OnButtonClick' screentip='合并Alice和Cove的Excel配置数据' tag='合并Excel(Alice-Cove)' />
+                    <button id='AutoSeachExcel' size='large' label='查验模版&#13;写入数据' image='document'
+                            onAction='OnButtonClick' screentip='查验模版写入数据是否正确' tag='查验模版写入数据' />
+                    <button id='AutoInsertNumChanges' size='large' label='活动奖励&#13;写入' image='console'
+                            onAction='OnButtonClick' screentip='活动奖励数据写入' tag='活动奖励写入' />
+                </group>
                 <group id='Group10' label='玩法计算'>
                     <button id='Button15' size='large' label='Alice大富翁' image='dart' screentip='大富翁方案整理'
                             onAction='OnButtonClick' tag='Alice大富翁' />

@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Media;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Rendering;
@@ -119,6 +119,11 @@ namespace NumDesTools.UI
             // 更新匹配统计的显示
             MatchCountTextBlock.Text = $"匹配项数量：{count}";
         }
+
+    private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Escape) Close();
+    }
     }
 
     // 高亮服务类
@@ -198,4 +203,5 @@ namespace NumDesTools.UI
             Length = length;
         }
     }
+
 }

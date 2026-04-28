@@ -16,6 +16,8 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,3">
                     <TextBlock Text="ID: " Foreground="#888" FontSize="11"/>
                     <TextBlock x:Name="RowKeyText" Foreground="White" FontWeight="Bold" FontSize="11"/>
+                    <StackPanel x:Name="RowHashCols" Orientation="Horizontal"
+                                Margin="8,0,0,0" VerticalAlignment="Center"/>
                     <Border x:Name="BadgeBorder" CornerRadius="3" Margin="8,0,0,0" Padding="4,1">
                         <TextBlock x:Name="DiffTypeBadge" FontSize="10"/>
                     </Border>
@@ -47,15 +49,17 @@
             <!-- OURS 行 -->
             <ScrollViewer x:Name="OursScroll"
                           HorizontalScrollBarVisibility="Hidden"
-                          VerticalScrollBarVisibility="Disabled">
-                <Grid x:Name="OursGrid" MinHeight="24"/>
+                          VerticalScrollBarVisibility="Disabled"
+                          Height="24">
+                <Grid x:Name="OursGrid" Height="24"/>
             </ScrollViewer>
 
             <!-- THEIRS 行（OnlyOurs 时隐藏） -->
             <ScrollViewer x:Name="TheirsScroll"
-                          HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Disabled">
-                <Grid x:Name="TheirsGrid" MinHeight="24"/>
+                          HorizontalScrollBarVisibility="Hidden"
+                          VerticalScrollBarVisibility="Disabled"
+                          Height="24">
+                <Grid x:Name="TheirsGrid" Height="24"/>
             </ScrollViewer>
 
         </StackPanel>

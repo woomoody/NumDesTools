@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using Orientation = System.Windows.Controls.Orientation;
 using TextBox = System.Windows.Controls.TextBox;
@@ -41,5 +41,9 @@ namespace NumDesTools.UI
             DialogResult = true;
             Close();
         }
+    private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Escape) Close();
+    }
     }
 }

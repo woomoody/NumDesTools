@@ -664,5 +664,9 @@ code {
             var html = "<!DOCTYPE html><html><head><meta charset='utf-8'>" + Css + "</head><body>" + item.Html + "</body></html>";
             HelpBrowser.NavigateToString(html);
         }
+    private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Escape) Close();
+    }
     }
 }

@@ -5,21 +5,66 @@ namespace NumDesTools;
 internal class SvnGitTools
 {
     public static List<string> GitDiffFileCount(string path)
+        => GitDiffAndStagedFiles(path, workdirOnly: true);
+
+    public static List<string> GitDiffAndStagedFiles(string path, bool workdirOnly = false)
     {
         string repoPath = FindGitRoot(path);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var fileList = new List<string>();
         using var repo = new Repository(repoPath);
         var status = repo.RetrieveStatus();
 
         foreach (var item in status)
         {
-            if (
-                item.State == FileStatus.ModifiedInWorkdir
-                || item.State == FileStatus.NewInWorkdir
-            )
+            bool isWorkdir = item.State == FileStatus.ModifiedInWorkdir
+                          || item.State == FileStatus.NewInWorkdir;
+            bool isStaged  = !workdirOnly
+                          && ((item.State & FileStatus.ModifiedInIndex) != 0
+                          ||  (item.State & FileStatus.NewInIndex)      != 0
+                          ||  (item.State & FileStatus.DeletedFromIndex) != 0
+                          ||  (item.State & FileStatus.RenamedInIndex)   != 0);
+
+            if (isWorkdir || isStaged)
             {
                 string fullPath = Path.Combine(repoPath, item.FilePath);
-                fileList.Add(fullPath);
+                if (seen.Add(fullPath))
+                    fileList.Add(fullPath);
+            }
+        }
+
+        return fileList;
+    }
+
+    // 获取指定作者最近 N 次提交中涉及的所有文件（去重），只返回当前仍存在的文件
+    public static List<string> GetRecentAuthorCommitFiles(string repoPath, string authorName, int commitCount)
+    {
+        repoPath = FindGitRoot(repoPath) ?? repoPath;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var fileList = new List<string>();
+        using var repo = new Repository(repoPath);
+
+        var commits = repo.Commits.QueryBy(new CommitFilter
+        {
+            SortBy = CommitSortStrategies.Time,
+            IncludeReachableFrom = repo.Head,
+        })
+        .Where(c => c.Author.Name.Contains(authorName, StringComparison.OrdinalIgnoreCase))
+        .Take(commitCount)
+        .ToList();
+
+        foreach (var commit in commits)
+        {
+            var parent = commit.Parents.FirstOrDefault();
+            if (parent == null) continue;
+
+            var diff = repo.Diff.Compare<TreeChanges>(parent.Tree, commit.Tree);
+            foreach (var change in diff)
+            {
+                if (change.Status == ChangeKind.Deleted) continue;
+                var fullPath = Path.Combine(repoPath, change.Path.Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(fullPath) && seen.Add(fullPath))
+                    fileList.Add(fullPath);
             }
         }
 

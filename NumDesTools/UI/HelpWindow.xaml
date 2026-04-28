@@ -7,7 +7,8 @@
     WindowState="Maximized"
     WindowStartupLocation="CenterScreen"
     Background="#1E1E1E"
-    FontFamily="微软雅黑">
+    FontFamily="微软雅黑"
+    KeyDown="Window_EscClose">
 
     <Window.Resources>
         <!-- TreeView 整体背景 -->

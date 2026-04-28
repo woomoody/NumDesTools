@@ -1,11 +1,12 @@
-﻿<Window
+<Window
     x:Class="NumDesTools.UI.LoopRunCheckBoxWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="计算选项"
     Width="500"
     Height="500"
-    WindowStartupLocation="CenterScreen">
+    WindowStartupLocation="CenterScreen"
+    KeyDown="Window_EscClose">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition />
