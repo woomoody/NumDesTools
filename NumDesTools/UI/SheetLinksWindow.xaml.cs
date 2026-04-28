@@ -1,4 +1,4 @@
-﻿using System.Windows.Input;
+using System.Windows.Input;
 using GraphX.Common.Enums;
 using GraphX.Controls;
 using GraphX.Logic.Algorithms.LayoutAlgorithms;
@@ -131,5 +131,9 @@ namespace NumDesTools.UI
             SelfGraphXEdge edge = (SelfGraphXEdge)ec.Edge;
             MessageBox.Show($"右击了边：{edge.Source.Name} -> {edge.Target.Name}");
         }
+    private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Escape) Close();
+    }
     }
 }

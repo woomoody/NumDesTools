@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
-using MiniExcelLibs;
+using System.Threading.Tasks;
 using OfficeOpenXml;
 using CompressionLevel = System.IO.Compression.CompressionLevel;
 
@@ -16,41 +16,300 @@ public static class ExcelConflictDiffer
 {
     public static FileDiff Diff(string oursPath, string theirsPath)
     {
-        // 自动修复 xmlns 损坏问题，返回可安全读取的路径（可能是临时文件）
         var safeOurs   = EnsureXmlNamespace(oursPath);
         var safeTheirs = EnsureXmlNamespace(theirsPath);
 
-        var fileName   = Path.GetFileName(oursPath);
-        var sheetNames = MiniExcel.GetSheetNames(safeOurs);
+        var fileName = Path.GetFileName(oursPath);
 
-        if (!fileName.Contains('$'))
-            sheetNames = sheetNames.Contains("Sheet1") ? ["Sheet1"] : [sheetNames[0]];
-
-        var sheetDiffs = new List<SheetDiff>();
-        foreach (var sheet in sheetNames)
+        // 读取 sheet 列表
+        List<string> sheetNames;
+        using (var pkg = new ExcelPackage(new FileInfo(safeOurs)))
         {
-
-            var oursRows   = ReadSheet(safeOurs,   sheet);
-            var theirsRows = ReadSheet(safeTheirs, sheet);
-            var meta       = ReadMetaRows(safeOurs, sheet);
-            var diff       = DiffSheets(sheet, oursRows, theirsRows, meta);
-            sheetDiffs.Add(diff);
+            sheetNames = pkg.Workbook.Worksheets.Select(w => w.Name).ToList();
+            if (!fileName.Contains('$'))
+            {
+                var s1 = sheetNames.FirstOrDefault(s => s == "Sheet1") ?? sheetNames.FirstOrDefault();
+                sheetNames = s1 != null ? [s1] : sheetNames;
+            }
         }
 
-        // 清理临时文件
+        // 并行读取两个文件，每个文件一次 ExcelPackage 打开，同时取 meta
+        SheetBundle oursBundle   = default;
+        SheetBundle theirsBundle = default;
+
+        Parallel.Invoke(
+            () => oursBundle   = ReadAllSheets(safeOurs,   sheetNames, readMeta: true),
+            () => theirsBundle = ReadAllSheets(safeTheirs, sheetNames, readMeta: false)
+        );
+
+        var sheetDiffs = new List<SheetDiff>(sheetNames.Count);
+        foreach (var sheet in sheetNames)
+        {
+            var oursData   = oursBundle.Sheets.TryGetValue(sheet, out var od) ? od : new SheetData();
+            var theirsData = theirsBundle.Sheets.TryGetValue(sheet, out var td) ? td : new SheetData();
+            sheetDiffs.Add(DiffSheets(sheet, oursData, theirsData));
+        }
+
         if (safeOurs   != oursPath)   TryDelete(safeOurs);
         if (safeTheirs != theirsPath) TryDelete(safeTheirs);
 
         return new FileDiff(oursPath, theirsPath, sheetDiffs);
     }
 
-    // ── 内部 ─────────────────────────────────────────────────────────────────
+    // ── 数据结构 ──────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// 将 THEIRS 新增列插入到它们在 THEIRS 中紧邻的已知列之后，而不是追加到末尾。
-    /// 算法：遍历 theirsKeys，遇到 OURS 已有列则记录"最后一个已知锚点"，
-    /// 遇到新列则紧跟在锚点之后插入。
-    /// </summary>
+    private struct SheetBundle
+    {
+        public Dictionary<string, SheetData> Sheets;
+    }
+
+    private struct SheetData
+    {
+        public List<string>   Columns;
+        public List<string[]> Rows;      // 每行按 Columns 顺序存字符串，避免字典开销
+        public Dictionary<string, string> TypeRow;
+        public Dictionary<string, string> LabelRow;
+    }
+
+    // ── 读取 ──────────────────────────────────────────────────────────────────
+
+    private static SheetBundle ReadAllSheets(string path, List<string> sheetNames, bool readMeta)
+    {
+        var bundle = new SheetBundle { Sheets = new Dictionary<string, SheetData>(sheetNames.Count) };
+        using var pkg = new ExcelPackage(new FileInfo(path));
+        // 禁止 EPPlus 自动重算公式，避免公式错误单元格触发 RuntimeBinderException
+        pkg.Workbook.CalcMode = ExcelCalcMode.Manual;
+
+        foreach (var sheetName in sheetNames)
+        {
+            var ws = pkg.Workbook.Worksheets[sheetName] ?? pkg.Workbook.Worksheets.FirstOrDefault();
+            if (ws?.Dimension == null)
+            {
+                bundle.Sheets[sheetName] = new SheetData
+                {
+                    Columns  = [],
+                    Rows     = [],
+                    TypeRow  = new(),
+                    LabelRow = new(),
+                };
+                continue;
+            }
+
+            var dim      = ws.Dimension;
+            int colCount = dim.End.Column;
+            int rowCount = dim.End.Row;
+
+            // 第2行为列名（header），第3行 type，第4行 label，第5行起为数据
+            var columns     = new List<string>(colCount);
+            var colEpplusIdx = new List<int>(colCount);   // columns[i] 对应的 EPPlus 1-based 列号
+            var typeRow      = new Dictionary<string, string>(readMeta ? colCount : 0, StringComparer.Ordinal);
+            var labelRow     = new Dictionary<string, string>(readMeta ? colCount : 0, StringComparer.Ordinal);
+
+            for (int c = 1; c <= colCount; c++)
+            {
+                string h;
+                try { h = ws.Cells[2, c].Value?.ToString() ?? string.Empty; }
+                catch { h = string.Empty; }
+                if (string.IsNullOrEmpty(h)) continue;
+                columns.Add(h);
+                colEpplusIdx.Add(c);
+                if (readMeta)
+                {
+                    try { typeRow[h]  = ws.Cells[3, c].Value?.ToString() ?? string.Empty; } catch { typeRow[h]  = string.Empty; }
+                    try { labelRow[h] = ws.Cells[4, c].Value?.ToString() ?? string.Empty; } catch { labelRow[h] = string.Empty; }
+                }
+            }
+
+            // 数据从第5行起（第2行header，第3行type，第4行label）
+            const int dataStartRow = 5;
+            var rows = new List<string[]>(Math.Max(0, rowCount - dataStartRow + 1));
+
+            for (int r = dataStartRow; r <= rowCount; r++)
+            {
+                var row = new string[columns.Count];
+                for (int i = 0; i < columns.Count; i++)
+                {
+                    try { row[i] = ws.Cells[r, colEpplusIdx[i]].Value?.ToString() ?? string.Empty; }
+                    catch { row[i] = string.Empty; }
+                }
+                rows.Add(row);
+            }
+
+            bundle.Sheets[sheetName] = new SheetData
+            {
+                Columns  = columns,
+                Rows     = rows,
+                TypeRow  = typeRow,
+                LabelRow = labelRow,
+            };
+        }
+        return bundle;
+    }
+
+    // ── Diff ──────────────────────────────────────────────────────────────────
+
+    private static SheetDiff DiffSheets(string sheetName, SheetData ours, SheetData theirs)
+    {
+        var oursColumns   = ours.Columns   ?? [];
+        var theirsColumns = theirs.Columns ?? [];
+
+        if (oursColumns.Count == 0 && theirsColumns.Count == 0)
+            return new SheetDiff(sheetName, [])
+            {
+                TypeRow = ours.TypeRow ?? new(), LabelRow = ours.LabelRow ?? new(), AllColumns = [],
+            };
+
+        var allCols = MergeColumnOrder(oursColumns, theirsColumns);
+        var keyCol  = allCols.Count > 1 ? allCols[1] : allCols[0];
+
+        int oursKeyIdx   = oursColumns.IndexOf(keyCol);
+        int theirsKeyIdx = theirsColumns.IndexOf(keyCol);
+
+        // 预建 allCols[i] → oursColumns/theirsColumns 下标映射，避免 DiffRow 每次 O(n) 查找
+        var oursColIdxMap   = BuildColIndexMap(allCols, oursColumns);
+        var theirsColIdxMap = BuildColIndexMap(allCols, theirsColumns);
+
+        // 构建 key → 行索引映射
+        var oursDict   = BuildKeyIndex(ours.Rows,   oursKeyIdx);
+        var theirsDict = BuildKeyIndex(theirs.Rows, theirsKeyIdx);
+
+        var rows = new List<RowConflict>(oursDict.Count + theirsDict.Count / 4);
+
+        foreach (var (key, oursRowIdx) in oursDict)
+        {
+            var oursRow = ours.Rows[oursRowIdx];
+
+            if (theirsDict.TryGetValue(key, out int theirsRowIdx))
+            {
+                var theirsRow = theirs.Rows[theirsRowIdx];
+                var cells = DiffRow(oursRow, theirsRow, allCols, oursColIdxMap, theirsColIdxMap);
+
+                if (cells.Count == 0)
+                {
+                    // Same 行：两侧相同，只存一份（OursFullRow），TheirsFullRow 指向同一对象节省内存
+                    var rowDict = MakeRowDict(oursRow, oursColumns);
+                    rows.Add(new RowConflict
+                    {
+                        SheetName     = sheetName,
+                        RowKey        = key,
+                        DiffType      = RowDiffType.Same,
+                        AllColumns    = allCols,
+                        OursFullRow   = rowDict,
+                        TheirsFullRow = rowDict,
+                    });
+                }
+                else
+                {
+                    rows.Add(new RowConflict
+                    {
+                        SheetName     = sheetName,
+                        RowKey        = key,
+                        DiffType      = RowDiffType.Modified,
+                        AllColumns    = allCols,
+                        OursFullRow   = MakeRowDict(oursRow, oursColumns),
+                        TheirsFullRow = MakeRowDict(theirsRow, theirsColumns),
+                    }.WithCells(cells));
+                }
+            }
+            else
+            {
+                rows.Add(new RowConflict
+                {
+                    SheetName     = sheetName,
+                    RowKey        = key,
+                    DiffType      = RowDiffType.OnlyOurs,
+                    AllColumns    = allCols,
+                    OursFullRow   = MakeRowDict(oursRow, oursColumns),
+                    TheirsFullRow = null,
+                    RowChoice     = ConflictChoice.Ours,
+                });
+            }
+        }
+
+        foreach (var (key, theirsRowIdx) in theirsDict)
+        {
+            if (oursDict.ContainsKey(key)) continue;
+            var theirsRow = theirs.Rows[theirsRowIdx];
+            rows.Add(new RowConflict
+            {
+                SheetName     = sheetName,
+                RowKey        = key,
+                DiffType      = RowDiffType.OnlyTheirs,
+                AllColumns    = allCols,
+                OursFullRow   = null,
+                TheirsFullRow = MakeRowDict(theirsRow, theirsColumns),
+                RowChoice     = ConflictChoice.Theirs,
+            });
+        }
+
+        return new SheetDiff(sheetName, rows)
+        {
+            TypeRow    = ours.TypeRow  ?? new(),
+            LabelRow   = ours.LabelRow ?? new(),
+            AllColumns = allCols,
+        };
+    }
+
+    private static Dictionary<string, int> BuildKeyIndex(List<string[]> rows, int keyColIdx)
+    {
+        var dict = new Dictionary<string, int>(rows.Count, StringComparer.Ordinal);
+        if (keyColIdx < 0) return dict;
+        for (int i = 0; i < rows.Count; i++)
+        {
+            var key = keyColIdx < rows[i].Length ? rows[i][keyColIdx] : string.Empty;
+            if (!string.IsNullOrEmpty(key) && !dict.ContainsKey(key))
+                dict[key] = i;
+        }
+        return dict;
+    }
+
+    private static IDictionary<string, object?> MakeRowDict(string[] row, List<string> columns)
+    {
+        var dict = new Dictionary<string, object?>(columns.Count, StringComparer.Ordinal);
+        for (int i = 0; i < columns.Count; i++)
+            dict[columns[i]] = i < row.Length ? (object?)row[i] : null;
+        return dict;
+    }
+
+    // 预建 allCols[i] → source 列下标的映射数组（-1 表示 source 中不存在该列）
+    private static int[] BuildColIndexMap(List<string> allCols, List<string> sourceCols)
+    {
+        var map = new int[allCols.Count];
+        // sourceCols 建反向字典，O(1) 查找
+        var srcIdx = new Dictionary<string, int>(sourceCols.Count, StringComparer.Ordinal);
+        for (int i = 0; i < sourceCols.Count; i++) srcIdx[sourceCols[i]] = i;
+        for (int i = 0; i < allCols.Count; i++)
+            map[i] = srcIdx.TryGetValue(allCols[i], out var idx) ? idx : -1;
+        return map;
+    }
+
+    private static List<CellConflict> DiffRow(
+        string[] oursRow, string[] theirsRow,
+        List<string> allCols,
+        int[] oursColIdxMap, int[] theirsColIdxMap)
+    {
+        var result = new List<CellConflict>();
+        for (int i = 0; i < allCols.Count; i++)
+        {
+            int oi = oursColIdxMap[i];
+            int ti = theirsColIdxMap[i];
+
+            var oursStr   = oi >= 0 && oi < oursRow.Length   ? oursRow[oi]   : string.Empty;
+            var theirsStr = ti >= 0 && ti < theirsRow.Length ? theirsRow[ti] : string.Empty;
+
+            if (string.Equals(oursStr, theirsStr, StringComparison.Ordinal)) continue;
+
+            result.Add(new CellConflict
+            {
+                ColName     = allCols[i],
+                OursValue   = oursStr.Length   > 0 ? oursStr   : null,
+                TheirsValue = theirsStr.Length > 0 ? theirsStr : null,
+                Choice      = ConflictChoice.Ours,
+            });
+        }
+        return result;
+    }
+
     private static List<string> MergeColumnOrder(List<string> oursKeys, List<string> theirsKeys)
     {
         if (theirsKeys.Count == 0) return oursKeys.ToList();
@@ -58,87 +317,41 @@ public static class ExcelConflictDiffer
 
         var result    = oursKeys.ToList();
         var oursSet   = new HashSet<string>(oursKeys, StringComparer.Ordinal);
-        var insertPos = 0; // 默认插到最前（找不到锚点时）
+        var insertPos = 0;
 
         for (int ti = 0; ti < theirsKeys.Count; ti++)
         {
             var col = theirsKeys[ti];
             if (oursSet.Contains(col))
             {
-                // 更新锚点位置
                 insertPos = result.IndexOf(col) + 1;
             }
             else
             {
-                // 新列：插入到当前锚点之后
                 result.Insert(insertPos, col);
                 oursSet.Add(col);
-                insertPos++; // 下一个新列紧跟其后
+                insertPos++;
             }
         }
         return result;
     }
 
-    private static List<IDictionary<string, object?>> ReadSheet(string path, string sheet)
-    {
-        return MiniExcel
-            .Query(path, useHeaderRow: true, startCell: "A2", sheetName: sheet)
-            .Cast<IDictionary<string, object?>>()
-            .ToList();
-    }
+    // ── XML 修复 ──────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// 用 EPPlus 读取第2行（字段名）、第3行（type）、第4行（中文说明），
-    /// 返回 (typeRow, labelRow, columns) 三元组。
-    /// </summary>
-    private static (Dictionary<string, string> typeRow,
-                    Dictionary<string, string> labelRow,
-                    List<string> columns) ReadMetaRows(string path, string sheetName)
-    {
-        var typeRow  = new Dictionary<string, string>(StringComparer.Ordinal);
-        var labelRow = new Dictionary<string, string>(StringComparer.Ordinal);
-        var columns  = new List<string>();
-        try
-        {
-            using var pkg   = new ExcelPackage(new FileInfo(path));
-            var sheet = pkg.Workbook.Worksheets[sheetName] ?? pkg.Workbook.Worksheets[0];
-            if (sheet?.Dimension == null) return (typeRow, labelRow, columns);
-
-            int colCount = sheet.Dimension.End.Column;
-            for (int col = 1; col <= colCount; col++)
-            {
-                var header = sheet.Cells[2, col].Value?.ToString() ?? string.Empty;
-                if (string.IsNullOrEmpty(header)) continue;
-                columns.Add(header);
-                typeRow[header]  = sheet.Cells[3, col].Value?.ToString() ?? string.Empty;
-                labelRow[header] = sheet.Cells[4, col].Value?.ToString() ?? string.Empty;
-            }
-        }
-        catch { /* 读取失败不影响主流程 */ }
-        return (typeRow, labelRow, columns);
-    }
-
-    /// <summary>
-    /// 检测 xlsx 中所有 worksheet XML 是否存在 xmlns:r 未声明问题。
-    /// 若存在，将修复后的文件写入临时路径并返回；否则返回原路径。
-    /// </summary>
     private static string EnsureXmlNamespace(string path)
     {
         const string rNs     = "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"";
         const string rPrefix = "r:";
 
         bool needsFix = false;
-
         using (var zip = ZipFile.OpenRead(path))
         {
             foreach (var entry in zip.Entries)
             {
                 if (!entry.FullName.StartsWith("xl/worksheets/") || !entry.FullName.EndsWith(".xml"))
                     continue;
-
                 using var stream = entry.Open();
                 using var reader = new StreamReader(stream, Encoding.UTF8);
-                // 只读首行（xmlns 声明在第一行）
                 var firstLine = reader.ReadLine() ?? string.Empty;
                 if (firstLine.Contains(rPrefix) && !firstLine.Contains(rNs))
                 {
@@ -150,7 +363,6 @@ public static class ExcelConflictDiffer
 
         if (!needsFix) return path;
 
-        // 修复：复制到临时文件，在 worksheet XML 根元素上补全 xmlns:r
         var tmpPath = Path.Combine(Path.GetTempPath(), "NumDesExcelDiff",
             Path.GetFileNameWithoutExtension(path) + "_fixed_" + Path.GetRandomFileName() + ".xlsx");
         Directory.CreateDirectory(Path.GetDirectoryName(tmpPath)!);
@@ -162,23 +374,14 @@ public static class ExcelConflictDiffer
             {
                 if (!entry.FullName.StartsWith("xl/worksheets/") || !entry.FullName.EndsWith(".xml"))
                     continue;
-
                 string xml;
                 using (var stream = entry.Open())
                 using (var reader = new StreamReader(stream, Encoding.UTF8))
                     xml = reader.ReadToEnd();
 
-                // 只在根元素 <worksheet ...> 上没有声明 xmlns:r 时才插入
                 if (!xml.Contains(rNs) && xml.Contains(rPrefix))
-                {
-                    // 在 <worksheet 的第一个属性前插入 xmlns:r
-                    xml = Regex.Replace(xml,
-                        @"(<worksheet\b)",
-                        $"$1 {rNs}",
-                        RegexOptions.None);
-                }
+                    xml = Regex.Replace(xml, @"(<worksheet\b)", $"$1 {rNs}", RegexOptions.None);
 
-                // 重写 entry 内容
                 entry.Delete();
                 var newEntry = zip.CreateEntry(entry.FullName, CompressionLevel.Fastest);
                 using var writeStream = newEntry.Open();
@@ -192,144 +395,7 @@ public static class ExcelConflictDiffer
 
     private static void TryDelete(string path)
     {
-        try { File.Delete(path); } catch { /* 忽略清理失败 */ }
-    }
-
-    private static SheetDiff DiffSheets(
-        string sheetName,
-        List<IDictionary<string, object?>> ours,
-        List<IDictionary<string, object?>> theirs,
-        (Dictionary<string, string> typeRow, Dictionary<string, string> labelRow, List<string> columns) meta)
-    {
-        if (ours.Count == 0 && theirs.Count == 0)
-            return new SheetDiff(sheetName, []) { TypeRow = meta.typeRow, LabelRow = meta.labelRow, AllColumns = meta.columns };
-
-        // 合并列顺序：以 OURS 为骨架，THEIRS 新增列插入到其在 THEIRS 中的相邻已知列之后
-        var oursKeys   = ours.Count   > 0 ? ours[0].Keys.ToList()   : new List<string>();
-        var theirsKeys = theirs.Count > 0 ? theirs[0].Keys.ToList() : new List<string>();
-        var allCols = MergeColumnOrder(oursKeys, theirsKeys);
-
-        // 找 key 列（第 2 列，index=1）
-        var keyCol = allCols.Count > 1 ? allCols[1] : allCols[0];
-
-        var oursDict   = BuildKeyDict(ours,   keyCol);
-        var theirsDict = BuildKeyDict(theirs, keyCol);
-
-        var rows = new List<RowConflict>();
-
-        // 在 OURS 中存在的行
-        foreach (var (key, oursRow) in oursDict)
-        {
-            if (theirsDict.TryGetValue(key, out var theirsRow))
-            {
-                var cells = DiffRow(oursRow, theirsRow, allCols);
-                if (cells.Count == 0)
-                {
-                    // 相同行：保留在列表中，供"显示全部"模式使用
-                    rows.Add(new RowConflict
-                    {
-                        SheetName     = sheetName,
-                        RowKey        = key,
-                        DiffType      = RowDiffType.Same,
-                        AllColumns    = allCols,
-                        OursFullRow   = oursRow,
-                        TheirsFullRow = theirsRow,
-                    });
-                    continue;
-                }
-
-                rows.Add(new RowConflict
-                {
-                    SheetName    = sheetName,
-                    RowKey       = key,
-                    DiffType     = RowDiffType.Modified,
-                    AllColumns   = allCols,
-                    OursFullRow  = oursRow,
-                    TheirsFullRow = theirsRow,
-                }.WithCells(cells));
-            }
-            else
-            {
-                // 只在 OURS 有（对方删了），默认保留我的（Ours）
-                rows.Add(new RowConflict
-                {
-                    SheetName    = sheetName,
-                    RowKey       = key,
-                    DiffType     = RowDiffType.OnlyOurs,
-                    AllColumns   = allCols,
-                    OursFullRow  = oursRow,
-                    TheirsFullRow = null,
-                    RowChoice    = ConflictChoice.Ours
-                });
-            }
-        }
-
-        // 只在 THEIRS 有的行（对方新增），默认接受对方（Theirs）
-        foreach (var (key, theirsRow) in theirsDict)
-        {
-            if (oursDict.ContainsKey(key)) continue;
-
-            rows.Add(new RowConflict
-            {
-                SheetName    = sheetName,
-                RowKey       = key,
-                DiffType     = RowDiffType.OnlyTheirs,
-                AllColumns   = allCols,
-                OursFullRow  = null,
-                TheirsFullRow = theirsRow,
-                RowChoice    = ConflictChoice.Theirs
-            });
-        }
-
-        // allCols 已合并 OURS+THEIRS 列顺序；用 meta 补全 THEIRS 新增列的 type/label
-        var finalCols = allCols; // allCols 已是两侧合并后的完整列列表
-        return new SheetDiff(sheetName, rows)
-        {
-            TypeRow    = meta.typeRow,
-            LabelRow   = meta.labelRow,
-            AllColumns = finalCols,
-        };
-    }
-
-    private static Dictionary<string, IDictionary<string, object?>> BuildKeyDict(
-        List<IDictionary<string, object?>> rows, string keyCol)
-    {
-        var dict = new Dictionary<string, IDictionary<string, object?>>();
-        foreach (var row in rows)
-        {
-            if (!row.TryGetValue(keyCol, out var keyVal)) continue;
-            var key = keyVal?.ToString();
-            if (string.IsNullOrEmpty(key) || dict.ContainsKey(key)) continue;
-            dict[key] = row;
-        }
-        return dict;
-    }
-
-    private static List<CellConflict> DiffRow(
-        IDictionary<string, object?> oursRow,
-        IDictionary<string, object?> theirsRow,
-        List<string> cols)
-    {
-        var result = new List<CellConflict>();
-        foreach (var col in cols)
-        {
-            oursRow.TryGetValue(col, out var oursVal);
-            theirsRow.TryGetValue(col, out var theirsVal);
-
-            var oursStr   = oursVal?.ToString()   ?? string.Empty;
-            var theirsStr = theirsVal?.ToString() ?? string.Empty;
-
-            if (oursStr == theirsStr) continue;
-
-            result.Add(new CellConflict
-            {
-                ColName     = col,
-                OursValue   = oursVal,
-                TheirsValue = theirsVal,
-                Choice      = ConflictChoice.Ours  // 默认保我的
-            });
-        }
-        return result;
+        try { File.Delete(path); } catch { }
     }
 }
 

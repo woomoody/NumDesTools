@@ -119,7 +119,40 @@
       "WebFetch(domain:www.bing.com)",
       "WebFetch(domain:cn.bing.com)",
       "WebFetch(domain:www.baidu.com)",
-      "WebFetch(domain:www.zhihu.com)"
+      "WebFetch(domain:www.zhihu.com)",
+      "WebFetch(domain:jingyan.baidu.com)",
+      "WebFetch(domain:bbs.csdn.net)",
+      "WebFetch(domain:www.so.com)",
+      "WebFetch(domain:webcache.googleusercontent.com)",
+      "WebFetch(domain:blog.csdn.net)",
+      "WebFetch(domain:zhuanlan.zhihu.com)",
+      "WebFetch(domain:www.360doc.com)",
+      "WebFetch(domain:www.sohu.com)",
+      "WebFetch(domain:blog.51cto.com)",
+      "WebFetch(domain:www.cpearson.com)",
+      "WebFetch(domain:www.excelforum.com)",
+      "WebFetch(domain:www.mrexcel.com)",
+      "WebFetch(domain:www.vbforums.com)",
+      "WebFetch(domain:xcelplus.net)",
+      "WebFetch(domain:archive.codeplex.com)",
+      "WebFetch(domain:www.ozgrid.com)",
+      "WebFetch(domain:excelhome.net)",
+      "WebFetch(domain:docs.google.com)",
+      "WebFetch(domain:support.microsoft.com)",
+      "WebFetch(domain:www.vertex42.com)",
+      "WebFetch(domain:www.get-digital-help.com)",
+      "WebFetch(domain:codereview.stackexchange.com)",
+      "WebFetch(domain:exceljet.net)",
+      "WebFetch(domain:www.datanumen.com)",
+      "WebFetch(domain:www.excelarticles.com)",
+      "WebFetch(domain:www.ablebits.com)",
+      "WebFetch(domain:xlsxwriter.readthedocs.io)",
+      "WebFetch(domain:www.exceldemy.com)",
+      "WebFetch(domain:www.spreadsheetsmadeeasy.com)",
+      "WebFetch(domain:myengineeringworld.net)",
+      "WebFetch(domain:www.jkp-ads.com)",
+      "WebFetch(domain:www.decisionmodels.com)",
+      "WebFetch(domain:api.github.com)"
     ],
     "additionalDirectories": [
       "C:\\Users\\cent\\Documents\\NumDesTools\\Config",
@@ -127,7 +160,8 @@
       "C:\\Users\\cent\\.claude\\projects\\c--NumDesToolsCentTest",
       "C:\\Users\\cent\\StockReport",
       "\\tmp\\xlsm_reader",
-      "c:\\tmp\\xlsm_reader"
+      "c:\\tmp\\xlsm_reader",
+      "C:\\Users\\cent\\Documents\\NumDesTools"
     ]
   }
 }

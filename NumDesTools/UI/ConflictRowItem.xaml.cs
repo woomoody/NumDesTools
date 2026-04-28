@@ -20,8 +20,44 @@ public partial class ConflictRowItem : UserControl
     // 由 ExcelConflictWindow 在刷新列表前设置，所有行共享同一套列宽
     public static double[]? CurrentSheetColWidths { get; set; }
 
-    // 主窗口注入：TheirsScroll 滚动时同步 MetaScroll
+    // 主窗口注入：行内滚动时同步 MetaScroll + SharedHScrollBar
     public static Action<double>? OnScrollOffsetChanged { get; set; }
+
+    // 主窗口注入：列宽总量变化时更新共享滚动条 Maximum
+    public static Action<double>? OnTotalWidthChanged { get; set; }
+
+    // 活跃实例集合，供主窗口共享滚动条驱动所有行
+    private static readonly List<ConflictRowItem> _activeItems = [];
+
+    // 当前sheet的默认滚动位置，新加载的行自动定位到冲突列
+    public static double InitialScrollOffset { get; set; }
+
+    public static void SetGlobalScrollOffset(double offset)
+    {
+        InitialScrollOffset = offset;
+        foreach (var item in _activeItems)
+            item.ApplyScrollOffset(offset);
+    }
+
+    private void ApplyScrollOffset(double offset)
+    {
+        if (OursScroll.ScrollableWidth > 0)
+        {
+            OursScroll.ScrollToHorizontalOffset(offset);
+            TheirsScroll.ScrollToHorizontalOffset(offset);
+        }
+        else
+        {
+            // Not yet measured — queue via LayoutUpdated
+            void OnLayout(object? s, EventArgs _)
+            {
+                OursScroll.LayoutUpdated -= OnLayout;
+                OursScroll.ScrollToHorizontalOffset(offset);
+                TheirsScroll.ScrollToHorizontalOffset(offset);
+            }
+            OursScroll.LayoutUpdated += OnLayout;
+        }
+    }
 
     private static readonly SolidColorBrush BgOursNormal   = Brush("#0A1525");
     private static readonly SolidColorBrush BgTheirsNormal = Brush("#0A1A0F");
@@ -50,6 +86,14 @@ public partial class ConflictRowItem : UserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        Loaded   += (_, _) => { if (!_activeItems.Contains(this)) _activeItems.Add(this); };
+        Unloaded += (_, _) => _activeItems.Remove(this);
+    }
+
+    private void ApplyInitialScrollAfterLayout()
+    {
+        if (InitialScrollOffset > 0)
+            ApplyScrollOffset(InitialScrollOffset);
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -60,8 +104,26 @@ public partial class ConflictRowItem : UserControl
 
     private void Render(RowConflict rc)
     {
-        RowKeyText.Text    = rc.RowKey;
+        RowKeyText.Text = rc.RowKey;
         DiffTypeBadge.Text = rc.DiffTypeBadge;
+
+        // # 备注列分段显示
+        RowHashCols.Children.Clear();
+        var hashVals = rc.HashColValues;
+        for (int hi = 0; hi < hashVals.Count; hi++)
+        {
+            if (hi > 0)
+                RowHashCols.Children.Add(new TextBlock { Text = " | ", Foreground = Brush("#555555"), FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+            RowHashCols.Children.Add(new TextBlock
+            {
+                Text = hashVals[hi].Val,
+                ToolTip = $"{hashVals[hi].Col}: {hashVals[hi].Val}",
+                Foreground = Brush("#AACCFF"), FontSize = 11,
+                MaxWidth = 200, TextWrapping = TextWrapping.NoWrap,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+        }
 
         var isModified   = rc.DiffType == RowDiffType.Modified;
         var isOnlyOurs   = rc.DiffType == RowDiffType.OnlyOurs;
@@ -103,6 +165,7 @@ public partial class ConflictRowItem : UserControl
             : FallbackColWidths(cols, rc);
         var diffCols = new HashSet<string>(rc.Cells.Select(c => c.ColName), StringComparer.Ordinal);
 
+        OnTotalWidthChanged?.Invoke(colWidths.Sum());
         SyncScroll(OursScroll, TheirsScroll);
 
         // OURS 行
@@ -165,6 +228,8 @@ public partial class ConflictRowItem : UserControl
                 TheirsGrid.Children.Add(tb);
             }
         }
+
+        ApplyInitialScrollAfterLayout();
     }
 
     private void RaiseDetailEvent(RowConflict rc) =>
@@ -206,10 +271,12 @@ public partial class ConflictRowItem : UserControl
             Background        = bg,
             Padding           = new Thickness(5, 3, 5, 3),
             FontSize          = 11,
+            TextWrapping      = TextWrapping.NoWrap,
             TextTrimming      = TextTrimming.CharacterEllipsis,
             ToolTip           = string.IsNullOrEmpty(text) ? null : text,
-            VerticalAlignment = VerticalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Center,
             Width             = colWidth,
+            Height            = 24,
             Cursor            = System.Windows.Input.Cursors.Hand,
         };
 
@@ -238,10 +305,12 @@ public partial class ConflictRowItem : UserControl
                 Background        = bgBrush,
                 Padding           = new Thickness(5, 3, 5, 3),
                 FontSize          = 11,
+                TextWrapping      = TextWrapping.NoWrap,
                 TextTrimming      = TextTrimming.CharacterEllipsis,
                 ToolTip           = string.IsNullOrEmpty(val) ? null : val,
-                VerticalAlignment = VerticalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Center,
                 Width             = colWidth,
+                Height            = 24,
                 Cursor            = System.Windows.Input.Cursors.Hand,
             };
             tb.MouseLeftButtonDown += (_, _) => RaiseDetailEvent(rc);
@@ -308,10 +377,17 @@ public partial class ConflictRowItem : UserControl
     {
         theirs.ScrollChanged -= OnTheirsScrollChanged;
         theirs.ScrollChanged += OnTheirsScrollChanged;
+        ours.ScrollChanged   -= OnOursScrollChanged;
+        ours.ScrollChanged   += OnOursScrollChanged;
 
         void OnTheirsScrollChanged(object s, ScrollChangedEventArgs ev)
         {
             ours.ScrollToHorizontalOffset(ev.HorizontalOffset);
+            OnScrollOffsetChanged?.Invoke(ev.HorizontalOffset);
+        }
+        void OnOursScrollChanged(object s, ScrollChangedEventArgs ev)
+        {
+            theirs.ScrollToHorizontalOffset(ev.HorizontalOffset);
             OnScrollOffsetChanged?.Invoke(ev.HorizontalOffset);
         }
     }

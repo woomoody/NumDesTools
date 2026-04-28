@@ -1,4 +1,6 @@
-﻿using Font = System.Drawing.Font;
+﻿using System.Runtime.InteropServices;
+using ExcelDna.Integration;
+using Font = System.Drawing.Font;
 using IWin32Window = System.Windows.Forms.IWin32Window;
 
 #pragma warning disable CA1416
@@ -23,12 +25,15 @@ public class CellSelectChangeTip : ClickThroughForm
     private void InitializeComponent()
     {
         SuspendLayout();
+        AutoScaleMode = AutoScaleMode.None;   // 禁止 WinForms 按字体DPI缩放 Location 坐标
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
         BackColor = Color.Black;
         ClientSize = new Size(300, 200);
         ControlBox = false;
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false;
+        TopMost = true;
+        StartPosition = FormStartPosition.Manual;  // 防止 Show() 重置 Location
         Name = "CellSelectChangeTip";
         Load += CellSelectChangeTip_Load;
         ResumeLayout(false);
@@ -53,39 +58,68 @@ public class CellSelectChangeTip : ClickThroughForm
             return;
         }
 
-        var workingArea = NumDesAddIn.App.ActiveWindow;
-        var zoom = workingArea.Zoom / 100;
-        var workingAreaLeft = workingArea.Left * 1.67;
-        var workingAreaTop = workingArea.Top * 1.67;
-        var workingAreaWidth = workingArea.Width * 1.67;
-        var workingAreaHeight = workingArea.Height * 1.67;
 #pragma warning disable CA1416
         var size = TextRenderer.MeasureText(_displayText, new Font("微软雅黑", 13));
 #pragma warning restore CA1416
         var tipWidth = size.Width + 10;
         var tipHeight = size.Height + 10;
-        var targetLeftPixels = PubMetToExcel.ExcelRangePixelsX(target.Left * zoom);
-        var targetWidthPixels = Convert.ToInt32(target.Width * 1.67 * zoom);
-        var targetTopPixels = PubMetToExcel.ExcelRangePixelsY(target.Top * zoom);
-        var targetHeightPixels = Convert.ToInt32(target.Height * 1.67 * zoom);
-        _currentLeft = targetLeftPixels + targetWidthPixels;
-        _currentTop = targetTopPixels + targetHeightPixels;
-        if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth)
-            _currentLeft = targetLeftPixels - tipWidth;
 
-        if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight)
-            _currentTop = targetTopPixels - tipHeight;
-        Location = new Point(_currentLeft, _currentTop);
-        ClientSize = new Size(tipWidth, tipHeight);
+        if (!CalcScreenPos(target, ref tipWidth, ref tipHeight, out _currentLeft, out _currentTop))
+            return;
+
+        Paint -= TargetStrWrite;
         Paint += TargetStrWrite;
         var excelHandle = (IntPtr)NumDesAddIn.App.Hwnd;
         _owner = new Win32Window(excelHandle);
-        Show(_owner);
+        if (!Visible)
+            Show(_owner);
+        ClientSize = new Size(tipWidth, tipHeight);
+        Location = new Point(_currentLeft, _currentTop);
+        GetWindowRect(Handle, out var rc);
+        var scr = Screen.FromHandle(Handle);
+        System.Diagnostics.Debug.WriteLine(
+            $"[CellTip] setLoc=({_currentLeft},{_currentTop}) → WinRect=({rc.Left},{rc.Top},{rc.Right},{rc.Bottom})" +
+            $" | DeviceDpi={DeviceDpi} ScreenBounds={scr.Bounds} WorkingArea={scr.WorkingArea}");
+        Invalidate();
     }
 
     public void HideToolTip()
     {
         Hide();
+    }
+
+    // COM Range.Left/Top + PointsToScreenPixels，再乘 DPI scale 转物理像素给 SetWindowPos
+    private static bool CalcScreenPos(Range target, ref int tipWidth, ref int tipHeight,
+        out int left, out int top)
+    {
+        left = top = 0;
+        try
+        {
+            var win = NumDesAddIn.App.ActiveWindow;
+
+            // PointsToScreenPixels 与 Form.Location / SetWindowPos 坐标系一致，直接使用
+            int scrLeft   = win.PointsToScreenPixelsX((int)target.Left);
+            int scrTop    = win.PointsToScreenPixelsY((int)target.Top);
+            int scrRight  = win.PointsToScreenPixelsX((int)(target.Left + target.Width));
+            int scrBottom = win.PointsToScreenPixelsY((int)(target.Top  + target.Height));
+
+            left = scrRight;
+            top  = scrBottom;
+
+            var vs = SystemInformation.VirtualScreen;
+            if (left + tipWidth  > vs.Right)  left = scrLeft - tipWidth;
+            if (top  + tipHeight > vs.Bottom) top  = scrTop  - tipHeight;
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[CellTip] addr={target.Address}" +
+                $" | scr L={scrLeft} T={scrTop} R={scrRight} B={scrBottom}" +
+                $" | finalPos ({left},{top}) size ({tipWidth}x{tipHeight})");
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private class Win32Window : IWin32Window
@@ -108,17 +142,18 @@ public class CellSelectChangeTip : ClickThroughForm
         if (rngRow < 100 && rngCol < 10)
         {
             var cellStr = "";
-            var arr = target.Value;
-            var isArray = arr is object[,];
-            if (isArray)
+            object rawVal = target.Value;
+            if (rawVal is object[,] arr)
+            {
                 for (var i = 1; i <= arr.GetLength(0); i++)
                 {
                     for (var j = 1; j <= arr.GetLength(1); j++)
-                        cellStr += arr[i, j] + "#";
+                        cellStr += (arr[i, j]?.ToString() ?? string.Empty) + "#";
                     cellStr += "\r\n";
                 }
+            }
             else
-                cellStr = arr?.ToString() + "\r\n";
+                cellStr = (rawVal?.ToString() ?? string.Empty) + "\r\n";
 
             ShowToolTip(cellStr, target);
         }
@@ -137,27 +172,25 @@ public class CellSelectChangeTip : ClickThroughForm
 #pragma warning restore CA1416
         var tipWidth = size.Width + 10;
         var tipHeight = size.Height + 10;
-        var workingArea = NumDesAddIn.App.ActiveWindow;
-        var zoom = workingArea.Zoom / 100;
-        var workingAreaLeft = workingArea.Left * 1.67;
-        var workingAreaTop = workingArea.Top * 1.67;
-        var workingAreaWidth = workingArea.Width * 1.67;
-        var workingAreaHeight = workingArea.Height * 1.67;
-        var targetLeftPixels = PubMetToExcel.ExcelRangePixelsX(target.Left * zoom);
-        var targetWidthPixels = Convert.ToInt32(target.Width * 1.67 * zoom);
-        var targetTopPixels = PubMetToExcel.ExcelRangePixelsY(target.Top * zoom);
-        var targetHeightPixels = Convert.ToInt32(target.Height * 1.67 * zoom);
-        _currentLeft = targetLeftPixels + targetWidthPixels;
-        _currentTop = targetTopPixels + targetHeightPixels;
 
-        if (_currentLeft + tipWidth > workingAreaLeft + workingAreaWidth)
-            _currentLeft = targetLeftPixels - tipWidth;
+        if (!CalcScreenPos(target, ref tipWidth, ref tipHeight, out _currentLeft, out _currentTop))
+            return;
 
-        if (_currentTop + tipHeight > workingAreaTop + workingAreaHeight)
-            _currentTop = targetTopPixels - tipHeight;
-        Location = new Point(_currentLeft, _currentTop);
         ClientSize = new Size(tipWidth, tipHeight);
+        Location = new Point(_currentLeft, _currentTop);
     }
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hWnd);
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
+        int x, int y, int cx, int cy, uint uFlags);
+    private const uint SWP_NOZORDER   = 0x0004;
+    private const uint SWP_NOACTIVATE = 0x0010;
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT { public int Left, Top, Right, Bottom; }
 }
 
 public class ClickThroughForm : Form

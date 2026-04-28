@@ -6,7 +6,8 @@
     Width="820" Height="580" MinWidth="640" MinHeight="420"
     WindowStartupLocation="CenterScreen"
     Background="#1E1E1E"
-    FontFamily="微软雅黑">
+    FontFamily="微软雅黑"
+    KeyDown="Window_EscClose">
 
     <Window.Resources>
         <Style TargetType="Button" x:Key="PrimaryBtn">

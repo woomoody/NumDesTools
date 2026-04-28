@@ -6,6 +6,7 @@
 
         private static void AddCondition(dynamic sheet)
         {
+            if (sheet == null) return;
             var range = sheet.UsedRange;
             FormatConditions formatConditions = range.FormatConditions;
             int formatCount = 0;
@@ -33,6 +34,7 @@
 
         public static void DeleteCondition(dynamic sheet)
         {
+            if (sheet == null) return;
             var range = sheet.UsedRange;
             FormatConditions formatConditions = range.FormatConditions;
             foreach (object obj in formatConditions)
@@ -51,12 +53,10 @@
         public static void Calculate()
         {
             var sheet = NumDesAddIn.App.ActiveSheet;
+            if (sheet == null) return;
             AddCondition(sheet);
             if (NumDesAddIn.FocusLabelText == "聚光灯：关闭")
-            {
                 DeleteCondition(sheet);
-            }
-
             sheet.Calculate();
         }
     }
@@ -65,6 +65,7 @@
     {
         public static void Add(dynamic sheet, string formula)
         {
+            if (sheet == null) return;
             var range = sheet.UsedRange;
             FormatConditions formatConditions = range.FormatConditions;
             int formatCount = 0;
@@ -92,6 +93,7 @@
 
         public static void Delete(dynamic sheet, string formula)
         {
+            if (sheet == null) return;
             var range = sheet.UsedRange;
             FormatConditions formatConditions = range.FormatConditions;
             foreach (object obj in formatConditions)

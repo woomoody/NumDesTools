@@ -67,4 +67,9 @@ public partial class CloneTableSelectionWindow : Window
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
+    private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Escape) Close();
+    }
+
 }

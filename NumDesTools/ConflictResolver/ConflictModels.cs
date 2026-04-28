@@ -63,6 +63,29 @@ public class RowConflict : INotifyPropertyChanged
     public IDictionary<string, object?>? OursFullRow   { get; init; }
     public IDictionary<string, object?>? TheirsFullRow { get; init; }
 
+    /// <summary>所有 # 前缀列（备注类）的非空值，按列顺序，供行头显示</summary>
+    public List<(string Col, string Val)> HashColValues
+    {
+        get
+        {
+            var src = OursFullRow ?? TheirsFullRow;
+            if (src == null || AllColumns.Count == 0) return [];
+            var result = new List<(string, string)>();
+            foreach (var col in AllColumns)
+            {
+                if (!col.StartsWith('#')) continue;
+                if (!src.TryGetValue(col, out var v)) continue;
+                var s = v?.ToString() ?? string.Empty;
+                if (!string.IsNullOrEmpty(s))
+                    result.Add((col, s));
+            }
+            return result;
+        }
+    }
+
+    /// <summary>所有 # 列值拼成单行，供 ToolTip 等场景</summary>
+    public string DisplayName => string.Join("  ", HashColValues.Select(x => x.Val));
+
     public string DiffTypeBadge => DiffType switch
     {
         RowDiffType.OnlyOurs   => "仅我有（对方删除）",

@@ -385,4 +385,9 @@ public partial class CloneActivityWindow : Window
         }
         return (global, perTable);
     }
+    private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Escape) Close();
+    }
+
 }
