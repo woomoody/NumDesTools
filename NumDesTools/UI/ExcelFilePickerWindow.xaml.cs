@@ -1,4 +1,5 @@
 using System.IO;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using Newtonsoft.Json;
@@ -13,7 +14,11 @@ namespace NumDesTools.UI;
 
 public partial class ExcelFilePickerWindow : Window
 {
-    private record FileEntry(string FullPath, string RelPath);
+    private record FileEntry(string FullPath, string RelPath)
+    {
+        public string FileName  => Path.GetFileName(FullPath);
+        public string FolderKey => Path.GetDirectoryName(RelPath) is { Length: > 0 } d ? d.Replace('\\', '/') : "/";
+    }
     private record HistoryEntry(string Keyword, int Count);
 
     private const string HistoryKey = "FilePickerSearchHistory";
@@ -92,13 +97,15 @@ public partial class ExcelFilePickerWindow : Window
 
     private void SearchBox_GotFocus(object sender, RoutedEventArgs e)
     {
+        SearchPlaceholder.Visibility = Visibility.Collapsed;
         if (string.IsNullOrEmpty(SearchBox.Text))
             ShowHistoryPopup();
     }
 
     private void SearchBox_LostFocus(object sender, RoutedEventArgs e)
     {
-        // Popup StaysOpen=False handles close; only close if focus didn't go to HistoryList
+        if (string.IsNullOrEmpty(SearchBox.Text))
+            SearchPlaceholder.Visibility = Visibility.Visible;
         if (!HistoryList.IsKeyboardFocusWithin)
             HistoryPopup.IsOpen = false;
     }
@@ -173,6 +180,7 @@ public partial class ExcelFilePickerWindow : Window
 
         _filtered = [.. list];
         FileList.ItemsSource = _filtered;
+
         CountLabel.Text = $"{_filtered.Count} 个文件";
 
         if (_filtered.Count > 0)
@@ -212,14 +220,14 @@ public partial class ExcelFilePickerWindow : Window
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        SearchPlaceholder.Visibility = string.IsNullOrEmpty(SearchBox.Text)
-            ? Visibility.Visible : Visibility.Collapsed;
         if (!string.IsNullOrEmpty(SearchBox.Text))
             HistoryPopup.IsOpen = false;
         else if (SearchBox.IsFocused)
             ShowHistoryPopup();
         ApplyFilter();
     }
+
+    private string? _activeFolderKey;
 
     private void Filter_Changed(object sender, RoutedEventArgs e) => ApplyFilter();
 
@@ -232,27 +240,31 @@ public partial class ExcelFilePickerWindow : Window
 
     private void SearchBox_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Down)
+        if (HistoryPopup.IsOpen && HistoryList.Items.Count > 0 &&
+            (e.Key == Key.Down || e.Key == Key.Up))
         {
-            if (HistoryPopup.IsOpen && HistoryList.Items.Count > 0)
-            {
-                HistoryList.Focus();
-                HistoryList.SelectedIndex = 0;
-                (HistoryList.ItemContainerGenerator.ContainerFromIndex(0) as ListBoxItem)?.Focus();
-                e.Handled = true;
-            }
-            else if (_filtered.Count > 0)
-            {
-                FileList.Focus();
-                FileList.SelectedIndex = Math.Max(0, FileList.SelectedIndex);
-                (FileList.ItemContainerGenerator.ContainerFromIndex(FileList.SelectedIndex) as ListBoxItem)?.Focus();
-                e.Handled = true;
-            }
+            int cur   = HistoryList.SelectedIndex;
+            int next  = e.Key == Key.Down ? cur + 1 : cur - 1;
+            next = Math.Clamp(next, 0, HistoryList.Items.Count - 1);
+            HistoryList.SelectedIndex = next;
+            HistoryList.ScrollIntoView(HistoryList.SelectedItem);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Down && _filtered.Count > 0)
+        {
+            FileList.Focus();
+            FileList.SelectedIndex = Math.Max(0, FileList.SelectedIndex);
+            (FileList.ItemContainerGenerator.ContainerFromIndex(FileList.SelectedIndex) as ListBoxItem)?.Focus();
+            e.Handled = true;
         }
         else if (e.Key == Key.Enter)
         {
-            if (HistoryPopup.IsOpen) HistoryPopup.IsOpen = false;
-            Confirm();
+            if (HistoryPopup.IsOpen && HistoryList.SelectedItem is string kw)
+                ApplyHistoryItem(kw);
+            else
+                Confirm();
             e.Handled = true;
         }
         else if (e.Key == Key.Escape && HistoryPopup.IsOpen)
@@ -265,6 +277,22 @@ public partial class ExcelFilePickerWindow : Window
     private void FileList_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter) { Confirm(); e.Handled = true; }
+        else if (e.Key == Key.Up && FileList.SelectedIndex <= 0)
+        {
+            SearchBox.Focus();
+            SearchBox.CaretIndex = SearchBox.Text.Length;
+            e.Handled = true;
+        }
+    }
+
+    private void List_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.ListBox lb) return;
+        int delta = e.Delta > 0 ? -1 : 1;
+        int next  = Math.Clamp(lb.SelectedIndex + delta, 0, lb.Items.Count - 1);
+        lb.SelectedIndex = next;
+        lb.ScrollIntoView(lb.SelectedItem);
+        e.Handled = true;
     }
 
     private void Window_KeyDown(object sender, KeyEventArgs e)

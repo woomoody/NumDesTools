@@ -893,4 +893,14 @@ public partial class ExcelConflictWindow : Window
         e.Handled = true;
     }
 
+    private void List_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.ListBox lb) return;
+        int delta = e.Delta > 0 ? -1 : 1;
+        int next  = Math.Clamp(lb.SelectedIndex + delta, 0, lb.Items.Count - 1);
+        lb.SelectedIndex = next;
+        lb.ScrollIntoView(lb.SelectedItem);
+        e.Handled = true;
+    }
+
 }

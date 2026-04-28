@@ -207,7 +207,8 @@ public static class ExcelConflictEntry
 
         while (true)
         {
-        var pickRoot   = !string.IsNullOrEmpty(lastDir) && Directory.Exists(lastDir) ? lastDir : gitRoot;
+        var defaultRoot = Directory.GetParent(gitRoot)?.FullName ?? gitRoot;
+        var pickRoot    = defaultRoot;
         var filePicker = new NumDesTools.UI.ExcelFilePickerWindow(pickRoot);
         if (filePicker.ShowDialog() != true || filePicker.SelectedFile == null) return;
         NumDesAddIn.GlobalValue.SaveValue("HistoryFileLastDir", Path.GetDirectoryName(filePicker.SelectedFile) ?? gitRoot);
@@ -348,12 +349,16 @@ public static class ExcelConflictEntry
             });
         }
 
-        // 监听滚动：接近底部时加载下一页；Enter = 与工作区对比；Esc = 关闭
+        // 监听滚动：接近底部时加载下一页；Enter / 双击 = 与工作区对比；Esc = 关闭
         lb.KeyDown += (_, e) =>
         {
             if (lb.TopIndex + lb.Height / lb.ItemHeight >= lb.Items.Count - 3) LoadNextPage();
             if (e.KeyCode == Keys.Enter && lb.SelectedItem != null) { picker.Tag = "working"; picker.DialogResult = DialogResult.OK; }
             if (e.KeyCode == Keys.Escape) picker.Close();
+        };
+        lb.MouseDoubleClick += (_, _) =>
+        {
+            if (lb.SelectedItem != null) { picker.Tag = "working"; picker.DialogResult = DialogResult.OK; }
         };
         lb.MouseWheel += (_, e) =>
         {
@@ -478,6 +483,10 @@ public static class ExcelConflictEntry
                     if (lb2.TopIndex + lb2.Height / lb2.ItemHeight >= lb2.Items.Count - 3) LoadNextPage2();
                     if (e.KeyCode == Keys.Enter && lb2.SelectedItem != null) picker2.DialogResult = DialogResult.OK;
                     if (e.KeyCode == Keys.Escape) picker2.Close();
+                };
+                lb2.MouseDoubleClick += (_, _) =>
+                {
+                    if (lb2.SelectedItem != null) picker2.DialogResult = DialogResult.OK;
                 };
                 picker2.KeyPreview = true;
                 picker2.KeyDown += (_, e) =>
