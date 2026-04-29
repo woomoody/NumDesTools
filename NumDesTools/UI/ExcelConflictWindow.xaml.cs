@@ -30,17 +30,32 @@ public partial class ExcelConflictWindow : Window
         _outPath    = outPath ?? diff.OursPath;
 
         FileNameText.Text = Path.GetFileName(diff.OursPath);
-        ConflictRowItem.OnScrollOffsetChanged = offset =>
+        // 冲突行（Modified）：驱动冲突行列头 + 冲突行滚动条
+        ConflictRowItem.OnConflictScrollOffsetChanged = offset =>
         {
             MetaScroll.ScrollToHorizontalOffset(offset);
             BatchScroll.ScrollToHorizontalOffset(offset);
             SharedHScrollBar.Value = offset;
         };
-        ConflictRowItem.OnTotalWidthChanged = totalWidth =>
+        ConflictRowItem.OnConflictTotalWidthChanged = totalWidth =>
         {
-            SharedHScrollBar.Maximum    = Math.Max(0, totalWidth - SharedHScrollBar.ActualWidth);
+            SharedHScrollBar.Maximum      = Math.Max(0, totalWidth - SharedHScrollBar.ActualWidth);
             SharedHScrollBar.ViewportSize = SharedHScrollBar.ActualWidth;
-            SharedHScrollBar.Visibility = totalWidth > SharedHScrollBar.ActualWidth
+            SharedHScrollBar.Visibility   = totalWidth > SharedHScrollBar.ActualWidth
+                ? Visibility.Visible : Visibility.Collapsed;
+        };
+        // 新增/删除行（OnlyOurs/OnlyTheirs）：驱动各自列头 + 新增/删除滚动条
+        ConflictRowItem.OnRowsScrollOffsetChanged = offset =>
+        {
+            OursMetaScroll.ScrollToHorizontalOffset(offset);
+            TheirsMetaScroll.ScrollToHorizontalOffset(offset);
+            RowsHScrollBar.Value = offset;
+        };
+        ConflictRowItem.OnRowsTotalWidthChanged = totalWidth =>
+        {
+            RowsHScrollBar.Maximum      = Math.Max(0, totalWidth - RowsHScrollBar.ActualWidth);
+            RowsHScrollBar.ViewportSize = RowsHScrollBar.ActualWidth;
+            RowsHScrollBar.Visibility   = totalWidth > RowsHScrollBar.ActualWidth
                 ? Visibility.Visible : Visibility.Collapsed;
         };
         BuildSheetTabs();
@@ -57,8 +72,17 @@ public partial class ExcelConflictWindow : Window
 
     private readonly string _outPath;
     private double[] _currentColWidths = Array.Empty<double>();
+    private double[] _allColWidths = Array.Empty<double>();
     private HashSet<string> _conflictColSet = new(StringComparer.Ordinal);
     private bool _suppressRefresh;
+
+    // section 展开状态（VSCode 风格：折叠=28px标题栏，展开=记忆高度）
+    private bool _sectionOnlyOursExpanded   = false;
+    private bool _sectionOnlyTheirsExpanded = false;
+    private bool _detailExpanded            = true;
+    private double _oursExpandedHeight   = 200;
+    private double _theirsExpandedHeight = 200;
+    private double _detailExpandedHeight = 180;
 
     // 全量模式分批加载
     private const int PageSize = 200;
@@ -109,54 +133,58 @@ public partial class ExcelConflictWindow : Window
 
         var sheetDiff = _diff.Sheets.FirstOrDefault(s => s.SheetName == sheetName);
 
-        // Build conflict col set for this sheet (used for column widths + scroll)
         _conflictColSet = sheetDiff?.Rows
             .Where(r => r.DiffType == RowDiffType.Modified)
             .SelectMany(r => r.Cells.Select(c => c.ColName))
             .ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>(StringComparer.Ordinal);
 
+        bool hideNonConflict = HideNoConflictCols.IsChecked == true;
         if (sheetDiff != null)
         {
-            _currentColWidths = ComputeSheetColWidths(sheetDiff.AllColumns, sheetDiff.Rows, _conflictColSet);
+            List<string>? visibleCols = (hideNonConflict && _conflictColSet.Count > 0)
+                ? sheetDiff.AllColumns.Where(c => _conflictColSet.Contains(c)).ToList()
+                : null;
+            ConflictRowItem.VisibleColumns = visibleCols;
+
+            _allColWidths = ComputeSheetColWidths(sheetDiff.AllColumns, sheetDiff.Rows, _conflictColSet);
+            ConflictRowItem.AllSheetColWidths = _allColWidths;
+
+            var colsForWidths = visibleCols ?? sheetDiff.AllColumns;
+            _currentColWidths = visibleCols != null
+                ? ComputeSheetColWidths(colsForWidths, sheetDiff.Rows, _conflictColSet)
+                : _allColWidths;
             ConflictRowItem.CurrentSheetColWidths = _currentColWidths;
         }
 
-        var allConflict = allRows
-            .Where(r => r.DiffType == RowDiffType.OnlyOurs
-                     || r.DiffType == RowDiffType.OnlyTheirs
-                     || (r.DiffType == RowDiffType.Modified && r.Cells.Count > 0))
-            .ToList();
+        // Split rows into three sections
+        var modifiedRows   = allRows.Where(r => r.DiffType == RowDiffType.Modified && r.Cells.Count > 0).ToList();
+        var onlyOursRows   = allRows.Where(r => r.DiffType == RowDiffType.OnlyOurs).ToList();
+        var onlyTheirsRows = allRows.Where(r => r.DiffType == RowDiffType.OnlyTheirs).ToList();
 
+        // For Context/All modes, include Same rows in the modified section only
+        List<RowConflict> displayModified;
         switch (_viewMode)
         {
-            case ViewMode.ConflictOnly:
-                _pendingRows = [];
-                _loadedCount = 0;
-                LoadMoreBar.Visibility = Visibility.Collapsed;
-                ConflictList.ItemsSource = new ObservableCollection<RowConflict>(allConflict);
-                break;
-
             case ViewMode.Context:
             {
                 var allList = allRows.ToList();
                 _pendingRows = allList;
                 _loadedCount = 0;
-                var contextRows = BuildConflictContextRows(allList);
-                LoadMoreBar.Visibility = contextRows.Count < allList.Count ? Visibility.Visible : Visibility.Collapsed;
-                LoadMoreStatus.Text    = $"冲突±{ConflictContext}行：已显示 {contextRows.Count}/{allList.Count}";
-                ConflictList.ItemsSource = new ObservableCollection<RowConflict>(contextRows);
+                var contextRows = BuildConflictContextRows(allList).Where(r => r.DiffType != RowDiffType.OnlyOurs && r.DiffType != RowDiffType.OnlyTheirs).ToList();
+                LoadMoreBar.Visibility = contextRows.Count < allList.Count(r => r.DiffType != RowDiffType.OnlyOurs && r.DiffType != RowDiffType.OnlyTheirs) ? Visibility.Visible : Visibility.Collapsed;
+                LoadMoreStatus.Text    = $"冲突±{ConflictContext}行：已显示 {contextRows.Count}";
+                displayModified = contextRows;
                 break;
             }
-
             case ViewMode.All:
             {
-                var allList = allRows.ToList();
+                var allList = allRows.Where(r => r.DiffType != RowDiffType.OnlyOurs && r.DiffType != RowDiffType.OnlyTheirs).ToList();
                 if (allList.Count <= PageSize)
                 {
                     _pendingRows = [];
                     _loadedCount = 0;
                     LoadMoreBar.Visibility = Visibility.Collapsed;
-                    ConflictList.ItemsSource = new ObservableCollection<RowConflict>(allList);
+                    displayModified = allList;
                 }
                 else
                 {
@@ -164,27 +192,117 @@ public partial class ExcelConflictWindow : Window
                     _loadedCount = PageSize;
                     LoadMoreBar.Visibility = Visibility.Visible;
                     LoadMoreStatus.Text    = $"已显示 {PageSize}/{allList.Count} 行";
-                    ConflictList.ItemsSource = new ObservableCollection<RowConflict>(allList.Take(PageSize));
+                    displayModified = allList.Take(PageSize).ToList();
                 }
                 break;
             }
+            default: // ConflictOnly
+                _pendingRows = [];
+                _loadedCount = 0;
+                LoadMoreBar.Visibility = Visibility.Collapsed;
+                displayModified = modifiedRows;
+                break;
+        }
+
+        ConflictList.ItemsSource = new ObservableCollection<RowConflict>(displayModified);
+        OnlyOursList.ItemsSource   = new ObservableCollection<RowConflict>(onlyOursRows);
+        OnlyTheirsList.ItemsSource = new ObservableCollection<RowConflict>(onlyTheirsRows);
+
+        SectionOnlyOursCount.Text   = $"({onlyOursRows.Count})";
+        SectionOnlyTheirsCount.Text = $"({onlyTheirsRows.Count})";
+
+        // 新增/删除 section：无数据时折叠且隐藏（行高=0）
+        if (onlyOursRows.Count == 0)
+        {
+            RowOnlyOurs.MinHeight = 0; RowOnlyOurs.Height = new GridLength(0);
+        }
+        else
+        {
+            SetSectionExpanded(RowOnlyOurs, OnlyOursList, OursHeaderBorder,
+                SectionOnlyOursChevron, _sectionOnlyOursExpanded, ref _oursExpandedHeight);
+        }
+
+        if (onlyTheirsRows.Count == 0)
+        {
+            RowOnlyTheirs.MinHeight = 0; RowOnlyTheirs.Height = new GridLength(0);
+        }
+        else
+        {
+            SetSectionExpanded(RowOnlyTheirs, OnlyTheirsList, TheirsHeaderBorder,
+                SectionOnlyTheirsChevron, _sectionOnlyTheirsExpanded, ref _theirsExpandedHeight);
         }
 
         if (sheetDiff != null)
         {
             BuildMetaHeader(sheetDiff);
+            BuildSectionMetaHeader(sheetDiff, OursMetaFieldGrid,   OursMetaLabelGrid,   sheetDiff.AllColumns, _allColWidths);
+            BuildSectionMetaHeader(sheetDiff, TheirsMetaFieldGrid, TheirsMetaLabelGrid, sheetDiff.AllColumns, _allColWidths);
             BuildColBatchBar(sheetDiff);
             BuildChangeNav(sheetDiff);
         }
 
-        // 渲染完成后自动滚动到第一个冲突列
-        // 用 LayoutUpdated 一次性触发，确保 ScrollViewer 已完成布局（ActualWidth 有效）
         void OnLayout(object? s, EventArgs _)
         {
             ConflictList.LayoutUpdated -= OnLayout;
             ScrollToFirstConflictColumn();
         }
         ConflictList.LayoutUpdated += OnLayout;
+    }
+
+    // VSCode 风格：折叠 = RowDefinition.Height 设为 28（标题栏高），展开 = 恢复记忆高度
+    private void SetSectionExpanded(RowDefinition row, System.Windows.Controls.ListBox list,
+        Border? colHeader, TextBlock chevron, bool expanded, ref double savedHeight)
+    {
+        if (expanded)
+        {
+            row.MinHeight = 28;
+            row.Height    = new GridLength(Math.Max(savedHeight, 120));
+        }
+        else
+        {
+            // 记住当前高度再折叠
+            if (row.ActualHeight > 28) savedHeight = row.ActualHeight;
+            row.MinHeight = 28;
+            row.Height    = new GridLength(28);
+        }
+        list.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+        if (colHeader != null)
+            colHeader.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
+        chevron.Text = expanded ? "▼ " : "▶ ";
+    }
+
+    private void SectionHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender == SectionOnlyOursHeader)
+        {
+            _sectionOnlyOursExpanded = !_sectionOnlyOursExpanded;
+            SetSectionExpanded(RowOnlyOurs, OnlyOursList, OursHeaderBorder,
+                SectionOnlyOursChevron, _sectionOnlyOursExpanded, ref _oursExpandedHeight);
+        }
+        else if (sender == SectionOnlyTheirsHeader)
+        {
+            _sectionOnlyTheirsExpanded = !_sectionOnlyTheirsExpanded;
+            SetSectionExpanded(RowOnlyTheirs, OnlyTheirsList, TheirsHeaderBorder,
+                SectionOnlyTheirsChevron, _sectionOnlyTheirsExpanded, ref _theirsExpandedHeight);
+        }
+    }
+
+    private void DetailHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        _detailExpanded = !_detailExpanded;
+        if (_detailExpanded)
+        {
+            RowDetail.MinHeight = 28;
+            RowDetail.Height    = new GridLength(Math.Max(_detailExpandedHeight, 120));
+        }
+        else
+        {
+            if (RowDetail.ActualHeight > 28) _detailExpandedHeight = RowDetail.ActualHeight;
+            RowDetail.MinHeight = 28;
+            RowDetail.Height    = new GridLength(28);
+        }
+        DetailContent.Visibility = _detailExpanded ? Visibility.Visible : Visibility.Collapsed;
+        DetailChevron.Text = _detailExpanded ? "▼ " : "▶ ";
     }
 
     private void ScrollToFirstConflictColumn()
@@ -215,12 +333,14 @@ public partial class ExcelConflictWindow : Window
 
         const double margin = 40;
         var scrollTo = Math.Max(0, offset - margin);
-        // Store globally so newly-loaded rows also start at the right position
         ConflictRowItem.InitialScrollOffset = scrollTo;
         ConflictRowItem.SetGlobalScrollOffset(scrollTo);
         MetaScroll.ScrollToHorizontalOffset(scrollTo);
         BatchScroll.ScrollToHorizontalOffset(scrollTo);
         SharedHScrollBar.Value = scrollTo;
+        // 新增/删除行从列头第0列开始
+        ConflictRowItem.InitialRowsScrollOffset = 0;
+        ConflictRowItem.SetGlobalRowsScrollOffset(0);
     }
 
     private static List<RowConflict> BuildConflictContextRows(List<RowConflict> rows)
@@ -280,6 +400,14 @@ public partial class ExcelConflictWindow : Window
         BatchScroll.ScrollToHorizontalOffset(offset);
     }
 
+    private void RowsHScrollBar_Scroll(object sender, System.Windows.Controls.Primitives.ScrollEventArgs e)
+    {
+        var offset = e.NewValue;
+        ConflictRowItem.SetGlobalRowsScrollOffset(offset);
+        OursMetaScroll.ScrollToHorizontalOffset(offset);
+        TheirsMetaScroll.ScrollToHorizontalOffset(offset);
+    }
+
     // ── Meta 列头 ────────────────────────────────────────────────────────────
 
     private static readonly SolidColorBrush MetaFieldFg = new(Color(0x5A, 0x9F, 0xDF));
@@ -289,13 +417,24 @@ public partial class ExcelConflictWindow : Window
 
     private void BuildMetaHeader(SheetDiff sheet)
     {
-        var cols = sheet.AllColumns;
+        var cols = ConflictRowItem.VisibleColumns ?? sheet.AllColumns;
         if (cols.Count == 0) { MetaScroll.Visibility = Visibility.Collapsed; return; }
         MetaScroll.Visibility = Visibility.Visible;
 
         BuildMetaGrid(MetaFieldGrid, cols, _currentColWidths,
             col => MakeMetaCell(col, MetaFieldFg, MetaFieldBg, bold: true));
         BuildMetaGrid(MetaLabelGrid, cols, _currentColWidths,
+            col => MakeMetaCell(
+                sheet.LabelRow.TryGetValue(col, out var v) ? v : string.Empty,
+                MetaLabelFg, MetaLabelBg, bold: false));
+    }
+
+    private void BuildSectionMetaHeader(SheetDiff sheet, Grid fieldGrid, Grid labelGrid, List<string> cols, double[] widths)
+    {
+        if (cols.Count == 0) return;
+        BuildMetaGrid(fieldGrid, cols, widths,
+            col => MakeMetaCell(col, MetaFieldFg, MetaFieldBg, bold: true));
+        BuildMetaGrid(labelGrid, cols, widths,
             col => MakeMetaCell(
                 sheet.LabelRow.TryGetValue(col, out var v) ? v : string.Empty,
                 MetaLabelFg, MetaLabelBg, bold: false));
@@ -379,7 +518,8 @@ public partial class ExcelConflictWindow : Window
 
     private void BuildColBatchBar(SheetDiff sheet)
     {
-        var cols = sheet.AllColumns;
+        // 与 Modified 行保持一致：隐藏无冲突列时用 VisibleColumns
+        var cols = ConflictRowItem.VisibleColumns ?? sheet.AllColumns;
         if (cols.Count == 0 || _currentColWidths.Length == 0 || !cols.Any(_conflictColSet.Contains))
         {
             ColBatchBar.Visibility = Visibility.Collapsed;
@@ -777,6 +917,12 @@ public partial class ExcelConflictWindow : Window
         btn.Foreground = active ? System.Windows.Media.Brushes.White : new SolidColorBrush(Color(0xAA, 0xAA, 0xAA));
     }
 
+    private void HideNoConflictCols_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_suppressRefresh) return;
+        RefreshConflictList();
+    }
+
     private void ViewMode_Changed(object sender, RoutedEventArgs e)
     {
         if (_suppressRefresh) return;
@@ -890,16 +1036,6 @@ public partial class ExcelConflictWindow : Window
             ChangeNavList.SelectedIndex = next;
             ChangeNavList.ScrollIntoView(ChangeNavList.Items[next]);
         }
-        e.Handled = true;
-    }
-
-    private void List_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
-    {
-        if (sender is not System.Windows.Controls.ListBox lb) return;
-        int delta = e.Delta > 0 ? -1 : 1;
-        int next  = Math.Clamp(lb.SelectedIndex + delta, 0, lb.Items.Count - 1);
-        lb.SelectedIndex = next;
-        lb.ScrollIntoView(lb.SelectedItem);
         e.Handled = true;
     }
 

@@ -162,7 +162,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         CustomRibbon.ActivateTab("MainTab");
 
         if (FocusLabelText == "聚光灯：开启")
-            FocusLight.Calculate();
+            CrosslightController.Enable(App);
     }
 
     public override string GetCustomUI(string ribbonId)
@@ -3015,12 +3015,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var isOpening = LabelText == "放大镜：开启";
         CustomRibbon.InvalidateControl("Button5");
         if (isOpening)
-            App.SheetSelectionChange += CellSelectChangeTip.OnSelectionChange;
+            CellSelectChangeTip.Enable(App);
         else
-        {
-            App.SheetSelectionChange -= CellSelectChangeTip.OnSelectionChange;
-            CellSelectChangeTip.Instance.ClearBubble();
-        }
+            CellSelectChangeTip.Disable();
     }
 
     public void FocusLight_Click(IRibbonControl control)
@@ -3030,23 +3027,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         FocusLabelText = FocusLabelText == "聚光灯：开启" ? "聚光灯：关闭" : "聚光灯：开启";
         CustomRibbon.InvalidateControl("FocusLightButton");
         if (FocusLabelText == "聚光灯：开启")
-        {
-            FocusLight.Calculate();
-            App.SheetSelectionChange += FocusLightSelectionChange;
-            App.SheetActivate        += FocusLightSheetActivate;
-        }
+            CrosslightController.Enable(App);
         else
-        {
-            App.SheetSelectionChange -= FocusLightSelectionChange;
-            App.SheetActivate        -= FocusLightSheetActivate;
-            FocusLight.DeleteCondition(App.ActiveSheet);
-        }
+            CrosslightController.Disable();
 
         GlobalValue.SaveValue("FocusLabelText", FocusLabelText);
     }
-
-    private void FocusLightSelectionChange(object sh, Range target) => FocusLight.Calculate();
-    private void FocusLightSheetActivate(object sh)                 => FocusLight.Calculate();
 
     public void SheetMenu_Click(IRibbonControl control)
     {

@@ -133,21 +133,29 @@ public partial class ExcelFilePickerWindow : Window
 
     private void LoadFiles()
     {
-        var all = new List<FileEntry>();
-        try
+        CountLabel.Text = "扫描中…";
+        System.Threading.ThreadPool.QueueUserWorkItem(_ =>
         {
-            foreach (var f in Directory.EnumerateFiles(_rootDir, "*.xls*", SearchOption.AllDirectories))
+            var all = new List<FileEntry>();
+            try
             {
-                var ext = Path.GetExtension(f).ToLowerInvariant();
-                if (ext != ".xlsx" && ext != ".xlsm") continue;
-                var rel = Path.GetRelativePath(_rootDir, f).Replace('\\', '/');
-                all.Add(new FileEntry(f, rel));
+                foreach (var f in Directory.EnumerateFiles(_rootDir, "*.xls*", SearchOption.AllDirectories))
+                {
+                    var ext = Path.GetExtension(f).ToLowerInvariant();
+                    if (ext != ".xlsx" && ext != ".xlsm") continue;
+                    var rel = Path.GetRelativePath(_rootDir, f).Replace('\\', '/');
+                    all.Add(new FileEntry(f, rel));
+                }
             }
-        }
-        catch { }
+            catch { }
 
-        _allFiles = [.. all.OrderBy(x => x.RelPath)];
-        ApplyFilter();
+            var sorted = all.OrderBy(x => x.RelPath).ToList();
+            Dispatcher.Invoke(() =>
+            {
+                _allFiles = sorted;
+                ApplyFilter();
+            });
+        });
     }
 
     private void ApplyFilter()

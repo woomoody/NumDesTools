@@ -187,6 +187,44 @@ public static class ExcelConflictEntry
         picker?.Dispose();
     }
 
+    /// 从当前活动工作簿路径或 GitRootPath 推算 Excel 文件扫描根目录。
+    /// 策略：沿当前工作簿路径向上找名为 "Excels" 的祖先目录；
+    ///       若找不到，则沿 GitRootPath 向上找；
+    ///       都找不到则用 GitRootPath 本身。
+    private static string ResolveExcelRoot(string gitRoot)
+    {
+        // 1. 从当前活动工作簿路径推算
+        try
+        {
+            var wbPath = (string)NumDesAddIn.App.ActiveWorkbook.FullName;
+            if (!string.IsNullOrEmpty(wbPath))
+            {
+                var dir = Path.GetDirectoryName(wbPath);
+                while (!string.IsNullOrEmpty(dir))
+                {
+                    if (Path.GetFileName(dir).Equals("Excels", StringComparison.OrdinalIgnoreCase))
+                        return dir;
+                    dir = Path.GetDirectoryName(dir);
+                }
+            }
+        }
+        catch { }
+
+        // 2. 从 GitRootPath 向上找 Excels
+        {
+            var dir = gitRoot;
+            while (!string.IsNullOrEmpty(dir))
+            {
+                if (Path.GetFileName(dir).Equals("Excels", StringComparison.OrdinalIgnoreCase))
+                    return dir;
+                dir = Path.GetDirectoryName(dir);
+            }
+        }
+
+        // 3. 退回 GitRootPath
+        return gitRoot;
+    }
+
     /// <summary>
     /// 让用户选择一个 xlsx 文件，浏览其 Git 提交历史，
     /// 可选 "历史版本 vs 工作区"（支持写回 + git add）
@@ -207,8 +245,7 @@ public static class ExcelConflictEntry
 
         while (true)
         {
-        var defaultRoot = Directory.GetParent(gitRoot)?.FullName ?? gitRoot;
-        var pickRoot    = defaultRoot;
+        var pickRoot = ResolveExcelRoot(gitRoot);
         var filePicker = new NumDesTools.UI.ExcelFilePickerWindow(pickRoot);
         if (filePicker.ShowDialog() != true || filePicker.SelectedFile == null) return;
         NumDesAddIn.GlobalValue.SaveValue("HistoryFileLastDir", Path.GetDirectoryName(filePicker.SelectedFile) ?? gitRoot);
@@ -352,7 +389,8 @@ public static class ExcelConflictEntry
         // 监听滚动：接近底部时加载下一页；Enter / 双击 = 与工作区对比；Esc = 关闭
         lb.KeyDown += (_, e) =>
         {
-            if (lb.TopIndex + lb.Height / lb.ItemHeight >= lb.Items.Count - 3) LoadNextPage();
+            if ((e.KeyCode == Keys.Down || e.KeyCode == Keys.PageDown) &&
+                lb.TopIndex + lb.Height / lb.ItemHeight >= lb.Items.Count - 3) LoadNextPage();
             if (e.KeyCode == Keys.Enter && lb.SelectedItem != null) { picker.Tag = "working"; picker.DialogResult = DialogResult.OK; }
             if (e.KeyCode == Keys.Escape) picker.Close();
         };
@@ -362,6 +400,10 @@ public static class ExcelConflictEntry
         };
         lb.MouseWheel += (_, e) =>
         {
+            int delta = e.Delta > 0 ? -1 : 1;
+            int next  = Math.Clamp(lb.SelectedIndex + delta, 0, lb.Items.Count - 1);
+            lb.SelectedIndex = next;
+            lb.TopIndex = Math.Max(0, next - lb.Height / (lb.ItemHeight > 0 ? lb.ItemHeight : 1) / 2);
             if (e.Delta < 0 && lb.TopIndex + lb.Height / (lb.ItemHeight + 1) >= lb.Items.Count - 5)
                 LoadNextPage();
         };
@@ -475,12 +517,17 @@ public static class ExcelConflictEntry
 
                 lb2.MouseWheel += (_, e) =>
                 {
+                    int delta2 = e.Delta > 0 ? -1 : 1;
+                    int next2  = Math.Clamp(lb2.SelectedIndex + delta2, 0, lb2.Items.Count - 1);
+                    lb2.SelectedIndex = next2;
+                    lb2.TopIndex = Math.Max(0, next2 - lb2.Height / (lb2.ItemHeight > 0 ? lb2.ItemHeight : 1) / 2);
                     if (e.Delta < 0 && lb2.TopIndex + lb2.Height / (lb2.ItemHeight + 1) >= lb2.Items.Count - 5)
                         LoadNextPage2();
                 };
                 lb2.KeyDown += (_, e) =>
                 {
-                    if (lb2.TopIndex + lb2.Height / lb2.ItemHeight >= lb2.Items.Count - 3) LoadNextPage2();
+                    if ((e.KeyCode == Keys.Down || e.KeyCode == Keys.PageDown) &&
+                        lb2.TopIndex + lb2.Height / lb2.ItemHeight >= lb2.Items.Count - 3) LoadNextPage2();
                     if (e.KeyCode == Keys.Enter && lb2.SelectedItem != null) picker2.DialogResult = DialogResult.OK;
                     if (e.KeyCode == Keys.Escape) picker2.Close();
                 };
