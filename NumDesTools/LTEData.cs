@@ -817,7 +817,8 @@ public class LteData
             "#【A-LTE】数值大纲.xlsx",
             "#各类枚举"
         );
-        var dataTypeArray = listObjectsDic["数据类型"];
+        var dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
+        if (dataTypeArray == null) return;
 
         //基础数据整理
         var copyData = BaseData(copyArray, dataTypeArray, copyTilteArray);
@@ -828,10 +829,18 @@ public class LteData
 
         if (errorTypeList.Count != 0)
         {
-            //基础数据中存在错误类型
-            var errorTypeListOnly = new HashSet<string>(errorTypeList);
-            var errorStr = string.Join(",", errorTypeListOnly);
-            MessageBox.Show($"基础数据中存在以下错误类型：{errorStr}");
+            var emptyKeyErrors = errorTypeList.Where(e => e.StartsWith('[')).ToList();
+            var unknownTypeErrors = errorTypeList.Where(e => !e.StartsWith('[')).ToList();
+            var sb = new StringBuilder("基础数据存在以下问题，请修复后重试：\n");
+            if (emptyKeyErrors.Count > 0)
+                sb.AppendLine($"\n【类型字段为空】共 {emptyKeyErrors.Count} 行：\n" + string.Join("\n", emptyKeyErrors));
+            if (unknownTypeErrors.Count > 0)
+            {
+                var unknownOnly = new HashSet<string>(unknownTypeErrors);
+                sb.AppendLine($"\n【类型不在枚举中】{string.Join(", ", unknownOnly)}");
+            }
+            MessageBox.Show(sb.ToString());
+            return;
         }
         ////基础List数据清理
         ////baseList.DataBodyRange.ClearContents();
@@ -879,7 +888,8 @@ public class LteData
             MessageBox.Show("#道具信息中的名称【道具信息】不存在");
             return;
         }
-        object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
+        object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
+        if (fieldGroupArray == null) return;
 
         // 寻找优先级数据
         var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
@@ -887,7 +897,8 @@ public class LteData
             "#【A-LTE】数值大纲.xlsx",
             "#寻找优先级"
         );
-        var findRankDataArray = findRanklistObjectsDic["寻找方案"];
+        var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
+        if (findRankDataArray == null) return;
 
         //寻找数据整理
         var findArray = FindData(
@@ -984,7 +995,8 @@ public class LteData
             "#【A-LTE】数值大纲.xlsx",
             "#各类枚举"
         );
-        var dataTypeArray = listObjectsDic["数据类型"];
+        var dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
+        if (dataTypeArray == null) return;
 
         //基础数据整理
         var copyData = BaseData(copyArray, dataTypeArray, copyTitleArray);
@@ -995,10 +1007,18 @@ public class LteData
 
         if (errorTypeList.Count != 0)
         {
-            //基础数据中存在错误类型
-            var errorTypeListOnly = new HashSet<string>(errorTypeList);
-            var errorStr = string.Join(",", errorTypeListOnly);
-            MessageBox.Show($"基础数据中存在以下错误类型：{errorStr}");
+            var emptyKeyErrors = errorTypeList.Where(e => e.StartsWith('[')).ToList();
+            var unknownTypeErrors = errorTypeList.Where(e => !e.StartsWith('[')).ToList();
+            var sb = new StringBuilder("基础数据存在以下问题，请修复后重试：\n");
+            if (emptyKeyErrors.Count > 0)
+                sb.AppendLine($"\n【类型字段为空】共 {emptyKeyErrors.Count} 行：\n" + string.Join("\n", emptyKeyErrors));
+            if (unknownTypeErrors.Count > 0)
+            {
+                var unknownOnly = new HashSet<string>(unknownTypeErrors);
+                sb.AppendLine($"\n【类型不在枚举中】{string.Join(", ", unknownOnly)}");
+            }
+            MessageBox.Show(sb.ToString());
+            return;
         }
 
         WriteDymaicData(copyArray, list, "LTE【基础】", 1, colCount);
@@ -1012,7 +1032,8 @@ public class LteData
             MessageBox.Show("#道具信息中的名称【道具信息】不存在");
             return;
         }
-        object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
+        object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
+        if (fieldGroupArray == null) return;
 
         // 寻找优先级数据
         var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
@@ -1020,7 +1041,8 @@ public class LteData
             "#【A-LTE】数值大纲.xlsx",
             "#寻找优先级"
         );
-        var findRankDataArray = findRanklistObjectsDic["寻找方案"];
+        var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
+        if (findRankDataArray == null) return;
 
         //寻找数据整理
         var findArray = FindData(
@@ -1033,6 +1055,52 @@ public class LteData
         WriteDymaicData(findArray, findList, "LTE【寻找】", 1, 9);
     }
 
+    // "图1-1" → "图1"；null 或无 "-" 时安全返回空字符串
+    private static string MapPrefix(string val)
+        => string.IsNullOrEmpty(val) ? string.Empty : val.Split('-')[0];
+
+    // baseDic[id][col]；id 不存在或列不足时返回空字符串而非崩溃
+    private static string SafeGet(Dictionary<string, List<string>> dic, string id, int col)
+    {
+        if (id == null || !dic.TryGetValue(id, out var row) || col >= row.Count)
+            return string.Empty;
+        return row[col] ?? string.Empty;
+    }
+
+    // 从 GetExcelListObjects 字典里取指定 key；为 null 或 key 不存在时弹提示并返回 null
+    private static object[,] GetTableData(
+        Dictionary<string, object[,]> dic, string dicName, string key)
+    {
+        if (dic == null)
+        {
+            MessageBox.Show($"找不到数据表「{dicName}」，请确认文件已打开");
+            return null;
+        }
+        if (!dic.TryGetValue(key, out var arr) || arr == null)
+        {
+            MessageBox.Show($"「{dicName}」中找不到名称为「{key}」的列表，请确认表名正确");
+            return null;
+        }
+        return arr;
+    }
+
+    // 读 ListObject 数据区；DataBodyRange 为空时弹提示并返回 null
+    private static object[,] GetBodyRange(ListObject list, string listDesc)
+    {
+        var range = list.DataBodyRange;
+        if (range == null)
+        {
+            MessageBox.Show($"「{listDesc}」数据区为空，请先确认表中有数据行");
+            return null;
+        }
+        if (range.Value2 is not object[,] val)
+        {
+            MessageBox.Show($"「{listDesc}」数据区读取失败（Value2 为空）");
+            return null;
+        }
+        return val;
+    }
+
     private static void WriteDymaicData(
         object[,] copyArray,
         ListObject list,
@@ -1043,7 +1111,7 @@ public class LteData
     )
     {
         //基础List数据清理
-        object[,] oldListData = list.DataBodyRange.Value2;
+        object[,] oldListData = GetBodyRange(list, sheetName) ?? new object[0, 0];
         //基础数据和基础List数据对比
         var copyDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey(copyArray);
         var oldListDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(oldListData);
@@ -1273,6 +1341,7 @@ public class LteData
         foreach (var baseList in baseDic)
         {
             var key = baseList.Key;
+            if (string.IsNullOrEmpty(key)) continue;
 
             Debug.Print($"数据编号：{key}");
 
@@ -1294,6 +1363,12 @@ public class LteData
 
             string itemType = baseDic[key][8];
 
+            if (string.IsNullOrEmpty(itemType))
+            {
+                errorTypeList.Add($"[{key}] 类型字段为空");
+                continue;
+            }
+
             //判断类型是否存在
             if (dataTypeDic.ContainsKey(itemType))
             {
@@ -1310,7 +1385,7 @@ public class LteData
 
             //链长
             string linkMax = string.Empty;
-            string currentName = baseDic[key][6];
+            string currentName = SafeGet(baseDic, key, 6);
             int countCurrent = baseDic
                 .Values.Where(list => list.Count > 6)
                 .Count(list => list[6] == currentName);
@@ -1326,7 +1401,7 @@ public class LteData
 
             //五合提示
             string fiveMergeTip = string.Empty;
-            string rank = baseDic[key][7];
+            string rank = SafeGet(baseDic, key, 7);
 
             if (int.TryParse(rank, out int rankNum))
             {
@@ -1347,8 +1422,8 @@ public class LteData
             var idNameList = new List<int> { 11, 13, 15, 17, 19, 21, 23, 25 };
             var countNumList = new List<int> { 12, 14, 16, 18, 20, 22, 24, 26 };
 
-            string firstPos = baseDic[key][3];
-            var firstPosPre = firstPos.Split("-")[0];
+            string firstPos = SafeGet(baseDic, key, 3);
+            var firstPosPre = MapPrefix(firstPos);
 
             int onlyNum = 4;
             int num = 5;
@@ -1416,7 +1491,7 @@ public class LteData
                     string matchId = baseDic
                         .FirstOrDefault(kv =>
                             kv.Value.Count > 17
-                            && kv.Value[3].Split("-")[0] + kv.Value[11] == orginOnlyNum
+                            && MapPrefix(kv.Value[3]) + kv.Value[11] == orginOnlyNum
                         )
                         .Key;
                     if (matchId == null)
@@ -1424,7 +1499,7 @@ public class LteData
                         matchId = baseDic
                             .FirstOrDefault(kv =>
                                 kv.Value.Count > 17
-                                && kv.Value[3].Split("-")[0] + kv.Value[13] == orginOnlyNum
+                                && MapPrefix(kv.Value[3]) + kv.Value[13] == orginOnlyNum
                             )
                             .Key;
                     }
@@ -1433,7 +1508,7 @@ public class LteData
                         matchId = baseDic
                             .FirstOrDefault(kv =>
                                 kv.Value.Count > 17
-                                && kv.Value[3].Split("-")[0] + kv.Value[15] == orginOnlyNum
+                                && MapPrefix(kv.Value[3]) + kv.Value[15] == orginOnlyNum
                             )
                             .Key;
                     }
@@ -1442,7 +1517,7 @@ public class LteData
                         matchId = baseDic
                             .FirstOrDefault(kv =>
                                 kv.Value.Count > 17
-                                && kv.Value[3].Split("-")[0] + kv.Value[17] == orginOnlyNum
+                                && MapPrefix(kv.Value[3]) + kv.Value[17] == orginOnlyNum
                             )
                             .Key;
                     }
@@ -1473,7 +1548,7 @@ public class LteData
 
             // 转换组
             var spawnIndex = 27;
-            var spawnName = baseDic[key][spawnIndex];
+            var spawnName = SafeGet(baseDic, key, spawnIndex);
 
             //先在唯一ID中查找
             var spawnMatchId = string.Empty;
@@ -1555,7 +1630,8 @@ public class LteData
 
             // 消耗组，第1层寻找
             var inputGroup = copyDic[key][titleList.IndexOf("消耗ID组")];
-            var inputArray = inputGroup.Split("#");
+            if (string.IsNullOrEmpty(inputGroup)) continue;
+            var inputArray = inputGroup.Split('#');
 
             for (int i = 0; i < inputArray.Length; i++)
             {
@@ -1571,6 +1647,7 @@ public class LteData
                     continue;
                 }
 
+                if (!copyDic.ContainsKey(findTargetId)) continue;
                 var findTargetType = copyDic[findTargetId][titleList.IndexOf("寻找类型")];
                 var findTargetDetailType = copyDic[findTargetId][titleList.IndexOf("寻找细类")];
 
@@ -1712,13 +1789,13 @@ public class LteData
         var findTargetDetailTypeIndex = titleList.IndexOf("寻找细类");
         var findTargetTypeIndex = titleList.IndexOf("寻找类型");
 
-        var findTargetNickName = baseDic[findTargetId][titleList.IndexOf("代号")];
+        if (!baseDic.ContainsKey(findTargetId))
+        { findTips = string.Empty; return (string.Empty, string.Empty); }
 
+        var findTargetNickName = SafeGet(baseDic, findTargetId, titleList.IndexOf("代号"));
         var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName);
-
         var targetTypeIndex = titleList.IndexOf("类型");
-
-        var targetType = baseDic[findTargetId][targetTypeIndex];
+        var targetType = SafeGet(baseDic, findTargetId, targetTypeIndex);
 
         if (findRankDic.TryGetValue(targetType, out var findTargetRankList))
         {
@@ -1752,9 +1829,9 @@ public class LteData
                 if (rankLinks1.hasFind != "1")
                 {
                     var target2Id = rankLinks1.targetId;
-                    if (target2Id == findTargetId)
-                        continue;
-                    var target2Type = baseDic[target2Id][targetTypeIndex];
+                    if (target2Id == findTargetId) continue;
+                    if (!baseDic.ContainsKey(target2Id)) continue;
+                    var target2Type = SafeGet(baseDic, target2Id, targetTypeIndex);
                     if (findRankDic.TryGetValue(target2Type, out var findTarget2RankList))
                     {
                         var findRankLinksTemp = FindRankLinks(
@@ -1932,14 +2009,11 @@ public class LteData
                 int itemCount = 0;
                 foreach (var findTargetId3 in matchedIDs)
                 {
-                    if (findTargetId3 != string.Empty)
+                    if (findTargetId3 != string.Empty && baseDic.ContainsKey(findTargetId3))
                     {
-                        var findTargetType3 = baseDic[findTargetId3][titleList.IndexOf("寻找类型")];
-                        var findTargetDetailType3 = baseDic[findTargetId3][
-                            titleList.IndexOf("寻找细类")
-                        ];
-
-                        var findTargetNickName3 = baseDic[findTargetId3][titleList.IndexOf("代号")];
+                        var findTargetType3 = SafeGet(baseDic, findTargetId3, titleList.IndexOf("寻找类型"));
+                        var findTargetDetailType3 = SafeGet(baseDic, findTargetId3, titleList.IndexOf("寻找细类"));
+                        var findTargetNickName3 = SafeGet(baseDic, findTargetId3, titleList.IndexOf("代号"));
 
                         var findTaregtfieldLinks3 = FieldGroupLinks(
                             fieldGroupDic,
@@ -2054,9 +2128,9 @@ public class LteData
             {
                 findLinks += "{" + rankLinks.targetFindType + "," + rankLinks.targetId + "},";
             }
-            if (fieldGroupDic != null)
+            if (fieldGroupDic != null && baseDic.ContainsKey(rankLinks.targetId))
             {
-                var findTargetNickName = baseDic[rankLinks.targetId][titleList.IndexOf("代号")];
+                var findTargetNickName = SafeGet(baseDic, rankLinks.targetId, titleList.IndexOf("代号"));
 
                 var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName);
 
@@ -2086,7 +2160,8 @@ public class LteData
     {
         var findItemListTuple = new List<(string, string, string, string)>();
 
-        var targetType = baseDic[findTargetId][targetTypeIndex];
+        if (!baseDic.ContainsKey(findTargetId)) return findItemListTuple;
+        var targetType = SafeGet(baseDic, findTargetId, targetTypeIndex);
 
         // 优先级寻找
         foreach (var findTargetRank in findTargetRankList.Skip(1))
@@ -2344,8 +2419,10 @@ public class LteData
             MessageBox.Show("LTE【基础】中的名称表-基础不存在");
             return;
         }
-        object[,] baseArray = baseList.DataBodyRange.Value2;
-        object[,] baseTitleArray = baseList.HeaderRowRange.Value2;
+        object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
+        if (baseArray == null) return;
+        if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
+        { MessageBox.Show("LTE【基础】标题行读取失败"); return; }
 
         var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
         if (fieldGroupList == null)
@@ -2353,7 +2430,8 @@ public class LteData
             MessageBox.Show("#道具信息中的名称【道具信息】不存在");
             return;
         }
-        object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
+        object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
+        if (fieldGroupArray == null) return;
 
         //基础数据修改依赖数据
         var listObjectsDic = PubMetToExcel.GetExcelListObjects(
@@ -2361,8 +2439,10 @@ public class LteData
             "#【A-LTE】数值大纲.xlsx",
             "#各类枚举"
         );
-        object[,] taskDataTypeArray = listObjectsDic["任务类型"];
-        object[,] dataTypeArray = listObjectsDic["数据类型"];
+        object[,] taskDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "任务类型");
+        if (taskDataTypeArray == null) return;
+        object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
+        if (dataTypeArray == null) return;
 
         // 寻找优先级数据
         var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
@@ -2370,7 +2450,8 @@ public class LteData
             "#【A-LTE】数值大纲.xlsx",
             "#寻找优先级"
         );
-        var findRankDataArray = findRanklistObjectsDic["寻找方案"];
+        var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
+        if (findRankDataArray == null) return;
 
         //任务数据整理
         var copyTaskData = TaskData(
@@ -2461,8 +2542,10 @@ public class LteData
             MessageBox.Show("LTE【基础】中的名称表-基础不存在");
             return;
         }
-        object[,] baseArray = baseList.DataBodyRange.Value2;
-        object[,] baseTitleArray = baseList.HeaderRowRange.Value2;
+        object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
+        if (baseArray == null) return;
+        if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
+        { MessageBox.Show("LTE【基础】标题行读取失败"); return; }
 
         var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
         if (fieldGroupList == null)
@@ -2470,7 +2553,8 @@ public class LteData
             MessageBox.Show("#道具信息中的名称【道具信息】不存在");
             return;
         }
-        object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
+        object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
+        if (fieldGroupArray == null) return;
 
         //基础数据修改依赖数据
         var listObjectsDic = PubMetToExcel.GetExcelListObjects(
@@ -2478,8 +2562,10 @@ public class LteData
             "#【A-LTE】数值大纲.xlsx",
             "#各类枚举"
         );
-        object[,] taskDataTypeArray = listObjectsDic["任务类型"];
-        object[,] dataTypeArray = listObjectsDic["数据类型"];
+        object[,] taskDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "任务类型");
+        if (taskDataTypeArray == null) return;
+        object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
+        if (dataTypeArray == null) return;
 
         // 寻找优先级数据
         var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
@@ -2487,7 +2573,8 @@ public class LteData
             "#【A-LTE】数值大纲.xlsx",
             "#寻找优先级"
         );
-        var findRankDataArray = findRanklistObjectsDic["寻找方案"];
+        var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
+        if (findRankDataArray == null) return;
 
         //任务数据整理
         var copyTaskData = TaskData(
@@ -2673,7 +2760,7 @@ public class LteData
                 var findLinks = findLinksGroup.findLinks;
                 var findLinks31 = findLinksGroup.findLinks31;
 
-                taskTargetMapName = taskTargetMapName.Split("-")[0];
+                taskTargetMapName = MapPrefix(taskTargetMapName);
                 var match = DigitsRegex.Match(taskTargetMapName);
                 var taskTargetMapId = match.Success ? match.Value : "0";
 
@@ -2748,7 +2835,7 @@ public class LteData
                 var findSubLinks = findSubLinksGroup.findLinks;
                 var findSubLinks31 = findSubLinksGroup.findLinks31;
 
-                taskSubTargetMapName = taskSubTargetMapName.Split("-")[0];
+                taskSubTargetMapName = MapPrefix(taskSubTargetMapName);
                 var match = DigitsRegex.Match(taskSubTargetMapName);
                 var taskSubTargetMapId = match.Success ? match.Value : "0";
 
@@ -3019,8 +3106,10 @@ public class LteData
             MessageBox.Show("LTE【基础】中的名称表-基础不存在");
             return;
         }
-        object[,] baseArray = baseList.DataBodyRange.Value2;
-        object[,] baseTitleArray = baseList.HeaderRowRange.Value2;
+        object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
+        if (baseArray == null) return;
+        if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
+        { MessageBox.Show("LTE【基础】标题行读取失败"); return; }
 
         var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
         if (fieldGroupList == null)
@@ -3028,7 +3117,8 @@ public class LteData
             MessageBox.Show("#道具信息中的名称【道具信息】不存在");
             return;
         }
-        object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
+        object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
+        if (fieldGroupArray == null) return;
 
         //基础数据修改依赖数据
         var listObjectsDic = PubMetToExcel.GetExcelListObjects(
@@ -3037,8 +3127,10 @@ public class LteData
             "#各类枚举"
         );
 
-        object[,] fieldDataTypeArray = listObjectsDic["地组类型"];
-        object[,] dataTypeArray = listObjectsDic["数据类型"];
+        object[,] fieldDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "地组类型");
+        if (fieldDataTypeArray == null) return;
+        object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
+        if (dataTypeArray == null) return;
 
         // 寻找优先级数据
         var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
@@ -3046,7 +3138,8 @@ public class LteData
             "#【A-LTE】数值大纲.xlsx",
             "#寻找优先级"
         );
-        var findRankDataArray = findRanklistObjectsDic["寻找方案"];
+        var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
+        if (findRankDataArray == null) return;
 
         //地组数据整理
         var copyFiledData = FiledData(
@@ -3301,12 +3394,12 @@ public class LteData
                 fieldConditon = fieldFix.fixData;
                 fieldFindId = fieldFix.findData;
                 var fieldConditonTargetId = fieldFix.fieldConditonTargetId;
+                if (string.IsNullOrEmpty(fieldConditonTargetId) || !baseDic.ContainsKey(fieldConditonTargetId))
+                    goto SkipFieldTarget;
 
                 //目标寻找关系
-                var findTargetType = baseDic[fieldConditonTargetId][titleList.IndexOf("寻找类型")];
-                var findTargetDetailType = baseDic[fieldConditonTargetId][
-                    titleList.IndexOf("寻找细类")
-                ];
+                var findTargetType = SafeGet(baseDic, fieldConditonTargetId, titleList.IndexOf("寻找类型"));
+                var findTargetDetailType = SafeGet(baseDic, fieldConditonTargetId, titleList.IndexOf("寻找细类"));
 
                 var findLinksGroup = FindLinks(
                     findTargetDetailType,
@@ -3322,8 +3415,8 @@ public class LteData
                 findLinks = findLinksGroup.findLinks;
                 var findLinks31 = findLinksGroup.findLinks31;
 
-                var taskTargetMapName = baseDic[fieldConditonTargetId][titleList.IndexOf("首次出现")];
-                taskTargetMapName = taskTargetMapName.Split("-")[0];
+                var taskTargetMapName = SafeGet(baseDic, fieldConditonTargetId, titleList.IndexOf("首次出现"));
+                taskTargetMapName = MapPrefix(taskTargetMapName);
                 var match = DigitsRegex.Match(taskTargetMapName);
                 var taskTargetMapId = match.Success ? match.Value : "0";
 
@@ -3339,6 +3432,7 @@ public class LteData
                     + "{20,\"UILteMapEntrance\","
                     + taskTargetMapId
                     + "},{8,9999}";
+                SkipFieldTarget: ;
             }
 
             // 消耗寻找
@@ -3349,10 +3443,10 @@ public class LteData
 
             string findLinks2 = string.Empty;
 
-            if (fieldFindId2 != fieldFindId && fieldCostTarget != string.Empty)
+            if (fieldFindId2 != null && fieldFindId2 != fieldFindId && fieldCostTarget != string.Empty && baseDic.ContainsKey(fieldFindId2))
             {
-                var findTarget2Type = baseDic[fieldFindId2][titleList.IndexOf("寻找类型")];
-                var findTarget2DetailType = baseDic[fieldFindId2][titleList.IndexOf("寻找细类")];
+                var findTarget2Type = SafeGet(baseDic, fieldFindId2, titleList.IndexOf("寻找类型"));
+                var findTarget2DetailType = SafeGet(baseDic, fieldFindId2, titleList.IndexOf("寻找细类"));
 
                 var findLinks2Group = FindLinks(
                     findTarget2DetailType,
@@ -3369,7 +3463,7 @@ public class LteData
                 var findLinks231 = findLinks2Group.findLinks31;
 
                 var taskTarget2MapName = baseDic[fieldFindId2][titleList.IndexOf("首次出现")];
-                taskTarget2MapName = taskTarget2MapName.Split("-")[0];
+                taskTarget2MapName = MapPrefix(taskTarget2MapName);
                 var match2 = DigitsRegex.Match(taskTarget2MapName);
                 var taskTarget2MapId = match2.Success ? match2.Value : "0";
 

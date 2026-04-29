@@ -1360,6 +1360,7 @@ public static class PubMetToExcel
         }
         else
         {
+            if (twoDimensionalList.Count == 0) return flattenedList;
             int columnCount = twoDimensionalList[0].Count;
             for (int col = 0; col < columnCount; col++)
             {
@@ -1396,10 +1397,8 @@ public static class PubMetToExcel
     //二维List转二维数组
     public static object[,] ConvertListToArray(List<List<object>> listOfLists)
     {
-        // 获取行数
         var rowCount = listOfLists.Count;
-
-        // 获取最大列数（找出最长的子列表）
+        if (rowCount == 0) return new object[0, 0];
         var colCount = listOfLists.Max(innerList => innerList.Count);
 
         // 初始化二维数组
@@ -1422,10 +1421,8 @@ public static class PubMetToExcel
 
     public static object[,] ConvertListToArray(List<List<string>> listOfLists)
     {
-        // 获取行数
         var rowCount = listOfLists.Count;
-
-        // 获取最大列数（找出最长的子列表）
+        if (rowCount == 0) return new object[0, 0];
         var colCount = listOfLists.Max(innerList => innerList.Count);
 
         // 初始化二维数组
@@ -1645,6 +1642,7 @@ public static class PubMetToExcel
         for (int i = 0; i < array.GetLength(0); i++)
         {
             string key = array[i, 0]?.ToString();
+            if (string.IsNullOrEmpty(key)) continue;
 
             var row = new List<string>();
             for (int j = 0; j < array.GetLength(1); j++)
@@ -1660,7 +1658,8 @@ public static class PubMetToExcel
         var dict = new Dictionary<string, string>();
         for (int i = 0; i < array.GetLength(0); i++)
         {
-            string key = array[i, 0].ToString();
+            string key = array[i, 0]?.ToString();
+            if (string.IsNullOrEmpty(key)) continue;
 
             string row = String.Empty;
             for (int j = 0; j < array.GetLength(1); j++)
@@ -1711,7 +1710,8 @@ public static class PubMetToExcel
         var dict = new Dictionary<string, string>();
         for (int i = 1; i <= array.GetLength(0); i++)
         {
-            string key = array[i, 1].ToString();
+            string key = array[i, 1]?.ToString();
+            if (string.IsNullOrEmpty(key)) continue;
 
             string row = String.Empty;
             for (int j = 1; j <= array.GetLength(1); j++)
@@ -1729,7 +1729,8 @@ public static class PubMetToExcel
         var dict = new Dictionary<string, List<string>>();
         for (int j = 1; j <= array.GetLength(1); j++)
         {
-            string key = array[1, j].ToString();
+            string key = array[1, j]?.ToString();
+            if (string.IsNullOrEmpty(key)) continue;
 
             var col = new List<string>();
             for (int i = 1; i <= array.GetLength(0); i++)

@@ -17,26 +17,52 @@ namespace NumDesTools.UI;
 
 public partial class ConflictRowItem : UserControl
 {
-    // 由 ExcelConflictWindow 在刷新列表前设置，所有行共享同一套列宽
+    // 过滤后的冲突列宽（Modified行用）
     public static double[]? CurrentSheetColWidths { get; set; }
 
-    // 主窗口注入：行内滚动时同步 MetaScroll + SharedHScrollBar
-    public static Action<double>? OnScrollOffsetChanged { get; set; }
+    // 全量列宽（OnlyOurs/OnlyTheirs行用，不受隐藏无冲突列影响）
+    public static double[]? AllSheetColWidths { get; set; }
 
-    // 主窗口注入：列宽总量变化时更新共享滚动条 Maximum
-    public static Action<double>? OnTotalWidthChanged { get; set; }
+    // null = 显示全部列；有值 = 仅显示这些列（隐藏无冲突列模式）
+    public static List<string>? VisibleColumns { get; set; }
 
-    // 活跃实例集合，供主窗口共享滚动条驱动所有行
-    private static readonly List<ConflictRowItem> _activeItems = [];
+    // 冲突行（Modified）滚动回调
+    public static Action<double>? OnConflictScrollOffsetChanged { get; set; }
+    public static Action<double>? OnConflictTotalWidthChanged   { get; set; }
 
-    // 当前sheet的默认滚动位置，新加载的行自动定位到冲突列
+    // 新增/删除行（OnlyOurs/OnlyTheirs）滚动回调
+    public static Action<double>? OnRowsScrollOffsetChanged { get; set; }
+    public static Action<double>? OnRowsTotalWidthChanged   { get; set; }
+
+    // 兼容旧调用（同时触发两路）
+    public static Action<double>? OnScrollOffsetChanged
+    {
+        set { OnConflictScrollOffsetChanged = value; OnRowsScrollOffsetChanged = value; }
+    }
+    public static Action<double>? OnTotalWidthChanged
+    {
+        set { OnConflictTotalWidthChanged = value; OnRowsTotalWidthChanged = value; }
+    }
+
+    // 活跃实例集合，按类型分开（修改行 vs 新增/删除行）
+    private static readonly List<ConflictRowItem> _conflictItems = [];
+    private static readonly List<ConflictRowItem> _rowItems      = [];
+    private bool _isModifiedRow;
+
+    // 当前sheet的默认滚动位置
     public static double InitialScrollOffset { get; set; }
+    public static double InitialRowsScrollOffset { get; set; }
 
     public static void SetGlobalScrollOffset(double offset)
     {
         InitialScrollOffset = offset;
-        foreach (var item in _activeItems)
-            item.ApplyScrollOffset(offset);
+        foreach (var item in _conflictItems) item.ApplyScrollOffset(offset);
+    }
+
+    public static void SetGlobalRowsScrollOffset(double offset)
+    {
+        InitialRowsScrollOffset = offset;
+        foreach (var item in _rowItems) item.ApplyScrollOffset(offset);
     }
 
     private void ApplyScrollOffset(double offset)
@@ -86,14 +112,48 @@ public partial class ConflictRowItem : UserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
-        Loaded   += (_, _) => { if (!_activeItems.Contains(this)) _activeItems.Add(this); };
-        Unloaded += (_, _) => _activeItems.Remove(this);
+        Loaded += (_, _) =>
+        {
+            var list = _isModifiedRow ? _conflictItems : _rowItems;
+            if (!list.Contains(this)) list.Add(this);
+        };
+        Unloaded += (_, _) =>
+        {
+            _conflictItems.Remove(this);
+            _rowItems.Remove(this);
+        };
+
+        // 注册一次，用实例字段 _isModifiedRow 和 _syncGuard 防重入
+        OursScroll.ScrollChanged   += OnOursScrollChanged;
+        TheirsScroll.ScrollChanged += OnTheirsScrollChanged;
+    }
+
+    private bool _syncGuard;
+
+    private void OnOursScrollChanged(object s, ScrollChangedEventArgs ev)
+    {
+        if (ev.HorizontalChange == 0 || _syncGuard) return;
+        _syncGuard = true;
+        TheirsScroll.ScrollToHorizontalOffset(ev.HorizontalOffset);
+        _syncGuard = false;
+        if (_isModifiedRow) OnConflictScrollOffsetChanged?.Invoke(ev.HorizontalOffset);
+        else                OnRowsScrollOffsetChanged?.Invoke(ev.HorizontalOffset);
+    }
+
+    private void OnTheirsScrollChanged(object s, ScrollChangedEventArgs ev)
+    {
+        if (ev.HorizontalChange == 0 || _syncGuard) return;
+        _syncGuard = true;
+        OursScroll.ScrollToHorizontalOffset(ev.HorizontalOffset);
+        _syncGuard = false;
+        if (_isModifiedRow) OnConflictScrollOffsetChanged?.Invoke(ev.HorizontalOffset);
+        else                OnRowsScrollOffsetChanged?.Invoke(ev.HorizontalOffset);
     }
 
     private void ApplyInitialScrollAfterLayout()
     {
-        if (InitialScrollOffset > 0)
-            ApplyScrollOffset(InitialScrollOffset);
+        var offset = _isModifiedRow ? InitialScrollOffset : InitialRowsScrollOffset;
+        if (offset > 0) ApplyScrollOffset(offset);
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -104,6 +164,15 @@ public partial class ConflictRowItem : UserControl
 
     private void Render(RowConflict rc)
     {
+        _isModifiedRow = rc.DiffType == RowDiffType.Modified;
+        // 更新列表归属（DataContext 复用时 DiffType 可能变化）
+        if (IsLoaded)
+        {
+            _conflictItems.Remove(this);
+            _rowItems.Remove(this);
+            var list = _isModifiedRow ? _conflictItems : _rowItems;
+            if (!list.Contains(this)) list.Add(this);
+        }
         RowKeyText.Text = rc.RowKey;
         DiffTypeBadge.Text = rc.DiffTypeBadge;
 
@@ -152,21 +221,38 @@ public partial class ConflictRowItem : UserControl
             RowChoiceTheirsRb.SetBinding(CheckBox.IsCheckedProperty, bindTheirs);
         }
 
-        var cols = rc.AllColumns.Count > 0 ? rc.AllColumns : DeriveColumns(rc);
+        var allCols = rc.AllColumns.Count > 0 ? rc.AllColumns : DeriveColumns(rc);
+        List<string> cols;
+        double[] colWidths;
+
+        if (rc.DiffType == RowDiffType.Modified && VisibleColumns != null && CurrentSheetColWidths != null)
+        {
+            // Modified行：只显示有冲突的列，用过滤后的列宽
+            cols      = VisibleColumns;
+            colWidths = CurrentSheetColWidths;
+        }
+        else
+        {
+            // OnlyOurs/OnlyTheirs行：显示全量列，用全量列宽
+            cols      = allCols;
+            var widths = AllSheetColWidths ?? CurrentSheetColWidths;
+            colWidths = (widths != null && widths.Length >= cols.Count)
+                ? widths
+                : FallbackColWidths(cols, rc);
+        }
+
         if (cols.Count == 0)
         {
             OursScroll.Visibility = TheirsScroll.Visibility = Visibility.Collapsed;
             return;
         }
-
-        var sharedWidths = CurrentSheetColWidths;
-        var colWidths = (sharedWidths != null && sharedWidths.Length >= cols.Count)
-            ? sharedWidths
-            : FallbackColWidths(cols, rc);
         var diffCols = new HashSet<string>(rc.Cells.Select(c => c.ColName), StringComparer.Ordinal);
 
-        OnTotalWidthChanged?.Invoke(colWidths.Sum());
-        SyncScroll(OursScroll, TheirsScroll);
+        var totalWidth = colWidths.Sum();
+        if (isModified)
+            OnConflictTotalWidthChanged?.Invoke(totalWidth);
+        else
+            OnRowsTotalWidthChanged?.Invoke(totalWidth);
 
         // OURS 行
         OursScroll.Visibility = Visibility.Visible;
@@ -371,25 +457,6 @@ public partial class ConflictRowItem : UserControl
                 Refresh();
         };
         return container;
-    }
-
-    private static void SyncScroll(ScrollViewer ours, ScrollViewer theirs)
-    {
-        theirs.ScrollChanged -= OnTheirsScrollChanged;
-        theirs.ScrollChanged += OnTheirsScrollChanged;
-        ours.ScrollChanged   -= OnOursScrollChanged;
-        ours.ScrollChanged   += OnOursScrollChanged;
-
-        void OnTheirsScrollChanged(object s, ScrollChangedEventArgs ev)
-        {
-            ours.ScrollToHorizontalOffset(ev.HorizontalOffset);
-            OnScrollOffsetChanged?.Invoke(ev.HorizontalOffset);
-        }
-        void OnOursScrollChanged(object s, ScrollChangedEventArgs ev)
-        {
-            theirs.ScrollToHorizontalOffset(ev.HorizontalOffset);
-            OnScrollOffsetChanged?.Invoke(ev.HorizontalOffset);
-        }
     }
 
     private static List<string> DeriveColumns(RowConflict rc)

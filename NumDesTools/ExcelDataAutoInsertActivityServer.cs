@@ -92,8 +92,9 @@ public static class ExcelDataAutoInsertActivityServer
                         var activityCondition = "";
                         if (activityName.Contains("："))
                         {
-                            activityName = mergeValue.ToString().Split("：")[1];
-                            activityCondition = mergeValue.ToString().Split("：")[0];
+                            var parts = activityName.Split("：");
+                            activityCondition = parts[0];
+                            activityName = parts.Length > 1 ? parts[1] : string.Empty;
                         }
 
                         sourceData.Add(
@@ -119,8 +120,9 @@ public static class ExcelDataAutoInsertActivityServer
                     var activityCondition = "";
                     if (activityName.Contains("："))
                     {
-                        activityName = cell.Value.ToString().Split("：")[1];
-                        activityCondition = cell.Value.ToString().Split("：")[0];
+                        var parts = activityName.Split("：");
+                        activityCondition = parts[0];
+                        activityName = parts.Length > 1 ? parts[1] : string.Empty;
                     }
                     sourceData.Add(
                         (
@@ -358,6 +360,7 @@ public static class ExcelDataAutoInsertActivityServer
             MessageBox.Show("活动枚举 中的名称表-【活动枚举】不存在");
             return;
         }
+        if (baseList.DataBodyRange == null) { MessageBox.Show("活动枚举表无数据行"); return; }
         object[,] baseArray = baseList.DataBodyRange.Value2;
         var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseArray);
 
