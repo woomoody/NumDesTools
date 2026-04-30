@@ -254,6 +254,7 @@ public static class ActivityConfigTester
 
         NumDesAddIn.App.StatusBar = false;
         ErrorLogCtp.DisposeCtp();
+        PluginLog.Write(report.ToString());
         ErrorLogCtp.CreateCtpNormal(report.ToString());
 
         MessageBox.Show(errorCount > 0

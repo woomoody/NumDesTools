@@ -164,7 +164,7 @@ public partial class ConflictRowItem : UserControl
 
     private void Render(RowConflict rc)
     {
-        _isModifiedRow = rc.DiffType == RowDiffType.Modified;
+        _isModifiedRow = rc.DiffType != RowDiffType.OnlyOurs && rc.DiffType != RowDiffType.OnlyTheirs;
         // 更新列表归属（DataContext 复用时 DiffType 可能变化）
         if (IsLoaded)
         {
@@ -225,20 +225,28 @@ public partial class ConflictRowItem : UserControl
         List<string> cols;
         double[] colWidths;
 
-        if (rc.DiffType == RowDiffType.Modified && VisibleColumns != null && CurrentSheetColWidths != null)
+        if (isOnlyOurs || isOnlyTheirs)
         {
-            // Modified行：只显示有冲突的列，用过滤后的列宽
-            cols      = VisibleColumns;
-            colWidths = CurrentSheetColWidths;
-        }
-        else
-        {
-            // OnlyOurs/OnlyTheirs行：显示全量列，用全量列宽
+            // 新增/删除行：始终显示全量列，用全量列宽
             cols      = allCols;
             var widths = AllSheetColWidths ?? CurrentSheetColWidths;
             colWidths = (widths != null && widths.Length >= cols.Count)
                 ? widths
                 : FallbackColWidths(cols, rc);
+        }
+        else
+        {
+            // Modified / Same 行：受隐藏无冲突列影响，与列头对齐
+            if (VisibleColumns != null && CurrentSheetColWidths != null)
+            {
+                cols      = VisibleColumns;
+                colWidths = CurrentSheetColWidths;
+            }
+            else
+            {
+                cols      = allCols;
+                colWidths = CurrentSheetColWidths ?? FallbackColWidths(cols, rc);
+            }
         }
 
         if (cols.Count == 0)
@@ -247,12 +255,6 @@ public partial class ConflictRowItem : UserControl
             return;
         }
         var diffCols = new HashSet<string>(rc.Cells.Select(c => c.ColName), StringComparer.Ordinal);
-
-        var totalWidth = colWidths.Sum();
-        if (isModified)
-            OnConflictTotalWidthChanged?.Invoke(totalWidth);
-        else
-            OnRowsTotalWidthChanged?.Invoke(totalWidth);
 
         // OURS 行
         OursScroll.Visibility = Visibility.Visible;

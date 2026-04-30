@@ -1,5 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
 using MiniExcelLibs;
+using NumDesTools;
 
 namespace NumDesTools.Advance
 {
@@ -17,13 +18,13 @@ namespace NumDesTools.Advance
         {
             if (!File.Exists(filePath))
             {
-                Debug.Print($"文件不存在: {filePath}");
+                PluginLog.Verbose($"文件不存在: {filePath}");
                 return;
             }
 
             if (filePath.Contains("#"))
             {
-                Debug.Print($"[#]文件，跳过: {filePath}");
+                PluginLog.Verbose($"[#]文件，跳过: {filePath}");
                 return;
             }
 
@@ -36,7 +37,7 @@ namespace NumDesTools.Advance
             // 确保元数据表存在
             CreateMetadataTable(connection);
 
-            Debug.Print($"更新文件: {filePath} (模式: {updateMode})");
+            PluginLog.Verbose($"更新文件: {filePath} (模式: {updateMode})");
             UpdateSingleExcelFile(connection, filePath, updateMode);
 
             // 验证行号映射
@@ -70,7 +71,7 @@ namespace NumDesTools.Advance
                 using var connection = new SqliteConnection($"Data Source={dbPath}");
                 connection.Open();
                 CreateMetadataTable(connection);
-                Debug.Print($"创建新数据库: {dbPath}");
+                PluginLog.Verbose($"创建新数据库: {dbPath}");
             }
         }
 
@@ -89,7 +90,7 @@ namespace NumDesTools.Advance
                 {
                     if (sheetName.Contains("#"))
                     {
-                        Debug.Print($"[#]工作表，跳过: {sheetName} in file {filePath}");
+                        PluginLog.Verbose($"[#]工作表，跳过: {sheetName} in file {filePath}");
                         continue;
                     }
 
@@ -100,12 +101,12 @@ namespace NumDesTools.Advance
 
                     if (tableExists)
                     {
-                        Debug.Print($"表已存在，执行更新: {tableName}");
+                        PluginLog.Verbose($"表已存在，执行更新: {tableName}");
                         UpdateExistingTable(connection, tableName, filePath, sheetName, updateMode);
                     }
                     else
                     {
-                        Debug.Print($"表不存在，创建新表: {tableName}");
+                        PluginLog.Verbose($"表不存在，创建新表: {tableName}");
                         ProcessSingleExcelFile(connection, filePath); // 使用原有的创建逻辑
                     }
 
@@ -115,7 +116,7 @@ namespace NumDesTools.Advance
             }
             catch (Exception ex)
             {
-                Debug.Print($"更新文件 {filePath} 失败: {ex.Message}");
+                PluginLog.Write($"更新文件 {filePath} 失败: {ex.Message}");
             }
         }
 
@@ -150,7 +151,7 @@ namespace NumDesTools.Advance
 
                 if (rows.Count == 0)
                 {
-                    Debug.Print($"Excel文件为空，跳过更新: {filePath}");
+                    PluginLog.Verbose($"Excel文件为空，跳过更新: {filePath}");
                     return;
                 }
 
@@ -172,11 +173,11 @@ namespace NumDesTools.Advance
                     InsertDataWithTypes(connection, tableName, rows, columnTypes);
                 }
 
-                Debug.Print($"表 {tableName} 更新完成，行数: {rows.Count}");
+                PluginLog.Verbose($"表 {tableName} 更新完成，行数: {rows.Count}");
             }
             catch (Exception ex)
             {
-                Debug.Print($"更新表 {tableName} 失败: {ex.Message}");
+                PluginLog.Write($"更新表 {tableName} 失败: {ex.Message}");
                 throw;
             }
         }
@@ -197,12 +198,12 @@ namespace NumDesTools.Advance
                     var alterSql = $"ALTER TABLE [{tableName}] ADD COLUMN [{column}] {MapTypeToSqliteString(newColumnTypes[column])}";
                     using var command = new SqliteCommand(alterSql, connection);
                     command.ExecuteNonQuery();
-                    Debug.Print($"表 {tableName} 添加新列: {column}");
+                    PluginLog.Verbose($"表 {tableName} 添加新列: {column}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.Print($"更新表结构失败 {tableName}: {ex.Message}");
+                PluginLog.Write($"更新表结构失败 {tableName}: {ex.Message}");
             }
         }
 
@@ -224,11 +225,11 @@ namespace NumDesTools.Advance
                 command2.Parameters.AddWithValue("@tableName", tableName);
                 command2.ExecuteNonQuery();
 
-                Debug.Print($"清空表数据: {tableName}");
+                PluginLog.Verbose($"清空表数据: {tableName}");
             }
             catch (Exception ex)
             {
-                Debug.Print($"清空表数据失败 {tableName}: {ex.Message}");
+                PluginLog.Write($"清空表数据失败 {tableName}: {ex.Message}");
             }
         }
 
@@ -260,16 +261,16 @@ namespace NumDesTools.Advance
                 {
                     UpdateSingleExcelFile(connection, filePath, updateMode);
                     successCount++;
-                    Debug.Print($"成功更新文件: {filePath}");
+                    PluginLog.Verbose($"成功更新文件: {filePath}");
                 }
                 catch (Exception ex)
                 {
-                    Debug.Print($"更新文件失败 {filePath}: {ex.Message}");
+                    PluginLog.Verbose($"更新文件失败 {filePath}: {ex.Message}");
                 }
             }
 
             VerifyRowMappings(dbPath);
-            Debug.Print($"批量更新完成: {successCount}/{totalCount} 个文件成功");
+            PluginLog.Write($"批量更新完成: {successCount}/{totalCount} 个文件成功");
         }
 
         #endregion
@@ -401,7 +402,7 @@ namespace NumDesTools.Advance
                 {
                     if (sheetName.Contains("#"))
                     {
-                        Debug.Print($"[#]工作表，跳过: {sheetName} in file {file}");
+                        PluginLog.Verbose($"[#]工作表，跳过: {sheetName} in file {file}");
                         continue;
                     }
                     // 表名格式：文件名_工作表名（不含特殊字符）
@@ -422,7 +423,7 @@ namespace NumDesTools.Advance
             }
             catch (Exception ex)
             {
-                Debug.Print($"处理文件 {file} 失败: {ex.Message}");
+                PluginLog.Verbose($"处理文件 {file} 失败: {ex.Message}");
             }
         }
         private string SanitizeTableName(string name)
@@ -566,7 +567,7 @@ namespace NumDesTools.Advance
             }
             catch (Exception ex)
             {
-                Debug.Print($"存储行号映射失败: {ex.Message}");
+                PluginLog.Verbose($"存储行号映射失败: {ex.Message}");
             }
         }
 
@@ -687,7 +688,7 @@ namespace NumDesTools.Advance
                 // 检查映射行数
                 var mappingCount = GetMappingCount(connection, tableName);
 
-                Debug.Print($"表 {tableName}: 数据行={dataCount}, 映射行={mappingCount}, 状态={(dataCount == mappingCount ? "正常" : "异常")}");
+                PluginLog.Verbose($"表 {tableName}: 数据行={dataCount}, 映射行={mappingCount}, 状态={(dataCount == mappingCount ? "正常" : "异常")}");
             }
         }
 
@@ -804,7 +805,7 @@ namespace NumDesTools.Advance
 
                 if (columnsToSearch.Count == 0)
                 {
-                    Debug.Print($"表 {tableName} 中没有找到指定的列: {string.Join(", ", options.TargetColumns)}");
+                    PluginLog.Write($"表 {tableName} 中没有找到指定的列: {string.Join(", ", options.TargetColumns)}");
                     return results;
                 }
 
@@ -871,7 +872,7 @@ namespace NumDesTools.Advance
             }
             catch (Exception ex)
             {
-                Debug.Print($"搜索表 {tableName} 时出错: {ex.Message}");
+                PluginLog.Verbose($"搜索表 {tableName} 时出错: {ex.Message}");
             }
 
             return results;
@@ -941,7 +942,7 @@ namespace NumDesTools.Advance
             }
             catch (Exception ex)
             {
-                Debug.Print($"获取表 {tableName} 的元数据失败: {ex.Message}");
+                PluginLog.Verbose($"获取表 {tableName} 的元数据失败: {ex.Message}");
             }
 
             return null;
@@ -963,7 +964,7 @@ namespace NumDesTools.Advance
             }
             catch (Exception ex)
             {
-                Debug.Print($"获取表 {tableName} 的列信息失败: {ex.Message}");
+                PluginLog.Verbose($"获取表 {tableName} 的列信息失败: {ex.Message}");
             }
 
             return columns;
@@ -1096,7 +1097,7 @@ namespace NumDesTools.Advance
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"高级搜索表 {tableName} 时出错: {ex.Message}");
+                PluginLog.Verbose($"高级搜索表 {tableName} 时出错: {ex.Message}");
             }
 
             return results;

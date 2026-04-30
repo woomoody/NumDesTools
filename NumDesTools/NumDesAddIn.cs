@@ -321,7 +321,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             && (DateTime.Now - lastTime).TotalMilliseconds < CLICK_DELAY_MS
         )
         {
-            Debug.Print($"{control.Id}1s内有2+次点击，不响应");
+            PluginLog.Verbose($"{control.Id}1s内有2+次点击，不响应");
             return;
         }
 
@@ -349,21 +349,25 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
         else
         {
-            Debug.Print($"未知按钮ID: {control.Id}");
+            PluginLog.Verbose($"未知按钮ID: {control.Id}");
         }
 
         sw.Stop();
         var ts2 = sw.ElapsedMilliseconds;
-        App.ScreenUpdating = true;
         App.Calculation = XlCalculation.xlCalculationAutomatic;
         App.EnableEvents = true;
-        App.StatusBar = $"[执行完成] {control.Tag} 耗时： {(double)ts2 / 1000}s";
-        Debug.Print($"[执行完成] {control.Tag} 耗时： {ts2}ms");
+        // 克隆活动自己管理 ScreenUpdating 和 StatusBar，外层不再覆盖
+        if (control.Id != "ActivityClone")
+        {
+            App.ScreenUpdating = true;
+            App.StatusBar = $"[执行完成] {control.Tag} 耗时： {(double)ts2 / 1000}s";
+        }
+        PluginLog.Write($"[执行完成] {control.Tag} 耗时： {ts2}ms");
     }
 
     private void HandleError(string buttonId, Exception ex, IRibbonControl control)
     {
-        Debug.Print($"按钮 [{buttonId}] 执行失败: {ex.Message}");
+        PluginLog.Write($"按钮 [{buttonId}] 执行失败: {ex.Message}");
         // 可选：禁用问题按钮
         (control.Context as IRibbonUI)?.InvalidateControl(buttonId);
     }
@@ -1040,7 +1044,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     //    }
     //    catch (Exception ex)
     //    {
-    //        Debug.Print($"右键菜单错误: {ex.Message}");
+    //        PluginLog.Write($"右键菜单错误: {ex.Message}");
     //        cancel = true;
     //    }
     //}
@@ -1088,7 +1092,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             if (!wb.Name.Contains("#"))
             {
-                Debug.Print($"{wb.Name}-{wb.Worksheets[1].Name}");
+                PluginLog.Verbose($"{wb.Name}-{wb.Worksheets[1].Name}");
                 var selectSheets = wb.Windows[1].SelectedSheets;
                 if (selectSheets.Count > 1)
                 {
@@ -1249,7 +1253,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             {
                 if (!wb.Name.Contains("#") && !wb.Name.Contains("Config"))
                 {
-                    Debug.Print($"{wb.Name}-{wb.Worksheets[1].Name}");
+                    PluginLog.Verbose($"{wb.Name}-{wb.Worksheets[1].Name}");
                     var wss = wb.Sheets;
                     foreach (Worksheet sheet in wss)
                     {
@@ -2447,7 +2451,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
         catch (COMException ex)
         {
-            Debug.Print("COM Exception: " + ex.Message);
+            PluginLog.Write("COM Exception: " + ex.Message);
             App.StatusBar = "操作失败：" + ex.Message;
         }
     }
@@ -2660,7 +2664,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //        }
         //        catch (Exception ex)
         //        {
-        //            Debug.Print($"Error processing file {fileInfo}: {ex.Message}");
+        //            PluginLog.Write($"Error processing file {fileInfo}: {ex.Message}");
         //        }
         //        finally
         //        {
@@ -2729,7 +2733,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //}
         //else
         //{
-        //    Debug.Print("NoValue");
+        //    PluginLog.Write("NoValue");
         //}
 
 
@@ -3081,7 +3085,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wbName = wb.Name;
         if (!wbName.Contains("#"))
         {
-            Debug.Print($"{wb.Name}-{wb.Worksheets[1].Name}");
+            PluginLog.Verbose($"{wb.Name}-{wb.Worksheets[1].Name}");
             var selectSheets = wb.Windows[1].SelectedSheets;
             if (selectSheets.Count > 1)
             {

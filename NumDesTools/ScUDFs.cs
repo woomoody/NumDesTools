@@ -1121,11 +1121,11 @@ public class ExcelUdf
             // 写入文件
             File.WriteAllText(fullPath, json, Encoding.UTF8);
 
-            Debug.Print($"JSON 文件已保存到: {fullPath}");
+            PluginLog.Write($"JSON 文件已保存到: {fullPath}");
         }
         catch (Exception ex)
         {
-            Debug.Print($"保存 JSON 文件失败: {ex.Message}");
+            PluginLog.Write($"保存 JSON 文件失败: {ex.Message}");
         }
         return json;
     }
@@ -1318,11 +1318,11 @@ public class ExcelUdf
             // 写入文件
             File.WriteAllText(fullPath, json, Encoding.UTF8);
 
-            Debug.Print($"JSON 文件已保存到: {fullPath}");
+            PluginLog.Write($"JSON 文件已保存到: {fullPath}");
         }
         catch (Exception ex)
         {
-            Debug.Print($"保存 JSON 文件失败: {ex.Message}");
+            PluginLog.Write($"保存 JSON 文件失败: {ex.Message}");
         }
         return json;
     }

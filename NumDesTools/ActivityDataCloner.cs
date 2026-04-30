@@ -63,7 +63,8 @@ public static class ActivityDataCloner
         string ExcelName,   // 文件名（含 #SheetName 后缀时拆分处理）
         string LookupField, // 用于定位源行的字段名
         string LookupValue, // 源行在该字段的值
-        bool IsSuspect = false  // 疑似匹配（非标准列），需用户确认
+        bool IsSuspect = false,  // 疑似匹配（非标准列），需用户确认
+        bool IsManual = false    // 来自 manualIdMaps 历史补充，找不到源行时静默跳过
     );
 
     // 探测结果：Certain=标准列精确/前缀匹配，Suspect=非标准列前缀匹配
@@ -71,8 +72,7 @@ public static class ActivityDataCloner
 
     // ── 历史记录 & 手动映射方案 ───────────────────────────────────────────
     private static string HistoryFilePath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                     "NumDesTools", "Config", "clone_history.json");
+        Path.Combine(Path.GetDirectoryName(NumDesAddIn.App.ActiveWorkbook.Path)!, "TablesTools", "AliceConfig", "clone_history.json");
 
     private class CloneHistory
     {
@@ -121,7 +121,15 @@ public static class ActivityDataCloner
 
     internal static void RunDialogWithPrefill(List<UI.CloneIdRow>? prefillRows)
     {
-        var win = new UI.CloneActivityWindow(prefillRows);
+        try { RunDialogWithPrefillInternal(prefillRows); }
+        catch (Exception ex) { PluginLog.Write($"[Clone] UNHANDLED: {ex}"); }
+    }
+
+    private static void RunDialogWithPrefillInternal(List<UI.CloneIdRow>? prefillRows)
+    {
+        var excelPath = NumDesAddIn.App.ActiveWorkbook.Path;
+        PluginLog.Write($"[Clone] RunDialogWithPrefill excelPath={excelPath}");
+        var win = new UI.CloneActivityWindow(prefillRows, excelPath);
         win.ShowDialog();
         if (!win.Confirmed) return;
 
@@ -150,7 +158,8 @@ public static class ActivityDataCloner
                     win.ResultReplaceArt, win.ResultReplaceSubTable,
                     win.ResultSuspectDecisions,
                     win.SavedTableSelections.Count > 0 ? win.SavedTableSelections : null,
-                    win);
+                    win,
+                    win.ResultRemarkDst, win.ResultIncrementRemark);
     }
 
     /// <summary>
@@ -177,8 +186,10 @@ public static class ActivityDataCloner
                            bool? presetReplaceSubTable = null,
                            List<UI.SuspectDecision>? presetSuspect = null,
                            List<UI.TableSelection>? savedTableSelections = null,
-                           UI.CloneActivityWindow? originWindow = null)
+                           UI.CloneActivityWindow? originWindow = null,
+                           string remarkDst = "", bool incrementRemark = true)
     {
+        PluginLog.Write($"[Clone] RunInternal src={string.Join(",", sourceIds)} dst={string.Join(",", targetIds)}");
         if (sourceIds.Count != targetIds.Count || sourceIds.Count == 0) return;
         history ??= LoadHistory();
 
@@ -187,9 +198,9 @@ public static class ActivityDataCloner
         for (int i = 0; i < sourceIds.Count; i++)
             idMap[sourceIds[i].ToString()] = targetIds[i].ToString();
 
-        // 期号：从第一对ID差值推算（若差值>0且<100视为期号步进）
+        // 期号：从第一对ID差值推算（若差值>0且<100视为期号步进）；受 incrementRemark 控制
         int phaseStep = 0;
-        if (targetIds.Count > 0)
+        if (incrementRemark && targetIds.Count > 0)
         {
             var diff = (int)(targetIds[0] - sourceIds[0]);
             if (diff != 0 && Math.Abs(diff) < 100) phaseStep = diff;
@@ -197,20 +208,23 @@ public static class ActivityDataCloner
 
         NumDesAddIn.App.StatusBar = "活动克隆：读取规则...";
         var rules = LoadRules();
+        PluginLog.Write($"[Clone] rules={rules != null}");
         if (rules == null) return;
 
         var excelPath = NumDesAddIn.App.ActiveWorkbook.Path;
 
-        // 增量更新活动目录到 Public.db，供后续扫描使用（比逐文件打开快得多）
-        NumDesAddIn.App.StatusBar = "活动克隆：同步数据库...";
+        // 增量更新前缀索引，供后续扫描使用（仅解析第2列数字前缀，远快于全量 DB 同步）
+        NumDesAddIn.App.StatusBar = "活动克隆：更新前缀索引...";
+        Advance.IdPrefixIndex.Sync(excelPath);
+        // Public.db 保留供手动同步/搜索功能使用，克隆扫描不再依赖它
         var dbPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Public.db");
-        SyncExcelDirToDb(excelPath, dbPath);
         var report = new StringBuilder();
         report.AppendLine("═══════════════ 活动数据克隆报告 ═══════════════");
         report.AppendLine($"时间    ：{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         report.AppendLine($"替换映射：{string.Join("  ", idMap.Select(kv => $"{kv.Key}→{kv.Value}"))}");
-        if (!string.IsNullOrEmpty(remarkKeyword)) report.AppendLine($"备注关键字：{remarkKeyword}");
+        if (!string.IsNullOrEmpty(remarkKeyword)) report.AppendLine($"备注关键字：{remarkKeyword}" + (string.IsNullOrEmpty(remarkDst) ? "" : $" → {remarkDst}"));
+        report.AppendLine($"备注序号自增：{(incrementRemark ? "是" : "否")}");
         report.AppendLine();
 
         // 1. 查第一个源ID确定活动 type
@@ -221,9 +235,11 @@ public static class ActivityDataCloner
             var (t, d) = LookupActivityType(excelPath, sid, report, remarkKeyword);
             if (t >= 0) { activityType = t; activityDataId = d; break; }
         }
+        PluginLog.Write($"[Clone] activityType={activityType} activityDataId={activityDataId}");
         if (activityType < 0)
         {
             ErrorLogCtp.DisposeCtp();
+            PluginLog.Write(report.ToString());
             ErrorLogCtp.CreateCtpNormal(report.ToString());
             return;
         }
@@ -239,8 +255,9 @@ public static class ActivityDataCloner
             ? ActivityTypeMapLoader.LoadTypeTables(xlsxMapPath)
             : null;
 
-        var allTargets = new List<CloneTarget>();
-        var seenKeys   = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var allTargets   = new List<CloneTarget>();
+        var seenKeys     = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // ExcelName|LookupValue
+        var seenSuspects = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // ExcelName（疑似表只加一次）
         foreach (var sid in sourceIds)
         {
             var (_, curDataId) = LookupActivityType(excelPath, sid, new StringBuilder(), remarkKeyword);
@@ -249,25 +266,70 @@ public static class ActivityDataCloner
                                                xlsxMapPath, cachedTypeMap, dbPath);
             foreach (var ct in perTargets)
             {
-                var key = $"{ct.ExcelName}|{ct.LookupValue}";
-                if (seenKeys.Add(key)) allTargets.Add(ct);
+                if (ct.IsSuspect)
+                {
+                    // 疑似表（未配置的扫描结果）：同一文件名只询问并克隆一次
+                    if (seenSuspects.Add(ct.ExcelName)) allTargets.Add(ct);
+                }
+                else
+                {
+                    // 正常表：同一文件名+同一LookupValue才去重（允许不同活动ID各克隆一份）
+                    if (seenKeys.Add($"{ct.ExcelName}|{ct.LookupValue}")) allTargets.Add(ct);
+                }
             }
         }
+        // 2b. 补充 manualIdMaps 中有记录但尚未进入 allTargets 的表
+        // 这些表使用非标准ID前缀（如 Field地组表 用 73601 而非 763601）。
+        // LookupValue 选取规则：
+        //   若 scheme.Src 在本次 idMap 的 keys 中（即当次克隆 src 就是 scheme.Src）→ 用 Src（源行是当期数据）
+        //   否则 → 用 Dst（上次克隆已写入 Dst 行，Dst 就是本次源行）
+        foreach (var (tableName, schemes) in history.ManualIdMaps)
+        {
+            if (allTargets.Any(t => t.ExcelName.Equals(tableName, StringComparison.OrdinalIgnoreCase)))
+                continue; // 已在列表中
+            var filePath = Path.Combine(excelPath, tableName);
+            if (!File.Exists(filePath)) continue;
+            var firstScheme = schemes.FirstOrDefault(s => !string.IsNullOrEmpty(s.Dst) || !string.IsNullOrEmpty(s.Src));
+            if (firstScheme == null) continue;
+            // 用 scheme.Src/Dst 作为探针（这张表用的是异构ID，不能用本次 sourceId 探测）
+            var probeId = firstScheme.Src.Length > 0 ? firstScheme.Src : firstScheme.Dst;
+            var detected = !string.IsNullOrEmpty(probeId)
+                ? DetectLookupField(excelPath, tableName, probeId) : null;
+            var lookupField = detected?.FieldName ?? "__col2";
+            foreach (var scheme in schemes)
+            {
+                // 确定 LookupValue：
+                //   scheme.Src 末尾期号 == 本次任意 sourceId 末尾期号 → 用 Src（当期源行）
+                //   否则 → 用 Dst（上次克隆写入的行即为本次源行）
+                var srcPhase = ExtractPhaseNum(scheme.Src);
+                var useSrc = sourceIds.Any(sid => ExtractPhaseNum(sid.ToString()) == srcPhase);
+                var lookupValue = useSrc ? scheme.Src : scheme.Dst;
+                if (string.IsNullOrEmpty(lookupValue)) continue;
+                var key = $"{tableName}|{lookupValue}";
+                if (!seenKeys.Add(key)) continue;
+                allTargets.Add(new CloneTarget(tableName, lookupField, lookupValue, IsSuspect: false, IsManual: true));
+                report.AppendLine($"  + manualIdMaps 补充：{tableName}  [LookupValue={lookupValue}  {(useSrc ? $"Src={scheme.Src}" : $"Dst={scheme.Dst}（由{scheme.Src}映射而来）")}]");
+            }
+        }
+
+        PluginLog.Write($"[Clone] allTargets={allTargets.Count}");
         if (allTargets.Count == 0)
         {
             ErrorLogCtp.DisposeCtp();
+            PluginLog.Write(report.ToString());
             ErrorLogCtp.CreateCtpNormal(report.ToString());
             return;
         }
 
-        // 3. 疑似表确认：有预设（来自窗口历史）则直接用，否则逐一弹框
+        // 3. 疑似表确认：有预设（来自窗口历史）则直接用，否则逐一弹框，结果写回历史
         var suspectTargets = allTargets.Where(t => t.IsSuspect).ToList();
         if (suspectTargets.Count > 0)
         {
             var suspectMap = presetSuspect?.ToDictionary(d => d.TableName, d => d.Include,
                                  StringComparer.OrdinalIgnoreCase)
                              ?? new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-            var skipped = new List<CloneTarget>();
+            var decisions  = new List<UI.SuspectDecision>();
+            var skipped    = new List<CloneTarget>();
             foreach (var st in suspectTargets)
             {
                 bool include;
@@ -285,9 +347,12 @@ public static class ActivityDataCloner
                         == System.Windows.MessageBoxResult.Yes;
                     report.AppendLine($"  {(include ? "✓" : "✗")} 用户{(include ? "确认" : "跳过")}：{st.ExcelName}");
                 }
+                decisions.Add(new UI.SuspectDecision { TableName = st.ExcelName, Include = include });
                 if (!include) skipped.Add(st);
             }
             foreach (var s in skipped) allTargets.Remove(s);
+            // 把本次决策写回历史，下次同类活动不再重复询问
+            originWindow?.UpdateHistoryWithSuspectDecisions(decisions);
             report.AppendLine();
         }
 
@@ -296,6 +361,7 @@ public static class ActivityDataCloner
         var tableNames = allTargets.Select(t => t.ExcelName).ToList();
         var selWin = new UI.CloneTableSelectionWindow(tableNames, savedTableSelections);
         selWin.ShowDialog();
+        PluginLog.Write($"[Clone] selWin.Confirmed={selWin.Confirmed}");
         if (!selWin.Confirmed) return; // 用户取消
 
         var tableSelResult = selWin.Result;
@@ -305,13 +371,17 @@ public static class ActivityDataCloner
         allTargets = allTargets.Where(t => selectedSet.Contains(t.ExcelName)).ToList();
 
         // 将选择结果回写到来源窗口的历史记录
-        originWindow?.UpdateHistoryWithTableSelections(tableSelResult);
+        PluginLog.Write($"[Clone] UpdateHistoryWithTableSelections...");
+        try { originWindow?.UpdateHistoryWithTableSelections(tableSelResult); }
+        catch (Exception ex) { PluginLog.Write($"[Clone] UpdateHistoryWithTableSelections ERROR: {ex.Message}"); }
+        PluginLog.Write($"[Clone] UpdateHistoryWithTableSelections done, allTargets={allTargets.Count}");
 
         report.AppendLine($"表选择：共 {tableNames.Count} 张，选中 {allTargets.Count} 张，跳过 {tableNames.Count - allTargets.Count} 张");
         if (allTargets.Count == 0)
         {
             report.AppendLine("所有表均已跳过，克隆取消。");
             ErrorLogCtp.DisposeCtp();
+            PluginLog.Write(report.ToString());
             ErrorLogCtp.CreateCtpNormal(report.ToString());
             return;
         }
@@ -330,7 +400,7 @@ public static class ActivityDataCloner
             NumDesAddIn.App.StatusBar =
                 $"活动克隆 [{i + 1}/{total}]：{target.ExcelName}";
             var err = CloneTableRow(excelPath, target, idMap, phaseStep, report, history,
-                                    replaceArtFields, replaceSubTableIds);
+                                    replaceArtFields, replaceSubTableIds, remarkKeyword, remarkDst, originWindow);
             if (err) errorCount++;
         }
 
@@ -338,11 +408,22 @@ public static class ActivityDataCloner
         report.AppendLine();
         report.AppendLine($"═════ 完成：{total} 张表，{errorCount} 个错误 ══════");
 
+        // 先恢复屏幕刷新，再弹 CTP，否则面板不显示（外层 wrapper 的 ScreenUpdating=false 尚未结束）
+        NumDesAddIn.App.ScreenUpdating = true;
         NumDesAddIn.App.StatusBar = errorCount == 0
             ? $"活动克隆完成（{total} 张表）"
             : $"活动克隆完成（{total} 张表，{errorCount} 个错误）";
+        PluginLog.Write($"[Clone] DisposeCtp...");
         ErrorLogCtp.DisposeCtp();
-        ErrorLogCtp.CreateCtpNormal(report.ToString());
+        PluginLog.Write(report.ToString());
+        // 只有出现错误或警告时才弹 CTP 面板，正常完成静默
+        var reportStr = report.ToString();
+        if (errorCount > 0 || reportStr.Contains('❌') || reportStr.Contains('⚠'))
+        {
+            PluginLog.Write($"[Clone] CreateCtpNormal, report len={reportStr.Length}");
+            ErrorLogCtp.CreateCtpNormal(reportStr);
+            PluginLog.Write($"[Clone] CreateCtpNormal done");
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -388,7 +469,7 @@ public static class ActivityDataCloner
 
         for (int row = 3; row <= sheet.Dimension.End.Row; row++)
         {
-            var cellVal = sheet.Cells[row, idCol].Value?.ToString();
+            var cellVal = CellStr(sheet.Cells[row, idCol].Value);
             if (string.IsNullOrEmpty(cellVal)) continue;
 
             bool matched;
@@ -398,7 +479,7 @@ public static class ActivityDataCloner
             }
             else if (useRemark && cellVal.StartsWith(sourcePrefix))
             {
-                var remark = sheet.Cells[row, remarkCol].Value?.ToString() ?? string.Empty;
+                var remark = CellStr(sheet.Cells[row, remarkCol].Value) ?? string.Empty;
                 matched = remark.Contains(remarkKeyword);
             }
             else
@@ -408,8 +489,8 @@ public static class ActivityDataCloner
 
             if (!matched) continue;
 
-            var typeStr = sheet.Cells[row, typeCol].Value?.ToString();
-            var dataStr = sheet.Cells[row, dataCol].Value?.ToString();
+            var typeStr = CellStr(sheet.Cells[row, typeCol].Value);
+            var dataStr = CellStr(sheet.Cells[row, dataCol].Value);
             if (!int.TryParse(typeStr, out var t) || !long.TryParse(dataStr, out var d))
             {
                 report.AppendLine($"❌ 源行 id={cellVal} 的 type/activityID 解析失败");
@@ -486,10 +567,7 @@ public static class ActivityDataCloner
         if (activityType == 2)
         {
             NumDesAddIn.App.StatusBar = $"活动克隆：type=2 扫描关联表...";
-            if (dbPath != null && File.Exists(dbPath))
-                ScanDbForTargets(dbPath, excelPath, activityIdStr, targets, report);
-            else
-                ScanDirectoryForTargets(excelPath, activityIdStr, targets, report);
+            ScanIndexForTargets(excelPath, activityIdStr, targets, report);
         }
         else if (multiTables != null && multiTables.Count > 0)
         {
@@ -514,31 +592,17 @@ public static class ActivityDataCloner
                     : t.ExcelName),
                 StringComparer.OrdinalIgnoreCase);
 
-            var hints = (dbPath != null && File.Exists(dbPath))
-                ? ScanDbForMissingTables(dbPath, excelPath, activityIdStr, configuredFiles, report)
-                : ActivityTypeMapLoader.ScanForMissingTables(excelPath, activityIdStr, configuredFiles, report);
+            var hints = ScanIndexForMissingTables(excelPath, activityIdStr, configuredFiles, report);
 
             if (hints.Count > 0)
             {
-                report.AppendLine($"── 发现 {hints.Count} 张未在配置中的疑似关联表（需确认） ──");
+                report.AppendLine($"── 发现 {hints.Count} 张未在配置中的疑似关联表（待外层确认） ──");
                 foreach (var hint in hints)
                 {
                     var sampleStr = string.Join("  ", hint.Samples.Select(s =>
                         string.IsNullOrEmpty(s.Remark) ? s.Id : $"{s.Id}({s.Remark})"));
-                    var msg = $"发现未配置表：{hint.FileName}\n匹配字段：{hint.MatchedField}\n样本数据：{sampleStr}\n\n是否纳入本次克隆？";
-                    var ans = MessageBox.Show(msg, "未配置关联表",
-                        System.Windows.MessageBoxButton.YesNo,
-                        System.Windows.MessageBoxImage.Question);
-
-                    if (ans == System.Windows.MessageBoxResult.Yes)
-                    {
-                        targets.Add(new(hint.FileName, hint.MatchedField, activityIdStr, IsSuspect: false));
-                        report.AppendLine($"  ✓ 用户纳入：{hint.FileName}（字段={hint.MatchedField}）");
-                    }
-                    else
-                    {
-                        report.AppendLine($"  ✗ 用户跳过：{hint.FileName}");
-                    }
+                    report.AppendLine($"  ? {hint.FileName}  字段={hint.MatchedField}  样本={sampleStr}");
+                    targets.Add(new(hint.FileName, hint.MatchedField, activityIdStr, IsSuspect: true));
                 }
             }
         }
@@ -623,26 +687,33 @@ public static class ActivityDataCloner
 
             // 规则：第2列（key列）前缀匹配 → 确定；其他列匹配 → 疑似
             // 先扫第2列
-            var col2Header = sheet.Cells[2, 2].Value?.ToString() ?? string.Empty;
+            var col2Header = CellStr(sheet.Cells[2, 2].Value) ?? string.Empty;
+            PluginLog.Verbose($"[Detect] {excelName} col2Header={col2Header} endRow={sheet.Dimension.End.Row} lookupValue={lookupValue}");
             if (!_skipFields.Contains(col2Header))
             {
                 for (int row = 3; row <= sheet.Dimension.End.Row; row++)
                 {
-                    var v = sheet.Cells[row, 2].Value?.ToString();
-                    if (v != null && (v == lookupValue || v.StartsWith(lookupValue)))
-                        return new DetectResult(col2Header.Length > 0 ? col2Header : "id", IsSuspect: false);
+                    var v = CellStr(sheet.Cells[row, 2].Value);
+                    if (v.Length > 0 && (v == lookupValue || v.StartsWith(lookupValue)))
+                    {
+                        PluginLog.Verbose($"[Detect] {excelName} col2 HIT row={row} v={v}");
+                        // 列名为空时退用第2列实际内容，仍找不到则记录列号位置用"__col2"占位
+                        var fieldName = col2Header.Length > 0 ? col2Header : "__col2";
+                        return new DetectResult(fieldName, IsSuspect: false);
+                    }
                 }
+                PluginLog.Verbose($"[Detect] {excelName} col2 NO HIT after scanning {sheet.Dimension.End.Row - 2} rows");
             }
 
             // 第2列未命中，扫其余列作为疑似
             for (int col = 3; col <= sheet.Dimension.End.Column; col++)
             {
-                var header = sheet.Cells[2, col].Value?.ToString() ?? string.Empty;
+                var header = CellStr(sheet.Cells[2, col].Value) ?? string.Empty;
                 if (_skipFields.Contains(header)) continue;
 
                 for (int row = 3; row <= sheet.Dimension.End.Row; row++)
                 {
-                    var cellStr = sheet.Cells[row, col].Value?.ToString();
+                    var cellStr = CellStr(sheet.Cells[row, col].Value);
                     if (cellStr != null && (cellStr == lookupValue || cellStr.StartsWith(lookupValue)))
                         return new DetectResult(header, IsSuspect: true);
                 }
@@ -680,14 +751,13 @@ public static class ActivityDataCloner
             if (existingNames.Contains(fileName)) continue;
 
             var detected = DetectLookupField(excelDir, fileName, activityDataId);
-            if (detected == null) { skipped++; continue; }
+            if (detected == null || detected.IsSuspect) { skipped++; continue; }
 
-            targets.Add(new(fileName, detected.FieldName, activityDataId, detected.IsSuspect));
-            if (detected.IsSuspect) suspect++;
-            else certain++;
+            targets.Add(new(fileName, detected.FieldName, activityDataId, IsSuspect: false));
+            certain++;
         }
 
-        report.AppendLine($"全量扫描：确定 {certain} 张，疑似 {suspect} 张，无数据跳过 {skipped} 张");
+        report.AppendLine($"全量扫描：确定 {certain} 张，跳过 {skipped} 张");
     }
 
     // ── DB 加速：增量同步 + 快速扫描 ────────────────────────────────────────────
@@ -705,8 +775,60 @@ public static class ActivityDataCloner
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.Print($"SyncExcelDirToDb failed: {ex.Message}");
+            PluginLog.Write($"[Clone] SyncExcelDirToDb failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// 用 IdPrefixIndex 快速找出含 activityDataId 前缀数据的表（type=2 LTE 全目录扫描）。
+    /// </summary>
+    private static void ScanIndexForTargets(
+        string excelDir, string activityDataId,
+        List<CloneTarget> targets, StringBuilder report)
+    {
+        var existingNames = new HashSet<string>(
+            targets.Select(t => Path.GetFileNameWithoutExtension(t.ExcelName) + ".xlsx"),
+            StringComparer.OrdinalIgnoreCase);
+
+        var candidates = Advance.IdPrefixIndex.FindFiles(activityDataId);
+        int certain = 0, skipped = 0;
+
+        foreach (var baseName in candidates)
+        {
+            if (_alwaysSkipScan.Contains(baseName)) { skipped++; continue; }
+            if (existingNames.Contains(baseName)) { skipped++; continue; }
+
+            var detected = DetectLookupField(excelDir, baseName, activityDataId);
+            if (detected == null || detected.IsSuspect) { skipped++; continue; }
+
+            targets.Add(new(baseName, detected.FieldName, activityDataId, IsSuspect: false));
+            existingNames.Add(baseName);
+            certain++;
+        }
+        report.AppendLine($"索引筛选：命中 {candidates.Count} 张，跳过 {skipped} 张；确定 {certain} 张");
+    }
+
+    /// <summary>
+    /// 用 IdPrefixIndex 快速找出未配置的关联表（替代 ScanForMissingTables 的文件逐一打开）。
+    /// </summary>
+    private static List<ActivityTypeMapLoader.MissingTableHint> ScanIndexForMissingTables(
+        string excelDir, string activityDataId,
+        HashSet<string> configuredFiles, StringBuilder? report)
+    {
+        var candidates = Advance.IdPrefixIndex.FindFiles(activityDataId)
+            .Where(n => !configuredFiles.Contains(n))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (candidates.Count == 0) return [];
+
+        // 把索引未命中的文件加入 configured，让 ScanForMissingTables 只处理候选集
+        var allXlsx = Directory.GetFiles(excelDir, "*.xlsx", SearchOption.TopDirectoryOnly)
+            .Select(Path.GetFileName)
+            .Where(n => !candidates.Contains(n!));
+        var reducedConfigured = new HashSet<string>(configuredFiles, StringComparer.OrdinalIgnoreCase);
+        foreach (var n in allXlsx) reducedConfigured.Add(n!);
+
+        return ActivityTypeMapLoader.ScanForMissingTables(excelDir, activityDataId, reducedConfigured, report);
     }
 
     /// <summary>
@@ -767,20 +889,22 @@ public static class ActivityDataCloner
             return;
         }
 
-        // 对命中文件用 DetectLookupField 读真实 header（row2），确定/疑似判断
+        // 对命中文件用 DetectLookupField 读真实 header（row2），只取第2列确定命中
+        // DB 查询的候选文件可能因为关联引用列而误命中（如 mapTaskGiftID 恰好等于某活动ID），
+        // 只认第2列（主key列）命中为"确定"，其余列命中属于误报，直接跳过
         int certain = 0, skipped = 0;
         foreach (var filePath in candidateFiles)
         {
             var baseName = Path.GetFileName(filePath);
             var detected = DetectLookupField(excelDir, baseName, activityDataId);
-            if (detected == null) { skipped++; continue; }
+            if (detected == null || detected.IsSuspect) { skipped++; continue; }
 
-            targets.Add(new(baseName, detected.FieldName, activityDataId, detected.IsSuspect));
+            targets.Add(new(baseName, detected.FieldName, activityDataId, IsSuspect: false));
             existingNames.Add(baseName);
             certain++;
         }
 
-        report.AppendLine($"DB筛选：命中 {candidateFiles.Count} 张，跳过 {dbSkipped} 张；确定 {certain} 张，疑似 {candidateFiles.Count - certain - skipped} 张");
+        report.AppendLine($"DB筛选：命中 {candidateFiles.Count} 张，跳过 {dbSkipped} 张；确定 {certain} 张");
     }
 
     /// <summary>
@@ -907,7 +1031,8 @@ public static class ActivityDataCloner
 
     private static readonly HashSet<string> _subTableIdFields = new(StringComparer.OrdinalIgnoreCase)
     {
-        "sub_table_id", "subtableid", "sub_id"
+        "sub_table_id", "subtableid", "sub_id",
+        "#_sub_table_id", "_sub_table_id"
     };
 
     private static bool IsSubTableIdField(string header)
@@ -948,7 +1073,7 @@ public static class ActivityDataCloner
                 int scanEnd = Math.Min(sheet.Dimension.End.Row, 52);
                 for (int col = 2; col <= sheet.Dimension.End.Column; col++)
                 {
-                    var header = sheet.Cells[2, col].Value?.ToString() ?? "";
+                    var header = CellStr(sheet.Cells[2, col].Value) ?? "";
 
                     bool wantArt = artSample == null && IsIdField(header) && IsArtField(header);
                     bool wantSub = subSample == null && IsSubTableIdField(header);
@@ -956,7 +1081,7 @@ public static class ActivityDataCloner
 
                     for (int row = 3; row <= scanEnd; row++)
                     {
-                        var v = sheet.Cells[row, col].Value?.ToString();
+                        var v = CellStr(sheet.Cells[row, col].Value);
                         if (v == null) continue;
                         if (!idMap.ContainsKey(v) && !IsKnownPrefix(v, knownSorted)) continue;
 
@@ -992,7 +1117,9 @@ public static class ActivityDataCloner
         string excelDir, CloneTarget target,
         Dictionary<string, string> idMap, int phaseStep,
         StringBuilder report, CloneHistory history,
-        bool replaceArtFields = false, bool replaceSubTableIds = false)
+        bool replaceArtFields = false, bool replaceSubTableIds = false,
+        string remarkKeyword = "", string remarkDst = "",
+        UI.CloneActivityWindow? originWindow = null)
     {
         var (rawName, sheetName) = ParseExcelName(target.ExcelName);
         var path = ResolveFilePath(excelDir, rawName);
@@ -1014,18 +1141,70 @@ public static class ActivityDataCloner
             { report.AppendLine($"❌ {target.ExcelName}  Sheet 为空或不存在"); return true; }
 
 
-            var lookupCol = FindHeaderCol(sheet, target.LookupField);
+            var lookupCol = target.LookupField == "__col2"
+                ? 2
+                : FindHeaderCol(sheet, target.LookupField);
+            PluginLog.Write($"[Clone] {rawName} sheet={sheet.Name} lookupField={target.LookupField} lookupCol={lookupCol} lookupValue={target.LookupValue}");
             if (lookupCol < 0)
             { report.AppendLine($"❌ {target.ExcelName}  找不到列「{target.LookupField}」"); return true; }
 
             var remarkCol = FindHeaderCol(sheet, "#备注");
             var colCount  = sheet.Dimension.End.Column;
 
-            // ── 构建该表的有效映射（全局 idMap + 已保存手动方案）─────────────
+            // ── 构建该表的有效映射（全局 idMap + 已保存手动方案 + 跨sourceId推算）─────────────
             var effectiveMap = new Dictionary<string, string>(idMap, StringComparer.Ordinal);
             if (history.ManualIdMaps.TryGetValue(rawName, out var savedSchemes))
+            {
                 foreach (var s in savedSchemes)
+                {
                     effectiveMap.TryAdd(s.Src, s.Dst);
+                    // 如果 scheme.Dst 就是本次克隆的 LookupValue（即上期已写入的前缀），
+                    // 用 phaseStep 推算出当期→下期的映射并加入 effectiveMap
+                    if (phaseStep != 0
+                        && target.LookupValue.StartsWith(s.Dst, StringComparison.Ordinal)
+                        && long.TryParse(s.Dst, out var dstNum))
+                    {
+                        var nextDst = (dstNum + phaseStep).ToString();
+                        effectiveMap.TryAdd(s.Dst, nextDst);
+                    }
+                }
+
+                // 对 idMap 里其他 oldId→newId 对，尝试用已有 scheme 推算异构前缀
+                // 规则：找 scheme.Src 与某个 idMap key 的最长公共后缀，
+                //       用同样后缀在其他 idMap key 上拼出新的异构前缀
+                foreach (var scheme in savedSchemes)
+                {
+                    foreach (var (baseOld, baseNew) in idMap)
+                    {
+                        // 找 scheme.Src 和 baseOld 的公共后缀长度
+                        int suffixLen = 0;
+                        for (int i = 1; i <= Math.Min(scheme.Src.Length, baseOld.Length); i++)
+                        {
+                            if (scheme.Src[^i] == baseOld[^i]) suffixLen = i;
+                            else break;
+                        }
+                        if (suffixLen < 3) continue; // 公共后缀太短，不可靠
+                        // 对 idMap 里每个不同的 oldId，用相同后缀推算对应异构前缀
+                        foreach (var (otherOld, otherNew) in idMap)
+                        {
+                            if (otherOld == baseOld) continue;
+                            if (!otherOld.EndsWith(baseOld[^suffixLen..])) continue;
+                            var newSrc = otherOld[..^suffixLen] + scheme.Src[^suffixLen..];
+                            // scheme.Dst 和 baseNew 的对应后缀
+                            int dstSuffixLen = 0;
+                            for (int i = 1; i <= Math.Min(scheme.Dst.Length, baseNew.Length); i++)
+                            {
+                                if (scheme.Dst[^i] == baseNew[^i]) dstSuffixLen = i;
+                                else break;
+                            }
+                            if (dstSuffixLen < 3) continue;
+                            if (!otherNew.EndsWith(baseNew[^dstSuffixLen..])) continue;
+                            var newDst = otherNew[..^dstSuffixLen] + scheme.Dst[^dstSuffixLen..];
+                            effectiveMap.TryAdd(newSrc, newDst);
+                        }
+                    }
+                }
+            }
 
             // ── 第1步：找到 lookupField 能匹配的源行（精确或前缀）──────────────
             var srcRows     = FindRowsByValueOrPrefix(sheet, lookupCol, target.LookupValue);
@@ -1043,14 +1222,23 @@ public static class ActivityDataCloner
                 : CollectAlienKeyPrefixes(
                     sheet, lookupCol, remarkCol, target.LookupValue, effectiveMap, srcRows);
 
+
             // ── 第3步：对异构前缀弹窗，让用户提供映射 ──────────────────────────
-            if (alienPrefixes.Count > 0)
+            // 过滤掉当前活动组已屏蔽的前缀
+            var blockedPrefixes = originWindow?.CurrentBlockedAlienPrefixes ?? new();
+            blockedPrefixes.TryGetValue(rawName, out var blockedForTable);
+            var visibleAliens = alienPrefixes
+                .Where(p => blockedForTable == null ||
+                            !blockedForTable.Any(b => p.SampleKey.StartsWith(b, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            if (visibleAliens.Count > 0)
             {
                 var phaseLabel = phaseStep != 0
                     ? $"第{ExtractPhaseNum(target.LookupValue)}期 → 第{ExtractPhaseNum(target.LookupValue) + phaseStep}期"
                     : $"{target.LookupValue}→?";
 
-                var prefill = alienPrefixes.Select(p => new UI.CloneIdRow
+                var prefill = visibleAliens.Select(p => new UI.CloneIdRow
                 {
                     SourceId   = p.SampleKey,
                     TargetId   = "",
@@ -1058,11 +1246,17 @@ public static class ActivityDataCloner
                     BoundTable = rawName,
                 }).ToList();
 
-                var win = new UI.CloneActivityWindow(prefill);
+                var win = new UI.CloneActivityWindow(prefill, excelDir);
                 win.Title = $"异构ID映射 — {rawName}（{phaseLabel}）";
                 win.ShowDialog();
 
-                if (win.Confirmed)
+                if (win.Confirmed && win.ResultBlockAlienTable)
+                {
+                    // 屏蔽当前弹窗展示的所有前缀（不是全表，只是这批ID）
+                    originWindow?.UpdateHistoryWithBlockedAlienPrefixes(rawName, win.ResultBlockAlienPrefixes);
+                    report.AppendLine($"  屏蔽异构前缀：{rawName}  [{string.Join(", ", win.ResultBlockAlienPrefixes)}]");
+                }
+                else if (win.Confirmed)
                 {
                     foreach (var r in win.ResultRows)
                     {
@@ -1103,17 +1297,38 @@ public static class ActivityDataCloner
 
             if (srcRows.Count == 0)
             {
+                if (target.IsManual)
+                {
+                    // manualIdMaps 补充的表：本期可能没有这个异构前缀的数据，静默跳过
+                    report.AppendLine($"  跳过 {target.ExcelName}  [LookupValue={target.LookupValue} 无匹配行]");
+                    return false;
+                }
                 report.AppendLine($"❌ {target.ExcelName}  找不到可克隆的源行");
                 return true;
             }
 
             // ── 第4步：按源行顺序克隆并替换 ────────────────────────────────────
-            // insertAfter = 主前缀最后一行；仅对有 alien 源行的 key 才扩展，
-            // 避免 effectiveMap 里其他期号（如763651）把插入位置拉到错误的地方
+            // insertAfter = 所有 source 前缀（idMap.Keys + alienKeys）和已写入 clone 前缀（idMap.Values）
+            // 的最后一行，使克隆行紧跟在所有源数据及已写克隆之后。
+            // 找不到某前缀时返回 -1，不会错误退化到表末尾。
             var insertAfter = FindLastRowWithPrefix(sheet, lookupCol, target.LookupValue);
+            foreach (var key in idMap.Keys)
+            {
+                var r = FindLastRowWithPrefix(sheet, lookupCol, key);
+                if (r > 0) insertAfter = Math.Max(insertAfter, r);
+            }
+            foreach (var val in idMap.Values)
+            {
+                var r = FindLastRowWithPrefix(sheet, lookupCol, val);
+                if (r > 0) insertAfter = Math.Max(insertAfter, r);
+            }
             foreach (var alienKey in alienSrcKeys)
-                insertAfter = Math.Max(insertAfter,
-                    FindLastRowWithPrefix(sheet, lookupCol, alienKey));
+            {
+                var r = FindLastRowWithPrefix(sheet, lookupCol, alienKey);
+                if (r > 0) insertAfter = Math.Max(insertAfter, r);
+            }
+            // 退化保底：如果所有前缀都找不到（insertAfter<=0），追加到表末尾
+            if (insertAfter <= 0) insertAfter = sheet.Dimension.End.Row;
 
             srcRows.Sort();
             foreach (var srcRow in srcRows)
@@ -1122,7 +1337,10 @@ public static class ActivityDataCloner
                 sheet.InsertRow(destRow, 1);
                 EpPlusRowWriter.CloneRow(sheet, srcRow, destRow, colCount);
                 // 替换：仅对新复制的行做 effectiveMap 替换，不收集 unknownIds
-                ApplyIdMap(sheet, srcRow, destRow, colCount, effectiveMap, phaseStep, replaceArtFields, replaceSubTableIds);
+                // forcedIdCol：当 lookup 列无列头（__col2）时强制将该列视为 ID 列参与替换
+                var forcedIdCol = target.LookupField == "__col2" ? lookupCol : -1;
+                PluginLog.Verbose($"[Clone] ApplyIdMap {rawName} srcRow={srcRow} destRow={destRow} forcedIdCol={forcedIdCol} phaseStep={phaseStep} remarkKeyword={remarkKeyword} remarkDst={remarkDst} effectiveMap=[{string.Join(",", effectiveMap.Select(kv => $"{kv.Key}→{kv.Value}"))}]");
+                ApplyIdMap(sheet, srcRow, destRow, colCount, effectiveMap, phaseStep, replaceArtFields, replaceSubTableIds, remarkKeyword, remarkDst, forcedIdCol);
                 var newId = sheet.Cells[destRow, lookupCol].Value;
                 report.AppendLine($"✓ {target.ExcelName}  源行={srcRow}  插入行={destRow}  新{target.LookupField}={newId}");
                 insertAfter = destRow;
@@ -1148,8 +1366,8 @@ public static class ActivityDataCloner
         if (sheet.Dimension == null || remarkCol < 0) return [];
 
         var alreadySet   = alreadyMatchedRows.ToHashSet();
-        // 排序后用前缀二分查找替代 Any(StartsWith) 线性扫描
         var knownSorted  = effectiveMap.Keys.OrderBy(k => k).ToList();
+        var knownLenRange = GetKnownLenRange(effectiveMap.Keys);
 
         // 备注关键字：取 lookupValue 前4位作为模糊匹配依据
         var remarkHint = lookupValue.Length >= 3 ? lookupValue[..Math.Min(4, lookupValue.Length)] : lookupValue;
@@ -1160,13 +1378,14 @@ public static class ActivityDataCloner
         {
             if (alreadySet.Contains(row)) continue;
 
-            var keyVal = sheet.Cells[row, lookupCol].Value?.ToString();
+            var keyVal = CellStr(sheet.Cells[row, lookupCol].Value);
             if (string.IsNullOrEmpty(keyVal)) continue;
 
-            // 快速前缀检查：已知映射的 key 中任意一个是 keyVal 的前缀则跳过
             if (IsKnownPrefix(keyVal, knownSorted)) continue;
+            // 位数与已知 key 相差超过 2 → 不是同类活动 ID，跳过
+            if (!IsCompatibleLength(keyVal.Length, knownLenRange)) continue;
 
-            var remark = sheet.Cells[row, remarkCol].Value?.ToString() ?? "";
+            var remark = CellStr(sheet.Cells[row, remarkCol].Value) ?? "";
             if (!remark.Contains(remarkHint)) continue;
 
             var bucket = keyVal.Length >= 5 ? keyVal[..5] : keyVal;
@@ -1190,16 +1409,18 @@ public static class ActivityDataCloner
         if (sheet.Dimension == null || srcRows.Count == 0) return [];
 
         var knownSorted  = effectiveMap.Keys.OrderBy(k => k).ToList();
+        var knownLenRange = GetKnownLenRange(effectiveMap.Keys);
         var seenPrefixes = new Dictionary<string, AlienPrefix>(StringComparer.Ordinal);
 
         foreach (var row in srcRows)
         {
-            var keyVal = sheet.Cells[row, keyCol].Value?.ToString();
+            var keyVal = CellStr(sheet.Cells[row, keyCol].Value);
             if (string.IsNullOrEmpty(keyVal)) continue;
             if (IsKnownPrefix(keyVal, knownSorted)) continue;
+            if (!IsCompatibleLength(keyVal.Length, knownLenRange)) continue;
 
             var remark = remarkCol > 0
-                ? sheet.Cells[row, remarkCol].Value?.ToString() ?? ""
+                ? CellStr(sheet.Cells[row, remarkCol].Value) ?? ""
                 : "";
             var bucket = keyVal.Length >= 5 ? keyVal[..5] : keyVal;
             if (!seenPrefixes.ContainsKey(bucket))
@@ -1208,6 +1429,22 @@ public static class ActivityDataCloner
 
         return seenPrefixes.Values.ToList();
     }
+
+    // 返回已知 key 集合的位数范围 (min, max)，用于过滤明显不同类的 ID
+    private static (int min, int max) GetKnownLenRange(IEnumerable<string> keys)
+    {
+        int min = int.MaxValue, max = 0;
+        foreach (var k in keys)
+        {
+            if (k.Length < min) min = k.Length;
+            if (k.Length > max) max = k.Length;
+        }
+        return min == int.MaxValue ? (0, 99) : (min, max);
+    }
+
+    // 候选 ID 位数是否与已知 key 位数范围兼容（允许 ±2 的浮动）
+    private static bool IsCompatibleLength(int len, (int min, int max) range)
+        => len >= range.min - 2 && len <= range.max + 2;
 
     // 检查 keyVal 是否以 sortedKnown 中某个 key 为前缀（sortedKnown 已排序，可提前终止）
     private static bool IsKnownPrefix(string keyVal, List<string> sortedKnown)
@@ -1233,18 +1470,17 @@ public static class ActivityDataCloner
 
     /// <summary>
     /// 找到最后一个在 lookupCol 列值以 prefix 开头的行号（同一活动前缀的最末行）。
-    /// 找不到时返回 sheet.Dimension.End.Row（退化到追加末尾）。
+    /// 找不到时返回 -1。
     /// </summary>
     private static int FindLastRowWithPrefix(ExcelWorksheet sheet, int lookupCol, string prefix)
     {
-        var lastMatch = sheet.Dimension.End.Row;
         for (int row = sheet.Dimension.End.Row; row >= 3; row--)
         {
-            var val = sheet.Cells[row, lookupCol].Value?.ToString();
+            var val = CellStr(sheet.Cells[row, lookupCol].Value);
             if (val != null && (val == prefix || val.StartsWith(prefix)))
                 return row;
         }
-        return lastMatch;
+        return -1;
     }
 
     /// <summary>
@@ -1254,54 +1490,82 @@ public static class ActivityDataCloner
     private static void ApplyIdMap(
         ExcelWorksheet sheet, int srcRow, int destRow, int colCount,
         Dictionary<string, string> idMap, int phaseStep,
-        bool replaceArtFields = false, bool replaceSubTableIds = false)
+        bool replaceArtFields = false, bool replaceSubTableIds = false,
+        string remarkKeyword = "", string remarkDst = "",
+        int forcedIdCol = -1)  // 无列头的 lookup 列（如 __col2），强制视为 ID 列
     {
         // 预建排序后的 oldId 列表（长的先匹配，防止短前缀误替换）
         var sortedKeys = idMap.Keys.OrderByDescending(k => k.Length).ToList();
+        var hasRemarkReplace = !string.IsNullOrEmpty(remarkKeyword) && !string.IsNullOrEmpty(remarkDst);
 
         for (int col = 2; col <= colCount; col++)
         {
-            var header = sheet.Cells[2, col].Value?.ToString() ?? "";
+            var header = CellStr(sheet.Cells[2, col].Value) ?? "";
             var cell   = sheet.Cells[destRow, col];
             var val    = cell.Value;
             if (val == null) continue;
 
             var valStr = val.ToString()!;
 
+            // ── 备注列：做关键字替换（remarkKeyword → remarkDst），不走ID替换逻辑 ──
+            if (header == "#备注")
+            {
+                var updated = valStr;
+                var keywordHit = hasRemarkReplace && updated.Contains(remarkKeyword);
+                if (keywordHit)
+                    updated = updated.Replace(remarkKeyword, remarkDst);
+                // 关键字替换命中时 remarkDst 已含目标期号，不再自增；否则按 phaseStep 自增
+                if (!keywordHit && phaseStep != 0)
+                    updated = ReplacePhaseNumber(updated, phaseStep);
+                PluginLog.Verbose($"[Remark] row={destRow} orig={valStr} updated={updated} keywordHit={keywordHit} keyword={remarkKeyword}");
+                if (updated != valStr) cell.Value = updated;
+                continue;
+            }
+
             // ── 纯数字字段（可能是ID）─────────────────────────────────────────
             if (long.TryParse(valStr, out var numVal) && numVal != 0)
             {
-                if (!IsIdField(header) && !IsSubTableIdField(header)) continue;
+                // 子表ID字段：受 replaceSubTableIds 开关控制
                 if (IsSubTableIdField(header) && !replaceSubTableIds) continue;
+                // 美术ID字段：受 replaceArtFields 开关控制
                 if (IsArtField(header) && !replaceArtFields) continue;
+
+                // 非ID类列名的普通数字字段：只有在 effectiveMap 中能精确或前缀命中时才替换，
+                // 否则跳过（避免误改金额、数量等普通数字）
+                var isId = IsIdField(header) || IsSubTableIdField(header) || col == forcedIdCol;
 
                 // 1. 精确匹配 idMap → 直接替换
                 if (idMap.TryGetValue(valStr, out var mapped))
                 { cell.Value = long.Parse(mapped); continue; }
 
                 // 2. 子行前缀替换：若该数字以某个 oldId 为前缀且更长
+                var prefixHit = false;
                 foreach (var oldKey in sortedKeys)
                 {
                     if (valStr.Length > oldKey.Length && valStr.StartsWith(oldKey))
                     {
                         cell.Value = long.Parse(idMap[oldKey] + valStr[oldKey.Length..]);
+                        prefixHit = true;
                         break;
                     }
                 }
-                // 3. 不命中 → 保持原值，不做任何处理
+                if (prefixHit) continue;
+
+                // 3. 非ID列名且无法命中 → 不替换
+                if (!isId) continue;
                 continue;
             }
 
             // ── 字符串字段：做多次子串替换（ID、期号）─────────────────────────
-            var updated = valStr;
+            var upd = valStr;
             foreach (var oldKey in sortedKeys)
-                updated = updated.Replace(oldKey, idMap[oldKey]);
+                upd = upd.Replace(oldKey, idMap[oldKey]);
 
             // 期号替换（用 phaseStep 计算）
             if (phaseStep != 0)
-                updated = ReplacePhaseNumber(updated, phaseStep);
+                upd = ReplacePhaseNumber(upd, phaseStep);
 
-            if (updated != valStr) cell.Value = updated;
+            if (upd != valStr) cell.Value = upd;
         }
     }
 
@@ -1312,7 +1576,7 @@ public static class ActivityDataCloner
         for (int col = 2; col <= colCount; col++)
         {
             var cell = sheet.Cells[row, col];
-            var val  = cell.Value?.ToString();
+            var val  = CellStr(cell.Value);
             if (string.IsNullOrEmpty(val)) continue;
             if (val == oldId) { cell.Value = long.TryParse(newId, out var n) ? (object)n : newId; continue; }
             if (val.StartsWith(oldId) && long.TryParse(val, out _))
@@ -1330,6 +1594,8 @@ public static class ActivityDataCloner
         return RxPhaseNum.Replace(text, m =>
             $"第{int.Parse(m.Groups[1].Value) + step}期");
     }
+
+    private static string CellStr(object? value) => value?.ToString() ?? "";
 
     private static bool IsIdField(string header)
     {
@@ -1349,8 +1615,13 @@ public static class ActivityDataCloner
     public static int FindHeaderCol(ExcelWorksheet sheet, string headerName)
     {
         if (sheet.Dimension == null) return -1;
-        for (int col = 1; col <= sheet.Dimension.End.Column; col++)
-            if (sheet.Cells[2, col].Value?.ToString() == headerName)
+        var endCol = sheet.Dimension.End.Column;
+        // 优先第2行（标准表头行），找不到再查第1行（部分表把 #备注 放在第1行）
+        for (int col = 1; col <= endCol; col++)
+            if (CellStr(sheet.Cells[2, col].Value) == headerName)
+                return col;
+        for (int col = 1; col <= endCol; col++)
+            if (CellStr(sheet.Cells[1, col].Value) == headerName)
                 return col;
         return -1;
     }
@@ -1362,7 +1633,7 @@ public static class ActivityDataCloner
     {
         if (sheet.Dimension == null) return -1;
         for (int row = 3; row <= sheet.Dimension.End.Row; row++)
-            if (sheet.Cells[row, col].Value?.ToString() == value)
+            if (CellStr(sheet.Cells[row, col].Value) == value)
                 return row;
         return -1;
     }
@@ -1380,8 +1651,8 @@ public static class ActivityDataCloner
 
         for (int row = 3; row <= sheet.Dimension.End.Row; row++)
         {
-            var cellStr = sheet.Cells[row, col].Value?.ToString();
-            if (cellStr == null) continue;
+            var cellStr = CellStr(sheet.Cells[row, col].Value);
+            if (cellStr.Length == 0) continue;
             if (cellStr == prefix)
                 exact.Add(row);
             else if (cellStr.StartsWith(prefix))

@@ -107,7 +107,7 @@ public sealed class CellSelectChangeTip : Form
         catch { /* ignore */ }
         _scrollTimer.Start();
 
-        System.Diagnostics.Debug.WriteLine(
+        PluginLog.Verbose(
             $"[CellTip] cursor=({cursor.X},{cursor.Y}) loc=({x},{y}) size=({w}x{h})");
     }
 
@@ -231,7 +231,7 @@ public sealed class CellSelectChangeTip : Form
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[CellTip] {ex.GetType().Name}: {ex.Message}");
+            PluginLog.Verbose($"[CellTip] {ex.GetType().Name}: {ex.Message}");
             Instance.ClearBubble();
         }
     }

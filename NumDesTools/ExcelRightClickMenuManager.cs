@@ -44,7 +44,7 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
         }
         catch (Exception ex)
         {
-            Debug.Print($"右键菜单初始化错误: {ex.Message}");
+            PluginLog.Write($"右键菜单初始化错误: {ex.Message}");
             cancel = true;
         }
     }
@@ -288,7 +288,7 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
             if (button == null)
             {
                 // 处理转换失败的情况
-                Debug.Print($"添加按钮失败: 无法转换为 CommandBarButton");
+                PluginLog.Verbose($"添加按钮失败: 无法转换为 CommandBarButton");
                 Marshal.ReleaseComObject(control);
                 return;
             }
@@ -313,7 +313,7 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
         }
         catch (Exception ex)
         {
-            Debug.Print($"添加按钮[{config.Tag}]失败: {ex.Message}");
+            PluginLog.Verbose($"添加按钮[{config.Tag}]失败: {ex.Message}");
         }
     }
 
@@ -351,7 +351,7 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
         catch (InvalidCastException ex)
         {
             cancel = true;
-            Debug.Print($"[{button.Tag}] 类型转换错误: {ex.Message}");
+            PluginLog.Verbose($"[{button.Tag}] 类型转换错误: {ex.Message}");
             MessageBox.Show(
                 $"类型转换错误: {ex.Message}\n\n请检查对象类型是否匹配",
                 "类型错误",
@@ -362,7 +362,7 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
         catch (Exception ex)
         {
             cancel = true;
-            Debug.Print($"[{button.Tag}] 执行错误: {ex.Message}");
+            PluginLog.Verbose($"[{button.Tag}] 执行错误: {ex.Message}");
             MessageBox.Show(
                 $"操作失败: {ex.Message}\n\n{ex.StackTrace}",
                 "错误",
@@ -379,16 +379,16 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
             stopwatch.Stop();
             _excelApp.StatusBar =
                 $"[执行完成] {button.Tag} 耗时： {(double)stopwatch.ElapsedMilliseconds / 1000}s";
-            Debug.Print($"[执行完成] {button.Tag} 耗时： {stopwatch.ElapsedMilliseconds}ms");
+            PluginLog.Write($"[执行完成] {button.Tag} 耗时： {stopwatch.ElapsedMilliseconds}ms");
         }
     }
 
     public void PrintPerformanceReport()
     {
-        Debug.Print("=== 按钮性能报告 ===");
+        PluginLog.Verbose("=== 按钮性能报告 ===");
         foreach (var stat in _performanceStats.OrderByDescending(x => x.Value))
         {
-            Debug.Print($"{stat.Key.PadRight(20)}: {stat.Value}ms");
+            PluginLog.Verbose($"{stat.Key.PadRight(20)}: {stat.Value}ms");
         }
     }
 

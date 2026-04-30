@@ -747,7 +747,7 @@ public static class PubMetToExcel
             }
             catch (Exception ex)
             {
-                Debug.Print("读取 Excel 表格数据出现异常：" + ex.Message);
+                PluginLog.Write("读取 Excel 表格数据出现异常：" + ex.Message);
                 return null;
             }
         }
@@ -2321,7 +2321,7 @@ public static class PubMetToExcel
         }
 
         // 输出合并后的数组（示例）
-        Debug.Print("合并成功！");
+        PluginLog.Write("合并成功！");
         return mergedArray;
     }
 
@@ -2353,7 +2353,7 @@ public static class PubMetToExcel
         }
 
         // 输出合并后的数组（示例）
-        Debug.Print("合并成功！");
+        PluginLog.Write("合并成功！");
         return mergedArray;
     }
     #endregion
