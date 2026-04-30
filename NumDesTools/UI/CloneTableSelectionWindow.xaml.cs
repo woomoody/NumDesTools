@@ -21,8 +21,10 @@ public partial class CloneTableSelectionWindow : Window
                             StringComparer.OrdinalIgnoreCase)
                        ?? new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var name in tableNames)
         {
+            if (!seen.Add(name)) continue;
             _tables.Add(new TableSelection
             {
                 TableName = name,

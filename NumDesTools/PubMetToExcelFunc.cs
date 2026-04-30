@@ -1123,9 +1123,9 @@ public static class PubMetToExcelFunc
 
                             if (wsName.Contains("LTE【通用】"))
                             {
-                                Debug.Print($"{wsName}:{cell.Address}");
-                                Debug.Print($"原公式:{originalFormula}");
-                                Debug.Print($"新公式:{newFormula}");
+                                PluginLog.Verbose($"{wsName}:{cell.Address}");
+                                PluginLog.Verbose($"原公式:{originalFormula}");
+                                PluginLog.Verbose($"新公式:{newFormula}");
                             }
 
                             if (originalFormula != newFormula)
@@ -2191,7 +2191,7 @@ public static class PubMetToExcelFunc
 
         if (!Clipboard.ContainsText())
         {
-            Debug.Print("剪切板中没有文本数据");
+            PluginLog.Write("剪切板中没有文本数据");
             MessageBox.Show("剪切板中没有文本数据");
         }
 
@@ -2203,7 +2203,7 @@ public static class PubMetToExcelFunc
 
         if (lines.Length == 0)
         {
-            Debug.Print("剪切板中没有有效数据");
+            PluginLog.Write("剪切板中没有有效数据");
             MessageBox.Show("剪切板中没有有效数据");
         }
 
@@ -2231,7 +2231,7 @@ public static class PubMetToExcelFunc
 
         if (iconFixData.Count == 0)
         {
-            Debug.Print("剪切板中没有有效数据");
+            PluginLog.Write("剪切板中没有有效数据");
             MessageBox.Show("剪切板中没有有效数据");
             return;
         }
@@ -2298,14 +2298,14 @@ public static class PubMetToExcelFunc
 
         //if (firstMatchRow == -1 || lastMatchRow == -1)
         //{
-        //    Debug.Print("未找到匹配的行");
+        //    PluginLog.Write("未找到匹配的行");
         //    MessageBox.Show("未找到匹配的行");
         //    return;
         //}
 
         if (fieldKeyCol == -1 || fieldValue1Col == -1 || fieldValue2Col == -1)
         {
-            Debug.Print("未找到匹配的列");
+            PluginLog.Write("未找到匹配的列");
             MessageBox.Show("未找到匹配的列");
             return;
         }
@@ -2507,7 +2507,7 @@ public static class PubMetToExcelFunc
                         return;
                     }
 
-                    Debug.Print($"检查：{file}");
+                    PluginLog.Verbose($"检查：{file}");
                     //if (file.Contains("$多人建造活动.xlsx"))
                     //{
                     //    var ac = 1;
@@ -2551,7 +2551,7 @@ public static class PubMetToExcelFunc
                                     || ReferenceEquals(cellValue, " ")
                                 )
                                 {
-                                    Debug.Print($"{file}:[{sheet.Name}]冗余列{col}/{colMax}");
+                                    PluginLog.Verbose($"{file}:[{sheet.Name}]冗余列{col}/{colMax}");
                                     //删除多余列
                                     targetList.Add((file, sheet.Name + "：冗余列", 2, col));
 
@@ -2564,7 +2564,7 @@ public static class PubMetToExcelFunc
                                 var colObj = sheet.Column(col);
                                 if (colObj.Hidden)
                                 {
-                                    Debug.Print($"{file}:[{sheet.Name}]隐藏列{col}/{colMax}");
+                                    PluginLog.Verbose($"{file}:[{sheet.Name}]隐藏列{col}/{colMax}");
 
                                     targetList.Add((file, sheet.Name + "：隐藏列", 2, col));
 

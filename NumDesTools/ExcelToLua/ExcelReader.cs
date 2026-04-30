@@ -162,7 +162,7 @@ namespace NumDesTools.ExcelToLua
         {
             if (isLog)
             {
-                Debug.Print($"file Name:{filepath}");
+                PluginLog.Verbose($"file Name:{filepath}");
             }
 
             List<ISheet> list = new List<ISheet>();
@@ -238,7 +238,7 @@ namespace NumDesTools.ExcelToLua
 
                 LogDisplay.Show();
 
-                Debug.Print($"{e} ~!: {row.Sheet.SheetName} {row.GetCell(i)}");
+                PluginLog.Verbose($"{e} ~!: {row.Sheet.SheetName} {row.GetCell(i)}");
                 throw;
             }
         }

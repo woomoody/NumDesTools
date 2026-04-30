@@ -1,4 +1,4 @@
-﻿using System.Runtime.Versioning;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.VisualBasic;
@@ -78,18 +78,36 @@ public class LteData
     //导出LTE数据配置
     public static void ExportLteDataConfigFirst(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        try
+        {
         cancelDefault = true; // 阻止默认事件
         ExportLteDataConfig(true, GitConfig.Name);
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[LTEData] ExportLteDataConfigFirst CRASH: {ex}");
+            MessageBox.Show($"操作失败，已记录日志。\n{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     public static void ExportLteDataConfigUpdate(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        try
+        {
         cancelDefault = true; // 阻止默认事件
         ExportLteDataConfig(false, GitConfig.Name);
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[LTEData] ExportLteDataConfigUpdate CRASH: {ex}");
+            MessageBox.Show($"操作失败，已记录日志。\n{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     public static void ExportLteDataConfig(bool isFirst, string userName)
     {
+        try
+        {
         //Epplus获取[LTE配置【导出】]表的ListObject
         var sheet = Wk.ActiveSheet;
         var sheetName = sheet.Name;
@@ -196,6 +214,12 @@ public class LteData
         else
         {
             MessageBox.Show($"{sheetName}有误，请对比#【A-LTE】配置模版");
+        }
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[LTEData] ExportLteDataConfig CRASH: {ex}");
+            MessageBox.Show($"操作失败，已记录日志。\n{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -785,16 +809,26 @@ public class LteData
     //去重复制
     public static void FilterRepeatValueCopy(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        try
+        {
         cancelDefault = true; // 阻止默认事件
         //去重
         var mergedArray = FilterRepeatValue("", "", true);
         //复制
         PubMetToExcel.CopyArrayToClipboard(mergedArray);
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[LTEData] FilterRepeatValueCopy CRASH: {ex}");
+            MessageBox.Show($"操作失败，已记录日志。\n{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     //首次写入数据（指定范围内数据去重）
     public static void FirstCopyValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        try
+        {
         cancelDefault = true; // 阻止默认事件
         object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
         object[,] copyTilteArray = ColTitleValue(ActivityDataMinIndex, ActivityDataMaxIndex);
@@ -900,13 +934,17 @@ public class LteData
         var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
         if (findRankDataArray == null) return;
 
+        var baseActivityIdArray = PubMetToExcel.ReadExcelDataC("LTE【基础】", 0, 0, 1, 1);
+        double baseActivityId = baseActivityIdArray?[0, 0] is double d ? d : 0;
+
         //寻找数据整理
         var findArray = FindData(
             copyArray,
             dataTypeArray,
             fieldGroupArray,
             copyTilteArray,
-            findRankDataArray
+            findRankDataArray,
+            baseActivityId
         );
         //寻找List数据清理
         findList.DataBodyRange.ClearContents();
@@ -967,11 +1005,19 @@ public class LteData
             FindDataTagCol,
             writeFindArray
         );
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[LTEData] FirstCopyValue CRASH: {ex}");
+            MessageBox.Show($"操作失败，已记录日志。\n{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     //更新写入数据（指定范围内数据去重），比对数据，更新数据状态
     public static void UpdateCopyValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        try
+        {
         cancelDefault = true; // 阻止默认事件
         object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
         object[,] copyTitleArray = ColTitleValue(ActivityDataMinIndex, ActivityDataMaxIndex);
@@ -1045,14 +1091,23 @@ public class LteData
         if (findRankDataArray == null) return;
 
         //寻找数据整理
+        var baseActivityIdArray2 = PubMetToExcel.ReadExcelDataC("LTE【基础】", 0, 0, 1, 1);
+        double baseActivityId2 = baseActivityIdArray2?[0, 0] is double d2 ? d2 : 0;
         var findArray = FindData(
             copyArray,
             dataTypeArray,
             fieldGroupArray,
             copyTitleArray,
-            findRankDataArray
+            findRankDataArray,
+            baseActivityId2
         );
         WriteDymaicData(findArray, findList, "LTE【寻找】", 1, 9);
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[LTEData] UpdateCopyValue CRASH: {ex}");
+            MessageBox.Show($"操作失败，已记录日志。\n{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     // "图1-1" → "图1"；null 或无 "-" 时安全返回空字符串
@@ -1601,7 +1656,8 @@ public class LteData
         object[,] dataTypeArray,
         object[,] fieldGroupArray,
         object[,] copyTitleArray,
-        object[,] findRankDataArray
+        object[,] findRankDataArray,
+        double activityId = 0
     )
     {
         var findDic = new Dictionary<string, List<string>>();
@@ -1689,7 +1745,19 @@ public class LteData
                                 findDic[findIdStr]
                                     .Add(copyDic[findIdStr][titleList.IndexOf("备注名称")]);
                                 findDic[findIdStr].Add(findTips);
-                                findDic[findIdStr].Add(findLinks + findLinks31 + "{8,9993}");
+
+                                // 追加地图节点：从目标物品"首次出现"取地图ID，与任务寻找逻辑一致
+                                var mapName = copyDic[findIdStr][titleList.IndexOf("首次出现")];
+                                var mapPrefix = MapPrefix(mapName);
+                                var mapMatch = DigitsRegex.Match(mapPrefix);
+                                var mapId = "0";
+                                if (mapMatch.Success && double.TryParse(mapMatch.Value, out double mapIdDouble))
+                                    mapId = (mapIdDouble + activityId).ToString(CultureInfo.InvariantCulture);
+
+                                findDic[findIdStr].Add(
+                                    findLinks + findLinks31
+                                    + "{20,\"UILteMapEntrance\"," + mapId + "},{8,9993}"
+                                );
                             }
                         }
                     }
@@ -2301,6 +2369,36 @@ public class LteData
                         Debug.Print($"谁找4：{findTargetId},找谁：{targetId}");
                     }
                 }
+                // 来源：Any-链-源 — 追溯链的最低级版本(01)的产出来源
+                // 若当前链后两位已是01，跳过避免与 Any/类型匹配规则重复
+                else if (findRankType == "Any-链-源")
+                {
+                    var id01 = findTargetId.Length >= 2
+                        ? findTargetId[..^2] + "01"
+                        : string.Empty;
+
+                    if (!string.IsNullOrEmpty(id01) && id01 != findTargetId)
+                    {
+                        var sourceIds = baseDic
+                            .Where(kv =>
+                                kv.Value.Count > outPutIdGroupIndex
+                                && kv.Value[outPutIdGroupIndex].Contains(id01)
+                            )
+                            .Select(kv => kv.Key)
+                            .ToList();
+
+                        foreach (var sourceId in sourceIds)
+                        {
+                            var sourceFindType = SafeGet(baseDic, sourceId, findTargetTypeIndex);
+                            var sourceFindDetailType = SafeGet(baseDic, sourceId, findTargetDetailTypeIndex);
+                            var sourceType = SafeGet(baseDic, sourceId, targetTypeIndex);
+                            if (!dataTypeDic.ContainsKey(sourceType)) continue;
+                            var hasFind = dataTypeDic[sourceType][4];
+                            findItemListTuple.Add((sourceId, sourceFindType, sourceFindDetailType, hasFind));
+                        }
+                    }
+                    continue;
+                }
                 else if (findRankType == targetType)
                 {
                     targetId = findTargetId;
@@ -2319,6 +2417,7 @@ public class LteData
                 }
             }
         }
+
         return findItemListTuple;
     }
 
@@ -2394,6 +2493,8 @@ public class LteData
     //首次写入数据
     public static void FirstCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        try
+        {
         cancelDefault = true; // 阻止默认事件
         var sheetName = "LTE【任务】";
         var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
@@ -2512,11 +2613,19 @@ public class LteData
             TaskDataTagCol,
             writeArray
         );
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[LTEData] FirstCopyTaskValue CRASH: {ex}");
+            MessageBox.Show($"操作失败，已记录日志。\n{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     //更新写入数据
     public static void UpdateCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        try
+        {
         cancelDefault = true; // 阻止默认事件
         var sheetName = "LTE【任务】";
         var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
@@ -2606,6 +2715,12 @@ public class LteData
             TaskDataEndCol,
             TaskDataTagCol
         );
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[LTEData] UpdateCopyTaskValue CRASH: {ex}");
+            MessageBox.Show($"操作失败，已记录日志。\n{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     private static bool CheckLandmarkIdExists(Dictionary<string, List<string>> baseDic, string id, string rank)
@@ -2955,6 +3070,8 @@ public class LteData
     #region LTE地组数据计算
     public static void GroundDataSim(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        try
+        {
         cancelDefault = true; // 阻止默认事件
         var selectedRange = NumDesAddIn.App.Selection;
         var targetWorkbookName = "地组工具.xlsx";
@@ -3032,6 +3149,7 @@ public class LteData
                     catch (Exception cellEx)
                     {
                         LogDisplay.RecordLine($"处理单元格[{i},{j}]时出错: {cellEx.Message}");
+                        PluginLog.Write($"[LTEData] 单元格异常 [{i},{j}]: {cellEx}");
                     }
                 }
             }
@@ -3069,6 +3187,7 @@ public class LteData
         }
         catch (Exception ex)
         {
+            PluginLog.Write($"[LTEData] 复制剪切板失败: {ex}");
             MessageBox.Show(
                 $"复制到剪切板失败: {ex.Message}",
                 "错误",
@@ -3076,11 +3195,19 @@ public class LteData
                 MessageBoxIcon.Error
             );
         }
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[LTEData] GroundDataSim CRASH: {ex}");
+            MessageBox.Show($"操作失败，已记录日志。\n{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     //首次写入数据
     public static void FirstCopyFieldValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        try
+        {
         cancelDefault = true; // 阻止默认事件
         var sheetName = "LTE【地组】";
         var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
@@ -3197,11 +3324,19 @@ public class LteData
             FieldDataTagCol,
             writeArray
         );
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[LTEData] FirstCopyFieldValue CRASH: {ex}");
+            MessageBox.Show($"操作失败，已记录日志。\n{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     //更新写入数据
     public static void UpdateCopyFieldValue(CommandBarButton ctrl, ref bool cancelDefault)
     {
+        try
+        {
         cancelDefault = true; // 阻止默认事件
         var sheetName = "LTE【地组】";
         var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
@@ -3285,6 +3420,12 @@ public class LteData
             FieldDataEndCol,
             FieldDataTagCol
         );
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[LTEData] UpdateCopyFieldValue CRASH: {ex}");
+            MessageBox.Show($"操作失败，已记录日志。\n{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     //原始数据改造

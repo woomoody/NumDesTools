@@ -350,7 +350,7 @@ namespace NumDesTools.ExcelToLua
 
                     LogDisplay.Show();
 
-                    Debug.Print(
+                    PluginLog.Write(
                         $"配表 [ {tableName} ] - [ {field.desc} ] 字段,第{(cell.row + 1)}行 LuaTable格式非法: {errorMsg}"
                     );
                 }
@@ -735,7 +735,7 @@ namespace NumDesTools.ExcelToLua
 
                 LogDisplay.Show();
 
-                Debug.Print("需要导出分表的配表未找到约定的分表字段");
+                PluginLog.Write("需要导出分表的配表未找到约定的分表字段");
                 return null;
             }
 
@@ -768,7 +768,7 @@ namespace NumDesTools.ExcelToLua
 
                     LogDisplay.Show();
 
-                    Debug.Print("分组id值填写错误，string无法正确转换为int");
+                    PluginLog.Write("分组id值填写错误，string无法正确转换为int");
                 }
             }
 

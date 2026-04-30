@@ -144,7 +144,7 @@ namespace NumDesTools.ExcelToLua
                 DateTime.Now.ToString(CultureInfo.InvariantCulture),
                 "导表完成"
             );
-            Debug.Print("导表完成!");
+            PluginLog.Write("导表完成!");
         }
 
         //[MenuItem("Tools/导出Excel(只导出Git变更)", false, 2001)]
@@ -174,7 +174,7 @@ namespace NumDesTools.ExcelToLua
                 DateTime.Now.ToString(CultureInfo.InvariantCulture),
                 "导表完成"
             );
-            Debug.Print("导表完成!");
+            PluginLog.Write("导表完成!");
         }
 
         static List<string> GetGitChangedExcelFiles()
@@ -324,7 +324,7 @@ namespace NumDesTools.ExcelToLua
 
                         LogDisplay.Show();
 
-                        Debug.Print($"配表名称非法 ：<<{fileName}>> 已跳过该表，相关策划需确认");
+                        PluginLog.Write($"配表名称非法 ：<<{fileName}>> 已跳过该表，相关策划需确认");
                         continue;
                     }
 
@@ -383,7 +383,7 @@ namespace NumDesTools.ExcelToLua
                     DateTime.Now.ToString(CultureInfo.InvariantCulture),
                     fileName
                 );
-                Debug.Print($"{fileName} done.");
+                PluginLog.Verbose($"{fileName} done.");
             }
         }
 
@@ -646,7 +646,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
 
                     LogDisplay.Show();
 
-                    Debug.Print($"配表导出文件无法正确编译，请检查配置。   : {name}\n{e.Message}"); //
+                    PluginLog.Write($"配表导出文件无法正确编译，请检查配置。   : {name}\n{e.Message}"); //
                 }
                 if (createLua)
                     lua.Dispose();
@@ -743,7 +743,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
 
                     LogDisplay.Show();
 
-                    Debug.Print("===多语言存在重复key:" + key);
+                    PluginLog.Write("===多语言存在重复key:" + key);
                     for (int i = 0; i < contents.Count; i++)
                     {
                         if (contents[i].Contains($"\"{key}\""))
@@ -756,7 +756,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
 
                             LogDisplay.Show();
 
-                            Debug.Print("===重复key字段在表:" + fileNames[i]);
+                            PluginLog.Write("===重复key字段在表:" + fileNames[i]);
                         }
                     }
                 }
@@ -768,7 +768,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                 count
             );
 
-            Debug.Print("===多语言表总数:" + count);
+            PluginLog.Write("===多语言表总数:" + count);
         }
 
         public static void CheckLocalizationLuaDuplicateValues()
@@ -817,7 +817,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
 
                     LogDisplay.Show();
 
-                    Debug.Print($"=== 多语言值:{item.Key} 重复数量:{item.Value}");
+                    PluginLog.Write($"=== 多语言值:{item.Key} 重复数量:{item.Value}");
                     count++;
                 }
                 else
@@ -837,8 +837,8 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                 DateTime.Now.ToString(CultureInfo.InvariantCulture),
                 countAll
             );
-            Debug.Print("===多语言重复数量:" + count);
-            Debug.Print("===多语言重复行总数:" + countAll);
+            PluginLog.Write("===多语言重复数量:" + count);
+            PluginLog.Write("===多语言重复行总数:" + countAll);
         }
     }
 }

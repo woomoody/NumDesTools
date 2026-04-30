@@ -29,7 +29,7 @@ public class Lua2Excel
             excel?.Dispose();
         }
 
-        Debug.Print(errorLogLua);
+        PluginLog.Write(errorLogLua);
     }
 #pragma warning disable CA1416
     [ExcelFunction(IsHidden = true)]

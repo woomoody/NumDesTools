@@ -118,34 +118,41 @@ public static class ErrorLogCtp
 
     public static void CreateCtpNormal(string errorLog)
     {
-        LabelControl = new LabelControl();
-        var (back, fore, panelBack) = GetThemeColors();
-        LabelControl.BackColor = panelBack;
-        var font = new Font("微软雅黑", 9, FontStyle.Bold);
-        var errorLinkLable = new RichTextBox
+        try
         {
-            Text = errorLog,
-            Location = new Point(10, 40),
-            ScrollBars = (RichTextBoxScrollBars)ScrollBars.Vertical,
-            Font = font,
-            Dock = DockStyle.Fill,
-            BackColor = back,
-            ForeColor = fore
-        };
+            LabelControl = new LabelControl();
+            var (back, fore, panelBack) = GetThemeColors();
+            LabelControl.BackColor = panelBack;
+            var font = new Font("微软雅黑", 9, FontStyle.Bold);
+            var errorLinkLable = new RichTextBox
+            {
+                Text = errorLog,
+                Location = new Point(10, 40),
+                ScrollBars = (RichTextBoxScrollBars)ScrollBars.Vertical,
+                Font = font,
+                Dock = DockStyle.Fill,
+                BackColor = back,
+                ForeColor = fore
+            };
 
-        LabelControl.Controls.Add(errorLinkLable);
+            LabelControl.Controls.Add(errorLinkLable);
 
-        Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(LabelControl, "写入错误日志");
-        Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
-        Ctp.Width = CalcCtpWidth(errorLog, font);
-        LabelControl.Dock = DockStyle.Fill;
-        Ctp.Visible = true;
+            Ctp = CustomTaskPaneFactory.CreateCustomTaskPane(LabelControl, "写入错误日志");
+            Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
+            Ctp.Width = CalcCtpWidth(errorLog, font);
+            LabelControl.Dock = DockStyle.Fill;
+            Ctp.Visible = true;
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[CTP ERROR] {ex}");
+        }
     }
 
     public static void DisposeCtp()
     {
         if (Ctp == null) return;
-        Ctp.Delete();
+        try { Ctp.Delete(); } catch { }
         Ctp = null;
     }
 
@@ -550,7 +557,7 @@ public static class ExcelToDataGridView
         var myCommand = new OleDbDataAdapter(strExcel, strConn);
         var ds = new DataSet();
         myCommand.Fill(ds, "table1");
-        Console.WriteLine(ds.Tables[0].Rows[0][0].ToString());
+        PluginLog.Verbose(ds.Tables[0].Rows[0][0].ToString());
         conn.Close();
 
         return ds.Tables[0];
@@ -711,7 +718,7 @@ public static class ExcelSheetData
                 continue;
 
             var asd123 = cell.ToString();
-            Debug.Print(asd123);
+            PluginLog.Verbose(asd123);
         }
 
         for (var i = 10; i < 1000; i++)

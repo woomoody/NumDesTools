@@ -64,6 +64,7 @@ public static class ActivityRulesUpdater
         if (enumMap.Count == 0)
         {
             ErrorLogCtp.DisposeCtp();
+            PluginLog.Write(report.ToString());
             ErrorLogCtp.CreateCtpNormal(report.ToString());
             return;
         }
@@ -97,6 +98,7 @@ public static class ActivityRulesUpdater
         NumDesAddIn.App.StatusBar = $"规则更新完成（新增 {added} 条）";
 
         ErrorLogCtp.DisposeCtp();
+        PluginLog.Write(report.ToString());
         ErrorLogCtp.CreateCtpNormal(report.ToString());
     }
 

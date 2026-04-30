@@ -37,26 +37,12 @@ public partial class ExcelConflictWindow : Window
             BatchScroll.ScrollToHorizontalOffset(offset);
             SharedHScrollBar.Value = offset;
         };
-        ConflictRowItem.OnConflictTotalWidthChanged = totalWidth =>
-        {
-            SharedHScrollBar.Maximum      = Math.Max(0, totalWidth - SharedHScrollBar.ActualWidth);
-            SharedHScrollBar.ViewportSize = SharedHScrollBar.ActualWidth;
-            SharedHScrollBar.Visibility   = totalWidth > SharedHScrollBar.ActualWidth
-                ? Visibility.Visible : Visibility.Collapsed;
-        };
         // 新增/删除行（OnlyOurs/OnlyTheirs）：驱动各自列头 + 新增/删除滚动条
         ConflictRowItem.OnRowsScrollOffsetChanged = offset =>
         {
             OursMetaScroll.ScrollToHorizontalOffset(offset);
             TheirsMetaScroll.ScrollToHorizontalOffset(offset);
             RowsHScrollBar.Value = offset;
-        };
-        ConflictRowItem.OnRowsTotalWidthChanged = totalWidth =>
-        {
-            RowsHScrollBar.Maximum      = Math.Max(0, totalWidth - RowsHScrollBar.ActualWidth);
-            RowsHScrollBar.ViewportSize = RowsHScrollBar.ActualWidth;
-            RowsHScrollBar.Visibility   = totalWidth > RowsHScrollBar.ActualWidth
-                ? Visibility.Visible : Visibility.Collapsed;
         };
         BuildSheetTabs();
         UpdateStats();
@@ -66,6 +52,13 @@ public partial class ExcelConflictWindow : Window
         Loaded += (_, _) =>
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background,
                 (System.Action)RefreshConflictList);
+
+        // 窗口/控件尺寸变化时重新计算滚动条范围（解决首次布局 ActualWidth=0 问题）
+        SizeChanged += (_, _) =>
+        {
+            ApplyScrollBarRange(SharedHScrollBar, _conflictTotalWidth);
+            UpdateRowsScrollBarVisibility();
+        };
     }
 
     private enum ViewMode { ConflictOnly, Context, All }
@@ -83,6 +76,10 @@ public partial class ExcelConflictWindow : Window
     private double _oursExpandedHeight   = 200;
     private double _theirsExpandedHeight = 200;
     private double _detailExpandedHeight = 180;
+
+    // 滚动条总宽度（列宽之和），SizeChanged 时重新计算 Maximum/Viewport
+    private double _conflictTotalWidth = 0;
+    private double _rowsTotalWidth = 0;
 
     // 全量模式分批加载
     private const int PageSize = 200;
@@ -154,6 +151,12 @@ public partial class ExcelConflictWindow : Window
                 ? ComputeSheetColWidths(colsForWidths, sheetDiff.Rows, _conflictColSet)
                 : _allColWidths;
             ConflictRowItem.CurrentSheetColWidths = _currentColWidths;
+
+            // 列宽确定后一次性设置两条滚动条，后续行渲染不再重复触发
+            _conflictTotalWidth = _currentColWidths.Sum();
+            _rowsTotalWidth     = _allColWidths.Sum();
+            ApplyScrollBarRange(SharedHScrollBar, _conflictTotalWidth);
+            UpdateRowsScrollBarVisibility();
         }
 
         // Split rows into three sections
@@ -269,6 +272,15 @@ public partial class ExcelConflictWindow : Window
         if (colHeader != null)
             colHeader.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
         chevron.Text = expanded ? "▼ " : "▶ ";
+        UpdateRowsScrollBarVisibility();
+    }
+
+    private void UpdateRowsScrollBarVisibility()
+    {
+        if (_sectionOnlyOursExpanded || _sectionOnlyTheirsExpanded)
+            ApplyScrollBarRange(RowsHScrollBar, _rowsTotalWidth);
+        else
+            RowsHScrollBar.Visibility = Visibility.Collapsed;
     }
 
     private void SectionHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -390,6 +402,18 @@ public partial class ExcelConflictWindow : Window
         _loadedCount = _pendingRows.Count;
         ConflictList.ItemsSource = new ObservableCollection<RowConflict>(_pendingRows);
         LoadMoreBar.Visibility = Visibility.Collapsed;
+    }
+
+    private void ApplyScrollBarRange(System.Windows.Controls.Primitives.ScrollBar bar, double totalWidth)
+    {
+        if (totalWidth <= 0) { bar.Visibility = Visibility.Collapsed; return; }
+        // 先 Visible，让 WPF 完成布局，再读 ActualWidth
+        bar.Visibility = Visibility.Visible;
+        bar.UpdateLayout();
+        var viewport = bar.ActualWidth > 0 ? bar.ActualWidth : ActualWidth;
+        bar.ViewportSize = viewport;
+        bar.Maximum      = Math.Max(0, totalWidth - viewport);
+        if (totalWidth <= viewport) bar.Visibility = Visibility.Collapsed;
     }
 
     private void SharedHScrollBar_Scroll(object sender, System.Windows.Controls.Primitives.ScrollEventArgs e)

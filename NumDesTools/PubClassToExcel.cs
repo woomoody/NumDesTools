@@ -405,7 +405,7 @@ public class ChatApiClient
         }
         catch (Exception ex)
         {
-            Debug.Print($"解析失败: {ex.Message}");
+            PluginLog.Write($"解析失败: {ex.Message}");
         }
     }
 }
@@ -524,7 +524,7 @@ public class SelfEnvironmentDetector
         catch (Exception ex)
         {
             MessageBox.Show($"检查 .NET 版本时发生错误: {ex.Message}");
-            Debug.Print($"检查 .NET 版本时发生错误: {ex.Message}");
+            PluginLog.Write($"检查 .NET 版本时发生错误: {ex.Message}");
             return false;
         }
     }
@@ -535,7 +535,7 @@ public class SelfEnvironmentDetector
         {
             if (!File.Exists(installerPath))
             {
-                Debug.Print("安装程序路径无效，请检查路径是否正确。");
+                PluginLog.Write("安装程序路径无效，请检查路径是否正确。");
                 return;
             }
 
@@ -552,13 +552,13 @@ public class SelfEnvironmentDetector
             {
                 process.WaitForExit();
                 MessageBox.Show("安装程序已执行完成。");
-                Debug.Print("安装程序已执行完成。");
+                PluginLog.Write("安装程序已执行完成。");
             }
         }
         catch (Exception ex)
         {
             MessageBox.Show($"执行安装程序时发生错误: {ex.Message}");
-            Debug.Print($"执行安装程序时发生错误: {ex.Message}");
+            PluginLog.Write($"执行安装程序时发生错误: {ex.Message}");
         }
     }
 }

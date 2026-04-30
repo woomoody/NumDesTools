@@ -121,7 +121,7 @@ public class RoleDataPro
         App.ScreenUpdating = true;
         sw.Stop();
         var ts2 = sw.Elapsed;
-        Debug.Print(ts2.ToString());
+        PluginLog.Write(ts2.ToString());
     }
 
     public static void ExportMulti(CommandBarButton ctrl, ref bool cancelDefault)

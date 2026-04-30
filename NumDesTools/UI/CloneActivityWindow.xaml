@@ -172,22 +172,46 @@
                 </ItemsControl>
             </ScrollViewer>
 
-            <!-- 添加行按钮 -->
-            <Button Grid.Row="2" Content="＋ 添加一行" Style="{StaticResource SecBtn}"
-                    HorizontalAlignment="Left" Margin="0,4,0,6"
-                    Click="AddRow_Click"/>
+            <!-- 添加行 / 源ID±  / 目标ID± 按钮行 -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,6">
+                <Button Content="＋ 添加一行" Style="{StaticResource SecBtn}"
+                        Margin="0,0,10,0" Click="AddRow_Click"/>
+                <TextBlock Text="源ID" Foreground="#888" FontSize="11"
+                           VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <Button Content="＋" Style="{StaticResource SecBtn}"
+                        Margin="0,0,2,0" Click="SrcIncrement_Click"
+                        ToolTip="源ID 按步长+1组"/>
+                <Button Content="－" Style="{StaticResource SecBtn}"
+                        Margin="0,0,12,0" Click="SrcDecrement_Click"
+                        ToolTip="源ID 按步长-1组（下限1）"/>
+                <TextBlock Text="目标ID" Foreground="#888" FontSize="11"
+                           VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <Button Content="＋" Style="{StaticResource SecBtn}"
+                        Margin="0,0,2,0" Click="DstIncrement_Click"
+                        ToolTip="目标ID 按步长+1组"/>
+                <Button Content="－" Style="{StaticResource SecBtn}"
+                        Click="DstDecrement_Click"
+                        ToolTip="目标ID 按步长-1组（下限1）"/>
+            </StackPanel>
 
-            <!-- 活动备注关键字 -->
+            <!-- 活动备注：源关键字 → 目标替换文本 -->
             <Grid Grid.Row="3">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="活动备注关键字：" Foreground="#888" FontSize="12"
+                <TextBlock Grid.Column="0" Text="备注关键字（源）：" Foreground="#888" FontSize="12"
                            VerticalAlignment="Center" Margin="0,0,6,0"/>
                 <TextBox x:Name="RemarkBox" Grid.Column="1"
-                         Style="{StaticResource CellBox}"
+                         Style="{StaticResource CellBox}" Margin="0,0,6,0"
                          ToolTip="用于在 ActivityClientData 中辅助匹配含该关键字的行（可留空）"/>
+                <TextBlock Grid.Column="2" Text="→ 替换为：" Foreground="#888" FontSize="12"
+                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBox x:Name="RemarkDstBox" Grid.Column="3"
+                         Style="{StaticResource CellBox}"
+                         ToolTip="克隆行的 #备注 列中，将源关键字替换为此文本（留空=不替换）"/>
             </Grid>
 
             <!-- 特殊字段决策（历史可回填，用户可修改） -->
@@ -202,7 +226,13 @@
                           Content="替换子表ID字段"
                           Style="{StaticResource ToggleCheck}"
                           IsChecked="False"
-                          ToolTip="绿色=替换；红色=保留原值"/>
+                          ToolTip="绿色=替换；红色=保留原值"
+                          Margin="0,0,10,0"/>
+                <CheckBox x:Name="IncrementRemarkCheck"
+                          Content="自增备注序号（第N期）"
+                          Style="{StaticResource ToggleCheck}"
+                          IsChecked="True"
+                          ToolTip="绿色=自动将备注中的「第N期」递增；红色=保留原备注文本"/>
             </StackPanel>
 
             <!-- 疑似表决策列表（有疑似表时才显示） -->
@@ -236,11 +266,80 @@
 
             <ListBox x:Name="HistoryList" Grid.Row="1"
                      Background="#252525" BorderBrush="#333" BorderThickness="1"
-                     FontSize="11" SelectionChanged="HistoryList_SelectionChanged">
+                     FontSize="11" SelectionChanged="HistoryList_SelectionChanged"
+                     KeyDown="HistoryList_KeyDown"
+                     MouseDoubleClick="HistoryList_MouseDoubleClick">
+                <ListBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.ContainerStyle>
+                            <Style TargetType="GroupItem">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="GroupItem">
+                                            <StackPanel>
+                                                <!-- 组头：点击切换折叠 -->
+                                                <ToggleButton x:Name="GroupToggle"
+                                                              IsChecked="True"
+                                                              Cursor="Hand"
+                                                              Background="#1A3A2A"
+                                                              BorderThickness="0"
+                                                              Padding="6,4"
+                                                              Margin="0,2,0,0"
+                                                              HorizontalContentAlignment="Stretch">
+                                                    <ToggleButton.Template>
+                                                        <ControlTemplate TargetType="ToggleButton">
+                                                            <Border Background="{TemplateBinding Background}"
+                                                                    Padding="{TemplateBinding Padding}">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <TextBlock x:Name="Arrow"
+                                                                               Grid.Column="0"
+                                                                               Text="▾"
+                                                                               Foreground="#6EC97E"
+                                                                               FontSize="10"
+                                                                               VerticalAlignment="Center"
+                                                                               Margin="0,0,5,0"/>
+                                                                    <TextBlock Grid.Column="1"
+                                                                               Text="{Binding Name}"
+                                                                               Foreground="#6EC97E"
+                                                                               FontSize="11"
+                                                                               FontWeight="Bold"
+                                                                               VerticalAlignment="Center"/>
+                                                                </Grid>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsChecked" Value="False">
+                                                                    <Setter TargetName="Arrow" Property="Text" Value="▸"/>
+                                                                </Trigger>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="#22503A"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </ToggleButton.Template>
+                                                </ToggleButton>
+                                                <!-- 子项列表：绑定到 ToggleButton.IsChecked -->
+                                                <ItemsPresenter x:Name="ItemsHost"/>
+                                            </StackPanel>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger SourceName="GroupToggle" Property="IsChecked" Value="False">
+                                                    <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </GroupStyle.ContainerStyle>
+                    </GroupStyle>
+                </ListBox.GroupStyle>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding Label}" TextWrapping="Wrap"
-                                   ToolTip="{Binding Tooltip}"/>
+                                   ToolTip="{Binding Tooltip}" Padding="8,0,0,0"/>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
@@ -249,7 +348,10 @@
                 <Button Content="应用选中" Style="{StaticResource SecBtn}"
                         Click="ApplyHistory_Click" Margin="0,0,4,0"/>
                 <Button Content="删除" Style="{StaticResource SmallBtn}"
-                        Click="DeleteHistory_Click"/>
+                        Click="DeleteHistory_Click" Margin="0,0,4,0"/>
+                <Button Content="重置屏蔽" Style="{StaticResource SmallBtn}"
+                        Click="ResetBlockedAlien_Click"
+                        ToolTip="清空选中条目所属活动组的所有异构ID屏蔽记录"/>
             </StackPanel>
         </Grid>
 
@@ -264,6 +366,12 @@
                 <TextBlock x:Name="StatusText" Foreground="#666" FontSize="11"
                            VerticalAlignment="Center" TextWrapping="Wrap"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button x:Name="BlockAlienBtn"
+                            Content="🚫 屏蔽此表异构映射"
+                            Style="{StaticResource SecBtn}"
+                            Visibility="Collapsed"
+                            Margin="0,0,8,0" Click="BlockAlien_Click"
+                            ToolTip="本方案以后不再对此表弹出异构ID映射对话框"/>
                     <Button Content="取消" Style="{StaticResource SecBtn}"
                             Margin="0,0,8,0" Click="Cancel_Click"/>
                     <Button Content="▶ 开始克隆" Style="{StaticResource PrimaryBtn}"

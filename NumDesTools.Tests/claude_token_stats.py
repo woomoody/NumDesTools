@@ -148,3 +148,104 @@ for proj in sorted(proj_daily.keys()):
     print(f"  {short:<42}  input={pi:>10,}  output={po:>10,}  实计={pi+po:>10,}  费用=${pcost:.4f}")
 
 print()
+
+# ── 字符图表 ──────────────────────────────────────────────────────────────────
+def ascii_chart(daily, calc_cost):
+    raw_dates = sorted(daily.keys())
+    if not raw_dates:
+        return
+
+    # 填充日期轴：从最早到最晚，缺失日期补 0
+    from datetime import date, timedelta
+    d0 = date.fromisoformat(raw_dates[0])
+    d1 = date.fromisoformat(raw_dates[-1])
+    dates = [(d0 + timedelta(days=i)).isoformat() for i in range((d1 - d0).days + 1)]
+    empty = {'input': 0, 'output': 0, 'cache_read': 0, 'cache_write': 0}
+
+    costs   = [calc_cost(daily.get(d, empty)['input'], daily.get(d, empty)['output'],
+                         daily.get(d, empty)['cache_read'], daily.get(d, empty)['cache_write']) for d in dates]
+    outputs = [daily.get(d, empty)['output'] / 1000 for d in dates]   # K tokens
+    inputs  = [daily.get(d, empty)['input']  / 1000 for d in dates]
+
+    ROWS   = 10   # 图高（行数）
+    BAR_W  = 6    # 每天占宽
+    YLABEL = 8    # 左侧标签宽
+
+    def make_bar_chart(values, title, unit, bar_char='█', sub_char='▄'):
+        max_v = max(values) if max(values) > 0 else 1
+        print(f'\n  {title}')
+        for row in range(ROWS, 0, -1):
+            threshold = max_v * row / ROWS
+            line = f'  {max_v * row / ROWS:{YLABEL-2}.0f}{unit} │'
+            for v in values:
+                filled = v >= threshold
+                half   = v >= max_v * (row - 0.5) / ROWS and not filled
+                if filled:
+                    line += f' {bar_char*4} '
+                elif half:
+                    line += f' {sub_char*4} '
+                else:
+                    line += ' ' * BAR_W
+            print(line)
+        # x 轴
+        print(' ' * YLABEL + '  └' + '──────' * len(dates))
+        # 日期标签
+        label_line = ' ' * (YLABEL + 3)
+        for d in dates:
+            label_line += f'{d[5:]:^6}'
+        print(label_line)
+
+    def make_cost_chart(values, title):
+        max_v = max(values) if max(values) > 0 else 1
+        # 折线图：用字符模拟
+        rows_data = []
+        for row in range(ROWS, 0, -1):
+            threshold_hi = max_v * row / ROWS
+            threshold_lo = max_v * (row - 1) / ROWS
+            row_chars = []
+            for v in values:
+                if threshold_lo < v <= threshold_hi:
+                    row_chars.append('●')
+                elif v > threshold_hi:
+                    row_chars.append('│')
+                else:
+                    row_chars.append(' ')
+            rows_data.append((threshold_hi, row_chars))
+
+        print(f'\n  {title}')
+        for threshold, row_chars in rows_data:
+            line = f'  {threshold:{YLABEL-2}.2f}$ │'
+            for i, ch in enumerate(row_chars):
+                # 连接相邻点
+                if ch == '●' and i + 1 < len(row_chars) and row_chars[i+1] == '●':
+                    line += f'  {ch}───'
+                elif ch == '●':
+                    line += f'  {ch}   '
+                elif ch == '│':
+                    line += f'  {ch}   '
+                else:
+                    # 检查是否需要画水平连接线
+                    line += ' ' * BAR_W
+            print(line)
+        print(' ' * YLABEL + '  └' + '──────' * len(dates))
+        label_line = ' ' * (YLABEL + 3)
+        for d in dates:
+            label_line += f'{d[5:]:^6}'
+        print(label_line)
+        # 数值行
+        val_line = ' ' * (YLABEL + 3)
+        for c in values:
+            val_line += f'{"$"+f"{c:.1f}":^6}'
+        print(val_line)
+
+    SEP2 = '─' * (YLABEL + 4 + BAR_W * len(dates))
+    print()
+    print(SEP2)
+    print('  📊 Token 使用趋势（字符图）')
+    print(SEP2)
+    make_bar_chart(outputs, '■ output tokens (K)', 'K', '█')
+    make_bar_chart(inputs,  '■ input tokens (K)',  'K', '░')
+    make_cost_chart(costs,  '● 每日费用 (USD)')
+    print()
+
+ascii_chart(daily, calc_cost)
