@@ -5,6 +5,8 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
+using ExcelDna.Integration;
 using Window = System.Windows.Window;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MessageBox = System.Windows.MessageBox;
@@ -60,6 +62,10 @@ namespace NumDesTools.UI
             InitializeComponent();
             RuleRows.ItemsSource = _rows;
             HistoryList.ItemsSource = _history;
+
+            // 挂到 Excel 主窗口，使 WPF 窗口能正常接收键盘输入
+            var helper = new WindowInteropHelper(this);
+            helper.Owner = (IntPtr)ExcelDnaUtil.WindowHandle;
 
             LoadHistory();
             if (_rows.Count == 0) AddEmptyRow();
