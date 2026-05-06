@@ -62,7 +62,7 @@
                     <labelControl id='SearchLab' label='搜索编号/关键字' />
                     <editBox id="ExcelSearchBoxEdit" label='输入查找值' onChange="ExcelOnEditBoxTextChanged"
                              sizeString="………………………………………………………"
-                             screentip='前缀加*表示模糊搜索' getText='GetEditBoxDefaultText'/>
+                             screentip='前缀加*表示模糊搜索&#13;常规模版支持多ID：逗号/换行分隔，如 763601,763651' getText='GetEditBoxDefaultText'/>
                     <menu id='ExcelSearchBoxMenu' label='全局搜索' image='key' size='large'>
                         <button id="ExcelSearchBoxButton1" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件'
                                 onAction='OnButtonClick' imageMso="FindDialogExcel" tag='全局搜索' />
@@ -74,7 +74,7 @@
                                 onAction='OnButtonClick' imageMso="AdpNewTable" tag='合并数据-关键词' />
                     </menu>
                     <menu id='AutoInsertExcelDataMenu2' label='创建数据' image='ejs' size='large'>
-                        <button id="ModelDataCreat" label="常规模版" screentip='全局搜索关键词，输出表格数据，常规模版数据，例如：各类LTE、主岛活动常规【模版】'
+                        <button id="ModelDataCreat" label="常规模版" screentip='全局搜索关键词，输出表格数据，常规模版数据，例如：各类LTE、主岛活动常规【模版】&#13;支持多ID：输入框用逗号/换行分隔，如 763601,763651，每张表取最小行和最大行'
                                 onAction='OnButtonClick' imageMso="TableInsert" tag='常规模版' />
                         <button id="ModelDataCreat2" label="特殊模版" screentip='指定表格搜索关键词，输出表格数据，特殊模版数据，例如：LTE皮肤【模版】'
                                 onAction='OnButtonClick' imageMso="SheetInsert" tag='特殊模版' />
@@ -127,9 +127,7 @@
                                 onAction='OnButtonClick' screentip='浏览某个 xlsx 的 Git 提交历史，选历史版本与工作区或另一历史版本对比'
                                 tag='查看历史版本对比' />
                     </menu>
-                    <button id="ActivityCloneButton" size='large' label="克隆活动&#13;" screentip='根据ActivityTableRules规则，以指定源活动ID为模板克隆新期次数据到所有相关表'
-                            onAction='OnButtonClick' imageMso="Copy" tag='克隆活动' />
-                    <menu id='ActivityValidateMenuMain' label='验证活动&#13;' image='codecov' size='large'>
+<menu id='ActivityValidateMenuMain' label='验证活动&#13;' image='codecov' size='large'>
                         <button id="ActivityTestAll" label="验证活动(全量)" screentip='验证所有活动配置表的跨表引用和字段规则'
                                 onAction='OnButtonClick' imageMso="DataValidation" tag='验证活动(全量)' />
                         <button id="ActivityTestById" label="验证活动(指定ID)" screentip='输入活动ID验证配置链完整性'

@@ -2869,6 +2869,97 @@ public static class PubMetToExcelFunc
         return new Dictionary<string, List<string>>(targetList);
     }
 
+    // 多ID版本：每个文件只打开一次，同时匹配所有 findValues
+    public static Dictionary<string, List<string>> SearchModelKeyMiniExcelMulti(
+        IReadOnlyCollection<string> findValues,
+        string[] files,
+        bool isMulti
+    )
+    {
+        // value 用 ConcurrentBag 保证并发 Add 安全
+        var targetList = new ConcurrentDictionary<string, ConcurrentBag<string>>(StringComparer.Ordinal);
+        var currentCount = 0;
+        var count = files.Length;
+
+        // 分成精确匹配集合和前缀匹配集合
+        var exactSet = new HashSet<string>(
+            findValues.Where(v => !v.Contains("*")),
+            StringComparer.Ordinal);
+        var prefixList = findValues
+            .Where(v => v.Contains("*"))
+            .Select(v => v.Replace("*", ""))
+            .ToList();
+
+        Action<string> processFile = file =>
+        {
+            var fileName = Path.GetFileName(file);
+
+            try
+            {
+                var sheetNames = MiniExcel.GetSheetNames(file);
+
+                foreach (var sheetName in sheetNames)
+                {
+                    if (sheetName.Contains("#") || sheetName.Contains("Chart"))
+                        continue;
+
+                    var rows = MiniExcel.Query(
+                        file,
+                        sheetName: sheetName,
+                        startCell: "A2",
+                        useHeaderRow: true
+                    );
+
+                    var sheetFullName = fileName.Contains("$") ? $"{fileName}#{sheetName}" : fileName;
+
+                    foreach (var row in rows)
+                    {
+                        int colIndex = 1;
+                        foreach (var cell in row)
+                        {
+                            if (colIndex == 2)
+                            {
+                                var cellValue = cell.Value?.ToString();
+                                if (cellValue != null)
+                                {
+                                    bool matched = exactSet.Contains(cellValue)
+                                        || prefixList.Any(p => cellValue.StartsWith(p));
+                                    if (matched)
+                                    {
+                                        targetList.GetOrAdd(sheetFullName, _ => new ConcurrentBag<string>())
+                                                  .Add(cellValue);
+                                    }
+                                }
+                                break; // col2 only, skip rest of row
+                            }
+                            colIndex++;
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            Interlocked.Increment(ref currentCount);
+            NumDesAddIn.App.StatusBar = $"正在检查第 {currentCount}/{count} 个文件: {file}";
+        };
+
+        if (isMulti)
+        {
+            var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+            Parallel.ForEach(files, options, processFile);
+        }
+        else
+        {
+            foreach (var file in files)
+                processFile(file);
+        }
+
+        return targetList.ToDictionary(
+            kv => kv.Key,
+            kv => kv.Value.ToList(),
+            StringComparer.Ordinal);
+    }
+
     //MiniExcel查询：全局查询Sheet名
     public static List<(string, string, int, int)> SearchSheetNameFromExcel(
         string rootPath,
