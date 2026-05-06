@@ -302,8 +302,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ActivityTestAll"] = ActivityTestAll_Click,
             ["ActivityTestById"] = ActivityTestById_Click,
             ["ActivityTestGitChanged"] = ActivityTestGitChanged_Click,
-            ["ActivityCloneButton"] = ActivityClone_Click,
-            ["ActivityRulesUpdateButton"] = ActivityRulesUpdate_Click,
+["ActivityRulesUpdateButton"] = ActivityRulesUpdate_Click,
             ["ExcelConflictGit"]     = _ => ExcelConflictEntry.OpenGitConflict(),
             ["ExcelConflictManual"]  = _ => ExcelConflictEntry.OpenManualCompare(),
             ["ExcelConflictHistory"] = _ => ExcelConflictEntry.OpenGitHistory(),
@@ -438,6 +437,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         if (isCheckOut)
         {
+            var xllBuildTime = File.GetLastWriteTime(ExcelDnaUtil.XllPath).ToString("yyyy-MM-dd HH:mm:ss");
+            PluginLog.Write($"[NumDesTools] xll loaded  build={xllBuildTime}  path={ExcelDnaUtil.XllPath}");
+
             //注册智能感应
             IntelliSenseServer.Install();
 
@@ -769,6 +771,38 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             LogDisplay.RecordLine($"[{DateTime.Now}] , 替换失败，错误信息：{ex.Message}");
             MessageBox.Show(ex.Message);
         }
+    }
+
+    // Ctrl+Alt+H：常驻批量替换面板（多对规则，选中区域）
+    [ExcelCommand(ShortCut = "^%h")]
+    public static void BatchReplaceInSelection()
+    {
+        UI.BatchReplaceWindow.OnExecute = rules =>
+        {
+            Range sel = App.Selection;
+            if (sel == null)
+            {
+                UI.BatchReplaceWindow.GetOrCreate().SetStatus("未选中任何单元格", false);
+                return;
+            }
+            int changed = 0;
+            foreach (Range cell in sel.Cells)
+            {
+                var val = cell.Value2?.ToString();
+                if (string.IsNullOrEmpty(val)) continue;
+                var newVal = val;
+                foreach (var (from, to) in rules)
+                    newVal = newVal.Replace(from, to);
+                if (newVal != val) { cell.Value2 = newVal; changed++; }
+            }
+            var msg = $"替换完成：{changed} 个单元格已更新";
+            App.StatusBar = msg;
+            UI.BatchReplaceWindow.GetOrCreate().SetStatus(msg, true);
+        };
+
+        var win = UI.BatchReplaceWindow.GetOrCreate();
+        if (!win.IsVisible) win.Show();
+        win.Activate();
     }
 
     //Ctrl+Alt+N，查找资源Icon
@@ -2367,13 +2401,28 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var filesCollection = new SelfExcelFileCollector(path);
         var files = filesCollection.GetAllExcelFilesPath();
 
-        var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(
-            _excelSeachStr,
-            files,
-            true,
-            true
-        );
-        targetList = targetList
+        // 支持多个 id：逗号、换行、空格分隔
+        var ids = _excelSeachStr
+            .Split(new[] { ',', '\n', '\r', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim())
+            .Where(s => s.Length > 0)
+            .Distinct()
+            .ToList();
+
+        // 单次扫描所有文件，同时匹配所有 id
+        var merged = PubMetToExcelFunc.SearchModelKeyMiniExcelMulti(ids, files, true);
+
+        // 每张表只保留 [min, max]
+        var targetList = merged
+            .ToDictionary(
+                kv => kv.Key,
+                kv => {
+                    var sorted = kv.Value.OrderBy(v => v, StringComparer.Ordinal).ToList();
+                    return sorted.Count > 1
+                        ? new List<string> { sorted.First(), sorted.Last() }
+                        : new List<string> { sorted.First(), sorted.First() };
+                },
+                StringComparer.Ordinal)
             .OrderBy(x => x.Key, StringComparer.Ordinal)
             .ToDictionary(x => x.Key, x => x.Value);
 
@@ -3399,9 +3448,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public void ActivityTestGitChanged_Click(IRibbonControl control)
         => ActivityConfigTester.TestGitChanged();
 
-    public void ActivityClone_Click(IRibbonControl control)
-        => ActivityDataCloner.RunDialog();
-
-    public void ActivityRulesUpdate_Click(IRibbonControl control)
+public void ActivityRulesUpdate_Click(IRibbonControl control)
         => ActivityRulesUpdater.Run();
 }
