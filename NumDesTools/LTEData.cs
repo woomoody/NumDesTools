@@ -3674,11 +3674,11 @@ public class LteData
                 break;
             }
 
-            var matchFieldIdEnd = fieldId.Substring(8, 1);
+            var matchFieldIdEnd = fieldId.Substring(fieldId.Length - 1, 1) ;
             var fieldCount = string.Empty;
             if (matchFieldIdEnd == "1")
             {
-                var matchFieldId = fieldId.Substring(0, 7);
+                var matchFieldId = fieldId.Substring(0, fieldId.Length - 2);
                 var matchCount = fieldIdList.Count(id => id.StartsWith(matchFieldId));
 
                 if (matchCount > 1)
