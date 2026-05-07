@@ -16,7 +16,7 @@ public static class ExcelConflictDiffer
 {
     public static FileDiff Diff(string oursPath, string theirsPath)
     {
-        var safeOurs   = EnsureXmlNamespace(oursPath);
+        var safeOurs = EnsureXmlNamespace(oursPath);
         var safeTheirs = EnsureXmlNamespace(theirsPath);
 
         var fileName = Path.GetFileName(oursPath);
@@ -28,30 +28,35 @@ public static class ExcelConflictDiffer
             sheetNames = pkg.Workbook.Worksheets.Select(w => w.Name).ToList();
             if (!fileName.Contains('$'))
             {
-                var s1 = sheetNames.FirstOrDefault(s => s == "Sheet1") ?? sheetNames.FirstOrDefault();
+                var s1 =
+                    sheetNames.FirstOrDefault(s => s == "Sheet1") ?? sheetNames.FirstOrDefault();
                 sheetNames = s1 != null ? [s1] : sheetNames;
             }
         }
 
         // 并行读取两个文件，每个文件一次 ExcelPackage 打开，同时取 meta
-        SheetBundle oursBundle   = default;
+        SheetBundle oursBundle = default;
         SheetBundle theirsBundle = default;
 
         Parallel.Invoke(
-            () => oursBundle   = ReadAllSheets(safeOurs,   sheetNames, readMeta: true),
+            () => oursBundle = ReadAllSheets(safeOurs, sheetNames, readMeta: true),
             () => theirsBundle = ReadAllSheets(safeTheirs, sheetNames, readMeta: false)
         );
 
         var sheetDiffs = new List<SheetDiff>(sheetNames.Count);
         foreach (var sheet in sheetNames)
         {
-            var oursData   = oursBundle.Sheets.TryGetValue(sheet, out var od) ? od : new SheetData();
-            var theirsData = theirsBundle.Sheets.TryGetValue(sheet, out var td) ? td : new SheetData();
+            var oursData = oursBundle.Sheets.TryGetValue(sheet, out var od) ? od : new SheetData();
+            var theirsData = theirsBundle.Sheets.TryGetValue(sheet, out var td)
+                ? td
+                : new SheetData();
             sheetDiffs.Add(DiffSheets(sheet, oursData, theirsData));
         }
 
-        if (safeOurs   != oursPath)   TryDelete(safeOurs);
-        if (safeTheirs != theirsPath) TryDelete(safeTheirs);
+        if (safeOurs != oursPath)
+            TryDelete(safeOurs);
+        if (safeTheirs != theirsPath)
+            TryDelete(safeTheirs);
 
         return new FileDiff(oursPath, theirsPath, sheetDiffs);
     }
@@ -65,8 +70,8 @@ public static class ExcelConflictDiffer
 
     private struct SheetData
     {
-        public List<string>   Columns;
-        public List<string[]> Rows;      // 每行按 Columns 顺序存字符串，避免字典开销
+        public List<string> Columns;
+        public List<string[]> Rows; // 每行按 Columns 顺序存字符串，避免字典开销
         public Dictionary<string, string> TypeRow;
         public Dictionary<string, string> LabelRow;
     }
@@ -75,7 +80,10 @@ public static class ExcelConflictDiffer
 
     private static SheetBundle ReadAllSheets(string path, List<string> sheetNames, bool readMeta)
     {
-        var bundle = new SheetBundle { Sheets = new Dictionary<string, SheetData>(sheetNames.Count) };
+        var bundle = new SheetBundle
+        {
+            Sheets = new Dictionary<string, SheetData>(sheetNames.Count)
+        };
         using var pkg = new ExcelPackage(new FileInfo(path));
         // 禁止 EPPlus 自动重算公式，避免公式错误单元格触发 RuntimeBinderException
         pkg.Workbook.CalcMode = ExcelCalcMode.Manual;
@@ -87,36 +95,63 @@ public static class ExcelConflictDiffer
             {
                 bundle.Sheets[sheetName] = new SheetData
                 {
-                    Columns  = [],
-                    Rows     = [],
-                    TypeRow  = new(),
+                    Columns = [],
+                    Rows = [],
+                    TypeRow = new(),
                     LabelRow = new(),
                 };
                 continue;
             }
 
-            var dim      = ws.Dimension;
+            var dim = ws.Dimension;
             int colCount = dim.End.Column;
             int rowCount = dim.End.Row;
 
             // 第2行为列名（header），第3行 type，第4行 label，第5行起为数据
-            var columns     = new List<string>(colCount);
-            var colEpplusIdx = new List<int>(colCount);   // columns[i] 对应的 EPPlus 1-based 列号
-            var typeRow      = new Dictionary<string, string>(readMeta ? colCount : 0, StringComparer.Ordinal);
-            var labelRow     = new Dictionary<string, string>(readMeta ? colCount : 0, StringComparer.Ordinal);
+            var columns = new List<string>(colCount);
+            var colEpplusIdx = new List<int>(colCount); // columns[i] 对应的 EPPlus 1-based 列号
+            var typeRow = new Dictionary<string, string>(
+                readMeta ? colCount : 0,
+                StringComparer.Ordinal
+            );
+            var labelRow = new Dictionary<string, string>(
+                readMeta ? colCount : 0,
+                StringComparer.Ordinal
+            );
 
             for (int c = 1; c <= colCount; c++)
             {
                 string h;
-                try { h = ws.Cells[2, c].Value?.ToString() ?? string.Empty; }
-                catch { h = string.Empty; }
-                if (string.IsNullOrEmpty(h)) continue;
+                try
+                {
+                    h = ws.Cells[2, c].Value?.ToString() ?? string.Empty;
+                }
+                catch
+                {
+                    h = string.Empty;
+                }
+                if (string.IsNullOrEmpty(h))
+                    continue;
                 columns.Add(h);
                 colEpplusIdx.Add(c);
                 if (readMeta)
                 {
-                    try { typeRow[h]  = ws.Cells[3, c].Value?.ToString() ?? string.Empty; } catch { typeRow[h]  = string.Empty; }
-                    try { labelRow[h] = ws.Cells[4, c].Value?.ToString() ?? string.Empty; } catch { labelRow[h] = string.Empty; }
+                    try
+                    {
+                        typeRow[h] = ws.Cells[3, c].Value?.ToString() ?? string.Empty;
+                    }
+                    catch
+                    {
+                        typeRow[h] = string.Empty;
+                    }
+                    try
+                    {
+                        labelRow[h] = ws.Cells[4, c].Value?.ToString() ?? string.Empty;
+                    }
+                    catch
+                    {
+                        labelRow[h] = string.Empty;
+                    }
                 }
             }
 
@@ -129,17 +164,23 @@ public static class ExcelConflictDiffer
                 var row = new string[columns.Count];
                 for (int i = 0; i < columns.Count; i++)
                 {
-                    try { row[i] = ws.Cells[r, colEpplusIdx[i]].Value?.ToString() ?? string.Empty; }
-                    catch { row[i] = string.Empty; }
+                    try
+                    {
+                        row[i] = ws.Cells[r, colEpplusIdx[i]].Value?.ToString() ?? string.Empty;
+                    }
+                    catch
+                    {
+                        row[i] = string.Empty;
+                    }
                 }
                 rows.Add(row);
             }
 
             bundle.Sheets[sheetName] = new SheetData
             {
-                Columns  = columns,
-                Rows     = rows,
-                TypeRow  = typeRow,
+                Columns = columns,
+                Rows = rows,
+                TypeRow = typeRow,
                 LabelRow = labelRow,
             };
         }
@@ -150,27 +191,29 @@ public static class ExcelConflictDiffer
 
     private static SheetDiff DiffSheets(string sheetName, SheetData ours, SheetData theirs)
     {
-        var oursColumns   = ours.Columns   ?? [];
+        var oursColumns = ours.Columns ?? [];
         var theirsColumns = theirs.Columns ?? [];
 
         if (oursColumns.Count == 0 && theirsColumns.Count == 0)
             return new SheetDiff(sheetName, [])
             {
-                TypeRow = ours.TypeRow ?? new(), LabelRow = ours.LabelRow ?? new(), AllColumns = [],
+                TypeRow = ours.TypeRow ?? new(),
+                LabelRow = ours.LabelRow ?? new(),
+                AllColumns = [],
             };
 
         var allCols = MergeColumnOrder(oursColumns, theirsColumns);
-        var keyCol  = allCols.Count > 1 ? allCols[1] : allCols[0];
+        var keyCol = allCols.Count > 1 ? allCols[1] : allCols[0];
 
-        int oursKeyIdx   = oursColumns.IndexOf(keyCol);
+        int oursKeyIdx = oursColumns.IndexOf(keyCol);
         int theirsKeyIdx = theirsColumns.IndexOf(keyCol);
 
         // 预建 allCols[i] → oursColumns/theirsColumns 下标映射，避免 DiffRow 每次 O(n) 查找
-        var oursColIdxMap   = BuildColIndexMap(allCols, oursColumns);
+        var oursColIdxMap = BuildColIndexMap(allCols, oursColumns);
         var theirsColIdxMap = BuildColIndexMap(allCols, theirsColumns);
 
         // 构建 key → 行索引映射
-        var oursDict   = BuildKeyIndex(ours.Rows,   oursKeyIdx);
+        var oursDict = BuildKeyIndex(ours.Rows, oursKeyIdx);
         var theirsDict = BuildKeyIndex(theirs.Rows, theirsKeyIdx);
 
         var rows = new List<RowConflict>(oursDict.Count + theirsDict.Count / 4);
@@ -188,64 +231,73 @@ public static class ExcelConflictDiffer
                 {
                     // Same 行：两侧相同，只存一份（OursFullRow），TheirsFullRow 指向同一对象节省内存
                     var rowDict = MakeRowDict(oursRow, oursColumns);
-                    rows.Add(new RowConflict
-                    {
-                        SheetName     = sheetName,
-                        RowKey        = key,
-                        DiffType      = RowDiffType.Same,
-                        AllColumns    = allCols,
-                        OursFullRow   = rowDict,
-                        TheirsFullRow = rowDict,
-                    });
+                    rows.Add(
+                        new RowConflict
+                        {
+                            SheetName = sheetName,
+                            RowKey = key,
+                            DiffType = RowDiffType.Same,
+                            AllColumns = allCols,
+                            OursFullRow = rowDict,
+                            TheirsFullRow = rowDict,
+                        }
+                    );
                 }
                 else
                 {
-                    rows.Add(new RowConflict
-                    {
-                        SheetName     = sheetName,
-                        RowKey        = key,
-                        DiffType      = RowDiffType.Modified,
-                        AllColumns    = allCols,
-                        OursFullRow   = MakeRowDict(oursRow, oursColumns),
-                        TheirsFullRow = MakeRowDict(theirsRow, theirsColumns),
-                    }.WithCells(cells));
+                    rows.Add(
+                        new RowConflict
+                        {
+                            SheetName = sheetName,
+                            RowKey = key,
+                            DiffType = RowDiffType.Modified,
+                            AllColumns = allCols,
+                            OursFullRow = MakeRowDict(oursRow, oursColumns),
+                            TheirsFullRow = MakeRowDict(theirsRow, theirsColumns),
+                        }.WithCells(cells)
+                    );
                 }
             }
             else
             {
-                rows.Add(new RowConflict
-                {
-                    SheetName     = sheetName,
-                    RowKey        = key,
-                    DiffType      = RowDiffType.OnlyOurs,
-                    AllColumns    = allCols,
-                    OursFullRow   = MakeRowDict(oursRow, oursColumns),
-                    TheirsFullRow = null,
-                    RowChoice     = ConflictChoice.Ours,
-                });
+                rows.Add(
+                    new RowConflict
+                    {
+                        SheetName = sheetName,
+                        RowKey = key,
+                        DiffType = RowDiffType.OnlyOurs,
+                        AllColumns = allCols,
+                        OursFullRow = MakeRowDict(oursRow, oursColumns),
+                        TheirsFullRow = null,
+                        RowChoice = ConflictChoice.Ours,
+                    }
+                );
             }
         }
 
         foreach (var (key, theirsRowIdx) in theirsDict)
         {
-            if (oursDict.ContainsKey(key)) continue;
+            if (oursDict.ContainsKey(key))
+                continue;
             var theirsRow = theirs.Rows[theirsRowIdx];
-            rows.Add(new RowConflict
-            {
-                SheetName     = sheetName,
-                RowKey        = key,
-                DiffType      = RowDiffType.OnlyTheirs,
-                AllColumns    = allCols,
-                OursFullRow   = null,
-                TheirsFullRow = MakeRowDict(theirsRow, theirsColumns),
-                RowChoice     = ConflictChoice.Theirs,
-            });
+            rows.Add(
+                new RowConflict
+                {
+                    SheetName = sheetName,
+                    RowKey = key,
+                    DiffType = RowDiffType.OnlyTheirs,
+                    AllColumns = allCols,
+                    OursFullRow = null,
+                    TheirsFullRow = MakeRowDict(theirsRow, theirsColumns),
+                    RowChoice = ConflictChoice.Theirs,
+                }
+            );
         }
 
         return new SheetDiff(sheetName, rows)
         {
-            TypeRow    = ours.TypeRow  ?? new(),
-            LabelRow   = ours.LabelRow ?? new(),
+            TypeRow = ours.TypeRow ?? new(),
+            LabelRow = ours.LabelRow ?? new(),
             AllColumns = allCols,
         };
     }
@@ -253,7 +305,8 @@ public static class ExcelConflictDiffer
     private static Dictionary<string, int> BuildKeyIndex(List<string[]> rows, int keyColIdx)
     {
         var dict = new Dictionary<string, int>(rows.Count, StringComparer.Ordinal);
-        if (keyColIdx < 0) return dict;
+        if (keyColIdx < 0)
+            return dict;
         for (int i = 0; i < rows.Count; i++)
         {
             var key = keyColIdx < rows[i].Length ? rows[i][keyColIdx] : string.Empty;
@@ -277,16 +330,20 @@ public static class ExcelConflictDiffer
         var map = new int[allCols.Count];
         // sourceCols 建反向字典，O(1) 查找
         var srcIdx = new Dictionary<string, int>(sourceCols.Count, StringComparer.Ordinal);
-        for (int i = 0; i < sourceCols.Count; i++) srcIdx[sourceCols[i]] = i;
+        for (int i = 0; i < sourceCols.Count; i++)
+            srcIdx[sourceCols[i]] = i;
         for (int i = 0; i < allCols.Count; i++)
             map[i] = srcIdx.TryGetValue(allCols[i], out var idx) ? idx : -1;
         return map;
     }
 
     private static List<CellConflict> DiffRow(
-        string[] oursRow, string[] theirsRow,
+        string[] oursRow,
+        string[] theirsRow,
         List<string> allCols,
-        int[] oursColIdxMap, int[] theirsColIdxMap)
+        int[] oursColIdxMap,
+        int[] theirsColIdxMap
+    )
     {
         var result = new List<CellConflict>();
         for (int i = 0; i < allCols.Count; i++)
@@ -294,29 +351,34 @@ public static class ExcelConflictDiffer
             int oi = oursColIdxMap[i];
             int ti = theirsColIdxMap[i];
 
-            var oursStr   = oi >= 0 && oi < oursRow.Length   ? oursRow[oi]   : string.Empty;
+            var oursStr = oi >= 0 && oi < oursRow.Length ? oursRow[oi] : string.Empty;
             var theirsStr = ti >= 0 && ti < theirsRow.Length ? theirsRow[ti] : string.Empty;
 
-            if (string.Equals(oursStr, theirsStr, StringComparison.Ordinal)) continue;
+            if (string.Equals(oursStr, theirsStr, StringComparison.Ordinal))
+                continue;
 
-            result.Add(new CellConflict
-            {
-                ColName     = allCols[i],
-                OursValue   = oursStr.Length   > 0 ? oursStr   : null,
-                TheirsValue = theirsStr.Length > 0 ? theirsStr : null,
-                Choice      = ConflictChoice.Ours,
-            });
+            result.Add(
+                new CellConflict
+                {
+                    ColName = allCols[i],
+                    OursValue = oursStr.Length > 0 ? oursStr : null,
+                    TheirsValue = theirsStr.Length > 0 ? theirsStr : null,
+                    Choice = ConflictChoice.Ours,
+                }
+            );
         }
         return result;
     }
 
     private static List<string> MergeColumnOrder(List<string> oursKeys, List<string> theirsKeys)
     {
-        if (theirsKeys.Count == 0) return oursKeys.ToList();
-        if (oursKeys.Count  == 0) return theirsKeys.ToList();
+        if (theirsKeys.Count == 0)
+            return oursKeys.ToList();
+        if (oursKeys.Count == 0)
+            return theirsKeys.ToList();
 
-        var result    = oursKeys.ToList();
-        var oursSet   = new HashSet<string>(oursKeys, StringComparer.Ordinal);
+        var result = oursKeys.ToList();
+        var oursSet = new HashSet<string>(oursKeys, StringComparer.Ordinal);
         var insertPos = 0;
 
         for (int ti = 0; ti < theirsKeys.Count; ti++)
@@ -340,7 +402,8 @@ public static class ExcelConflictDiffer
 
     private static string EnsureXmlNamespace(string path)
     {
-        const string rNs     = "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"";
+        const string rNs =
+            "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"";
         const string rPrefix = "r:";
 
         bool needsFix = false;
@@ -348,7 +411,9 @@ public static class ExcelConflictDiffer
         {
             foreach (var entry in zip.Entries)
             {
-                if (!entry.FullName.StartsWith("xl/worksheets/") || !entry.FullName.EndsWith(".xml"))
+                if (
+                    !entry.FullName.StartsWith("xl/worksheets/") || !entry.FullName.EndsWith(".xml")
+                )
                     continue;
                 using var stream = entry.Open();
                 using var reader = new StreamReader(stream, Encoding.UTF8);
@@ -361,10 +426,14 @@ public static class ExcelConflictDiffer
             }
         }
 
-        if (!needsFix) return path;
+        if (!needsFix)
+            return path;
 
-        var tmpPath = Path.Combine(Path.GetTempPath(), "NumDesExcelDiff",
-            Path.GetFileNameWithoutExtension(path) + "_fixed_" + Path.GetRandomFileName() + ".xlsx");
+        var tmpPath = Path.Combine(
+            Path.GetTempPath(),
+            "NumDesExcelDiff",
+            Path.GetFileNameWithoutExtension(path) + "_fixed_" + Path.GetRandomFileName() + ".xlsx"
+        );
         Directory.CreateDirectory(Path.GetDirectoryName(tmpPath)!);
         File.Copy(path, tmpPath, overwrite: true);
 
@@ -372,7 +441,9 @@ public static class ExcelConflictDiffer
         {
             foreach (var entry in zip.Entries.ToList())
             {
-                if (!entry.FullName.StartsWith("xl/worksheets/") || !entry.FullName.EndsWith(".xml"))
+                if (
+                    !entry.FullName.StartsWith("xl/worksheets/") || !entry.FullName.EndsWith(".xml")
+                )
                     continue;
                 string xml;
                 using (var stream = entry.Open())
@@ -395,7 +466,11 @@ public static class ExcelConflictDiffer
 
     private static void TryDelete(string path)
     {
-        try { File.Delete(path); } catch { }
+        try
+        {
+            File.Delete(path);
+        }
+        catch { }
     }
 }
 
@@ -403,7 +478,8 @@ file static class RowConflictExt
 {
     internal static RowConflict WithCells(this RowConflict row, List<CellConflict> cells)
     {
-        foreach (var c in cells) row.Cells.Add(c);
+        foreach (var c in cells)
+            row.Cells.Add(c);
         return row;
     }
 }

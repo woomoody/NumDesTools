@@ -278,7 +278,9 @@ public static class ExcelDataAutoInsertActivityServer
                     {
                         activeName = $"{a.Item7}：{a.Item1}";
                     }
-                    errorLog.Append($"运营排期-活动模版【{nameOrIdString}】：{activeName}**生命周期类型错误[{targetLifeType}]，搜索不到\r\n");
+                    errorLog.Append(
+                        $"运营排期-活动模版【{nameOrIdString}】：{activeName}**生命周期类型错误[{targetLifeType}]，搜索不到\r\n"
+                    );
                     targetLifeValue = "targetLifeValue";
                 }
                 else
@@ -360,7 +362,11 @@ public static class ExcelDataAutoInsertActivityServer
             MessageBox.Show("活动枚举 中的名称表-【活动枚举】不存在");
             return;
         }
-        if (baseList.DataBodyRange == null) { MessageBox.Show("活动枚举表无数据行"); return; }
+        if (baseList.DataBodyRange == null)
+        {
+            MessageBox.Show("活动枚举表无数据行");
+            return;
+        }
         object[,] baseArray = baseList.DataBodyRange.Value2;
         var baseDic = PubMetToExcel.TwoDArrayToDictionaryFirstKey1(baseArray);
 

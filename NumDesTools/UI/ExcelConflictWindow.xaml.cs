@@ -4,14 +4,14 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using NumDesTools.ConflictResolver;
-using Action     = System.Action;
-using Border     = System.Windows.Controls.Border;
-using Button     = System.Windows.Controls.Button;
-using CheckBox   = System.Windows.Controls.CheckBox;
+using Action = System.Action;
+using Border = System.Windows.Controls.Border;
+using Button = System.Windows.Controls.Button;
+using CheckBox = System.Windows.Controls.CheckBox;
 using MessageBox = System.Windows.MessageBox;
-using TextBox    = System.Windows.Controls.TextBox;
-using Window     = System.Windows.Window;
-using WpfColor   = System.Windows.Media.Color;
+using TextBox = System.Windows.Controls.TextBox;
+using Window = System.Windows.Window;
+using WpfColor = System.Windows.Media.Color;
 
 namespace NumDesTools.UI;
 
@@ -25,9 +25,9 @@ public partial class ExcelConflictWindow : Window
     {
         _suppressRefresh = true;
         InitializeComponent();
-        _diff       = diff;
+        _diff = diff;
         _autoGitAdd = autoGitAdd;
-        _outPath    = outPath ?? diff.OursPath;
+        _outPath = outPath ?? diff.OursPath;
 
         FileNameText.Text = Path.GetFileName(diff.OursPath);
         // 冲突行（Modified）：驱动冲突行列头 + 冲突行滚动条
@@ -50,8 +50,10 @@ public partial class ExcelConflictWindow : Window
 
         // 把首次列表渲染推到窗口显示后，避免构造函数阻塞 ShowDialog
         Loaded += (_, _) =>
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background,
-                (System.Action)RefreshConflictList);
+            Dispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.Background,
+                (System.Action)RefreshConflictList
+            );
 
         // 窗口/控件尺寸变化时重新计算滚动条范围（解决首次布局 ActualWidth=0 问题）
         SizeChanged += (_, _) =>
@@ -61,7 +63,12 @@ public partial class ExcelConflictWindow : Window
         };
     }
 
-    private enum ViewMode { ConflictOnly, Context, All }
+    private enum ViewMode
+    {
+        ConflictOnly,
+        Context,
+        All
+    }
 
     private readonly string _outPath;
     private double[] _currentColWidths = Array.Empty<double>();
@@ -70,10 +77,10 @@ public partial class ExcelConflictWindow : Window
     private bool _suppressRefresh;
 
     // section 展开状态（VSCode 风格：折叠=28px标题栏，展开=记忆高度）
-    private bool _sectionOnlyOursExpanded   = false;
+    private bool _sectionOnlyOursExpanded = false;
     private bool _sectionOnlyTheirsExpanded = false;
-    private bool _detailExpanded            = true;
-    private double _oursExpandedHeight   = 200;
+    private bool _detailExpanded = true;
+    private double _oursExpandedHeight = 200;
     private double _theirsExpandedHeight = 200;
     private double _detailExpandedHeight = 180;
 
@@ -83,8 +90,8 @@ public partial class ExcelConflictWindow : Window
 
     // 全量模式分批加载
     private const int PageSize = 200;
-    private const int ConflictContext = 5;        // 冲突行上下各 N 行
-    private List<RowConflict> _pendingRows = [];  // 待加载的完整列表
+    private const int ConflictContext = 5; // 冲突行上下各 N 行
+    private List<RowConflict> _pendingRows = []; // 待加载的完整列表
     private int _loadedCount;
     private ViewMode _viewMode = ViewMode.ConflictOnly;
 
@@ -102,14 +109,13 @@ public partial class ExcelConflictWindow : Window
             _sheetRows[sheet.SheetName] = rows;
 
             var conflictCount = sheet.Rows.Count(r => r.DiffType != RowDiffType.Same);
-            var header = conflictCount > 0
-                ? $"● {sheet.SheetName} ({conflictCount})"
-                : sheet.SheetName;
+            var header =
+                conflictCount > 0 ? $"● {sheet.SheetName} ({conflictCount})" : sheet.SheetName;
 
             var tab = new TabItem
             {
-                Header     = header,
-                Tag        = sheet.SheetName,
+                Header = header,
+                Tag = sheet.SheetName,
                 Foreground = sheet.HasConflict
                     ? System.Windows.Media.Brushes.OrangeRed
                     : System.Windows.Media.Brushes.Gray
@@ -124,44 +130,55 @@ public partial class ExcelConflictWindow : Window
 
     private void RefreshConflictList()
     {
-        if (SheetTabs.SelectedItem is not TabItem tab) return;
+        if (SheetTabs.SelectedItem is not TabItem tab)
+            return;
         var sheetName = tab.Tag?.ToString() ?? string.Empty;
-        if (!_sheetRows.TryGetValue(sheetName, out var allRows)) return;
+        if (!_sheetRows.TryGetValue(sheetName, out var allRows))
+            return;
 
         var sheetDiff = _diff.Sheets.FirstOrDefault(s => s.SheetName == sheetName);
 
-        _conflictColSet = sheetDiff?.Rows
-            .Where(r => r.DiffType == RowDiffType.Modified)
-            .SelectMany(r => r.Cells.Select(c => c.ColName))
-            .ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>(StringComparer.Ordinal);
+        _conflictColSet =
+            sheetDiff
+                ?.Rows.Where(r => r.DiffType == RowDiffType.Modified)
+                .SelectMany(r => r.Cells.Select(c => c.ColName))
+                .ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>(StringComparer.Ordinal);
 
         bool hideNonConflict = HideNoConflictCols.IsChecked == true;
         if (sheetDiff != null)
         {
-            List<string>? visibleCols = (hideNonConflict && _conflictColSet.Count > 0)
-                ? sheetDiff.AllColumns.Where(c => _conflictColSet.Contains(c)).ToList()
-                : null;
+            List<string>? visibleCols =
+                (hideNonConflict && _conflictColSet.Count > 0)
+                    ? sheetDiff.AllColumns.Where(c => _conflictColSet.Contains(c)).ToList()
+                    : null;
             ConflictRowItem.VisibleColumns = visibleCols;
 
-            _allColWidths = ComputeSheetColWidths(sheetDiff.AllColumns, sheetDiff.Rows, _conflictColSet);
+            _allColWidths = ComputeSheetColWidths(
+                sheetDiff.AllColumns,
+                sheetDiff.Rows,
+                _conflictColSet
+            );
             ConflictRowItem.AllSheetColWidths = _allColWidths;
 
             var colsForWidths = visibleCols ?? sheetDiff.AllColumns;
-            _currentColWidths = visibleCols != null
-                ? ComputeSheetColWidths(colsForWidths, sheetDiff.Rows, _conflictColSet)
-                : _allColWidths;
+            _currentColWidths =
+                visibleCols != null
+                    ? ComputeSheetColWidths(colsForWidths, sheetDiff.Rows, _conflictColSet)
+                    : _allColWidths;
             ConflictRowItem.CurrentSheetColWidths = _currentColWidths;
 
             // 列宽确定后一次性设置两条滚动条，后续行渲染不再重复触发
             _conflictTotalWidth = _currentColWidths.Sum();
-            _rowsTotalWidth     = _allColWidths.Sum();
+            _rowsTotalWidth = _allColWidths.Sum();
             ApplyScrollBarRange(SharedHScrollBar, _conflictTotalWidth);
             UpdateRowsScrollBarVisibility();
         }
 
         // Split rows into three sections
-        var modifiedRows   = allRows.Where(r => r.DiffType == RowDiffType.Modified && r.Cells.Count > 0).ToList();
-        var onlyOursRows   = allRows.Where(r => r.DiffType == RowDiffType.OnlyOurs).ToList();
+        var modifiedRows = allRows
+            .Where(r => r.DiffType == RowDiffType.Modified && r.Cells.Count > 0)
+            .ToList();
+        var onlyOursRows = allRows.Where(r => r.DiffType == RowDiffType.OnlyOurs).ToList();
         var onlyTheirsRows = allRows.Where(r => r.DiffType == RowDiffType.OnlyTheirs).ToList();
 
         // For Context/All modes, include Same rows in the modified section only
@@ -173,15 +190,29 @@ public partial class ExcelConflictWindow : Window
                 var allList = allRows.ToList();
                 _pendingRows = allList;
                 _loadedCount = 0;
-                var contextRows = BuildConflictContextRows(allList).Where(r => r.DiffType != RowDiffType.OnlyOurs && r.DiffType != RowDiffType.OnlyTheirs).ToList();
-                LoadMoreBar.Visibility = contextRows.Count < allList.Count(r => r.DiffType != RowDiffType.OnlyOurs && r.DiffType != RowDiffType.OnlyTheirs) ? Visibility.Visible : Visibility.Collapsed;
-                LoadMoreStatus.Text    = $"冲突±{ConflictContext}行：已显示 {contextRows.Count}";
+                var contextRows = BuildConflictContextRows(allList)
+                    .Where(r =>
+                        r.DiffType != RowDiffType.OnlyOurs && r.DiffType != RowDiffType.OnlyTheirs
+                    )
+                    .ToList();
+                LoadMoreBar.Visibility =
+                    contextRows.Count
+                    < allList.Count(r =>
+                        r.DiffType != RowDiffType.OnlyOurs && r.DiffType != RowDiffType.OnlyTheirs
+                    )
+                        ? Visibility.Visible
+                        : Visibility.Collapsed;
+                LoadMoreStatus.Text = $"冲突±{ConflictContext}行：已显示 {contextRows.Count}";
                 displayModified = contextRows;
                 break;
             }
             case ViewMode.All:
             {
-                var allList = allRows.Where(r => r.DiffType != RowDiffType.OnlyOurs && r.DiffType != RowDiffType.OnlyTheirs).ToList();
+                var allList = allRows
+                    .Where(r =>
+                        r.DiffType != RowDiffType.OnlyOurs && r.DiffType != RowDiffType.OnlyTheirs
+                    )
+                    .ToList();
                 if (allList.Count <= PageSize)
                 {
                     _pendingRows = [];
@@ -194,7 +225,7 @@ public partial class ExcelConflictWindow : Window
                     _pendingRows = allList;
                     _loadedCount = PageSize;
                     LoadMoreBar.Visibility = Visibility.Visible;
-                    LoadMoreStatus.Text    = $"已显示 {PageSize}/{allList.Count} 行";
+                    LoadMoreStatus.Text = $"已显示 {PageSize}/{allList.Count} 行";
                     displayModified = allList.Take(PageSize).ToList();
                 }
                 break;
@@ -208,38 +239,64 @@ public partial class ExcelConflictWindow : Window
         }
 
         ConflictList.ItemsSource = new ObservableCollection<RowConflict>(displayModified);
-        OnlyOursList.ItemsSource   = new ObservableCollection<RowConflict>(onlyOursRows);
+        OnlyOursList.ItemsSource = new ObservableCollection<RowConflict>(onlyOursRows);
         OnlyTheirsList.ItemsSource = new ObservableCollection<RowConflict>(onlyTheirsRows);
 
-        SectionOnlyOursCount.Text   = $"({onlyOursRows.Count})";
+        SectionOnlyOursCount.Text = $"({onlyOursRows.Count})";
         SectionOnlyTheirsCount.Text = $"({onlyTheirsRows.Count})";
 
         // 新增/删除 section：无数据时折叠且隐藏（行高=0）
         if (onlyOursRows.Count == 0)
         {
-            RowOnlyOurs.MinHeight = 0; RowOnlyOurs.Height = new GridLength(0);
+            RowOnlyOurs.MinHeight = 0;
+            RowOnlyOurs.Height = new GridLength(0);
         }
         else
         {
-            SetSectionExpanded(RowOnlyOurs, OnlyOursList, OursHeaderBorder,
-                SectionOnlyOursChevron, _sectionOnlyOursExpanded, ref _oursExpandedHeight);
+            SetSectionExpanded(
+                RowOnlyOurs,
+                OnlyOursList,
+                OursHeaderBorder,
+                SectionOnlyOursChevron,
+                _sectionOnlyOursExpanded,
+                ref _oursExpandedHeight
+            );
         }
 
         if (onlyTheirsRows.Count == 0)
         {
-            RowOnlyTheirs.MinHeight = 0; RowOnlyTheirs.Height = new GridLength(0);
+            RowOnlyTheirs.MinHeight = 0;
+            RowOnlyTheirs.Height = new GridLength(0);
         }
         else
         {
-            SetSectionExpanded(RowOnlyTheirs, OnlyTheirsList, TheirsHeaderBorder,
-                SectionOnlyTheirsChevron, _sectionOnlyTheirsExpanded, ref _theirsExpandedHeight);
+            SetSectionExpanded(
+                RowOnlyTheirs,
+                OnlyTheirsList,
+                TheirsHeaderBorder,
+                SectionOnlyTheirsChevron,
+                _sectionOnlyTheirsExpanded,
+                ref _theirsExpandedHeight
+            );
         }
 
         if (sheetDiff != null)
         {
             BuildMetaHeader(sheetDiff);
-            BuildSectionMetaHeader(sheetDiff, OursMetaFieldGrid,   OursMetaLabelGrid,   sheetDiff.AllColumns, _allColWidths);
-            BuildSectionMetaHeader(sheetDiff, TheirsMetaFieldGrid, TheirsMetaLabelGrid, sheetDiff.AllColumns, _allColWidths);
+            BuildSectionMetaHeader(
+                sheetDiff,
+                OursMetaFieldGrid,
+                OursMetaLabelGrid,
+                sheetDiff.AllColumns,
+                _allColWidths
+            );
+            BuildSectionMetaHeader(
+                sheetDiff,
+                TheirsMetaFieldGrid,
+                TheirsMetaLabelGrid,
+                sheetDiff.AllColumns,
+                _allColWidths
+            );
             BuildColBatchBar(sheetDiff);
             BuildChangeNav(sheetDiff);
         }
@@ -253,20 +310,27 @@ public partial class ExcelConflictWindow : Window
     }
 
     // VSCode 风格：折叠 = RowDefinition.Height 设为 28（标题栏高），展开 = 恢复记忆高度
-    private void SetSectionExpanded(RowDefinition row, System.Windows.Controls.ListBox list,
-        Border? colHeader, TextBlock chevron, bool expanded, ref double savedHeight)
+    private void SetSectionExpanded(
+        RowDefinition row,
+        System.Windows.Controls.ListBox list,
+        Border? colHeader,
+        TextBlock chevron,
+        bool expanded,
+        ref double savedHeight
+    )
     {
         if (expanded)
         {
             row.MinHeight = 28;
-            row.Height    = new GridLength(Math.Max(savedHeight, 120));
+            row.Height = new GridLength(Math.Max(savedHeight, 120));
         }
         else
         {
             // 记住当前高度再折叠
-            if (row.ActualHeight > 28) savedHeight = row.ActualHeight;
+            if (row.ActualHeight > 28)
+                savedHeight = row.ActualHeight;
             row.MinHeight = 28;
-            row.Height    = new GridLength(28);
+            row.Height = new GridLength(28);
         }
         list.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
         if (colHeader != null)
@@ -288,14 +352,26 @@ public partial class ExcelConflictWindow : Window
         if (sender == SectionOnlyOursHeader)
         {
             _sectionOnlyOursExpanded = !_sectionOnlyOursExpanded;
-            SetSectionExpanded(RowOnlyOurs, OnlyOursList, OursHeaderBorder,
-                SectionOnlyOursChevron, _sectionOnlyOursExpanded, ref _oursExpandedHeight);
+            SetSectionExpanded(
+                RowOnlyOurs,
+                OnlyOursList,
+                OursHeaderBorder,
+                SectionOnlyOursChevron,
+                _sectionOnlyOursExpanded,
+                ref _oursExpandedHeight
+            );
         }
         else if (sender == SectionOnlyTheirsHeader)
         {
             _sectionOnlyTheirsExpanded = !_sectionOnlyTheirsExpanded;
-            SetSectionExpanded(RowOnlyTheirs, OnlyTheirsList, TheirsHeaderBorder,
-                SectionOnlyTheirsChevron, _sectionOnlyTheirsExpanded, ref _theirsExpandedHeight);
+            SetSectionExpanded(
+                RowOnlyTheirs,
+                OnlyTheirsList,
+                TheirsHeaderBorder,
+                SectionOnlyTheirsChevron,
+                _sectionOnlyTheirsExpanded,
+                ref _theirsExpandedHeight
+            );
         }
     }
 
@@ -305,13 +381,14 @@ public partial class ExcelConflictWindow : Window
         if (_detailExpanded)
         {
             RowDetail.MinHeight = 28;
-            RowDetail.Height    = new GridLength(Math.Max(_detailExpandedHeight, 120));
+            RowDetail.Height = new GridLength(Math.Max(_detailExpandedHeight, 120));
         }
         else
         {
-            if (RowDetail.ActualHeight > 28) _detailExpandedHeight = RowDetail.ActualHeight;
+            if (RowDetail.ActualHeight > 28)
+                _detailExpandedHeight = RowDetail.ActualHeight;
             RowDetail.MinHeight = 28;
-            RowDetail.Height    = new GridLength(28);
+            RowDetail.Height = new GridLength(28);
         }
         DetailContent.Visibility = _detailExpanded ? Visibility.Visible : Visibility.Collapsed;
         DetailChevron.Text = _detailExpanded ? "▼ " : "▶ ";
@@ -319,15 +396,19 @@ public partial class ExcelConflictWindow : Window
 
     private void ScrollToFirstConflictColumn()
     {
-        if (_currentColWidths.Length == 0) return;
-        if (SheetTabs.SelectedItem is not TabItem tab) return;
+        if (_currentColWidths.Length == 0)
+            return;
+        if (SheetTabs.SelectedItem is not TabItem tab)
+            return;
         var sheetName = tab.Tag?.ToString() ?? string.Empty;
         var sheetDiff = _diff.Sheets.FirstOrDefault(s => s.SheetName == sheetName);
-        if (sheetDiff == null) return;
+        if (sheetDiff == null)
+            return;
 
         var cols = sheetDiff.AllColumns;
         bool hasRowConflict = sheetDiff.Rows.Any(r =>
-            r.DiffType == RowDiffType.OnlyOurs || r.DiffType == RowDiffType.OnlyTheirs);
+            r.DiffType == RowDiffType.OnlyOurs || r.DiffType == RowDiffType.OnlyTheirs
+        );
 
         double offset = 0;
         bool found = false;
@@ -341,7 +422,8 @@ public partial class ExcelConflictWindow : Window
             offset += _currentColWidths[i];
         }
 
-        if (!found) return;
+        if (!found)
+            return;
 
         const double margin = 40;
         var scrollTo = Math.Max(0, offset - margin);
@@ -360,11 +442,13 @@ public partial class ExcelConflictWindow : Window
         var indices = new HashSet<int>();
         for (int i = 0; i < rows.Count; i++)
         {
-            if (rows[i].DiffType == RowDiffType.Same) continue;
+            if (rows[i].DiffType == RowDiffType.Same)
+                continue;
             for (int d = -ConflictContext; d <= ConflictContext; d++)
             {
                 var idx = i + d;
-                if (idx >= 0 && idx < rows.Count) indices.Add(idx);
+                if (idx >= 0 && idx < rows.Count)
+                    indices.Add(idx);
             }
         }
         return rows.Where((_, i) => indices.Contains(i)).ToList();
@@ -372,21 +456,29 @@ public partial class ExcelConflictWindow : Window
 
     private void LoadMore_Click(object sender, RoutedEventArgs e)
     {
-        if (_pendingRows.Count == 0) return;
+        if (_pendingRows.Count == 0)
+            return;
         // 追加模式：把 _loadedCount 视为"从全量 pending 加载了多少"
         // 首次点加载更多时先从头加载 PageSize（因为当前显示的是 context 子集）
         if (_loadedCount == 0)
         {
             // 切换到分页模式：用前 PageSize 行替换当前 context 视图
             _loadedCount = PageSize;
-            ConflictList.ItemsSource = new ObservableCollection<RowConflict>(_pendingRows.Take(PageSize));
+            ConflictList.ItemsSource = new ObservableCollection<RowConflict>(
+                _pendingRows.Take(PageSize)
+            );
         }
         else
         {
             var next = _pendingRows.Skip(_loadedCount).Take(PageSize).ToList();
-            if (next.Count == 0) { LoadMoreBar.Visibility = Visibility.Collapsed; return; }
+            if (next.Count == 0)
+            {
+                LoadMoreBar.Visibility = Visibility.Collapsed;
+                return;
+            }
             var current = (ObservableCollection<RowConflict>)ConflictList.ItemsSource;
-            foreach (var row in next) current.Add(row);
+            foreach (var row in next)
+                current.Add(row);
             _loadedCount += next.Count;
         }
 
@@ -398,25 +490,37 @@ public partial class ExcelConflictWindow : Window
 
     private void LoadAll_Click(object sender, RoutedEventArgs e)
     {
-        if (_pendingRows.Count == 0) return;
+        if (_pendingRows.Count == 0)
+            return;
         _loadedCount = _pendingRows.Count;
         ConflictList.ItemsSource = new ObservableCollection<RowConflict>(_pendingRows);
         LoadMoreBar.Visibility = Visibility.Collapsed;
     }
 
-    private void ApplyScrollBarRange(System.Windows.Controls.Primitives.ScrollBar bar, double totalWidth)
+    private void ApplyScrollBarRange(
+        System.Windows.Controls.Primitives.ScrollBar bar,
+        double totalWidth
+    )
     {
-        if (totalWidth <= 0) { bar.Visibility = Visibility.Collapsed; return; }
+        if (totalWidth <= 0)
+        {
+            bar.Visibility = Visibility.Collapsed;
+            return;
+        }
         // 先 Visible，让 WPF 完成布局，再读 ActualWidth
         bar.Visibility = Visibility.Visible;
         bar.UpdateLayout();
         var viewport = bar.ActualWidth > 0 ? bar.ActualWidth : ActualWidth;
         bar.ViewportSize = viewport;
-        bar.Maximum      = Math.Max(0, totalWidth - viewport);
-        if (totalWidth <= viewport) bar.Visibility = Visibility.Collapsed;
+        bar.Maximum = Math.Max(0, totalWidth - viewport);
+        if (totalWidth <= viewport)
+            bar.Visibility = Visibility.Collapsed;
     }
 
-    private void SharedHScrollBar_Scroll(object sender, System.Windows.Controls.Primitives.ScrollEventArgs e)
+    private void SharedHScrollBar_Scroll(
+        object sender,
+        System.Windows.Controls.Primitives.ScrollEventArgs e
+    )
     {
         var offset = e.NewValue;
         ConflictRowItem.SetGlobalScrollOffset(offset);
@@ -424,7 +528,10 @@ public partial class ExcelConflictWindow : Window
         BatchScroll.ScrollToHorizontalOffset(offset);
     }
 
-    private void RowsHScrollBar_Scroll(object sender, System.Windows.Controls.Primitives.ScrollEventArgs e)
+    private void RowsHScrollBar_Scroll(
+        object sender,
+        System.Windows.Controls.Primitives.ScrollEventArgs e
+    )
     {
         var offset = e.NewValue;
         ConflictRowItem.SetGlobalRowsScrollOffset(offset);
@@ -442,29 +549,69 @@ public partial class ExcelConflictWindow : Window
     private void BuildMetaHeader(SheetDiff sheet)
     {
         var cols = ConflictRowItem.VisibleColumns ?? sheet.AllColumns;
-        if (cols.Count == 0) { MetaScroll.Visibility = Visibility.Collapsed; return; }
+        if (cols.Count == 0)
+        {
+            MetaScroll.Visibility = Visibility.Collapsed;
+            return;
+        }
         MetaScroll.Visibility = Visibility.Visible;
 
-        BuildMetaGrid(MetaFieldGrid, cols, _currentColWidths,
-            col => MakeMetaCell(col, MetaFieldFg, MetaFieldBg, bold: true));
-        BuildMetaGrid(MetaLabelGrid, cols, _currentColWidths,
-            col => MakeMetaCell(
-                sheet.LabelRow.TryGetValue(col, out var v) ? v : string.Empty,
-                MetaLabelFg, MetaLabelBg, bold: false));
+        BuildMetaGrid(
+            MetaFieldGrid,
+            cols,
+            _currentColWidths,
+            col => MakeMetaCell(col, MetaFieldFg, MetaFieldBg, bold: true)
+        );
+        BuildMetaGrid(
+            MetaLabelGrid,
+            cols,
+            _currentColWidths,
+            col =>
+                MakeMetaCell(
+                    sheet.LabelRow.TryGetValue(col, out var v) ? v : string.Empty,
+                    MetaLabelFg,
+                    MetaLabelBg,
+                    bold: false
+                )
+        );
     }
 
-    private void BuildSectionMetaHeader(SheetDiff sheet, Grid fieldGrid, Grid labelGrid, List<string> cols, double[] widths)
+    private void BuildSectionMetaHeader(
+        SheetDiff sheet,
+        Grid fieldGrid,
+        Grid labelGrid,
+        List<string> cols,
+        double[] widths
+    )
     {
-        if (cols.Count == 0) return;
-        BuildMetaGrid(fieldGrid, cols, widths,
-            col => MakeMetaCell(col, MetaFieldFg, MetaFieldBg, bold: true));
-        BuildMetaGrid(labelGrid, cols, widths,
-            col => MakeMetaCell(
-                sheet.LabelRow.TryGetValue(col, out var v) ? v : string.Empty,
-                MetaLabelFg, MetaLabelBg, bold: false));
+        if (cols.Count == 0)
+            return;
+        BuildMetaGrid(
+            fieldGrid,
+            cols,
+            widths,
+            col => MakeMetaCell(col, MetaFieldFg, MetaFieldBg, bold: true)
+        );
+        BuildMetaGrid(
+            labelGrid,
+            cols,
+            widths,
+            col =>
+                MakeMetaCell(
+                    sheet.LabelRow.TryGetValue(col, out var v) ? v : string.Empty,
+                    MetaLabelFg,
+                    MetaLabelBg,
+                    bold: false
+                )
+        );
     }
 
-    private static void BuildMetaGrid(Grid grid, List<string> cols, double[] widths, Func<string, TextBlock> makeCell)
+    private static void BuildMetaGrid(
+        Grid grid,
+        List<string> cols,
+        double[] widths,
+        Func<string, TextBlock> makeCell
+    )
     {
         grid.ColumnDefinitions.Clear();
         grid.Children.Clear();
@@ -482,13 +629,27 @@ public partial class ExcelConflictWindow : Window
     private static bool IsRemarkCol(string col)
     {
         var lo = col.ToLowerInvariant();
-        return lo.Contains("备注") || lo.Contains("remark") || lo.Contains("note") || lo.Contains("desc");
+        return lo.Contains("备注")
+            || lo.Contains("remark")
+            || lo.Contains("note")
+            || lo.Contains("desc");
     }
 
-    private static double[] ComputeSheetColWidths(List<string> cols, IEnumerable<RowConflict> rows, HashSet<string> conflictCols)
+    private static double[] ComputeSheetColWidths(
+        List<string> cols,
+        IEnumerable<RowConflict> rows,
+        HashSet<string> conflictCols
+    )
     {
-        const double min = 40, maxConflict = 280, maxRemark = 160, maxNormal = 60, maxRow = 120, pad = 16, charPx = 7.5;
-        double Cap(string col) => conflictCols.Contains(col) ? maxConflict : (IsRemarkCol(col) ? maxRemark : maxNormal);
+        const double min = 40,
+            maxConflict = 280,
+            maxRemark = 160,
+            maxNormal = 60,
+            maxRow = 120,
+            pad = 16,
+            charPx = 7.5;
+        double Cap(string col) =>
+            conflictCols.Contains(col) ? maxConflict : (IsRemarkCol(col) ? maxRemark : maxNormal);
         double Measure(string t, double cap) =>
             string.IsNullOrEmpty(t) ? min : Math.Max(min, Math.Min(cap, t.Length * charPx + pad));
 
@@ -499,8 +660,10 @@ public partial class ExcelConflictWindow : Window
             for (int i = 0; i < cols.Count; i++)
             {
                 var col = cols[i];
-                double cap = conflictCols.Contains(col) ? maxConflict : (isRowConflict ? maxRow : (IsRemarkCol(col) ? maxRemark : maxNormal));
-                if (rc.OursFullRow   != null && rc.OursFullRow.TryGetValue(col,   out var ov))
+                double cap = conflictCols.Contains(col)
+                    ? maxConflict
+                    : (isRowConflict ? maxRow : (IsRemarkCol(col) ? maxRemark : maxNormal));
+                if (rc.OursFullRow != null && rc.OursFullRow.TryGetValue(col, out var ov))
                     widths[i] = Math.Max(widths[i], Measure(ov?.ToString() ?? string.Empty, cap));
                 if (rc.TheirsFullRow != null && rc.TheirsFullRow.TryGetValue(col, out var tv))
                     widths[i] = Math.Max(widths[i], Measure(tv?.ToString() ?? string.Empty, cap));
@@ -509,34 +672,41 @@ public partial class ExcelConflictWindow : Window
         return widths;
     }
 
-    private static TextBlock MakeMetaCell(string text, SolidColorBrush fg, SolidColorBrush bg, bool bold)
-        => new()
+    private static TextBlock MakeMetaCell(
+        string text,
+        SolidColorBrush fg,
+        SolidColorBrush bg,
+        bool bold
+    ) =>
+        new()
         {
-            Text         = text,
-            Foreground   = fg,
-            Background   = bg,
-            Padding      = new Thickness(5, 2, 5, 2),
-            FontSize     = 10,
-            FontWeight   = bold ? FontWeights.Bold : FontWeights.Normal,
+            Text = text,
+            Foreground = fg,
+            Background = bg,
+            Padding = new Thickness(5, 2, 5, 2),
+            FontSize = 10,
+            FontWeight = bold ? FontWeights.Bold : FontWeights.Normal,
             TextTrimming = TextTrimming.CharacterEllipsis,
-            ToolTip      = string.IsNullOrEmpty(text) ? null : text,
+            ToolTip = string.IsNullOrEmpty(text) ? null : text,
         };
 
     // ── 详情面板 ─────────────────────────────────────────────────────────────
 
-    internal void OnCellSelected(object sender, CellSelectedRoutedEventArgs e) => ShowDetailForRow(e.Row);
+    internal void OnCellSelected(object sender, CellSelectedRoutedEventArgs e) =>
+        ShowDetailForRow(e.Row);
 
-    private static readonly SolidColorBrush DetailFgOurs   = new(Color(0xA8, 0xC8, 0xFF));
+    private static readonly SolidColorBrush DetailFgOurs = new(Color(0xA8, 0xC8, 0xFF));
     private static readonly SolidColorBrush DetailFgTheirs = new(Color(0xA8, 0xFF, 0xCA));
+
     // 字符级差异用黄色，与主列表红色背景区分
-    private static readonly SolidColorBrush DetailFgDiff   = new(Color(0xFF, 0xD0, 0x40));
-    private static readonly SolidColorBrush DetailBgDiff   = new(Color(0x35, 0x2A, 0x00));
-    private static readonly SolidColorBrush DetailFgMuted  = new(Color(0x55, 0x55, 0x55));
-    private static readonly SolidColorBrush DetailBgOurs   = new(Color(0x0A, 0x15, 0x25));
+    private static readonly SolidColorBrush DetailFgDiff = new(Color(0xFF, 0xD0, 0x40));
+    private static readonly SolidColorBrush DetailBgDiff = new(Color(0x35, 0x2A, 0x00));
+    private static readonly SolidColorBrush DetailFgMuted = new(Color(0x55, 0x55, 0x55));
+    private static readonly SolidColorBrush DetailBgOurs = new(Color(0x0A, 0x15, 0x25));
     private static readonly SolidColorBrush DetailBgTheirs = new(Color(0x0A, 0x1A, 0x0F));
-    private static readonly SolidColorBrush DetailBgCol    = new(Color(0x1A, 0x2A, 0x1A));
-    private static readonly SolidColorBrush DetailBorder   = new(Color(0x33, 0x33, 0x33));
-    private static readonly SolidColorBrush DetailBg       = new(Color(0x1A, 0x1A, 0x1A));
+    private static readonly SolidColorBrush DetailBgCol = new(Color(0x1A, 0x2A, 0x1A));
+    private static readonly SolidColorBrush DetailBorder = new(Color(0x33, 0x33, 0x33));
+    private static readonly SolidColorBrush DetailBg = new(Color(0x1A, 0x1A, 0x1A));
 
     private static WpfColor Color(byte r, byte g, byte b) => WpfColor.FromRgb(r, g, b);
 
@@ -562,19 +732,30 @@ public partial class ExcelConflictWindow : Window
         for (int i = 0; i < cols.Count; i++)
         {
             var col = cols[i];
-            if (!_conflictColSet.Contains(col)) continue;
+            if (!_conflictColSet.Contains(col))
+                continue;
 
             var colCapture = col;
             var cell = new StackPanel
             {
-                Orientation       = System.Windows.Controls.Orientation.Horizontal,
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                VerticalAlignment   = System.Windows.VerticalAlignment.Center,
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
             };
-            cell.Children.Add(MakeColBatchBtn("↑我", Color(0x1A, 0x3A, 0x6E),
-                () => SetColumnChoiceAndRefresh(colCapture, ConflictChoice.Ours)));
-            cell.Children.Add(MakeColBatchBtn("↓他", Color(0x1A, 0x5C, 0x3A),
-                () => SetColumnChoiceAndRefresh(colCapture, ConflictChoice.Theirs)));
+            cell.Children.Add(
+                MakeColBatchBtn(
+                    "↑我",
+                    Color(0x1A, 0x3A, 0x6E),
+                    () => SetColumnChoiceAndRefresh(colCapture, ConflictChoice.Ours)
+                )
+            );
+            cell.Children.Add(
+                MakeColBatchBtn(
+                    "↓他",
+                    Color(0x1A, 0x5C, 0x3A),
+                    () => SetColumnChoiceAndRefresh(colCapture, ConflictChoice.Theirs)
+                )
+            );
             Grid.SetColumn(cell, i);
             grid.Children.Add(cell);
         }
@@ -591,29 +772,60 @@ public partial class ExcelConflictWindow : Window
         {
             var border = new Border
             {
-                Margin          = new Thickness(0, 2, 0, 2),
-                Background      = DetailBg,
-                BorderBrush     = DetailBorder,
+                Margin = new Thickness(0, 2, 0, 2),
+                Background = DetailBg,
+                BorderBrush = DetailBorder,
                 BorderThickness = new Thickness(1),
             };
 
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(
+                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }
+            );
+            grid.ColumnDefinitions.Add(
+                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }
+            );
 
             // 列名 + 单列批量按钮
             var colPanel = new StackPanel { Background = DetailBgCol };
-            colPanel.Children.Add(new TextBlock
+            colPanel.Children.Add(
+                new TextBlock
+                {
+                    Text = cell.ColName,
+                    Foreground = new SolidColorBrush(Color(0x88, 0xFF, 0x88)),
+                    FontSize = 11,
+                    FontWeight = FontWeights.Bold,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(6, 4, 6, 2),
+                }
+            );
+            var colBtnRow = new StackPanel
             {
-                Text = cell.ColName, Foreground = new SolidColorBrush(Color(0x88, 0xFF, 0x88)),
-                FontSize = 11, FontWeight = FontWeights.Bold, TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(6, 4, 6, 2),
-            });
-            var colBtnRow = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(4, 0, 4, 4) };
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                Margin = new Thickness(4, 0, 4, 4)
+            };
             var cellCapture = cell;
-            colBtnRow.Children.Add(MakeColBatchBtn("全取我的", Color(0x1A, 0x3A, 0x6E), () => { cellCapture.Choice = ConflictChoice.Ours; }));
-            colBtnRow.Children.Add(MakeColBatchBtn("全取他的", Color(0x1A, 0x5C, 0x3A), () => { cellCapture.Choice = ConflictChoice.Theirs; }));
+            colBtnRow.Children.Add(
+                MakeColBatchBtn(
+                    "全取我的",
+                    Color(0x1A, 0x3A, 0x6E),
+                    () =>
+                    {
+                        cellCapture.Choice = ConflictChoice.Ours;
+                    }
+                )
+            );
+            colBtnRow.Children.Add(
+                MakeColBatchBtn(
+                    "全取他的",
+                    Color(0x1A, 0x5C, 0x3A),
+                    () =>
+                    {
+                        cellCapture.Choice = ConflictChoice.Theirs;
+                    }
+                )
+            );
             colPanel.Children.Add(colBtnRow);
             var colBorder = new Border { Child = colPanel };
             Grid.SetColumn(colBorder, 0);
@@ -622,23 +834,52 @@ public partial class ExcelConflictWindow : Window
             // OURS
             var oursBorder = new Border
             {
-                Background      = DetailBgOurs,
-                Padding         = new Thickness(6, 4, 6, 4),
-                BorderBrush     = new SolidColorBrush(Color(0x22, 0x22, 0x22)),
+                Background = DetailBgOurs,
+                Padding = new Thickness(6, 4, 6, 4),
+                BorderBrush = new SolidColorBrush(Color(0x22, 0x22, 0x22)),
                 BorderThickness = new Thickness(1, 0, 1, 0),
             };
             var oursPanel = new StackPanel();
-            oursPanel.Children.Add(new TextBlock { Text = "我的", Foreground = DetailFgMuted, FontSize = 9, Margin = new Thickness(0,0,0,2) });
-            oursPanel.Children.Add(MakeDetailValueBox(cell.OursDisplay, cell.TheirsDisplay, DetailFgOurs, DetailBgOurs));
+            oursPanel.Children.Add(
+                new TextBlock
+                {
+                    Text = "我的",
+                    Foreground = DetailFgMuted,
+                    FontSize = 9,
+                    Margin = new Thickness(0, 0, 0, 2)
+                }
+            );
+            oursPanel.Children.Add(
+                MakeDetailValueBox(cell.OursDisplay, cell.TheirsDisplay, DetailFgOurs, DetailBgOurs)
+            );
             oursBorder.Child = oursPanel;
             Grid.SetColumn(oursBorder, 1);
             grid.Children.Add(oursBorder);
 
             // THEIRS
-            var theirsBorder = new Border { Background = DetailBgTheirs, Padding = new Thickness(6, 4, 6, 4) };
+            var theirsBorder = new Border
+            {
+                Background = DetailBgTheirs,
+                Padding = new Thickness(6, 4, 6, 4)
+            };
             var theirsPanel = new StackPanel();
-            theirsPanel.Children.Add(new TextBlock { Text = "他的", Foreground = DetailFgMuted, FontSize = 9, Margin = new Thickness(0,0,0,2) });
-            theirsPanel.Children.Add(MakeDetailValueBox(cell.TheirsDisplay, cell.OursDisplay, DetailFgTheirs, DetailBgTheirs));
+            theirsPanel.Children.Add(
+                new TextBlock
+                {
+                    Text = "他的",
+                    Foreground = DetailFgMuted,
+                    FontSize = 9,
+                    Margin = new Thickness(0, 0, 0, 2)
+                }
+            );
+            theirsPanel.Children.Add(
+                MakeDetailValueBox(
+                    cell.TheirsDisplay,
+                    cell.OursDisplay,
+                    DetailFgTheirs,
+                    DetailBgTheirs
+                )
+            );
             theirsBorder.Child = theirsPanel;
             Grid.SetColumn(theirsBorder, 2);
             grid.Children.Add(theirsBorder);
@@ -652,14 +893,14 @@ public partial class ExcelConflictWindow : Window
     {
         var btn = new Button
         {
-            Content         = label,
-            FontSize        = 9,
-            Padding         = new Thickness(5, 2, 5, 2),
-            Margin          = new Thickness(0, 0, 4, 0),
-            Background      = new SolidColorBrush(bg),
-            Foreground      = System.Windows.Media.Brushes.White,
+            Content = label,
+            FontSize = 9,
+            Padding = new Thickness(5, 2, 5, 2),
+            Margin = new Thickness(0, 0, 4, 0),
+            Background = new SolidColorBrush(bg),
+            Foreground = System.Windows.Media.Brushes.White,
             BorderThickness = new Thickness(0),
-            Cursor          = System.Windows.Input.Cursors.Hand,
+            Cursor = System.Windows.Input.Cursors.Hand,
         };
         btn.Click += (_, _) => onClick();
         return btn;
@@ -667,7 +908,8 @@ public partial class ExcelConflictWindow : Window
 
     private void SetColumnChoiceAndRefresh(string colName, ConflictChoice choice)
     {
-        if (SheetTabs.SelectedItem is not TabItem tab) return;
+        if (SheetTabs.SelectedItem is not TabItem tab)
+            return;
         var sheetName = tab.Tag?.ToString() ?? string.Empty;
         var sheetDiff = _diff.Sheets.FirstOrDefault(s => s.SheetName == sheetName);
         sheetDiff?.SetColumnChoice(colName, choice);
@@ -675,10 +917,15 @@ public partial class ExcelConflictWindow : Window
     }
 
     // 字符级高亮 RichTextBox（只读可选中），差异段黄色加粗直接显示
-    private System.Windows.Controls.RichTextBox MakeDetailValueBox(string text, string other, SolidColorBrush fg, SolidColorBrush bg)
+    private System.Windows.Controls.RichTextBox MakeDetailValueBox(
+        string text,
+        string other,
+        SolidColorBrush fg,
+        SolidColorBrush bg
+    )
     {
-        var diffTb  = MakeInlineDiffBlock(text, other, fg);
-        var para    = new System.Windows.Documents.Paragraph { Margin = new Thickness(0) };
+        var diffTb = MakeInlineDiffBlock(text, other, fg);
+        var para = new System.Windows.Documents.Paragraph { Margin = new Thickness(0) };
         foreach (var inline in diffTb.Inlines.ToList())
         {
             diffTb.Inlines.Remove(inline);
@@ -691,23 +938,23 @@ public partial class ExcelConflictWindow : Window
         var doc = new System.Windows.Documents.FlowDocument(para)
         {
             PagePadding = new Thickness(0),
-            LineHeight  = 16,
-            PageWidth   = 10000, // 禁止自动换行
+            LineHeight = 16,
+            PageWidth = 10000, // 禁止自动换行
         };
 
         var rtb = new System.Windows.Controls.RichTextBox(doc)
         {
-            IsReadOnly              = true,
-            Background              = bg,
-            Foreground              = fg,
-            FontSize                = 11,
-            BorderThickness         = new Thickness(0),
-            Padding                 = new Thickness(0),
-            MaxHeight               = 36,
-            VerticalScrollBarVisibility   = System.Windows.Controls.ScrollBarVisibility.Disabled,
+            IsReadOnly = true,
+            Background = bg,
+            Foreground = fg,
+            FontSize = 11,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(0),
+            MaxHeight = 36,
+            VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled,
             HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
-            Cursor                  = System.Windows.Input.Cursors.IBeam,
-            ToolTip                 = string.IsNullOrEmpty(text) ? null : text,
+            Cursor = System.Windows.Input.Cursors.IBeam,
+            ToolTip = string.IsNullOrEmpty(text) ? null : text,
         };
         return rtb;
     }
@@ -715,8 +962,13 @@ public partial class ExcelConflictWindow : Window
     // 构建带字符级高亮的 TextBlock：公共前缀/后缀正常色，差异段黄色加粗
     private TextBlock MakeInlineDiffBlock(string text, string other, SolidColorBrush normalFg)
     {
-        var tb = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.NoWrap,
-            TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = string.IsNullOrEmpty(text) ? null : text };
+        var tb = new TextBlock
+        {
+            FontSize = 11,
+            TextWrapping = TextWrapping.NoWrap,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            ToolTip = string.IsNullOrEmpty(text) ? null : text
+        };
 
         // 空值直接显示
         if (string.IsNullOrEmpty(text) && string.IsNullOrEmpty(other))
@@ -737,21 +989,27 @@ public partial class ExcelConflictWindow : Window
         }
 
         int diffStart = prefixLen;
-        int diffEnd   = text.Length - suffixLen;
+        int diffEnd = text.Length - suffixLen;
 
         if (diffStart > 0)
-            tb.Inlines.Add(new System.Windows.Documents.Run(text[..diffStart]) { Foreground = normalFg });
+            tb.Inlines.Add(
+                new System.Windows.Documents.Run(text[..diffStart]) { Foreground = normalFg }
+            );
 
         if (diffStart < diffEnd)
-            tb.Inlines.Add(new System.Windows.Documents.Run(text[diffStart..diffEnd])
-            {
-                Foreground = DetailFgDiff,
-                FontWeight = FontWeights.Bold,
-                Background = DetailBgDiff,
-            });
+            tb.Inlines.Add(
+                new System.Windows.Documents.Run(text[diffStart..diffEnd])
+                {
+                    Foreground = DetailFgDiff,
+                    FontWeight = FontWeights.Bold,
+                    Background = DetailBgDiff,
+                }
+            );
 
         if (diffEnd < text.Length)
-            tb.Inlines.Add(new System.Windows.Documents.Run(text[diffEnd..]) { Foreground = normalFg });
+            tb.Inlines.Add(
+                new System.Windows.Documents.Run(text[diffEnd..]) { Foreground = normalFg }
+            );
 
         return tb;
     }
@@ -760,11 +1018,13 @@ public partial class ExcelConflictWindow : Window
     {
         int maxPrefix = Math.Min(a.Length, b.Length);
         int prefix = 0;
-        while (prefix < maxPrefix && a[prefix] == b[prefix]) prefix++;
+        while (prefix < maxPrefix && a[prefix] == b[prefix])
+            prefix++;
 
         int maxSuffix = Math.Min(a.Length - prefix, b.Length - prefix);
         int suffix = 0;
-        while (suffix < maxSuffix && a[a.Length - 1 - suffix] == b[b.Length - 1 - suffix]) suffix++;
+        while (suffix < maxSuffix && a[a.Length - 1 - suffix] == b[b.Length - 1 - suffix])
+            suffix++;
 
         return (prefix, suffix);
     }
@@ -775,49 +1035,141 @@ public partial class ExcelConflictWindow : Window
     {
         ChangeNavList.Items.Clear();
 
-        var modified   = sheet.Rows.Where(r => r.DiffType == RowDiffType.Modified   && r.Cells.Count > 0).ToList();
-        var onlyOurs   = sheet.Rows.Where(r => r.DiffType == RowDiffType.OnlyOurs).ToList();
+        var modified = sheet
+            .Rows.Where(r => r.DiffType == RowDiffType.Modified && r.Cells.Count > 0)
+            .ToList();
+        var onlyOurs = sheet.Rows.Where(r => r.DiffType == RowDiffType.OnlyOurs).ToList();
         var onlyTheirs = sheet.Rows.Where(r => r.DiffType == RowDiffType.OnlyTheirs).ToList();
 
-        if (modified.Count   > 0) AddNavGroup("冲突列",  "#FFD080", "#3A2A00", modified,   RowDiffType.Modified,   ConflictChoice.Ours);
-        if (onlyOurs.Count   > 0) AddNavGroup("仅我有",  "#FF8888", "#3A1A1A", onlyOurs,   RowDiffType.OnlyOurs,   ConflictChoice.Ours);
-        if (onlyTheirs.Count > 0) AddNavGroup("仅他有",  "#88FF88", "#1A3A1A", onlyTheirs, RowDiffType.OnlyTheirs, ConflictChoice.Theirs);
+        if (modified.Count > 0)
+            AddNavGroup(
+                "冲突列",
+                "#FFD080",
+                "#3A2A00",
+                modified,
+                RowDiffType.Modified,
+                ConflictChoice.Ours
+            );
+        if (onlyOurs.Count > 0)
+            AddNavGroup(
+                "仅我有",
+                "#FF8888",
+                "#3A1A1A",
+                onlyOurs,
+                RowDiffType.OnlyOurs,
+                ConflictChoice.Ours
+            );
+        if (onlyTheirs.Count > 0)
+            AddNavGroup(
+                "仅他有",
+                "#88FF88",
+                "#1A3A1A",
+                onlyTheirs,
+                RowDiffType.OnlyTheirs,
+                ConflictChoice.Theirs
+            );
     }
 
-    private void AddNavGroup(string label, string fgHex, string bgHex,
-                             List<RowConflict> rows, RowDiffType type, ConflictChoice defaultChoice)
+    private void AddNavGroup(
+        string label,
+        string fgHex,
+        string bgHex,
+        List<RowConflict> rows,
+        RowDiffType type,
+        ConflictChoice defaultChoice
+    )
     {
         bool collapsed = false;
         var groupItems = new List<ListBoxItem>();
 
         // ── 组头 ──
-        var headerItem = new ListBoxItem { Padding = new Thickness(0), IsEnabled = true, Background = System.Windows.Media.Brushes.Transparent };
-        var fg  = new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString(fgHex));
-        var bg  = new SolidColorBrush((WpfColor)System.Windows.Media.ColorConverter.ConvertFromString(bgHex));
+        var headerItem = new ListBoxItem
+        {
+            Padding = new Thickness(0),
+            IsEnabled = true,
+            Background = System.Windows.Media.Brushes.Transparent
+        };
+        var fg = new SolidColorBrush(
+            (WpfColor)System.Windows.Media.ColorConverter.ConvertFromString(fgHex)
+        );
+        var bg = new SolidColorBrush(
+            (WpfColor)System.Windows.Media.ColorConverter.ConvertFromString(bgHex)
+        );
 
         var headerBorder = new Border { Background = bg, Padding = new Thickness(4, 3, 4, 3) };
-        var headerGrid   = new Grid();
-        headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var headerGrid = new Grid();
+        headerGrid.ColumnDefinitions.Add(
+            new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }
+        );
         headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        var labelPanel = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
-        var chevron    = new TextBlock { Text = "▼ ", Foreground = fg, FontSize = 10, VerticalAlignment = VerticalAlignment.Center };
+        var labelPanel = new StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal
+        };
+        var chevron = new TextBlock
+        {
+            Text = "▼ ",
+            Foreground = fg,
+            FontSize = 10,
+            VerticalAlignment = VerticalAlignment.Center
+        };
         labelPanel.Children.Add(chevron);
-        labelPanel.Children.Add(new TextBlock { Text = label, Foreground = fg, FontSize = 11, FontWeight = FontWeights.Bold, VerticalAlignment = VerticalAlignment.Center });
-        labelPanel.Children.Add(new TextBlock { Text = $" ({rows.Count})", Foreground = new SolidColorBrush(WpfColor.FromRgb(0x88, 0x88, 0x88)), FontSize = 10, VerticalAlignment = VerticalAlignment.Center });
+        labelPanel.Children.Add(
+            new TextBlock
+            {
+                Text = label,
+                Foreground = fg,
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                VerticalAlignment = VerticalAlignment.Center
+            }
+        );
+        labelPanel.Children.Add(
+            new TextBlock
+            {
+                Text = $" ({rows.Count})",
+                Foreground = new SolidColorBrush(WpfColor.FromRgb(0x88, 0x88, 0x88)),
+                FontSize = 10,
+                VerticalAlignment = VerticalAlignment.Center
+            }
+        );
         Grid.SetColumn(labelPanel, 0);
         headerGrid.Children.Add(labelPanel);
 
         // 全选按钮
-        var btnPanel = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal };
-        btnPanel.Children.Add(MakeColBatchBtn("全取我的", Color(0x1A, 0x3A, 0x6E), () =>
+        var btnPanel = new StackPanel
         {
-            foreach (var r in rows) { r.SetAllCells(ConflictChoice.Ours); r.RowChoice = ConflictChoice.Ours; }
-        }));
-        btnPanel.Children.Add(MakeColBatchBtn("全取他的", Color(0x1A, 0x5C, 0x3A), () =>
-        {
-            foreach (var r in rows) { r.SetAllCells(ConflictChoice.Theirs); r.RowChoice = ConflictChoice.Theirs; }
-        }));
+            Orientation = System.Windows.Controls.Orientation.Horizontal
+        };
+        btnPanel.Children.Add(
+            MakeColBatchBtn(
+                "全取我的",
+                Color(0x1A, 0x3A, 0x6E),
+                () =>
+                {
+                    foreach (var r in rows)
+                    {
+                        r.SetAllCells(ConflictChoice.Ours);
+                        r.RowChoice = ConflictChoice.Ours;
+                    }
+                }
+            )
+        );
+        btnPanel.Children.Add(
+            MakeColBatchBtn(
+                "全取他的",
+                Color(0x1A, 0x5C, 0x3A),
+                () =>
+                {
+                    foreach (var r in rows)
+                    {
+                        r.SetAllCells(ConflictChoice.Theirs);
+                        r.RowChoice = ConflictChoice.Theirs;
+                    }
+                }
+            )
+        );
         Grid.SetColumn(btnPanel, 1);
         headerGrid.Children.Add(btnPanel);
         headerBorder.Child = headerGrid;
@@ -828,33 +1180,56 @@ public partial class ExcelConflictWindow : Window
         // ── 子项 ──
         foreach (var rc in rows)
         {
-            var tooltip = string.IsNullOrEmpty(rc.DisplayName) ? rc.RowKey : $"{rc.RowKey}  {rc.DisplayName}";
-            var item = new ListBoxItem { Tag = rc, Padding = new Thickness(0), ToolTip = tooltip };
-            var panel = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(16, 1, 4, 1) };
-            panel.Children.Add(new TextBlock
+            var tooltip = string.IsNullOrEmpty(rc.DisplayName)
+                ? rc.RowKey
+                : $"{rc.RowKey}  {rc.DisplayName}";
+            var item = new ListBoxItem
             {
-                Text = rc.RowKey, Foreground = System.Windows.Media.Brushes.White,
-                FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxWidth = 80, VerticalAlignment = VerticalAlignment.Center,
-            });
+                Tag = rc,
+                Padding = new Thickness(0),
+                ToolTip = tooltip
+            };
+            var panel = new StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+                Margin = new Thickness(16, 1, 4, 1)
+            };
+            panel.Children.Add(
+                new TextBlock
+                {
+                    Text = rc.RowKey,
+                    Foreground = System.Windows.Media.Brushes.White,
+                    FontSize = 11,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxWidth = 80,
+                    VerticalAlignment = VerticalAlignment.Center,
+                }
+            );
             if (!string.IsNullOrEmpty(rc.DisplayName))
             {
-                panel.Children.Add(new TextBlock
-                {
-                    Text = $"  {rc.DisplayName}",
-                    Foreground = new SolidColorBrush(WpfColor.FromRgb(0xAA, 0xCC, 0xFF)),
-                    FontSize = 10, VerticalAlignment = VerticalAlignment.Center,
-                    TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 140,
-                });
+                panel.Children.Add(
+                    new TextBlock
+                    {
+                        Text = $"  {rc.DisplayName}",
+                        Foreground = new SolidColorBrush(WpfColor.FromRgb(0xAA, 0xCC, 0xFF)),
+                        FontSize = 10,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                        MaxWidth = 140,
+                    }
+                );
             }
             if (type == RowDiffType.Modified)
             {
-                panel.Children.Add(new TextBlock
-                {
-                    Text = $" +{rc.Cells.Count}",
-                    Foreground = new SolidColorBrush(WpfColor.FromRgb(0xFF, 0xD0, 0x80)),
-                    FontSize = 9, VerticalAlignment = VerticalAlignment.Center,
-                });
+                panel.Children.Add(
+                    new TextBlock
+                    {
+                        Text = $" +{rc.Cells.Count}",
+                        Foreground = new SolidColorBrush(WpfColor.FromRgb(0xFF, 0xD0, 0x80)),
+                        FontSize = 9,
+                        VerticalAlignment = VerticalAlignment.Center,
+                    }
+                );
             }
             item.Content = panel;
             groupItems.Add(item);
@@ -865,8 +1240,11 @@ public partial class ExcelConflictWindow : Window
         headerBorder.PreviewMouseLeftButtonDown += (_, e) =>
         {
             // 如果点的是批量按钮区域则不折叠
-            if (e.OriginalSource is System.Windows.FrameworkElement fe
-                && fe.IsDescendantOf(btnPanel)) return;
+            if (
+                e.OriginalSource is System.Windows.FrameworkElement fe
+                && fe.IsDescendantOf(btnPanel)
+            )
+                return;
             collapsed = !collapsed;
             chevron.Text = collapsed ? "▶ " : "▼ ";
             foreach (var it in groupItems)
@@ -877,7 +1255,8 @@ public partial class ExcelConflictWindow : Window
 
     private void ChangeNavList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ChangeNavList.SelectedItem is not ListBoxItem { Tag: RowConflict rc }) return;
+        if (ChangeNavList.SelectedItem is not ListBoxItem { Tag: RowConflict rc })
+            return;
         ShowDetailForRow(rc);
 
         // 在上方 ConflictList 中定位到该行
@@ -898,7 +1277,7 @@ public partial class ExcelConflictWindow : Window
     private void ShowDetailForRow(RowConflict rc)
     {
         DetailRowKey.Text = $"ID: {rc.RowKey}  [{rc.DiffTypeBadge}]";
-        DetailHint.Text   = string.Empty;
+        DetailHint.Text = string.Empty;
 
         List<CellConflict> items;
         if (rc.DiffType == RowDiffType.Modified)
@@ -909,20 +1288,24 @@ public partial class ExcelConflictWindow : Window
         {
             // OnlyOurs: 显示我方全部字段（他方为空）; OnlyTheirs: 显示他方全部字段（我方为空）
             // 两侧都显示非空方的值，让用户能看清楚内容
-            var src    = rc.OursFullRow ?? rc.TheirsFullRow;
+            var src = rc.OursFullRow ?? rc.TheirsFullRow;
             var isOurs = rc.DiffType == RowDiffType.OnlyOurs;
-            items = (src?.Keys ?? Enumerable.Empty<string>()).Select(col =>
-            {
-                src!.TryGetValue(col, out var val);
-                return new CellConflict
+            items = (src?.Keys ?? Enumerable.Empty<string>())
+                .Select(col =>
                 {
-                    ColName     = col,
-                    OursValue   = isOurs ? val : null,
-                    TheirsValue = isOurs ? null : val,
-                };
-            })
-            .Where(c => !string.IsNullOrEmpty(c.OursValue?.ToString()) || !string.IsNullOrEmpty(c.TheirsValue?.ToString()))
-            .ToList();
+                    src!.TryGetValue(col, out var val);
+                    return new CellConflict
+                    {
+                        ColName = col,
+                        OursValue = isOurs ? val : null,
+                        TheirsValue = isOurs ? null : val,
+                    };
+                })
+                .Where(c =>
+                    !string.IsNullOrEmpty(c.OursValue?.ToString())
+                    || !string.IsNullOrEmpty(c.TheirsValue?.ToString())
+                )
+                .ToList();
         }
         BuildDetailPanel(items);
     }
@@ -931,37 +1314,55 @@ public partial class ExcelConflictWindow : Window
 
     private void SheetTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_suppressRefresh) return;
+        if (_suppressRefresh)
+            return;
         RefreshConflictList();
     }
 
-    private static void ApplyToggleStyle(System.Windows.Controls.Primitives.ToggleButton btn, bool active, WpfColor activeColor)
+    private static void ApplyToggleStyle(
+        System.Windows.Controls.Primitives.ToggleButton btn,
+        bool active,
+        WpfColor activeColor
+    )
     {
-        btn.Background = active ? new SolidColorBrush(activeColor) : System.Windows.Media.Brushes.Transparent;
-        btn.Foreground = active ? System.Windows.Media.Brushes.White : new SolidColorBrush(Color(0xAA, 0xAA, 0xAA));
+        btn.Background = active
+            ? new SolidColorBrush(activeColor)
+            : System.Windows.Media.Brushes.Transparent;
+        btn.Foreground = active
+            ? System.Windows.Media.Brushes.White
+            : new SolidColorBrush(Color(0xAA, 0xAA, 0xAA));
     }
 
     private void HideNoConflictCols_Changed(object sender, RoutedEventArgs e)
     {
-        if (_suppressRefresh) return;
+        if (_suppressRefresh)
+            return;
         RefreshConflictList();
     }
 
     private void ViewMode_Changed(object sender, RoutedEventArgs e)
     {
-        if (_suppressRefresh) return;
+        if (_suppressRefresh)
+            return;
         if (sender is System.Windows.Controls.Primitives.ToggleButton btn && btn.IsChecked == true)
         {
             _suppressRefresh = true;
             ViewConflictOnly.IsChecked = ReferenceEquals(btn, ViewConflictOnly);
-            ViewContext.IsChecked      = ReferenceEquals(btn, ViewContext);
-            ViewAll.IsChecked          = ReferenceEquals(btn, ViewAll);
-            ApplyToggleStyle(ViewConflictOnly, ViewConflictOnly.IsChecked == true, Color(0x1A, 0x3A, 0x6E));
-            ApplyToggleStyle(ViewContext,      ViewContext.IsChecked      == true, Color(0x1A, 0x5C, 0x3A));
-            ApplyToggleStyle(ViewAll,          ViewAll.IsChecked          == true, Color(0x3A, 0x2A, 0x00));
-            _viewMode = ViewConflictOnly.IsChecked == true ? ViewMode.ConflictOnly
-                      : ViewAll.IsChecked == true          ? ViewMode.All
-                      :                                      ViewMode.Context;
+            ViewContext.IsChecked = ReferenceEquals(btn, ViewContext);
+            ViewAll.IsChecked = ReferenceEquals(btn, ViewAll);
+            ApplyToggleStyle(
+                ViewConflictOnly,
+                ViewConflictOnly.IsChecked == true,
+                Color(0x1A, 0x3A, 0x6E)
+            );
+            ApplyToggleStyle(ViewContext, ViewContext.IsChecked == true, Color(0x1A, 0x5C, 0x3A));
+            ApplyToggleStyle(ViewAll, ViewAll.IsChecked == true, Color(0x3A, 0x2A, 0x00));
+            _viewMode =
+                ViewConflictOnly.IsChecked == true
+                    ? ViewMode.ConflictOnly
+                    : ViewAll.IsChecked == true
+                        ? ViewMode.All
+                        : ViewMode.Context;
             _suppressRefresh = false;
             RefreshConflictList();
         }
@@ -998,22 +1399,24 @@ public partial class ExcelConflictWindow : Window
             {
                 var dlg = new Microsoft.Win32.SaveFileDialog
                 {
-                    Title            = "保存合并结果",
-                    Filter           = "Excel 文件|*.xlsx",
-                    FileName         = Path.GetFileName(_outPath),
+                    Title = "保存合并结果",
+                    Filter = "Excel 文件|*.xlsx",
+                    FileName = Path.GetFileName(_outPath),
                     InitialDirectory = Path.GetDirectoryName(_outPath)
                 };
-                if (dlg.ShowDialog() != true) return;
+                if (dlg.ShowDialog() != true)
+                    return;
                 savePath = dlg.FileName;
             }
 
             ConflictApplier.Apply(_diff, savePath, _autoGitAdd);
 
             MessageBox.Show(
-                _autoGitAdd
-                    ? $"已写回并执行 git add。\n{savePath}"
-                    : $"已写回。\n{savePath}",
-                "完成", MessageBoxButton.OK, MessageBoxImage.Information);
+                _autoGitAdd ? $"已写回并执行 git add。\n{savePath}" : $"已写回。\n{savePath}",
+                "完成",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information
+            );
 
             DialogResult = true;
             Close();
@@ -1024,27 +1427,40 @@ public partial class ExcelConflictWindow : Window
         }
     }
 
-    private void Cancel_Click(object sender, RoutedEventArgs e) { DialogResult = false; Close(); }
+    private void Cancel_Click(object sender, RoutedEventArgs e)
+    {
+        DialogResult = false;
+        Close();
+    }
 
     private void UpdateStats()
     {
-        StatRows.Text  = _diff.TotalConflictRows.ToString();
+        StatRows.Text = _diff.TotalConflictRows.ToString();
         StatCells.Text = _diff.TotalConflictCells.ToString();
     }
+
     private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key == System.Windows.Input.Key.Escape) { Close(); e.Handled = true; return; }
+        if (e.Key == System.Windows.Input.Key.Escape)
+        {
+            Close();
+            e.Handled = true;
+            return;
+        }
 
         // ↑↓ 全局驱动 ChangeNavList，跳过组头（IsEnabled=false 的项）
-        if (e.Key != System.Windows.Input.Key.Up && e.Key != System.Windows.Input.Key.Down) return;
-        if (ChangeNavList.Items.Count == 0) return;
+        if (e.Key != System.Windows.Input.Key.Up && e.Key != System.Windows.Input.Key.Down)
+            return;
+        if (ChangeNavList.Items.Count == 0)
+            return;
 
         // 如果焦点已在 ChangeNavList 里，让它自己处理
-        if (ChangeNavList.IsKeyboardFocusWithin) return;
+        if (ChangeNavList.IsKeyboardFocusWithin)
+            return;
 
         int current = ChangeNavList.SelectedIndex;
-        int next    = current;
-        int delta   = e.Key == System.Windows.Input.Key.Down ? 1 : -1;
+        int next = current;
+        int delta = e.Key == System.Windows.Input.Key.Down ? 1 : -1;
 
         for (int i = current + delta; i >= 0 && i < ChangeNavList.Items.Count; i += delta)
         {
@@ -1062,5 +1478,4 @@ public partial class ExcelConflictWindow : Window
         }
         e.Handled = true;
     }
-
 }

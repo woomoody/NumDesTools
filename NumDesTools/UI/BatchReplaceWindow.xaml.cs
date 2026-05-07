@@ -7,9 +7,9 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using ExcelDna.Integration;
-using Window = System.Windows.Window;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MessageBox = System.Windows.MessageBox;
+using Window = System.Windows.Window;
 
 namespace NumDesTools.UI
 {
@@ -18,19 +18,39 @@ namespace NumDesTools.UI
     {
         private string _from = "";
         private string _to = "";
-        public string From { get => _from; set { _from = value; OnPropertyChanged(); } }
-        public string To   { get => _to;   set { _to   = value; OnPropertyChanged(); } }
+        public string From
+        {
+            get => _from;
+            set
+            {
+                _from = value;
+                OnPropertyChanged();
+            }
+        }
+        public string To
+        {
+            get => _to;
+            set
+            {
+                _to = value;
+                OnPropertyChanged();
+            }
+        }
         public event PropertyChangedEventHandler? PropertyChanged;
-        private void OnPropertyChanged([CallerMemberName] string? n = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+
+        private void OnPropertyChanged([CallerMemberName] string? n = null) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
     }
 
     // ── 历史条目 ─────────────────────────────────────────
     public class HistoryEntry
     {
         public List<(string From, string To)> Rules { get; set; } = [];
-        public string Display => Rules.Count > 0 ? $"{Rules[0].From}→{Rules[0].To}{(Rules.Count > 1 ? $" +{Rules.Count - 1}" : "")}" : "";
-        public string Detail  => string.Join("\n", Rules.Select(r => $"{r.From} → {r.To}"));
+        public string Display =>
+            Rules.Count > 0
+                ? $"{Rules[0].From}→{Rules[0].To}{(Rules.Count > 1 ? $" +{Rules.Count - 1}" : "")}"
+                : "";
+        public string Detail => string.Join("\n", Rules.Select(r => $"{r.From} → {r.To}"));
     }
 
     // ── 主窗口 ───────────────────────────────────────────
@@ -39,7 +59,9 @@ namespace NumDesTools.UI
         private static BatchReplaceWindow? _instance;
         private static readonly string HistoryFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "NumDesTools", "batch_replace_history.json");
+            "NumDesTools",
+            "batch_replace_history.json"
+        );
 
         private readonly ObservableCollection<RuleRow> _rows = [];
         private readonly ObservableCollection<HistoryEntry> _history = [];
@@ -68,7 +90,8 @@ namespace NumDesTools.UI
             helper.Owner = (IntPtr)ExcelDnaUtil.WindowHandle;
 
             LoadHistory();
-            if (_rows.Count == 0) AddEmptyRow();
+            if (_rows.Count == 0)
+                AddEmptyRow();
 
             Activated += (_, _) => FocusRowAt(0);
         }
@@ -89,18 +112,24 @@ namespace NumDesTools.UI
         {
             if (sender is System.Windows.Controls.Button btn && btn.Tag is RuleRow row)
                 _rows.Remove(row);
-            if (_rows.Count == 0) AddEmptyRow();
+            if (_rows.Count == 0)
+                AddEmptyRow();
         }
 
         private void FocusLastRow() => FocusRowAt(_rows.Count - 1);
 
         private void FocusRowAt(int index)
         {
-            Dispatcher.InvokeAsync(() =>
-            {
-                var container = RuleRows.ItemContainerGenerator.ContainerFromIndex(index);
-                (container as FrameworkElement)?.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
-            }, System.Windows.Threading.DispatcherPriority.Loaded);
+            Dispatcher.InvokeAsync(
+                () =>
+                {
+                    var container = RuleRows.ItemContainerGenerator.ContainerFromIndex(index);
+                    (container as FrameworkElement)?.MoveFocus(
+                        new TraversalRequest(FocusNavigationDirection.First)
+                    );
+                },
+                System.Windows.Threading.DispatcherPriority.Loaded
+            );
         }
 
         // ── 执行替换 ────────────────────────────────────
@@ -132,8 +161,8 @@ namespace NumDesTools.UI
                 : System.Windows.Media.Brushes.OrangeRed;
         }
 
-        public static void SetStatusStatic(string msg, bool ok)
-            => _instance?.Dispatcher.BeginInvoke(() => _instance?.SetStatus(msg, ok));
+        public static void SetStatusStatic(string msg, bool ok) =>
+            _instance?.Dispatcher.BeginInvoke(() => _instance?.SetStatus(msg, ok));
 
         // ── 清空 ────────────────────────────────────────
         private void Clear_Click(object sender, RoutedEventArgs e)
@@ -144,7 +173,10 @@ namespace NumDesTools.UI
         }
 
         // ── 历史 ────────────────────────────────────────
-        private void HistoryList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        private void HistoryList_SelectionChanged(
+            object sender,
+            System.Windows.Controls.SelectionChangedEventArgs e
+        )
         {
             if (HistoryList.SelectedItem is HistoryEntry entry)
             {
@@ -166,12 +198,16 @@ namespace NumDesTools.UI
             var entry = new HistoryEntry { Rules = rules };
             // 去重（相同规则集）
             var dup = _history.FirstOrDefault(h =>
-                h.Rules.Count == rules.Count &&
-                h.Rules.Zip(rules).All(p => p.First.From == p.Second.From && p.First.To == p.Second.To));
-            if (dup != null) _history.Remove(dup);
+                h.Rules.Count == rules.Count
+                && h.Rules.Zip(rules)
+                    .All(p => p.First.From == p.Second.From && p.First.To == p.Second.To)
+            );
+            if (dup != null)
+                _history.Remove(dup);
 
             _history.Insert(0, entry);
-            while (_history.Count > 30) _history.RemoveAt(_history.Count - 1);
+            while (_history.Count > 30)
+                _history.RemoveAt(_history.Count - 1);
             SaveHistory();
         }
 
@@ -179,15 +215,16 @@ namespace NumDesTools.UI
         {
             try
             {
-                if (!File.Exists(HistoryFile)) return;
+                if (!File.Exists(HistoryFile))
+                    return;
                 var json = File.ReadAllText(HistoryFile);
                 var list = JsonSerializer.Deserialize<List<HistorySerialized>>(json);
-                if (list == null) return;
+                if (list == null)
+                    return;
                 foreach (var item in list)
-                    _history.Add(new HistoryEntry
-                    {
-                        Rules = item.Rules.Select(r => (r.From, r.To)).ToList()
-                    });
+                    _history.Add(
+                        new HistoryEntry { Rules = item.Rules.Select(r => (r.From, r.To)).ToList() }
+                    );
             }
             catch { }
         }
@@ -197,25 +234,42 @@ namespace NumDesTools.UI
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(HistoryFile)!);
-                var list = _history.Select(h => new HistorySerialized
-                {
-                    Rules = h.Rules.Select(r => new RuleSerialized { From = r.From, To = r.To }).ToList()
-                }).ToList();
-                File.WriteAllText(HistoryFile, JsonSerializer.Serialize(list, new JsonSerializerOptions { WriteIndented = true }));
+                var list = _history
+                    .Select(h => new HistorySerialized
+                    {
+                        Rules = h
+                            .Rules.Select(r => new RuleSerialized { From = r.From, To = r.To })
+                            .ToList()
+                    })
+                    .ToList();
+                File.WriteAllText(
+                    HistoryFile,
+                    JsonSerializer.Serialize(
+                        list,
+                        new JsonSerializerOptions { WriteIndented = true }
+                    )
+                );
             }
             catch { }
         }
 
         // ── 置顶 ────────────────────────────────────────
-        private void TopmostCheck_Changed(object sender, RoutedEventArgs e)
-            => Topmost = TopmostCheck.IsChecked == true;
+        private void TopmostCheck_Changed(object sender, RoutedEventArgs e) =>
+            Topmost = TopmostCheck.IsChecked == true;
 
         // ── 键盘 ────────────────────────────────────────
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Escape) { Hide(); e.Handled = true; }
+            if (e.Key == Key.Escape)
+            {
+                Hide();
+                e.Handled = true;
+            }
             if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
-            { DoExecute(); e.Handled = true; }
+            {
+                DoExecute();
+                e.Handled = true;
+            }
         }
 
         // 关闭时隐藏，不销毁
@@ -226,7 +280,15 @@ namespace NumDesTools.UI
         }
 
         // ── 序列化 DTOs ─────────────────────────────────
-        private class RuleSerialized { public string From { get; set; } = ""; public string To { get; set; } = ""; }
-        private class HistorySerialized { public List<RuleSerialized> Rules { get; set; } = []; }
+        private class RuleSerialized
+        {
+            public string From { get; set; } = "";
+            public string To { get; set; } = "";
+        }
+
+        private class HistorySerialized
+        {
+            public List<RuleSerialized> Rules { get; set; } = [];
+        }
     }
 }

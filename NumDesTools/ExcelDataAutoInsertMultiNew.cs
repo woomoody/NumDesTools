@@ -1,6 +1,6 @@
-﻿using OfficeOpenXml;
+﻿using System.Text.RegularExpressions;
+using OfficeOpenXml;
 using OfficeOpenXml.Style;
-using System.Text.RegularExpressions;
 
 #pragma warning disable CA1416
 
@@ -220,7 +220,11 @@ public static class ExcelDataAutoInsertMultiNew
                     if (cell.Formula is { Length: > 0 })
                     {
                         errorList.Add(
-                            ($"{excelRealName}#{sheet.Name}", @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@")
+                            (
+                                $"{excelRealName}#{sheet.Name}",
+                                @"不推荐自动写入，单元格有公式:" + cell.Address,
+                                "@@@"
+                            )
                         );
                         return errorList;
                     }
@@ -275,14 +279,14 @@ public static class ExcelDataAutoInsertMultiNew
                             out ExcelWorksheet sheetNew,
                             out excelNew
                         );
-                        
+
                         writeIdList = GetElementIdGroup(excelName, sheetNew, _modelId);
                         writeRow = writeIdList.Item2;
 
-                        if(writeRow != -1)
+                        if (writeRow != -1)
                         {
                             sheetModel = sheetNew;
-                            
+
                             break;
                         }
 
@@ -290,7 +294,6 @@ public static class ExcelDataAutoInsertMultiNew
 
                         errorExcelLog = excelName + "#找不到" + writeIdList.Item1[0];
                         errorList.Add((excelName, errorExcelLog, excelName));
-
                     }
                 }
                 else

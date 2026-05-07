@@ -23,7 +23,8 @@ namespace NumDesTools.UI
             );
             ListBoxCellData.ItemsSource = CellDataList;
         }
-        public SheetCellSeachResult(List<(string, int, int, string, string,string)> list)
+
+        public SheetCellSeachResult(List<(string, int, int, string, string, string)> list)
         {
             InitializeComponent();
             DataContext = this;

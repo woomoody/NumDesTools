@@ -9,7 +9,7 @@ namespace NumDesTools.UI
     /// SheetSeachResult.xaml 的交互逻辑
     /// </summary>
     // ReSharper disable once RedundantExtendsListEntry
-    public partial class SheetSeachResult:UserControl
+    public partial class SheetSeachResult : UserControl
     {
         public ObservableCollection<SelfWorkBookSearchCollect> TargetSheetList { get; set; }
 
@@ -21,6 +21,7 @@ namespace NumDesTools.UI
                 list.Select(t => new SelfWorkBookSearchCollect(t))
             );
         }
+
         //这个事件的问题是打开新的再关闭后，再次打开无法点击ListBox
         //但是如果采用单击listbox事件会导致打开的Excel文件不在前景，暂时没想到更好的办法
         private void ListBoxWorkBook_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -30,7 +31,8 @@ namespace NumDesTools.UI
             {
                 var selectedWorkBook = (SelfWorkBookSearchCollect)listBox.SelectedItem;
                 // 关闭所有打开的备注编辑框，不隐藏角标
-                NumDesAddIn.App.DisplayCommentIndicator = XlCommentDisplayMode.xlCommentIndicatorOnly;
+                NumDesAddIn.App.DisplayCommentIndicator =
+                    XlCommentDisplayMode.xlCommentIndicatorOnly;
 
                 PubMetToExcel.OpenExcelAndSelectCell(
                     selectedWorkBook.FilePath,

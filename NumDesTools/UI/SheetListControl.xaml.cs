@@ -18,11 +18,10 @@ namespace NumDesTools.UI
     /// SheetListControl.xaml 的交互逻辑
     /// </summary>
     // ReSharper disable once RedundantExtendsListEntry
-    public partial class SheetListControl:UserControl
+    public partial class SheetListControl : UserControl
     {
         public static Application ExcelApp = NumDesAddIn.App;
-        public ObservableCollection<SelfComSheetCollect> Sheets { get; } =
-            [];
+        public ObservableCollection<SelfComSheetCollect> Sheets { get; } = [];
 
         public SheetListControl()
         {
@@ -134,16 +133,12 @@ namespace NumDesTools.UI
             };
 
             trigger.Setters.Add(new Setter(FontStyleProperty, FontStyles.Italic));
-            trigger.Setters.Add(
-                new Setter(ForegroundProperty, Brushes.PapayaWhip)
-            );
+            trigger.Setters.Add(new Setter(ForegroundProperty, Brushes.PapayaWhip));
 
             itemContainerStyle.Triggers.Add(trigger);
 
             // 添加 ToolTip
-            itemContainerStyle.Setters.Add(
-                new Setter(ToolTipProperty, new Binding("DetailInfo"))
-            );
+            itemContainerStyle.Setters.Add(new Setter(ToolTipProperty, new Binding("DetailInfo")));
 
             listBox.ItemContainerStyle = itemContainerStyle;
         }

@@ -104,7 +104,9 @@ public class ExcelDataAutoInsertNumChanges
                         if (keyIndexRow == -1)
                         {
                             MessageBox.Show($"{workBookName} 找不到Id：{keyIndexValue}");
-                            LogDisplay.RecordLine($"[{DateTime.Now}] , {$"{workBookName} 找不到Id：{keyIndexValue}"}");
+                            LogDisplay.RecordLine(
+                                $"[{DateTime.Now}] , {$"{workBookName} 找不到Id：{keyIndexValue}"}"
+                            );
                             return;
                         }
                         var baseValue = sheetTarget

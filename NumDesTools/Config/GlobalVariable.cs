@@ -32,7 +32,10 @@ namespace NumDesTools.Config
                 { "ChatGptApiUrl", "https://api.openai.com/v1/chat/completions" },
                 { "ChatGptApiModel", "gpt-4o" },
                 { "DeepSeektApiKey", "***" },
-                { "DeepSeektApiUrl", "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions" },
+                {
+                    "DeepSeektApiUrl",
+                    "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+                },
                 { "DeepSeektApiModel", "deepseek-r1" },
                 {
                     "ChatGptSysContentExcelAss",
@@ -44,15 +47,13 @@ namespace NumDesTools.Config
                 },
                 // log retention days configurable
                 { "LogRetentionDays", "30" },
-                {
-                    "GitRootPath",""
-                },
+                { "GitRootPath", "" },
                 { "ConflictSkipHashFiles", "false" }
             };
 
         // 默认列表配置
         public readonly List<string> DefaultNormaKeyList =
-            new() { ",,", "[,", ",]", "{,", ",}", "，，", "[，", "，]", "{，", "，}" , "，" };
+            new() { ",,", "[,", ",]", "{,", ",}", "，，", "[，", "，]", "{，", "，}", "，" };
 
         public readonly List<string> DefaultSpecialKeyList = new() { "][", "}{" };
 
@@ -87,7 +88,11 @@ namespace NumDesTools.Config
         {
             get
             {
-                if (Value != null && Value.TryGetValue("LogRetentionDays", out var s) && int.TryParse(s, out var v))
+                if (
+                    Value != null
+                    && Value.TryGetValue("LogRetentionDays", out var s)
+                    && int.TryParse(s, out var v)
+                )
                     return Math.Max(1, v);
                 return 30;
             }
@@ -119,7 +124,10 @@ namespace NumDesTools.Config
                     {
                         if (listValue.Type == JTokenType.Array)
                         {
-                            _configData.Value[kvp.Key] = string.Join("", listValue.ToObject<List<object>>());
+                            _configData.Value[kvp.Key] = string.Join(
+                                "",
+                                listValue.ToObject<List<object>>()
+                            );
                         }
                     }
                     else if (kvp.Value is string stringValue)
@@ -271,12 +279,12 @@ namespace NumDesTools.Config
                     else
                     {
                         var lines = new List<string>();
-                        for (int i = 0; i < kvp.Value.Length; i += NumDesAddIn.MAX_LINE_LENGTH)
+                        for (int i = 0; i < kvp.Value.Length; i += NumDesAddIn.MaxLineLength)
                         {
                             lines.Add(
                                 kvp.Value.Substring(
                                     i,
-                                    Math.Min(NumDesAddIn.MAX_LINE_LENGTH, kvp.Value.Length - i)
+                                    Math.Min(NumDesAddIn.MaxLineLength, kvp.Value.Length - i)
                                 )
                             );
                         }
@@ -316,14 +324,19 @@ namespace NumDesTools.Config
                 if (File.Exists(FilePath))
                 {
                     var json = File.ReadAllText(FilePath, Encoding.UTF8);
-                    var existingConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+                    var existingConfig = JsonConvert.DeserializeObject<Dictionary<string, object>>(
+                        json
+                    );
 
                     // 备份需要保留的值
                     if (existingConfig != null)
                     {
-                        foreach (var key in ignoreKey) 
+                        foreach (var key in ignoreKey)
                         {
-                            if (existingConfig.ContainsKey(key) && existingConfig[key] is string value)
+                            if (
+                                existingConfig.ContainsKey(key)
+                                && existingConfig[key] is string value
+                            )
                             {
                                 backupValues[key] = value;
                             }
@@ -366,7 +379,6 @@ namespace NumDesTools.Config
             }
         }
 
-
         #endregion
 
         #region 长文本处理
@@ -375,7 +387,7 @@ namespace NumDesTools.Config
         // 判断是否为长文本
         private bool IsLongText(string text)
         {
-            return text?.Length > NumDesAddIn.LONG_TEXT_THRESHOLD;
+            return text?.Length > NumDesAddIn.LongTextThreshold;
         }
 
         #endregion

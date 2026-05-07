@@ -33,7 +33,9 @@ namespace NumDesTools.UI
                 {
                     if (match.Index > lastIndex)
                     {
-                        textBlock.Inlines.Add(new Run(text.Substring(lastIndex, match.Index - lastIndex)));
+                        textBlock.Inlines.Add(
+                            new Run(text.Substring(lastIndex, match.Index - lastIndex))
+                        );
                     }
 
                     var highlightRun = new Run(match.Value)
@@ -56,7 +58,12 @@ namespace NumDesTools.UI
             return value;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(
+            object value,
+            Type targetType,
+            object parameter,
+            CultureInfo culture
+        )
         {
             throw new NotImplementedException();
         }

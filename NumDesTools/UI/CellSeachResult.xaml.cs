@@ -16,7 +16,9 @@ namespace NumDesTools.UI
         {
             InitializeComponent();
             DataContext = this;
-            CellDataList = new ObservableCollection<SelfCellData>(list.Select(t => new SelfCellData(t)));
+            CellDataList = new ObservableCollection<SelfCellData>(
+                list.Select(t => new SelfCellData(t))
+            );
             ListBoxCellData.ItemsSource = CellDataList;
         }
 
@@ -26,7 +28,8 @@ namespace NumDesTools.UI
             {
                 var sheet = NumDesAddIn.App.ActiveSheet;
                 // 关闭所有打开的备注编辑框，不隐藏角标
-                NumDesAddIn.App.DisplayCommentIndicator = XlCommentDisplayMode.xlCommentIndicatorOnly;
+                NumDesAddIn.App.DisplayCommentIndicator =
+                    XlCommentDisplayMode.xlCommentIndicatorOnly;
                 var cell = sheet.Cells[cellData.Row, cellData.Column];
                 cell.Select();
             }

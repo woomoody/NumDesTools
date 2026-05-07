@@ -20,14 +20,16 @@ public static class ConflictApplier
 
         foreach (var sheetDiff in diff.Sheets)
         {
-            if (!sheetDiff.HasConflict) continue;
+            if (!sheetDiff.HasConflict)
+                continue;
 
             var sheet = pkg.Workbook.Worksheets[sheetDiff.SheetName];
-            if (sheet?.Dimension == null) continue;
+            if (sheet?.Dimension == null)
+                continue;
 
             // 建立 key → 行号 映射（表头在第2行，数据从第3行起）
             var keyColIdx = FindKeyColIndex(sheet);
-            var keyToRow  = BuildKeyRowMap(sheet, keyColIdx);
+            var keyToRow = BuildKeyRowMap(sheet, keyColIdx);
 
             var allCols = sheetDiff.AllColumns;
 
@@ -49,8 +51,10 @@ public static class ConflictApplier
             EnsureNewColsMeta(sheet, sheetDiff);
 
             // 最后处理删除行（从大行号到小行号，避免移位影响前面的行号）
-            var deleteRows = sheetDiff.Rows
-                .Where(rc => rc.DiffType == RowDiffType.OnlyOurs && rc.RowChoice == ConflictChoice.Theirs)
+            var deleteRows = sheetDiff
+                .Rows.Where(rc =>
+                    rc.DiffType == RowDiffType.OnlyOurs && rc.RowChoice == ConflictChoice.Theirs
+                )
                 .Select(rc => keyToRow.TryGetValue(rc.RowKey, out var r) ? r : -1)
                 .Where(r => r > 0)
                 .OrderByDescending(r => r)
@@ -61,7 +65,8 @@ public static class ConflictApplier
 
         pkg.Save();
 
-        if (gitAdd) GitAdd(outPath);
+        if (gitAdd)
+            GitAdd(outPath);
     }
 
     // ── 定向修改 Modified 行 ────────────────────────────────────────────────
@@ -70,13 +75,16 @@ public static class ConflictApplier
         ExcelWorksheet sheet,
         RowConflict rc,
         Dictionary<string, int> keyToRow,
-        List<string> allColumns)
+        List<string> allColumns
+    )
     {
-        if (!keyToRow.TryGetValue(rc.RowKey, out var rowIdx)) return;
+        if (!keyToRow.TryGetValue(rc.RowKey, out var rowIdx))
+            return;
 
         foreach (var cell in rc.Cells)
         {
-            if (cell.Choice != ConflictChoice.Theirs) continue;
+            if (cell.Choice != ConflictChoice.Theirs)
+                continue;
 
             var colIdx = FindOrCreateHeaderCol(sheet, cell.ColName, allColumns);
             sheet.Cells[rowIdx, colIdx].Value = cell.TheirsValue;
@@ -85,21 +93,27 @@ public static class ConflictApplier
 
     // ── 追加 OnlyTheirs 行 ───────────────────────────────────────────────────
 
-    private static void AppendTheirsRow(ExcelWorksheet sheet, RowConflict rc, List<string> allColumns)
+    private static void AppendTheirsRow(
+        ExcelWorksheet sheet,
+        RowConflict rc,
+        List<string> allColumns
+    )
     {
-        if (rc.TheirsFullRow == null) return;
+        if (rc.TheirsFullRow == null)
+            return;
 
         var lastRow = sheet.Dimension.End.Row + 1;
 
         foreach (var (header, val) in rc.TheirsFullRow)
         {
-            if (string.IsNullOrEmpty(header)) continue;
+            if (string.IsNullOrEmpty(header))
+                continue;
             var colIdx = FindOrCreateHeaderCol(sheet, header, allColumns);
             sheet.Cells[lastRow, colIdx].Value = val;
         }
 
         // 复制上一行的样式
-        var srcRow   = lastRow - 1;
+        var srcRow = lastRow - 1;
         var colCount = sheet.Dimension.End.Column;
         if (srcRow >= 3)
             for (int col = 1; col <= colCount; col++)
@@ -113,18 +127,30 @@ public static class ConflictApplier
         for (int col = 1; col <= end; col++)
         {
             var colName = sheet.Cells[2, col].Value?.ToString() ?? string.Empty;
-            if (string.IsNullOrEmpty(colName)) continue;
+            if (string.IsNullOrEmpty(colName))
+                continue;
 
-            if (sheet.Cells[3, col].Value == null && sheetDiff.TypeRow.TryGetValue(colName, out var t) && !string.IsNullOrEmpty(t))
+            if (
+                sheet.Cells[3, col].Value == null
+                && sheetDiff.TypeRow.TryGetValue(colName, out var t)
+                && !string.IsNullOrEmpty(t)
+            )
                 sheet.Cells[3, col].Value = t;
-            if (sheet.Cells[4, col].Value == null && sheetDiff.LabelRow.TryGetValue(colName, out var l) && !string.IsNullOrEmpty(l))
+            if (
+                sheet.Cells[4, col].Value == null
+                && sheetDiff.LabelRow.TryGetValue(colName, out var l)
+                && !string.IsNullOrEmpty(l)
+            )
                 sheet.Cells[4, col].Value = l;
         }
     }
 
     // 在 row2 查找列名，找不到则按 SheetDiff.AllColumns 顺序插入到正确位置
-    private static int FindOrCreateHeaderCol(ExcelWorksheet sheet, string colName,
-        List<string>? allColumns = null)
+    private static int FindOrCreateHeaderCol(
+        ExcelWorksheet sheet,
+        string colName,
+        List<string>? allColumns = null
+    )
     {
         var end = sheet.Dimension.End.Column;
         for (int col = 1; col <= end; col++)
@@ -151,7 +177,8 @@ public static class ConflictApplier
                         }
                     }
                 }
-                found:;
+                found:
+                ;
             }
         }
 
@@ -180,7 +207,8 @@ public static class ConflictApplier
     private static int FindKeyColIndex(ExcelWorksheet sheet)
     {
         // 与 Differ 对齐：key 列为表头行第2列
-        if (sheet.Dimension.End.Column >= 2) return 2;
+        if (sheet.Dimension.End.Column >= 2)
+            return 2;
         return 1;
     }
 
@@ -201,7 +229,8 @@ public static class ConflictApplier
     private static void GitAdd(string filePath)
     {
         var repoRoot = SvnGitTools.FindGitRoot(filePath);
-        if (repoRoot == null) return;
+        if (repoRoot == null)
+            return;
         using var repo = new LibGit2Sharp.Repository(repoRoot);
         var relativePath = Path.GetRelativePath(repoRoot, filePath).Replace('\\', '/');
         repo.Index.Add(relativePath);

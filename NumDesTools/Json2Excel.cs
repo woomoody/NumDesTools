@@ -40,8 +40,6 @@ public class JsonToExcelConverter
 
         var excelFilePath = Path.ChangeExtension(jsonFilePath, ".xlsx");
 
-        
-
         // 创建Excel文件
         using var package = new ExcelPackage(new FileInfo(excelFilePath));
         var worksheet = package.Workbook.Worksheets.Add("Data");
@@ -61,7 +59,8 @@ public class JsonToExcelConverter
             col = 1;
             foreach (var key in allKeys)
             {
-                if (rowDict.TryGetValue(key, out var value)) worksheet.Cells[row, col].Value = value;
+                if (rowDict.TryGetValue(key, out var value))
+                    worksheet.Cells[row, col].Value = value;
                 col++;
             }
 

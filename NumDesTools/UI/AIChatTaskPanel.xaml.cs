@@ -34,9 +34,7 @@ public partial class AiChatTaskPanel
                 binding.Command == EditingCommands.EnterParagraphBreak
             );
         if (enterCommandBinding != null)
-            PromptInput.TextArea.DefaultInputHandler.CommandBindings.Remove(
-                enterCommandBinding
-            );
+            PromptInput.TextArea.DefaultInputHandler.CommandBindings.Remove(enterCommandBinding);
 
         // 初始化输入框
         InitializeTextEditors();
@@ -264,7 +262,8 @@ public partial class AiChatTaskPanel
             object requestBody = null;
             if (_apiModel.Contains("gpt"))
                 requestBody = CreateRequestBody(userInput);
-            else if (_apiModel.Contains("deepseek")) requestBody = CreateRequestBodyDeepSeek(userInput);
+            else if (_apiModel.Contains("deepseek"))
+                requestBody = CreateRequestBodyDeepSeek(userInput);
 
             AppendToOutput(_userName, userInput, true);
 
@@ -296,15 +295,16 @@ public partial class AiChatTaskPanel
                     // 流结束时添加时间戳
                     Dispatcher.Invoke(() =>
                     {
-                        var script = $@"
+                        var script =
+                            $@"
                         var container = document.getElementById('{_currentResponseId}');
                         var timestampDiv = container.querySelector('.timestamp');
                         timestampDiv.innerHTML = '{nowTime:yyyy-MM-dd HH:mm:ss}';";
 
                         ResponseOutput.InvokeScript("eval", script);
-
                     });
-                });
+                }
+            );
 
             // 转换新消息为 HTML
             var htmlMessage = Markdown.ToHtml(streamMessage.Message);
@@ -315,10 +315,11 @@ public partial class AiChatTaskPanel
             streamMessage.Message = htmlMessage;
             await new ChatHistoryManager().SaveChatMessageAsync(streamMessage);
 
-            ResponseOutput.InvokeScript("replaceContent",
-                new object[] { _currentResponseId, htmlMessage });
+            ResponseOutput.InvokeScript(
+                "replaceContent",
+                new object[] { _currentResponseId, htmlMessage }
+            );
             ResponseOutput.InvokeScript("scrollToBottom");
-
         }
         catch (Exception ex)
         {
@@ -330,20 +331,21 @@ public partial class AiChatTaskPanel
         PromptInput.Focus(); // 自动聚焦到输入框
     }
 
-
     private void AppendStreamingContent(string chunk)
     {
         Dispatcher.Invoke(() =>
         {
             var doc = ResponseOutput.Document;
-            if (doc == null) return;
+            if (doc == null)
+                return;
 
             // 获取或创建消息容器
             if (string.IsNullOrEmpty(_currentResponseId))
             {
                 _currentResponseId = $"msg-{DateTime.Now.Ticks}";
 
-                var newMessage = $@"
+                var newMessage =
+                    $@"
                 <div id='{_currentResponseId}' class='message-container'>
                     <div class='message system'>
                         <div class='role'>{_apiModel}</div>
@@ -355,7 +357,8 @@ public partial class AiChatTaskPanel
             }
 
             // 更新内容
-            var script = $@"
+            var script =
+                $@"
             var container = document.getElementById('{_currentResponseId}');
             var contentDiv = container.querySelector('.content');
             contentDiv.innerHTML += '{HttpUtility.JavaScriptStringEncode(chunk)}';
@@ -367,7 +370,8 @@ public partial class AiChatTaskPanel
 
     private void AppendRawHtml(string html)
     {
-        var script = $@"
+        var script =
+            $@"
         document.body.insertAdjacentHTML('beforeend', '{HttpUtility.JavaScriptStringEncode(html)}');
         scrollToBottom();";
 
@@ -412,7 +416,12 @@ public partial class AiChatTaskPanel
         };
     }
 
-    private void AppendToOutput(string role, string message, bool isUser, DateTime? timestamp = null)
+    private void AppendToOutput(
+        string role,
+        string message,
+        bool isUser,
+        DateTime? timestamp = null
+    )
     {
         Dispatcher.BeginInvoke(() =>
         {
@@ -438,8 +447,9 @@ public partial class AiChatTaskPanel
                     htmlMessage = HttpUtility.HtmlDecode(htmlMessage);
 
                     // 如果未传递时间戳，则使用当前时间
-                    var displayTimestamp = timestamp?.ToString("yyyy-MM-dd HH:mm:ss") ??
-                                           DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    var displayTimestamp =
+                        timestamp?.ToString("yyyy-MM-dd HH:mm:ss")
+                        ?? DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
                     // 生成消息 HTML
                     var messageHtml =
@@ -478,16 +488,23 @@ public partial class AiChatTaskPanel
     {
         // 保存消息到本地文件
         var chatRecord = new ChatHistoryManager();
-        _ = chatRecord.SaveChatMessageAsync(new ChatMessage
-        {
-            Role = role,
-            Message = htmlMessage,
-            IsUser = isUser,
-            Timestamp = DateTime.Now // 保存时间戳
-        });
+        _ = chatRecord.SaveChatMessageAsync(
+            new ChatMessage
+            {
+                Role = role,
+                Message = htmlMessage,
+                IsUser = isUser,
+                Timestamp = DateTime.Now // 保存时间戳
+            }
+        );
     }
 
-    private void LoadChatHistoryOutPut(string role, string message, bool isUser, DateTime? timestamp = null)
+    private void LoadChatHistoryOutPut(
+        string role,
+        string message,
+        bool isUser,
+        DateTime? timestamp = null
+    )
     {
         Dispatcher.BeginInvoke(() =>
         {

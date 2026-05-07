@@ -30,20 +30,17 @@ public static class ActivityConfigTester
     private static string RulesFilePath =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            "NumDesTools", "Config", "ActivityTableRules.json"
+            "NumDesTools",
+            "Config",
+            "ActivityTableRules.json"
         );
 
     // Lua 错误中行号的正则：[string "..."]:42:
-    private static readonly Regex LuaErrorLineRegex = new(
-        @"\[string[^\]]*\]:(\d+):",
-        RegexOptions.Compiled
-    );
+    private static readonly Regex LuaErrorLineRegex =
+        new(@"\[string[^\]]*\]:(\d+):", RegexOptions.Compiled);
 
     // Lua txt 每条数据行的 key 正则：\t[123] = {
-    private static readonly Regex LuaRowKeyRegex = new(
-        @"^\t\[(\d+)\]",
-        RegexOptions.Compiled
-    );
+    private static readonly Regex LuaRowKeyRegex = new(@"^\t\[(\d+)\]", RegexOptions.Compiled);
 
     // ─── 规则数据模型（对应 JSON 结构）──────────────────────────────────────────
 
@@ -88,7 +85,8 @@ public static class ActivityConfigTester
         /// </summary>
         [JsonProperty("typeMultiSubTableRules")]
         [JsonConverter(typeof(MultiSubTableRulesConverter))]
-        public Dictionary<string, List<MultiSubTableEntry>> TypeMultiSubTableRules { get; set; } = new();
+        public Dictionary<string, List<MultiSubTableEntry>> TypeMultiSubTableRules { get; set; } =
+            new();
 
         /// <summary>追加到全局桩的额外 Lua 代码（模拟引擎 API）。</summary>
         [JsonProperty("globalStubExtras")]
@@ -97,25 +95,42 @@ public static class ActivityConfigTester
 
     private class SubTableRule
     {
-        [JsonProperty("table")]           public string Table         { get; set; }
-        [JsonProperty("lookupField")]     public string LookupField   { get; set; } = "activityID";
-        [JsonProperty("sceneValidation")] public bool   SceneValidation { get; set; }
-        [JsonProperty("fields")]          public List<FieldRule> Fields { get; set; } = new();
+        [JsonProperty("table")]
+        public string Table { get; set; }
+
+        [JsonProperty("lookupField")]
+        public string LookupField { get; set; } = "activityID";
+
+        [JsonProperty("sceneValidation")]
+        public bool SceneValidation { get; set; }
+
+        [JsonProperty("fields")]
+        public List<FieldRule> Fields { get; set; } = new();
     }
 
     private class MultiSubTableEntry
     {
-        [JsonProperty("table")]       public string Table       { get; set; }
-        [JsonProperty("lookupField")] public string LookupField { get; set; } = "activityID";
-        [JsonProperty("desc")]        public string Desc        { get; set; }
+        [JsonProperty("table")]
+        public string Table { get; set; }
+
+        [JsonProperty("lookupField")]
+        public string LookupField { get; set; } = "activityID";
+
+        [JsonProperty("desc")]
+        public string Desc { get; set; }
     }
 
     // 兼容两种格式：字符串数组（"ActivityBpRewardData.xlsx"）或对象数组（{table, lookupField}）
-    private class MultiSubTableRulesConverter : JsonConverter<Dictionary<string, List<MultiSubTableEntry>>>
+    private class MultiSubTableRulesConverter
+        : JsonConverter<Dictionary<string, List<MultiSubTableEntry>>>
     {
         public override Dictionary<string, List<MultiSubTableEntry>> ReadJson(
-            JsonReader reader, Type objectType, Dictionary<string, List<MultiSubTableEntry>>? existingValue,
-            bool hasExistingValue, JsonSerializer serializer)
+            JsonReader reader,
+            Type objectType,
+            Dictionary<string, List<MultiSubTableEntry>>? existingValue,
+            bool hasExistingValue,
+            JsonSerializer serializer
+        )
         {
             var result = new Dictionary<string, List<MultiSubTableEntry>>();
             var obj = JObject.Load(reader);
@@ -129,17 +144,20 @@ public static class ActivityConfigTester
                         // 字符串：从 xlsx 文件名推断 LuaKey
                         var xlsx = token.Value<string>() ?? "";
                         var name = Path.GetFileNameWithoutExtension(xlsx);
-                        entries.Add(new MultiSubTableEntry
-                        {
-                            Table       = "Tables." + name,
-                            LookupField = "activityID",
-                            Desc        = name
-                        });
+                        entries.Add(
+                            new MultiSubTableEntry
+                            {
+                                Table = "Tables." + name,
+                                LookupField = "activityID",
+                                Desc = name
+                            }
+                        );
                     }
                     else
                     {
                         var e = token.ToObject<MultiSubTableEntry>(serializer);
-                        if (e != null) entries.Add(e);
+                        if (e != null)
+                            entries.Add(e);
                     }
                 }
                 result[prop.Name] = entries;
@@ -147,30 +165,59 @@ public static class ActivityConfigTester
             return result;
         }
 
-        public override void WriteJson(JsonWriter writer, Dictionary<string, List<MultiSubTableEntry>>? value, JsonSerializer serializer)
-            => serializer.Serialize(writer, value);
+        public override void WriteJson(
+            JsonWriter writer,
+            Dictionary<string, List<MultiSubTableEntry>>? value,
+            JsonSerializer serializer
+        ) => serializer.Serialize(writer, value);
     }
 
     private class TableRule
     {
-        [JsonProperty("name")]      public string Name      { get; set; }
-        [JsonProperty("luaKey")]    public string LuaKey    { get; set; }
-        [JsonProperty("excelFile")] public string ExcelFile { get; set; }
-        [JsonProperty("desc")]      public string Desc      { get; set; }
-        [JsonProperty("keyField")]  public string KeyField  { get; set; } = "id";
-        [JsonProperty("fields")]    public List<FieldRule> Fields { get; set; } = new();
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("luaKey")]
+        public string LuaKey { get; set; }
+
+        [JsonProperty("excelFile")]
+        public string ExcelFile { get; set; }
+
+        [JsonProperty("desc")]
+        public string Desc { get; set; }
+
+        [JsonProperty("keyField")]
+        public string KeyField { get; set; } = "id";
+
+        [JsonProperty("fields")]
+        public List<FieldRule> Fields { get; set; } = new();
     }
 
     private class FieldRule
     {
-        [JsonProperty("name")]        public string Name        { get; set; }
-        [JsonProperty("desc")]        public string Desc        { get; set; }
-        [JsonProperty("required")]    public bool   Required    { get; set; }
-        [JsonProperty("type")]        public string Type        { get; set; } = "any";
-        [JsonProperty("refTable")]    public string RefTable    { get; set; }
-        [JsonProperty("refField")]    public string RefField    { get; set; } = "id";
-        [JsonProperty("refIsArray")]  public bool   RefIsArray  { get; set; }
-        [JsonProperty("customCheck")] public string CustomCheck { get; set; }
+        [JsonProperty("name")]
+        public string Name { get; set; }
+
+        [JsonProperty("desc")]
+        public string Desc { get; set; }
+
+        [JsonProperty("required")]
+        public bool Required { get; set; }
+
+        [JsonProperty("type")]
+        public string Type { get; set; } = "any";
+
+        [JsonProperty("refTable")]
+        public string RefTable { get; set; }
+
+        [JsonProperty("refField")]
+        public string RefField { get; set; } = "id";
+
+        [JsonProperty("refIsArray")]
+        public bool RefIsArray { get; set; }
+
+        [JsonProperty("customCheck")]
+        public string CustomCheck { get; set; }
     }
 
     private record LineMapEntry(string Id, int ExcelDisplayRow);
@@ -178,7 +225,8 @@ public static class ActivityConfigTester
     // tableName → (byLine, byId) — built once per table, reused across all error lookups
     private record TableLineMaps(
         Dictionary<int, LineMapEntry> ByLine,
-        Dictionary<string, LineMapEntry> ById);
+        Dictionary<string, LineMapEntry> ById
+    );
 
     // ─── 公共入口 ─────────────────────────────────────────────────────────────────
 
@@ -198,13 +246,20 @@ public static class ActivityConfigTester
     public static void TestGitChanged()
     {
         var rules = LoadRules();
-        if (rules == null) return;
+        if (rules == null)
+            return;
 
         var excelPath = NumDesAddIn.App.ActiveWorkbook.FullName;
-        var changedFiles = SvnGitTools.GitDiffFileCount(Path.GetDirectoryName(excelPath) ?? excelPath);
+        var changedFiles = SvnGitTools.GitDiffFileCount(
+            Path.GetDirectoryName(excelPath) ?? excelPath
+        );
 
-        var activityTableNames = rules.Tables.Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (!changedFiles.Any(f => activityTableNames.Contains(Path.GetFileNameWithoutExtension(f))))
+        var activityTableNames = rules
+            .Tables.Select(t => t.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (
+            !changedFiles.Any(f => activityTableNames.Contains(Path.GetFileNameWithoutExtension(f)))
+        )
         {
             MessageBox.Show("当前 Git 工作区没有活动相关表格的改动。");
             return;
@@ -215,12 +270,17 @@ public static class ActivityConfigTester
 
     // ─── 核心流程 ─────────────────────────────────────────────────────────────────
 
-    private static void Run(HashSet<string> filterIds, List<string> gitChangedFiles, RulesRoot rules = null)
+    private static void Run(
+        HashSet<string> filterIds,
+        List<string> gitChangedFiles,
+        RulesRoot rules = null
+    )
     {
         NumDesAddIn.App.StatusBar = "活动配置验证：读取规则...";
 
         rules ??= LoadRules();
-        if (rules == null) return;
+        if (rules == null)
+            return;
 
         var excelPath = NumDesAddIn.App.ActiveWorkbook.FullName;
 
@@ -229,15 +289,14 @@ public static class ActivityConfigTester
         if (luaDir == null)
         {
             MessageBox.Show(
-                "无法定位 Code/Assets/LuaScripts/Tables 目录。\n"
-                + "请确认当前工作簿在 public/Excels/Tables/ 下。"
+                "无法定位 Code/Assets/LuaScripts/Tables 目录。\n" + "请确认当前工作簿在 public/Excels/Tables/ 下。"
             );
             return;
         }
 
         // 3. 只导 git 有改动的文件，lua.txt 已存在的表直接复用
-        var needExport = gitChangedFiles
-            ?? SvnGitTools.GitDiffFileCount(Path.GetDirectoryName(excelPath) ?? "");
+        var needExport =
+            gitChangedFiles ?? SvnGitTools.GitDiffFileCount(Path.GetDirectoryName(excelPath) ?? "");
         ExportChangedActivityExcels(needExport, rules);
 
         var report = new StringBuilder();
@@ -257,9 +316,7 @@ public static class ActivityConfigTester
         PluginLog.Write(report.ToString());
         ErrorLogCtp.CreateCtpNormal(report.ToString());
 
-        MessageBox.Show(errorCount > 0
-            ? $"发现 {errorCount} 个配置问题，查看右侧报告面板。"
-            : "所有活动配置验证通过！");
+        MessageBox.Show(errorCount > 0 ? $"发现 {errorCount} 个配置问题，查看右侧报告面板。" : "所有活动配置验证通过！");
     }
 
     // ─── 规则文件加载 ─────────────────────────────────────────────────────────────
@@ -272,9 +329,7 @@ public static class ActivityConfigTester
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(RulesFilePath)!);
                 File.WriteAllText(RulesFilePath, DefaultRulesJson, Encoding.UTF8);
-                MessageBox.Show(
-                    $"已在以下路径生成默认规则配置文件，请按实际项目填写后重新执行验证：\n{RulesFilePath}"
-                );
+                MessageBox.Show($"已在以下路径生成默认规则配置文件，请按实际项目填写后重新执行验证：\n{RulesFilePath}");
             }
             catch (Exception ex)
             {
@@ -409,16 +464,20 @@ public static class ActivityConfigTester
 
     private static void ExportChangedActivityExcels(List<string> changedFiles, RulesRoot rules)
     {
-        var activityNames = rules.Tables.Select(t => t.Name)
+        var activityNames = rules
+            .Tables.Select(t => t.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var file in changedFiles)
         {
-            if (file.Contains("#") || file.Contains("~")) continue;
-            if (!file.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)) continue;
+            if (file.Contains("#") || file.Contains("~"))
+                continue;
+            if (!file.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+                continue;
 
             var name = Path.GetFileNameWithoutExtension(file);
-            if (!activityNames.Contains(name)) continue;
+            if (!activityNames.Contains(name))
+                continue;
 
             try
             {
@@ -447,13 +506,13 @@ public static class ActivityConfigTester
         StringBuilder report
     )
     {
-        _subdirPrefabCache = new();   // reset per run
+        _subdirPrefabCache = new(); // reset per run
         using var lua = new Lua();
         var errorCount = 0;
 
         // Paths derived once from luaDir
         var luaScriptsRoot = Path.GetFullPath(Path.Combine(luaDir, "..", ".."));
-        var codeRoot       = Path.GetFullPath(Path.Combine(luaDir, "..", "..", ".."));
+        var codeRoot = Path.GetFullPath(Path.Combine(luaDir, "..", "..", ".."));
 
         lua.DoString(BuildGlobalStub(rules));
 
@@ -467,8 +526,13 @@ public static class ActivityConfigTester
             var path = Path.Combine(luaScriptsRoot, rel);
             if (File.Exists(path))
             {
-                try { lua.DoString(File.ReadAllText(path, Encoding.UTF8)); }
-                catch { /* non-critical */ }
+                try
+                {
+                    lua.DoString(File.ReadAllText(path, Encoding.UTF8));
+                }
+                catch
+                { /* non-critical */
+                }
             }
         }
 
@@ -562,18 +626,25 @@ public static class ActivityConfigTester
         {
             // e1. 收集所有需要加载的子表名：
             //     typeSubTableRules（深度校验规则）> typeTableMap（存在性兼容）> 固定辅助表
-            var loadedTables = rules.Tables.Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var loadedTables = rules
+                .Tables.Select(t => t.Name)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var subTablesLoaded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             // 从 typeSubTableRules 和 typeMultiSubTableRules 中收集所有子表名
-            var subTableNamesFromRules = rules.TypeSubTableRules.Values
-                .Select(r => r.Table)
-                .Concat(rules.TypeMultiSubTableRules.Values.SelectMany(list => list.Select(e => e.Table)))
+            var subTableNamesFromRules = rules
+                .TypeSubTableRules.Values.Select(r => r.Table)
+                .Concat(
+                    rules.TypeMultiSubTableRules.Values.SelectMany(list =>
+                        list.Select(e => e.Table)
+                    )
+                )
                 .Select(k => k.Contains('.') ? k.Split('.')[1] : k);
 
             // 从 typeTableMap 收集（向后兼容）
-            var subTableNamesFromMap = rules.TypeTableMap.Values
-                .Select(k => k.Contains('.') ? k.Split('.')[1] : k);
+            var subTableNamesFromMap = rules.TypeTableMap.Values.Select(k =>
+                k.Contains('.') ? k.Split('.')[1] : k
+            );
 
             // 固定辅助表：LteData/MapDataProto 始终加载（LTE 链验证需要）
             var extraTables = new[] { "LteData", "MapDataProto" };
@@ -585,7 +656,8 @@ public static class ActivityConfigTester
 
             foreach (var subName in subTableKeys)
             {
-                if (loadedTables.Contains(subName) || subTablesLoaded.Contains(subName)) continue;
+                if (loadedTables.Contains(subName) || subTablesLoaded.Contains(subName))
+                    continue;
                 var subFile = Path.Combine(luaDir, $"{subName}.lua.txt");
                 if (!File.Exists(subFile))
                 {
@@ -603,12 +675,14 @@ public static class ActivityConfigTester
                     report.AppendLine($"[子表] ✗ {subName} 加载失败：{CleanLuaError(ex.Message)}");
                 }
             }
-            if (subTablesLoaded.Count > 0) report.AppendLine();
+            if (subTablesLoaded.Count > 0)
+                report.AppendLine();
 
             // e1b. 加载 LTE 动态映射表（LteIconIdMapping_* / LteElementPrefabMapping_*）
             // 这些表名在 LteData 行里以字符串形式引用，必须预先全部加载才能在追踪脚本里访问
             // Use targeted glob patterns instead of scanning the full directory
-            var lteMappingFiles = Directory.GetFiles(luaDir, "LteIconIdMapping_*.lua.txt")
+            var lteMappingFiles = Directory
+                .GetFiles(luaDir, "LteIconIdMapping_*.lua.txt")
                 .Concat(Directory.GetFiles(luaDir, "LteElementPrefabMapping_*.lua.txt"));
             foreach (var mf in lteMappingFiles)
             {
@@ -617,22 +691,41 @@ public static class ActivityConfigTester
                 var mName = nameWithoutTxt.EndsWith(".lua", StringComparison.OrdinalIgnoreCase)
                     ? nameWithoutTxt[..^4]
                     : nameWithoutTxt;
-                if (subTablesLoaded.Contains(mName)) continue;
+                if (subTablesLoaded.Contains(mName))
+                    continue;
                 try
                 {
                     lua.DoString(File.ReadAllText(mf, Encoding.UTF8));
                     subTablesLoaded.Add(mName);
                 }
-                catch { /* 映射表加载失败不阻断主流程 */ }
+                catch
+                { /* 映射表加载失败不阻断主流程 */
+                }
             }
 
             // e1c. 加载 LTE 活动私有子表及全局辅助表
             // 全局表：只加载一次
-            foreach (var globalTbl in new[] {
-                // schema tables must come first — activity-specific tables call Tables.Xxx._dataCellMetaTable
-                "Item", "Icon", "Type", "ItemMerge", "ItemBuild", "ItemSpawn", "ItemAdsorb",
-                "ItemBomb", "ExploitationDetail", "ExploitationGroup", "Drop", "BpMergeScore",
-                "LandmarkBuilding", "Object", "LteMultiScenarioData" })
+            foreach (
+                var globalTbl in new[]
+                {
+                    // schema tables must come first — activity-specific tables call Tables.Xxx._dataCellMetaTable
+                    "Item",
+                    "Icon",
+                    "Type",
+                    "ItemMerge",
+                    "ItemBuild",
+                    "ItemSpawn",
+                    "ItemAdsorb",
+                    "ItemBomb",
+                    "ExploitationDetail",
+                    "ExploitationGroup",
+                    "Drop",
+                    "BpMergeScore",
+                    "LandmarkBuilding",
+                    "Object",
+                    "LteMultiScenarioData"
+                }
+            )
             {
                 TryLoadLuaTable(lua, luaDir, globalTbl, subTablesLoaded);
             }
@@ -640,21 +733,42 @@ public static class ActivityConfigTester
             // 活动私有表：每个 filterID 一套
             foreach (var fid in filterIds)
             {
-                foreach (var prefix in new[] {
-                    "Item_", "ItemBuild_", "ItemMerge_", "ItemSpawn_", "ItemAdsorb_",
-                    "ItemBomb_", "ExploitationGroup_", "ExploitationDetail_",
-                    "Drop_", "Icon_", "Type_", "BpMergeScore_",
-                    "RewardGroup_", "Help_", "FindTargetTemplateData_",
-                    "PictorialBookItemData_", "ItemExchangePointObstacle_" })
+                foreach (
+                    var prefix in new[]
+                    {
+                        "Item_",
+                        "ItemBuild_",
+                        "ItemMerge_",
+                        "ItemSpawn_",
+                        "ItemAdsorb_",
+                        "ItemBomb_",
+                        "ExploitationGroup_",
+                        "ExploitationDetail_",
+                        "Drop_",
+                        "Icon_",
+                        "Type_",
+                        "BpMergeScore_",
+                        "RewardGroup_",
+                        "Help_",
+                        "FindTargetTemplateData_",
+                        "PictorialBookItemData_",
+                        "ItemExchangePointObstacle_"
+                    }
+                )
                 {
                     TryLoadLuaTable(lua, luaDir, prefix + fid, subTablesLoaded);
                 }
             }
 
             // e2. 注册 C# 文件存在检查函数，供 Lua 脚本校验场景 prefab 文件
-            lua.RegisterFunction("_cs_file_exists", null,
-                typeof(ActivityConfigTester).GetMethod(nameof(LuaCheckFileExists),
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static));
+            lua.RegisterFunction(
+                "_cs_file_exists",
+                null,
+                typeof(ActivityConfigTester).GetMethod(
+                    nameof(LuaCheckFileExists),
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
+                )
+            );
             // 通过全局变量把 codeRoot 传进去（Lua 字符串常量）
             lua.DoString($"_cs_code_root = [[{codeRoot.Replace('\\', '/')}]]");
 
@@ -663,8 +777,12 @@ public static class ActivityConfigTester
             lua.DoString("_validation_errors = {}");
             // 同时收集正向追踪日志（每条 ID 追踪成功时写入）
             lua.DoString("_trace_log = {}");
-            var traceScript = BuildIdTraceScript(filterIds, rules.TypeTableMap,
-                rules.TypeSubTableRules, rules.TypeMultiSubTableRules);
+            var traceScript = BuildIdTraceScript(
+                filterIds,
+                rules.TypeTableMap,
+                rules.TypeSubTableRules,
+                rules.TypeMultiSubTableRules
+            );
             try
             {
                 lua.DoString(traceScript);
@@ -681,7 +799,8 @@ public static class ActivityConfigTester
                 for (var i = 1; ; i++)
                 {
                     var entry = traceLog[i]?.ToString();
-                    if (entry == null) break;
+                    if (entry == null)
+                        break;
                     report.AppendLine($"[追踪] {entry}");
                 }
             }
@@ -732,21 +851,23 @@ public static class ActivityConfigTester
     {
         var count = 0;
         var luaErrors = lua.GetTable("_validation_errors");
-        if (luaErrors == null) return 0;
+        if (luaErrors == null)
+            return 0;
 
         for (var i = 1; ; i++)
         {
             var entry = luaErrors[i]?.ToString();
-            if (entry == null) break;
+            if (entry == null)
+                break;
 
             // 格式：tableName|id|fieldName|message
             var parts = entry.Split('|', 4);
             if (parts.Length == 4)
             {
-                var tbl   = parts[0];
-                var id    = parts[1];
+                var tbl = parts[0];
+                var id = parts[1];
                 var field = parts[2];
-                var code  = parts[3];
+                var code = parts[3];
 
                 // ERR_TABLE_NOT_LOADED 是警告，不计入错误数
                 if (code == "ERR_TABLE_NOT_LOADED")
@@ -781,9 +902,7 @@ public static class ActivityConfigTester
         if (code.StartsWith("ERR_TYPE:"))
         {
             var p = code.Split(':');
-            return p.Length >= 3
-                ? $"期望类型 {p[1]}，实际类型 {p[2]}"
-                : code;
+            return p.Length >= 3 ? $"期望类型 {p[1]}，实际类型 {p[2]}" : code;
         }
         if (code.StartsWith("ERR_REF:"))
         {
@@ -792,13 +911,11 @@ public static class ActivityConfigTester
             {
                 var p = code.Split(':', 3);
                 var subTable = p.Length > 1 ? p[1].Replace("_BY_TYPE", "") : "?";
-                var actId    = p.Length > 2 ? p[2] : "?";
+                var actId = p.Length > 2 ? p[2] : "?";
                 return $"type对应子表 {subTable} 中不存在 id={actId}，该活动类型缺少子表配置";
             }
             var parts = code.Split(':', 3);
-            return parts.Length == 3
-                ? $"{fieldName}={parts[2]} 在 {parts[1]} 中不存在"
-                : code;
+            return parts.Length == 3 ? $"{fieldName}={parts[2]} 在 {parts[1]} 中不存在" : code;
         }
         if (code == "ERR_ID_NOT_FOUND")
             return "该 ID 在配置表中不存在";
@@ -819,10 +936,8 @@ public static class ActivityConfigTester
     // ─── 从 Lua 错误消息推断配置问题位置 ─────────────────────────────────────────
 
     // 尝试从 Lua 错误中提取类似 "ActivityClientData[1234]" 的配置引用，定位 Excel 行
-    private static readonly Regex LuaConfigRefRegex = new(
-        @"ActivityClient\w*\[(\d+)\]|Tables\.(\w+)\[(\d+)\]",
-        RegexOptions.Compiled
-    );
+    private static readonly Regex LuaConfigRefRegex =
+        new(@"ActivityClient\w*\[(\d+)\]|Tables\.(\w+)\[(\d+)\]", RegexOptions.Compiled);
 
     private static string InferConfigLocation(
         string errorMsg,
@@ -830,15 +945,19 @@ public static class ActivityConfigTester
     )
     {
         var m = LuaConfigRefRegex.Match(errorMsg);
-        if (!m.Success) return null;
+        if (!m.Success)
+            return null;
 
-        string id, tableName;
+        string id,
+            tableName;
         if (m.Groups[1].Success)
         {
             // ActivityClientXxx[id] 模式
             id = m.Groups[1].Value;
-            tableName = lineMaps.Keys.FirstOrDefault(k =>
-                errorMsg.Contains(k, StringComparison.OrdinalIgnoreCase)) ?? "";
+            tableName =
+                lineMaps.Keys.FirstOrDefault(k =>
+                    errorMsg.Contains(k, StringComparison.OrdinalIgnoreCase)
+                ) ?? "";
         }
         else
         {
@@ -846,17 +965,31 @@ public static class ActivityConfigTester
             id = m.Groups[3].Value;
         }
 
-        if (string.IsNullOrEmpty(tableName)) return $"活动ID={id}（表名未知）";
+        if (string.IsNullOrEmpty(tableName))
+            return $"活动ID={id}（表名未知）";
         return ResolveLocationById(tableName, id, lineMaps);
     }
 
-    private static void TryLoadLuaTable(Lua lua, string luaDir, string tableName, HashSet<string> loaded)
+    private static void TryLoadLuaTable(
+        Lua lua,
+        string luaDir,
+        string tableName,
+        HashSet<string> loaded
+    )
     {
-        if (loaded.Contains(tableName)) return;
+        if (loaded.Contains(tableName))
+            return;
         var path = Path.Combine(luaDir, tableName + ".lua.txt");
-        if (!File.Exists(path)) return;
-        try { lua.DoString(File.ReadAllText(path, Encoding.UTF8)); loaded.Add(tableName); }
-        catch { /* non-critical */ }
+        if (!File.Exists(path))
+            return;
+        try
+        {
+            lua.DoString(File.ReadAllText(path, Encoding.UTF8));
+            loaded.Add(tableName);
+        }
+        catch
+        { /* non-critical */
+        }
     }
 
     // 供 NLua RegisterFunction 使用：检查 codeRoot/bundleName/assetName.prefab 是否存在
@@ -868,21 +1001,27 @@ public static class ActivityConfigTester
         {
             var bundleDir = Path.Combine(
                 codeRoot.Replace('/', Path.DirectorySeparatorChar),
-                bundleName.Replace('/', Path.DirectorySeparatorChar));
+                bundleName.Replace('/', Path.DirectorySeparatorChar)
+            );
             var fileName = assetName + ".prefab";
             if (File.Exists(Path.Combine(bundleDir, fileName)))
                 return true;
-            if (!Directory.Exists(bundleDir)) return false;
+            if (!Directory.Exists(bundleDir))
+                return false;
             if (!_subdirPrefabCache.TryGetValue(bundleDir, out var cached))
             {
-                cached = Directory.GetFiles(bundleDir, "*.prefab", SearchOption.AllDirectories)
+                cached = Directory
+                    .GetFiles(bundleDir, "*.prefab", SearchOption.AllDirectories)
                     .Select(Path.GetFileName)
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
                 _subdirPrefabCache[bundleDir] = cached;
             }
             return cached.Contains(fileName);
         }
-        catch { return false; }
+        catch
+        {
+            return false;
+        }
     }
 
     // ─── 针对指定活动 ID 追踪配置链 ────────────────────────────────────────────────
@@ -896,7 +1035,8 @@ public static class ActivityConfigTester
         HashSet<string> ids,
         Dictionary<string, string> typeTableMap,
         Dictionary<string, SubTableRule> typeSubTableRules,
-        Dictionary<string, List<MultiSubTableEntry>> typeMultiSubTableRules)
+        Dictionary<string, List<MultiSubTableEntry>> typeMultiSubTableRules
+    )
     {
         var sb = new StringBuilder();
         sb.AppendLine("local _errs = _validation_errors");
@@ -913,13 +1053,16 @@ public static class ActivityConfigTester
         sb.AppendLine("local _typeMap = {}");
         foreach (var (typeKey, rule) in typeSubTableRules)
         {
-            if (typeKey == "2") continue; // LTE chain handled separately
+            if (typeKey == "2")
+                continue; // LTE chain handled separately
             sb.AppendLine($"_typeMap[{typeKey}] = {{tbl={rule.Table}, lf='{rule.LookupField}'}}");
         }
         foreach (var (typeKey, luaKey) in typeTableMap)
         {
-            if (typeKey == "2") continue;
-            if (typeSubTableRules.ContainsKey(typeKey)) continue;
+            if (typeKey == "2")
+                continue;
+            if (typeSubTableRules.ContainsKey(typeKey))
+                continue;
             sb.AppendLine($"_typeMap[{typeKey}] = {{tbl={luaKey}, lf='activityID'}}");
         }
         sb.AppendLine();
@@ -934,7 +1077,8 @@ public static class ActivityConfigTester
         sb.AppendLine("}");
         sb.AppendLine();
 
-        sb.AppendLine(@"
+        sb.AppendLine(
+            @"
 local _tlog = _trace_log
 local function _tl(msg)
     if #_tlog < 200 then table.insert(_tlog, msg)
@@ -1293,22 +1437,28 @@ for _, _id in ipairs(_ids) do
         end
     end
 end
-");
+"
+        );
         sb.AppendLine(BuildMultiSubTableCheckScript(typeMultiSubTableRules));
 
         return sb.ToString();
     }
 
     // 生成各 type 的深度字段校验函数集合（返回 Lua 代码片段）
-    private static string BuildSubTableCheckFunctions(Dictionary<string, SubTableRule> typeSubTableRules)
+    private static string BuildSubTableCheckFunctions(
+        Dictionary<string, SubTableRule> typeSubTableRules
+    )
     {
-        if (typeSubTableRules.Count == 0) return "";
+        if (typeSubTableRules.Count == 0)
+            return "";
         var sb = new StringBuilder();
         sb.AppendLine("local _subCheckFuncs = {}");
         foreach (var (typeKey, rule) in typeSubTableRules)
         {
-            if (typeKey == "2") continue; // LTE 链专属
-            if (rule.Fields == null || rule.Fields.Count == 0) continue;
+            if (typeKey == "2")
+                continue; // LTE 链专属
+            if (rule.Fields == null || rule.Fields.Count == 0)
+                continue;
             var tableName = rule.Table.Contains('.') ? rule.Table.Split('.')[1] : rule.Table;
             sb.AppendLine($"_subCheckFuncs[{typeKey}] = function(actId, subId, row)");
             foreach (var field in rule.Fields)
@@ -1317,7 +1467,9 @@ end
                 if (field.Required)
                 {
                     sb.AppendLine($"    if {fa} == nil or tostring({fa}) == '' then");
-                    sb.AppendLine($"        _e('{tableName}', subId, '{field.Name}', 'ERR_REQUIRED')");
+                    sb.AppendLine(
+                        $"        _e('{tableName}', subId, '{field.Name}', 'ERR_REQUIRED')"
+                    );
                     sb.AppendLine($"    else");
                 }
                 else
@@ -1335,16 +1487,22 @@ end
                 {
                     sb.AppendLine($"        local _rv = tonumber({fa}) or {fa}");
                     // 0 是配置表通用"未设置"哨兵值，跳过引用检查
-                    sb.AppendLine($"        if _rv ~= 0 and ({field.RefTable} == nil or {field.RefTable}[_rv] == nil) then");
+                    sb.AppendLine(
+                        $"        if _rv ~= 0 and ({field.RefTable} == nil or {field.RefTable}[_rv] == nil) then"
+                    );
                     sb.AppendLine($"            _e('{tableName}', subId, '{field.Name}',");
-                    sb.AppendLine($"                'ERR_REF:{EscapeLua(field.RefTable)}:'..tostring({fa}))");
+                    sb.AppendLine(
+                        $"                'ERR_REF:{EscapeLua(field.RefTable)}:'..tostring({fa}))"
+                    );
                     sb.AppendLine($"        end");
                 }
                 if (!string.IsNullOrEmpty(field.CustomCheck))
                 {
                     sb.AppendLine($"        do");
                     sb.AppendLine($"            local id = subId");
-                    sb.AppendLine($"            local function err(f,m) _e('{tableName}', subId, f, m) end");
+                    sb.AppendLine(
+                        $"            local function err(f,m) _e('{tableName}', subId, f, m) end"
+                    );
                     sb.AppendLine($"            {field.CustomCheck}");
                     sb.AppendLine($"        end");
                 }
@@ -1357,12 +1515,16 @@ end
 
     // 生成多子表存在性验证脚本（typeMultiSubTableRules）
     private static string BuildMultiSubTableCheckScript(
-        Dictionary<string, List<MultiSubTableEntry>> rules)
+        Dictionary<string, List<MultiSubTableEntry>> rules
+    )
     {
-        if (rules.Count == 0) return "";
+        if (rules.Count == 0)
+            return "";
         var sb = new StringBuilder();
         sb.AppendLine("for _, _mid in ipairs(_ids) do  -- multi-sub-table existence check");
-        sb.AppendLine("    local _cd = Tables.ActivityClientData and Tables.ActivityClientData[_mid]");
+        sb.AppendLine(
+            "    local _cd = Tables.ActivityClientData and Tables.ActivityClientData[_mid]"
+        );
         sb.AppendLine("    if _cd then");
         sb.AppendLine("        local _t = tostring(_cd.type)");
         foreach (var (typeKey, entries) in rules)
@@ -1373,9 +1535,13 @@ end
                 var tblName = entry.Table.Contains('.') ? entry.Table.Split('.')[1] : entry.Table;
                 var lf = entry.LookupField ?? "activityID";
                 sb.AppendLine($"            local _lk = _cd.{lf} or _mid");
-                sb.AppendLine($"            if {entry.Table} == nil or {entry.Table}[_lk] == nil then");
+                sb.AppendLine(
+                    $"            if {entry.Table} == nil or {entry.Table}[_lk] == nil then"
+                );
                 sb.AppendLine($"                _e('ActivityClientData', _mid, '{lf}',");
-                sb.AppendLine($"                    'ERR_REF:{EscapeLua(entry.Table)}:'..tostring(_lk))");
+                sb.AppendLine(
+                    $"                    'ERR_REF:{EscapeLua(entry.Table)}:'..tostring(_lk))"
+                );
                 sb.AppendLine($"            end");
             }
             sb.AppendLine($"        end");
@@ -1402,7 +1568,9 @@ end
         sb.AppendLine("_validation_errors = {}");
         sb.AppendLine();
         sb.AppendLine("local function _err(tbl, id, field, msg)");
-        sb.AppendLine("    table.insert(_validation_errors, tbl..\"|\"..tostring(id)..\"|\"..field..\"|\"..msg)");
+        sb.AppendLine(
+            "    table.insert(_validation_errors, tbl..\"|\"..tostring(id)..\"|\"..field..\"|\"..msg)"
+        );
         sb.AppendLine("end");
         sb.AppendLine();
 
@@ -1413,7 +1581,9 @@ end
             foreach (var id in filterIds)
                 sb.Append($"[\"{id}\"]=true,");
             sb.AppendLine("}");
-            sb.AppendLine("local function _shouldCheck(id) return _filter[tostring(id)] == true end");
+            sb.AppendLine(
+                "local function _shouldCheck(id) return _filter[tostring(id)] == true end"
+            );
         }
         else
         {
@@ -1430,7 +1600,9 @@ end
             sb.AppendLine($"local {lv} = {t.LuaKey}");
             // 若表未加载（nil）则输出警告，而不是把它当空表跳过
             sb.AppendLine($"if {lv} == nil then");
-            sb.AppendLine($"    table.insert(_validation_errors, \"{t.Name}||_load|ERR_TABLE_NOT_LOADED\")");
+            sb.AppendLine(
+                $"    table.insert(_validation_errors, \"{t.Name}||_load|ERR_TABLE_NOT_LOADED\")"
+            );
             sb.AppendLine($"end");
         }
         sb.AppendLine();
@@ -1455,14 +1627,20 @@ end
                 if (field.Required)
                 {
                     sb.AppendLine($"        -- [{field.Name}] required: {field.Desc}");
-                    sb.AppendLine($"        if {fieldAccess} == nil or tostring({fieldAccess}) == \"\" then");
-                    sb.AppendLine($"            _err(\"{table.Name}\", _id, \"{field.Name}\", \"ERR_REQUIRED\")");
+                    sb.AppendLine(
+                        $"        if {fieldAccess} == nil or tostring({fieldAccess}) == \"\" then"
+                    );
+                    sb.AppendLine(
+                        $"            _err(\"{table.Name}\", _id, \"{field.Name}\", \"ERR_REQUIRED\")"
+                    );
                     sb.AppendLine($"        else");
                 }
                 else
                 {
                     sb.AppendLine($"        -- [{field.Name}]: {field.Desc}");
-                    sb.AppendLine($"        if {fieldAccess} ~= nil and tostring({fieldAccess}) ~= \"\" then");
+                    sb.AppendLine(
+                        $"        if {fieldAccess} ~= nil and tostring({fieldAccess}) ~= \"\" then"
+                    );
                 }
 
                 // ── 类型检查 ──
@@ -1470,7 +1648,9 @@ end
                 {
                     sb.AppendLine($"            if type({fieldAccess}) ~= \"{field.Type}\" then");
                     sb.AppendLine($"                _err(\"{table.Name}\", _id, \"{field.Name}\",");
-                    sb.AppendLine($"                    \"ERR_TYPE:{field.Type}:\"..type({fieldAccess}))");
+                    sb.AppendLine(
+                        $"                    \"ERR_TYPE:{field.Type}:\"..type({fieldAccess}))"
+                    );
                     sb.AppendLine($"            end");
                 }
 
@@ -1482,21 +1662,37 @@ end
                     {
                         sb.AppendLine($"            if type({fieldAccess}) == \"table\" then");
                         sb.AppendLine($"                for _, _refId in ipairs({fieldAccess}) do");
-                        sb.AppendLine($"                    local _key = tonumber(_refId) or _refId");
-                        sb.AppendLine($"                    if {refLocalVar} == nil or {refLocalVar}[_key] == nil then");
-                        sb.AppendLine($"                        _err(\"{table.Name}\", _id, \"{field.Name}\",");
-                        sb.AppendLine($"                            \"ERR_REF:{EscapeLua(field.RefTable)}:\"..tostring(_refId))");
+                        sb.AppendLine(
+                            $"                    local _key = tonumber(_refId) or _refId"
+                        );
+                        sb.AppendLine(
+                            $"                    if {refLocalVar} == nil or {refLocalVar}[_key] == nil then"
+                        );
+                        sb.AppendLine(
+                            $"                        _err(\"{table.Name}\", _id, \"{field.Name}\","
+                        );
+                        sb.AppendLine(
+                            $"                            \"ERR_REF:{EscapeLua(field.RefTable)}:\"..tostring(_refId))"
+                        );
                         sb.AppendLine($"                    end");
                         sb.AppendLine($"                end");
                         sb.AppendLine($"            end");
                     }
                     else
                     {
-                        sb.AppendLine($"            local _refKey = tonumber({fieldAccess}) or {fieldAccess}");
+                        sb.AppendLine(
+                            $"            local _refKey = tonumber({fieldAccess}) or {fieldAccess}"
+                        );
                         // 0 是配置表通用"未设置"哨兵值，跳过引用检查，避免假阳性
-                        sb.AppendLine($"            if _refKey ~= 0 and ({refLocalVar} == nil or {refLocalVar}[_refKey] == nil) then");
-                        sb.AppendLine($"                _err(\"{table.Name}\", _id, \"{field.Name}\",");
-                        sb.AppendLine($"                    \"ERR_REF:{EscapeLua(field.RefTable)}:\"..tostring({fieldAccess}))");
+                        sb.AppendLine(
+                            $"            if _refKey ~= 0 and ({refLocalVar} == nil or {refLocalVar}[_refKey] == nil) then"
+                        );
+                        sb.AppendLine(
+                            $"                _err(\"{table.Name}\", _id, \"{field.Name}\","
+                        );
+                        sb.AppendLine(
+                            $"                    \"ERR_REF:{EscapeLua(field.RefTable)}:\"..tostring({fieldAccess}))"
+                        );
                         sb.AppendLine($"            end");
                     }
                 }
@@ -1505,8 +1701,12 @@ end
                 if (!string.IsNullOrEmpty(field.CustomCheck))
                 {
                     sb.AppendLine($"            do");
-                    sb.AppendLine($"                local row, id, tbl_name = _row, _id, \"{table.Name}\"");
-                    sb.AppendLine($"                local function err(f, m) _err(tbl_name, id, f, m) end");
+                    sb.AppendLine(
+                        $"                local row, id, tbl_name = _row, _id, \"{table.Name}\""
+                    );
+                    sb.AppendLine(
+                        $"                local function err(f, m) _err(tbl_name, id, f, m) end"
+                    );
                     sb.AppendLine($"                {field.CustomCheck}");
                     sb.AppendLine($"            end");
                 }
@@ -1535,7 +1735,8 @@ end
         // SetDataTableMetatable(targetTable, dataTable, metatable, name, flag)
         // 真实实现：把 dataTable 里的每一行复制进 targetTable，并为每行设置元表（默认值）。
         // 桩必须忠实模拟：否则 Tables.ActivityClientData[id] 永远为 nil，导致所有 ID 报"不存在"。
-        sb.AppendLine(@"
+        sb.AppendLine(
+            @"
 Tables.SetDataTableMetatable = function(target, data, mt, name, flag)
     for k, v in pairs(data) do
         if type(v) == 'table' then
@@ -1546,15 +1747,19 @@ Tables.SetDataTableMetatable = function(target, data, mt, name, flag)
 end
 Tables.SetSubTableMetatable = Tables.SetDataTableMetatable
 Tables.CheckNullValue = function() end
-");
+"
+        );
 
         // ── 引擎/框架基础桩 ──
         sb.AppendLine("IsEditor = false");
-        sb.AppendLine("Debug = { Log=function()end, LogError=function()end, LogWarning=function()end, LogFormat=function()end }");
+        sb.AppendLine(
+            "Debug = { Log=function()end, LogError=function()end, LogWarning=function()end, LogFormat=function()end }"
+        );
         sb.AppendLine("print = function() end");
 
         // ── Lua OOP 框架桩（class / handler / import 等常见 pattern）──
-        sb.AppendLine(@"
+        sb.AppendLine(
+            @"
 -- 极简 class() 实现，支持 class('Name') 和 class('Name', Base)
 function class(name, base)
     local cls = {}
@@ -1581,7 +1786,8 @@ TimerManager     = { AddTimer=function()return 0 end, RemoveTimer=function()end 
 CS               = setmetatable({}, { __index=function(t,k) t[k]=setmetatable({},{__index=function(t2,k2) t2[k2]=function()end; return t2[k2] end}); return t[k] end })
 UnityEngine      = CS.UnityEngine or setmetatable({}, { __index=function(t,k) t[k]=function()end; return t[k] end })
 SolarRoot        = setmetatable({}, { __index=function(t,k) t[k]=setmetatable({},{__index=function()return '' end}); return t[k] end })
-");
+"
+        );
 
         // ── 用户自定义引擎 API 桩（来自 JSON globalStubExtras）──
         if (!string.IsNullOrWhiteSpace(rules.GlobalStubExtras))
@@ -1597,7 +1803,8 @@ SolarRoot        = setmetatable({}, { __index=function(t,k) t[k]=setmetatable({}
         var dir = Path.GetDirectoryName(workbookPath);
         for (var depth = 0; depth <= 6; depth++)
         {
-            if (dir == null) break;
+            if (dir == null)
+                break;
             var candidate = Path.Combine(dir, "Code", "Assets", "LuaScripts", "Tables");
             if (Directory.Exists(candidate))
                 return candidate;
@@ -1609,15 +1816,17 @@ SolarRoot        = setmetatable({}, { __index=function(t,k) t[k]=setmetatable({}
     private static TableLineMaps BuildLineMap(string luaText)
     {
         var byLine = new Dictionary<int, LineMapEntry>();
-        var byId   = new Dictionary<string, LineMapEntry>(StringComparer.Ordinal);
+        var byId = new Dictionary<string, LineMapEntry>(StringComparer.Ordinal);
         using var reader = new StringReader(luaText);
-        int lineNum = 0, dataRowIndex = 0;
+        int lineNum = 0,
+            dataRowIndex = 0;
         string line;
         while ((line = reader.ReadLine()) != null)
         {
             lineNum++;
             var m = LuaRowKeyRegex.Match(line);
-            if (!m.Success) continue;
+            if (!m.Success)
+                continue;
             // Excel行：1行标题 + 3行字段定义 + 1偏移 + N = 5 + dataRowIndex
             var entry = new LineMapEntry(m.Groups[1].Value, 5 + dataRowIndex);
             byLine[lineNum] = entry;
@@ -1636,7 +1845,8 @@ SolarRoot        = setmetatable({}, { __index=function(t,k) t[k]=setmetatable({}
         if (luaLineNum < 0 || !lineMaps.TryGetValue(tableName, out var maps))
             return "（位置未知）";
         var best = maps.ByLine.Keys.Where(k => k <= luaLineNum).DefaultIfEmpty(-1).Max();
-        if (best < 0) return $"Lua第{luaLineNum}行（表头区域）";
+        if (best < 0)
+            return $"Lua第{luaLineNum}行（表头区域）";
         var e = maps.ByLine[best];
         return $"{tableName}.xlsx 第{e.ExcelDisplayRow}行（ID={e.Id}，Lua第{luaLineNum}行）";
     }
@@ -1647,7 +1857,8 @@ SolarRoot        = setmetatable({}, { __index=function(t,k) t[k]=setmetatable({}
         Dictionary<string, TableLineMaps> lineMaps
     )
     {
-        if (!lineMaps.TryGetValue(tableName, out var maps)) return "（位置未知）";
+        if (!lineMaps.TryGetValue(tableName, out var maps))
+            return "（位置未知）";
         return maps.ById.TryGetValue(activityId, out var entry)
             ? $"{tableName}.xlsx 第{entry.ExcelDisplayRow}行（ID={activityId}）"
             : $"{tableName}.xlsx（ID={activityId}，行号未知）";

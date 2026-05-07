@@ -160,24 +160,7 @@ public class RatioCaculate
     )
     {
         var scoreGetTimes = 0;
-        var otherRankCountTotal = new List<double>
-        {
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-        };
+        var otherRankCountTotal = new List<double> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         var maxRankCountTotal = 0;
 
         var currentLimit1 = new List<(int, int)>();

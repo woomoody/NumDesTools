@@ -4,9 +4,19 @@ using System.Runtime.CompilerServices;
 
 namespace NumDesTools.ConflictResolver;
 
-public enum ConflictChoice { Ours, Theirs }
+public enum ConflictChoice
+{
+    Ours,
+    Theirs
+}
 
-public enum RowDiffType { Modified, OnlyOurs, OnlyTheirs, Same }
+public enum RowDiffType
+{
+    Modified,
+    OnlyOurs,
+    OnlyTheirs,
+    Same
+}
 
 /// <summary>单元格级别的冲突</summary>
 public class CellConflict : INotifyPropertyChanged
@@ -21,14 +31,24 @@ public class CellConflict : INotifyPropertyChanged
     public ConflictChoice Choice
     {
         get => _choice;
-        set { _choice = value; OnPropertyChanged(); OnPropertyChanged(nameof(ChoiceOurs)); OnPropertyChanged(nameof(ChoiceTheirs)); }
+        set
+        {
+            _choice = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ChoiceOurs));
+            OnPropertyChanged(nameof(ChoiceTheirs));
+        }
     }
 
     /// <summary>用户已明确做出选择（true=已选，false=待选）</summary>
     public bool IsExplicit
     {
         get => _isExplicit;
-        set { _isExplicit = value; OnPropertyChanged(); }
+        set
+        {
+            _isExplicit = value;
+            OnPropertyChanged();
+        }
     }
 
     public void ClearChoice()
@@ -37,13 +57,30 @@ public class CellConflict : INotifyPropertyChanged
         OnPropertyChanged(nameof(IsExplicit));
     }
 
-    public bool ChoiceOurs  { get => Choice == ConflictChoice.Ours;   set { if (value) Choice = ConflictChoice.Ours; } }
-    public bool ChoiceTheirs{ get => Choice == ConflictChoice.Theirs; set { if (value) Choice = ConflictChoice.Theirs; } }
+    public bool ChoiceOurs
+    {
+        get => Choice == ConflictChoice.Ours;
+        set
+        {
+            if (value)
+                Choice = ConflictChoice.Ours;
+        }
+    }
+    public bool ChoiceTheirs
+    {
+        get => Choice == ConflictChoice.Theirs;
+        set
+        {
+            if (value)
+                Choice = ConflictChoice.Theirs;
+        }
+    }
 
-    public string OursDisplay   => OursValue?.ToString()   ?? "(空)";
+    public string OursDisplay => OursValue?.ToString() ?? "(空)";
     public string TheirsDisplay => TheirsValue?.ToString() ?? "(空)";
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
     private void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
@@ -52,7 +89,7 @@ public class CellConflict : INotifyPropertyChanged
 public class RowConflict : INotifyPropertyChanged
 {
     public string SheetName { get; init; } = string.Empty;
-    public string RowKey    { get; init; } = string.Empty;
+    public string RowKey { get; init; } = string.Empty;
     public RowDiffType DiffType { get; init; }
 
     /// <summary>仅有差异的列（Modified时）</summary>
@@ -60,7 +97,7 @@ public class RowConflict : INotifyPropertyChanged
 
     /// <summary>完整列顺序，用于渲染整行预览</summary>
     public List<string> AllColumns { get; init; } = [];
-    public IDictionary<string, object?>? OursFullRow   { get; init; }
+    public IDictionary<string, object?>? OursFullRow { get; init; }
     public IDictionary<string, object?>? TheirsFullRow { get; init; }
 
     /// <summary>所有 # 前缀列（备注类）的非空值，按列顺序，供行头显示</summary>
@@ -69,12 +106,15 @@ public class RowConflict : INotifyPropertyChanged
         get
         {
             var src = OursFullRow ?? TheirsFullRow;
-            if (src == null || AllColumns.Count == 0) return [];
+            if (src == null || AllColumns.Count == 0)
+                return [];
             var result = new List<(string, string)>();
             foreach (var col in AllColumns)
             {
-                if (!col.StartsWith('#')) continue;
-                if (!src.TryGetValue(col, out var v)) continue;
+                if (!col.StartsWith('#'))
+                    continue;
+                if (!src.TryGetValue(col, out var v))
+                    continue;
                 var s = v?.ToString() ?? string.Empty;
                 if (!string.IsNullOrEmpty(s))
                     result.Add((col, s));
@@ -86,37 +126,66 @@ public class RowConflict : INotifyPropertyChanged
     /// <summary>所有 # 列值拼成单行，供 ToolTip 等场景</summary>
     public string DisplayName => string.Join("  ", HashColValues.Select(x => x.Val));
 
-    public string DiffTypeBadge => DiffType switch
-    {
-        RowDiffType.OnlyOurs   => "仅我有（对方删除）",
-        RowDiffType.OnlyTheirs => "仅对方有（新增行）",
-        RowDiffType.Same       => "相同",
-        _                      => $"冲突 {Cells.Count} 列"
-    };
+    public string DiffTypeBadge =>
+        DiffType switch
+        {
+            RowDiffType.OnlyOurs => "仅我有（对方删除）",
+            RowDiffType.OnlyTheirs => "仅对方有（新增行）",
+            RowDiffType.Same => "相同",
+            _ => $"冲突 {Cells.Count} 列"
+        };
 
     /// <summary>整行的选择（仅 OnlyOurs/OnlyTheirs 时有效）</summary>
     private ConflictChoice _rowChoice;
     public ConflictChoice RowChoice
     {
         get => _rowChoice;
-        set { _rowChoice = value; OnPropertyChanged(); OnPropertyChanged(nameof(RowChoiceOurs)); OnPropertyChanged(nameof(RowChoiceTheirs)); }
+        set
+        {
+            _rowChoice = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(RowChoiceOurs));
+            OnPropertyChanged(nameof(RowChoiceTheirs));
+        }
     }
-    public bool RowChoiceOurs   { get => RowChoice == ConflictChoice.Ours;   set { if (value) RowChoice = ConflictChoice.Ours; } }
-    public bool RowChoiceTheirs { get => RowChoice == ConflictChoice.Theirs; set { if (value) RowChoice = ConflictChoice.Theirs; } }
-
-    public bool IsResolved => DiffType switch
+    public bool RowChoiceOurs
     {
-        RowDiffType.Modified => true, // 格级选择总是有值（Ours/Theirs），不存在"未选"
-        _                    => true
-    };
+        get => RowChoice == ConflictChoice.Ours;
+        set
+        {
+            if (value)
+                RowChoice = ConflictChoice.Ours;
+        }
+    }
+    public bool RowChoiceTheirs
+    {
+        get => RowChoice == ConflictChoice.Theirs;
+        set
+        {
+            if (value)
+                RowChoice = ConflictChoice.Theirs;
+        }
+    }
+
+    public bool IsResolved =>
+        DiffType switch
+        {
+            RowDiffType.Modified => true, // 格级选择总是有值（Ours/Theirs），不存在"未选"
+            _ => true
+        };
 
     /// <summary>将该行所有单元格冲突批量设置为同一选择</summary>
     public void SetAllCells(ConflictChoice choice)
     {
-        foreach (var c in Cells) { c.Choice = choice; c.IsExplicit = true; }
+        foreach (var c in Cells)
+        {
+            c.Choice = choice;
+            c.IsExplicit = true;
+        }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
     private void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
@@ -127,11 +196,13 @@ public record SheetDiff(string SheetName, List<RowConflict> Rows)
     public bool HasConflict => Rows.Any(r => r.DiffType != RowDiffType.Same);
 
     /// <summary>列名 → type 行值（第3行，如 "int", "string"）</summary>
-    public Dictionary<string, string> TypeRow    { get; init; } = new();
+    public Dictionary<string, string> TypeRow { get; init; } = new();
+
     /// <summary>列名 → 中文说明行值（第4行）</summary>
-    public Dictionary<string, string> LabelRow   { get; init; } = new();
+    public Dictionary<string, string> LabelRow { get; init; } = new();
+
     /// <summary>列顺序（与 RowConflict.AllColumns 一致）</summary>
-    public List<string>               AllColumns { get; init; } = new();
+    public List<string> AllColumns { get; init; } = new();
 
     /// <summary>对所有行中指定列的冲突单元格批量设置选择</summary>
     public void SetColumnChoice(string colName, ConflictChoice choice)
@@ -141,7 +212,11 @@ public record SheetDiff(string SheetName, List<RowConflict> Rows)
             if (row.DiffType == RowDiffType.Modified)
             {
                 var cell = row.Cells.FirstOrDefault(c => c.ColName == colName);
-                if (cell != null) { cell.Choice = choice; cell.IsExplicit = true; }
+                if (cell != null)
+                {
+                    cell.Choice = choice;
+                    cell.IsExplicit = true;
+                }
             }
             else
             {
@@ -155,6 +230,7 @@ public record SheetDiff(string SheetName, List<RowConflict> Rows)
 /// <summary>整个文件的差异结果</summary>
 public record FileDiff(string OursPath, string TheirsPath, List<SheetDiff> Sheets)
 {
-    public int TotalConflictRows  => Sheets.Sum(s => s.Rows.Count(r => r.DiffType != RowDiffType.Same));
+    public int TotalConflictRows =>
+        Sheets.Sum(s => s.Rows.Count(r => r.DiffType != RowDiffType.Same));
     public int TotalConflictCells => Sheets.Sum(s => s.Rows.Sum(r => r.Cells.Count));
 }

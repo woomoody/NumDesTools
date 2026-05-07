@@ -2174,8 +2174,7 @@ public static class PubMetToExcelFunc
                     FileAccess.ReadWrite,
                     FileShare.None
                 )
-            )
-            { }
+            ) { }
         }
         catch (IOException)
         {
@@ -2877,14 +2876,17 @@ public static class PubMetToExcelFunc
     )
     {
         // value 用 ConcurrentBag 保证并发 Add 安全
-        var targetList = new ConcurrentDictionary<string, ConcurrentBag<string>>(StringComparer.Ordinal);
+        var targetList = new ConcurrentDictionary<string, ConcurrentBag<string>>(
+            StringComparer.Ordinal
+        );
         var currentCount = 0;
         var count = files.Length;
 
         // 分成精确匹配集合和前缀匹配集合
         var exactSet = new HashSet<string>(
             findValues.Where(v => !v.Contains("*")),
-            StringComparer.Ordinal);
+            StringComparer.Ordinal
+        );
         var prefixList = findValues
             .Where(v => v.Contains("*"))
             .Select(v => v.Replace("*", ""))
@@ -2910,7 +2912,9 @@ public static class PubMetToExcelFunc
                         useHeaderRow: true
                     );
 
-                    var sheetFullName = fileName.Contains("$") ? $"{fileName}#{sheetName}" : fileName;
+                    var sheetFullName = fileName.Contains("$")
+                        ? $"{fileName}#{sheetName}"
+                        : fileName;
 
                     foreach (var row in rows)
                     {
@@ -2922,12 +2926,17 @@ public static class PubMetToExcelFunc
                                 var cellValue = cell.Value?.ToString();
                                 if (cellValue != null)
                                 {
-                                    bool matched = exactSet.Contains(cellValue)
+                                    bool matched =
+                                        exactSet.Contains(cellValue)
                                         || prefixList.Any(p => cellValue.StartsWith(p));
                                     if (matched)
                                     {
-                                        targetList.GetOrAdd(sheetFullName, _ => new ConcurrentBag<string>())
-                                                  .Add(cellValue);
+                                        targetList
+                                            .GetOrAdd(
+                                                sheetFullName,
+                                                _ => new ConcurrentBag<string>()
+                                            )
+                                            .Add(cellValue);
                                     }
                                 }
                                 break; // col2 only, skip rest of row
@@ -2945,7 +2954,10 @@ public static class PubMetToExcelFunc
 
         if (isMulti)
         {
-            var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+            var options = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount
+            };
             Parallel.ForEach(files, options, processFile);
         }
         else
@@ -2957,7 +2969,8 @@ public static class PubMetToExcelFunc
         return targetList.ToDictionary(
             kv => kv.Key,
             kv => kv.Value.ToList(),
-            StringComparer.Ordinal);
+            StringComparer.Ordinal
+        );
     }
 
     //MiniExcel查询：全局查询Sheet名

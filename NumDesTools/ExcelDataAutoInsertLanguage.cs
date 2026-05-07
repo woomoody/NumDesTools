@@ -1,5 +1,5 @@
-﻿using OfficeOpenXml;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
+using OfficeOpenXml;
 using Match = System.Text.RegularExpressions.Match;
 using MessageBox = System.Windows.MessageBox;
 

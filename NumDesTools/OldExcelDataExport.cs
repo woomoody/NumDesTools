@@ -43,18 +43,31 @@ public static class ErrorLogCtp
         {
             var v = Registry.GetValue(
                 @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
-                "AppsUseLightTheme", 1);
+                "AppsUseLightTheme",
+                1
+            );
             return v is int i && i == 0;
         }
-        catch { return true; }
+        catch
+        {
+            return true;
+        }
     }
 
     // 返回 (控件背景色, 控件前景色, 面板背景色)
     internal static (Color back, Color fore, Color panelBack) GetThemeColors()
     {
         return IsSystemDarkMode()
-            ? (Color.FromArgb(30, 30, 30), Color.FromArgb(220, 220, 220), Color.FromArgb(45, 45, 45))
-            : (Color.FromArgb(250, 250, 250), Color.FromArgb(30, 30, 30), Color.FromArgb(235, 235, 235));
+            ? (
+                Color.FromArgb(30, 30, 30),
+                Color.FromArgb(220, 220, 220),
+                Color.FromArgb(45, 45, 45)
+            )
+            : (
+                Color.FromArgb(250, 250, 250),
+                Color.FromArgb(30, 30, 30),
+                Color.FromArgb(235, 235, 235)
+            );
     }
 
     // 根据文本内容计算合适的 CTP 宽度：自适应最长行，上限为屏幕宽度的一半
@@ -65,7 +78,8 @@ public static class ErrorLogCtp
         foreach (var line in text.Split('\n'))
         {
             var w = (int)g.MeasureString(line.TrimEnd('\r'), font).Width;
-            if (w > maxLineWidth) maxLineWidth = w;
+            if (w > maxLineWidth)
+                maxLineWidth = w;
         }
         var screenHalf = Screen.PrimaryScreen?.WorkingArea.Width / 2 ?? 800;
         return Math.Max(350, Math.Min(maxLineWidth + 30, screenHalf));
@@ -151,8 +165,13 @@ public static class ErrorLogCtp
 
     public static void DisposeCtp()
     {
-        if (Ctp == null) return;
-        try { Ctp.Delete(); } catch { }
+        if (Ctp == null)
+            return;
+        try
+        {
+            Ctp.Delete();
+        }
+        catch { }
         Ctp = null;
     }
 
@@ -677,7 +696,13 @@ public static class PreviewTableCtp
         {
             BackgroundColor = panelBack,
             GridColor = fore,
-            DefaultCellStyle = { BackColor = back, ForeColor = fore, SelectionBackColor = Color.FromArgb(70, 130, 180), SelectionForeColor = Color.White },
+            DefaultCellStyle =
+            {
+                BackColor = back,
+                ForeColor = fore,
+                SelectionBackColor = Color.FromArgb(70, 130, 180),
+                SelectionForeColor = Color.White
+            },
             ColumnHeadersDefaultCellStyle = { BackColor = panelBack, ForeColor = fore },
             EnableHeadersVisualStyles = false
         };

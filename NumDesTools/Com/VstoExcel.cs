@@ -41,11 +41,10 @@ public class VstoExcel
         NumDesAddIn.App.DisplayAlerts = true;
         NumDesAddIn.App.EnableEvents = true;
 
-        if(!String.IsNullOrEmpty(errorLog))
+        if (!String.IsNullOrEmpty(errorLog))
         {
             ErrorLogCtp.DisposeCtp();
             ErrorLogCtp.CreateCtpNormal(errorLog);
         }
-        
     }
 }

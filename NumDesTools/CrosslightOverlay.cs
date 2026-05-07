@@ -12,23 +12,23 @@ internal sealed class CrosslightOverlay : IDisposable
 {
     private readonly LineForm _hLine;
     private readonly LineForm _vLine;
-    private readonly Timer    _scrollTimer;
-    private readonly Timer    _focusTimer;
+    private readonly Timer _scrollTimer;
+    private readonly Timer _focusTimer;
     private int _lastScrollRow;
     private int _lastScrollCol;
 
-    private static readonly Color RowColor = Color.FromArgb(255, 200, 50);
-    private static readonly Color ColColor = Color.FromArgb(50,  160, 255);
-    private const byte LineAlpha  = 160;
-    private const int  Thickness  = 2;
+    private static readonly Color _rowColor = Color.FromArgb(255, 200, 50);
+    private static readonly Color _colColor = Color.FromArgb(50, 160, 255);
+    private const byte LineAlpha = 160;
+    private const int Thickness = 2;
 
     private static CrosslightOverlay? _instance;
-    public  static CrosslightOverlay  Instance => _instance ??= new CrosslightOverlay();
+    public static CrosslightOverlay Instance => _instance ??= new CrosslightOverlay();
 
     private CrosslightOverlay()
     {
-        _hLine = new LineForm(RowColor, LineAlpha);
-        _vLine = new LineForm(ColColor, LineAlpha);
+        _hLine = new LineForm(_rowColor, LineAlpha);
+        _vLine = new LineForm(_colColor, LineAlpha);
 
         _scrollTimer = new Timer { Interval = 150 };
         _scrollTimer.Tick += OnScrollCheck;
@@ -45,13 +45,13 @@ internal sealed class CrosslightOverlay : IDisposable
         // Excel 主窗口范围（同 CellSelectChangeTip 的 Screen.FromPoint(cursor).WorkingArea 思路）
         GetWindowRect((IntPtr)NumDesAddIn.App.Hwnd, out var rc);
 
-        int left   = rc.Left;
-        int top    = rc.Top;
-        int right  = rc.Right;
+        int left = rc.Left;
+        int top = rc.Top;
+        int right = rc.Right;
         int bottom = rc.Bottom;
 
-        _hLine.Place(left,     cursor.Y, right - left,  Thickness);
-        _vLine.Place(cursor.X, top,      Thickness,     bottom - top);
+        _hLine.Place(left, cursor.Y, right - left, Thickness);
+        _vLine.Place(cursor.X, top, Thickness, bottom - top);
 
         ShowWindow(_hLine.Handle, SW_SHOWNOACTIVATE);
         ShowWindow(_vLine.Handle, SW_SHOWNOACTIVATE);
@@ -65,15 +65,19 @@ internal sealed class CrosslightOverlay : IDisposable
                 _lastScrollCol = win.ScrollColumn;
             }
         }
-        catch { /* ignore */ }
+        catch
+        { /* ignore */
+        }
         _scrollTimer.Start();
     }
 
     public void ClearCross()
     {
         _scrollTimer.Stop();
-        if (!_hLine.IsDisposed) _hLine.Hide();
-        if (!_vLine.IsDisposed) _vLine.Hide();
+        if (!_hLine.IsDisposed)
+            _hLine.Hide();
+        if (!_vLine.IsDisposed)
+            _vLine.Hide();
     }
 
     private void OnScrollCheck(object? sender, EventArgs e)
@@ -81,24 +85,32 @@ internal sealed class CrosslightOverlay : IDisposable
         try
         {
             var win = NumDesAddIn.App.ActiveWindow;
-            if (win == null) return;
+            if (win == null)
+                return;
             if (win.ScrollRow != _lastScrollRow || win.ScrollColumn != _lastScrollCol)
                 ClearCross();
         }
-        catch { ClearCross(); }
+        catch
+        {
+            ClearCross();
+        }
     }
 
     private void OnFocusCheck(object? sender, EventArgs e)
     {
-        if (_hLine.IsDisposed || (!_hLine.Visible && !_vLine.Visible)) return;
+        if (_hLine.IsDisposed || (!_hLine.Visible && !_vLine.Visible))
+            return;
         try
         {
             var fg = GetForegroundWindow();
-            GetWindowThreadProcessId(fg,                            out uint fgPid);
+            GetWindowThreadProcessId(fg, out uint fgPid);
             GetWindowThreadProcessId((IntPtr)NumDesAddIn.App.Hwnd, out uint excelPid);
-            if (fgPid != excelPid) ClearCross();
+            if (fgPid != excelPid)
+                ClearCross();
         }
-        catch { /* ignore */ }
+        catch
+        { /* ignore */
+        }
     }
 
     public void Dispose()
@@ -117,39 +129,65 @@ internal sealed class CrosslightOverlay : IDisposable
 
     private const int SW_SHOWNOACTIVATE = 4;
 
-    [DllImport("user32.dll")] static extern bool   ShowWindow(IntPtr h, int cmd);
-    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll")] static extern uint   GetWindowThreadProcessId(IntPtr h, out uint pid);
-    [DllImport("user32.dll")] static extern bool   GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")]
+    static extern bool ShowWindow(IntPtr h, int cmd);
+
+    [DllImport("user32.dll")]
+    static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+
+    [DllImport("user32.dll")]
+    static extern bool GetWindowRect(IntPtr h, out RECT r);
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct RECT { public int Left, Top, Right, Bottom; }
+    private struct RECT
+    {
+        public int Left,
+            Top,
+            Right,
+            Bottom;
+    }
 
     private sealed class LineForm : Form
     {
-        private const int GWL_EXSTYLE       = -20;
-        private const int WS_EX_LAYERED     = 0x00080000;
+        private const int GWL_EXSTYLE = -20;
+        private const int WS_EX_LAYERED = 0x00080000;
         private const int WS_EX_TRANSPARENT = 0x00000020;
-        private const int WS_EX_TOOLWINDOW  = 0x00000080;
-        private const int WS_EX_NOACTIVATE  = 0x08000000;
+        private const int WS_EX_TOOLWINDOW = 0x00000080;
+        private const int WS_EX_NOACTIVATE = 0x08000000;
 
-        [DllImport("user32.dll")] static extern int  GetWindowLong(IntPtr h, int i);
-        [DllImport("user32.dll")] static extern int  SetWindowLong(IntPtr h, int i, int v);
-        [DllImport("user32.dll")] static extern bool SetLayeredWindowAttributes(IntPtr h, uint key, byte alpha, uint flags);
+        [DllImport("user32.dll")]
+        static extern int GetWindowLong(IntPtr h, int i);
+
+        [DllImport("user32.dll")]
+        static extern int SetWindowLong(IntPtr h, int i, int v);
+
+        [DllImport("user32.dll")]
+        static extern bool SetLayeredWindowAttributes(IntPtr h, uint key, byte alpha, uint flags);
 
         public LineForm(Color color, byte alpha)
         {
             FormBorderStyle = FormBorderStyle.None;
-            ShowInTaskbar   = false;
-            TopMost         = true;
-            BackColor       = color;
-            AutoScaleMode   = AutoScaleMode.None;
-            StartPosition   = FormStartPosition.Manual;
+            ShowInTaskbar = false;
+            TopMost = true;
+            BackColor = color;
+            AutoScaleMode = AutoScaleMode.None;
+            StartPosition = FormStartPosition.Manual;
 
             int ex = GetWindowLong(Handle, GWL_EXSTYLE);
-            SetWindowLong(Handle, GWL_EXSTYLE,
-                ex | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
-            SetLayeredWindowAttributes(Handle, 0, alpha, 0x00000002 /* LWA_ALPHA */);
+            SetWindowLong(
+                Handle,
+                GWL_EXSTYLE,
+                ex | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE
+            );
+            SetLayeredWindowAttributes(
+                Handle,
+                0,
+                alpha,
+                0x00000002 /* LWA_ALPHA */
+            );
         }
 
         protected override CreateParams CreateParams
@@ -157,14 +195,15 @@ internal sealed class CrosslightOverlay : IDisposable
             get
             {
                 var cp = base.CreateParams;
-                cp.ExStyle |= WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
+                cp.ExStyle |=
+                    WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
                 return cp;
             }
         }
 
         public void Place(int x, int y, int w, int h)
         {
-            Location   = new Point(x, y);
+            Location = new Point(x, y);
             ClientSize = new Size(w, h);
         }
     }
@@ -179,35 +218,42 @@ internal static class CrosslightController
 
     public static void Enable(Application app)
     {
-        if (_active) return;
+        if (_active)
+            return;
         _active = true;
-        _app    = app;
+        _app = app;
 
         app.SheetSelectionChange += OnSelectionChange;
-        app.WindowDeactivate     += OnWindowDeactivate;
-        app.WorkbookDeactivate   += OnWorkbookDeactivate;
-        app.WindowActivate       += OnWindowActivate;
+        app.WindowDeactivate += OnWindowDeactivate;
+        app.WorkbookDeactivate += OnWorkbookDeactivate;
+        app.WindowActivate += OnWindowActivate;
 
         CrosslightOverlay.Instance.UpdateCross();
     }
 
     public static void Disable()
     {
-        if (!_active || _app == null) return;
+        if (!_active || _app == null)
+            return;
         _active = false;
 
         _app.SheetSelectionChange -= OnSelectionChange;
-        _app.WindowDeactivate     -= OnWindowDeactivate;
-        _app.WorkbookDeactivate   -= OnWorkbookDeactivate;
-        _app.WindowActivate       -= OnWindowActivate;
+        _app.WindowDeactivate -= OnWindowDeactivate;
+        _app.WorkbookDeactivate -= OnWorkbookDeactivate;
+        _app.WindowActivate -= OnWindowActivate;
 
         CrosslightOverlay.Instance.ClearCross();
         _app = null;
     }
 
-    private static void OnSelectionChange(object sh, Range target)
-        => ExcelAsyncUtil.QueueAsMacro(CrosslightOverlay.Instance.UpdateCross);
-    private static void OnWindowDeactivate(object wb, object wn)   => CrosslightOverlay.Instance.ClearCross();
-    private static void OnWorkbookDeactivate(object wb)             => CrosslightOverlay.Instance.ClearCross();
-    private static void OnWindowActivate(object wb, object wn)     => CrosslightOverlay.Instance.UpdateCross();
+    private static void OnSelectionChange(object sh, Range target) =>
+        ExcelAsyncUtil.QueueAsMacro(CrosslightOverlay.Instance.UpdateCross);
+
+    private static void OnWindowDeactivate(object wb, object wn) =>
+        CrosslightOverlay.Instance.ClearCross();
+
+    private static void OnWorkbookDeactivate(object wb) => CrosslightOverlay.Instance.ClearCross();
+
+    private static void OnWindowActivate(object wb, object wn) =>
+        CrosslightOverlay.Instance.UpdateCross();
 }

@@ -83,7 +83,12 @@ namespace NumDesTools.UI
             var replaceText = ReplaceTextBox.Text;
             if (string.IsNullOrEmpty(replaceText))
             {
-                MessageBoxResult result = MessageBox.Show("请输入替换文本！选择确定则为删除选定文本", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBoxResult result = MessageBox.Show(
+                    "请输入替换文本！选择确定则为删除选定文本",
+                    "提示",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
                 if (result != MessageBoxResult.OK)
                 {
                     return;
@@ -114,16 +119,18 @@ namespace NumDesTools.UI
             DialogResult = true;
             Close();
         }
+
         private void UpdateMatchCount(int count)
         {
             // 更新匹配统计的显示
             MatchCountTextBlock.Text = $"匹配项数量：{count}";
         }
 
-    private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
-    {
-        if (e.Key == System.Windows.Input.Key.Escape) Close();
-    }
+        private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Escape)
+                Close();
+        }
     }
 
     // 高亮服务类
@@ -147,7 +154,10 @@ namespace NumDesTools.UI
                 foreach (var marker in _markers)
                 {
                     foreach (
-                        var rect in BackgroundGeometryBuilder.GetRectsForSegment(strTextView, marker)
+                        var rect in BackgroundGeometryBuilder.GetRectsForSegment(
+                            strTextView,
+                            marker
+                        )
                     )
                     {
                         drawingContext.DrawRectangle(
@@ -203,5 +213,4 @@ namespace NumDesTools.UI
             Length = length;
         }
     }
-
 }
