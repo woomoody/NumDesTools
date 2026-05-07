@@ -36,6 +36,49 @@ internal class SvnGitTools
         return fileList;
     }
 
+    // 返回最近 N 条提交的摘要（sha7、作者、时间、message首行）
+    public record CommitInfo(string Sha, string ShortSha, string Author, DateTime When, string Message);
+
+    public static List<CommitInfo> GetCommitList(string repoPath, int count = 30)
+    {
+        repoPath = FindGitRoot(repoPath) ?? repoPath;
+        using var repo = new Repository(repoPath);
+        return repo.Commits.QueryBy(new CommitFilter
+        {
+            SortBy = CommitSortStrategies.Time,
+            IncludeReachableFrom = repo.Head,
+        })
+        .Take(count)
+        .Select(c => new CommitInfo(
+            c.Sha,
+            c.Sha[..7],
+            c.Author.Name,
+            c.Author.When.LocalDateTime,
+            c.MessageShort))
+        .ToList();
+    }
+
+    // 获取某个提交涉及的所有文件（只返回当前仍存在的 xlsx/xls）
+    public static List<string> GetCommitFiles(string repoPath, string commitSha)
+    {
+        repoPath = FindGitRoot(repoPath) ?? repoPath;
+        using var repo = new Repository(repoPath);
+        var commit = repo.Lookup<Commit>(commitSha)
+            ?? throw new ArgumentException($"找不到提交 {commitSha}");
+        var parent = commit.Parents.FirstOrDefault();
+        if (parent == null) return [];
+
+        var diff = repo.Diff.Compare<TreeChanges>(parent.Tree, commit.Tree);
+        var result = new List<string>();
+        foreach (var change in diff)
+        {
+            if (change.Status == ChangeKind.Deleted) continue;
+            var fullPath = Path.Combine(repoPath, change.Path.Replace('/', Path.DirectorySeparatorChar));
+            if (File.Exists(fullPath)) result.Add(fullPath);
+        }
+        return result;
+    }
+
     // 获取指定作者最近 N 次提交中涉及的所有文件（去重），只返回当前仍存在的文件
     public static List<string> GetRecentAuthorCommitFiles(string repoPath, string authorName, int commitCount)
     {

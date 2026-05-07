@@ -69,6 +69,8 @@ namespace NumDesTools.UI
 
             LoadHistory();
             if (_rows.Count == 0) AddEmptyRow();
+
+            Activated += (_, _) => FocusRowAt(0);
         }
 
         // ── 公开：从外部触发执行（快捷键重复按） ────────
@@ -90,11 +92,13 @@ namespace NumDesTools.UI
             if (_rows.Count == 0) AddEmptyRow();
         }
 
-        private void FocusLastRow()
+        private void FocusLastRow() => FocusRowAt(_rows.Count - 1);
+
+        private void FocusRowAt(int index)
         {
             Dispatcher.InvokeAsync(() =>
             {
-                var container = RuleRows.ItemContainerGenerator.ContainerFromIndex(_rows.Count - 1);
+                var container = RuleRows.ItemContainerGenerator.ContainerFromIndex(index);
                 (container as FrameworkElement)?.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
             }, System.Windows.Threading.DispatcherPriority.Loaded);
         }
@@ -127,6 +131,9 @@ namespace NumDesTools.UI
                 ? System.Windows.Media.Brushes.Green
                 : System.Windows.Media.Brushes.OrangeRed;
         }
+
+        public static void SetStatusStatic(string msg, bool ok)
+            => _instance?.Dispatcher.BeginInvoke(() => _instance?.SetStatus(msg, ok));
 
         // ── 清空 ────────────────────────────────────────
         private void Clear_Click(object sender, RoutedEventArgs e)
