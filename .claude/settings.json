@@ -152,7 +152,8 @@
       "WebFetch(domain:myengineeringworld.net)",
       "WebFetch(domain:www.jkp-ads.com)",
       "WebFetch(domain:www.decisionmodels.com)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Read(//c/ProgramData/Microsoft/Windows/WER/ReportArchive/AppCrash_EXCEL.EXE_54a74f7f3424f4287e0d3f3833baaccad19292f_3d443073_136943d8-cee5-498f-b0b9-2be8c4f981fe/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\cent\\Documents\\NumDesTools\\Config",
@@ -165,7 +166,8 @@
       "C:\\Users\\cent\\Documents\\tmp\\xlsxreader",
       "C:\\M1Work\\Public\\Excels\\TablesTools\\AliceConfig",
       "\\tmp\\fixmap",
-      "c:\\tmp\\fixmap"
+      "c:\\tmp\\fixmap",
+      "C:\\Users\\cent\\Documents\\WindowsPowerShell"
     ]
   }
 }

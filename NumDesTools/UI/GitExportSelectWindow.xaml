@@ -5,88 +5,389 @@
     Title="Git 变更导出 — 选择文件"
     Width="680" Height="580" MinWidth="500" MinHeight="400"
     WindowStartupLocation="CenterScreen"
-    Background="#1E1E1E" Foreground="White"
+    Background="#1E1E1E" Foreground="#D4D4D4"
     KeyDown="Window_EscClose">
 
     <Window.Resources>
+
+        <!-- ── 调色板 ── -->
+        <SolidColorBrush x:Key="BgWindow"  Color="#1E1E1E"/>
+        <SolidColorBrush x:Key="BgPanel"   Color="#252525"/>
+        <SolidColorBrush x:Key="BgInput"   Color="#2D2D2D"/>
+        <SolidColorBrush x:Key="BgDeep"    Color="#141414"/>
+        <SolidColorBrush x:Key="FgMain"    Color="#D4D4D4"/>
+        <SolidColorBrush x:Key="FgDim"     Color="#888888"/>
+        <SolidColorBrush x:Key="FgMuted"   Color="#555555"/>
+        <SolidColorBrush x:Key="Border"    Color="#3A3A3A"/>
+        <SolidColorBrush x:Key="Accent"    Color="#0E639C"/>
+        <SolidColorBrush x:Key="AccentGreen" Color="#1A5C3A"/>
+        <SolidColorBrush x:Key="Hover"     Color="#2A2D2E"/>
+
+        <!-- ── Button ── -->
         <Style TargetType="Button" x:Key="ActionBtn">
-            <Setter Property="Padding"         Value="14,6"/>
+            <Setter Property="Padding"         Value="10,4"/>
             <Setter Property="Margin"          Value="4,0"/>
-            <Setter Property="Background"      Value="#333"/>
-            <Setter Property="Foreground"      Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground"      Value="{StaticResource FgMain}"/>
+            <Setter Property="Background"      Value="{StaticResource BgInput}"/>
+            <Setter Property="BorderBrush"     Value="{StaticResource Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="FontSize"        Value="11"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#3A3D3E"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#1A1D1E"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
+
         <Style TargetType="Button" x:Key="PrimaryBtn">
-            <Setter Property="Padding"         Value="14,6"/>
-            <Setter Property="Background"      Value="#1A5C3A"/>
+            <Setter Property="Padding"         Value="14,5"/>
             <Setter Property="Foreground"      Value="White"/>
-            <Setter Property="FontWeight"      Value="Bold"/>
+            <Setter Property="Background"      Value="{StaticResource AccentGreen}"/>
             <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="FontSize"        Value="11"/>
             <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#25804F"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#10402A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
+
+        <!-- ── CheckBox ── -->
         <Style TargetType="CheckBox">
-            <Setter Property="Foreground"      Value="White"/>
-            <Setter Property="Margin"          Value="0,0,8,0"/>
+            <Setter Property="Foreground"              Value="{StaticResource FgMain}"/>
+            <Setter Property="Margin"                  Value="0,0,8,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontSize"                Value="11"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border x:Name="Box" Width="14" Height="14"
+                                    Background="{StaticResource BgInput}"
+                                    BorderBrush="{StaticResource Border}"
+                                    BorderThickness="1" CornerRadius="2"
+                                    Margin="0,0,5,0" VerticalAlignment="Center">
+                                <Path x:Name="Check" Data="M 2 6 L 5 9 L 12 2"
+                                      Stroke="White" StrokeThickness="1.5"
+                                      Visibility="Collapsed"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Check"  Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="Box"    Property="Background" Value="{StaticResource Accent}"/>
+                                <Setter TargetName="Box"    Property="BorderBrush" Value="{StaticResource Accent}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="#888"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
+
+        <!-- ── RadioButton ── -->
         <Style TargetType="RadioButton">
-            <Setter Property="Foreground"      Value="White"/>
-            <Setter Property="Margin"          Value="0,0,12,0"/>
+            <Setter Property="Foreground"              Value="{StaticResource FgMain}"/>
+            <Setter Property="Margin"                  Value="0,0,12,0"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontSize"                Value="11"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border x:Name="Ring" Width="14" Height="14"
+                                    Background="{StaticResource BgInput}"
+                                    BorderBrush="{StaticResource Border}"
+                                    BorderThickness="1" CornerRadius="7"
+                                    Margin="0,0,5,0" VerticalAlignment="Center">
+                                <Ellipse x:Name="Dot" Width="6" Height="6"
+                                         Fill="White" Visibility="Collapsed"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Dot"  Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="Ring" Property="Background"  Value="{StaticResource Accent}"/>
+                                <Setter TargetName="Ring" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Ring" Property="BorderBrush" Value="#888"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
+
+        <!-- ── Separator ── -->
+        <Style TargetType="Separator">
+            <Setter Property="Background" Value="{StaticResource Border}"/>
+            <Setter Property="Height"     Value="1"/>
+            <Setter Property="Margin"     Value="0,8"/>
+        </Style>
+
+        <!-- ── ScrollViewer / ScrollBar ── -->
+        <Style TargetType="ScrollBar" x:Key="DarkScrollBar">
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="Width"       Value="6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="Transparent">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border Background="#555" CornerRadius="3"/>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#888"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ScrollViewer" x:Key="DarkScroll">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ScrollContentPresenter Grid.Column="0"/>
+                            <ScrollBar Grid.Column="1"
+                                       Style="{StaticResource DarkScrollBar}"
+                                       Orientation="Vertical"
+                                       Value="{TemplateBinding VerticalOffset}"
+                                       Maximum="{TemplateBinding ScrollableHeight}"
+                                       ViewportSize="{TemplateBinding ViewportHeight}"
+                                       Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ── ComboBox ── -->
+        <Style TargetType="ComboBoxItem" x:Key="DarkComboItem">
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="Foreground"  Value="{StaticResource FgMain}"/>
+            <Setter Property="Padding"     Value="8,5"/>
+            <Setter Property="FontSize"    Value="11"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource Hover}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="#0E4D7A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBox" x:Key="DarkCombo">
+            <Setter Property="Background"         Value="{StaticResource BgInput}"/>
+            <Setter Property="Foreground"         Value="{StaticResource FgMain}"/>
+            <Setter Property="BorderBrush"        Value="{StaticResource Border}"/>
+            <Setter Property="BorderThickness"    Value="1"/>
+            <Setter Property="Padding"            Value="6,4"/>
+            <Setter Property="FontSize"           Value="11"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource DarkComboItem}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="3">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="22"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ContentPresenter Grid.Column="0"
+                                        Margin="{TemplateBinding Padding}"
+                                        Content="{TemplateBinding SelectionBoxItem}"
+                                        ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                        VerticalAlignment="Center" IsHitTestVisible="False"/>
+                                    <Path Grid.Column="1" Data="M 0 0 L 4 5 L 8 0 Z"
+                                          Fill="{StaticResource FgDim}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <ToggleButton Opacity="0"
+                                IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                Focusable="False"/>
+                            <Popup IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True" Focusable="False"
+                                   PopupAnimation="Fade" Placement="Bottom">
+                                <Border Background="{StaticResource BgInput}"
+                                        BorderBrush="{StaticResource Border}" BorderThickness="1"
+                                        CornerRadius="3"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        Effect="{x:Null}">
+                                    <ScrollViewer Style="{StaticResource DarkScroll}"
+                                                  VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="BorderBrush" Value="#666"/>
+                            </Trigger>
+                            <Trigger Property="IsDropDownOpen" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
     </Window.Resources>
 
     <Grid Margin="12">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>   <!-- 0: 模式选择 -->
-            <RowDefinition Height="Auto"/>   <!-- 1: 分隔 -->
-            <RowDefinition Height="Auto"/>   <!-- 2: 全选/取消 + 统计 -->
-            <RowDefinition Height="*"/>      <!-- 3: 文件列表 -->
-            <RowDefinition Height="Auto"/>   <!-- 4: 底部按钮 -->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- 模式选择区 -->
-        <Border Grid.Row="0" Background="#252525" CornerRadius="4" Padding="12,8">
+        <Border Grid.Row="0" Background="{StaticResource BgPanel}" CornerRadius="4" Padding="12,10">
             <StackPanel>
-                <TextBlock Text="导出范围" Foreground="#888" FontSize="11" Margin="0,0,0,6"/>
+                <TextBlock Text="导出范围" Foreground="{StaticResource FgDim}" FontSize="10"
+                           FontWeight="SemiBold" Margin="0,0,0,8"/>
+
                 <RadioButton x:Name="ModeGitStaged" Content="Git 变更 + 暂存区"
-                             GroupName="ExportMode" IsChecked="True"
-                             Checked="Mode_Changed"/>
+                             GroupName="ExportMode" IsChecked="True" Checked="Mode_Changed"/>
+
                 <RadioButton x:Name="ModeWithHistory" Content="Git 变更 + 暂存区 + 近期提交"
-                             GroupName="ExportMode" Margin="0,4,0,0"
-                             Checked="Mode_Changed"/>
-                <StackPanel Orientation="Horizontal" Margin="20,4,0,2"
-                            x:Name="HistoryAuthorRow" IsEnabled="False">
-                    <TextBlock Text="作者：" Foreground="#666" FontSize="10" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="AuthorText" Foreground="#88CCFF" FontSize="10" VerticalAlignment="Center"/>
-                    <TextBlock Text="（当前 git user.name）" Foreground="#444" FontSize="10" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                             GroupName="ExportMode" Margin="0,6,0,0" Checked="Mode_Changed"/>
+                <StackPanel x:Name="HistoryAuthorRow" IsEnabled="False" Margin="22,3,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="作者：" Foreground="{StaticResource FgMuted}" FontSize="10"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock x:Name="AuthorText" Foreground="#88CCFF" FontSize="10"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="20,2,0,0"
-                            x:Name="HistoryPanel" IsEnabled="False">
-                    <TextBlock Text="最近" Foreground="#AAAAAA" FontSize="11" VerticalAlignment="Center"/>
-                    <Border Background="#333" CornerRadius="3" Margin="6,0">
+                <StackPanel x:Name="HistoryPanel" IsEnabled="False" Orientation="Horizontal"
+                            Margin="22,4,0,0">
+                    <TextBlock Text="最近" Foreground="{StaticResource FgDim}" FontSize="11"
+                               VerticalAlignment="Center"/>
+                    <Border Background="{StaticResource BgInput}" BorderBrush="{StaticResource Border}"
+                            BorderThickness="1" CornerRadius="3" Margin="6,0">
                         <StackPanel Orientation="Horizontal">
-                            <Button Content="-" Width="22" Height="22"
-                                    Style="{StaticResource ActionBtn}" Padding="0"
-                                    Click="DecCommitCount_Click"/>
+                            <Button Content="−" Width="22" Height="22" Padding="0"
+                                    Style="{StaticResource ActionBtn}" Click="DecCommitCount_Click"/>
                             <TextBlock x:Name="CommitCountText" Text="3"
-                                       Foreground="White" FontSize="12" Width="28"
+                                       Foreground="{StaticResource FgMain}" FontSize="12" Width="28"
                                        TextAlignment="Center" VerticalAlignment="Center"/>
-                            <Button Content="+" Width="22" Height="22"
-                                    Style="{StaticResource ActionBtn}" Padding="0"
-                                    Click="IncCommitCount_Click"/>
+                            <Button Content="+" Width="22" Height="22" Padding="0"
+                                    Style="{StaticResource ActionBtn}" Click="IncCommitCount_Click"/>
                         </StackPanel>
                     </Border>
-                    <TextBlock Text="次我的提交" Foreground="#AAAAAA" FontSize="11" VerticalAlignment="Center"/>
-                    <Button x:Name="RefreshBtn" Content="刷新" Margin="12,0,0,0"
-                            Style="{StaticResource ActionBtn}" Padding="8,2"
-                            Click="Refresh_Click"/>
+                    <TextBlock Text="次我的提交" Foreground="{StaticResource FgDim}" FontSize="11"
+                               VerticalAlignment="Center"/>
+                    <Button Content="刷新" Margin="10,0,0,0" Padding="8,2"
+                            Style="{StaticResource ActionBtn}" Click="Refresh_Click"/>
+                </StackPanel>
+
+                <!-- 指定提交模式 -->
+                <RadioButton x:Name="ModeSpecificCommit" Content="指定某次提交"
+                             GroupName="ExportMode" Margin="0,6,0,0" Checked="Mode_Changed"/>
+                <StackPanel x:Name="CommitPickPanel" IsEnabled="False" Margin="22,6,0,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="选择提交：" Foreground="{StaticResource FgDim}" FontSize="11"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <Button Content="加载列表" Style="{StaticResource ActionBtn}" Padding="8,2"
+                                Click="LoadCommitList_Click"/>
+                    </StackPanel>
+                    <ComboBox x:Name="CommitCombo" Style="{StaticResource DarkCombo}"
+                              MaxWidth="560" HorizontalAlignment="Left"
+                              SelectionChanged="CommitCombo_SelectionChanged"
+                              DisplayMemberPath="Display"/>
                 </StackPanel>
             </StackPanel>
         </Border>
 
-        <Separator Grid.Row="1" Background="#333" Margin="0,8"/>
+        <Separator Grid.Row="1"/>
 
         <!-- 全选行 + 文件数统计 -->
         <Grid Grid.Row="2" Margin="0,0,0,6">
@@ -94,35 +395,33 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0" Orientation="Horizontal">
-                <CheckBox x:Name="SelectAllBox" Content="全选 / 取消全选"
-                          Checked="SelectAll_Checked" Unchecked="SelectAll_Unchecked"/>
-            </StackPanel>
+            <CheckBox x:Name="SelectAllBox" Grid.Column="0" Content="全选 / 取消全选"
+                      Checked="SelectAll_Checked" Unchecked="SelectAll_Unchecked"/>
             <TextBlock x:Name="FileCountText" Grid.Column="1"
-                       Foreground="#888" FontSize="11"
+                       Foreground="{StaticResource FgDim}" FontSize="11"
                        HorizontalAlignment="Right" VerticalAlignment="Center"/>
         </Grid>
 
         <!-- 文件列表 -->
-        <Border Grid.Row="3" Background="#141414" CornerRadius="4"
-                BorderBrush="#333" BorderThickness="1">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Border Grid.Row="3" Background="{StaticResource BgDeep}" CornerRadius="4"
+                BorderBrush="{StaticResource Border}" BorderThickness="1">
+            <ScrollViewer Style="{StaticResource DarkScroll}" VerticalScrollBarVisibility="Auto">
                 <StackPanel x:Name="FileListPanel" Margin="4"/>
             </ScrollViewer>
         </Border>
 
-        <!-- 底部按钮 -->
+        <!-- 底部 -->
         <Grid Grid.Row="4" Margin="0,10,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <TextBlock x:Name="StatusText" Grid.Column="0"
-                       Foreground="#666" FontSize="11" VerticalAlignment="Center"/>
+                       Foreground="{StaticResource FgDim}" FontSize="11" VerticalAlignment="Center"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button Content="取消" Style="{StaticResource ActionBtn}" Click="Cancel_Click"/>
-                <Button x:Name="ExportBtn" Content="导出选中文件"
-                        Style="{StaticResource PrimaryBtn}" Click="Export_Click"/>
+                <Button Content="导出选中文件" Style="{StaticResource PrimaryBtn}"
+                        Margin="8,0,0,0" Click="Export_Click"/>
             </StackPanel>
         </Grid>
     </Grid>

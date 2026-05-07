@@ -80,6 +80,8 @@
                                 onAction='OnButtonClick' imageMso="SheetInsert" tag='特殊模版' />
                     </menu>
                     <menu id='CurrentSheetMenu' label='当前表操作' image='verilog' size='large'>
+                        <button id="BatchReplaceInSelectionBtn" label="批量替换" screentip='对选中单元格执行多组批量替换（Ctrl+Alt+H）'
+                                onAction='OnButtonClick' imageMso="ReplaceDialog" tag='批量替换' />
                         <button id="ExcelSearchBoxButton5" label="替换文本" screentip='搜索当前激活表格中包含特别的字符串并替换'
                                 onAction='OnButtonClick' imageMso="ReplaceDialog" tag='替换文本(当前表格)' />
                         <button id="ExcelSearchBoxButton6" label="搜索文本" screentip='搜索当前激活表格中包含特别的字符串'

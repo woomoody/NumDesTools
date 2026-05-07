@@ -7,7 +7,6 @@
     MinWidth="440" MinHeight="340"
     WindowStartupLocation="CenterScreen"
     ShowInTaskbar="True"
-    ShowActivated="False"
     KeyDown="Window_KeyDown"
     Closing="Window_Closing">
 

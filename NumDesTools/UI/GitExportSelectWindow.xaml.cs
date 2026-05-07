@@ -13,6 +13,9 @@ public partial class GitExportSelectWindow : Window
     // 每个文件条目：路径 + 来源标签
     private record FileEntry(string Path, string Source);
 
+    // ComboBox 显示用包装
+    private record CommitItem(string Display, string Sha);
+
     private readonly string _repoBasePath;
     private readonly string _gitAuthor;
     private int _commitCount = 3;
@@ -107,7 +110,9 @@ public partial class GitExportSelectWindow : Window
             Margin    = new Thickness(0),
         };
 
-        var sourceColor = entry.Source.StartsWith("历史") ? "#88CCFF" : "#88FF88";
+        var sourceColor = entry.Source.StartsWith("历史") ? "#88CCFF"
+                        : entry.Source == "指定提交"     ? "#FFD080"
+                        : "#88FF88";
         var sourceBrush = new SolidColorBrush(
             (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(sourceColor));
 
@@ -115,7 +120,9 @@ public partial class GitExportSelectWindow : Window
         {
             Background    = new SolidColorBrush(
                 (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(
-                    entry.Source.StartsWith("历史") ? "#1A3A6E" : "#1A3A1A")),
+                    entry.Source.StartsWith("历史") ? "#1A3A6E"
+                    : entry.Source == "指定提交"    ? "#3A2800"
+                    : "#1A3A1A")),
             CornerRadius  = new CornerRadius(3),
             Padding       = new Thickness(4, 1, 4, 1),
             Margin        = new Thickness(6, 0, 0, 0),
@@ -214,10 +221,53 @@ public partial class GitExportSelectWindow : Window
     private void Mode_Changed(object sender, RoutedEventArgs e)
     {
         if (HistoryPanel == null) return;
-        bool on = ModeWithHistory.IsChecked == true;
-        HistoryPanel.IsEnabled      = on;
-        HistoryAuthorRow.IsEnabled  = on;
-        RefreshFileList();
+        bool historyOn = ModeWithHistory.IsChecked == true;
+        bool commitOn  = ModeSpecificCommit.IsChecked == true;
+        HistoryPanel.IsEnabled     = historyOn;
+        HistoryAuthorRow.IsEnabled = historyOn;
+        CommitPickPanel.IsEnabled  = commitOn;
+
+        if (!commitOn) RefreshFileList();
+        // 指定提交模式：等用户选择后再刷新，不自动刷新
+    }
+
+    private void LoadCommitList_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var commits = SvnGitTools.GetCommitList(_repoBasePath, 50);
+            CommitCombo.ItemsSource = commits.Select(c =>
+                new CommitItem(
+                    $"{c.ShortSha}  {c.When:MM-dd HH:mm}  [{c.Author}]  {c.Message}",
+                    c.Sha))
+                .ToList();
+            CommitCombo.SelectedIndex = 0;
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"加载提交列表失败：{ex.Message}";
+        }
+    }
+
+    private void CommitCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (ModeSpecificCommit.IsChecked != true) return;
+        if (CommitCombo.SelectedItem is not CommitItem item) return;
+        try
+        {
+            var files = SvnGitTools.GetCommitFiles(_repoBasePath, item.Sha)
+                .Where(IsExportable).ToList();
+
+            FileListPanel.Children.Clear();
+            _entries = files.Select(f => new FileEntry(f, "指定提交")).ToList();
+            foreach (var entry in _entries)
+                FileListPanel.Children.Add(MakeFileRow(entry));
+            UpdateCountLabel();
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"读取提交文件失败：{ex.Message}";
+        }
     }
 
     private void IncCommitCount_Click(object sender, RoutedEventArgs e)
@@ -234,7 +284,13 @@ public partial class GitExportSelectWindow : Window
         if (ModeWithHistory.IsChecked == true) RefreshFileList();
     }
 
-    private void Refresh_Click(object sender, RoutedEventArgs e) => RefreshFileList();
+    private void Refresh_Click(object sender, RoutedEventArgs e)
+    {
+        if (ModeSpecificCommit.IsChecked == true)
+            CommitCombo_SelectionChanged(sender, null!);
+        else
+            RefreshFileList();
+    }
 
     private void SelectAll_Checked(object sender, RoutedEventArgs e)   => SetAllChecked(true);
     private void SelectAll_Unchecked(object sender, RoutedEventArgs e) => SetAllChecked(false);

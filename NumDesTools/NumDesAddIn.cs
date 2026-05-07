@@ -269,6 +269,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ExcelSearchBoxButton2"] = ExcelSearchID_Click,
             ["ExcelSearchBoxButton4"] = ExcelSearchAllToExcel_Click,
             ["ExcelDataToDb"] = ExcelDataToDb_Click,
+            ["BatchReplaceInSelectionBtn"] = BatchReplaceInSelection_Click,
             ["ExcelSearchBoxButton5"] = CellDataReplace_Click,
             ["ExcelSearchBoxButton6"] = CellDataSearch_Click,
             ["ModelDataCreat"] = ModelDataCreat_Click,
@@ -773,36 +774,70 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
     }
 
-    // Ctrl+Alt+H：常驻批量替换面板（多对规则，选中区域）
+    private static UI.BatchReplacePanel? _batchReplacePanel;
+    private const string BatchReplaceCtpName = "批量替换";
+
+    // Ribbon 按钮入口（IRibbonControl 上下文可正确创建 CTP）
+    public void BatchReplaceInSelection_Click(IRibbonControl control)
+        => BatchReplaceInSelectionCore();
+
+    // Ctrl+Alt+H 快捷键入口
     [ExcelCommand(ShortCut = "^%h")]
     public static void BatchReplaceInSelection()
+        => ExcelAsyncUtil.QueueAsMacro(BatchReplaceInSelectionCore);
+
+    private static void BatchReplaceInSelectionCore()
     {
-        UI.BatchReplaceWindow.OnExecute = rules =>
+        if (_batchReplacePanel != null)
         {
-            Range sel = App.Selection;
-            if (sel == null)
+            NumDesCTP.DeleteCTP(true, BatchReplaceCtpName);
+            _batchReplacePanel = null;
+            return;
+        }
+
+        UI.BatchReplacePanel.OnExecute = rules =>
+        {
+            ExcelAsyncUtil.QueueAsMacro(() =>
             {
-                UI.BatchReplaceWindow.GetOrCreate().SetStatus("未选中任何单元格", false);
-                return;
-            }
-            int changed = 0;
-            foreach (Range cell in sel.Cells)
-            {
-                var val = cell.Value2?.ToString();
-                if (string.IsNullOrEmpty(val)) continue;
-                var newVal = val;
-                foreach (var (from, to) in rules)
-                    newVal = newVal.Replace(from, to);
-                if (newVal != val) { cell.Value2 = newVal; changed++; }
-            }
-            var msg = $"替换完成：{changed} 个单元格已更新";
-            App.StatusBar = msg;
-            UI.BatchReplaceWindow.GetOrCreate().SetStatus(msg, true);
+                try
+                {
+                    Range sel = App.Selection;
+                    if (sel == null)
+                    {
+                        _batchReplacePanel?.SetStatus("未选中任何单元格", false);
+                        return;
+                    }
+                    int changed = 0;
+                    foreach (Range cell in sel.Cells)
+                    {
+                        var val = cell.Value2?.ToString();
+                        if (string.IsNullOrEmpty(val)) continue;
+                        var newVal = val;
+                        foreach (var (from, to) in rules)
+                            newVal = newVal.Replace(from, to);
+                        if (newVal != val) { cell.Value2 = newVal; changed++; }
+                    }
+                    var msg = $"替换完成：{changed} 个单元格已更新";
+                    App.StatusBar = msg;
+                    _batchReplacePanel?.SetStatus(msg, true);
+                }
+                catch (Exception ex)
+                {
+                    PluginLog.Write($"[BatchReplace] 执行替换异常: {ex}");
+                }
+            });
         };
 
-        var win = UI.BatchReplaceWindow.GetOrCreate();
-        if (!win.IsVisible) win.Show();
-        win.Activate();
+        _batchReplacePanel = new UI.BatchReplacePanel();
+        int ctpWidth = (int)(System.Windows.SystemParameters.PrimaryScreenWidth / 3);
+        NumDesCTP.ShowCTP(
+            ctpWidth,
+            BatchReplaceCtpName,
+            true,
+            BatchReplaceCtpName,
+            _batchReplacePanel,
+            MsoCTPDockPosition.msoCTPDockPositionRight
+        );
     }
 
     //Ctrl+Alt+N，查找资源Icon
@@ -2820,6 +2855,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void TestBar2_Click(IRibbonControl control)
     {
+        BatchReplaceInSelectionCore();
         //var lines = File.ReadAllLines(DefaultFilePath);
         //CompareExcel.CompareMain(lines);
 
