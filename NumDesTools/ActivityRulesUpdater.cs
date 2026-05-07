@@ -1,7 +1,7 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using MessageBox = System.Windows.MessageBox;
 
 #pragma warning disable CA1416
@@ -17,11 +17,14 @@ public static class ActivityRulesUpdater
 {
     // ── 路径 ─────────────────────────────────────────────────────────────────
     private static string RulesFilePath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                     "NumDesTools", "Config", "ActivityTableRules.json");
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            "NumDesTools",
+            "Config",
+            "ActivityTableRules.json"
+        );
 
-    private static readonly string LuaRoot =
-        @"C:\M1Work\Code\Assets\LuaScripts";
+    private static readonly string LuaRoot = @"C:\M1Work\Code\Assets\LuaScripts";
 
     private static string EnumCmdsPath =>
         Path.Combine(LuaRoot, "Logics", "DataStructures", "Definitions", "EnumCmds.lua.txt");
@@ -31,15 +34,16 @@ public static class ActivityRulesUpdater
 
     // ── 正则 ─────────────────────────────────────────────────────────────────
     // ActivityType 枚举成员：  EnumName = 数字,
-    private static readonly Regex RxEnumEntry =
-        new(@"(\w+)\s*=\s*(\d+)", RegexOptions.Compiled);
+    private static readonly Regex RxEnumEntry = new(@"(\w+)\s*=\s*(\d+)", RegexOptions.Compiled);
 
     // ActivityManager if/elseif 块：
     //   data.type == EnumCmds.ActivityType.XxxName then
     //       logic = SomeLogicBase:Create(...)
     private static readonly Regex RxTypeBlock =
-        new(@"ActivityType\.(\w+)\s*then\s*\r?\n\s*logic\s*=\s*(\w+):Create",
-            RegexOptions.Compiled | RegexOptions.Multiline);
+        new(
+            @"ActivityType\.(\w+)\s*then\s*\r?\n\s*logic\s*=\s*(\w+):Create",
+            RegexOptions.Compiled | RegexOptions.Multiline
+        );
 
     // LogicBase 文件里首行 activityID 子表引用：
     //   self.config = Tables.XxxData[self.data.activityID]
@@ -81,8 +85,10 @@ public static class ActivityRulesUpdater
         var inferred = new Dictionary<string, string>(); // typeNum(string) → luaKey
         foreach (var (enumName, typeNum) in enumMap)
         {
-            if (!logicMap.TryGetValue(enumName, out var logic)) continue;
-            if (!tableMap.TryGetValue(logic, out var luaKey)) continue;
+            if (!logicMap.TryGetValue(enumName, out var logic))
+                continue;
+            if (!tableMap.TryGetValue(logic, out var luaKey))
+                continue;
             inferred[typeNum.ToString()] = luaKey;
         }
 
@@ -115,7 +121,7 @@ public static class ActivityRulesUpdater
             return new();
         }
 
-        var text  = File.ReadAllText(EnumCmdsPath, Encoding.UTF8);
+        var text = File.ReadAllText(EnumCmdsPath, Encoding.UTF8);
         var start = text.IndexOf("ActivityType = {", StringComparison.Ordinal);
         if (start < 0)
         {
@@ -125,14 +131,20 @@ public static class ActivityRulesUpdater
 
         // 截取到对应的 } 结束
         var depth = 0;
-        var end   = start;
+        var end = start;
         for (; end < text.Length; end++)
         {
-            if (text[end] == '{') depth++;
-            else if (text[end] == '}') { depth--; if (depth == 0) break; }
+            if (text[end] == '{')
+                depth++;
+            else if (text[end] == '}')
+            {
+                depth--;
+                if (depth == 0)
+                    break;
+            }
         }
 
-        var block  = text.Substring(start, end - start + 1);
+        var block = text.Substring(start, end - start + 1);
         var result = new Dictionary<string, int>();
         foreach (Match m in RxEnumEntry.Matches(block))
         {
@@ -154,11 +166,11 @@ public static class ActivityRulesUpdater
             return new();
         }
 
-        var text   = File.ReadAllText(ActivityManagerPath, Encoding.UTF8);
+        var text = File.ReadAllText(ActivityManagerPath, Encoding.UTF8);
         var result = new Dictionary<string, string>();
         foreach (Match m in RxTypeBlock.Matches(text))
         {
-            var enumName  = m.Groups[1].Value;
+            var enumName = m.Groups[1].Value;
             var logicName = m.Groups[2].Value;
             result.TryAdd(enumName, logicName);
         }
@@ -172,24 +184,28 @@ public static class ActivityRulesUpdater
     /// 提取 Tables.Xxx[self.data.activityID] 的第一条引用作为子表。
     /// </summary>
     private static Dictionary<string, string> BuildLogicToTableMap(
-        List<string> logicNames, StringBuilder report)
+        List<string> logicNames,
+        StringBuilder report
+    )
     {
         // 建立 logicName(lower) → 文件路径 的索引（一次性扫描目录）
         var fileIndex = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var f in Directory.EnumerateFiles(LuaRoot, "*.lua.txt", SearchOption.AllDirectories))
+        foreach (
+            var f in Directory.EnumerateFiles(LuaRoot, "*.lua.txt", SearchOption.AllDirectories)
+        )
         {
-            var baseName = Path.GetFileNameWithoutExtension(
-                               Path.GetFileNameWithoutExtension(f)); // 去掉 .lua.txt
+            var baseName = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(f)); // 去掉 .lua.txt
             fileIndex.TryAdd(baseName, f);
         }
 
         var result = new Dictionary<string, string>();
         foreach (var logic in logicNames)
         {
-            if (!fileIndex.TryGetValue(logic, out var path)) continue;
+            if (!fileIndex.TryGetValue(logic, out var path))
+                continue;
 
             var text = File.ReadAllText(path, Encoding.UTF8);
-            var m    = RxTableRef.Match(text);
+            var m = RxTableRef.Match(text);
             if (m.Success)
                 result.TryAdd(logic, "Tables." + m.Groups[1].Value);
         }
@@ -203,7 +219,9 @@ public static class ActivityRulesUpdater
     /// 返回 (新增数, 跳过数)。
     /// </summary>
     private static (int added, int skipped) PatchRulesJson(
-        Dictionary<string, string> inferred, StringBuilder report)
+        Dictionary<string, string> inferred,
+        StringBuilder report
+    )
     {
         if (!File.Exists(RulesFilePath))
         {
@@ -228,7 +246,7 @@ public static class ActivityRulesUpdater
             root["typeTableMap"] = typeTableMap;
         }
 
-        var added   = 0;
+        var added = 0;
         var skipped = 0;
 
         // 按 type 数字排序输出
@@ -240,7 +258,7 @@ public static class ActivityRulesUpdater
                 continue;
             }
             typeTableMap[typeNum] = luaKey;
-            report.AppendLine($"  + type={typeNum,-4} → {luaKey}");
+            report.AppendLine($"  + type={typeNum, -4} → {luaKey}");
             added++;
         }
 
@@ -248,12 +266,13 @@ public static class ActivityRulesUpdater
         {
             // 按 key 数字排序后写回
             var sorted = new JObject(
-                typeTableMap.Properties().OrderBy(p =>
-                    int.TryParse(p.Name, out var n) ? n : int.MaxValue));
+                typeTableMap
+                    .Properties()
+                    .OrderBy(p => int.TryParse(p.Name, out var n) ? n : int.MaxValue)
+            );
             root["typeTableMap"] = sorted;
 
-            File.WriteAllText(RulesFilePath,
-                root.ToString(Formatting.Indented), Encoding.UTF8);
+            File.WriteAllText(RulesFilePath, root.ToString(Formatting.Indented), Encoding.UTF8);
         }
 
         return (added, skipped);

@@ -139,7 +139,8 @@ namespace NumDesTools
                     // excelSplit may be length 2 if the subpart contains '$' instead of a '##' separator
                     if (excelSplit.Length >= 3)
                     {
-                        table = workbookPath + @"\Tables\克朗代克\" + excelSplit[1] + "#" + excelSplit[2];
+                        table =
+                            workbookPath + @"\Tables\克朗代克\" + excelSplit[1] + "#" + excelSplit[2];
                     }
                     else if (excelSplit.Length == 2 && excelSplit[1].Contains("$"))
                     {
@@ -155,7 +156,10 @@ namespace NumDesTools
                     }
                     else
                     {
-                        table = workbookPath + @"\Tables\克朗代克\" + (excelSplit.Length > 1 ? excelSplit[1] : "");
+                        table =
+                            workbookPath
+                            + @"\Tables\克朗代克\"
+                            + (excelSplit.Length > 1 ? excelSplit[1] : "");
                     }
                 }
                 //克朗代克单表
@@ -422,9 +426,7 @@ namespace NumDesTools
                                 continue;
                             }
 
-                            if (
-                                nextTableRow[nextFiledKey].ToString()!.Contains(currentId)
-                            )
+                            if (nextTableRow[nextFiledKey].ToString()!.Contains(currentId))
                             {
                                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                                 var nextTableName = Path.GetFileName(nextExcelPath);

@@ -14,7 +14,11 @@ namespace NumDesTools.Advance
         /// <param name="filePath">Excel文件路径</param>
         /// <param name="dbPath">数据库路径</param>
         /// <param name="updateMode">更新模式：覆盖或追加</param>
-        public void UpdateSingleFile(string filePath, string dbPath, UpdateMode updateMode = UpdateMode.Overwrite)
+        public void UpdateSingleFile(
+            string filePath,
+            string dbPath,
+            UpdateMode updateMode = UpdateMode.Overwrite
+        )
         {
             if (!File.Exists(filePath))
             {
@@ -78,7 +82,11 @@ namespace NumDesTools.Advance
         /// <summary>
         /// 处理单个Excel文件的更新
         /// </summary>
-        private void UpdateSingleExcelFile(SqliteConnection connection, string filePath, UpdateMode updateMode)
+        private void UpdateSingleExcelFile(
+            SqliteConnection connection,
+            string filePath,
+            UpdateMode updateMode
+        )
         {
             try
             {
@@ -94,7 +102,8 @@ namespace NumDesTools.Advance
                         continue;
                     }
 
-                    var tableName = $"{SanitizeTableName(fileNameOnly)}_{SanitizeTableName(sheetName)}";
+                    var tableName =
+                        $"{SanitizeTableName(fileNameOnly)}_{SanitizeTableName(sheetName)}";
 
                     // 检查表是否已存在
                     bool tableExists = CheckTableExists(connection, tableName);
@@ -111,7 +120,13 @@ namespace NumDesTools.Advance
                     }
 
                     // 更新文件路径映射
-                    StoreFilePathMapping(connection, tableName, fileFullPath, sheetName, fileNameOnly);
+                    StoreFilePathMapping(
+                        connection,
+                        tableName,
+                        fileFullPath,
+                        sheetName,
+                        fileNameOnly
+                    );
                 }
             }
             catch (Exception ex)
@@ -127,7 +142,8 @@ namespace NumDesTools.Advance
         {
             try
             {
-                var sql = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@tableName";
+                var sql =
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@tableName";
                 using var command = new SqliteCommand(sql, connection);
                 command.Parameters.AddWithValue("@tableName", tableName);
                 var result = Convert.ToInt32(command.ExecuteScalar());
@@ -142,8 +158,13 @@ namespace NumDesTools.Advance
         /// <summary>
         /// 更新已存在的表
         /// </summary>
-        private void UpdateExistingTable(SqliteConnection connection, string tableName,
-            string filePath, string sheetName, UpdateMode updateMode)
+        private void UpdateExistingTable(
+            SqliteConnection connection,
+            string tableName,
+            string filePath,
+            string sheetName,
+            UpdateMode updateMode
+        )
         {
             try
             {
@@ -185,17 +206,24 @@ namespace NumDesTools.Advance
         /// <summary>
         /// 更新表结构（添加新列）
         /// </summary>
-        private void UpdateTableStructure(SqliteConnection connection, string tableName,
-            Dictionary<string, Type> newColumnTypes)
+        private void UpdateTableStructure(
+            SqliteConnection connection,
+            string tableName,
+            Dictionary<string, Type> newColumnTypes
+        )
         {
             try
             {
                 var existingColumns = GetTableColumns(connection, tableName);
-                var newColumns = newColumnTypes.Keys.Except(existingColumns, StringComparer.OrdinalIgnoreCase);
+                var newColumns = newColumnTypes.Keys.Except(
+                    existingColumns,
+                    StringComparer.OrdinalIgnoreCase
+                );
 
                 foreach (var column in newColumns)
                 {
-                    var alterSql = $"ALTER TABLE [{tableName}] ADD COLUMN [{column}] {MapTypeToSqliteString(newColumnTypes[column])}";
+                    var alterSql =
+                        $"ALTER TABLE [{tableName}] ADD COLUMN [{column}] {MapTypeToSqliteString(newColumnTypes[column])}";
                     using var command = new SqliteCommand(alterSql, connection);
                     command.ExecuteNonQuery();
                     PluginLog.Verbose($"表 {tableName} 添加新列: {column}");
@@ -243,7 +271,11 @@ namespace NumDesTools.Advance
         /// <param name="filePaths">Excel文件路径集合</param>
         /// <param name="dbPath">数据库路径</param>
         /// <param name="updateMode">更新模式</param>
-        public void UpdateMultipleFiles(IEnumerable<string> filePaths, string dbPath, UpdateMode updateMode = UpdateMode.Overwrite)
+        public void UpdateMultipleFiles(
+            IEnumerable<string> filePaths,
+            string dbPath,
+            UpdateMode updateMode = UpdateMode.Overwrite
+        )
         {
             EnsureDatabaseExists(dbPath);
 
@@ -278,7 +310,8 @@ namespace NumDesTools.Advance
         public void ConvertWithSchemaInference(string rootPath, string dbPath)
         {
             var filesCollection = new SelfExcelFileCollector(rootPath);
-            var files = filesCollection.GetAllExcelFilesPath()
+            var files = filesCollection
+                .GetAllExcelFilesPath()
                 .Where(f => !f.Contains("#"))
                 .ToList();
             SyncDirectory(files, dbPath);
@@ -301,17 +334,22 @@ namespace NumDesTools.Advance
             // 读取已有 mtime 记录
             var dbMtimes = LoadMtimes(connection);
 
-            int updated = 0, skipped = 0;
+            int updated = 0,
+                skipped = 0;
             foreach (var file in filePaths)
             {
-                if (!File.Exists(file) || file.Contains("#") || Path.GetFileName(file).StartsWith('~'))
+                if (
+                    !File.Exists(file)
+                    || file.Contains("#")
+                    || Path.GetFileName(file).StartsWith('~')
+                )
                 {
                     skipped++;
                     continue;
                 }
 
                 var fullPath = Path.GetFullPath(file);
-                var mtime    = new FileInfo(file).LastWriteTimeUtc.Ticks;
+                var mtime = new FileInfo(file).LastWriteTimeUtc.Ticks;
 
                 if (dbMtimes.TryGetValue(fullPath, out var stored) && stored == mtime)
                 {
@@ -334,10 +372,14 @@ namespace NumDesTools.Advance
             try
             {
                 using var cmd = new SqliteCommand(
-                    "ALTER TABLE _file_metadata ADD COLUMN mtime INTEGER DEFAULT 0", connection);
+                    "ALTER TABLE _file_metadata ADD COLUMN mtime INTEGER DEFAULT 0",
+                    connection
+                );
                 cmd.ExecuteNonQuery();
             }
-            catch { /* 列已存在 */ }
+            catch
+            { /* 列已存在 */
+            }
         }
 
         private static Dictionary<string, long> LoadMtimes(SqliteConnection connection)
@@ -346,7 +388,9 @@ namespace NumDesTools.Advance
             try
             {
                 using var cmd = new SqliteCommand(
-                    "SELECT file_full_path, COALESCE(mtime,0) FROM _file_metadata", connection);
+                    "SELECT file_full_path, COALESCE(mtime,0) FROM _file_metadata",
+                    connection
+                );
                 using var rdr = cmd.ExecuteReader();
                 while (rdr.Read())
                     dict[rdr.GetString(0)] = rdr.GetInt64(1);
@@ -360,7 +404,9 @@ namespace NumDesTools.Advance
             try
             {
                 using var cmd = new SqliteCommand(
-                    "UPDATE _file_metadata SET mtime=@m WHERE file_full_path=@p", connection);
+                    "UPDATE _file_metadata SET mtime=@m WHERE file_full_path=@p",
+                    connection
+                );
                 cmd.Parameters.AddWithValue("@m", mtime);
                 cmd.Parameters.AddWithValue("@p", fullPath);
                 cmd.ExecuteNonQuery();
@@ -370,7 +416,8 @@ namespace NumDesTools.Advance
 
         private void CreateMetadataTable(SqliteConnection connection)
         {
-            var createMetaSql = @"
+            var createMetaSql =
+                @"
         CREATE TABLE IF NOT EXISTS _file_metadata (
             table_name TEXT PRIMARY KEY,
             file_full_path TEXT NOT NULL,
@@ -406,10 +453,17 @@ namespace NumDesTools.Advance
                         continue;
                     }
                     // 表名格式：文件名_工作表名（不含特殊字符）
-                    var tableName = $"{SanitizeTableName(fileNameOnly)}_{SanitizeTableName(sheetName)}";
+                    var tableName =
+                        $"{SanitizeTableName(fileNameOnly)}_{SanitizeTableName(sheetName)}";
 
                     // 存储文件路径映射
-                    StoreFilePathMapping(connection, tableName, fileFullPath, sheetName, fileNameOnly);
+                    StoreFilePathMapping(
+                        connection,
+                        tableName,
+                        fileFullPath,
+                        sheetName,
+                        fileNameOnly
+                    );
 
                     var rows = MiniExcel.Query(file, sheetName: sheetName).ToList();
 
@@ -426,19 +480,27 @@ namespace NumDesTools.Advance
                 PluginLog.Verbose($"处理文件 {file} 失败: {ex.Message}");
             }
         }
+
         private string SanitizeTableName(string name)
         {
             // 移除或替换SQLite表名中的非法字符
             return name.Replace(" ", "_")
-                      .Replace("-", "_")
-                      .Replace(".", "_")
-                      .Replace("(", "")
-                      .Replace(")", "");
+                .Replace("-", "_")
+                .Replace(".", "_")
+                .Replace("(", "")
+                .Replace(")", "");
         }
-        private void StoreFilePathMapping(SqliteConnection connection, string tableName,
-       string fileFullPath, string sheetName, string fileNameOnly)
+
+        private void StoreFilePathMapping(
+            SqliteConnection connection,
+            string tableName,
+            string fileFullPath,
+            string sheetName,
+            string fileNameOnly
+        )
         {
-            var insertMetaSql = @"
+            var insertMetaSql =
+                @"
                 INSERT OR REPLACE INTO _file_metadata 
                 (table_name, file_full_path, sheet_name, file_name_only) 
                 VALUES (@tableName, @filePath, @sheetName, @fileNameOnly)";
@@ -509,7 +571,13 @@ namespace NumDesTools.Advance
                         int excelRowNumber = batchStart + indexInBatch + 1;
 
                         // 记录行号映射
-                        StoreRowMapping(connection, tableName, nextRowId, excelRowNumber, transaction);
+                        StoreRowMapping(
+                            connection,
+                            tableName,
+                            nextRowId,
+                            excelRowNumber,
+                            transaction
+                        );
 
                         nextRowId++;
                     }
@@ -528,14 +596,19 @@ namespace NumDesTools.Advance
         }
 
         // 获取表的最大行ID
-        private static long GetMaxRowId(SqliteConnection connection, string tableName, SqliteTransaction transaction = null)
+        private static long GetMaxRowId(
+            SqliteConnection connection,
+            string tableName,
+            SqliteTransaction transaction = null
+        )
         {
             try
             {
                 var sql = $"SELECT COALESCE(MAX(rowid), 0) FROM [{tableName}]";
-                using var command = transaction != null
-                    ? new SqliteCommand(sql, connection, transaction)
-                    : new SqliteCommand(sql, connection);
+                using var command =
+                    transaction != null
+                        ? new SqliteCommand(sql, connection, transaction)
+                        : new SqliteCommand(sql, connection);
 
                 return Convert.ToInt64(command.ExecuteScalar());
             }
@@ -546,18 +619,25 @@ namespace NumDesTools.Advance
         }
 
         // 存储行号映射
-        private static void StoreRowMapping(SqliteConnection connection, string tableName,
-            long dbRowId, int excelRow, SqliteTransaction transaction = null)
+        private static void StoreRowMapping(
+            SqliteConnection connection,
+            string tableName,
+            long dbRowId,
+            int excelRow,
+            SqliteTransaction transaction = null
+        )
         {
             try
             {
-                var sql = @"
+                var sql =
+                    @"
             INSERT INTO _row_mapping (table_name, db_rowid, excel_row)
             VALUES (@tableName, @dbRowId, @excelRow)";
 
-                using var command = transaction != null
-                    ? new SqliteCommand(sql, connection, transaction)
-                    : new SqliteCommand(sql, connection);
+                using var command =
+                    transaction != null
+                        ? new SqliteCommand(sql, connection, transaction)
+                        : new SqliteCommand(sql, connection);
 
                 command.Parameters.AddWithValue("@tableName", tableName);
                 command.Parameters.AddWithValue("@dbRowId", dbRowId);
@@ -680,7 +760,8 @@ namespace NumDesTools.Advance
 
             foreach (var tableName in tableNames)
             {
-                if (tableName == "_file_metadata" || tableName == "_row_mapping") continue;
+                if (tableName == "_file_metadata" || tableName == "_row_mapping")
+                    continue;
 
                 // 检查数据行数
                 var dataCount = GetRowCount(connection, tableName);
@@ -688,7 +769,9 @@ namespace NumDesTools.Advance
                 // 检查映射行数
                 var mappingCount = GetMappingCount(connection, tableName);
 
-                PluginLog.Verbose($"表 {tableName}: 数据行={dataCount}, 映射行={mappingCount}, 状态={(dataCount == mappingCount ? "正常" : "异常")}");
+                PluginLog.Verbose(
+                    $"表 {tableName}: 数据行={dataCount}, 映射行={mappingCount}, 状态={(dataCount == mappingCount ? "正常" : "异常")}"
+                );
             }
         }
 
@@ -745,7 +828,8 @@ namespace NumDesTools.Advance
 
             foreach (var tableName in tableNames)
             {
-                if (tableName == "_file_metadata") continue;
+                if (tableName == "_file_metadata")
+                    continue;
 
                 var tableResults = SearchInTable(connection, tableName, options);
                 results.AddRange(tableResults);
@@ -754,16 +838,16 @@ namespace NumDesTools.Advance
             return results;
         }
 
-        public List<SearchResult> SearchInColumns(string dbPath, string searchValue, params string[] columnNames)
+        public List<SearchResult> SearchInColumns(
+            string dbPath,
+            string searchValue,
+            params string[] columnNames
+        )
         {
-            var options = new SearchOptions(searchValue)
-            {
-                TargetColumns = columnNames
-            };
+            var options = new SearchOptions(searchValue) { TargetColumns = columnNames };
 
             return SearchAllTables(options, dbPath);
         }
-
 
         // 2. 获取数据库中的所有表名
         private List<string> GetTableNames(SqliteConnection connection)
@@ -784,7 +868,11 @@ namespace NumDesTools.Advance
             return tableNames;
         }
 
-        private List<SearchResult> SearchInTable(SqliteConnection connection, string tableName, SearchOptions options)
+        private List<SearchResult> SearchInTable(
+            SqliteConnection connection,
+            string tableName,
+            SearchOptions options
+        )
         {
             var results = new List<SearchResult>();
 
@@ -792,31 +880,40 @@ namespace NumDesTools.Advance
             {
                 // 从元数据表获取文件路径和工作表名
                 var fileInfo = GetFileInfoFromMetadata(connection, tableName);
-                if (fileInfo == null) return results;
+                if (fileInfo == null)
+                    return results;
 
                 // 获取表的所有列
                 var allColumns = GetTableColumns(connection, tableName);
-                if (allColumns.Count == 0) return results;
+                if (allColumns.Count == 0)
+                    return results;
 
                 // 确定要搜索的列
-                var columnsToSearch = options.TargetColumns.Length > 0
-                    ? allColumns.Intersect(options.TargetColumns, StringComparer.OrdinalIgnoreCase).ToList()
-                    : allColumns;
+                var columnsToSearch =
+                    options.TargetColumns.Length > 0
+                        ? allColumns
+                            .Intersect(options.TargetColumns, StringComparer.OrdinalIgnoreCase)
+                            .ToList()
+                        : allColumns;
 
                 if (columnsToSearch.Count == 0)
                 {
-                    PluginLog.Write($"表 {tableName} 中没有找到指定的列: {string.Join(", ", options.TargetColumns)}");
+                    PluginLog.Write(
+                        $"表 {tableName} 中没有找到指定的列: {string.Join(", ", options.TargetColumns)}"
+                    );
                     return results;
                 }
 
                 // 构建查询条件
                 var conditions = BuildSearchConditions(columnsToSearch, options);
-                if (conditions.Count == 0) return results;
+                if (conditions.Count == 0)
+                    return results;
 
                 string whereClause = string.Join(" OR ", conditions);
 
                 // 修改查询，获取行号映射
-                string query = $@"
+                string query =
+                    $@"
             SELECT t.*, rm.excel_row 
             FROM [{tableName}] t
             LEFT JOIN _row_mapping rm ON t.rowid = rm.db_rowid AND rm.table_name = @tableName
@@ -843,8 +940,13 @@ namespace NumDesTools.Advance
                         string columnName = reader.GetName(i);
 
                         // 如果指定了列，只检查指定的列
-                        if (options.TargetColumns.Length > 0 &&
-                            !options.TargetColumns.Contains(columnName, StringComparer.OrdinalIgnoreCase))
+                        if (
+                            options.TargetColumns.Length > 0
+                            && !options.TargetColumns.Contains(
+                                columnName,
+                                StringComparer.OrdinalIgnoreCase
+                            )
+                        )
                         {
                             continue;
                         }
@@ -856,15 +958,17 @@ namespace NumDesTools.Advance
 
                             if (isMatch)
                             {
-                                results.Add(new SearchResult
-                                {
-                                    TableName = fileInfo.SheetName,
-                                    ColumnName = columnName,
-                                    RowNumber = excelRowNumber, // 使用正确的Excel行号
-                                    Value = value,
-                                    FileName = fileInfo.FileFullPath,
-                                    FileNameOnly = fileInfo.FileNameOnly
-                                });
+                                results.Add(
+                                    new SearchResult
+                                    {
+                                        TableName = fileInfo.SheetName,
+                                        ColumnName = columnName,
+                                        RowNumber = excelRowNumber, // 使用正确的Excel行号
+                                        Value = value,
+                                        FileName = fileInfo.FileFullPath,
+                                        FileNameOnly = fileInfo.FileNameOnly
+                                    }
+                                );
                             }
                         }
                     }
@@ -886,15 +990,19 @@ namespace NumDesTools.Advance
             {
                 if (options.ExactMatch)
                 {
-                    conditions.Add(options.CaseSensitive
-                        ? $"[{column}] = @SearchValue"
-                        : $"LOWER([{column}]) = LOWER(@SearchValue)");
+                    conditions.Add(
+                        options.CaseSensitive
+                            ? $"[{column}] = @SearchValue"
+                            : $"LOWER([{column}]) = LOWER(@SearchValue)"
+                    );
                 }
                 else
                 {
-                    conditions.Add(options.CaseSensitive
-                        ? $"[{column}] LIKE '%' || @SearchValue || '%'"
-                        : $"LOWER([{column}]) LIKE '%' || LOWER(@SearchValue) || '%'");
+                    conditions.Add(
+                        options.CaseSensitive
+                            ? $"[{column}] LIKE '%' || @SearchValue || '%'"
+                            : $"LOWER([{column}]) LIKE '%' || LOWER(@SearchValue) || '%'"
+                    );
                 }
             }
 
@@ -903,7 +1011,8 @@ namespace NumDesTools.Advance
 
         private bool IsValueMatch(string cellValue, string searchValue, SearchOptions options)
         {
-            if (string.IsNullOrEmpty(cellValue)) return false;
+            if (string.IsNullOrEmpty(cellValue))
+                return false;
 
             if (options.ExactMatch)
             {
@@ -919,12 +1028,15 @@ namespace NumDesTools.Advance
             }
         }
 
-
-        private FileInfoResult GetFileInfoFromMetadata(SqliteConnection connection, string tableName)
+        private FileInfoResult GetFileInfoFromMetadata(
+            SqliteConnection connection,
+            string tableName
+        )
         {
             try
             {
-                var query = "SELECT file_full_path, sheet_name, file_name_only FROM _file_metadata WHERE table_name = @tableName";
+                var query =
+                    "SELECT file_full_path, sheet_name, file_name_only FROM _file_metadata WHERE table_name = @tableName";
 
                 using var command = new SqliteCommand(query, connection);
                 command.Parameters.AddWithValue("@tableName", tableName);
@@ -971,7 +1083,11 @@ namespace NumDesTools.Advance
         }
 
         // 多列精确搜索
-        public List<SearchResult> SearchExactInColumns(string dbPath, string searchValue, params string[] columnNames)
+        public List<SearchResult> SearchExactInColumns(
+            string dbPath,
+            string searchValue,
+            params string[] columnNames
+        )
         {
             var options = new SearchOptions(searchValue)
             {
@@ -983,7 +1099,11 @@ namespace NumDesTools.Advance
         }
 
         // 大小写敏感搜索
-        public List<SearchResult> SearchCaseSensitive(string dbPath, string searchValue, params string[] columnNames)
+        public List<SearchResult> SearchCaseSensitive(
+            string dbPath,
+            string searchValue,
+            params string[] columnNames
+        )
         {
             var options = new SearchOptions(searchValue)
             {
@@ -995,8 +1115,13 @@ namespace NumDesTools.Advance
         }
 
         // 组合搜索：多列+精确+大小写敏感
-        public List<SearchResult> SearchAdvanced(string dbPath, string searchValue,
-            bool exactMatch, bool caseSensitive, params string[] columnNames)
+        public List<SearchResult> SearchAdvanced(
+            string dbPath,
+            string searchValue,
+            bool exactMatch,
+            bool caseSensitive,
+            params string[] columnNames
+        )
         {
             var options = new SearchOptions(searchValue)
             {
@@ -1014,7 +1139,6 @@ namespace NumDesTools.Advance
             var parts = tableName.Split('_');
             return parts.Length > 0 ? parts[0] : tableName;
         }
-
 
         public List<SearchResult> AdvancedSearch(
             Dictionary<string, string> conditions,

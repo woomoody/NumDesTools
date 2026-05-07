@@ -28,7 +28,7 @@ namespace NumDesTools.ExcelToLua
         public const int OBJECT_ARRAY2 = 401; //List<List<object>>
         public const int REWARD = 501; //奖励: List<int>
         public const int REWARD_ARRAY = 502; //奖励: List<List<int>>
-        public const int ANY = 600;    //任意类型，常量表专用
+        public const int ANY = 600; //任意类型，常量表专用
     }
 
     public class FieldData
@@ -383,7 +383,6 @@ namespace NumDesTools.ExcelToLua
                         string id = value.Trim();
                         if (string.IsNullOrEmpty(id))
                         {
-
                             LogDisplay.RecordLine(
                                 "[{0}] , {1}",
                                 DateTime.Now.ToString(CultureInfo.InvariantCulture),
@@ -393,16 +392,15 @@ namespace NumDesTools.ExcelToLua
                             LogDisplay.Show();
 
                             throw new Exception($"{sheet.SheetName} 第{i + 1}行, ID为空!");
-                            
                         }
 
                         if (!idset.Add(id))
                         {
                             LogDisplay.RecordLine(
-                              "[{0}] , {1}",
-                              DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                              $"{sheet.SheetName} 第{i + 1}行, ID重复:{id}!"
-                          );
+                                "[{0}] , {1}",
+                                DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                                $"{sheet.SheetName} 第{i + 1}行, ID重复:{id}!"
+                            );
 
                             LogDisplay.Show();
 

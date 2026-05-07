@@ -9,7 +9,10 @@ namespace NumDesTools;
 internal static class PluginLog
 {
     private static readonly string LogPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "tmp", "plugin.log");
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        "tmp",
+        "plugin.log"
+    );
 
     private const long MaxBytes = 2 * 1024 * 1024; // 2 MB
 
@@ -38,12 +41,14 @@ internal static class PluginLog
         try
         {
             var info = new FileInfo(LogPath);
-            if (info.Length < MaxBytes) return;
+            if (info.Length < MaxBytes)
+                return;
             var content = File.ReadAllText(LogPath, Encoding.UTF8);
             // 保留后半段，从中间某个换行处截断
             var half = content.Length / 2;
-            var cut  = content.IndexOf('\n', half);
-            if (cut < 0) return;
+            var cut = content.IndexOf('\n', half);
+            if (cut < 0)
+                return;
             File.WriteAllText(LogPath, content[(cut + 1)..], Encoding.UTF8);
         }
         catch { }

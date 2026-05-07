@@ -16,5 +16,6 @@ public class ExcelHost : IExcelHost
 
     public object GetActiveCell() => NumDesAddIn.App.ActiveCell;
 
-    public object OpenWorkbook(string filename) => NumDesAddIn.App.Workbooks.Open(Filename: filename);
+    public object OpenWorkbook(string filename) =>
+        NumDesAddIn.App.Workbooks.Open(Filename: filename);
 }

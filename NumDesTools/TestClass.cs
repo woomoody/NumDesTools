@@ -18,7 +18,8 @@ public class ScreenCoordinateFix
     {
         var excelApp = NumDesAddIn.App;
         Range range = excelApp.Selection as Range;
-        if (range == null) return;
+        if (range == null)
+            return;
 
         IntPtr hwnd = (IntPtr)excelApp.Hwnd;
         Window window = excelApp.ActiveWindow;
@@ -28,7 +29,8 @@ public class ScreenCoordinateFix
         ClientToScreen(hwnd, ref clientOrigin);
 
         // Step 2: 获取DPI（精确到当前显示器）
-        float dpiX, dpiY;
+        float dpiX,
+            dpiY;
         using (Graphics g = Graphics.FromHwnd(hwnd))
         {
             dpiX = g.DpiX;
@@ -51,15 +53,17 @@ public class ScreenCoordinateFix
         int screenY = clientOrigin.Y + (int)(adjustedTop * dpiY / 72.0);
 
         // Step 6: 处理行列标题偏移
-        screenX += GetColumnHeaderWidth(window);  // 添加列标题宽度
-        screenY += GetRowHeaderHeight(window);    // 添加行标题高度
+        screenX += GetColumnHeaderWidth(window); // 添加列标题宽度
+        screenY += GetRowHeaderHeight(window); // 添加行标题高度
 
         // 在消息框中显示中间值
-        MessageBox.Show($"ClientOrigin: ({clientOrigin.X},{clientOrigin.Y})\n" +
-                        $"DPI: {dpiX}x{dpiY}\n" +
-                        $"ScrollOffset: {scrollOffsetX},{scrollOffsetY}\n" +
-                        $"Zoom: {window.Zoom}%\n" +
-                        $"修正后坐标: ({screenX}, {screenY})");
+        MessageBox.Show(
+            $"ClientOrigin: ({clientOrigin.X},{clientOrigin.Y})\n"
+                + $"DPI: {dpiX}x{dpiY}\n"
+                + $"ScrollOffset: {scrollOffsetX},{scrollOffsetY}\n"
+                + $"Zoom: {window.Zoom}%\n"
+                + $"修正后坐标: ({screenX}, {screenY})"
+        );
     }
 
     private static int GetColumnHeaderWidth(Window window)

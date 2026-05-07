@@ -17,7 +17,7 @@ namespace NumDesTools;
 public sealed class CellSelectChangeTip : Form
 {
     private string? _text;
-    private static readonly Font TipFont = new Font("微软雅黑", 11);
+    private static readonly Font _tipFont = new Font("微软雅黑", 11);
     private const int Pad = 8;
 
     private readonly Timer _scrollTimer;
@@ -26,21 +26,24 @@ public sealed class CellSelectChangeTip : Form
     private int _lastScrollCol;
 
     private static CellSelectChangeTip? _instance;
-    public  static CellSelectChangeTip  Instance => _instance ??= new CellSelectChangeTip();
+    public static CellSelectChangeTip Instance => _instance ??= new CellSelectChangeTip();
 
     private CellSelectChangeTip()
     {
         FormBorderStyle = FormBorderStyle.None;
-        ShowInTaskbar   = false;
-        TopMost         = true;
-        BackColor       = Color.FromArgb(40, 40, 40);
-        ForeColor       = Color.White;
-        AutoScaleMode   = AutoScaleMode.None;
-        StartPosition   = FormStartPosition.Manual;
+        ShowInTaskbar = false;
+        TopMost = true;
+        BackColor = Color.FromArgb(40, 40, 40);
+        ForeColor = Color.White;
+        AutoScaleMode = AutoScaleMode.None;
+        StartPosition = FormStartPosition.Manual;
 
-        SetStyle(ControlStyles.OptimizedDoubleBuffer
-               | ControlStyles.AllPaintingInWmPaint
-               | ControlStyles.UserPaint, true);
+        SetStyle(
+            ControlStyles.OptimizedDoubleBuffer
+                | ControlStyles.AllPaintingInWmPaint
+                | ControlStyles.UserPaint,
+            true
+        );
 
         var ex = GetWindowLong(Handle, GWL_EXSTYLE);
         SetWindowLong(Handle, GWL_EXSTYLE, ex | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
@@ -57,9 +60,10 @@ public sealed class CellSelectChangeTip : Form
     protected override void OnPaint(PaintEventArgs e)
     {
         e.Graphics.Clear(BackColor);
-        if (_text == null) return;
+        if (_text == null)
+            return;
         using var brush = new SolidBrush(ForeColor);
-        e.Graphics.DrawString(_text, TipFont, brush, new PointF(Pad, Pad));
+        e.Graphics.DrawString(_text, _tipFont, brush, new PointF(Pad, Pad));
     }
 
     // 不拦截鼠标，透传给 Excel
@@ -76,22 +80,26 @@ public sealed class CellSelectChangeTip : Form
     public void ShowBubble(string text)
     {
         _text = text;
-        var sz = TextRenderer.MeasureText(text, TipFont);
-        int w  = sz.Width  + Pad * 2;
-        int h  = sz.Height + Pad * 2;
+        var sz = TextRenderer.MeasureText(text, _tipFont);
+        int w = sz.Width + Pad * 2;
+        int h = sz.Height + Pad * 2;
 
         var cursor = Cursor.Position;
         int x = cursor.X + 14;
         int y = cursor.Y + 14;
 
         var wa = Screen.FromPoint(cursor).WorkingArea;
-        if (x + w > wa.Right)  x = cursor.X - w - 2;
-        if (y + h > wa.Bottom) y = cursor.Y - h - 2;
-        if (x < wa.Left) x = wa.Left;
-        if (y < wa.Top)  y = wa.Top;
+        if (x + w > wa.Right)
+            x = cursor.X - w - 2;
+        if (y + h > wa.Bottom)
+            y = cursor.Y - h - 2;
+        if (x < wa.Left)
+            x = wa.Left;
+        if (y < wa.Top)
+            y = wa.Top;
 
         ClientSize = new Size(w, h);
-        Location   = new Point(x, y);
+        Location = new Point(x, y);
 
         // SW_SHOWNOACTIVATE：显示但不抢 Excel 的键盘焦点
         ShowWindow(Handle, SW_SHOWNOACTIVATE);
@@ -104,11 +112,12 @@ public sealed class CellSelectChangeTip : Form
             _lastScrollRow = win.ScrollRow;
             _lastScrollCol = win.ScrollColumn;
         }
-        catch { /* ignore */ }
+        catch
+        { /* ignore */
+        }
         _scrollTimer.Start();
 
-        PluginLog.Verbose(
-            $"[CellTip] cursor=({cursor.X},{cursor.Y}) loc=({x},{y}) size=({w}x{h})");
+        PluginLog.Verbose($"[CellTip] cursor=({cursor.X},{cursor.Y}) loc=({x},{y}) size=({w}x{h})");
     }
 
     public void ClearBubble()
@@ -117,8 +126,10 @@ public sealed class CellSelectChangeTip : Form
         _text = null;
         if (IsHandleCreated && !IsDisposed)
         {
-            if (InvokeRequired) BeginInvoke((System.Action)Hide);
-            else Hide();
+            if (InvokeRequired)
+                BeginInvoke((System.Action)Hide);
+            else
+                Hide();
         }
     }
 
@@ -138,18 +149,22 @@ public sealed class CellSelectChangeTip : Form
 
     private void OnFocusCheck(object? sender, EventArgs e)
     {
-        if (!Visible) return;
+        if (!Visible)
+            return;
         try
         {
             var fg = GetForegroundWindow();
-            if (fg == Handle) return;   // 气泡本身（不应发生，但防御）
+            if (fg == Handle)
+                return; // 气泡本身（不应发生，但防御）
             // 比较进程 ID：前台窗口属于 Excel 进程则保留
             GetWindowThreadProcessId(fg, out uint fgPid);
             GetWindowThreadProcessId((IntPtr)NumDesAddIn.App.Hwnd, out uint excelPid);
             if (fgPid != excelPid)
                 ClearBubble();
         }
-        catch { /* ignore */ }
+        catch
+        { /* ignore */
+        }
     }
 
     public static void DisposeInstance()
@@ -172,22 +187,24 @@ public sealed class CellSelectChangeTip : Form
     {
         _app = app;
         app.SheetSelectionChange += OnSelectionChange;
-        app.WindowDeactivate     += OnWindowDeactivate;
-        app.WorkbookDeactivate   += OnWorkbookDeactivate;
+        app.WindowDeactivate += OnWindowDeactivate;
+        app.WorkbookDeactivate += OnWorkbookDeactivate;
     }
 
     public static void Disable()
     {
-        if (_app == null) return;
+        if (_app == null)
+            return;
         _app.SheetSelectionChange -= OnSelectionChange;
-        _app.WindowDeactivate     -= OnWindowDeactivate;
-        _app.WorkbookDeactivate   -= OnWorkbookDeactivate;
+        _app.WindowDeactivate -= OnWindowDeactivate;
+        _app.WorkbookDeactivate -= OnWorkbookDeactivate;
         _app = null;
         Instance.ClearBubble();
     }
 
-    private static void OnWindowDeactivate(object wb, object wn)   => Instance.ClearBubble();
-    private static void OnWorkbookDeactivate(object wb)             => Instance.ClearBubble();
+    private static void OnWindowDeactivate(object wb, object wn) => Instance.ClearBubble();
+
+    private static void OnWorkbookDeactivate(object wb) => Instance.ClearBubble();
 
     public static void OnSelectionChange(object sh, Range target)
     {
@@ -205,7 +222,11 @@ public sealed class CellSelectChangeTip : Form
             }
 
             object rawVal = target.Value;
-            if (rawVal == null) { Instance.ClearBubble(); return; }
+            if (rawVal == null)
+            {
+                Instance.ClearBubble();
+                return;
+            }
 
             string text;
             if (rawVal is object[,] arr)
@@ -215,7 +236,8 @@ public sealed class CellSelectChangeTip : Form
                 {
                     for (int j = 1; j <= arr.GetLength(1); j++)
                     {
-                        if (j > 1) sb.Append("  ");
+                        if (j > 1)
+                            sb.Append("  ");
                         sb.Append(arr[i, j]?.ToString() ?? "");
                     }
                     sb.AppendLine();
@@ -225,7 +247,11 @@ public sealed class CellSelectChangeTip : Form
             else
                 text = rawVal.ToString() ?? "";
 
-            if (string.IsNullOrEmpty(text)) { Instance.ClearBubble(); return; }
+            if (string.IsNullOrEmpty(text))
+            {
+                Instance.ClearBubble();
+                return;
+            }
 
             Instance.ShowBubble(text);
         }
@@ -236,14 +262,23 @@ public sealed class CellSelectChangeTip : Form
         }
     }
 
-    private const int GWL_EXSTYLE       = -20;
+    private const int GWL_EXSTYLE = -20;
     private const int WS_EX_TRANSPARENT = 0x00000020;
-    private const int WS_EX_NOACTIVATE  = 0x08000000;
+    private const int WS_EX_NOACTIVATE = 0x08000000;
     private const int SW_SHOWNOACTIVATE = 4;
 
-    [DllImport("user32.dll")] static extern int    GetWindowLong(IntPtr h, int i);
-    [DllImport("user32.dll")] static extern int    SetWindowLong(IntPtr h, int i, int v);
-    [DllImport("user32.dll")] static extern bool   ShowWindow(IntPtr h, int cmd);
-    [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll")] static extern uint   GetWindowThreadProcessId(IntPtr h, out uint pid);
+    [DllImport("user32.dll")]
+    static extern int GetWindowLong(IntPtr h, int i);
+
+    [DllImport("user32.dll")]
+    static extern int SetWindowLong(IntPtr h, int i, int v);
+
+    [DllImport("user32.dll")]
+    static extern bool ShowWindow(IntPtr h, int cmd);
+
+    [DllImport("user32.dll")]
+    static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
 }

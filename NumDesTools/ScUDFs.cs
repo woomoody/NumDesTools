@@ -1182,7 +1182,8 @@ public class ExcelUdf
         var index2List = new List<int>();
         index2List.Add(-1);
         foreach (var lockItem in rangeObjLock)
-        {   if(lockItem is ExcelEmpty)
+        {
+            if (lockItem is ExcelEmpty)
             {
                 continue;
             }
@@ -2037,19 +2038,31 @@ public class ExcelUdf
         Category = "UDF-Alice专属函数",
         IsVolatile = true,
         IsMacroType = true,
-        Description = "LTE设计表：计算某层链的所需数量。" +
-                      "合成链：ceil((上层所需 - 非矿额外产出) × 2.5)，再扣除地图统计数。" +
-                      "采集链：ceil(上层所需 / 产出数量)，BY列矿数量仅作参考不参与计算。",
+        Description = "LTE设计表：计算某层链的所需数量。"
+            + "合成链：ceil((上层所需 - 非矿额外产出) × 2.5)，再扣除地图统计数。"
+            + "采集链：ceil(上层所需 / 产出数量)，BY列矿数量仅作参考不参与计算。",
         Name = "LteChainRequiredCount"
     )]
     public static double LteChainRequiredCount(
         [ExcelArgument(AllowReference = true, Description = "上层物品所需数量（本层需要满足的目标）", Name = "上层所需数量")]
             double upperNeeded,
-        [ExcelArgument(AllowReference = true, Description = "本层在地图上的统计数量（BY列），合成链时从结果中扣除", Name = "地图统计数量")]
+        [ExcelArgument(
+            AllowReference = true,
+            Description = "本层在地图上的统计数量（BY列），合成链时从结果中扣除",
+            Name = "地图统计数量"
+        )]
             double mapStatCount,
-        [ExcelArgument(AllowReference = true, Description = "非挖矿的额外产出（合成链时扣除，采集链填0）", Name = "非矿额外产出")]
+        [ExcelArgument(
+            AllowReference = true,
+            Description = "非挖矿的额外产出（合成链时扣除，采集链填0）",
+            Name = "非矿额外产出"
+        )]
             double nonMineExtra,
-        [ExcelArgument(AllowReference = true, Description = "true=合成链(×2.5)，false=采集链(÷产出量)", Name = "是否合成链")]
+        [ExcelArgument(
+            AllowReference = true,
+            Description = "true=合成链(×2.5)，false=采集链(÷产出量)",
+            Name = "是否合成链"
+        )]
             bool isMergeChain,
         [ExcelArgument(AllowReference = true, Description = "每次采集/生产的产出数量（合成链填1）", Name = "产出数量")]
             double outputQty
@@ -2059,14 +2072,17 @@ public class ExcelUdf
         {
             // 合成链：先扣非矿额外产出，乘2.5上取整，再扣地图已有
             double netNeeded = upperNeeded - nonMineExtra;
-            if (netNeeded <= 0) return 0;
+            if (netNeeded <= 0)
+                return 0;
             return Math.Max(0, Math.Ceiling(netNeeded * 2.5) - mapStatCount);
         }
         else
         {
             // 采集链：直接除以产出量上取整，地图矿数量不参与计算
-            if (outputQty <= 0) outputQty = 1;
-            if (upperNeeded <= 0) return 0;
+            if (outputQty <= 0)
+                outputQty = 1;
+            if (upperNeeded <= 0)
+                return 0;
             return Math.Ceiling(upperNeeded / outputQty);
         }
     }
@@ -2081,7 +2097,11 @@ public class ExcelUdf
     public static string BombOffsets(
         [ExcelArgument(AllowReference = true, Description = "炸弹点单元格", Name = "炸弹点")]
             object bombCell,
-        [ExcelArgument(AllowReference = true, Description = "true=过滤空单元格，false=空单元格也输出（默认）", Name = "过滤空值")]
+        [ExcelArgument(
+            AllowReference = true,
+            Description = "true=过滤空单元格，false=空单元格也输出（默认）",
+            Name = "过滤空值"
+        )]
             bool ignoreEmpty = false,
         [ExcelArgument(AllowReference = true, Description = "范围1", Name = "范围1")]
             object range1 = null,
@@ -2102,37 +2122,37 @@ public class ExcelUdf
     )
     {
         var bombRef = bombCell as ExcelReference;
-        if (bombRef == null) return "#炸弹点需为单元格引用";
+        if (bombRef == null)
+            return "#炸弹点需为单元格引用";
         int bombRow = bombRef.RowFirst;
         int bombCol = bombRef.ColumnFirst;
 
         var ranges = new[] { range1, range2, range3, range4, range5, range6, range7, range8 };
-        var areas = ranges
-            .Select(r => r as ExcelReference)
-            .Where(r => r != null)
-            .ToList();
-        if (areas.Count == 0) return "#至少需要一个范围";
+        var areas = ranges.Select(r => r as ExcelReference).Where(r => r != null).ToList();
+        if (areas.Count == 0)
+            return "#至少需要一个范围";
 
         var parts = new List<string>();
         foreach (var area in areas)
-        for (int r = area.RowFirst; r <= area.RowLast; r++)
-        for (int c = area.ColumnFirst; c <= area.ColumnLast; c++)
-        {
-            if (r == bombRow && c == bombCol) continue;
-
-            if (ignoreEmpty)
+            for (int r = area.RowFirst; r <= area.RowLast; r++)
+            for (int c = area.ColumnFirst; c <= area.ColumnLast; c++)
             {
-                var cellRef = new ExcelReference(r, r, c, c, area.SheetId);
-                var val = XlCall.Excel(XlCall.xlCoerce, cellRef);
-                if (val == null || val is ExcelEmpty || val is ExcelError) continue;
-            }
+                if (r == bombRow && c == bombCol)
+                    continue;
 
-            int dx = c - bombCol;
-            int dy = bombRow - r;   // 上为正，下为负
-            parts.Add($"[{dx},{dy}]");
-        }
+                if (ignoreEmpty)
+                {
+                    var cellRef = new ExcelReference(r, r, c, c, area.SheetId);
+                    var val = XlCall.Excel(XlCall.xlCoerce, cellRef);
+                    if (val == null || val is ExcelEmpty || val is ExcelError)
+                        continue;
+                }
+
+                int dx = c - bombCol;
+                int dy = bombRow - r; // 上为正，下为负
+                parts.Add($"[{dx},{dy}]");
+            }
 
         return "[" + Join(",", parts) + "]";
     }
-
 }

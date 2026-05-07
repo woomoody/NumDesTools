@@ -18,8 +18,12 @@ namespace NumDesTools.Advance
         private const string IndexFileName = "IdPrefixIndex.json";
 
         private static string IndexPath =>
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                         "NumDesTools", "Config", IndexFileName);
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "NumDesTools",
+                "Config",
+                IndexFileName
+            );
 
         // ── 持久化格式 ─────────────────────────────────────────────────────────
 
@@ -32,7 +36,8 @@ namespace NumDesTools.Advance
         private class IndexRoot
         {
             public int Version { get; set; } = 1;
-            public Dictionary<string, IndexEntry> Files { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+            public Dictionary<string, IndexEntry> Files { get; set; } =
+                new(StringComparer.OrdinalIgnoreCase);
         }
 
         // ── 公开 API ───────────────────────────────────────────────────────────
@@ -49,7 +54,8 @@ namespace NumDesTools.Advance
             foreach (var file in files)
             {
                 var name = Path.GetFileName(file);
-                if (name.StartsWith('#') || name.StartsWith('~')) continue;
+                if (name.StartsWith('#') || name.StartsWith('~'))
+                    continue;
 
                 var mtime = new FileInfo(file).LastWriteTimeUtc.Ticks;
                 if (root.Files.TryGetValue(name, out var entry) && entry.Mtime == mtime)
@@ -63,11 +69,18 @@ namespace NumDesTools.Advance
 
             // 清理已删除的文件
             var existingNames = new HashSet<string>(
-                files.Select(Path.GetFileName), StringComparer.OrdinalIgnoreCase);
+                files.Select(Path.GetFileName),
+                StringComparer.OrdinalIgnoreCase
+            );
             var toRemove = root.Files.Keys.Where(k => !existingNames.Contains(k)).ToList();
-            foreach (var k in toRemove) { root.Files.Remove(k); changed = true; }
+            foreach (var k in toRemove)
+            {
+                root.Files.Remove(k);
+                changed = true;
+            }
 
-            if (changed) Save(root);
+            if (changed)
+                Save(root);
         }
 
         /// <summary>
@@ -83,8 +96,10 @@ namespace NumDesTools.Advance
                 foreach (var p in entry.Prefixes)
                 {
                     // activityId 以 p 开头（p 是短前缀），或 p 以 activityId 开头（activityId 更长）
-                    if (activityId.StartsWith(p, StringComparison.Ordinal) ||
-                        p.StartsWith(activityId, StringComparison.Ordinal))
+                    if (
+                        activityId.StartsWith(p, StringComparison.Ordinal)
+                        || p.StartsWith(activityId, StringComparison.Ordinal)
+                    )
                     {
                         result.Add(name);
                         break;
@@ -110,19 +125,21 @@ namespace NumDesTools.Advance
                 // 遍历所有 worksheet
                 foreach (var sheet in pkg.Workbook.Worksheets)
                 {
-                    if (sheet.Dimension == null) continue;
+                    if (sheet.Dimension == null)
+                        continue;
                     var endRow = sheet.Dimension.End.Row;
                     // 第2列，从第3行起（跳过类型行和表头行）
                     for (int row = 3; row <= endRow; row++)
                     {
                         var val = sheet.Cells[row, 2].Value;
-                        if (val == null) continue;
-                        var str = val is double d
-                            ? ((long)d).ToString()
-                            : val.ToString()!.Trim();
-                        if (str.Length < 4) continue;
+                        if (val == null)
+                            continue;
+                        var str = val is double d ? ((long)d).ToString() : val.ToString()!.Trim();
+                        if (str.Length < 4)
+                            continue;
                         // 必须是纯数字
-                        if (!IsAllDigits(str)) continue;
+                        if (!IsAllDigits(str))
+                            continue;
                         var prefix = str.Length >= PrefixLen ? str[..PrefixLen] : str;
                         seen.Add(prefix);
                     }
@@ -137,25 +154,35 @@ namespace NumDesTools.Advance
 
         private static bool IsAllDigits(string s)
         {
-            foreach (var c in s) if (!char.IsDigit(c)) return false;
+            foreach (var c in s)
+                if (!char.IsDigit(c))
+                    return false;
             return s.Length > 0;
         }
 
         private static IndexRoot Load()
         {
-            if (!File.Exists(IndexPath)) return new IndexRoot();
+            if (!File.Exists(IndexPath))
+                return new IndexRoot();
             try
             {
                 var json = File.ReadAllText(IndexPath);
-                return Newtonsoft.Json.JsonConvert.DeserializeObject<IndexRoot>(json) ?? new IndexRoot();
+                return Newtonsoft.Json.JsonConvert.DeserializeObject<IndexRoot>(json)
+                    ?? new IndexRoot();
             }
-            catch { return new IndexRoot(); }
+            catch
+            {
+                return new IndexRoot();
+            }
         }
 
         private static void Save(IndexRoot root)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(IndexPath)!);
-            var json = Newtonsoft.Json.JsonConvert.SerializeObject(root, Newtonsoft.Json.Formatting.Indented);
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(
+                root,
+                Newtonsoft.Json.Formatting.Indented
+            );
             File.WriteAllText(IndexPath, json);
         }
     }

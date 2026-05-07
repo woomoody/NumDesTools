@@ -8,8 +8,6 @@ public class Lua2Excel
 {
     public static void LuaDataGet()
     {
-        
-
         var files = Directory.GetFiles(@"C:\Users\cent\Desktop\Merge2Data", "*.lua.txt");
         var excelFilePath = @"C:\Users\cent\Desktop\Merge2Data\Excel";
         var errorLogLua = string.Empty;

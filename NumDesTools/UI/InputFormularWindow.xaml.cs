@@ -19,10 +19,24 @@ namespace NumDesTools.UI
 
             foreach (string str in strings)
             {
-                StackPanel panel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(0, 5, 0, 5) };
+                StackPanel panel = new StackPanel
+                {
+                    Orientation = Orientation.Vertical,
+                    Margin = new Thickness(0, 5, 0, 5)
+                };
 
-                TextBlock textBlock = new TextBlock { Text = $"错误链接：{str}", Width = 450, TextWrapping = TextWrapping.Wrap };
-                TextBox textBox = new TextBox { Width = 450, Margin = new Thickness(0, 5, 0, 0), Text = str };
+                TextBlock textBlock = new TextBlock
+                {
+                    Text = $"错误链接：{str}",
+                    Width = 450,
+                    TextWrapping = TextWrapping.Wrap
+                };
+                TextBox textBox = new TextBox
+                {
+                    Width = 450,
+                    Margin = new Thickness(0, 5, 0, 0),
+                    Text = str
+                };
 
                 panel.Children.Add(textBlock);
                 panel.Children.Add(textBox);
@@ -41,9 +55,11 @@ namespace NumDesTools.UI
             DialogResult = true;
             Close();
         }
-    private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
-    {
-        if (e.Key == System.Windows.Input.Key.Escape) Close();
-    }
+
+        private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Escape)
+                Close();
+        }
     }
 }

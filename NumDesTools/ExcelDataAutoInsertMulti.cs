@@ -1,7 +1,7 @@
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 
 #pragma warning disable CA1416
 
@@ -313,7 +313,14 @@ public static class ExcelDataAutoInsertMulti
                         out excelNew
                     );
 
-                    writeIdList = ExcelDataWriteIdGroup(excelName, addValue, sheetNew, fixKey, modelId); ;
+                    writeIdList = ExcelDataWriteIdGroup(
+                        excelName,
+                        addValue,
+                        sheetNew,
+                        fixKey,
+                        modelId
+                    );
+                    ;
                     writeRow = writeIdList.Item2;
 
                     if (writeRow != -1)
@@ -326,7 +333,6 @@ public static class ExcelDataAutoInsertMulti
 
                     errorExcelLog = excelName + "#找不到" + writeIdList.Item1[0];
                     errorList.Add((excelName, errorExcelLog, excelName));
-
                 }
             }
             else
@@ -335,7 +341,6 @@ public static class ExcelDataAutoInsertMulti
                 errorList.Add((excelName, errorExcelLog, excelName));
                 return errorList;
             }
-
         }
 
         for (var excelMulti = 0; excelMulti < modelId[excelName].Count; excelMulti++)
@@ -585,8 +590,13 @@ public static class ExcelDataAutoInsertMulti
 
                             for (var j = startCol; j < endCol; j++)
                             {
-                                var cellSource = sheetModel.Cells[startRowSource + j, excelFileFixKey];
-                                var cellCol = sheetModel.Cells[2, excelFileFixKey].Value?.ToString();
+                                var cellSource = sheetModel.Cells[
+                                    startRowSource + j,
+                                    excelFileFixKey
+                                ];
+                                var cellCol = sheetModel
+                                    .Cells[2, excelFileFixKey]
+                                    .Value?.ToString();
                                 var cellFix = sheet.Cells[writeRow + j + 1, excelFileFixKey];
                                 var rowId = sheet.Cells[startRowSource + j, 2];
 

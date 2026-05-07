@@ -78,7 +78,12 @@ public static class CompareExcel
                     if (!sheetName.Contains("#"))
                     {
                         var baseSheet = MiniExcel
-                            .Query(baseFile, useHeaderRow: true, startCell: "A2", sheetName: sheetName)
+                            .Query(
+                                baseFile,
+                                useHeaderRow: true,
+                                startCell: "A2",
+                                sheetName: sheetName
+                            )
                             .ToList();
 
                         var targetSheet = MiniExcel
@@ -217,7 +222,6 @@ public static class CompareExcel
                         { "对比表行", "" },
                         { "旧值", "" },
                         { "新值", "" }
-
                     }
                 );
             }

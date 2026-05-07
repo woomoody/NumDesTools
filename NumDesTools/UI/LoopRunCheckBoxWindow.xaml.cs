@@ -100,9 +100,11 @@ namespace NumDesTools.UI
             SelectedList = selectedNumbers;
             Dispatcher.Invoke(Close); // 确保在 UI 线程上调用 Close 方法
         }
-    private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
-    {
-        if (e.Key == System.Windows.Input.Key.Escape) Close();
-    }
+
+        private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Escape)
+                Close();
+        }
     }
 }

@@ -2,9 +2,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using NumDesTools.ExcelToLua;
-using Border   = System.Windows.Controls.Border;
+using Border = System.Windows.Controls.Border;
 using CheckBox = System.Windows.Controls.CheckBox;
-using Window   = System.Windows.Window;
+using Window = System.Windows.Window;
 
 namespace NumDesTools.UI;
 
@@ -28,7 +28,7 @@ public partial class GitExportSelectWindow : Window
     {
         InitializeComponent();
         _repoBasePath = repoBasePath;
-        _gitAuthor    = gitAuthor;
+        _gitAuthor = gitAuthor;
         Loaded += (_, _) =>
         {
             AuthorText.Text = string.IsNullOrEmpty(gitAuthor) ? "（未知）" : gitAuthor;
@@ -56,8 +56,8 @@ public partial class GitExportSelectWindow : Window
 
     private List<FileEntry> BuildEntries()
     {
-        var seen  = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var list  = new List<FileEntry>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var list = new List<FileEntry>();
 
         // 工作区 + 暂存
         var gitFiles = SvnGitTools.GitDiffAndStagedFiles(_repoBasePath);
@@ -72,11 +72,20 @@ public partial class GitExportSelectWindow : Window
         {
             try
             {
-                var historyFiles = SvnGitTools.GetRecentAuthorCommitFiles(_repoBasePath, _gitAuthor, _commitCount);
+                var historyFiles = SvnGitTools.GetRecentAuthorCommitFiles(
+                    _repoBasePath,
+                    _gitAuthor,
+                    _commitCount
+                );
                 foreach (var f in historyFiles)
                 {
                     if (IsExportable(f))
-                        list.Add(new FileEntry(f, seen.Add(f) ? $"历史×{_commitCount}" : $"历史×{_commitCount}(已含)"));
+                        list.Add(
+                            new FileEntry(
+                                f,
+                                seen.Add(f) ? $"历史×{_commitCount}" : $"历史×{_commitCount}(已含)"
+                            )
+                        );
                 }
             }
             catch (Exception ex)
@@ -94,9 +103,11 @@ public partial class GitExportSelectWindow : Window
         return !name.Contains('#')
             && !name.Contains('~')
             && !path.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase)
-            && !path.EndsWith(".xll",  StringComparison.OrdinalIgnoreCase)
-            && (path.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
-             || path.EndsWith(".xls",  StringComparison.OrdinalIgnoreCase));
+            && !path.EndsWith(".xll", StringComparison.OrdinalIgnoreCase)
+            && (
+                path.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(".xls", StringComparison.OrdinalIgnoreCase)
+            );
     }
 
     private static Border MakeFileRow(FileEntry entry)
@@ -106,52 +117,61 @@ public partial class GitExportSelectWindow : Window
         var cb = new CheckBox
         {
             IsChecked = !isAlreadyContained,
-            Tag       = entry.Path,
-            Margin    = new Thickness(0),
+            Tag = entry.Path,
+            Margin = new Thickness(0),
         };
 
-        var sourceColor = entry.Source.StartsWith("历史") ? "#88CCFF"
-                        : entry.Source == "指定提交"     ? "#FFD080"
-                        : "#88FF88";
+        var sourceColor = entry.Source.StartsWith("历史")
+            ? "#88CCFF"
+            : entry.Source == "指定提交"
+                ? "#FFD080"
+                : "#88FF88";
         var sourceBrush = new SolidColorBrush(
-            (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(sourceColor));
+            (System.Windows.Media.Color)
+                System.Windows.Media.ColorConverter.ConvertFromString(sourceColor)
+        );
 
         var badge = new Border
         {
-            Background    = new SolidColorBrush(
-                (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(
-                    entry.Source.StartsWith("历史") ? "#1A3A6E"
-                    : entry.Source == "指定提交"    ? "#3A2800"
-                    : "#1A3A1A")),
-            CornerRadius  = new CornerRadius(3),
-            Padding       = new Thickness(4, 1, 4, 1),
-            Margin        = new Thickness(6, 0, 0, 0),
+            Background = new SolidColorBrush(
+                (System.Windows.Media.Color)
+                    System.Windows.Media.ColorConverter.ConvertFromString(
+                        entry.Source.StartsWith("历史")
+                            ? "#1A3A6E"
+                            : entry.Source == "指定提交"
+                                ? "#3A2800"
+                                : "#1A3A1A"
+                    )
+            ),
+            CornerRadius = new CornerRadius(3),
+            Padding = new Thickness(4, 1, 4, 1),
+            Margin = new Thickness(6, 0, 0, 0),
         };
         badge.Child = new TextBlock
         {
-            Text       = entry.Source,
+            Text = entry.Source,
             Foreground = sourceBrush,
-            FontSize   = 9,
+            FontSize = 9,
         };
 
         var nameText = new TextBlock
         {
-            Text      = System.IO.Path.GetFileName(entry.Path),
+            Text = System.IO.Path.GetFileName(entry.Path),
             Foreground = isAlreadyContained
                 ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x66, 0x66, 0x66))
                 : System.Windows.Media.Brushes.White,
-            FontSize  = 11,
+            FontSize = 11,
             VerticalAlignment = VerticalAlignment.Center,
-            ToolTip   = entry.Path,
-            Margin    = new Thickness(6, 0, 0, 0),
-            MaxWidth  = 360,
+            ToolTip = entry.Path,
+            Margin = new Thickness(6, 0, 0, 0),
+            MaxWidth = 360,
             TextTrimming = TextTrimming.CharacterEllipsis,
         };
 
         var panel = new StackPanel
         {
             Orientation = System.Windows.Controls.Orientation.Horizontal,
-            Margin      = new Thickness(4, 2, 4, 2),
+            Margin = new Thickness(4, 2, 4, 2),
         };
         panel.Children.Add(cb);
         panel.Children.Add(nameText);
@@ -159,12 +179,12 @@ public partial class GitExportSelectWindow : Window
 
         var border = new Border
         {
-            BorderBrush     = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2A, 0x2A, 0x2A)),
+            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2A, 0x2A, 0x2A)),
             BorderThickness = new Thickness(0, 0, 0, 1),
-            Child           = panel,
+            Child = panel,
         };
 
-        cb.Checked   += (_, _) => UpdateCount(border.Parent as StackPanel ?? FileListPanel_Static);
+        cb.Checked += (_, _) => UpdateCount(border.Parent as StackPanel ?? FileListPanel_Static);
         cb.Unchecked += (_, _) => UpdateCount(border.Parent as StackPanel ?? FileListPanel_Static);
 
         return border;
@@ -176,7 +196,7 @@ public partial class GitExportSelectWindow : Window
     private void UpdateCountLabel()
     {
         FileListPanel_Static = FileListPanel;
-        int total   = FileListPanel.Children.Count;
+        int total = FileListPanel.Children.Count;
         int checked_ = CountChecked();
         FileCountText.Text = $"共 {total} 个文件，已选 {checked_} 个";
     }
@@ -185,7 +205,8 @@ public partial class GitExportSelectWindow : Window
     {
         // 触发器：直接从 parent window 的 FileCountText 更新
         // 通过遍历 visual tree 找到 window
-        if (panel == null) return;
+        if (panel is null)
+            return;
         var win = Window.GetWindow(panel) as GitExportSelectWindow;
         win?.UpdateCountLabel();
     }
@@ -220,14 +241,16 @@ public partial class GitExportSelectWindow : Window
 
     private void Mode_Changed(object sender, RoutedEventArgs e)
     {
-        if (HistoryPanel == null) return;
+        if (HistoryPanel is null)
+            return;
         bool historyOn = ModeWithHistory.IsChecked == true;
-        bool commitOn  = ModeSpecificCommit.IsChecked == true;
-        HistoryPanel.IsEnabled     = historyOn;
+        bool commitOn = ModeSpecificCommit.IsChecked == true;
+        HistoryPanel.IsEnabled = historyOn;
         HistoryAuthorRow.IsEnabled = historyOn;
-        CommitPickPanel.IsEnabled  = commitOn;
+        CommitPickPanel.IsEnabled = commitOn;
 
-        if (!commitOn) RefreshFileList();
+        if (!commitOn)
+            RefreshFileList();
         // 指定提交模式：等用户选择后再刷新，不自动刷新
     }
 
@@ -236,10 +259,11 @@ public partial class GitExportSelectWindow : Window
         try
         {
             var commits = SvnGitTools.GetCommitList(_repoBasePath, 50);
-            CommitCombo.ItemsSource = commits.Select(c =>
-                new CommitItem(
+            CommitCombo.ItemsSource = commits
+                .Select(c => new CommitItem(
                     $"{c.ShortSha}  {c.When:MM-dd HH:mm}  [{c.Author}]  {c.Message}",
-                    c.Sha))
+                    c.Sha
+                ))
                 .ToList();
             CommitCombo.SelectedIndex = 0;
         }
@@ -249,14 +273,21 @@ public partial class GitExportSelectWindow : Window
         }
     }
 
-    private void CommitCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    private void CommitCombo_SelectionChanged(
+        object sender,
+        System.Windows.Controls.SelectionChangedEventArgs e
+    )
     {
-        if (ModeSpecificCommit.IsChecked != true) return;
-        if (CommitCombo.SelectedItem is not CommitItem item) return;
+        if (ModeSpecificCommit.IsChecked != true)
+            return;
+        if (CommitCombo.SelectedItem is not CommitItem item)
+            return;
         try
         {
-            var files = SvnGitTools.GetCommitFiles(_repoBasePath, item.Sha)
-                .Where(IsExportable).ToList();
+            var files = SvnGitTools
+                .GetCommitFiles(_repoBasePath, item.Sha)
+                .Where(IsExportable)
+                .ToList();
 
             FileListPanel.Children.Clear();
             _entries = files.Select(f => new FileEntry(f, "指定提交")).ToList();
@@ -272,16 +303,20 @@ public partial class GitExportSelectWindow : Window
 
     private void IncCommitCount_Click(object sender, RoutedEventArgs e)
     {
-        if (_commitCount < 20) _commitCount++;
+        if (_commitCount < 20)
+            _commitCount++;
         CommitCountText.Text = _commitCount.ToString();
-        if (ModeWithHistory.IsChecked == true) RefreshFileList();
+        if (ModeWithHistory.IsChecked == true)
+            RefreshFileList();
     }
 
     private void DecCommitCount_Click(object sender, RoutedEventArgs e)
     {
-        if (_commitCount > 1) _commitCount--;
+        if (_commitCount > 1)
+            _commitCount--;
         CommitCountText.Text = _commitCount.ToString();
-        if (ModeWithHistory.IsChecked == true) RefreshFileList();
+        if (ModeWithHistory.IsChecked == true)
+            RefreshFileList();
     }
 
     private void Refresh_Click(object sender, RoutedEventArgs e)
@@ -292,7 +327,8 @@ public partial class GitExportSelectWindow : Window
             RefreshFileList();
     }
 
-    private void SelectAll_Checked(object sender, RoutedEventArgs e)   => SetAllChecked(true);
+    private void SelectAll_Checked(object sender, RoutedEventArgs e) => SetAllChecked(true);
+
     private void SelectAll_Unchecked(object sender, RoutedEventArgs e) => SetAllChecked(false);
 
     private void SetAllChecked(bool value)
@@ -300,20 +336,22 @@ public partial class GitExportSelectWindow : Window
         foreach (var child in FileListPanel.Children)
             if (child is Border b && b.Child is StackPanel sp)
                 foreach (var c in sp.Children)
-                    if (c is CheckBox cb) cb.IsChecked = value;
+                    if (c is CheckBox cb)
+                        cb.IsChecked = value;
     }
 
     private void Export_Click(object sender, RoutedEventArgs e)
     {
         SelectedPaths = GetCheckedPaths();
-        DialogResult  = true;
+        DialogResult = true;
         Close();
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
+
     private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        if (e.Key == System.Windows.Input.Key.Escape) Close();
+        if (e.Key == System.Windows.Input.Key.Escape)
+            Close();
     }
-
 }

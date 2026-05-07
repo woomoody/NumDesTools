@@ -94,31 +94,24 @@ public class NumDesCTP
                         var sheetName = listBoxSheet.Items[e.Index].ToString();
                         var sheet = excelApp.Sheets[sheetName] as Worksheet;
                         var isHidden = sheet is { Visible: XlSheetVisibility.xlSheetHidden };
-                        if (e.Font != null)
+                        if (e.Font is not null)
                         {
-                            // ReSharper disable PossibleLossOfFraction
+                            // ReSharper disable once PossibleLossOfFraction
                             float verticalOffset = (e.Bounds.Height - e.Font.Height) / 2;
-                            // ReSharper restore PossibleLossOfFraction
-                            if (e.Font is not null)
-                            {
-                                var font = isHidden
-                                    ? new Font(e.Font, FontStyle.Italic)
-                                    : e.Font;
-                                Brush brush = new SolidBrush(e.ForeColor);
-                                if (e.Font != null)
-                                    e.Graphics.DrawString(
-                                        sheetName,
-                                        font,
-                                        brush,
-                                        new RectangleF(
-                                            e.Bounds.X,
-                                            e.Bounds.Y + verticalOffset,
-                                            e.Bounds.Width,
-                                            e.Bounds.Height
-                                        ),
-                                        StringFormat.GenericDefault
-                                    );
-                            }
+                            var font = isHidden ? new Font(e.Font, FontStyle.Italic) : e.Font;
+                            Brush brush = new SolidBrush(e.ForeColor);
+                            e.Graphics.DrawString(
+                                sheetName,
+                                font,
+                                brush,
+                                new RectangleF(
+                                    e.Bounds.X,
+                                    e.Bounds.Y + verticalOffset,
+                                    e.Bounds.Width,
+                                    e.Bounds.Height
+                                ),
+                                StringFormat.GenericDefault
+                            );
                         }
 
                         e.DrawFocusRectangle();
@@ -176,7 +169,7 @@ public class NumDesCTP
                 }
             }
 
-            if (elementHost != null)
+            if (elementHost is not null)
                 elementHost.Child = controlWPF;
 
             PluginLog.Verbose($"[ShowCTP] Visible=true (reuse)");
@@ -185,8 +178,8 @@ public class NumDesCTP
         return controlWPF;
     }
 
-    public static bool TryGetCTP(string name, out CustomTaskPane pane)
-        => ctpsWPF.TryGetValue(name, out pane);
+    public static bool TryGetCTP(string name, out CustomTaskPane pane) =>
+        ctpsWPF.TryGetValue(name, out pane);
 
     public static void DeleteCTP(bool isWPF, string name)
     {

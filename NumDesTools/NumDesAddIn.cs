@@ -59,9 +59,9 @@ namespace NumDesTools;
 [ComVisible(true)]
 public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 {
-    public const int LONG_TEXT_THRESHOLD = 50;
-    public const int MAX_LINE_LENGTH = 50;
-    public const int CLICK_DELAY_MS = 500;
+    public const int LongTextThreshold = 50;
+    public const int MaxLineLength = 50;
+    public const int ClickDelayMs = 500;
     public static GlobalVariable GlobalValue = new();
     public static string LabelText = GlobalValue.Value["LabelText"];
     public static string FocusLabelText = GlobalValue.Value["FocusLabelText"];
@@ -303,11 +303,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ActivityTestAll"] = ActivityTestAll_Click,
             ["ActivityTestById"] = ActivityTestById_Click,
             ["ActivityTestGitChanged"] = ActivityTestGitChanged_Click,
-["ActivityRulesUpdateButton"] = ActivityRulesUpdate_Click,
-            ["ExcelConflictGit"]     = _ => ExcelConflictEntry.OpenGitConflict(),
-            ["ExcelConflictManual"]  = _ => ExcelConflictEntry.OpenManualCompare(),
+            ["ActivityRulesUpdateButton"] = ActivityRulesUpdate_Click,
+            ["ExcelConflictGit"] = _ => ExcelConflictEntry.OpenGitConflict(),
+            ["ExcelConflictManual"] = _ => ExcelConflictEntry.OpenManualCompare(),
             ["ExcelConflictHistory"] = _ => ExcelConflictEntry.OpenGitHistory(),
-            ["HelpButton"]           = _ => new NumDesTools.UI.HelpWindow().Show()
+            ["HelpButton"] = _ => new NumDesTools.UI.HelpWindow().Show()
         };
     }
 
@@ -318,7 +318,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         // 防抖检查（500ms内不重复处理）
         if (
             _lastClickTimes.TryGetValue(control.Id, out var lastTime)
-            && (DateTime.Now - lastTime).TotalMilliseconds < CLICK_DELAY_MS
+            && (DateTime.Now - lastTime).TotalMilliseconds < ClickDelayMs
         )
         {
             PluginLog.Verbose($"{control.Id}1s内有2+次点击，不响应");
@@ -438,8 +438,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         if (isCheckOut)
         {
-            var xllBuildTime = File.GetLastWriteTime(ExcelDnaUtil.XllPath).ToString("yyyy-MM-dd HH:mm:ss");
-            PluginLog.Write($"[NumDesTools] xll loaded  build={xllBuildTime}  path={ExcelDnaUtil.XllPath}");
+            var xllBuildTime = File.GetLastWriteTime(ExcelDnaUtil.XllPath)
+                .ToString("yyyy-MM-dd HH:mm:ss");
+            PluginLog.Write(
+                $"[NumDesTools] xll loaded  build={xllBuildTime}  path={ExcelDnaUtil.XllPath}"
+            );
 
             //注册智能感应
             IntelliSenseServer.Install();
@@ -778,13 +781,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private const string BatchReplaceCtpName = "批量替换";
 
     // Ribbon 按钮入口（IRibbonControl 上下文可正确创建 CTP）
-    public void BatchReplaceInSelection_Click(IRibbonControl control)
-        => BatchReplaceInSelectionCore();
+    public void BatchReplaceInSelection_Click(IRibbonControl control) =>
+        BatchReplaceInSelectionCore();
 
     // Ctrl+Alt+H 快捷键入口
     [ExcelCommand(ShortCut = "^%h")]
-    public static void BatchReplaceInSelection()
-        => ExcelAsyncUtil.QueueAsMacro(BatchReplaceInSelectionCore);
+    public static void BatchReplaceInSelection() =>
+        ExcelAsyncUtil.QueueAsMacro(BatchReplaceInSelectionCore);
 
     private static void BatchReplaceInSelectionCore()
     {
@@ -811,11 +814,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     foreach (Range cell in sel.Cells)
                     {
                         var val = cell.Value2?.ToString();
-                        if (string.IsNullOrEmpty(val)) continue;
+                        if (string.IsNullOrEmpty(val))
+                            continue;
                         var newVal = val;
                         foreach (var (from, to) in rules)
                             newVal = newVal.Replace(from, to);
-                        if (newVal != val) { cell.Value2 = newVal; changed++; }
+                        if (newVal != val)
+                        {
+                            cell.Value2 = newVal;
+                            changed++;
+                        }
                     }
                     var msg = $"替换完成：{changed} 个单元格已更新";
                     App.StatusBar = msg;
@@ -1184,7 +1192,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         List<(string, int, int, string, string)> sourceData = new();
 
         // 只检测工程配置路径
-        if(!wkFullPath.Contains(@"\Excels\"))
+        if (!wkFullPath.Contains(@"\Excels\"))
         {
             return;
         }
@@ -1342,7 +1350,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                             {
                                 for (int i = 1; i <= usedColMax; i++)
                                 {
-                                    var filedValue = (sheet.Cells[2, i] as Range)?.Value2?.ToString();
+                                    var filedValue = (
+                                        sheet.Cells[2, i] as Range
+                                    )?.Value2?.ToString();
                                     if (string.IsNullOrEmpty(filedValue))
                                     {
                                         var colName = PubMetToExcel.ConvertToExcelColumn(i);
@@ -2451,13 +2461,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var targetList = merged
             .ToDictionary(
                 kv => kv.Key,
-                kv => {
+                kv =>
+                {
                     var sorted = kv.Value.OrderBy(v => v, StringComparer.Ordinal).ToList();
                     return sorted.Count > 1
                         ? new List<string> { sorted.First(), sorted.Last() }
                         : new List<string> { sorted.First(), sorted.First() };
                 },
-                StringComparer.Ordinal)
+                StringComparer.Ordinal
+            )
             .OrderBy(x => x.Key, StringComparer.Ordinal)
             .ToDictionary(x => x.Key, x => x.Value);
 
@@ -2608,7 +2620,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (win.ShowDialog() != true || win.SelectedPaths == null || win.SelectedPaths.Count == 0)
             return;
 
-        var fileList  = win.SelectedPaths;
+        var fileList = win.SelectedPaths;
         var countFile = 0;
         foreach (var path in fileList)
         {
@@ -3190,7 +3202,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var ws = wk.ActiveSheet;
         var formula = "=EXACT(A1,";
-        
+
         if (wk.Name.Contains("A大型活动") || wk.Name.Contains("【A-LTE】配置模版"))
             if (ws.Name.Contains("【设计】"))
             {
@@ -3470,20 +3482,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     #endregion
 
-    public void ActivityTestAll_Click(IRibbonControl control)
-        => ActivityConfigTester.TestAll();
+    public void ActivityTestAll_Click(IRibbonControl control) => ActivityConfigTester.TestAll();
 
     public void ActivityTestById_Click(IRibbonControl control)
     {
-        var input = Microsoft.VisualBasic.Interaction.InputBox(
-            "请输入活动ID（多个用英文逗号分隔）：", "验证指定活动");
-        if (string.IsNullOrWhiteSpace(input)) return;
+        var input = Microsoft.VisualBasic.Interaction.InputBox("请输入活动ID（多个用英文逗号分隔）：", "验证指定活动");
+        if (string.IsNullOrWhiteSpace(input))
+            return;
         ActivityConfigTester.TestByIds(input);
     }
 
-    public void ActivityTestGitChanged_Click(IRibbonControl control)
-        => ActivityConfigTester.TestGitChanged();
+    public void ActivityTestGitChanged_Click(IRibbonControl control) =>
+        ActivityConfigTester.TestGitChanged();
 
-public void ActivityRulesUpdate_Click(IRibbonControl control)
-        => ActivityRulesUpdater.Run();
+    public void ActivityRulesUpdate_Click(IRibbonControl control) => ActivityRulesUpdater.Run();
 }
