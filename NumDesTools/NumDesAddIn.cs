@@ -162,7 +162,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         CustomRibbon.ActivateTab("MainTab");
 
         if (FocusLabelText == "聚光灯：开启")
-            CrosslightController.Enable(App);
+        {
+            var mode = GlobalValue.Value.TryGetValue("SpotlightMode", out var m) ? m : "overlay";
+            CrosslightController.Enable(App, mode == "fill");
+        }
     }
 
     public override string GetCustomUI(string ribbonId)
@@ -226,7 +229,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             "Button5" => LabelText,
             "Button14" => LabelTextRoleDataPreview,
-            "FocusLightButton" => FocusLabelText,
+            "FocusLightMenu" => FocusLabelText,
             "SheetMenu" => SheetMenuText,
             "CellHiLight" => CellHiLightText,
             "CheckSheetValue" => CheckSheetValueText,
@@ -247,7 +250,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             ["Button4"] = CleanCellFormat_Click,
             ["Button5"] = ZoomInOut_Click,
-            ["FocusLightButton"] = FocusLight_Click,
+            ["FocusLightButton"] = FocusLightOverlay_Click,
+            ["FocusLightFillButton"] = FocusLightFill_Click,
             ["Button8"] = FormularBaseCheck_Click,
             ["SheetMenu"] = SheetMenu_Click,
             ["CellHiLight"] = CellHiLight_Click,
@@ -3121,17 +3125,38 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             CellSelectChangeTip.Disable();
     }
 
-    public void FocusLight_Click(IRibbonControl control)
+    public void FocusLightOverlay_Click(IRibbonControl control)
     {
         if (control == null)
             throw new ArgumentNullException(nameof(control));
-        FocusLabelText = FocusLabelText == "聚光灯：开启" ? "聚光灯：关闭" : "聚光灯：开启";
-        CustomRibbon.InvalidateControl("FocusLightButton");
-        if (FocusLabelText == "聚光灯：开启")
-            CrosslightController.Enable(App);
-        else
-            CrosslightController.Disable();
+        ToggleFocusLight("overlay");
+    }
 
+    public void FocusLightFill_Click(IRibbonControl control)
+    {
+        if (control == null)
+            throw new ArgumentNullException(nameof(control));
+        ToggleFocusLight("fill");
+    }
+
+    private void ToggleFocusLight(string mode)
+    {
+        var currentMode = GlobalValue.Value.TryGetValue("SpotlightMode", out var m) ? m : "overlay";
+        bool turningOn = FocusLabelText != "聚光灯：开启" || currentMode != mode;
+
+        if (turningOn)
+        {
+            FocusLabelText = "聚光灯：开启";
+            GlobalValue.SaveValue("SpotlightMode", mode);
+            CrosslightController.Enable(App, mode == "fill");
+        }
+        else
+        {
+            FocusLabelText = "聚光灯：关闭";
+            CrosslightController.Disable();
+        }
+
+        CustomRibbon.InvalidateControl("FocusLightMenu");
         GlobalValue.SaveValue("FocusLabelText", FocusLabelText);
     }
 
@@ -3199,31 +3224,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         CellHiLightText = CellHiLightText == "高亮单元格：开启" ? "高亮单元格：关闭" : "高亮单元格：开启";
         CustomRibbon.InvalidateControl("CellHiLight");
 
-        var wk = App.ActiveWorkbook;
-        var ws = wk.ActiveSheet;
-        var formula = "=EXACT(A1,";
-
-        if (wk.Name.Contains("A大型活动") || wk.Name.Contains("【A-LTE】配置模版"))
-            if (ws.Name.Contains("【设计】"))
-            {
-                //var usedRange = ws.UsedRange;
-                //太破坏原有格式
-                //App.ScreenUpdating = false;
-                //foreach (Range cell in usedRange)
-                //{
-                //    cell.Interior.ColorIndex = XlColorIndex.xlColorIndexNone; // 清除高亮
-                //}
-                //App.ScreenUpdating = true;
-                if (CellHiLightText == "高亮单元格：开启")
-                {
-                    App.SheetSelectionChange += RepeatValueCal;
-                }
-                else
-                {
-                    ConditionFormat.Delete(ws, formula);
-                    App.SheetSelectionChange -= RepeatValueCal;
-                }
-            }
+        if (CellHiLightText == "高亮单元格：开启")
+            CellHighlightController.Enable(App);
+        else
+            CellHighlightController.Disable();
 
         GlobalValue.SaveValue("CellHiLightText", CellHiLightText);
     }
@@ -3397,7 +3401,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         CustomRibbon.InvalidateControl("Button5");
         CustomRibbon.InvalidateControl("Button14");
-        CustomRibbon.InvalidateControl("FocusLightButton");
+        CustomRibbon.InvalidateControl("FocusLightMenu");
         CustomRibbon.InvalidateControl("SheetMenu");
         CustomRibbon.InvalidateControl("CellHiLight");
         CustomRibbon.InvalidateControl("CheckSheetValue");
@@ -3463,22 +3467,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
     }
 
-    private void RepeatValueCal(object sh, Range target)
-    {
-        var wk = App.ActiveWorkbook;
-        var ws = wk.ActiveSheet;
-        var formula = "=EXACT(A1,";
-        if (wk.Name.Contains("A大型活动") || wk.Name.Contains("【A-LTE】配置模版"))
-        {
-            if (ws.Name.Contains("【设计】"))
-            {
-                ConditionFormat.Delete(ws, formula);
-                var rangeAddress = target.Address;
-                ConditionFormat.Add(ws, formula + rangeAddress + ")");
-                ws.Calculate();
-            }
-        }
-    }
 
     #endregion
 
