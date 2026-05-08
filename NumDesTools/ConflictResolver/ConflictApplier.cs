@@ -235,5 +235,29 @@ public static class ConflictApplier
         var relativePath = Path.GetRelativePath(repoRoot, filePath).Replace('\\', '/');
         repo.Index.Add(relativePath);
         repo.Index.Write();
+        AppendMergeMsg(repoRoot, Path.GetFileName(filePath));
+    }
+
+    // 把解决的文件名追加到 MERGE_MSG，SmartGit 提交对话框会自动读取
+    private static void AppendMergeMsg(string repoRoot, string fileName)
+    {
+        try
+        {
+            var mergeMsgPath = Path.Combine(repoRoot, ".git", "MERGE_MSG");
+            if (!File.Exists(mergeMsgPath))
+                return;
+
+            var existing = File.ReadAllText(mergeMsgPath);
+            var marker = "#解决冲突（NumDesTools）:";
+            var line = $"{marker} {fileName}";
+
+            // 已经记录过这个文件则跳过
+            if (existing.Contains(line))
+                return;
+
+            // 追加到末尾（保留原 merge commit message 不变）
+            File.AppendAllText(mergeMsgPath, $"\n{line}");
+        }
+        catch { }
     }
 }
