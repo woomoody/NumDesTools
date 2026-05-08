@@ -557,176 +557,215 @@ public class LteData
 
                 var writeCol = targetSheet.Dimension.End.Column;
 
-                var exportWildcardDyData = new Dictionary<string, string>(exportWildcardData);
-
-                bool dataWritten = false; // 标志是否有实际写入
-
-                var dataRepeatWritten = new HashSet<string>();
-
-                for (int idCount = 0; idCount < idList.Count; idCount++)
+                // 预读标题行和类型行，避免内层循环重复读 Cells
+                var colTitles = new string[writeCol + 1];
+                var colTypes = new string[writeCol + 1];
+                for (int j = 2; j <= writeCol; j++)
                 {
-                    string itemId = idList[idCount] ?? "";
-                    if (itemId == "")
-                        continue;
-                    string itemType = typeList[idCount] ?? "";
+                    colTitles[j] = targetSheet.Cells[2, j].Value?.ToString() ?? "";
+                    colTypes[j] = targetSheet.Cells[3, j].Value?.ToString() ?? "";
+                }
 
-                    var writeRow = targetSheet.Dimension.End.Row + 1;
+                // 预建 ID→行号索引，消灭 FindSourceRow 的 O(n) 循环
+                var idRowIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+                var endRow = targetSheet.Dimension.End.Row;
+                for (int r = 2; r <= endRow; r++)
+                {
+                    var v = targetSheet.Cells[r, 2].Value?.ToString() ?? "";
+                    if (v != "")
+                        idRowIndex[v] = r;
+                }
 
-                    //非第一次执行更新逻辑，否则首次逻辑
-                    if (dataStatusListNew != null)
+                var exportWildcardDyData = new Dictionary<string, string>(exportWildcardData);
+                bool dataWritten = false;
+                var dataRepeatWritten = new HashSet<string>();
+                var modelSheetTypes = new HashSet<object>(modelSheet.Value.Keys.Select(k => k.Item1));
+
+                // 阶段一：收集操作意图，不修改表
+                var deleteRows = new List<int>();                           // 要删除的行号
+                var updateOps = new List<(int rowIndex, int idCount)>();    // 原地覆写
+                var insertOps = new List<(string itemId, int idCount)>();   // 新增（insert after 相似ID）
+                var appendOps = new List<int>();                            // 追加到末尾（无相似ID）
+
+                if (dataStatusListNew != null)
+                {
+                    for (int idCount = 0; idCount < idList.Count; idCount++)
                     {
-                        //查找ID是否存在
-                        var rowIndex = PubMetToExcel.FindSourceRow(targetSheet, 2, itemId);
-                        //如果存在且标识为删除，则删除，不进行写入，标识为修改则进行写入
-                        if (rowIndex != -1)
-                        {
-                            if (dataStatusList[idCount] == "-")
-                            {
-                                targetSheet.DeleteRow(rowIndex);
-                                dataWritten = true;
-                                continue;
-                            }
+                        string itemId = idList[idCount] ?? "";
+                        if (itemId == "")
+                            continue;
+                        string itemType = typeList[idCount] ?? "";
+                        if (!modelSheetTypes.Contains(itemType))
+                            continue;
 
-                            if (dataStatusList[idCount] == "*")
-                            {
-                                writeRow = rowIndex;
-                            }
-                            else
-                            {
-                                //带#的已经写入过，不需要再写入
-                                continue;
-                            }
+                        string status = dataStatusList[idCount] ?? "";
+                        if (status is not ("+" or "-" or "*"))
+                            continue;
+
+                        idRowIndex.TryGetValue(itemId, out int existingRow);
+
+                        if (existingRow != 0)
+                        {
+                            if (status == "-")
+                                deleteRows.Add(existingRow);
+                            else if (status == "*")
+                                updateOps.Add((existingRow, idCount));
+                            // status == "+" 且已存在：跳过（已写入过）
                         }
-                        //如果不存在，则需要寻找本表相似ID最大行，依次写入
                         else
                         {
-                            if (dataStatusList[idCount] == "-")
-                            {
-                                //跳过标记为删除，但目标表也不存在的数据
-                                continue;
-                            }
-
-                            var activeId = itemId.Substring(0, 6);
-                            var regexSearch = new Regex($"^{activeId}\\d{{4}}$");
-                            var baseWriteRow = PubMetToExcel.FindSourceRowBlur(
-                                targetSheet,
-                                2,
-                                regexSearch
-                            );
-                            if (baseWriteRow != -1)
-                            {
-                                if (writeRow != baseWriteRow + 1)
-                                {
-                                    //需要插入行（向下插入）
-                                    writeRow = baseWriteRow + 1;
-                                    targetSheet.InsertRow(writeRow, 1);
-                                }
-                            }
+                            if (status == "-")
+                                continue; // 目标表不存在，跳过
+                            // "+" 或 "*"：需要新增
+                            if (itemId.Length >= 6)
+                                insertOps.Add((itemId, idCount));
+                            else
+                                appendOps.Add(idCount);
                         }
                     }
-
-                    //更新动态值
-                    foreach (var wildcardDy in exportWildcardData)
+                }
+                else
+                {
+                    // 首次模式：全量追加
+                    for (int idCount = 0; idCount < idList.Count; idCount++)
                     {
-                        GetDyWildcardValue(
-                            baseData,
-                            exportWildcardDyData,
-                            wildcardDy.Key,
-                            wildcardDy.Value,
-                            idCount
-                        );
+                        string itemId = idList[idCount] ?? "";
+                        if (itemId == "")
+                            continue;
+                        if (!modelSheetTypes.Contains(typeList[idCount] ?? ""))
+                            continue;
+                        appendOps.Add(idCount);
                     }
+                }
 
-                    //整理写入数据
-                    var writeData = new Dictionary<(int row, int col), (string, string)>();
+                // 阶段二执行：先删（倒序），再更新，最后插入/追加
+
+                // 2a. 删除：倒序，避免行号偏移
+                deleteRows.Sort((a, b) => b.CompareTo(a));
+                foreach (var rowToDel in deleteRows)
+                {
+                    targetSheet.DeleteRow(rowToDel);
+                    // 修正 updateOps 中受影响的行号
+                    for (int i = 0; i < updateOps.Count; i++)
+                    {
+                        if (updateOps[i].rowIndex > rowToDel)
+                            updateOps[i] = (updateOps[i].rowIndex - 1, updateOps[i].idCount);
+                    }
+                    idRowIndex = idRowIndex
+                        .Where(kv => kv.Value != rowToDel)
+                        .ToDictionary(
+                            kv => kv.Key,
+                            kv => kv.Value > rowToDel ? kv.Value - 1 : kv.Value,
+                            StringComparer.Ordinal
+                        );
+                    dataWritten = true;
+                }
+
+                // 2b. 原地更新
+                foreach (var (rowIndex, idCount) in updateOps)
+                {
+                    string itemId = idList[idCount] ?? "";
+                    string itemType = typeList[idCount] ?? "";
+
+                    foreach (var wildcardDy in exportWildcardData)
+                        GetDyWildcardValue(baseData, exportWildcardDyData, wildcardDy.Key, wildcardDy.Value, idCount);
+
+                    bool rowChanged = false;
+                    var rowWriteData = new List<(int col, string val, string colType)>();
                     for (int j = 2; j <= writeCol; j++)
                     {
-                        var cellTitle = targetSheet.Cells[2, j].Value?.ToString() ?? "";
+                        var cellTitle = colTitles[j];
                         if (cellTitle == "")
                             continue;
-                        // 使用 LINQ 查询判断字典中是否包含指定的值
-                        bool containsValue = modelSheet.Value.Keys.Any(key =>
-                            key.Item1.Equals(itemType) && key.Item2.Equals(cellTitle)
-                        );
+                        if (!modelSheet.Value.TryGetValue((itemType, (object)cellTitle), out var cellModelValue))
+                            continue;
 
-                        if (containsValue)
+                        var cellRealValue = AnalyzeWildcard(cellModelValue, exportWildcardData, exportWildcardDyData, strDictionary, baseData, id, itemId);
+
+                        if (j == 2 && cellRealValue == string.Empty)
+                            break;
+                        if (j == 2 && dataRepeatWritten.Contains(cellRealValue))
+                            break;
+                        if (j == 2)
+                            dataRepeatWritten.Add(cellRealValue);
+
+                        var existingVal = targetSheet.Cells[rowIndex, j].Value?.ToString() ?? "";
+                        if (existingVal != cellRealValue)
                         {
-                            var cellModelValue = modelSheet.Value[(itemType, cellTitle)];
-                            // 分析cellModelValue中的通配符
-                            var cellRealValue = AnalyzeWildcard(
-                                cellModelValue,
-                                exportWildcardData,
-                                exportWildcardDyData,
-                                strDictionary,
-                                baseData,
-                                id,
-                                itemId
-                            );
-
-                            // 空ID判断
-                            if (j == 2 && cellRealValue == string.Empty)
-                            {
-                                break;
-                            }
-                            // 重复ID判断
-                            if (j == 2 && dataRepeatWritten.Contains(cellRealValue))
-                            {
-                                break;
-                            }
-
-                            if (j == 2)
-                            {
-                                // 字典型数据判断，需要数据计算完毕后单独写入
-                                dataRepeatWritten.Add(cellRealValue);
-                            }
-                            // 记录数据
-                            var cell = targetSheet.Cells[writeRow, j];
-                            // 记录数据类型
-                            var cellType = targetSheet.Cells[3, j].Value?.ToString();
-
-                            if (isFirst)
-                            {
-                                writeData[(writeRow, j)] = (cellRealValue, cellType);
-                                dataWritten = true;
-                            }
-                            else
-                            {
-                                if (cell.Value?.ToString() != cellRealValue)
-                                {
-                                    writeData[(writeRow, j)] = (cellRealValue, cellType);
-                                    dataWritten = true;
-                                }
-                            }
+                            rowWriteData.Add((j, cellRealValue, colTypes[j]));
+                            rowChanged = true;
                         }
                     }
-                    // 实际写入
-                    foreach (var cell in writeData)
+
+                    if (!rowChanged)
+                        continue;
+
+                    foreach (var (col, val, colType) in rowWriteData)
                     {
-                        var sheetName = targetSheet.Name;
-                        var cellType = cell.Value.Item2;
-                        var rowIndex = cell.Key.row;
-                        var colIndex = cell.Key.col;
-                        var cellValue = cell.Value.Item1;
-                        var filePath = targetExcel.File.FullName;
-
-                        checkResult.AddRange(
-                            PubMetToExcel.ExcelCellValueFormatCheck(
-                                cellValue,
-                                cellType,
-                                sheetName,
-                                filePath,
-                                rowIndex - 1,
-                                colIndex - 1
-                            )
-                        );
-
-                        targetSheet.Cells[rowIndex, colIndex].Value = cellValue;
+                        checkResult.AddRange(PubMetToExcel.ExcelCellValueFormatCheck(val, colType, targetSheet.Name, targetExcel.File.FullName, rowIndex - 1, col - 1));
+                        targetSheet.Cells[rowIndex, col].Value = val;
                     }
+                    dataWritten = true;
                 }
-                if (dataWritten) // 只有在写入数据时才保存
+
+                // 2c. 新增（insert after 相似ID）
+                // 插入时行号会变，记录累计偏移
+                var insertsSorted = insertOps
+                    .Select(op =>
+                    {
+                        var activeId = op.itemId.Substring(0, 6);
+                        var regex = new Regex($"^{activeId}\\d{{4}}$");
+                        int baseRow = PubMetToExcel.FindSourceRowBlur(targetSheet, 2, regex);
+                        return (baseRow, op.itemId, op.idCount);
+                    })
+                    .Where(x => x.baseRow != -1)
+                    .OrderBy(x => x.baseRow)
+                    .ToList();
+
+                // 无相似ID的追加到末尾
+                var tailInserts = insertOps
+                    .Select(op =>
+                    {
+                        var activeId = op.itemId.Substring(0, 6);
+                        var regex = new Regex($"^{activeId}\\d{{4}}$");
+                        int baseRow = PubMetToExcel.FindSourceRowBlur(targetSheet, 2, regex);
+                        return (baseRow, op.idCount);
+                    })
+                    .Where(x => x.baseRow == -1)
+                    .Select(x => x.idCount)
+                    .Concat(appendOps)
+                    .ToList();
+
+                int rowOffset = 0;
+                foreach (var (baseRow, itemId, idCount) in insertsSorted)
                 {
-                    targetExcel.Save();
+                    string itemType = typeList[idCount] ?? "";
+                    int writeRow = baseRow + 1 + rowOffset;
+                    targetSheet.InsertRow(writeRow, 1);
+                    rowOffset++;
+
+                    foreach (var wildcardDy in exportWildcardData)
+                        GetDyWildcardValue(baseData, exportWildcardDyData, wildcardDy.Key, wildcardDy.Value, idCount);
+
+                    bool wrote = WriteRowData(targetSheet, targetExcel, writeRow, writeCol, itemId, itemType, idCount, colTitles, colTypes, modelSheet, exportWildcardData, exportWildcardDyData, strDictionary, baseData, id, dataRepeatWritten, checkResult, isFirst: true);
+                    if (wrote) dataWritten = true;
                 }
+
+                foreach (var idCount in tailInserts)
+                {
+                    string itemId = idList[idCount] ?? "";
+                    string itemType = typeList[idCount] ?? "";
+                    int writeRow = targetSheet.Dimension.End.Row + 1;
+
+                    foreach (var wildcardDy in exportWildcardData)
+                        GetDyWildcardValue(baseData, exportWildcardDyData, wildcardDy.Key, wildcardDy.Value, idCount);
+
+                    bool wrote = WriteRowData(targetSheet, targetExcel, writeRow, writeCol, itemId, itemType, idCount, colTitles, colTypes, modelSheet, exportWildcardData, exportWildcardDyData, strDictionary, baseData, id, dataRepeatWritten, checkResult, isFirst: true);
+                    if (wrote) dataWritten = true;
+                }
+
+                if (dataWritten)
+                    targetExcel.Save();
             }
 
             targetExcel?.Dispose();
@@ -754,6 +793,55 @@ public class LteData
             string filePath = Path.Combine(documentsPath, "strDic.csv");
             SaveDictionaryToFile(strDictionary, filePath);
         }
+    }
+
+    private static bool WriteRowData(
+        ExcelWorksheet targetSheet,
+        ExcelPackage targetExcel,
+        int writeRow,
+        int writeCol,
+        string itemId,
+        string itemType,
+        int idCount,
+        string[] colTitles,
+        string[] colTypes,
+        KeyValuePair<string, Dictionary<(object, object), string>> modelSheet,
+        Dictionary<string, string> exportWildcardData,
+        Dictionary<string, string> exportWildcardDyData,
+        Dictionary<string, Dictionary<string, List<string>>> strDictionary,
+        Dictionary<string, List<string>> baseData,
+        string id,
+        HashSet<string> dataRepeatWritten,
+        List<(string, int, int, string, string, string)> checkResult,
+        bool isFirst
+    )
+    {
+        bool wrote = false;
+        for (int j = 2; j <= writeCol; j++)
+        {
+            var cellTitle = colTitles[j];
+            if (cellTitle == "")
+                continue;
+            if (!modelSheet.Value.TryGetValue((itemType, (object)cellTitle), out var cellModelValue))
+                continue;
+
+            var cellRealValue = AnalyzeWildcard(cellModelValue, exportWildcardData, exportWildcardDyData, strDictionary, baseData, id, itemId);
+
+            if (j == 2 && cellRealValue == string.Empty)
+                break;
+            if (j == 2 && dataRepeatWritten.Contains(cellRealValue))
+                break;
+            if (j == 2)
+                dataRepeatWritten.Add(cellRealValue);
+
+            if (!isFirst && targetSheet.Cells[writeRow, j].Value?.ToString() == cellRealValue)
+                continue;
+
+            checkResult.AddRange(PubMetToExcel.ExcelCellValueFormatCheck(cellRealValue, colTypes[j], targetSheet.Name, targetExcel.File.FullName, writeRow - 1, j - 1));
+            targetSheet.Cells[writeRow, j].Value = cellRealValue;
+            wrote = true;
+        }
+        return wrote;
     }
 
     // delegate pure-logic helper implementations to LteCore to centralize logic and enable testing

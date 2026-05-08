@@ -213,13 +213,25 @@ internal static class CrosslightController
 {
     private static Application? _app;
     private static bool _active;
+    private static bool _fillMode;
 
     public static bool IsActive => _active;
 
-    public static void Enable(Application app)
+    public static void Enable(Application app, bool fillMode = false)
     {
         if (_active)
+        {
+            bool wasFill = _fillMode;
+            _fillMode = fillMode;
+            // clear whichever mode was running before switching
+            if (wasFill)
+                CellSpotlightHighlighter.ClearAll();
+            else
+                CrosslightOverlay.Instance.ClearCross();
+            TriggerCurrent();
             return;
+        }
+        _fillMode = fillMode;
         _active = true;
         _app = app;
 
@@ -227,8 +239,10 @@ internal static class CrosslightController
         app.WindowDeactivate += OnWindowDeactivate;
         app.WorkbookDeactivate += OnWorkbookDeactivate;
         app.WindowActivate += OnWindowActivate;
+        app.SheetDeactivate += OnSheetDeactivate;
+        app.WorkbookBeforeClose += OnWorkbookBeforeClose;
 
-        CrosslightOverlay.Instance.UpdateCross();
+        TriggerCurrent();
     }
 
     public static void Disable()
@@ -241,19 +255,67 @@ internal static class CrosslightController
         _app.WindowDeactivate -= OnWindowDeactivate;
         _app.WorkbookDeactivate -= OnWorkbookDeactivate;
         _app.WindowActivate -= OnWindowActivate;
+        _app.SheetDeactivate -= OnSheetDeactivate;
+        _app.WorkbookBeforeClose -= OnWorkbookBeforeClose;
 
         CrosslightOverlay.Instance.ClearCross();
+        CellSpotlightHighlighter.ClearAll();
         _app = null;
     }
 
-    private static void OnSelectionChange(object sh, Range target) =>
-        ExcelAsyncUtil.QueueAsMacro(CrosslightOverlay.Instance.UpdateCross);
+    private static void TriggerCurrent()
+    {
+        if (_fillMode)
+        {
+            ExcelAsyncUtil.QueueAsMacro(() =>
+            {
+                try
+                {
+                    var ws = NumDesAddIn.App.ActiveSheet as Worksheet;
+                    var sel = NumDesAddIn.App.Selection as Range;
+                    if (ws != null && sel != null)
+                        CellSpotlightHighlighter.Highlight(ws, sel);
+                }
+                catch { }
+            });
+        }
+        else
+        {
+            ExcelAsyncUtil.QueueAsMacro(CrosslightOverlay.Instance.UpdateCross);
+        }
+    }
 
-    private static void OnWindowDeactivate(object wb, object wn) =>
+    private static void OnSelectionChange(object sh, Range target)
+    {
+        if (_fillMode)
+        {
+            if (sh is Worksheet ws)
+                ExcelAsyncUtil.QueueAsMacro(() => CellSpotlightHighlighter.Highlight(ws, target));
+        }
+        else
+        {
+            ExcelAsyncUtil.QueueAsMacro(CrosslightOverlay.Instance.UpdateCross);
+        }
+    }
+
+    private static void OnWindowDeactivate(object wb, object wn)
+    {
         CrosslightOverlay.Instance.ClearCross();
+        CellSpotlightHighlighter.ClearAll();
+    }
 
-    private static void OnWorkbookDeactivate(object wb) => CrosslightOverlay.Instance.ClearCross();
+    private static void OnWorkbookDeactivate(object wb)
+    {
+        CrosslightOverlay.Instance.ClearCross();
+        CellSpotlightHighlighter.ClearAll();
+    }
 
     private static void OnWindowActivate(object wb, object wn) =>
-        CrosslightOverlay.Instance.UpdateCross();
+        TriggerCurrent();
+
+    private static void OnSheetDeactivate(object sh) =>
+        CellSpotlightHighlighter.ClearAll();
+
+    private static void OnWorkbookBeforeClose(Workbook wb, ref bool cancel) =>
+        CellSpotlightHighlighter.ClearAll();
 }

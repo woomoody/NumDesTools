@@ -119,17 +119,17 @@
                 <group id='GroupConflictMain' label='冲突与活动'>
                     <menu id='ExcelConflictMenuMain' label='xlsx冲突&#13;解决' image='diff' size='large'
                           screentip='解决 xlsx 文件的 Git 合并冲突，或手动对比两个 xlsx 文件'>
-                        <button id="ExcelConflictGit"    label="解决Git冲突"   imageMso="MergeDocument"
+                        <button id="ExcelConflictGit"    label="解决Git冲突"   imageMso="ResolveConflict"
                                 onAction='OnButtonClick' screentip='自动检测 Git 冲突的 xlsx，逐格选择保留哪一方'
                                 tag='解决Git冲突' />
-                        <button id="ExcelConflictManual" label="手动两文件对比" imageMso="FileMerge"
+                        <button id="ExcelConflictManual" label="手动两文件对比" imageMso="ReviewCompareTwoVersions"
                                 onAction='OnButtonClick' screentip='选择两个 xlsx 文件，逐格对比并选择合并结果'
                                 tag='手动两文件对比' />
-                        <button id="ExcelConflictHistory" label="查看历史版本对比" imageMso="RevisionsShowMarkup"
+                        <button id="ExcelConflictHistory" label="查看历史版本对比" imageMso="SourceControlShowHistory"
                                 onAction='OnButtonClick' screentip='浏览某个 xlsx 的 Git 提交历史，选历史版本与工作区或另一历史版本对比'
                                 tag='查看历史版本对比' />
                     </menu>
-<menu id='ActivityValidateMenuMain' label='验证活动&#13;' image='codecov' size='large'>
+                    <menu id='ActivityValidateMenuMain' label='验证活动&#13;' image='codecov' size='large'>
                         <button id="ActivityTestAll" label="验证活动(全量)" screentip='验证所有活动配置表的跨表引用和字段规则'
                                 onAction='OnButtonClick' imageMso="DataValidation" tag='验证活动(全量)' />
                         <button id="ActivityTestById" label="验证活动(指定ID)" screentip='输入活动ID验证配置链完整性'
@@ -166,8 +166,13 @@
                             onAction='OnButtonClick' screentip='将选中单元格修改为标准格式' tag='标准格式' />
                     <button id='Button5' size='large' getLabel='GetLableText' image='redux-reducer'
                             onAction='OnButtonClick' screentip='放大镜开关，对当前选中单元格进行放大显示' tag='放大镜开关' />
-                    <button id='FocusLightButton' size='large' getLabel='GetLableText' image='email'
-                            onAction='OnButtonClick' screentip='聚光灯开关，高亮显示当前行列' tag='聚光灯' />
+                    <menu id='FocusLightMenu' size='large' getLabel='GetLableText' image='email'
+                          screentip='聚光灯开关，高亮显示当前行列'>
+                        <button id='FocusLightButton' label='Overlay模式（行列线）' imageMso='HighlighterMode'
+                                onAction='OnButtonClick' screentip='聚光灯Overlay模式：半透明行列十字线覆盖显示' tag='聚光灯-Overlay' />
+                        <button id='FocusLightFillButton' label='填色模式（行列格）' imageMso='CellFillColorPicker'
+                                onAction='OnButtonClick' screentip='聚光灯填色模式：高亮当前行列所有单元格背景色' tag='聚光灯-填色' />
+                    </menu>
                     <button id='AutoMergeExcel' size='large' label='合并Excel&#13;(Alice-Cove)' image='dart'
                             onAction='OnButtonClick' screentip='合并Alice和Cove的Excel配置数据' tag='合并Excel(Alice-Cove)' />
                     <button id='AutoSeachExcel' size='large' label='查验模版&#13;写入数据' image='document'
