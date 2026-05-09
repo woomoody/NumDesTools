@@ -2461,7 +2461,7 @@ public static class PubMetToExcel
         {
             if (sheetName.Contains("#") || sheetName.Contains("Chart"))
                 continue;
-            var rows = MiniExcel.Query(wkFullPath, sheetName: sheetName).ToList();
+            var rows = MiniExcel.Query(wkFullPath, sheetName: sheetName, configuration: NumDesAddIn.OnOffMiniExcelCatches).ToList();
 
             if (rows.Count <= 4)
             {

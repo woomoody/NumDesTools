@@ -168,7 +168,7 @@ namespace NumDesTools.Advance
         {
             try
             {
-                var rows = MiniExcel.Query(filePath, sheetName: sheetName).ToList();
+                var rows = MiniExcel.Query(filePath, sheetName: sheetName, configuration: NumDesAddIn.OnOffMiniExcelCatches).ToList();
 
                 if (rows.Count == 0)
                 {
@@ -465,7 +465,7 @@ namespace NumDesTools.Advance
                         fileNameOnly
                     );
 
-                    var rows = MiniExcel.Query(file, sheetName: sheetName).ToList();
+                    var rows = MiniExcel.Query(file, sheetName: sheetName, configuration: NumDesAddIn.OnOffMiniExcelCatches).ToList();
 
                     if (rows.Count > 0)
                     {
