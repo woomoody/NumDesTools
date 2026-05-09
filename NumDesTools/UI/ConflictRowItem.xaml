@@ -13,7 +13,13 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,3">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,3">
+                    <!-- 剔除按钮：仅筛选选中模式下可见 -->
+                    <Button x:Name="DeSelectBtn" Content="✕" ToolTip="从选中中剔除此行"
+                            Visibility="Collapsed"
+                            Padding="3,1" Margin="0,0,4,0" FontSize="10"
+                            Background="#5A2A2A" Foreground="#FFAAAA" BorderThickness="0"
+                            Cursor="Hand" Click="DeSelect_Click"/>
                     <TextBlock Text="ID: " Foreground="#888" FontSize="11"/>
                     <TextBlock x:Name="RowKeyText" Foreground="White" FontWeight="Bold" FontSize="11"/>
                     <StackPanel x:Name="RowHashCols" Orientation="Horizontal"
