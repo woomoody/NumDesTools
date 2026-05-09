@@ -5,11 +5,11 @@
       "cron": "32 9 * * 1-5",
       "prompt": "运行飞书每日扫描任务：\ndotnet run --project \"C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\NumDesTools.Scanner\\NumDesTools.Scanner.csproj\" -- --all --release",
       "createdAt": 1778117536152,
+      "lastFiredAt": 1778205720381,
       "recurring": true,
       "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
-      "createdByPid": 43464,
-      "createdByProcStart": "639137507262114500",
-      "lastFiredAt": 1778205720381
+      "createdByPid": 64936,
+      "createdByProcStart": "639139405892453680"
     },
     {
       "id": "e24aeb32",
@@ -17,8 +17,8 @@
       "prompt": "飞书每日扫描定时任务即将在今天到期，请续期：重新创建 Cron，每工作日 9:32 触发，命令为 `dotnet run --project \"C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\NumDesTools.Scanner\\NumDesTools.Scanner.csproj\" -- --all --release`，durable: true，recurring: true。同时创建新的7天后续期提醒。",
       "createdAt": 1778117536197,
       "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
-      "createdByPid": 43464,
-      "createdByProcStart": "639137507262114500"
+      "createdByPid": 64936,
+      "createdByProcStart": "639139405892453680"
     }
   ]
 }
