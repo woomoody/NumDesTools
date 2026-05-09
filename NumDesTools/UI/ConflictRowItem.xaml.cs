@@ -115,10 +115,30 @@ public partial class ConflictRowItem : UserControl
         typeof(ConflictRowItem)
     );
 
+    public static readonly RoutedEvent RowDeSelectedEvent = EventManager.RegisterRoutedEvent(
+        "RowDeSelected",
+        RoutingStrategy.Bubble,
+        typeof(RowDeSelectedEventHandler),
+        typeof(ConflictRowItem)
+    );
+
+    public static void AddRowDeSelectedHandler(DependencyObject d, RowDeSelectedEventHandler h) =>
+        (d as UIElement)?.AddHandler(RowDeSelectedEvent, h);
+
+    public static void RemoveRowDeSelectedHandler(DependencyObject d, RowDeSelectedEventHandler h) =>
+        (d as UIElement)?.RemoveHandler(RowDeSelectedEvent, h);
+
     public event CellSelectedEventHandler CellSelected
     {
         add => AddHandler(CellSelectedEvent, value);
         remove => RemoveHandler(CellSelectedEvent, value);
+    }
+
+    private void DeSelect_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is RowConflict rc)
+            RaiseEvent(new RowDeSelectedRoutedEventArgs(RowDeSelectedEvent, this, rc));
+        e.Handled = true;
     }
 
     public ConflictRowItem()
@@ -135,6 +155,8 @@ public partial class ConflictRowItem : UserControl
         {
             _conflictItems.Remove(this);
             _rowItems.Remove(this);
+            if (_currentRc != null)
+                _currentRc.PropertyChanged -= OnRcPropertyChanged;
         };
 
         // 注册一次，用实例字段 _isModifiedRow 和 _syncGuard 防重入
@@ -177,11 +199,28 @@ public partial class ConflictRowItem : UserControl
             ApplyScrollOffset(offset);
     }
 
+    private RowConflict? _currentRc;
+
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
+        if (_currentRc != null)
+            _currentRc.PropertyChanged -= OnRcPropertyChanged;
+
         if (DataContext is not RowConflict rc)
             return;
+
+        _currentRc = rc;
+        rc.PropertyChanged += OnRcPropertyChanged;
         Render(rc);
+    }
+
+    private void OnRcPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(RowConflict.IsSelected) && _currentRc != null)
+        {
+            UpdateSelectionHighlight(_currentRc);
+            DeSelectBtn.Visibility = _currentRc.IsSelected ? Visibility.Visible : Visibility.Collapsed;
+        }
     }
 
     private void Render(RowConflict rc)
@@ -234,11 +273,9 @@ public partial class ConflictRowItem : UserControl
         var isOnlyOurs = rc.DiffType == RowDiffType.OnlyOurs;
         var isOnlyTheirs = rc.DiffType == RowDiffType.OnlyTheirs;
 
-        HeaderGrid.Background = isOnlyOurs
-            ? BgOnlyOurs
-            : isOnlyTheirs
-                ? BgOnlyTheirs
-                : Brush("#2A2A2A");
+        UpdateSelectionHighlight(rc);
+        DeSelectBtn.Visibility = rc.IsSelected ? Visibility.Visible : Visibility.Collapsed;
+
         BadgeBorder.Background = isModified
             ? Brush("#5A4A00")
             : isOnlyOurs
@@ -581,6 +618,24 @@ public partial class ConflictRowItem : UserControl
         return set.ToList();
     }
 
+    private static readonly SolidColorBrush BgSelected = new(WpfColor.FromArgb(180, 0x3A, 0x60, 0xA0));
+
+    private void UpdateSelectionHighlight(RowConflict rc)
+    {
+        if (rc.IsSelected)
+        {
+            HeaderGrid.Background = BgSelected;
+        }
+        else
+        {
+            HeaderGrid.Background = rc.DiffType == RowDiffType.OnlyOurs
+                ? BgOnlyOurs
+                : rc.DiffType == RowDiffType.OnlyTheirs
+                    ? BgOnlyTheirs
+                    : Brush("#2A2A2A");
+        }
+    }
+
     private void BatchChoice_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && DataContext is RowConflict rc)
@@ -598,9 +653,17 @@ public partial class ConflictRowItem : UserControl
     }
 }
 
+public delegate void RowDeSelectedEventHandler(object sender, RowDeSelectedRoutedEventArgs e);
+
 public delegate void CellSelectedEventHandler(object sender, CellSelectedRoutedEventArgs e);
 
 public class CellSelectedRoutedEventArgs(RoutedEvent routedEvent, object source, RowConflict row)
+    : RoutedEventArgs(routedEvent, source)
+{
+    public RowConflict Row { get; } = row;
+}
+
+public class RowDeSelectedRoutedEventArgs(RoutedEvent routedEvent, object source, RowConflict row)
     : RoutedEventArgs(routedEvent, source)
 {
     public RowConflict Row { get; } = row;

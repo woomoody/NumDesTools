@@ -48,6 +48,12 @@ public partial class ExcelConflictWindow : Window
         UpdateStats();
         ApplyButton.IsEnabled = diff.TotalConflictRows > 0;
 
+        // 拖拽多选 + 单行切换选中
+        ConflictList.PreviewMouseLeftButtonDown += ConflictList_DragStart;
+        ConflictList.PreviewMouseMove           += ConflictList_DragMove;
+        ConflictList.PreviewMouseLeftButtonUp   += ConflictList_DragEnd;
+        ConflictList.PreviewMouseDown           += ConflictList_MiddleClick;
+
         // 把首次列表渲染推到窗口显示后，避免构造函数阻塞 ShowDialog
         Loaded += (_, _) =>
             Dispatcher.BeginInvoke(
@@ -87,6 +93,11 @@ public partial class ExcelConflictWindow : Window
     // 滚动条总宽度（列宽之和），SizeChanged 时重新计算 Maximum/Viewport
     private double _conflictTotalWidth = 0;
     private double _rowsTotalWidth = 0;
+
+    // 拖拽多选
+    private bool _isDragging;
+    private int _dragStartIndex = -1;
+    private List<RowConflict> _selectedRows = [];
 
     // 全量模式分批加载
     private const int PageSize = 200;
@@ -1316,6 +1327,8 @@ public partial class ExcelConflictWindow : Window
     {
         if (_suppressRefresh)
             return;
+        ClearRowSelection();
+        UpdateSelectionButtons();
         RefreshConflictList();
     }
 
@@ -1390,8 +1403,249 @@ public partial class ExcelConflictWindow : Window
         }
     }
 
+    // ── 筛选选中 ─────────────────────────────────────────────────────────────
+
+    private void FilterBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter)
+            FilterSelect_Click(sender, e);
+    }
+
+    private void FilterSelect_Click(object sender, RoutedEventArgs e)
+    {
+        var keyword = FilterBox.Text.Trim();
+        if (string.IsNullOrEmpty(keyword)) return;
+
+        var items = ConflictList.ItemsSource as System.Collections.IList;
+        if (items == null) return;
+
+        ClearRowSelection();
+
+        bool isNumeric = keyword.All(char.IsDigit);
+
+        foreach (var item in items)
+        {
+            if (item is not RowConflict rc) continue;
+
+            bool match = isNumeric
+                ? rc.RowKey.Contains(keyword, StringComparison.Ordinal)
+                : rc.RowKey.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+                  || rc.DisplayName.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+
+            if (!match) continue;
+            rc.IsSelected = true;
+            _selectedRows.Add(rc);
+        }
+
+        FilterClearBtn.Visibility = Visibility.Visible;
+        UpdateSelectionButtons();
+    }
+
+    private void FilterClear_Click(object sender, RoutedEventArgs e)
+    {
+        FilterBox.Text = string.Empty;
+        FilterClearBtn.Visibility = Visibility.Collapsed;
+        ClearRowSelection();
+        UpdateSelectionButtons();
+    }
+
+    private void OnRowDeSelected(object sender, RowDeSelectedRoutedEventArgs e)
+    {
+        var rc = e.Row;
+        rc.IsSelected = false;
+        _selectedRows.Remove(rc);
+        UpdateSelectionButtons();
+    }
+
+    // ── 拖拽多选 ─────────────────────────────────────────────────────────────
+
+    private void ConflictList_DragStart(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // 点击按钮时不触发拖拽（避免干扰 ✕ 剔除按钮及行内其他按钮）
+        if (e.OriginalSource is DependencyObject src)
+        {
+            var hit = src;
+            while (hit != null)
+            {
+                if (hit is System.Windows.Controls.Button) return;
+                hit = System.Windows.Media.VisualTreeHelper.GetParent(hit);
+                if (hit is System.Windows.Controls.ListBox) break;
+            }
+        }
+
+        _dragStartIndex = GetRowIndexAtPoint(e.GetPosition(ConflictList));
+        if (_dragStartIndex < 0) return;
+
+        // Ctrl+点击：切换单行选中，不清除其他行
+        if ((System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) != 0)
+        {
+            ToggleRowAt(_dragStartIndex);
+            UpdateSelectionButtons();
+            return;
+        }
+
+        _isDragging = true;
+        ClearRowSelection();
+        SetRangeSelected(_dragStartIndex, _dragStartIndex, true);
+        ConflictList.CaptureMouse();
+    }
+
+    private void ConflictList_MiddleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != System.Windows.Input.MouseButton.Middle) return;
+        if (e.OriginalSource is DependencyObject src)
+        {
+            var hit = src;
+            while (hit != null)
+            {
+                if (hit is System.Windows.Controls.Button) return;
+                hit = System.Windows.Media.VisualTreeHelper.GetParent(hit);
+                if (hit is System.Windows.Controls.ListBox) break;
+            }
+        }
+        var idx = GetRowIndexAtPoint(e.GetPosition(ConflictList));
+        if (idx < 0) return;
+        ToggleRowAt(idx);
+        UpdateSelectionButtons();
+        e.Handled = true;
+    }
+
+    private void ToggleRowAt(int idx)
+    {
+        var items = ConflictList.ItemsSource as System.Collections.IList;
+        if (items == null || idx >= items.Count) return;
+        if (items[idx] is not RowConflict rc) return;
+        if (rc.IsSelected)
+        {
+            rc.IsSelected = false;
+            _selectedRows.Remove(rc);
+        }
+        else
+        {
+            rc.IsSelected = true;
+            _selectedRows.Add(rc);
+        }
+    }
+
+    private void ConflictList_DragMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_isDragging || e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
+        var idx = GetRowIndexAtPoint(e.GetPosition(ConflictList));
+        if (idx < 0) return;
+        ClearRowSelection();
+        int from = Math.Min(_dragStartIndex, idx);
+        int to   = Math.Max(_dragStartIndex, idx);
+        SetRangeSelected(from, to, true);
+    }
+
+    private void ConflictList_DragEnd(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (!_isDragging) return;
+        _isDragging = false;
+        ConflictList.ReleaseMouseCapture();
+        UpdateSelectionButtons();
+    }
+
+    private int GetRowIndexAtPoint(System.Windows.Point pt)
+    {
+        // 用 VisualTreeHelper 找到鼠标下的 ListBoxItem，再查索引
+        var hit = ConflictList.InputHitTest(pt) as DependencyObject;
+        while (hit != null)
+        {
+            if (hit is ListBoxItem lbi)
+            {
+                var items = ConflictList.ItemsSource as System.Collections.IList;
+                if (items == null) return -1;
+                return items.IndexOf(lbi.DataContext);
+            }
+            hit = System.Windows.Media.VisualTreeHelper.GetParent(hit);
+        }
+        return -1;
+    }
+
+    private void SetRangeSelected(int from, int to, bool selected)
+    {
+        var items = ConflictList.ItemsSource as System.Collections.IList;
+        if (items == null) return;
+        _selectedRows.Clear();
+        for (int i = from; i <= to && i < items.Count; i++)
+        {
+            if (items[i] is RowConflict rc)
+            {
+                rc.IsSelected = selected;
+                if (selected) _selectedRows.Add(rc);
+            }
+        }
+    }
+
+    private void ClearRowSelection()
+    {
+        foreach (var rc in _selectedRows)
+            rc.IsSelected = false;
+        _selectedRows.Clear();
+    }
+
+    private void UpdateSelectionButtons()
+    {
+        var hasSelection = _selectedRows.Count > 0;
+        SelectionActionBar.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
+        SelectionCountText.Text = hasSelection ? $"已选 {_selectedRows.Count} 行" : string.Empty;
+    }
+
+    private void SelectedOurs_Click(object sender, RoutedEventArgs e)
+    {
+        foreach (var rc in _selectedRows)
+        {
+            rc.SetAllCells(ConflictChoice.Ours);
+            rc.RowChoice = ConflictChoice.Ours;
+        }
+    }
+
+    private void SelectedTheirs_Click(object sender, RoutedEventArgs e)
+    {
+        foreach (var rc in _selectedRows)
+        {
+            rc.SetAllCells(ConflictChoice.Theirs);
+            rc.RowChoice = ConflictChoice.Theirs;
+        }
+    }
+
+    private void SelectedClear_Click(object sender, RoutedEventArgs e)
+    {
+        ClearRowSelection();
+        UpdateSelectionButtons();
+    }
+
     private void Apply_Click(object sender, RoutedEventArgs e)
     {
+        // 检查未处理的冲突行
+        var unresolved = _diff.Sheets
+            .SelectMany(s => s.Rows)
+            .Where(r => r.DiffType != RowDiffType.Same && !r.IsResolved)
+            .ToList();
+
+        if (unresolved.Count > 0)
+        {
+            var names = unresolved
+                .Take(5)
+                .Select(r => string.IsNullOrEmpty(r.DisplayName) ? r.RowKey : $"{r.RowKey} {r.DisplayName}");
+            var preview = string.Join("\n  ", names);
+            var more = unresolved.Count > 5 ? $"\n  …共 {unresolved.Count} 行" : string.Empty;
+
+            var result = MessageBox.Show(
+                $"以下 {unresolved.Count} 行尚未做出版本选择：\n  {preview}{more}\n\n确定要继续写回吗？（未选择的行将保留[我的]版本）",
+                "存在未处理冲突",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Warning
+            );
+            if (result != MessageBoxResult.OK)
+            {
+                // 跳转到第一个未处理行
+                ScrollToRow(unresolved[0]);
+                return;
+            }
+        }
+
         try
         {
             var savePath = _outPath;
@@ -1425,6 +1679,34 @@ public partial class ExcelConflictWindow : Window
         {
             MessageBox.Show($"写回失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private void ScrollToRow(RowConflict target)
+    {
+        // 切到对应 sheet tab
+        foreach (TabItem tab in SheetTabs.Items)
+        {
+            if (tab.Tag?.ToString() == target.SheetName)
+            {
+                SheetTabs.SelectedItem = tab;
+                break;
+            }
+        }
+
+        // 等布局完成后滚动
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, (Action)(() =>
+        {
+            var items = ConflictList.ItemsSource as System.Collections.IList;
+            if (items == null) return;
+            var idx = items.IndexOf(target);
+            if (idx < 0) return;
+            ConflictList.ScrollIntoView(target);
+            // 高亮未处理行，方便用户找到
+            target.IsSelected = true;
+            if (!_selectedRows.Contains(target))
+                _selectedRows.Add(target);
+            UpdateSelectionButtons();
+        }));
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e)

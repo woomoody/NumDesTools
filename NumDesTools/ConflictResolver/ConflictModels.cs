@@ -143,6 +143,7 @@ public class RowConflict : INotifyPropertyChanged
         set
         {
             _rowChoice = value;
+            _rowChoiceExplicit = true;
             OnPropertyChanged();
             OnPropertyChanged(nameof(RowChoiceOurs));
             OnPropertyChanged(nameof(RowChoiceTheirs));
@@ -167,12 +168,29 @@ public class RowConflict : INotifyPropertyChanged
         }
     }
 
+    /// <summary>用户是否已明确处理过该行（Modified = 所有冲突格都做过选择；OnlyOurs/OnlyTheirs = 用户主动选过保留/放弃）</summary>
     public bool IsResolved =>
         DiffType switch
         {
-            RowDiffType.Modified => true, // 格级选择总是有值（Ours/Theirs），不存在"未选"
+            RowDiffType.Modified => Cells.All(c => c.IsExplicit),
+            RowDiffType.OnlyOurs or RowDiffType.OnlyTheirs => _rowChoiceExplicit,
             _ => true
         };
+
+    private bool _rowChoiceExplicit;
+
+    /// <summary>拖拽多选时的行选中状态（纯视觉，不持久化）</summary>
+    private bool _isSelected;
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value) return;
+            _isSelected = value;
+            OnPropertyChanged();
+        }
+    }
 
     /// <summary>将该行所有单元格冲突批量设置为同一选择</summary>
     public void SetAllCells(ConflictChoice choice)
