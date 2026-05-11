@@ -189,7 +189,12 @@
       "Read(//d/PlaywrightPic/island/v2/**)",
       "Read(//d/PlaywrightPic/island/v4/**)",
       "Skill(claude-api)",
-      "Skill(claude-api:*)"
+      "Skill(claude-api:*)",
+      "WebFetch(domain:apkpure.com)",
+      "WebFetch(domain:apkcombo.com)",
+      "WebFetch(domain:apkmirror.com)",
+      "WebFetch(domain:apkpure.net)",
+      "WebFetch(domain:play.google.com)"
     ],
     "defaultMode": "bypassPermissions",
     "additionalDirectories": [
