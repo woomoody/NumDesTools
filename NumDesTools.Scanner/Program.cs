@@ -86,6 +86,19 @@ internal class Program
         if (args.Contains("--validate"))
             return ConfigValidator.Run(args);
 
+        // ── 活动写入模式（独立，不依赖飞书）────────────────────────────────────
+        if (args.Contains("--write-activity"))
+        {
+            int idx = Array.IndexOf(args, "--write-activity");
+            if (idx < 0 || idx + 1 >= args.Length)
+            {
+                Console.WriteLine("[ERROR] 用法：--write-activity <write_plan.json>");
+                return 1;
+            }
+            ActivityWriter.RunFromFile(args[idx + 1]);
+            return 0;
+        }
+
         // 解析参数
         bool releaseMode = args.Contains("--release");
         bool confirmMode = args.Contains("--confirm");
