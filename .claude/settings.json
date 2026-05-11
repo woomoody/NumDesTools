@@ -187,7 +187,9 @@
       "Read(//d/PlaywrightPic/island/v1/**)",
       "Read(//d/PlaywrightPic/island/v3/**)",
       "Read(//d/PlaywrightPic/island/v2/**)",
-      "Read(//d/PlaywrightPic/island/v4/**)"
+      "Read(//d/PlaywrightPic/island/v4/**)",
+      "Skill(claude-api)",
+      "Skill(claude-api:*)"
     ],
     "defaultMode": "bypassPermissions",
     "additionalDirectories": [

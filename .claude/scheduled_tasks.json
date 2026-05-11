@@ -5,7 +5,7 @@
       "cron": "32 9 * * 1-5",
       "prompt": "运行飞书每日扫描任务：\ndotnet run --project \"C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\NumDesTools.Scanner\\NumDesTools.Scanner.csproj\" -- --all --release",
       "createdAt": 1778117536152,
-      "lastFiredAt": 1778205720381,
+      "lastFiredAt": 1778464964196,
       "recurring": true,
       "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
       "createdByPid": 64936,
