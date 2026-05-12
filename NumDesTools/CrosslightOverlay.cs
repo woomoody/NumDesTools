@@ -287,6 +287,8 @@ internal static class CrosslightController
 
     private static void OnSelectionChange(object sh, Range target)
     {
+        if (NumDesAddIn.App.CutCopyMode != 0)
+            return;
         if (_fillMode)
         {
             if (sh is Worksheet ws)

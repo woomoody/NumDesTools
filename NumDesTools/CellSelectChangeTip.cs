@@ -208,6 +208,8 @@ public sealed class CellSelectChangeTip : Form
 
     public static void OnSelectionChange(object sh, Range target)
     {
+        if (NumDesAddIn.App.CutCopyMode != 0)
+            return;
         ExcelAsyncUtil.QueueAsMacro(() => TryShow(target));
     }
 

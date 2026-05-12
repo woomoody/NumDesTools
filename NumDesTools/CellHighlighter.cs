@@ -267,6 +267,8 @@ internal static class CellHighlightController
 
     private static void OnSelectionChange(object sh, Range target)
     {
+        if (NumDesAddIn.App.CutCopyMode != 0)
+            return;
         if (sh is Worksheet ws)
             CellHighlighter.Highlight(ws, target);
     }
