@@ -184,22 +184,26 @@
         {
           "excel_file": "ActivityBpData.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_bp"
         },
         {
           "excel_file": "ActivityBpRewardChangeData.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_bp"
         },
         {
           "excel_file": "ActivityBpRewardData.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_bp"
         },
         {
           "excel_file": "ActivityBpStageData.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_bp"
         },
         {
           "excel_file": "ActivityClientFollowUpData.xlsx",
@@ -214,17 +218,20 @@
         {
           "excel_file": "ActivitySeasonData.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_bp"
         },
         {
           "excel_file": "ActivityStageRewardData.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_bp"
         },
         {
           "excel_file": "Avatar.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "art"
         },
         {
           "excel_file": "BpBuildData.xlsx",
@@ -244,7 +251,8 @@
         {
           "excel_file": "BpMergeData.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "item_bp"
         },
         {
           "excel_file": "ChangeRewardGroupData.xlsx",
@@ -259,27 +267,32 @@
         {
           "excel_file": "Drop.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "reward"
         },
         {
           "excel_file": "EventTriggerData.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_trigger"
         },
         {
           "excel_file": "EventTriggerLtePortalData.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_trigger"
         },
         {
           "excel_file": "ExploitationDetail.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "exploit"
         },
         {
           "excel_file": "ExploitationGroup.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "exploit"
         },
         {
           "excel_file": "Field地组表$$.xlsx#Field",
@@ -294,32 +307,38 @@
         {
           "excel_file": "Icon.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "art"
         },
         {
           "excel_file": "IconSpine.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "art"
         },
         {
           "excel_file": "Item.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "item"
         },
         {
           "excel_file": "ItemAdsorb.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "item"
         },
         {
           "excel_file": "ItemBuild.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "item"
         },
         {
           "excel_file": "ItemChest.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "item"
         },
         {
           "excel_file": "ItemClone.xlsx",
@@ -364,7 +383,8 @@
         {
           "excel_file": "ItemHarvest.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "item"
         },
         {
           "excel_file": "ItemLtePin.xlsx",
@@ -384,7 +404,8 @@
         {
           "excel_file": "ItemMerge.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "item"
         },
         {
           "excel_file": "ItemRepairMat.xlsx",
@@ -394,47 +415,56 @@
         {
           "excel_file": "ItemSpawn.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "item"
         },
         {
           "excel_file": "ItemTemple.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "item"
         },
         {
           "excel_file": "LandmarkBuilding.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "landmark"
         },
         {
           "excel_file": "LteData.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_main"
         },
         {
           "excel_file": "LteEnergyReward.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_reward"
         },
         {
           "excel_file": "LteExchangeData.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_exchange"
         },
         {
           "excel_file": "LteExchangeGroupsData.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_exchange"
         },
         {
           "excel_file": "LteExchangeLandmark.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "landmark"
         },
         {
           "excel_file": "LteExchangeLandmarkData.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "landmark"
         },
         {
           "excel_file": "LteIslandDecorationChest.xlsx",
@@ -454,7 +484,8 @@
         {
           "excel_file": "MapDataProto.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_map"
         },
         {
           "excel_file": "MapIntroduction.xlsx",
@@ -569,12 +600,14 @@
         {
           "excel_file": "RewardGroup.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "reward"
         },
         {
           "excel_file": "ScoreTrigger.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "core_score"
         },
         {
           "excel_file": "ShopMarket.xlsx",
@@ -599,9 +632,12 @@
         {
           "excel_file": "Type.xlsx",
           "lookup_field": "id",
-          "source": "multiRules"
+          "source": "multiRules",
+          "role": "art"
         }
-      ]
+      ],
+      "logic_base": "LteBpLogicBase",
+      "desc": "LTE限时地图活动"
     },
     "3": {
       "type": 3,

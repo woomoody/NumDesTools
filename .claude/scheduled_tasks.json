@@ -5,7 +5,7 @@
       "cron": "32 9 * * 1-5",
       "prompt": "运行飞书每日扫描任务：\ndotnet run --project \"C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\NumDesTools.Scanner\\NumDesTools.Scanner.csproj\" -- --all --release",
       "createdAt": 1778117536152,
-      "lastFiredAt": 1778464964196,
+      "lastFiredAt": 1778551320353,
       "recurring": true,
       "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
       "createdByPid": 68084,
@@ -25,6 +25,7 @@
       "cron": "7 */2 * * *",
       "prompt": "运行需求情报收集任务。调用 demand-collector agent，从以下渠道收集新内容并对比上次快照：\n1. 竞品拆包数据（C:\\tmp\\apk_inspect\\parsed_data\\datas\\ — 检查文件修改时间）\n2. 工作项目 git log（C:\\M1Work、D:\\M2Work\\code，取最近2小时提交）\n3. 网络搜索（merge game / 合并游戏 相关，本次轮换关键词：merge puzzle game new event 2025 site:reddit.com）\n\n对比快照文件 C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\doc\\agents\\demand_snapshot.json：\n- 有新内容 → 生成或更新 doc/agents/output/{主题}.md，文档顶部插入更新记录行，然后通知用户\"[需求巡检] 发现新内容：{主题}\"\n- 无新内容 → 只回复：\"[需求巡检 {当前时间}] 无新内容，与上次相比无明显变化。\"\n\n输出目录：C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\doc\\agents\\output\\\n快照文件：C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\doc\\agents\\demand_snapshot.json",
       "createdAt": 1778494005733,
+      "lastFiredAt": 1778553420743,
       "recurring": true,
       "createdBySessionId": "d45b3e9b-1708-4915-a2b0-ec4baa4cc7b0",
       "createdByPid": 66740

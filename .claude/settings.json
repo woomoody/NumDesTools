@@ -194,7 +194,14 @@
       "WebFetch(domain:apkcombo.com)",
       "WebFetch(domain:apkmirror.com)",
       "WebFetch(domain:apkpure.net)",
-      "WebFetch(domain:play.google.com)"
+      "WebFetch(domain:play.google.com)",
+      "WebFetch(domain:www.reddit.com)",
+      "WebFetch(domain:toucharcade.com)",
+      "WebFetch(domain:www.pocketgamer.com)",
+      "WebFetch(domain:pocketgamer.com)",
+      "WebFetch(domain:mobilegamer.biz)",
+      "WebFetch(domain:www.gamedeveloper.com)",
+      "WebFetch(domain:old.reddit.com)"
     ],
     "defaultMode": "bypassPermissions",
     "additionalDirectories": [
