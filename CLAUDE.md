@@ -64,3 +64,10 @@ Long operations use `ExcelAsyncUtil.QueueAsMacro()`. Never block the Excel UI th
 ### Key dependencies
 
 `ExcelDna.AddIn 1.9.0`, `EPPlus 8.2.0`, `MiniExcel 1.42.0`, `LibGit2Sharp 0.31.0`, `NLua`, `MathNet.Numerics`.
+
+### Excel 读写规范
+
+- **读取 xlsx** → EPPlus（`OfficeOpenXml`）。参考 `NumDesTools.Scanner/ExcelReader.cs`。
+- **写入 xlsx** → EPPlus（`OfficeOpenXml`）。参考 `NumDesTools.Scanner/ActivityWriter.cs`（追加行）和 `NumDesTools.Scanner/LteMapWriter.cs`（新建带样式/列宽/行高的 sheet）。
+- 每个入口必须先调用 `ExcelPackage.License.SetNonCommercialPersonal("NumDesTools")`。
+- MiniExcel 已在依赖中但**不用于本项目**，不要引入。

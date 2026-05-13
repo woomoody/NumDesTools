@@ -201,7 +201,17 @@
       "WebFetch(domain:pocketgamer.com)",
       "WebFetch(domain:mobilegamer.biz)",
       "WebFetch(domain:www.gamedeveloper.com)",
-      "WebFetch(domain:old.reddit.com)"
+      "WebFetch(domain:old.reddit.com)",
+      "WebFetch(domain:www.droidgamers.com)",
+      "WebFetch(domain:evermerge.fandom.com)",
+      "WebFetch(domain:mergeadventure.fandom.com)",
+      "WebFetch(domain:mergegames.fandom.com)",
+      "WebFetch(domain:www.gamerefinery.com)",
+      "WebFetch(domain:www.deconstructoroffun.com)",
+      "WebFetch(domain:thetool.io)",
+      "mcp__FeishuProjectMcp__get_workitem_op_record",
+      "WebFetch(domain:feixiang.work)",
+      "WebFetch(domain:open.feishu.cn)"
     ],
     "defaultMode": "bypassPermissions",
     "additionalDirectories": [
@@ -212,14 +222,15 @@
       "\\tmp\\xlsm_reader",
       "c:\\tmp\\xlsm_reader",
       "C:\\Users\\cent\\Documents\\NumDesTools",
-      "C:\\Users\\cent\\Documents\\tmp\\xlsxreader",
+      "C:\\Users\\cent\\Documents\\workspace\\xlsxreader",
       "C:\\M1Work\\Public\\Excels\\TablesTools\\AliceConfig",
       "\\tmp\\fixmap",
       "c:\\tmp\\fixmap",
       "C:\\Users\\cent\\Documents\\WindowsPowerShell",
       "c:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\.claude",
-      "C:\\Users\\cent\\Documents\\tmp",
-      "c:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\.claude\\skills"
+      "C:\\Users\\cent\\Documents\\workspace",
+      "c:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\.claude\\skills",
+      "C:\\Users\\cent\\AppData\\Roaming\\syntevo\\SmartGit"
     ]
   }
 }
