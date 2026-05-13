@@ -4,13 +4,13 @@ using System.Text;
 namespace NumDesTools;
 
 /// <summary>
-/// 追加写日志到 我的文档\tmp\plugin.log，超过 2MB 自动保留最新一半。
+/// 追加写日志到 我的文档\workspace\plugin.log，超过 2MB 自动保留最新一半。
 /// </summary>
 internal static class PluginLog
 {
     private static readonly string LogPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-        "tmp",
+        "workspace",
         "plugin.log"
     );
 
@@ -21,7 +21,7 @@ internal static class PluginLog
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
-            var line = $"[{DateTime.Now:HH:mm:ss.fff}] {message}{Environment.NewLine}";
+            var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}{Environment.NewLine}";
             File.AppendAllText(LogPath, line, Encoding.UTF8);
             TrimIfNeeded();
             Debug.Print(line.TrimEnd());

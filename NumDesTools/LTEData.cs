@@ -579,13 +579,15 @@ public class LteData
                 var exportWildcardDyData = new Dictionary<string, string>(exportWildcardData);
                 bool dataWritten = false;
                 var dataRepeatWritten = new HashSet<string>();
-                var modelSheetTypes = new HashSet<object>(modelSheet.Value.Keys.Select(k => k.Item1));
+                var modelSheetTypes = new HashSet<object>(
+                    modelSheet.Value.Keys.Select(k => k.Item1)
+                );
 
                 // 阶段一：收集操作意图，不修改表
-                var deleteRows = new List<int>();                           // 要删除的行号
-                var updateOps = new List<(int rowIndex, int idCount)>();    // 原地覆写
-                var insertOps = new List<(string itemId, int idCount)>();   // 新增（insert after 相似ID）
-                var appendOps = new List<int>();                            // 追加到末尾（无相似ID）
+                var deleteRows = new List<int>(); // 要删除的行号
+                var updateOps = new List<(int rowIndex, int idCount)>(); // 原地覆写
+                var insertOps = new List<(string itemId, int idCount)>(); // 新增（insert after 相似ID）
+                var appendOps = new List<int>(); // 追加到末尾（无相似ID）
 
                 if (dataStatusListNew != null)
                 {
@@ -668,7 +670,13 @@ public class LteData
                     string itemType = typeList[idCount] ?? "";
 
                     foreach (var wildcardDy in exportWildcardData)
-                        GetDyWildcardValue(baseData, exportWildcardDyData, wildcardDy.Key, wildcardDy.Value, idCount);
+                        GetDyWildcardValue(
+                            baseData,
+                            exportWildcardDyData,
+                            wildcardDy.Key,
+                            wildcardDy.Value,
+                            idCount
+                        );
 
                     bool rowChanged = false;
                     var rowWriteData = new List<(int col, string val, string colType)>();
@@ -677,10 +685,23 @@ public class LteData
                         var cellTitle = colTitles[j];
                         if (cellTitle == "")
                             continue;
-                        if (!modelSheet.Value.TryGetValue((itemType, (object)cellTitle), out var cellModelValue))
+                        if (
+                            !modelSheet.Value.TryGetValue(
+                                (itemType, (object)cellTitle),
+                                out var cellModelValue
+                            )
+                        )
                             continue;
 
-                        var cellRealValue = AnalyzeWildcard(cellModelValue, exportWildcardData, exportWildcardDyData, strDictionary, baseData, id, itemId);
+                        var cellRealValue = AnalyzeWildcard(
+                            cellModelValue,
+                            exportWildcardData,
+                            exportWildcardDyData,
+                            strDictionary,
+                            baseData,
+                            id,
+                            itemId
+                        );
 
                         if (j == 2 && cellRealValue == string.Empty)
                             break;
@@ -702,7 +723,16 @@ public class LteData
 
                     foreach (var (col, val, colType) in rowWriteData)
                     {
-                        checkResult.AddRange(PubMetToExcel.ExcelCellValueFormatCheck(val, colType, targetSheet.Name, targetExcel.File.FullName, rowIndex - 1, col - 1));
+                        checkResult.AddRange(
+                            PubMetToExcel.ExcelCellValueFormatCheck(
+                                val,
+                                colType,
+                                targetSheet.Name,
+                                targetExcel.File.FullName,
+                                rowIndex - 1,
+                                col - 1
+                            )
+                        );
                         targetSheet.Cells[rowIndex, col].Value = val;
                     }
                     dataWritten = true;
@@ -745,10 +775,36 @@ public class LteData
                     rowOffset++;
 
                     foreach (var wildcardDy in exportWildcardData)
-                        GetDyWildcardValue(baseData, exportWildcardDyData, wildcardDy.Key, wildcardDy.Value, idCount);
+                        GetDyWildcardValue(
+                            baseData,
+                            exportWildcardDyData,
+                            wildcardDy.Key,
+                            wildcardDy.Value,
+                            idCount
+                        );
 
-                    bool wrote = WriteRowData(targetSheet, targetExcel, writeRow, writeCol, itemId, itemType, idCount, colTitles, colTypes, modelSheet, exportWildcardData, exportWildcardDyData, strDictionary, baseData, id, dataRepeatWritten, checkResult, isFirst: true);
-                    if (wrote) dataWritten = true;
+                    bool wrote = WriteRowData(
+                        targetSheet,
+                        targetExcel,
+                        writeRow,
+                        writeCol,
+                        itemId,
+                        itemType,
+                        idCount,
+                        colTitles,
+                        colTypes,
+                        modelSheet,
+                        exportWildcardData,
+                        exportWildcardDyData,
+                        strDictionary,
+                        baseData,
+                        id,
+                        dataRepeatWritten,
+                        checkResult,
+                        isFirst: true
+                    );
+                    if (wrote)
+                        dataWritten = true;
                 }
 
                 foreach (var idCount in tailInserts)
@@ -758,10 +814,36 @@ public class LteData
                     int writeRow = targetSheet.Dimension.End.Row + 1;
 
                     foreach (var wildcardDy in exportWildcardData)
-                        GetDyWildcardValue(baseData, exportWildcardDyData, wildcardDy.Key, wildcardDy.Value, idCount);
+                        GetDyWildcardValue(
+                            baseData,
+                            exportWildcardDyData,
+                            wildcardDy.Key,
+                            wildcardDy.Value,
+                            idCount
+                        );
 
-                    bool wrote = WriteRowData(targetSheet, targetExcel, writeRow, writeCol, itemId, itemType, idCount, colTitles, colTypes, modelSheet, exportWildcardData, exportWildcardDyData, strDictionary, baseData, id, dataRepeatWritten, checkResult, isFirst: true);
-                    if (wrote) dataWritten = true;
+                    bool wrote = WriteRowData(
+                        targetSheet,
+                        targetExcel,
+                        writeRow,
+                        writeCol,
+                        itemId,
+                        itemType,
+                        idCount,
+                        colTitles,
+                        colTypes,
+                        modelSheet,
+                        exportWildcardData,
+                        exportWildcardDyData,
+                        strDictionary,
+                        baseData,
+                        id,
+                        dataRepeatWritten,
+                        checkResult,
+                        isFirst: true
+                    );
+                    if (wrote)
+                        dataWritten = true;
                 }
 
                 if (dataWritten)
@@ -822,10 +904,20 @@ public class LteData
             var cellTitle = colTitles[j];
             if (cellTitle == "")
                 continue;
-            if (!modelSheet.Value.TryGetValue((itemType, (object)cellTitle), out var cellModelValue))
+            if (
+                !modelSheet.Value.TryGetValue((itemType, (object)cellTitle), out var cellModelValue)
+            )
                 continue;
 
-            var cellRealValue = AnalyzeWildcard(cellModelValue, exportWildcardData, exportWildcardDyData, strDictionary, baseData, id, itemId);
+            var cellRealValue = AnalyzeWildcard(
+                cellModelValue,
+                exportWildcardData,
+                exportWildcardDyData,
+                strDictionary,
+                baseData,
+                id,
+                itemId
+            );
 
             if (j == 2 && cellRealValue == string.Empty)
                 break;
@@ -837,7 +929,16 @@ public class LteData
             if (!isFirst && targetSheet.Cells[writeRow, j].Value?.ToString() == cellRealValue)
                 continue;
 
-            checkResult.AddRange(PubMetToExcel.ExcelCellValueFormatCheck(cellRealValue, colTypes[j], targetSheet.Name, targetExcel.File.FullName, writeRow - 1, j - 1));
+            checkResult.AddRange(
+                PubMetToExcel.ExcelCellValueFormatCheck(
+                    cellRealValue,
+                    colTypes[j],
+                    targetSheet.Name,
+                    targetExcel.File.FullName,
+                    writeRow - 1,
+                    j - 1
+                )
+            );
             targetSheet.Cells[writeRow, j].Value = cellRealValue;
             wrote = true;
         }
@@ -3035,6 +3136,8 @@ public class LteData
                 baseDic,
                 titleList
             );
+            if (fixMainData is null)
+                continue;
             string taskTypeId = fixMainData[0];
             string taskTagetId = fixMainData[1];
             taskDialogId = fixMainData[2];
@@ -3049,6 +3152,8 @@ public class LteData
                 baseDic,
                 titleList
             );
+            if (fixSubData is null)
+                continue;
             string taskSubTypeId = fixSubData[0];
             string taskSubTagetId = fixSubData[1];
             taskSubDialogId = fixSubData[2];
@@ -3263,9 +3368,14 @@ public class LteData
         }
         if (taskTagetName != string.Empty)
         {
-            taskTagetId = baseDic
-                .FirstOrDefault(kv => kv.Value.Count > 4 && kv.Value[4] == taskTagetName)
-                .Key;
+            taskTagetId =
+                baseDic.FirstOrDefault(kv => kv.Value.Count > 5 && kv.Value[5] == taskTagetName).Key
+                ?? string.Empty;
+            if (taskTagetId == string.Empty)
+            {
+                MessageBox.Show($"目标名\"{taskTagetName}\"在基础数据中不存在");
+                return null;
+            }
             var taskTagetType = baseDic.ContainsKey(taskTagetId)
                 ? baseDic[taskTagetId][titleList.IndexOf("类型")]
                 : string.Empty;
@@ -3762,7 +3872,7 @@ public class LteData
                 break;
             }
 
-            var matchFieldIdEnd = fieldId.Substring(fieldId.Length - 1, 1) ;
+            var matchFieldIdEnd = fieldId.Substring(fieldId.Length - 1, 1);
             var fieldCount = string.Empty;
             if (matchFieldIdEnd == "1")
             {
@@ -3880,7 +3990,7 @@ public class LteData
             // 消耗寻找
             var fieldCostTarget = copyFieldArray[i, 10]?.ToString() ?? String.Empty;
             string fieldFindId2 = baseDic
-                .FirstOrDefault(kv => kv.Value.Count > 4 && kv.Value[4] == fieldCostTarget)
+                .FirstOrDefault(kv => kv.Value.Count > 5 && kv.Value[5] == fieldCostTarget)
                 .Key;
 
             string findLinks2 = string.Empty;
@@ -3971,7 +4081,7 @@ public class LteData
         var fixIcon = string.Empty;
 
         var fieldConditonTargetId = baseDic
-            .FirstOrDefault(kv => kv.Value.Count > 4 && kv.Value[4] == fieldConditonTarget)
+            .FirstOrDefault(kv => kv.Value.Count > 5 && kv.Value[5] == fieldConditonTarget)
             .Key;
 
         if (fieldConditonTargetId == null)
