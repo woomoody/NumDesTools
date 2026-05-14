@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using ExcelDna.Integration;
 using MiniExcelLibs;
 using NLua;
 using NumDesTools.Config;
@@ -1462,7 +1463,8 @@ public static class PubMetToExcelFunc
             }
 
             currentCount++;
-            NumDesAddIn.App.StatusBar = $"正在检查第 {currentCount}/{totalCount} 个文件: {changedFile}";
+            var statusMsg1 = $"正在检查第 {currentCount}/{totalCount} 个文件: {changedFile}";
+            ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = statusMsg1);
         }
     }
 
@@ -2404,7 +2406,8 @@ public static class PubMetToExcelFunc
             }
 
             currentCount++;
-            NumDesAddIn.App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
+            var statusMsg2 = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
+            ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = statusMsg2);
         }
 
         return targetList;
@@ -2845,8 +2848,12 @@ public static class PubMetToExcelFunc
                 // 记录异常信息，继续处理下一个文件
             }
 
-            Interlocked.Increment(ref currentCount);
-            NumDesAddIn.App.StatusBar = $"正在检查第 {currentCount}/{count} 个文件: {file}";
+            var n = Interlocked.Increment(ref currentCount);
+            if (n % 10 == 0 || n == count)
+            {
+                var msg = $"正在检查第 {n}/{count} 个文件...";
+                ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = msg);
+            }
         };
 
         if (isMulti)
@@ -2948,8 +2955,12 @@ public static class PubMetToExcelFunc
             }
             catch { }
 
-            Interlocked.Increment(ref currentCount);
-            NumDesAddIn.App.StatusBar = $"正在检查第 {currentCount}/{count} 个文件: {file}";
+            var n = Interlocked.Increment(ref currentCount);
+            if (n % 10 == 0 || n == count)
+            {
+                var msg = $"正在检查第 {n}/{count} 个文件...";
+                ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = msg);
+            }
         };
 
         if (isMulti)

@@ -211,7 +211,10 @@
       "WebFetch(domain:thetool.io)",
       "mcp__FeishuProjectMcp__get_workitem_op_record",
       "WebFetch(domain:feixiang.work)",
-      "WebFetch(domain:open.feishu.cn)"
+      "WebFetch(domain:open.feishu.cn)",
+      "WebFetch(domain:www.appshopper.com)",
+      "Skill(xlsx-rw)",
+      "Skill(xlsx-rw:*)"
     ],
     "defaultMode": "bypassPermissions",
     "additionalDirectories": [
