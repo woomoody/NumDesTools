@@ -1,6 +1,6 @@
 ---
 name: demand-collector
-description: 需求情报收集与竞品分析。每2小时自动触发，从多渠道收集游戏需求线索和竞品动态，汇总后与上次对比，有新内容则生成/更新分析文档，无新内容则返回简短提示。
+description: 需求情报收集与竞品分析。每天自动触发，从多渠道收集游戏需求线索和竞品动态，汇总后与上次对比，有新内容则生成/更新分析文档，无新内容则返回简短提示。竞品数据全部来自 MuMu 模拟器 ADB 拉取，不使用第三方 APK 下载。
 tools: Bash, Read, Write, Grep, Glob, WebFetch, WebSearch
 model: opus
 ---
@@ -107,56 +107,22 @@ model: opus
 
 ---
 
-### 自动下载规则（夜间窗口 20:00 — 09:00）
+### APK 数据来源说明
 
-```python
-import datetime
-now = datetime.datetime.now()
-in_download_window = (now.hour >= 20) or (now.hour < 9)
-```
+**不使用第三方 APK 下载。** 所有竞品数据均来源于 **MuMu 模拟器内已安装的正版游戏**，通过 ADB 拉取。原因：热更数据（活动配置、本地化等）由服务器下发到模拟器运行目录，第三方 APK 包中不含这些实时数据。
 
-**在窗口内**：
-- 发现新竞品且找到 APK 下载链接 → 自动下载并解包
-- 已知竞品本地数据超过 7 天未更新 → 自动尝试重拉（ADB 优先，无则 apkpure）
+**数据获取流程：**
+1. 用户在 MuMu 模拟器中打开目标游戏，让游戏完成热更
+2. Agent 通过 ADB 拉取数据（Step A2-2）
+3. 分析拉取到的本地数据
 
-**窗口外（09:00–20:00）**：
-- 在输出文档标注"待下载（当前不在自动下载窗口）"，不触发下载
+**发现新竞品时（无 APK 下载）：**
+1. 写入 `competitors.json`，`status: "待安装"`，`localization_file` 填空
+2. 生成文档 `竞品-新发现-{游戏名}.md`，标注"**请在 MuMu 模拟器中安装该游戏，安装并打开热更完成后通知我，我将通过 ADB 拉取数据**"
+3. 不触发任何自动下载
 
-**下载 + 解包流程：**
-
-```python
-import subprocess, os, re
-
-def download_and_unpack(game_name, apk_url):
-    # 下载到 C:\tmp\apk_downloads\
-    dl_dir = r"C:\tmp\apk_downloads"
-    os.makedirs(dl_dir, exist_ok=True)
-    apk_path = os.path.join(dl_dir, f"{game_name}.apk")
-    if not os.path.exists(apk_path):
-        # apk_url 由 WebFetch 访问 apkpure 详情页后提取直链
-        subprocess.run(["cmd.exe", "/c", f"curl -L -o \"{apk_path}\" \"{apk_url}\""], timeout=300)
-
-    # APK 是 ZIP，用 tar 解包（Windows 内置）
-    unzip_dir = f"C:\\tmp\\{game_name}_unzip"
-    os.makedirs(unzip_dir, exist_ok=True)
-    subprocess.run(["cmd.exe", "/c", f"tar -xf \"{apk_path}\" -C \"{unzip_dir}\""])
-
-    # 找本地化 JSON：取 >50KB 的候选，按大小降序，最大的最可能是全量本地化
-    candidates = []
-    for root, _, files in os.walk(unzip_dir):
-        for f in files:
-            if re.search(r'(locali[sz]ation|game_text|lang|string|i18n).*\.(json|bytes|txt)$', f, re.IGNORECASE):
-                fp = os.path.join(root, f)
-                if os.path.getsize(fp) > 50000:
-                    candidates.append((fp, os.path.getsize(fp)))
-    candidates.sort(key=lambda x: -x[1])
-    return candidates
-
-# 解包成功后更新 competitors.json：
-#   localization_file = candidates[0][0]
-#   local_path = unzip_dir
-#   status = "已分析"
-```
+**本地数据超过 7 天未更新时：**
+- 在巡检摘要中提醒："**{游戏名} 本地数据已 {N} 天未更新，建议在 MuMu 模拟器中打开该游戏完成热更后，重新运行巡检以获取最新数据。**"
 
 ---
 
@@ -417,10 +383,9 @@ cd /d/M2Work/code && git log --oneline --since="2 hours ago" --all 2>/dev/null |
 - 已有 → 跳过
 - 没有 + 符合竞品范围（2合/3合/休闲益智，非重度策略）→ **立即纳入**：
   1. 用 WebSearch 搜"游戏名 android package name"获取包名
-  2. 用 WebSearch 搜"包名 apkpure"判断是否有 APK 下载
-  3. 写入 `competitors.json`（`status: "待拆包"` 或 `"已下载"`）
-  4. 生成文档 `竞品-新发现-{游戏名}.md`
-  5. 判断下载窗口决定是否立即下载（见自动下载规则）
+  2. 写入 `competitors.json`（`status: "待安装"`, `localization_file: ""`）
+  3. 生成文档 `竞品-新发现-{游戏名}.md`，在文档中标注"**请在 MuMu 模拟器中安装此游戏，打开并完成热更后通知我**"
+  4. **不触发任何 APK 下载**
 
 **C2 — 已知竞品动态追踪**
 

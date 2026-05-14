@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using ExcelDna.Integration;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using MessageBox = System.Windows.MessageBox;
@@ -54,31 +55,35 @@ public static class ActivityRulesUpdater
     // 公共入口
     // ═════════════════════════════════════════════════════════════════════════
 
-    public static void Run()
+    public static void Run(string excelPath)
     {
         var report = new StringBuilder();
         report.AppendLine("═══════════════ ActivityTableRules 更新报告 ═══════════════");
         report.AppendLine($"时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         report.AppendLine();
 
-        NumDesAddIn.App.StatusBar = "更新规则：读取枚举...";
+        ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = "更新规则：读取枚举...");
 
         // 1. 解析 ActivityType 枚举 → { 枚举名 → type数字 }
         var enumMap = ParseActivityTypeEnum(report);
         if (enumMap.Count == 0)
         {
-            ErrorLogCtp.DisposeCtp();
-            PluginLog.Write(report.ToString());
-            ErrorLogCtp.CreateCtpNormal(report.ToString());
+            var r0 = report.ToString();
+            ExcelAsyncUtil.QueueAsMacro(() =>
+            {
+                ErrorLogCtp.DisposeCtp();
+                PluginLog.Write(r0);
+                ErrorLogCtp.CreateCtpNormal(r0);
+            });
             return;
         }
 
         // 2. 解析 ActivityManager → { 枚举名 → LogicBase类名 }
-        NumDesAddIn.App.StatusBar = "更新规则：读取 ActivityManager...";
+        ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = "更新规则：读取 ActivityManager...");
         var logicMap = ParseActivityManagerMapping(report);
 
         // 3. 对每个 LogicBase 扫描 Tables.Xxx[activityID] → { LogicBase类名 → 子表luaKey }
-        NumDesAddIn.App.StatusBar = "更新规则：扫描 LogicBase 文件...";
+        ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = "更新规则：扫描 LogicBase 文件...");
         var tableMap = BuildLogicToTableMap(logicMap.Values.Distinct().ToList(), report);
 
         // 4. 合并：enumName → typeNum → logicBase → luaKey
@@ -96,16 +101,21 @@ public static class ActivityRulesUpdater
         report.AppendLine();
 
         // 5. 读取现有 JSON，只追加 typeTableMap 中缺失的项
-        NumDesAddIn.App.StatusBar = "更新规则：写入 JSON...";
+        ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = "更新规则：写入 JSON...");
         var (added, skipped) = PatchRulesJson(inferred, report);
 
         report.AppendLine();
         report.AppendLine($"═════ 完成：新增 {added} 条，已有跳过 {skipped} 条 ══════");
-        NumDesAddIn.App.StatusBar = $"规则更新完成（新增 {added} 条）";
 
-        ErrorLogCtp.DisposeCtp();
-        PluginLog.Write(report.ToString());
-        ErrorLogCtp.CreateCtpNormal(report.ToString());
+        var reportText = report.ToString();
+        var statusMsg = $"规则更新完成（新增 {added} 条）";
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            NumDesAddIn.App.StatusBar = statusMsg;
+            ErrorLogCtp.DisposeCtp();
+            PluginLog.Write(reportText);
+            ErrorLogCtp.CreateCtpNormal(reportText);
+        });
     }
 
     // ═════════════════════════════════════════════════════════════════════════

@@ -2449,45 +2449,46 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         var filesCollection = new SelfExcelFileCollector(path);
         var files = filesCollection.GetAllExcelFilesPath();
-
-        // 支持多个 id：逗号、换行、空格分隔
         var ids = _excelSeachStr
-            .Split(new[] { ',', '\n', '\r', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+            .Split([',', '\n', '\r', ' '], StringSplitOptions.RemoveEmptyEntries)
             .Select(s => s.Trim())
             .Where(s => s.Length > 0)
             .Distinct()
             .ToList();
 
-        // 单次扫描所有文件，同时匹配所有 id
-        var merged = PubMetToExcelFunc.SearchModelKeyMiniExcelMulti(ids, files, true);
-
-        // 每张表只保留 [min, max]
-        var targetList = merged
-            .ToDictionary(
-                kv => kv.Key,
-                kv =>
+        App.StatusBar = $"正在扫描 {files.Length} 个文件...";
+        Task.Run(() => PubMetToExcelFunc.SearchModelKeyMiniExcelMulti(ids, files, true))
+            .ContinueWith(t =>
+            {
+                ExcelAsyncUtil.QueueAsMacro(() =>
                 {
-                    var sorted = kv.Value.OrderBy(v => v, StringComparer.Ordinal).ToList();
-                    return sorted.Count > 1
-                        ? new List<string> { sorted.First(), sorted.Last() }
-                        : new List<string> { sorted.First(), sorted.First() };
-                },
-                StringComparer.Ordinal
-            )
-            .OrderBy(x => x.Key, StringComparer.Ordinal)
-            .ToDictionary(x => x.Key, x => x.Value);
+                    var merged = t.Result;
+                    var targetList = merged
+                        .ToDictionary(
+                            kv => kv.Key,
+                            kv =>
+                            {
+                                var sorted = kv
+                                    .Value.OrderBy(v => v, StringComparer.Ordinal)
+                                    .ToList();
+                                return sorted.Count > 1
+                                    ? new List<string> { sorted.First(), sorted.Last() }
+                                    : new List<string> { sorted.First(), sorted.First() };
+                            },
+                            StringComparer.Ordinal
+                        )
+                        .OrderBy(x => x.Key, StringComparer.Ordinal)
+                        .ToDictionary(x => x.Key, x => x.Value);
 
-        var rows = targetList.Values.Sum(list => list.Count);
-        var cols = 3;
-
-        var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, cols);
-
-        var maxRow = targetValue.GetLength(0);
-        var maxCol = targetValue.GetLength(1);
-
-        var range = ws.Range[ws.Cells[2, 3], ws.Cells[2 + maxRow - 1, 3 + maxCol - 1]];
-
-        range.Value2 = targetValue;
+                    var rows = targetList.Values.Sum(list => list.Count);
+                    var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, 3);
+                    var maxRow = targetValue.GetLength(0);
+                    var maxCol = targetValue.GetLength(1);
+                    ws.Range[ws.Cells[2, 3], ws.Cells[2 + maxRow - 1, 3 + maxCol - 1]].Value2 =
+                        targetValue;
+                    App.StatusBar = false;
+                });
+            });
     }
 
     public void ModelDataCreat2_Click(IRibbonControl control)
@@ -2510,30 +2511,27 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             .Where(name => name is string && !string.IsNullOrEmpty((string)name))
             .ToList();
 
-        //查询值
         var seachValue = $"*{title[1]}";
-        var fileList = new List<string>();
-        foreach (var sheetName in sheetNames)
-        {
-            var fileInfo = PubMetToExcel.AliceFilePathFix(path, sheetName);
-            string filePath = fileInfo.Item1;
-            fileList.Add(filePath);
-        }
+        var files = sheetNames
+            .Select(sheetName => (string)PubMetToExcel.AliceFilePathFix(path, sheetName).Item1)
+            .ToArray();
 
-        var files = fileList.ToArray();
-        var targetList = PubMetToExcelFunc.SearchModelKeyMiniExcel(seachValue, files, false, false);
-
-        var rows = targetList.Values.Sum(list => list.Count);
-        var cols = 3;
-
-        var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, cols);
-
-        var maxRow = targetValue.GetLength(0);
-        var maxCol = targetValue.GetLength(1);
-
-        var range = ws.Range[ws.Cells[3, 17], ws.Cells[3 + maxRow - 1, 17 + maxCol - 1]];
-
-        range.Value2 = targetValue;
+        App.StatusBar = $"正在扫描 {files.Length} 个文件...";
+        Task.Run(() => PubMetToExcelFunc.SearchModelKeyMiniExcel(seachValue, files, false, false))
+            .ContinueWith(t =>
+            {
+                ExcelAsyncUtil.QueueAsMacro(() =>
+                {
+                    var targetList = t.Result;
+                    var rows = targetList.Values.Sum(list => list.Count);
+                    var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, 3);
+                    var maxRow = targetValue.GetLength(0);
+                    var maxCol = targetValue.GetLength(1);
+                    ws.Range[ws.Cells[3, 17], ws.Cells[3 + maxRow - 1, 17 + maxCol - 1]].Value2 =
+                        targetValue;
+                    App.StatusBar = false;
+                });
+            });
     }
 
     public void CheckHiddenCellVsto_Click(IRibbonControl control)
@@ -3467,21 +3465,122 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
     }
 
-
     #endregion
 
-    public void ActivityTestAll_Click(IRibbonControl control) => ActivityConfigTester.TestAll();
+    public void ActivityTestAll_Click(IRibbonControl control)
+    {
+        var excelPath = App.ActiveWorkbook.FullName;
+        Task.Run(() =>
+        {
+            try
+            {
+                ActivityConfigTester.TestAll(excelPath);
+            }
+            catch (Exception ex)
+            {
+                PluginLog.Write($"[ActivityTestAll CRASH] {ex}");
+                ExcelAsyncUtil.QueueAsMacro(() => MessageBox.Show(ex.Message, "验证活动（全量）出错"));
+            }
+        });
+    }
 
     public void ActivityTestById_Click(IRibbonControl control)
     {
-        var input = Microsoft.VisualBasic.Interaction.InputBox("请输入活动ID（多个用英文逗号分隔）：", "验证指定活动");
+        var input = WpfInputBox("请输入活动ID（多个用英文逗号分隔）：", "验证指定活动");
         if (string.IsNullOrWhiteSpace(input))
             return;
-        ActivityConfigTester.TestByIds(input);
+        var excelPath = App.ActiveWorkbook.FullName;
+        Task.Run(() =>
+        {
+            try
+            {
+                ActivityConfigTester.TestByIds(excelPath, input);
+            }
+            catch (Exception ex)
+            {
+                PluginLog.Write($"[ActivityTestById CRASH] {ex}");
+                ExcelAsyncUtil.QueueAsMacro(() => MessageBox.Show(ex.Message, "验证活动（指定ID）出错"));
+            }
+        });
     }
 
-    public void ActivityTestGitChanged_Click(IRibbonControl control) =>
-        ActivityConfigTester.TestGitChanged();
+    private static string WpfInputBox(string prompt, string title)
+    {
+        var tb = new System.Windows.Controls.TextBox
+        {
+            Margin = new System.Windows.Thickness(0, 8, 0, 0),
+            MinWidth = 320,
+        };
+        var btn = new System.Windows.Controls.Button
+        {
+            Content = "确定",
+            IsDefault = true,
+            Margin = new System.Windows.Thickness(0, 8, 0, 0),
+            HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+        };
+        var panel = new System.Windows.Controls.StackPanel
+        {
+            Margin = new System.Windows.Thickness(12)
+        };
+        panel.Children.Add(
+            new System.Windows.Controls.TextBlock
+            {
+                Text = prompt,
+                TextWrapping = System.Windows.TextWrapping.Wrap
+            }
+        );
+        panel.Children.Add(tb);
+        panel.Children.Add(btn);
 
-    public void ActivityRulesUpdate_Click(IRibbonControl control) => ActivityRulesUpdater.Run();
+        var win = new System.Windows.Window
+        {
+            Title = title,
+            Content = panel,
+            SizeToContent = System.Windows.SizeToContent.WidthAndHeight,
+            ResizeMode = System.Windows.ResizeMode.NoResize,
+            WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen,
+        };
+        btn.Click += (_, _) => win.DialogResult = true;
+        win.KeyDown += (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Escape)
+                win.Close();
+        };
+
+        return win.ShowDialog() == true ? tb.Text : string.Empty;
+    }
+
+    public void ActivityTestGitChanged_Click(IRibbonControl control)
+    {
+        var excelPath = App.ActiveWorkbook.FullName;
+        Task.Run(() =>
+        {
+            try
+            {
+                ActivityConfigTester.TestGitChanged(excelPath);
+            }
+            catch (Exception ex)
+            {
+                PluginLog.Write($"[ActivityTestGitChanged CRASH] {ex}");
+                ExcelAsyncUtil.QueueAsMacro(() => MessageBox.Show(ex.Message, "验证活动（Git改动）出错"));
+            }
+        });
+    }
+
+    public void ActivityRulesUpdate_Click(IRibbonControl control)
+    {
+        var excelPath = App.ActiveWorkbook.FullName;
+        Task.Run(() =>
+        {
+            try
+            {
+                ActivityRulesUpdater.Run(excelPath);
+            }
+            catch (Exception ex)
+            {
+                PluginLog.Write($"[ActivityRulesUpdate CRASH] {ex}");
+                ExcelAsyncUtil.QueueAsMacro(() => MessageBox.Show(ex.Message, "更新活动规则出错"));
+            }
+        });
+    }
 }

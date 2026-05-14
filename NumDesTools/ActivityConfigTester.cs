@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using ExcelDna.Integration;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NumDesTools.ExcelToLua;
@@ -230,26 +231,25 @@ public static class ActivityConfigTester
 
     // ─── 公共入口 ─────────────────────────────────────────────────────────────────
 
-    /// <summary>全量测试所有活动表。</summary>
-    public static void TestAll() => Run(null, null);
+    /// <summary>全量测试所有活动表。excelPath 在 UI 线程提前取好。</summary>
+    public static void TestAll(string excelPath) => Run(excelPath, null, null);
 
-    /// <summary>测试指定活动 ID（逗号分隔）。</summary>
-    public static void TestByIds(string idsCsv)
+    /// <summary>测试指定活动 ID（逗号分隔）。excelPath 在 UI 线程提前取好。</summary>
+    public static void TestByIds(string excelPath, string idsCsv)
     {
         var ids = idsCsv
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToHashSet();
-        Run(ids, null);
+        Run(excelPath, ids, null);
     }
 
-    /// <summary>只测试 Git 变更涉及的活动表。</summary>
-    public static void TestGitChanged()
+    /// <summary>只测试 Git 变更涉及的活动表。excelPath 在 UI 线程提前取好。</summary>
+    public static void TestGitChanged(string excelPath)
     {
         var rules = LoadRules();
         if (rules == null)
             return;
 
-        var excelPath = NumDesAddIn.App.ActiveWorkbook.FullName;
         var changedFiles = SvnGitTools.GitDiffFileCount(
             Path.GetDirectoryName(excelPath) ?? excelPath
         );
@@ -261,35 +261,40 @@ public static class ActivityConfigTester
             !changedFiles.Any(f => activityTableNames.Contains(Path.GetFileNameWithoutExtension(f)))
         )
         {
-            MessageBox.Show("当前 Git 工作区没有活动相关表格的改动。");
+            ExcelAsyncUtil.QueueAsMacro(() => MessageBox.Show("当前 Git 工作区没有活动相关表格的改动。"));
             return;
         }
 
-        Run(null, changedFiles, rules);
+        Run(excelPath, null, changedFiles, rules);
     }
+
+    private static void SetStatus(object msg) =>
+        ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = msg);
 
     // ─── 核心流程 ─────────────────────────────────────────────────────────────────
 
     private static void Run(
+        string excelPath,
         HashSet<string> filterIds,
         List<string> gitChangedFiles,
         RulesRoot rules = null
     )
     {
-        NumDesAddIn.App.StatusBar = "活动配置验证：读取规则...";
+        SetStatus("活动配置验证：读取规则...");
 
         rules ??= LoadRules();
         if (rules == null)
             return;
 
-        var excelPath = NumDesAddIn.App.ActiveWorkbook.FullName;
-
         // 2. 推断 Lua 输出目录
         var luaDir = FindLuaOutputDir(excelPath);
         if (luaDir == null)
         {
-            MessageBox.Show(
-                "无法定位 Code/Assets/LuaScripts/Tables 目录。\n" + "请确认当前工作簿在 public/Excels/Tables/ 下。"
+            ExcelAsyncUtil.QueueAsMacro(
+                () =>
+                    MessageBox.Show(
+                        "无法定位 Code/Assets/LuaScripts/Tables 目录。\n请确认当前工作簿在 public/Excels/Tables/ 下。"
+                    )
             );
             return;
         }
@@ -311,12 +316,16 @@ public static class ActivityConfigTester
         report.AppendLine();
         report.AppendLine($"═════ 合计：{errorCount} 个配置问题 ══════");
 
-        NumDesAddIn.App.StatusBar = false;
-        ErrorLogCtp.DisposeCtp();
-        PluginLog.Write(report.ToString());
-        ErrorLogCtp.CreateCtpNormal(report.ToString());
-
-        MessageBox.Show(errorCount > 0 ? $"发现 {errorCount} 个配置问题，查看右侧报告面板。" : "所有活动配置验证通过！");
+        var reportText = report.ToString();
+        var msg = errorCount > 0 ? $"发现 {errorCount} 个配置问题，查看右侧报告面板。" : "所有活动配置验证通过！";
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            NumDesAddIn.App.StatusBar = false;
+            ErrorLogCtp.DisposeCtp();
+            PluginLog.Write(reportText);
+            ErrorLogCtp.CreateCtpNormal(reportText);
+            MessageBox.Show(msg);
+        });
     }
 
     // ─── 规则文件加载 ─────────────────────────────────────────────────────────────
@@ -481,7 +490,7 @@ public static class ActivityConfigTester
 
             try
             {
-                NumDesAddIn.App.StatusBar = $"活动配置验证：重新导表 {name}...";
+                SetStatus($"活动配置验证：重新导表 {name}...");
                 ExcelExporter.Export(file, name, new List<FieldData>(), false, false);
             }
             catch (Exception ex)
@@ -547,7 +556,7 @@ public static class ActivityConfigTester
                 continue;
             }
 
-            NumDesAddIn.App.StatusBar = $"活动配置验证：加载 {table.Name}...";
+            SetStatus($"活动配置验证：加载 {table.Name}...");
             var luaText = File.ReadAllText(luaFile, Encoding.UTF8);
             lineMaps[table.Name] = BuildLineMap(luaText);
 
@@ -569,7 +578,7 @@ public static class ActivityConfigTester
         report.AppendLine();
 
         // c. 动态生成规则校验脚本并执行（配置表格式 + 跨表引用检查）
-        NumDesAddIn.App.StatusBar = "活动配置验证：运行跨表校验...";
+        SetStatus("活动配置验证：运行跨表校验...");
         var script = BuildValidationScript(rules, filterIds);
         try
         {
@@ -598,7 +607,7 @@ public static class ActivityConfigTester
                     continue;
                 }
 
-                NumDesAddIn.App.StatusBar = $"活动配置验证：加载业务代码 {Path.GetFileName(codeFile)}...";
+                SetStatus($"活动配置验证：加载业务代码 {Path.GetFileName(codeFile)}...");
                 var codeText = File.ReadAllText(codeFile, Encoding.UTF8);
                 try
                 {
@@ -816,7 +825,7 @@ public static class ActivityConfigTester
             lua.DoString("_validation_errors = {}");
             foreach (var entry in rules.EntryPoints)
             {
-                NumDesAddIn.App.StatusBar = $"活动配置验证：执行入口 {entry[..Math.Min(entry.Length, 40)]}...";
+                SetStatus($"活动配置验证：执行入口 {entry[..Math.Min(entry.Length, 40)]}...");
                 try
                 {
                     lua.DoString(entry);
@@ -1055,7 +1064,9 @@ public static class ActivityConfigTester
         {
             if (typeKey == "2")
                 continue; // LTE chain handled separately
-            sb.AppendLine($"_typeMap[{typeKey}] = {{tbl={rule.Table}, lf='{rule.LookupField}'}}");
+            sb.AppendLine(
+                $"_typeMap[{typeKey}] = {{tbl={ToLuaTableExpr(rule.Table)}, lf='{rule.LookupField}'}}"
+            );
         }
         foreach (var (typeKey, luaKey) in typeTableMap)
         {
@@ -1063,7 +1074,9 @@ public static class ActivityConfigTester
                 continue;
             if (typeSubTableRules.ContainsKey(typeKey))
                 continue;
-            sb.AppendLine($"_typeMap[{typeKey}] = {{tbl={luaKey}, lf='activityID'}}");
+            sb.AppendLine(
+                $"_typeMap[{typeKey}] = {{tbl={ToLuaTableExpr(luaKey)}, lf='activityID'}}"
+            );
         }
         sb.AppendLine();
 
@@ -1485,10 +1498,11 @@ end
                 }
                 if (!string.IsNullOrEmpty(field.RefTable))
                 {
+                    var refExpr = ToLuaTableExpr(field.RefTable);
                     sb.AppendLine($"        local _rv = tonumber({fa}) or {fa}");
                     // 0 是配置表通用"未设置"哨兵值，跳过引用检查
                     sb.AppendLine(
-                        $"        if _rv ~= 0 and ({field.RefTable} == nil or {field.RefTable}[_rv] == nil) then"
+                        $"        if _rv ~= 0 and ({refExpr} == nil or {refExpr}[_rv] == nil) then"
                     );
                     sb.AppendLine($"            _e('{tableName}', subId, '{field.Name}',");
                     sb.AppendLine(
@@ -1535,9 +1549,8 @@ end
                 var tblName = entry.Table.Contains('.') ? entry.Table.Split('.')[1] : entry.Table;
                 var lf = entry.LookupField ?? "activityID";
                 sb.AppendLine($"            local _lk = _cd.{lf} or _mid");
-                sb.AppendLine(
-                    $"            if {entry.Table} == nil or {entry.Table}[_lk] == nil then"
-                );
+                var _tblExpr = ToLuaTableExpr(entry.Table);
+                sb.AppendLine($"            if {_tblExpr} == nil or {_tblExpr}[_lk] == nil then");
                 sb.AppendLine($"                _e('ActivityClientData', _mid, '{lf}',");
                 sb.AppendLine(
                     $"                    'ERR_REF:{EscapeLua(entry.Table)}:'..tostring(_lk))"
@@ -1879,4 +1892,18 @@ SolarRoot        = setmetatable({}, { __index=function(t,k) t[k]=setmetatable({}
     // Lua 字符串内转义（双引号、反斜杠）
     private static string EscapeLua(string s) =>
         s?.Replace("\\", "\\\\").Replace("\"", "\\\"") ?? "";
+
+    // 把 "Tables.Xxx" 或 "Xxx" 转成合法 Lua 访问表达式。
+    // 表名含非标识符字符（$、中文等）时改用 Tables["Xxx"]。
+    private static bool IsLuaIdentifier(string s) =>
+        !string.IsNullOrEmpty(s)
+        && s.All(c => char.IsLetterOrDigit(c) || c == '_')
+        && !char.IsDigit(s[0]);
+
+    private static string ToLuaTableExpr(string tableRef)
+    {
+        const string prefix = "Tables.";
+        string key = tableRef.StartsWith(prefix) ? tableRef[prefix.Length..] : tableRef;
+        return IsLuaIdentifier(key) ? $"Tables.{key}" : $"Tables[\"{EscapeLua(key)}\"]";
+    }
 }

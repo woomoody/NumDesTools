@@ -143,36 +143,49 @@ internal class Program
         if (args.Contains("--write-jam-map"))
         {
             int idx = Array.IndexOf(args, "--write-jam-map");
-            if (idx < 0 || idx + 1 >= args.Length)
-            {
-                Console.WriteLine("[ERROR] 用法：--write-jam-map <output.xlsx> [jam_config_full.json]");
-                return 1;
-            }
-            var outPath = args[idx + 1];
-            var dataPath = idx + 2 < args.Length ? args[idx + 2] : null;
+            var outDir =
+                idx + 1 < args.Length && !args[idx + 1].StartsWith("--") ? args[idx + 1] : null;
+            var dataPath =
+                idx + 2 < args.Length && !args[idx + 2].StartsWith("--") ? args[idx + 2] : null;
             if (dataPath != null)
-                JamMapWriter.Run(outPath, dataPath);
+                JamMapWriter.Run(outDir, dataPath);
             else
-                JamMapWriter.Run(outPath);
+                JamMapWriter.Run(outDir);
             return 0;
         }
 
-        // ── 海岛活动地图可视化（独立）────────────────────────────────────────
-        // 用法：--write-ocean-map <output.xlsx> [数据json路径]
+        // ── Gossip Harbor 竞品分析（独立）─────────────────────────────────────
+        // 用法：--write-gossip [输出目录]
+        if (args.Contains("--write-gossip"))
+        {
+            int idx = Array.IndexOf(args, "--write-gossip");
+            var outDir =
+                idx + 1 < args.Length && !args[idx + 1].StartsWith("--") ? args[idx + 1] : null;
+            GossipHarborWriter.Run(outDir);
+            return 0;
+        }
+
+        // ── 云雾地图可视化（海岛/邮差/主线，独立）──────────────────────────────
+        // 用法：--write-cloud-maps [输出目录] [数据目录]   → 所有已知活动
+        //       --write-ocean-map  [输出目录] [数据目录]   → 仅海岛
+        if (args.Contains("--write-cloud-maps"))
+        {
+            int idx = Array.IndexOf(args, "--write-cloud-maps");
+            var outDir =
+                idx + 1 < args.Length && !args[idx + 1].StartsWith("--") ? args[idx + 1] : null;
+            var dataDir =
+                idx + 2 < args.Length && !args[idx + 2].StartsWith("--") ? args[idx + 2] : null;
+            CloudMapWriter.RunAll(outDir, dataDir);
+            return 0;
+        }
         if (args.Contains("--write-ocean-map"))
         {
             int idx = Array.IndexOf(args, "--write-ocean-map");
-            if (idx < 0 || idx + 1 >= args.Length)
-            {
-                Console.WriteLine("[ERROR] 用法：--write-ocean-map <output.xlsx> [mapCloudOceanIsland.json]");
-                return 1;
-            }
-            var outPath = args[idx + 1];
-            var dataPath = idx + 2 < args.Length ? args[idx + 2] : null;
-            if (dataPath != null)
-                OceanIslandMapWriter.Run(outPath, dataPath);
-            else
-                OceanIslandMapWriter.Run(outPath);
+            var outDir =
+                idx + 1 < args.Length && !args[idx + 1].StartsWith("--") ? args[idx + 1] : null;
+            var dataDir =
+                idx + 2 < args.Length && !args[idx + 2].StartsWith("--") ? args[idx + 2] : null;
+            CloudMapWriter.Run(CloudMapWriter.KnownActivities[0], outDir, dataDir);
             return 0;
         }
 
