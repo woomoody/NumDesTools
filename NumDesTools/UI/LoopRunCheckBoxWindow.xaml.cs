@@ -1,10 +1,12 @@
 using System.Windows;
 using CheckBox = System.Windows.Controls.CheckBox;
-using Wpf.Ui.Controls;
 
 namespace NumDesTools.UI
 {
-    public partial class LoopRunCheckBoxWindow : FluentWindow
+    /// <summary>
+    /// LoopRunCheckBoxWindow.xaml 的交互逻辑
+    /// </summary>
+    public partial class LoopRunCheckBoxWindow
     {
         private readonly List<object> _checkList;
         public List<object> SelectedList { get; private set; }

@@ -1,11 +1,11 @@
 using System.Windows;
-using Wpf.Ui.Controls;
-using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Key = System.Windows.Input.Key;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using Window = System.Windows.Window;
 
 namespace NumDesTools.UI;
 
-public partial class InputBoxDialog : FluentWindow
+public partial class InputBoxDialog : Window
 {
     public string Input { get; private set; } = string.Empty;
 

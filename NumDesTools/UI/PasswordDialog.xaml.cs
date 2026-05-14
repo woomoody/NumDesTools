@@ -1,9 +1,9 @@
 using System.Windows;
-using Wpf.Ui.Controls;
+using Window = System.Windows.Window;
 
 namespace NumDesTools.UI;
 
-public partial class PasswordDialog : FluentWindow
+public partial class PasswordDialog : Window
 {
     public string Password { get; private set; } = string.Empty;
 

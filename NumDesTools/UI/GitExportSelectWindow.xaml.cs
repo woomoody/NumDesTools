@@ -4,7 +4,6 @@ using System.Windows.Media;
 using NumDesTools.ExcelToLua;
 using Border = System.Windows.Controls.Border;
 using CheckBox = System.Windows.Controls.CheckBox;
-using TextBlock = System.Windows.Controls.TextBlock;
 using Window = System.Windows.Window;
 
 namespace NumDesTools.UI;

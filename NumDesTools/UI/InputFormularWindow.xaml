@@ -1,8 +1,7 @@
-<ui:FluentWindow
+<Window
     x:Class="NumDesTools.UI.InputFormularWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="公式链接修复"
     Width="500"
     Height="400"
@@ -14,7 +13,7 @@
         </Grid.ColumnDefinitions>
         <StackPanel Grid.ColumnSpan="2">
             <ItemsControl Name="ItemsControl" Margin="10" />
-            <ui:Button
+            <Button
                 Width="100"
                 Margin="10"
                 HorizontalAlignment="Right"
@@ -22,4 +21,4 @@
                 Content="确认" />
         </StackPanel>
     </Grid>
-</ui:FluentWindow>
+</Window>
