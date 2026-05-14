@@ -13,6 +13,7 @@ namespace NumDesTools.UI
 
         public LoopRunCheckBoxWindow(List<object> inputCheckList)
         {
+            WpfUiHelper.ApplyDarkTheme(this);
             InitializeComponent();
             _checkList = inputCheckList;
             CreateCheckBoxes();

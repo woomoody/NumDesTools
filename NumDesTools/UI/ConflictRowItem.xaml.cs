@@ -122,11 +122,19 @@ public partial class ConflictRowItem : UserControl
         typeof(ConflictRowItem)
     );
 
+    public static void AddCellSelectedHandler(DependencyObject d, CellSelectedEventHandler h) =>
+        (d as UIElement)?.AddHandler(CellSelectedEvent, h);
+
+    public static void RemoveCellSelectedHandler(DependencyObject d, CellSelectedEventHandler h) =>
+        (d as UIElement)?.RemoveHandler(CellSelectedEvent, h);
+
     public static void AddRowDeSelectedHandler(DependencyObject d, RowDeSelectedEventHandler h) =>
         (d as UIElement)?.AddHandler(RowDeSelectedEvent, h);
 
-    public static void RemoveRowDeSelectedHandler(DependencyObject d, RowDeSelectedEventHandler h) =>
-        (d as UIElement)?.RemoveHandler(RowDeSelectedEvent, h);
+    public static void RemoveRowDeSelectedHandler(
+        DependencyObject d,
+        RowDeSelectedEventHandler h
+    ) => (d as UIElement)?.RemoveHandler(RowDeSelectedEvent, h);
 
     public event CellSelectedEventHandler CellSelected
     {
@@ -214,12 +222,17 @@ public partial class ConflictRowItem : UserControl
         Render(rc);
     }
 
-    private void OnRcPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void OnRcPropertyChanged(
+        object? sender,
+        System.ComponentModel.PropertyChangedEventArgs e
+    )
     {
         if (e.PropertyName == nameof(RowConflict.IsSelected) && _currentRc != null)
         {
             UpdateSelectionHighlight(_currentRc);
-            DeSelectBtn.Visibility = _currentRc.IsSelected ? Visibility.Visible : Visibility.Collapsed;
+            DeSelectBtn.Visibility = _currentRc.IsSelected
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
     }
 
@@ -618,7 +631,8 @@ public partial class ConflictRowItem : UserControl
         return set.ToList();
     }
 
-    private static readonly SolidColorBrush BgSelected = new(WpfColor.FromArgb(180, 0x3A, 0x60, 0xA0));
+    private static readonly SolidColorBrush BgSelected =
+        new(WpfColor.FromArgb(180, 0x3A, 0x60, 0xA0));
 
     private void UpdateSelectionHighlight(RowConflict rc)
     {
@@ -628,11 +642,12 @@ public partial class ConflictRowItem : UserControl
         }
         else
         {
-            HeaderGrid.Background = rc.DiffType == RowDiffType.OnlyOurs
-                ? BgOnlyOurs
-                : rc.DiffType == RowDiffType.OnlyTheirs
-                    ? BgOnlyTheirs
-                    : Brush("#2A2A2A");
+            HeaderGrid.Background =
+                rc.DiffType == RowDiffType.OnlyOurs
+                    ? BgOnlyOurs
+                    : rc.DiffType == RowDiffType.OnlyTheirs
+                        ? BgOnlyTheirs
+                        : Brush("#2A2A2A");
         }
     }
 

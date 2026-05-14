@@ -157,47 +157,81 @@ public static class MergeCookingWriter
         (string Item, double Pct)[] ProduceProbs
     );
 
-    // 合并链（语言包 lang_ui_en.json 真实英文名 + GAME_BASIC_UNLOCK_GOODS_DATA goodsID分组）
-    // C_leaf/C_root/C_meat/C_egg/C_milk/C_softdrink/C_coffee 为 lang_ui_en 实测系列名称
+    // 合并链（语言包 lang_ui_en.json 真实英文名 — 置信度：高）
+    // 链长度来源：lang_ui_en.json 枚举计数（19806条）
+    // C_leaf=10步, C_root=12步, C_meat=12步, C_egg=10步, C_milk=9步
+    // C_softdrink=13步, C_coffee=17步, C_glass=7步, C_coconutmilk=7步, C_coconutshell=7步
     private static readonly ChainDef[] MergeChains =
     [
         new(
-            "A-Vegetables (C_leaf + C_root)",
-            "G_vegetable (100005/100007) 产出链",
+            "A-Leaf Vegetables (C_leaf, 10级)",
+            "G_vegetable (100005/100007) 叶菜产出链",
             [
-                ("100020", "Tomato (C_root Lv1)", 1, true),
-                ("100021", "Cucumber (C_root Lv2)", 2, false),
-                ("100022", "Cabbage (C_leaf Lv2)", 2, true),
-                ("100023", "Asparagus (C_root Lv3)", 3, false),
-                ("100024", "Carrot (C_root Lv4)", 3, false),
-                ("100025", "Lettuce / Arugula (C_leaf)", 4, true),
-                ("100026", "Onion (C_root Lv5)", 4, true),
-                ("100027", "Bell Pepper (C_root Lv6)", 5, true),
-                ("100028", "Eggplant (C_root Lv7)", 5, true),
-                ("100029", "Broccoli (C_leaf Lv3)", 6, false),
-                ("100031", "Spinach (C_leaf Lv6)", 6, true),
-                ("100032", "Cauliflower (C_leaf Lv9)", 7, true),
+                ("100022", "Lettuce → Cabbage (C_leaf Lv1→2)", 1, true),
+                ("100029", "Broccoli (C_leaf Lv3)", 3, false),
+                ("100025", "Red Cabbage (C_leaf Lv4)", 4, true),
+                ("100031", "Arugula (C_leaf Lv5)", 5, true),
+                ("100032", "Spinach (C_leaf Lv6)", 6, true),
+                ("—", "Beet (C_leaf Lv7)", 7, false),
+                ("—", "Button Mushroom (C_leaf Lv8)", 8, false),
+                ("—", "Cauliflower (C_leaf Lv9)", 9, true),
+                ("—", "Artichoke (C_leaf Lv10 MAX)", 10, false),
             ]
         ),
         new(
-            "B-Protein / Meat (C_meat + C_egg)",
-            "G_eggmeat (100103/100105) 产出链",
+            "B-Root Vegetables (C_root, 12级)",
+            "G_vegetable (100005/100007) 根菜产出链",
+            [
+                ("100020", "Tomato (C_root Lv1)", 1, true),
+                ("100021", "Cucumber (C_root Lv2)", 2, false),
+                ("100023", "Asparagus (C_root Lv3)", 3, false),
+                ("100024", "Carrot (C_root Lv4)", 3, false),
+                ("100026", "Onion (C_root Lv5)", 4, true),
+                ("100027", "Bell Pepper (C_root Lv6)", 5, true),
+                ("100028", "Eggplant (C_root Lv7)", 5, true),
+                ("—", "Potato (C_root Lv8)", 6, false),
+                ("—", "Okra (C_root Lv9)", 7, false),
+                ("—", "Cherry Tomato (C_root Lv10)", 8, false),
+                ("—", "Pea (C_root Lv11)", 9, false),
+                ("—", "Corn (C_root Lv12 MAX)", 10, false),
+            ]
+        ),
+        new(
+            "C-Meats (C_meat, 12级)",
+            "G_eggmeat (100103/100105) 肉类产出链",
             [
                 ("100120", "Bacon (C_meat Lv1)", 1, true),
                 ("100121", "Sausage (C_meat Lv2)", 2, false),
                 ("100122", "Ham (C_meat Lv3)", 2, true),
                 ("100123", "Patty (C_meat Lv4)", 3, true),
                 ("100124", "Pork Ribs (C_meat Lv5)", 4, true),
+                ("—", "Pork Knuckle (C_meat Lv6)", 5, false),
+                ("—", "Lamb Chop (C_meat Lv7)", 6, false),
+                ("—", "Leg of Lamb (C_meat Lv8)", 7, false),
+                ("—", "Suckling Pig (C_meat Lv9)", 8, false),
+                ("—", "Whole Lamb (C_meat Lv10)", 9, false),
+                ("—", "Beef (C_meat Lv11)", 10, false),
+                ("—", "Lamb (C_meat Lv12 MAX)", 11, false),
+            ]
+        ),
+        new(
+            "D-Poultry/Eggs (C_egg, 10级)",
+            "G_eggmeat (100103/100105) 禽蛋产出链",
+            [
                 ("100140", "Egg (C_egg Lv1)", 1, true),
                 ("100141", "Chicken Wing (C_egg Lv2)", 2, true),
                 ("100142", "Chicken Drumstick (C_egg Lv3)", 3, true),
                 ("100143", "Chicken Breast (C_egg Lv4)", 4, false),
                 ("100144", "Whole Chicken (C_egg Lv5)", 5, true),
-                ("100145", "Turkey (C_egg Lv9 MAX)", 6, true),
+                ("—", "Duck Breast (C_egg Lv6)", 6, false),
+                ("—", "Whole Duck (C_egg Lv7)", 7, false),
+                ("—", "Goose (C_egg Lv8)", 8, false),
+                ("—", "Quail (C_egg Lv9)", 9, false),
+                ("100145", "Turkey (C_egg Lv10 MAX)", 10, true),
             ]
         ),
         new(
-            "C-Dairy (C_milk)",
+            "E-Dairy (C_milk, 9级)",
             "G_drink/100204 奶制品产出链",
             [
                 ("100220", "Frothed Milk (C_milk Lv1)", 1, true),
@@ -205,69 +239,108 @@ public static class MergeCookingWriter
                 ("100222", "Cheese (C_milk Lv3)", 3, true),
                 ("100223", "Butter (C_milk Lv4)", 4, true),
                 ("100224", "Cream Cheese (C_milk Lv5)", 5, true),
+                ("—", "Mozzarella Cheese (C_milk Lv6)", 6, false),
+                ("—", "Feta (C_milk Lv7)", 7, false),
+                ("—", "Cheddar (C_milk Lv8)", 8, false),
+                ("—", "Parmesan (C_milk Lv9 MAX)", 9, false),
             ]
         ),
         new(
-            "D-Seafood (水产链)",
-            "100163/100183/100184 产出链",
-            [
-                ("100160", "Seafood L1 (水产基础)", 1, false),
-                ("100161", "Seafood L2", 2, false),
-                ("100162", "Seafood L3", 3, false),
-                ("100163", "Seafood L4 (GEN)", 4, false),
-                ("100180", "Grilled Squid (DS_american2_12)", 5, true),
-                ("100181", "Grilled Tilapia (DS_american2_13)", 5, true),
-                ("100182", "Pan-fried Cod (DS_american2_14)", 5, true),
-                ("100183", "Seafood GEN L6", 6, false),
-                ("100184", "Seafood GEN L7", 7, false),
-            ]
-        ),
-        new(
-            "E-Beverages (C_softdrink + C_coffee)",
-            "G_drink (100204) 软饮/咖啡产出链",
+            "F-Soft Drinks (C_softdrink, 13级)",
+            "G_drink (100204) 软饮产出链",
             [
                 ("100036", "Water (C_softdrink Lv1)", 1, true),
                 ("100041", "Ice Cube (C_softdrink Lv2)", 2, true),
                 ("100044", "Sparkling Water (C_softdrink Lv3)", 3, false),
                 ("100050", "Cola (C_softdrink Lv4)", 4, true),
                 ("100055", "Soda (C_softdrink Lv5)", 5, true),
-                ("100056", "Orange Soda (C_softdrink Lv9)", 6, true),
+                ("100056", "Orange Soda (C_softdrink Lv6)", 6, true),
+                ("—", "Grape Soda (C_softdrink Lv7)", 7, false),
+                ("—", "Black Tea (C_softdrink Lv8)", 8, false),
+                ("—", "Green Tea (C_softdrink Lv9)", 9, false),
+                ("—", "Lactic Acid Drink (C_softdrink Lv10)", 10, false),
+                ("—", "Bubble Tea (C_softdrink Lv11)", 11, false),
+                ("—", "Floral Tea (C_softdrink Lv12)", 12, false),
+                ("—", "Energy Drink (C_softdrink Lv13 MAX)", 13, false),
+            ]
+        ),
+        new(
+            "G-Coffee (C_coffee, 17级)",
+            "G_drink (100204) 咖啡产出链",
+            [
                 ("101100", "Coffee Bean (C_coffee Lv1)", 1, true),
                 ("101110", "Ground Coffee (C_coffee Lv2)", 2, true),
+                ("—", "Cup of Coffee (C_coffee Lv3)", 3, false),
+                ("—", "Caramel Macchiato (C_coffee Lv4)", 4, false),
+                ("—", "Latte (C_coffee Lv5)", 5, false),
+                ("—", "Cappuccino (C_coffee Lv6)", 6, false),
+                ("—", "Mocha (C_coffee Lv7)", 7, false),
+                ("—", "Frappe (C_coffee Lv8)", 8, false),
+                ("—", "Mocha Frappe (C_coffee Lv9)", 9, false),
+                ("—", "Caramel Frappe (C_coffee Lv10)", 10, false),
+                ("—", "Mug of Coffee (C_coffee Lv11)", 11, false),
+                ("—", "Coffee on the Go (C_coffee Lv12)", 12, false),
+                ("—", "Cold Brew (C_coffee Lv13)", 13, false),
+                ("—", "Pour-over Coffee (C_coffee Lv14)", 14, false),
+                ("—", "French Press Coffee (C_coffee Lv15)", 15, false),
+                ("—", "Moka Pot Coffee (C_coffee Lv16)", 16, false),
+                ("—", "Siphon Coffee (C_coffee Lv17 MAX)", 17, false),
             ]
         ),
         new(
-            "F-Theme / Tourist Baggage (G_america)",
-            "101554-101557 主题装饰机产出链",
-            [
-                ("101554", "Tourist Baggage Lv1 (G_america, GEN)", 1, false),
-                ("101555", "Tourist Baggage Lv2 (G_america, GEN)", 2, true),
-                ("101556", "Tourist Baggage Lv3 (G_america, GEN)", 3, true),
-                ("101557", "Tourist Baggage Lv4 (G_america, GEN)", 4, false),
-                ("101580", "Theme Element L1 (c_americagift1: Bald Eagle Stamp)", 1, true),
-                ("101581", "Theme Element L2 (c_americagift2: Hollywood Postcard)", 2, true),
-                ("101582", "Theme Element L3 (c_americagift3: Cowboy Hat)", 3, true),
-                ("101583", "Theme Element L4 (c_americagift4: American Football)", 4, true),
-                ("101584", "Theme Element L5 (c_americagift5: I Love MC Mug)", 5, false),
-                ("101586", "Theme Element L6 (c_americagift6: Fridge Magnet)", 6, false),
-            ]
-        ),
-        new(
-            "G-Cookware / Equipment (C_glass)",
-            "各工坊辅助产出链",
+            "H-Glassware (C_glass, 7级)",
+            "G_french (Admission Ticket) 玻璃餐具链",
             [
                 ("100500", "Broken Glass (C_glass Lv1)", 1, true),
                 ("100501", "Glass Bowl (C_glass Lv2)", 2, false),
                 ("100502", "Crystal Glass (C_glass Lv3)", 3, true),
                 ("100503", "Glass Plate (C_glass Lv4)", 4, true),
                 ("100504", "Glass Jar (C_glass Lv5)", 5, false),
-                ("100510", "Glass Cake Stand (C_glass Lv6)", 1, true),
-                ("100511", "Glass Dessert Stand (C_glass Lv7 MAX)", 2, true),
-                ("100512", "Coconut Shell (C_coconutshell Lv1)", 3, true),
-                ("100513", "Coconut Spoon (C_coconutshell Lv2)", 4, false),
-                ("100520", "Coconut Fork (C_coconutshell Lv3)", 1, true),
-                ("100521", "Coconut Saucer (C_coconutshell Lv4)", 2, true),
-                ("100522", "Coconut Bowl (C_coconutshell Lv5)", 3, false),
+                ("100510", "Glass Cake Stand (C_glass Lv6)", 6, true),
+                ("100511", "Glass Dessert Stand (C_glass Lv7 MAX)", 7, true),
+            ]
+        ),
+        new(
+            "I-Coconut Tableware (C_coconutshell, 7级)",
+            "G_america/G_french 椰壳餐具链",
+            [
+                ("100512", "Coconut Shell (C_coconutshell Lv1)", 1, true),
+                ("100513", "Coconut Spoon (C_coconutshell Lv2)", 2, false),
+                ("100520", "Coconut Fork (C_coconutshell Lv3)", 3, true),
+                ("100521", "Coconut Saucer (C_coconutshell Lv4)", 4, true),
+                ("100522", "Coconut Bowl (C_coconutshell Lv5)", 5, false),
+                ("—", "Coconut Teapot (C_coconutshell Lv6)", 6, false),
+                ("—", "Coconut Teacup (C_coconutshell Lv7 MAX)", 7, false),
+            ]
+        ),
+        new(
+            "J-Coconut Beverages (C_coconutmilk, 7级)",
+            "G_america 椰汁饮品链",
+            [
+                ("—", "Glass of Coconut Water (C_coconutmilk Lv1)", 1, false),
+                ("—", "Coconut Sago Soup (C_coconutmilk Lv2)", 2, false),
+                ("—", "Coconut Soda (C_coconutmilk Lv3)", 3, false),
+                ("—", "Coconut Yogurt (C_coconutmilk Lv4)", 4, false),
+                ("—", "Coconut Jelly (C_coconutmilk Lv5)", 5, false),
+                ("—", "Coconut Pudding (C_coconutmilk Lv6)", 6, false),
+                ("—", "Coconut Candy (C_coconutmilk Lv7 MAX)", 7, false),
+            ]
+        ),
+        new(
+            "K-Theme / Tourist Baggage (G_america)",
+            "101554-101657 主题装饰机产出链",
+            [
+                ("101554", "Tourist Baggage Lv1 (G_america1, GEN)", 1, false),
+                ("101555", "Tourist Baggage Lv2 (G_america2, GEN)", 2, true),
+                ("101556", "Tourist Baggage Lv3 (G_america3, GEN)", 3, true),
+                ("101557", "Tourist Baggage Lv4 (G_america4, GEN)", 4, false),
+                ("101655", "Tourist Baggage Lv5 (G_america5 MAX, GEN)", 5, false),
+                ("101580", "Theme Element L1 (c_americagift1: Bald Eagle Stamp)", 1, true),
+                ("101581", "Theme Element L2 (c_americagift2: Hollywood Postcard)", 2, true),
+                ("101582", "Theme Element L3 (c_americagift3: Cowboy Hat)", 3, true),
+                ("101583", "Theme Element L4 (c_americagift4: American Football)", 4, true),
+                ("101584", "Theme Element L5 (c_americagift5: I Love MC Mug)", 5, false),
+                ("101586", "Theme Element L6 (c_americagift6: Fridge Magnet)", 6, false),
             ]
         ),
     ];
@@ -322,6 +395,7 @@ public static class MergeCookingWriter
         BuildGeneratorSheet(pkg);
         BuildChainSheet(pkg);
         BuildOrderSheet(pkg);
+        BuildActivitySheet(pkg);
         BuildSummarySheet(pkg);
 
         pkg.SaveAs(new FileInfo(outPath));
@@ -455,14 +529,16 @@ public static class MergeCookingWriter
             ws,
             1,
             1,
-            "【Merge Cooking 合并链机制 — 置信度：高（UnityPy解包语言包确认）】"
+            "【Merge Cooking 合并链机制 — 置信度：高（UnityPy解包 lang_ui_en.json 19806条确认）】"
                 + "合并规则：2个相同等级元素 → 合并为+1级元素（标准 2-to-1 merge）。"
-                + "链分组依据：goodsID 前6位相同 + lang_ui_en.json 真实英文名（configlanguagefolder.unity3d UnityPy解包）。"
-                + "元素系列：C_leaf=叶菜(Lettuce/Cabbage/Broccoli…10级), C_root=根菜(Tomato/Carrot/BellPepper…), "
-                + "C_meat=肉类(Bacon/Ham/Patty…12级), C_egg=禽类(Egg→Turkey 10级), "
-                + "C_milk=奶制品(Frothed Milk→Parmesan 9级), C_softdrink=软饮(Water→Bubble Tea 17级), "
-                + "C_coffee=咖啡(Bean→Siphon 17级), C_glass=玻璃餐具(Broken Glass→Glass Dessert Stand 7级)。"
-                + "G_america主题机系列：Lv1~10 均为 'Tourist Baggage'（合并升级），产出 c_americagift1~10 礼品元素。",
+                + "链长度（精确，来自lang_ui_en枚举）："
+                + "C_leaf=10级(Lettuce→Artichoke), C_root=12级(Tomato→Corn), "
+                + "C_meat=12级(Bacon→Lamb), C_egg=10级(Egg→Turkey), "
+                + "C_milk=9级(Frothed Milk→Parmesan), C_softdrink=13级(Water→Energy Drink), "
+                + "C_coffee=17级(Coffee Bean→Siphon Coffee), C_glass=7级(Broken Glass→Glass Dessert Stand), "
+                + "C_coconutshell=7级(Coconut Shell→Coconut Teacup), C_coconutmilk=7级(Glass of Coconut Water→Coconut Candy)。"
+                + "G_america主题机：Lv1~7均为'Tourist Baggage'合并升级，产出c_americagift1~10礼品元素。"
+                + "订单消耗列仅基于5个当前动态订单样本，非全量分布。",
             14
         );
 
@@ -689,7 +765,161 @@ public static class MergeCookingWriter
         ws.Row(2).Height = 22;
     }
 
-    // ── Sheet 4：核心设计总结 ─────────────────────────────────────────────────
+    // ── Sheet 4：活动日历 ────────────────────────────────────────────────────
+
+    private static void BuildActivitySheet(ExcelPackage pkg)
+    {
+        var ws = pkg.Workbook.Worksheets.Add("活动日历");
+        ws.View.FreezePanes(3, 1);
+
+        MechNote(
+            ws,
+            1,
+            1,
+            "【Merge Cooking 活动配置 — 置信度：高（USER_CONSTANT_CONFIG_DATA2服务端下发，2026-05-14实时数据）】"
+                + "配置来源：服务器实时下发 180 条配置，ActivityTime_xxxx 格式：开始日期_结束日期|参数…。"
+                + "波次能量数据：waveEnergyUse=127（当轮波次总能耗），waveOnlineTime=231704秒（~64.4小时在线时长）。"
+                + "StuckspotDic：GeneratorCd=62次（玩家等待CD最多），None=109次，CookingStart=40次，OutofEnergy=7次——"
+                + "证实生成器CD是主要卡点，远超能量不足。weightGroup=build_1039000_default，ABTestGroup=default。",
+            14
+        );
+
+        // Activity schedule entries (from USER_CONSTANT_CONFIG_DATA2, 2026-05-14)
+        var activities = new (string Id, string Schedule, string Note)[]
+        {
+            (
+                "1130",
+                "20260505-20260509|Teaaroma2026; 20260510-20260515|MotherLove2026; 20260516-20260521|RideSpring2026; 20260522-20260526|TennisBall2026",
+                "每5~7天切换主题"
+            ),
+            ("1270", "20260416-20260424|2组; 20260425-20260428|2组(续)", "排行赛/联赛系列"),
+            (
+                "1260",
+                "20260421|16; 20260426|16; 20260428|16; 20260501|17; 20260503|17…",
+                "单日活动，每2~3天一次"
+            ),
+            ("1490", "20260321-20260428|16; 20260429-20260606|17", "长周期(~6周)赛季活动"),
+            (
+                "1570",
+                "20260504-20260510|14|3; 20260511-20260517|15|3; 20260518-20260524|15|3",
+                "每周一期，3参数"
+            ),
+            ("1550", "20260504-20260510|2|0-604800-600|1 (周期重复)", "限时能量/特殊规则活动"),
+            ("1560", "20260504-20260510|2|0-604800-600|1 (同上)", "与1550并行运行"),
+            ("1710", "20260416-20260419|4×4天; 20260430-20260501|5×2天…", "每日活动，4~5参数"),
+            ("1650", "20260423-20260426|3×4天", "短期4天活动"),
+            ("1700", "20260413-20260419|4; 20260427-20260503|5", "每隔1周一次，共7天"),
+            ("1400", "20260504-20260510|2", "每周一次"),
+            ("1440", "20260504-20260506|1; 20260511-20260513|1; 20260518-20260520|1", "每周3天"),
+            ("1430", "20260507-20260510|2×4天", "每周4天活动"),
+            ("1540", "20260501-20260503|1; …(每周)", "每周3天"),
+            ("1680", "20260507|1; 20260514|1; 20260521|1", "每周四单日"),
+            ("1780", "20260512; 20260519; 20260526; 20260602", "每周二单日"),
+            ("1170", "20260501; 20260508; 20260515; 20260522", "每周四单日（不同于1680）"),
+            ("1840", "20260514-20260517|1×4天", "连续4天活动"),
+            ("1231", "20260509-20260510; 20260516-20260517…每周末", "每周末2天"),
+            ("1620", "20260518-20260524|7", "单周，7参数"),
+            ("1590", "20260501-20260504|2; 20260515-20260518|2", "两期，4天各"),
+            ("1610", "20260511-20260515|1", "5天短活动"),
+            ("1830", "20260511-20260517|1", "7天活动"),
+            ("1340", "20260412-20260620|Default", "长期常驻活动(~10周)"),
+            ("1230", "20260508-20260528|21|20260527", "3周活动，带截止节点"),
+            ("1020", "20260508-20260511|1; 20260522-20260525|1", "隔两周各4天"),
+            ("1820", "20260525-20260527|1; 20260601-20260603|1; 20260608-20260610|1", "每隔一周3天"),
+        };
+
+        string[] headers = ["活动ID", "活动周期/参数", "规律/备注", "周期类型"];
+        string[] hdrHex = ["1F4E79", "2F5496", "595959", "2F5496"];
+        for (var j = 0; j < headers.Length; j++)
+            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+
+        var colors = new[] { "EBF3FB", "FFF2CC", "D9EAD3", "FCE5CD", "E8DAEF", "F3F3F3" };
+        var row = 3;
+
+        for (var i = 0; i < activities.Length; i++)
+        {
+            var (id, schedule, note) = activities[i];
+            var hex = colors[i % colors.Length];
+
+            string cycleType;
+            if (note.Contains("每周") || note.Contains("每周一") || note.Contains("周末"))
+                cycleType = "每周";
+            else if (note.Contains("每日") || note.Contains("单日"))
+                cycleType = "每日";
+            else if (note.Contains("常驻") || note.Contains("长期"))
+                cycleType = "常驻";
+            else if (note.Contains("赛季") || schedule.Contains("0606"))
+                cycleType = "赛季(~6周)";
+            else
+                cycleType = "短期";
+
+            var typeHex = cycleType switch
+            {
+                "每周" => "D9EAD3",
+                "每日" => "FFF2CC",
+                "常驻" => "E8F5FF",
+                "赛季(~6周)" => "F3D6E4",
+                _ => "F5F5F5"
+            };
+
+            Cell(ws.Cells[row, 1], $"Act_{id}", hex);
+            Cell(ws.Cells[row, 2], schedule, "FAFAFA", wrap: true);
+            Cell(ws.Cells[row, 3], note, "F0F0F0", wrap: true);
+            Cell(ws.Cells[row, 4], cycleType, typeHex);
+            ws.Row(row).Height = 30;
+            row++;
+        }
+
+        // Wave energy stats block
+        row += 2;
+        var statTitle = ws.Cells[row, 1, row, 4];
+        statTitle.Merge = true;
+        statTitle.Value = "■ 波次能量统计 & 玩家行为数据（来源：WAVE_ORDER_DATA_KEY + USER_DATA）";
+        statTitle.Style.Font.Bold = true;
+        statTitle.Style.Fill.PatternType = ExcelFillStyle.Solid;
+        statTitle.Style.Fill.BackgroundColor.SetColor(HexColor("1F4E79"));
+        statTitle.Style.Font.Color.SetColor(Color.White);
+        Border(statTitle);
+        row++;
+
+        var waveStats = new (string Key, string Value, string Desc)[]
+        {
+            ("waveEnergyUse", "127", "当轮波次累计消耗能量"),
+            ("waveOnlineTime", "231704秒 (~64.4小时)", "当轮波次玩家在线总时长"),
+            ("orderTotal", "71", "玩家总完成订单数（含历史）"),
+            ("MergeConsumeTotal", "42", "累计合并操作次数"),
+            ("MergeConsumeRound", "31", "本轮合并次数"),
+            ("UseMachineNumber", "39", "总使用机器次数（点击生成器）"),
+            ("DiamondConsumeTotal", "31", "累计消耗钻石数"),
+            ("playDay", "2", "玩家游戏天数"),
+            ("GeneratorCd (StuckspotDic)", "62次", "等待生成器CD次数（主要卡点）"),
+            ("None (StuckspotDic)", "109次", "无明确卡点操作次数"),
+            ("CookingStart (StuckspotDic)", "40次", "开始烹饪操作次数"),
+            ("OutofEnergy (StuckspotDic)", "7次", "能量不足卡点次数"),
+        };
+
+        string[] statHeaders = ["指标", "值", "说明", ""];
+        for (var j = 0; j < 3; j++)
+            Header(ws.Cells[row, j + 1], statHeaders[j], "2F5496");
+        row++;
+
+        foreach (var (key, value, desc) in waveStats)
+        {
+            Cell(ws.Cells[row, 1], key, "EBF3FB");
+            Cell(ws.Cells[row, 2], value, "FFF2CC");
+            Cell(ws.Cells[row, 3], desc, "F5F5F5");
+            row++;
+        }
+
+        ws.Column(1).Width = 14;
+        ws.Column(2).Width = 55;
+        ws.Column(3).Width = 28;
+        ws.Column(4).Width = 14;
+        ws.Row(1).Height = 70;
+        ws.Row(2).Height = 22;
+    }
+
+    // ── Sheet 5：核心设计总结 ─────────────────────────────────────────────────
 
     private static void BuildSummarySheet(ExcelPackage pkg)
     {
