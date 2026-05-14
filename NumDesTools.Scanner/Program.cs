@@ -176,6 +176,17 @@ internal class Program
             return 0;
         }
 
+        // ── Merge Cooking 竞品分析（独立）──────────────────────────────────────
+        // 用法：--write-mergecooking [输出目录]
+        if (args.Contains("--write-mergecooking"))
+        {
+            int idx = Array.IndexOf(args, "--write-mergecooking");
+            var outDir =
+                idx + 1 < args.Length && !args[idx + 1].StartsWith("--") ? args[idx + 1] : null;
+            MergeCookingWriter.Run(outDir);
+            return 0;
+        }
+
         // ── 云雾地图可视化（海岛/邮差/主线，独立）──────────────────────────────
         // 用法：--write-cloud-maps [输出目录] [数据目录]   → 所有已知活动
         //       --write-ocean-map  [输出目录] [数据目录]   → 仅海岛

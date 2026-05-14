@@ -390,6 +390,8 @@ public static class TravelTownWriter
         BuildGeneratorSheet(pkg);
         BuildProductChainSheet(pkg);
         BuildOrderSheet(pkg);
+        BuildBuildingMappingSheet(pkg);
+        BuildPaymentSheet(pkg);
         BuildSummarySheet(pkg);
 
         pkg.SaveAs(new FileInfo(outPath));
@@ -720,11 +722,12 @@ public static class TravelTownWriter
             ws,
             1,
             1,
-            "【Travel Town 订单机制】订单以「任务树(Tree)」为单位，每棵树包含 3~10 个串联步骤（必须按顺序完成）。"
-                + "每步骤(Order)：需提交 objectives 指定的元素，获得 itemRewards 奖励（宝箱/钻石/工具箱等）。"
-                + "lockedByIds = 前置订单ID，必须先完成前置才能触发本步骤。"
-                + "taskType = ConsumeItems（消耗元素类型，目前全部相同）。"
-                + "与 Gossip Harbor 对比：TT 是线性剧情推进（完成 A 才解锁 B），Harbor 是动态权重随机刷新。",
+            "【Travel Town 订单机制】订单以「任务树(Tree)」为单位，每棵树包含若干串联步骤（必须按顺序完成）。"
+                + "数据来源：orders_intro.json 包含全部 103 棵树（含早期 ID 1~75 和后期 ID >1M），"
+                + "「introOrders」只是系统内部命名，并非「教程专用」——这就是 TT 完整的订单系统，没有单独的主线循环。"
+                + "每步骤：需提交 objectiveItems 指定的元素，获得 rewardItems 奖励（宝箱/钻石/工具箱等）。"
+                + "lockedByIds = 前置订单ID（串联依赖，空=起始步骤）。"
+                + "与 Gossip Harbor 对比：TT 是线性剧情推进（A完成才解锁B），Harbor 是动态权重随机刷新。",
             16
         );
 
@@ -830,7 +833,265 @@ public static class TravelTownWriter
         ws.Cells[statsRow, 3].Value = $"平均每树 {avgSteps:F1} 步";
     }
 
-    // ── Sheet 4：核心设计总结（含 Harbor 对比）────────────────────────────────
+    // ── Sheet 4：建筑→生成器→订单树 映射 ────────────────────────────────────────
+    private static void BuildBuildingMappingSheet(ExcelPackage pkg)
+    {
+        var ws = pkg.Workbook.Worksheets.Add("建筑→生成器映射");
+        ws.View.FreezePanes(3, 1);
+
+        MechNote(
+            ws,
+            1,
+            1,
+            "【建筑升级→生成器解锁映射】数据源：producers_inventory_slots.json（105条，含 unlockLevel）+ item_merge_graphs_full.json（orderSpawn.orderGraphTreeReference）。"
+                + "unlockLevel = 玩家等级达到该值时解锁此生成器；treeId = 与该生成器绑定的订单任务树 ID（唯一对应关系，直接配置字段，高置信）。"
+                + "小 ID（1~75）=早期内容，大 ID（>1M）=后期内容，均属 introOrders 同一系统。"
+                + "前4条（backpack/bucket/jewelry-box/picnic-basket）unlockLevel=0，为游戏开局即有的生成器。",
+            10
+        );
+
+        string[] headers = ["#", "解锁玩家等级", "生成器链(stem)", "生成器ItemID", "绑定订单树ID", "树类型", "备注",];
+        string[] hdrHex = ["595959", "1F4E79", "1F4E79", "2F5496", "1F6E4A", "595959", "595959",];
+        for (var j = 0; j < headers.Length; j++)
+            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+
+        var producersPath = Path.Combine(DataDir, "producers_inventory_slots.json");
+        var chainsPath = Path.Combine(DataDir, "item_merge_graphs_full.json");
+        if (!File.Exists(producersPath) || !File.Exists(chainsPath))
+        {
+            ws.Cells[3, 1].Value = "数据文件缺失";
+            return;
+        }
+
+        using var prodDoc = JsonDocument.Parse(File.ReadAllText(producersPath));
+        using var chainDoc = JsonDocument.Parse(File.ReadAllText(chainsPath));
+
+        // Build gen tree map: chainId → {generatorItemId, treeId}
+        var genTreeMap = new Dictionary<string, (string GenItemId, string TreeId)>(
+            StringComparer.Ordinal
+        );
+        foreach (var chain in chainDoc.RootElement.EnumerateArray())
+        {
+            var cid = chain.GetProperty("uniqueId").GetString() ?? "";
+            foreach (var item in chain.GetProperty("items").EnumerateArray())
+            {
+                if (
+                    !item.TryGetProperty("orderSpawn", out var os)
+                    || !os.TryGetProperty("orderGraphTreeReference", out var trEl)
+                )
+                    continue;
+                var treeId = trEl.GetString() ?? "";
+                if (string.IsNullOrEmpty(treeId))
+                    continue;
+                var genItemId = item.GetProperty("uniqueId").GetString() ?? "";
+                genTreeMap[cid] = (genItemId, treeId);
+                break;
+            }
+        }
+
+        var row = 3;
+        var idx = 0;
+        foreach (var producer in prodDoc.RootElement.EnumerateArray())
+        {
+            idx++;
+            var producerName = producer.GetProperty("producerName").GetString() ?? "";
+            var unlockLevel = producer.TryGetProperty("unlockLevel", out var ulEl)
+                ? ulEl.GetInt32()
+                : 0;
+            var stem = producerName.Replace("item-graph_", "");
+
+            genTreeMap.TryGetValue(producerName, out var genInfo);
+            var genItemId = genInfo.GenItemId ?? "—";
+            var treeId = genInfo.TreeId ?? "?";
+
+            string treeType;
+            string treeHex;
+            if (treeId == "?")
+            {
+                treeType = "无订单树";
+                treeHex = "F0F0F0";
+            }
+            else if (long.TryParse(treeId, out var tid))
+            {
+                if (tid <= 75)
+                {
+                    treeType = "早期内容";
+                    treeHex = "D9EAD3";
+                }
+                else if (tid < 1_000_000)
+                {
+                    treeType = "中期内容";
+                    treeHex = "FFF2CC";
+                }
+                else
+                {
+                    treeType = "后期内容";
+                    treeHex = "FCE5CD";
+                }
+            }
+            else
+            {
+                treeType = "特殊ID";
+                treeHex = "E8DAEF";
+            }
+
+            var noteStr = unlockLevel == 0 ? "开局即有" : "";
+            var rowHex = unlockLevel == 0 ? "EBF3FB" : null;
+
+            Cell(ws.Cells[row, 1], idx, "F5F5F5");
+            Cell(ws.Cells[row, 2], unlockLevel == 0 ? "—(初始)" : (object)unlockLevel, rowHex);
+            Cell(ws.Cells[row, 3], stem, rowHex ?? "FAFAFA");
+            Cell(ws.Cells[row, 4], genItemId, "F8F8F8");
+            Cell(ws.Cells[row, 5], treeId, treeHex);
+            Cell(ws.Cells[row, 6], treeType, treeHex);
+            Cell(ws.Cells[row, 7], noteStr, null);
+            row++;
+        }
+
+        ws.Column(1).Width = 5;
+        ws.Column(2).Width = 14;
+        ws.Column(3).Width = 28;
+        ws.Column(4).Width = 34;
+        ws.Column(5).Width = 16;
+        ws.Column(6).Width = 12;
+        ws.Column(7).Width = 12;
+        ws.Row(1).Height = 56;
+        ws.Row(2).Height = 22;
+        ws.Cells[1, 1].Style.WrapText = true;
+
+        ws.Cells[row + 1, 1].Value = $"合计 {idx} 条生成器（含 {idx - genTreeMap.Count} 条无订单树关联）";
+        ws.Cells[row + 1, 1].Style.Font.Bold = true;
+    }
+
+    // ── Sheet 5：付费设计分析 ─────────────────────────────────────────────────
+    private static void BuildPaymentSheet(ExcelPackage pkg)
+    {
+        var ws = pkg.Workbook.Worksheets.Add("付费设计");
+        ws.View.FreezePanes(3, 1);
+
+        MechNote(
+            ws,
+            1,
+            1,
+            "【Travel Town 付费设计】数据源：cache_22.dat_full.json → data.realCurrencyProducts（476条 IAP SKU，高置信直接配置）。"
+                + "SKU 命名规律：traveltown.bundle.{price}.{variant} / traveltown.store.{price}.{variant}。"
+                + "价格梯度：$0.49 ~ $99.99，共 54 个价格档位，476 个 SKU（每档多个变体，A/B 测试定价策略）。"
+                + "另有 Stars Shop（月费忠诚积分商店，featureUserLevel=35 解锁）和卡牌册系统（cache_1A albums，7个赛季册）。",
+            10
+        );
+
+        // Price tier summary
+        string[] headers = ["价格(USD)", "SKU数量", "示例SKU", "类型"];
+        string[] hdrHex = ["1F4E79", "2F5496", "2F5496", "595959"];
+        for (var j = 0; j < headers.Length; j++)
+            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+
+        var cache22Path = Path.Combine(DataDir, "cache_22.dat_full.json");
+        if (!File.Exists(cache22Path))
+        {
+            ws.Cells[3, 1].Value = "数据文件缺失";
+            return;
+        }
+
+        using var doc = JsonDocument.Parse(File.ReadAllText(cache22Path));
+        var rcpEl = doc
+            .RootElement.GetProperty("data")
+            .GetProperty("data")
+            .GetProperty("realCurrencyProducts");
+
+        var priceTiers = new SortedDictionary<double, List<string>>();
+        foreach (var p in rcpEl.EnumerateArray())
+        {
+            var price = p.GetProperty("price").GetDouble();
+            var sku = p.GetProperty("sku").GetString() ?? "";
+            if (!priceTiers.TryGetValue(price, out var list))
+            {
+                list = [];
+                priceTiers[price] = list;
+            }
+            list.Add(sku);
+        }
+
+        // Color code by tier
+        static string TierHex(double price) =>
+            price switch
+            {
+                < 1.0 => "D9EAD3",
+                < 5.0 => "EBF3FB",
+                < 15.0 => "FFF2CC",
+                < 30.0 => "FCE5CD",
+                _ => "FADADD",
+            };
+
+        static string TierLabel(double price) =>
+            price switch
+            {
+                < 1.0 => "入门档",
+                < 5.0 => "低价档",
+                < 15.0 => "中价档",
+                < 30.0 => "高价档",
+                _ => "顶级档",
+            };
+
+        var row = 3;
+        foreach (var (price, skus) in priceTiers)
+        {
+            var hex = TierHex(price);
+            var skuType = skus[0].Contains("bundle") ? "bundle包" : "store单品";
+            Cell(ws.Cells[row, 1], $"${price:F2}", hex);
+            Cell(ws.Cells[row, 2], skus.Count, hex);
+            Cell(ws.Cells[row, 3], skus[0], "F8F8F8");
+            Cell(ws.Cells[row, 4], $"{TierLabel(price)} / {skuType}", hex);
+            row++;
+        }
+
+        // Summary block
+        row += 2;
+        var summaryItems = new[]
+        {
+            ("总SKU数", "476 条（直接配置数据，高置信）"),
+            ("价格档位", "54 档，$0.49 ~ $99.99，每档2~29个变体（A/B测试用）"),
+            ("最低价入口", "$0.49（5个SKU，降低首付门槛）"),
+            ("核心主力档", "$4.99 / $9.99 / $19.99（SKU最多：16/29/29个，主推价位）"),
+            ("高消费档", "$49.99（8个SKU）/ $99.99（2个SKU，大额鲸鱼用户）"),
+            ("SKU命名", "bundle = 时限礼包（活动捆绑）；store = 常驻商店（钻石直购）"),
+            ("Stars Shop", "月费忠诚积分商店，玩家等级35解锁，URL: loyalty.traveltowngame.com"),
+            ("卡牌册系统", "7个赛季册（cache_1A albums），完成册子获得额外道具奖励"),
+        };
+
+        Header(ws.Cells[row, 1, row, 4], "付费设计关键结论（高置信直接数据）", "1A3A5C");
+        ws.Cells[row, 1, row, 4].Merge = true;
+        row++;
+
+        foreach (var (k, v) in summaryItems)
+        {
+            ws.Cells[row, 1].Value = k;
+            ws.Cells[row, 1].Style.Font.Bold = true;
+            ws.Cells[row, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
+            ws.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(HexColor("EBF3FB"));
+            Border(ws.Cells[row, 1]);
+
+            var vc = ws.Cells[row, 2, row, 4];
+            vc.Merge = true;
+            vc.Value = v;
+            vc.Style.WrapText = true;
+            vc.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            vc.Style.Fill.BackgroundColor.SetColor(HexColor("F8FAFF"));
+            Border(vc);
+            ws.Row(row).Height = 18;
+            row++;
+        }
+
+        ws.Column(1).Width = 14;
+        ws.Column(2).Width = 10;
+        ws.Column(3).Width = 44;
+        ws.Column(4).Width = 18;
+        ws.Row(1).Height = 56;
+        ws.Row(2).Height = 22;
+        ws.Cells[1, 1].Style.WrapText = true;
+    }
+
+    // ── Sheet 6：核心设计总结（含 Harbor 对比）────────────────────────────────
     private static void BuildSummarySheet(ExcelPackage pkg)
     {
         var ws = pkg.Workbook.Worksheets.Add("核心设计总结");
@@ -1165,23 +1426,32 @@ public static class TravelTownWriter
         {
             (
                 "高置信（直接配置数据）",
-                "produce.cycleDelay / capacity / itemsPerSubCycle / spawnTarget / weight：直接从 JSON 读取，100% 准确\ndifficulty.averageDifficulty 和 per-spawner difficulty：直接字段，100% 准确\norders_intro.json 全部103棵任务树字段：完整数据",
+                "produce.cycleDelay / capacity / itemsPerSubCycle / spawnTarget / weight：直接从 JSON 读取，100% 准确。\n"
+                    + "difficulty.averageDifficulty 和 per-spawner difficulty：直接字段，100% 准确。\n"
+                    + "orders_intro.json 全部103棵任务树字段：完整数据，「introOrders」就是完整订单系统，无单独主线循环。\n"
+                    + "生成器解锁等级→订单树映射：producers_inventory_slots.json 直接字段（105条，含 unlockLevel + chainId），与 orderSpawn.orderGraphTreeReference 完全对齐（见「建筑→生成器映射」sheet）。\n"
+                    + "付费 IAP 价格：cache_22.dat_full.json → realCurrencyProducts（476条 SKU，54档位，$0.49~$99.99，见「付费设计」sheet）。",
                 "E8F5E8"
             ),
             (
                 "高置信（结构推断）",
-                "生成器产出「固定确定」（weight=100，items列表只有一项）：直接配置可验证\n任务树线性依赖（lockedByIds 串联）：直接字段可验证\n元素难度「硬编码」（不是运行时动态计算）：JSON 配置层无动态字段",
+                "生成器产出「固定确定」（weight=100，items列表只有一项）：直接配置可验证。\n"
+                    + "任务树线性依赖（lockedByIds 串联）：直接字段可验证。\n"
+                    + "元素难度「硬编码」（不是运行时动态计算）：JSON 配置层无动态字段。\n"
+                    + "订单系统完整性：cache_D / cache_1C 均包含相同103棵树，无其他隐藏订单系统。",
                 "E8F5E8"
             ),
             (
                 "中置信（推断）",
-                "「机器升级解锁订单」路线：从 orderSpawn.orderGraphTreeReference 和 building 数据推断，未找到完整解锁映射表\nboosters_config.json 115个 merge-producer 的具体链接关系：部分对应关系未完全验证",
+                "boosters_config.json 115个 merge-producer 的具体解锁条件：部分与 producers_inventory_slots 对应关系未完全验证。\n"
+                    + "「建筑视觉升级」与「生成器解锁」的精确触发时机：meta_buildings 有视觉阶段数据，但 tasks 内 ConsumeResources 要求内容未完整解析。",
                 "FFF8E8"
             ),
             (
-                "未获取数据",
-                "完整的建筑升级→生成器解锁映射（meta_buildings.json 有建筑但未与生成器链完整对齐）\n活跃玩家的真实订单生成逻辑（intro orders vs 主线循环 orders 的区分）\n付费设计相关配置（钻石购买、加速等定价）",
-                "FFF0E8"
+                "暂未获取",
+                "meta_buildings 建筑故事剧情文本（cache_1E 有本地化字符串但为编码乱码）。\n"
+                    + "具体 IAP 礼包内容（bundle SKU对应的道具详情，只有 price 和 sku 字段，无 contents）。",
+                "F0F0F0"
             ),
         };
 
