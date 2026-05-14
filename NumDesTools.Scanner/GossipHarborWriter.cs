@@ -104,6 +104,7 @@ public static class GossipHarborWriter
         BuildOrderSheet(pkg);
         BuildCustomerSheet(pkg);
         BuildBattleRobotSheet(pkg);
+        BuildWeightSystemSheet(pkg);
 
         pkg.SaveAs(new FileInfo(outPath));
         Console.WriteLine($"[GossipHarbor] 已生成：{outPath}");
@@ -452,5 +453,189 @@ public static class GossipHarborWriter
         ws.Cells[statRow, 3].Value = $"Easy: {entries.Count(e => e.Difficulty == 0)}";
         ws.Cells[statRow, 4].Value = $"Normal: {entries.Count(e => e.Difficulty == 1)}";
         ws.Cells[statRow, 5].Value = $"Hard: {entries.Count(e => e.Difficulty == 2)}";
+    }
+
+    // ── Sheet 6：动态权重系统（Frida内存扫描结论）──────────────────────────────
+    private static void BuildWeightSystemSheet(ExcelPackage pkg)
+    {
+        var ws = pkg.Workbook.Worksheets.Add("动态权重系统");
+        ws.View.FreezePanes(2, 1);
+
+        // 标题行
+        var titleCell = ws.Cells[1, 1, 1, 6];
+        titleCell.Merge = true;
+        titleCell.Value = "Gossip Harbor 动态权重系统 — Frida内存扫描置信度报告（扫描时间：2026-05-14，PID=3199）";
+        titleCell.Style.Font.Bold = true;
+        titleCell.Style.Font.Size = 12;
+        titleCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
+        titleCell.Style.Fill.BackgroundColor.SetColor(HexColor("1F4E79"));
+        titleCell.Style.Font.Color.SetColor(Color.White);
+        titleCell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+        Border(titleCell);
+        ws.Row(1).Height = 26;
+
+        string[] headers = ["问题", "结论", "置信度", "关键证据字段/函数", "具体数值", "备注"];
+        string[] hdrHex = ["1F4E79", "2F5496", "595959", "2F5496", "595959", "595959"];
+        for (var j = 0; j < headers.Length; j++)
+            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+
+        // 4大问题的扫描结论
+        var findings = new[]
+        {
+            (
+                "BaseW（基础权重值）",
+                "找到 — 运行时字段确认",
+                "高",
+                "Spread_Weight(配置表) / spreadWeight(运行时JSON)",
+                "pack_common_1: 75/25; pack_common_2: 55/45; pack_large: 60/…",
+                "与 AdventureItemModelConfig.Spread_Weight 字段对应；gacha包权重用同一格式"
+            ),
+            (
+                "CapFactor（容量上限因子）",
+                "隐式实现 — 无独立变量名",
+                "中",
+                "Spread_ItemMaxNumber(配置) / spreadItemRestNumber(运行时) / _UpdateSpreadConfigSmartWeight",
+                "CapFactor = 1 - spreadItemRestNumber/Spread_ItemMaxNumber（推断公式）",
+                "无 'CapFactor' 字面量；JSON实例: {\"spreadItemRestNumber\":0,\"spreadState\":3,...}；权重更新入口已确认"
+            ),
+            (
+                "ChainMultiple（链重复倍率）",
+                "找到 — 变量名确认",
+                "高",
+                "itemChainMultiple / mapChainRepeatWeight / repeatWeightDecrease / mapItemCodeMultiple",
+                "具体倍率数值未以明文浮点出现；repeatWeightDecrease证实存在重复惩罚递减",
+                "位于 MainOrderCreatorRandom 模块 (addr 0x7ef20f14d528)；与多重字段共存"
+            ),
+            (
+                "BoardAware（订单是否感知棋盘）",
+                "否 — 高置信负向结论",
+                "高（负）",
+                "GetCachedItemCount（仅在spread/freefall，从未在订单附近） / GetBoardItemCount(全扫描未命中)",
+                "N/A — 订单创建只关心 requireItems 和时间参数",
+                "6批次扫描(r--/r-x/rw-)均未命中GetBoardItemCount；CreateOrder/CanCreateOrder/MainOrderCreatorRandom无棋盘调用"
+            ),
+        };
+
+        var confColors = new Dictionary<string, string>
+        {
+            ["高"] = "D9EAD3",
+            ["中"] = "FFF2CC",
+            ["高（负）"] = "EBF3FB",
+        };
+
+        var row = 3;
+        foreach (var (q, conclusion, conf, evidence, value, note) in findings)
+        {
+            var confHex = confColors.GetValueOrDefault(conf, "F5F5F5");
+            Cell(ws.Cells[row, 1], q, "F0F4FA");
+            ws.Cells[row, 1].Style.Font.Bold = true;
+            Cell(ws.Cells[row, 2], conclusion, confHex);
+            Cell(ws.Cells[row, 3], conf, confHex);
+            Cell(ws.Cells[row, 4], evidence, "FAFAFA");
+            ws.Cells[row, 4].Style.WrapText = true;
+            Cell(ws.Cells[row, 5], value, "FFF8E8");
+            ws.Cells[row, 5].Style.WrapText = true;
+            Cell(ws.Cells[row, 6], note, "F5F5F5");
+            ws.Cells[row, 6].Style.WrapText = true;
+            ws.Row(row).Height = 52;
+            row++;
+        }
+
+        row += 2;
+
+        // 4因子 CurWeight 公式块
+        var formulaTitle = ws.Cells[row, 1, row, 6];
+        formulaTitle.Merge = true;
+        formulaTitle.Value = "■ CurWeight 4因子公式（逆向推导，置信度：中-高）";
+        formulaTitle.Style.Font.Bold = true;
+        formulaTitle.Style.Fill.PatternType = ExcelFillStyle.Solid;
+        formulaTitle.Style.Fill.BackgroundColor.SetColor(HexColor("4A235A"));
+        formulaTitle.Style.Font.Color.SetColor(Color.White);
+        Border(formulaTitle);
+        ws.Row(row).Height = 22;
+        row++;
+
+        var formulaFactors = new[]
+        {
+            (
+                "BaseW",
+                "Spread_Weight（配置表字段）",
+                "高",
+                "每条链在AdventureItemModelConfig配置的基础权重，例如 75 / 25",
+                "直接运行时字段 spreadWeight 观测到"
+            ),
+            (
+                "CapFactor",
+                "1 - spreadItemRestNumber / Spread_ItemMaxNumber",
+                "中",
+                "当前链产出积压量越多，CapFactor越低，抑制继续产出同类元素",
+                "无显式变量，从 _UpdateSpreadConfigSmartWeight + 字段组合推断"
+            ),
+            (
+                "ChainMultiple",
+                "itemChainMultiple（运行时）",
+                "高（名称）/ 中（值）",
+                "对同一链重复出现施加衰减倍率，mapChainRepeatWeight存储各链重复次数",
+                "函数名确认，倍率数值未明文出现；repeatWeightDecrease证实递减机制"
+            ),
+            (
+                "RepeatFactor",
+                "推断 = f(mapItemCodeMultiple)",
+                "中",
+                "单品ID级别重复惩罚，防止同一具体元素连续产出",
+                "mapItemCodeMultiple 字段与 itemChainMultiple 并列，同一模块"
+            ),
+        };
+
+        string[] factorHeaders = ["因子名", "字段/公式", "置信度", "语义", "证据来源"];
+        for (var j = 0; j < factorHeaders.Length; j++)
+            Header(ws.Cells[row, j + 1], factorHeaders[j], "2F5496");
+        row++;
+
+        var fColors = new[] { "EBF3FB", "FFF2CC", "D9EAD3", "FCE5CD" };
+        for (var fi = 0; fi < formulaFactors.Length; fi++)
+        {
+            var (fname, formula, fconf, fmean, fevidence) = formulaFactors[fi];
+            var fhex = fColors[fi % fColors.Length];
+            Cell(ws.Cells[row, 1], fname, fhex);
+            ws.Cells[row, 1].Style.Font.Bold = true;
+            Cell(ws.Cells[row, 2], formula, "FAFAFA");
+            ws.Cells[row, 2].Style.WrapText = true;
+            Cell(ws.Cells[row, 3], fconf, fconf.StartsWith("高") ? "D9EAD3" : "FFF2CC");
+            Cell(ws.Cells[row, 4], fmean, "F5F5F5");
+            ws.Cells[row, 4].Style.WrapText = true;
+            Cell(ws.Cells[row, 5], fevidence, "F0F0F0");
+            ws.Cells[row, 5].Style.WrapText = true;
+            ws.Row(row).Height = 38;
+            row++;
+        }
+
+        row += 2;
+
+        // 总结说明
+        var summaryCell = ws.Cells[row, 1, row, 6];
+        summaryCell.Merge = true;
+        summaryCell.Value =
+            "【总结】4因子动态权重已高置信度确认存在（BaseW+ChainMultiple命中，CapFactor隐式推断，RepeatFactor字段并列）。"
+            + "订单不感知棋盘状态（高置信负向，6批扫描均未命中GetBoardItemCount于订单路径）。"
+            + "这与 Merge Cooking 的静态概率池和 TravelTown 的固定产出形成鲜明对比——"
+            + "Harbor是三款中运行时动态性最高的，对订单池设计成本最高，也是最难平衡的。"
+            + "主要未获取：各因子的具体数值参数（配置表加密，内存中以IL2CPP偏移量而非字符串字段存储）。";
+        summaryCell.Style.Font.Size = 10;
+        summaryCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
+        summaryCell.Style.Fill.BackgroundColor.SetColor(HexColor("EBF3FB"));
+        summaryCell.Style.WrapText = true;
+        summaryCell.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
+        Border(summaryCell);
+        ws.Row(row).Height = 60;
+
+        ws.Column(1).Width = 18;
+        ws.Column(2).Width = 26;
+        ws.Column(3).Width = 12;
+        ws.Column(4).Width = 32;
+        ws.Column(5).Width = 28;
+        ws.Column(6).Width = 30;
+
+        ws.Row(2).Height = 22;
     }
 }

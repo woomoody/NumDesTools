@@ -2606,8 +2606,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void TestBar1_Click(IRibbonControl control)
     {
-        // 标准 WPF 窗口（无 WPF-UI）
-        OpenWpfUiCompareWindows();
         //var files = new List<string>(
         //    Directory.GetFiles(
         //        @"C:\Users\cent\Downloads\configs_1.1.53\",
@@ -2838,59 +2836,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         //    sw.Stop();
         //}
-    }
-
-    private static void OpenWpfUiCompareWindows()
-    {
-        // 确保 Application 实例存在（pack:// URI 需要）
-        if (System.Windows.Application.Current is null)
-            _ = new System.Windows.Application
-            {
-                ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown,
-            };
-
-        // 标准 WPF 窗口
-        var plain = new System.Windows.Window
-        {
-            Title = "标准 WPF（对照）",
-            Width = 400,
-            Height = 260,
-            WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen,
-            Background = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromRgb(0x1E, 0x1E, 0x1E)
-            ),
-        };
-        var plainPanel = new System.Windows.Controls.StackPanel { Margin = new System.Windows.Thickness(16) };
-        plainPanel.Children.Add(new System.Windows.Controls.TextBlock
-        {
-            Text = "标准 WPF（无框架）",
-            Foreground = System.Windows.Media.Brushes.White,
-            FontSize = 16,
-            Margin = new System.Windows.Thickness(0, 0, 0, 12),
-        });
-        plainPanel.Children.Add(new System.Windows.Controls.TextBox { Text = "输入框", Margin = new System.Windows.Thickness(0, 0, 0, 8) });
-        plainPanel.Children.Add(new System.Windows.Controls.Button { Content = "按钮", Width = 80, HorizontalAlignment = System.Windows.HorizontalAlignment.Left });
-        plain.Content = plainPanel;
-        plain.Show();
-
-        // WPF-UI 窗口（普通 Window + merge Dark.xaml）
-        try
-        {
-            var wpfUiWin = new UI.WpfUiTestWindow();
-            wpfUiWin.Show();
-        }
-        catch (Exception ex)
-        {
-            var inner = ex.InnerException;
-            var msg = $"[WpfUiTest] {ex.GetType().Name}: {ex.Message}";
-            while (inner != null)
-            {
-                msg += $"\n  Inner: {inner.GetType().Name}: {inner.Message}";
-                inner = inner.InnerException;
-            }
-            msg += $"\n{ex.StackTrace}";
-            PluginLog.Write(msg);
-        }
     }
 
     public void CheckHiddenCell_Click(IRibbonControl control)

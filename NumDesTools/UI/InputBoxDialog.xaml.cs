@@ -11,6 +11,7 @@ public partial class InputBoxDialog : Window
 
     public InputBoxDialog(string prompt, string title)
     {
+        WpfUiHelper.ApplyDarkTheme(this);
         InitializeComponent();
         Title = title;
         PromptText.Text = prompt;
