@@ -1,0 +1,8 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Wpf.Ui 3.x 主题通过 ApplicationThemeManager.Apply() 在代码里统一初始化，
+        无需在此声明资源。窗口只需继承 FluentWindow 即可自动获得 Fluent 外观。
+    -->
+</ResourceDictionary>

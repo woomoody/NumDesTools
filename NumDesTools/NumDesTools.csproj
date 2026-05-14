@@ -141,6 +141,7 @@
       <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
       <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.0-rc.1.25451.107" />
       <PackageReference Include="System.Text.Encodings.Web" Version="10.0.0-rc.1.25451.107" />
+      <PackageReference Include="WPF-UI" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
       <Folder Include="Com\" />

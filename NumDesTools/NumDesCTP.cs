@@ -178,6 +178,27 @@ public class NumDesCTP
         return controlWPF;
     }
 
+    public static void DisposeAll()
+    {
+        foreach (var ctp in ctpsWPF.Values)
+            try { ctp.Delete(); } catch { }
+        ctpsWPF.Clear();
+
+        foreach (var ctp in ctpsWF.Values)
+            try { ctp.Delete(); } catch { }
+        ctpsWF.Clear();
+
+        if (LableControlWPF is { IsDisposed: false })
+        {
+            foreach (Control c in LableControlWPF.Controls)
+                if (c is ElementHost eh)
+                    eh.Child = null;
+            LableControlWPF.Dispose();
+        }
+        if (LableControlWF is { IsDisposed: false })
+            LableControlWF.Dispose();
+    }
+
     public static bool TryGetCTP(string name, out CustomTaskPane pane) =>
         ctpsWPF.TryGetValue(name, out pane);
 

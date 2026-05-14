@@ -62,6 +62,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public const int LongTextThreshold = 50;
     public const int MaxLineLength = 50;
     public const int ClickDelayMs = 500;
+
+    // 授权状态：AutoOpen 验证后设置，false 时所有按钮点击被拦截
+    private static bool _authorized = true;
     public static GlobalVariable GlobalValue = new();
     public static string LabelText = GlobalValue.Value["LabelText"];
     public static string FocusLabelText = GlobalValue.Value["FocusLabelText"];
@@ -107,6 +110,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     //右键事件
     private ExcelRightClickMenuManager _menuManager;
+    private CellSelectChangePro? _cellSelectChangePro;
 
     //构造函数初始化
     public NumDesAddIn()
@@ -319,6 +323,17 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void OnButtonClick(IRibbonControl control)
     {
+        if (!_authorized)
+        {
+            MessageBox.Show(
+                "插件授权已过期，请联系作者续期。",
+                "NumDesTools",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+            return;
+        }
+
         // 防抖检查（500ms内不重复处理）
         if (
             _lastClickTimes.TryGetValue(control.Id, out var lastTime)
@@ -437,53 +452,42 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //        }
         //#endif
 
-        // 插件防伪
-        var isCheckOut = CheckRes();
+        var xllBuildTime = File.GetLastWriteTime(ExcelDnaUtil.XllPath)
+            .ToString("yyyy-MM-dd HH:mm:ss");
+        PluginLog.Write(
+            $"[NumDesTools] xll loaded  build={xllBuildTime}  path={ExcelDnaUtil.XllPath}"
+        );
 
-        if (isCheckOut)
-        {
-            var xllBuildTime = File.GetLastWriteTime(ExcelDnaUtil.XllPath)
-                .ToString("yyyy-MM-dd HH:mm:ss");
-            PluginLog.Write(
-                $"[NumDesTools] xll loaded  build={xllBuildTime}  path={ExcelDnaUtil.XllPath}"
-            );
+        //注册智能感应
+        IntelliSenseServer.Install();
 
-            //注册智能感应
-            IntelliSenseServer.Install();
+        //新的右键管理器
+        _menuManager = new ExcelRightClickMenuManager(App);
+        App.SheetBeforeRightClick += OnSheetRightClick;
 
-            //新的右键管理器
-            _menuManager = new ExcelRightClickMenuManager(App);
-            App.SheetBeforeRightClick += OnSheetRightClick;
+        //注册Excel事件
+        App.WorkbookActivate += ExcelApp_WorkbookActivate;
+        App.WorkbookBeforeClose += ExcelApp_WorkbookBeforeClose;
 
-            //注册Excel事件
-            App.WorkbookActivate += ExcelApp_WorkbookActivate;
-            App.WorkbookBeforeClose += ExcelApp_WorkbookBeforeClose;
+        //注册动态参数函数
+        ExcelIntegration.RegisterUnhandledExceptionHandler(ex => "!!! ERROR: " + ex);
+        ExcelRegistration
+            .GetExcelFunctions()
+            .ProcessAsyncRegistrations(true)
+            .ProcessParamsRegistrations()
+            .RegisterFunctions();
 
-            //注册动态参数函数
-            ExcelIntegration.RegisterUnhandledExceptionHandler(ex => "!!! ERROR: " + ex);
-            // Set the Parameter Conversions before they are applied by the ProcessParameterConversions call below.
-            // Get all the ExcelFunction functions, process and register
-            // Since the .dna file has ExplicitExports="true", these explicit registrations are the only ones - there is no default processing
-            ExcelRegistration
-                .GetExcelFunctions()
-                .ProcessAsyncRegistrations(true)
-                .ProcessParamsRegistrations()
-                .RegisterFunctions();
+        //添加动态参数自定函数注册后，需要重新刷新下智能感应提示
+        IntelliSenseServer.Refresh();
 
-            //添加动态参数自定函数注册后，需要重新刷新下智能感应提示
-            IntelliSenseServer.Refresh();
+        //注册动态命令函数
+        ExcelRegistration.GetExcelCommands().RegisterCommands();
 
-            //注册动态命令函数
-            ExcelRegistration.GetExcelCommands().RegisterCommands();
+        //添加快捷键触发,可以自定义快捷键，例如： Ctrl+Alt+L
+        App.OnKey("^%l", "ShowDnaLog");
 
-            //添加快捷键触发,可以自定义快捷键，例如： Ctrl+Alt+L
-            App.OnKey("^%l", "ShowDnaLog");
-        }
-        else
-        {
-            App.Quit();
-            Marshal.ReleaseComObject(App);
-        }
+        // 授权验证：放在所有注册完成之后，验证失败只锁按钮不杀进程
+        _authorized = CheckRes();
     }
 
     void IExcelAddIn.AutoClose()
@@ -496,9 +500,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         App.WorkbookActivate -= ExcelApp_WorkbookActivate;
         App.WorkbookBeforeClose -= ExcelApp_WorkbookBeforeClose;
+        App.SheetBeforeRightClick -= OnSheetRightClick;
 
         //解除快捷键触发，例如： Ctrl+Alt+L
         App.OnKey("^%l");
+
+        Marshal.ReleaseComObject(App);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
     }
 
     private void OnSheetRightClick(object sh, Range target, ref bool cancel)
@@ -561,109 +570,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         return true;
     }
 
-    private string ShowPasswordInputDialog(string title, string prompt)
+    private static string ShowPasswordInputDialog(string title, string prompt)
     {
-        var dialog = new System.Windows.Window
-        {
-            Title = title,
-            Width = 380,
-            Height = 220,
-            WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen,
-            ResizeMode = System.Windows.ResizeMode.NoResize,
-            WindowStyle = System.Windows.WindowStyle.SingleBorderWindow
-        };
-
-        var mainGrid = new System.Windows.Controls.Grid();
-        mainGrid.RowDefinitions.Add(
-            new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto }
-        );
-        mainGrid.RowDefinitions.Add(
-            new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto }
-        );
-        mainGrid.RowDefinitions.Add(
-            new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto }
-        );
-        mainGrid.RowDefinitions.Add(
-            new System.Windows.Controls.RowDefinition { Height = System.Windows.GridLength.Auto }
-        );
-
-        // 1. 主标题
-        var mainPrompt = new System.Windows.Controls.TextBlock
-        {
-            Text = prompt,
-            FontSize = 14,
-            FontWeight = System.Windows.FontWeights.Bold,
-            Margin = new System.Windows.Thickness(0, 0, 0, 5)
-        };
-        System.Windows.Controls.Grid.SetRow(mainPrompt, 0);
-
-        // 2. 详细提示
-        var detailHint = new System.Windows.Controls.TextBlock
-        {
-            Text = "••• 密码是求和为10的表达式，例如：2+8",
-            FontSize = 11,
-            Foreground = System.Windows.Media.Brushes.DarkSlateGray,
-            Margin = new System.Windows.Thickness(0, 0, 0, 10),
-            TextWrapping = System.Windows.TextWrapping.Wrap
-        };
-        System.Windows.Controls.Grid.SetRow(detailHint, 1);
-
-        // 3. 密码输入框
-        var passwordBox = new System.Windows.Controls.PasswordBox
-        {
-            PasswordChar = '*',
-            FontSize = 14,
-            Height = 32,
-            Margin = new System.Windows.Thickness(0, 0, 0, 15)
-        };
-        System.Windows.Controls.Grid.SetRow(passwordBox, 2);
-
-        // 4. 按钮区域
-        var buttonPanel = new System.Windows.Controls.StackPanel
-        {
-            Orientation = System.Windows.Controls.Orientation.Horizontal,
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Right
-        };
-        System.Windows.Controls.Grid.SetRow(buttonPanel, 3);
-
-        var okButton = new System.Windows.Controls.Button
-        {
-            Content = "确定",
-            Width = 80,
-            Margin = new System.Windows.Thickness(0, 0, 10, 0),
-            IsDefault = true
-        };
-
-        var cancelButton = new System.Windows.Controls.Button
-        {
-            Content = "取消",
-            Width = 80,
-            IsCancel = true
-        };
-
-        buttonPanel.Children.Add(okButton);
-        buttonPanel.Children.Add(cancelButton);
-
-        mainGrid.Children.Add(mainPrompt);
-        mainGrid.Children.Add(detailHint);
-        mainGrid.Children.Add(passwordBox);
-        mainGrid.Children.Add(buttonPanel);
-
-        dialog.Content = mainGrid;
-
-        string result = string.Empty;
-        bool isOk = false;
-
-        okButton.Click += (_, _) =>
-        {
-            result = passwordBox.Password;
-            isOk = true;
-            dialog.Close();
-        };
-        cancelButton.Click += (_, _) => dialog.Close();
-
-        dialog.ShowDialog();
-        return isOk ? result : string.Empty;
+        var dialog = new PasswordDialog(prompt) { Title = title };
+        return dialog.ShowDialog() == true ? dialog.Password : string.Empty;
     }
 
     private bool ValidatePassword(string inputPassword)
@@ -1186,6 +1096,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
     {
+        if (App.Workbooks.Count == 1)
+        {
+            CellSelectChangeTip.Disable();
+            CellSelectChangeTip.DisposeInstance();
+            CrosslightController.Disable();
+            CrosslightOverlay.DisposeInstance();
+            NumDesCTP.DisposeAll();
+        }
         var workBook = App.ActiveWorkbook;
         var wkFullPath = workBook.FullName;
         var wkFileName = workBook.Name;
@@ -1929,7 +1847,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             LabelTextRoleDataPreview =
                 LabelTextRoleDataPreview == "角色数据预览：开启" ? "角色数据预览：关闭" : "角色数据预览：开启";
             CustomRibbon.InvalidateControl("Button14");
-            _ = new CellSelectChangePro();
+            _cellSelectChangePro ??= new CellSelectChangePro();
             App.StatusBar = false;
         }
         else
@@ -2362,6 +2280,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 // 非STA线程时创建新线程
                 var thread = new Thread(() => SetText(text));
                 thread.SetApartmentState(ApartmentState.STA);
+                thread.IsBackground = true;
                 thread.Start();
                 thread.Join(1000);
                 return;
@@ -3506,48 +3425,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private static string WpfInputBox(string prompt, string title)
     {
-        var tb = new System.Windows.Controls.TextBox
-        {
-            Margin = new System.Windows.Thickness(0, 8, 0, 0),
-            MinWidth = 320,
-        };
-        var btn = new System.Windows.Controls.Button
-        {
-            Content = "确定",
-            IsDefault = true,
-            Margin = new System.Windows.Thickness(0, 8, 0, 0),
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
-        };
-        var panel = new System.Windows.Controls.StackPanel
-        {
-            Margin = new System.Windows.Thickness(12)
-        };
-        panel.Children.Add(
-            new System.Windows.Controls.TextBlock
-            {
-                Text = prompt,
-                TextWrapping = System.Windows.TextWrapping.Wrap
-            }
-        );
-        panel.Children.Add(tb);
-        panel.Children.Add(btn);
-
-        var win = new System.Windows.Window
-        {
-            Title = title,
-            Content = panel,
-            SizeToContent = System.Windows.SizeToContent.WidthAndHeight,
-            ResizeMode = System.Windows.ResizeMode.NoResize,
-            WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen,
-        };
-        btn.Click += (_, _) => win.DialogResult = true;
-        win.KeyDown += (_, e) =>
-        {
-            if (e.Key == System.Windows.Input.Key.Escape)
-                win.Close();
-        };
-
-        return win.ShowDialog() == true ? tb.Text : string.Empty;
+        var dialog = new InputBoxDialog(prompt, title);
+        return dialog.ShowDialog() == true ? dialog.Input : string.Empty;
     }
 
     public void ActivityTestGitChanged_Click(IRibbonControl control)

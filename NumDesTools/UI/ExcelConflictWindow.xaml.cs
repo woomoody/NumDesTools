@@ -9,9 +9,12 @@ using Border = System.Windows.Controls.Border;
 using Button = System.Windows.Controls.Button;
 using CheckBox = System.Windows.Controls.CheckBox;
 using MessageBox = System.Windows.MessageBox;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using MessageBoxResult = System.Windows.MessageBoxResult;
+using TextBlock = System.Windows.Controls.TextBlock;
 using TextBox = System.Windows.Controls.TextBox;
-using Window = System.Windows.Window;
 using WpfColor = System.Windows.Media.Color;
+using Window = System.Windows.Window;
 
 namespace NumDesTools.UI;
 

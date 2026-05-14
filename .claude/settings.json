@@ -214,7 +214,8 @@
       "WebFetch(domain:open.feishu.cn)",
       "WebFetch(domain:www.appshopper.com)",
       "Skill(xlsx-rw)",
-      "Skill(xlsx-rw:*)"
+      "Skill(xlsx-rw:*)",
+      "WebFetch(domain:awesomeopensource.com)"
     ],
     "defaultMode": "bypassPermissions",
     "additionalDirectories": [
