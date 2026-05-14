@@ -4,13 +4,11 @@ using GraphX.Controls;
 using GraphX.Logic.Algorithms.LayoutAlgorithms;
 using GraphX.Logic.Models;
 using MessageBox = System.Windows.MessageBox;
+using Wpf.Ui.Controls;
 
 namespace NumDesTools.UI
 {
-    /// <summary>
-    /// SheetLinksWindow.xaml 的交互逻辑
-    /// </summary>
-    public partial class SheetLinksWindow
+    public partial class SheetLinksWindow : FluentWindow
     {
         public SheetLinksWindow()
         {

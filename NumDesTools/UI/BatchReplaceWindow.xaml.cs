@@ -9,7 +9,7 @@ using System.Windows.Interop;
 using ExcelDna.Integration;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MessageBox = System.Windows.MessageBox;
-using Window = System.Windows.Window;
+using Wpf.Ui.Controls;
 
 namespace NumDesTools.UI
 {
@@ -54,7 +54,7 @@ namespace NumDesTools.UI
     }
 
     // ── 主窗口 ───────────────────────────────────────────
-    public partial class BatchReplaceWindow : Window
+    public partial class BatchReplaceWindow : FluentWindow
     {
         private static BatchReplaceWindow? _instance;
         private static readonly string HistoryFile = Path.Combine(
