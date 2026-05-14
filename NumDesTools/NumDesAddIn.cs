@@ -63,7 +63,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public const int MaxLineLength = 50;
     public const int ClickDelayMs = 500;
 
-    // 授权状态：AutoOpen 验证后设置，false 时所有按钮点击被拦截
     private static bool _authorized = true;
     public static GlobalVariable GlobalValue = new();
     public static string LabelText = GlobalValue.Value["LabelText"];
@@ -572,8 +571,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private static string ShowPasswordInputDialog(string title, string prompt)
     {
-        var dialog = new PasswordDialog(prompt) { Title = title };
-        return dialog.ShowDialog() == true ? dialog.Password : string.Empty;
+        var dlg = new UI.PasswordDialog(prompt) { Title = title };
+        return dlg.ShowDialog() == true ? dlg.Password : string.Empty;
     }
 
     private bool ValidatePassword(string inputPassword)
@@ -1104,6 +1103,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             CrosslightOverlay.DisposeInstance();
             NumDesCTP.DisposeAll();
         }
+
         var workBook = App.ActiveWorkbook;
         var wkFullPath = workBook.FullName;
         var wkFileName = workBook.Name;
@@ -3425,8 +3425,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private static string WpfInputBox(string prompt, string title)
     {
-        var dialog = new InputBoxDialog(prompt, title);
-        return dialog.ShowDialog() == true ? dialog.Input : string.Empty;
+        var dlg = new UI.InputBoxDialog(prompt, title);
+        return dlg.ShowDialog() == true ? dlg.Input : string.Empty;
     }
 
     public void ActivityTestGitChanged_Click(IRibbonControl control)

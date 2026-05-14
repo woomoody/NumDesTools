@@ -1,13 +1,14 @@
 using System.Windows;
 using System.Windows.Controls;
 using Orientation = System.Windows.Controls.Orientation;
-using TextBlock = System.Windows.Controls.TextBlock;
 using TextBox = System.Windows.Controls.TextBox;
-using Wpf.Ui.Controls;
 
 namespace NumDesTools.UI
 {
-    public partial class InputFormularWindow : FluentWindow
+    /// <summary>
+    /// InputFormularWindow.xaml 的交互逻辑
+    /// </summary>
+    public partial class InputFormularWindow
     {
         public List<string> UserInputs { get; private set; }
 

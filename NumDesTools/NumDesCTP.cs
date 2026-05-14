@@ -181,11 +181,19 @@ public class NumDesCTP
     public static void DisposeAll()
     {
         foreach (var ctp in ctpsWPF.Values)
-            try { ctp.Delete(); } catch { }
+            try
+            {
+                ctp.Delete();
+            }
+            catch { }
         ctpsWPF.Clear();
 
         foreach (var ctp in ctpsWF.Values)
-            try { ctp.Delete(); } catch { }
+            try
+            {
+                ctp.Delete();
+            }
+            catch { }
         ctpsWF.Clear();
 
         if (LableControlWPF is { IsDisposed: false })

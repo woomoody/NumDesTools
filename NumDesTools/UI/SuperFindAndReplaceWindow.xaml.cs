@@ -5,14 +5,11 @@ using System.Windows.Media;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Rendering;
 using MessageBox = System.Windows.MessageBox;
-using MessageBoxButton = System.Windows.MessageBoxButton;
-using MessageBoxResult = System.Windows.MessageBoxResult;
 using Microsoft.Win32;
-using Wpf.Ui.Controls;
 
 namespace NumDesTools.UI
 {
-    public partial class SuperFindAndReplaceWindow : FluentWindow, INotifyPropertyChanged
+    public partial class SuperFindAndReplaceWindow : INotifyPropertyChanged
     {
         public SolidColorBrush BgMain { get; private set; } = new(Colors.White);
         public SolidColorBrush BgPanel { get; private set; } = new(Colors.White);
