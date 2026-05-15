@@ -18,10 +18,6 @@ public static class JamMapWriter
     private const string DefaultGameTextPath = @"C:\tmp\mftown\game_text_en.json";
     private const string DefaultElementPath = @"C:\tmp\mftown\jam_element_analysis.json";
     private const string DefaultProduceConsumePath = @"C:\tmp\mftown\jam_produce_consume.json";
-    private static readonly string DefaultOutputDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-        "workspace"
-    );
 
     // ── 尺寸常量（openpyxl 到 EPPlus 换算：px/7 ≈ 字符宽，1pt=1磅）
     private const double CellColWidth = 4.0; // 28px ≈ 4 字符
@@ -144,7 +140,7 @@ public static class JamMapWriter
     {
         ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
 
-        var dir = outputDir ?? DefaultOutputDir;
+        var dir = outputDir ?? OutputPaths.Reports;
         var outputPath = Path.Combine(dir, "CC收集活动-果酱节地编信息.xlsx");
 
         var data = LoadData(dataPath, gameTextPath, elementPath, produceConsumePath);
@@ -167,9 +163,9 @@ public static class JamMapWriter
         BuildItemStatsSheet(pkg, data);
         BuildElementRelationsSheet(pkg, data);
 
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
         pkg.SaveAs(new FileInfo(outputPath));
         Console.WriteLine($"[JamMap] 已写入：{outputPath}");
+        OutputPaths.GitCommit($"[JamMap] 更新果酱节地编报告 {DateTime.Today:yyyy-MM-dd}");
     }
 
     // ── 加载数据 ─────────────────────────────────────────────────────────────

@@ -145,10 +145,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private void ReleaseComObjects()
     {
-        // ReSharper disable RedundantCheckBeforeAssignment
         if (App != null)
+        {
+            Marshal.ReleaseComObject(App);
             App = null;
-        // ReSharper restore RedundantCheckBeforeAssignment
+        }
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
@@ -396,14 +397,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     void IExcelAddIn.AutoOpen()
     {
-        // XLL 进程里程序集搜索路径不含 bin 目录，手动从 XLL 同目录加载
-        AppDomain.CurrentDomain.AssemblyResolve += (_, args) =>
-        {
-            var name = new System.Reflection.AssemblyName(args.Name).Name;
-            var xllDir = Path.GetDirectoryName(ExcelDnaUtil.XllPath)!;
-            var path = Path.Combine(xllDir, name + ".dll");
-            return File.Exists(path) ? System.Reflection.Assembly.LoadFrom(path) : null;
-        };
         //#if RELEASE
         //        string addInPath = Path.GetDirectoryName(ExcelDnaUtil.XllPath);
         //        var isInstall = SelfEnvironmentDetector.IsInstalled(
@@ -465,6 +458,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             $"[NumDesTools] xll loaded  build={xllBuildTime}  path={ExcelDnaUtil.XllPath}"
         );
 
+        var excelDiffTmp = Path.Combine(Path.GetTempPath(), "NumDesExcelDiff");
+        if (Directory.Exists(excelDiffTmp))
+            try
+            {
+                Directory.Delete(excelDiffTmp, true);
+            }
+            catch { }
+
         //注册智能感应
         IntelliSenseServer.Install();
 
@@ -512,9 +513,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //解除快捷键触发，例如： Ctrl+Alt+L
         App.OnKey("^%l");
 
-        Marshal.ReleaseComObject(App);
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
+        ReleaseComObjects();
     }
 
     private void OnSheetRightClick(object sh, Range target, ref bool cancel)

@@ -118,6 +118,336 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="nd_标准格式" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_标准格式.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_AI对话" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_AI对话.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_Alice大富翁" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_Alice大富翁.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_TM目标元素" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_TM目标元素.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_TM非目标元素" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_TM非目标元素.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_xlsx冲突解决" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_xlsx冲突解决.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_万能卡概率" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_万能卡概率.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_全局搜索" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_全局搜索.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_创建数据" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_创建数据.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_删除冗余列" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_删除冗余列.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_合并Excel" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_合并Excel.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_图片Fix" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_图片Fix.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_对比Excel" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_对比Excel.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_导出Lua" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_导出Lua.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_当前表操作" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_当前表操作.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_插件日志" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_插件日志.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_放大镜" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_放大镜.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_数据自检" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_数据自检.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_文件名称" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_文件名称.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_文件路径" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_文件路径.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_更新活动规则" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_更新活动规则.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_查验模版写入数据" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_查验模版写入数据.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_检查工具" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_检查工具.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_检查数据格式" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_检查数据格式.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_活动奖励写入" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_活动奖励写入.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_溯源改动" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_溯源改动.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_生成活动" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_生成活动.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_移动转盘" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_移动转盘.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_移动魔瓶" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_移动魔瓶.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_聚光灯" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_聚光灯.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_自动数据" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_自动数据.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_自动数据对话类" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_自动数据对话类.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_表格目录" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_表格目录.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_验证活动" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_验证活动.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_高亮单元格" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_高亮单元格.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_默认配置" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_默认配置.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_Excel数据DB化" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_Excel数据DB化.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_xlsx冲突菜单" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_xlsx冲突菜单.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_全局搜索多线程" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_全局搜索多线程.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_全局搜索菜单" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_全局搜索菜单.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_公式检查" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_公式检查.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_创建数据菜单" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_创建数据菜单.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_历史版本对比" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_历史版本对比.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_合并数据关键词" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_合并数据关键词.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_导出Lua全量" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_导出Lua全量.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_导出Lua当前" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_导出Lua当前.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_导出Lua菜单" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_导出Lua菜单.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_常规模版" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_常规模版.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_当前表操作菜单" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_当前表操作菜单.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_手动两文件对比" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_手动两文件对比.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_批量替换" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_批量替换.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_搜索Sheet名" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_搜索Sheet名.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_搜索公式名" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_搜索公式名.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_搜索文本" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_搜索文本.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_更新活动" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_更新活动.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_更新表格路径" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_更新表格路径.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_替换文本" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_替换文本.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_检查表格式" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_检查表格式.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_检查隐藏全局" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_检查隐藏全局.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_检查隐藏当前" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_检查隐藏当前.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_特殊写入" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_特殊写入.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_特殊模版" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_特殊模版.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_生成活动ID" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_生成活动ID.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_生成活动名" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_生成活动名.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_生成活动菜单" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_生成活动菜单.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_编号搜索多线程" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_编号搜索多线程.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_聚光灯菜单" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_聚光灯菜单.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_自动数据LTE" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_自动数据LTE.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_自动数据New" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_自动数据New.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_自动数据多线程" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_自动数据多线程.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_自动数据多线程New" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_自动数据多线程New.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_自动数据菜单" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_自动数据菜单.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_解决Git冲突" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_解决Git冲突.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_验证Git改动" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_验证Git改动.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_验证全量" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_验证全量.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_验证指定ID" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_验证指定ID.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_验证活动菜单" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_验证活动菜单.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_全局搜索_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_全局搜索_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_全局搜索多线程_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_全局搜索多线程_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_公式检查_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_公式检查_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_历史版本对比_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_历史版本对比_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_合并数据关键词_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_合并数据关键词_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_导出Lua全量_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_导出Lua全量_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_导出Lua当前_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_导出Lua当前_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_常规模版_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_常规模版_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_手动两文件对比_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_手动两文件对比_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_批量替换_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_批量替换_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_搜索Sheet名_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_搜索Sheet名_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_搜索公式名_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_搜索公式名_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_搜索文本_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_搜索文本_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_更新活动_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_更新活动_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_更新表格路径_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_更新表格路径_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_替换文本_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_替换文本_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_检查表格式_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_检查表格式_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_检查隐藏全局_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_检查隐藏全局_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_检查隐藏当前_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_检查隐藏当前_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_特殊写入_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_特殊写入_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_特殊模版_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_特殊模版_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_生成活动ID_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_生成活动ID_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_生成活动名_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_生成活动名_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_编号搜索多线程_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_编号搜索多线程_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_聚光灯菜单_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_聚光灯菜单_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_自动数据LTE_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_自动数据LTE_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_自动数据New_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_自动数据New_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_自动数据多线程New_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_自动数据多线程New_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_自动数据多线程_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_自动数据多线程_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_解决Git冲突_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_解决Git冲突_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_验证Git改动_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_验证Git改动_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_验证全量_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_验证全量_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_验证指定ID_16" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_验证指定ID_16.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="angular-resolver" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>image\angular-resolver.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>

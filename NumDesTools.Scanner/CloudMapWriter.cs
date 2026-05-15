@@ -12,10 +12,6 @@ namespace NumDesTools.Scanner;
 /// </summary>
 public static class CloudMapWriter
 {
-    private static readonly string DefaultOutputDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-        "workspace"
-    );
 
     private const string DecryptedJsonDir = @"C:\tmp\mftown\decrypted_json";
 
@@ -236,7 +232,7 @@ public static class CloudMapWriter
     {
         ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
         var dir = dataDir ?? DecryptedJsonDir;
-        var outDir = outputDir ?? DefaultOutputDir;
+        var outDir = outputDir ?? OutputPaths.Reports;
         var dataPath = Path.Combine(dir, cfg.FileName);
         var faPath = cfg.FirstAreaFile is not null ? Path.Combine(dir, cfg.FirstAreaFile) : null;
         var outputPath = Path.Combine(outDir, cfg.OutputName);
@@ -272,9 +268,9 @@ public static class CloudMapWriter
                 BuildElementRelationsSheet(pkg, elPath);
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
         pkg.SaveAs(new FileInfo(outputPath));
         Console.WriteLine($"[CloudMap] 已写入：{outputPath}");
+        OutputPaths.GitCommit($"[CloudMap] 更新云雾地图报告 {DateTime.Today:yyyy-MM-dd}");
     }
 
     // ── 加载数据 ─────────────────────────────────────────────────────────────

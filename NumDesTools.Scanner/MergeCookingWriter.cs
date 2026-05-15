@@ -12,10 +12,6 @@ namespace NumDesTools.Scanner;
 /// </summary>
 public static class MergeCookingWriter
 {
-    private static readonly string OutputDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-        "workspace"
-    );
     private const string OutFileName = "竞品-MergeCooking核心循环分析.xlsx";
 
     // ── 样式辅助 ──────────────────────────────────────────────────────────────
@@ -386,8 +382,7 @@ public static class MergeCookingWriter
     public static void Run(string? outputDir = null)
     {
         ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
-        var dir = outputDir ?? OutputDir;
-        Directory.CreateDirectory(dir);
+        var dir = outputDir ?? OutputPaths.Reports;
         var outPath = Path.Combine(dir, OutFileName);
 
         using var pkg = new ExcelPackage();
@@ -400,6 +395,7 @@ public static class MergeCookingWriter
 
         pkg.SaveAs(new FileInfo(outPath));
         Console.WriteLine($"[MergeCooking] 已生成：{outPath}");
+        OutputPaths.GitCommit($"[MergeCooking] 更新竞品分析报告 {DateTime.Today:yyyy-MM-dd}");
     }
 
     // ── Sheet 1：生成器配置 ───────────────────────────────────────────────────

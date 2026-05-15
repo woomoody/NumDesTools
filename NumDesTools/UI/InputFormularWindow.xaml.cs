@@ -14,7 +14,6 @@ namespace NumDesTools.UI
 
         public InputFormularWindow(List<string> strings)
         {
-            WpfUiHelper.ApplyDarkTheme(this);
             InitializeComponent();
             UserInputs = [];
 

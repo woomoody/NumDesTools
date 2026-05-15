@@ -37,9 +37,7 @@ public partial class ExcelFilePickerWindow : Window
 
     public ExcelFilePickerWindow(string rootDir)
     {
-        WpfUiHelper.EnsureApplication();
         InitializeComponent();
-        Loaded += (_, _) => WpfUiHelper.ApplyDarkTitleBar(this);
         _rootDir = rootDir;
         RootLabel.Text = rootDir;
         LoadHistory();

@@ -16,8 +16,6 @@ public static class OceanIslandMapWriter
 {
     private const string DefaultDataPath =
         @"C:\tmp\mftown\mapCloudOceanIsland.json";
-    private static readonly string DefaultOutputDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "workspace");
 
     private const double CellColWidth  = 4.0;
     private const double RowNumColWidth = 5.7;
@@ -67,7 +65,7 @@ public static class OceanIslandMapWriter
     {
         ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
 
-        var dir = outputDir ?? DefaultOutputDir;
+        var dir = outputDir ?? OutputPaths.Reports;
         var outputPath = Path.Combine(dir, "CC收集活动-海岛地编信息.xlsx");
 
         var data = LoadData(dataPath);
@@ -82,9 +80,9 @@ public static class OceanIslandMapWriter
             BuildMapSheet(pkg, $"Lv{cloud.Level}-{cloud.Name}", data,
                 cloud.MinR, cloud.MaxR, cloud.MinC, cloud.MaxC, cloud);
 
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
         pkg.SaveAs(new FileInfo(outputPath));
         Console.WriteLine($"[OceanIsland] 已写入：{outputPath}");
+        OutputPaths.GitCommit($"[OceanIsland] 更新海岛地编报告 {DateTime.Today:yyyy-MM-dd}");
     }
 
     // ── 加载数据 ─────────────────────────────────────────────────────────────

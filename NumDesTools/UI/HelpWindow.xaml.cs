@@ -770,9 +770,7 @@ code {
 
         public HelpWindow()
         {
-            WpfUiHelper.EnsureApplication();
             InitializeComponent();
-            Loaded += (_, _) => WpfUiHelper.ApplyDarkTitleBar(this);
             BuildNavTree();
             HelpBrowser.NavigateToString(PlaceholderHtml);
         }

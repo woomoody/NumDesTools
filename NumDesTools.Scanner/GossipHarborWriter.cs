@@ -15,10 +15,6 @@ namespace NumDesTools.Scanner;
 public static class GossipHarborWriter
 {
     private const string ParsedDir = @"C:\tmp\gossipharbor_parsed";
-    private static readonly string OutputDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-        "workspace"
-    );
 
     private const string OutFileName = "竞品-GossipHarbor核心循环分析.xlsx";
 
@@ -31,10 +27,11 @@ public static class GossipHarborWriter
         c.Style.Font.Bold = true;
         c.Style.Font.Color.SetColor(Color.White);
         c.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+        c.Style.WrapText = true;
         Border(c);
     }
 
-    private static void Cell(ExcelRange c, object? value, string? hex = null)
+    private static void Cell(ExcelRange c, object? value, string? hex = null, bool wrap = false)
     {
         c.Value = value;
         if (hex != null)
@@ -42,7 +39,27 @@ public static class GossipHarborWriter
             c.Style.Fill.PatternType = ExcelFillStyle.Solid;
             c.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
         }
+        if (wrap)
+            c.Style.WrapText = true;
         Border(c);
+    }
+
+    private static void MechNote(
+        ExcelWorksheet ws,
+        int row,
+        int startCol,
+        string text,
+        int mergeWidth
+    )
+    {
+        var cell = ws.Cells[row, startCol, row, startCol + mergeWidth - 1];
+        cell.Merge = true;
+        cell.Value = text;
+        cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
+        cell.Style.Fill.BackgroundColor.SetColor(HexColor("F0F4FA"));
+        cell.Style.Font.Size = 9;
+        cell.Style.WrapText = true;
+        Border(cell);
     }
 
     private static void Border(ExcelRange c)
@@ -94,11 +111,12 @@ public static class GossipHarborWriter
     public static void Run(string? outputDir = null)
     {
         ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
-        Directory.CreateDirectory(outputDir ?? OutputDir);
-        var outPath = Path.Combine(outputDir ?? OutputDir, OutFileName);
+        var dir = outputDir ?? OutputPaths.Reports;
+        var outPath = Path.Combine(dir, OutFileName);
 
         using var pkg = new ExcelPackage();
 
+        BuildCoreMechSheet(pkg);
         BuildMergeChainSheet(pkg);
         BuildBoardSheet(pkg);
         BuildOrderSheet(pkg);
@@ -108,13 +126,252 @@ public static class GossipHarborWriter
 
         pkg.SaveAs(new FileInfo(outPath));
         Console.WriteLine($"[GossipHarbor] 已生成：{outPath}");
+        OutputPaths.GitCommit($"[GossipHarbor] 更新竞品分析报告 {DateTime.Today:yyyy-MM-dd}");
     }
 
-    // ── Sheet 1：合并链 ───────────────────────────────────────────────────────
+    // ── Sheet 1：核心机制（生成器→产出链→订单）────────────────────────────────
+    private static void BuildCoreMechSheet(ExcelPackage pkg)
+    {
+        var ws = pkg.Workbook.Worksheets.Add("核心机制");
+
+        // Row 1：机制说明
+        MechNote(
+            ws,
+            1,
+            1,
+            "【核心机制：生成器→产出链→订单对接】数据截面：adv_sewing（缝纫）关卡。棋盘pb#格=生成器直接产出的L1物品；合并链=L1→L2→…→终点；订单需求终点级物品。生成器CD/容量数值：配置加密，N/A。",
+            7
+        );
+        ws.Row(1).Height = 70;
+        ws.Row(2).Height = 22;
+
+        // ── 区块A：生成器产出物（pb#）─────────────────────────────────────────
+        var (boardStrings, _) = Load("AdventureBoardModelConfig");
+        var pbItems = boardStrings
+            .Where(s => s.Contains("pb#"))
+            .Select(s => s.Replace("pb#", "").Replace("c#", ""))
+            .Where(s => !string.IsNullOrEmpty(s))
+            .Distinct()
+            .OrderBy(s => s)
+            .ToList();
+
+        // 合并链数据
+        var (itemStrings, itemNumbers) = Load("AdventureItemModelConfig");
+        var fieldKeys = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "Type",
+            "MergedType",
+            "BubbleChance",
+            "Spread_Auto",
+            "Spread_Weight",
+            "Spread_WeightType",
+            "Spread_ItemMaxNumber",
+            "Spread_StorageMaxNumber",
+            "Spread_CostEnergy",
+            "Spread_TransformNumber",
+            "ProtectLevel",
+            "Transform_Weight",
+            "Swallow_Weight1",
+            "Swallow_Number1",
+        };
+        var pairs = new List<(string Type, string Merged)>();
+        string? curType = null;
+        for (var i = 0; i < itemStrings.Count - 1; i++)
+        {
+            if (itemStrings[i] == "Type" && !fieldKeys.Contains(itemStrings[i + 1]))
+                curType = itemStrings[i + 1];
+            else if (
+                itemStrings[i] == "MergedType"
+                && curType != null
+                && !fieldKeys.Contains(itemStrings[i + 1])
+            )
+            {
+                pairs.Add((curType, itemStrings[i + 1]));
+                curType = null;
+            }
+        }
+        var mergedFrom = pairs.ToDictionary(p => p.Type, p => p.Merged);
+        var isNotStart = pairs.Select(p => p.Merged).ToHashSet();
+
+        // 找每个 pb# 物品所在链的全链
+        Dictionary<string, List<string>> pbChains = [];
+        foreach (var pb in pbItems)
+        {
+            // pb 可能是链中任意位置，向上找链头
+            var head = pb;
+            // 反向查找：找谁 merge 到 pb
+            var reverseMap = pairs.ToDictionary(p => p.Merged, p => p.Type);
+            var cur = pb;
+            while (reverseMap.TryGetValue(cur, out var prev))
+                cur = prev;
+            head = cur;
+
+            var chain = new List<string> { head };
+            var c2 = head;
+            while (mergedFrom.TryGetValue(c2, out var next))
+            {
+                chain.Add(next);
+                c2 = next;
+            }
+            pbChains[pb] = chain;
+        }
+
+        // Spread_Weight 数值：从字符串序列中提取 (item → weight)
+        // 格式：...item_id, "Spread_Weight", item_id2(下一条的类型或数值前缀)...
+        // 实际数值在 numbers 数组中，按 BubbleChance/Spread_ 字段顺序排列
+        // 简化：直接读字符串数组里紧跟 "Spread_Weight" 的值（如 "main_nugget_1-2" 表示产出包）
+        var spreadWeightMap = new Dictionary<string, string>();
+        for (var i = 0; i < itemStrings.Count - 1; i++)
+        {
+            if (itemStrings[i] == "Spread_Weight" && !fieldKeys.Contains(itemStrings[i + 1]))
+                spreadWeightMap[itemStrings[i - 2]] = itemStrings[i + 1]; // [i-2]=Type value
+        }
+
+        // ── 标题行（Row 2）─────────────────────────────────────────────────────
+        Header(ws.Cells[2, 1], "生成器产出物(pb#)", "1F4E79");
+        Header(ws.Cells[2, 2], "链位置", "2F5496");
+        Header(ws.Cells[2, 3], "链长", "2F5496");
+        Header(ws.Cells[2, 4], "链头(L1)", "2F5496");
+        Header(ws.Cells[2, 5], "链尾(终点)", "2F5496");
+        Header(ws.Cells[2, 6], "产出包(Spread_Weight)", "2F5496");
+        Header(ws.Cells[2, 7], "生成器CD / 容量", "595959");
+        ws.View.FreezePanes(3, 1);
+
+        var row = 3;
+        foreach (var pb in pbItems)
+        {
+            var chain = pbChains.TryGetValue(pb, out var ch) ? ch : [pb];
+            var pos = chain.IndexOf(pb) + 1;
+            var spreadPkg = spreadWeightMap.TryGetValue(pb, out var sp) ? sp : "—";
+            Cell(ws.Cells[row, 1], pb, "EBF3FB");
+            ws.Cells[row, 1].Style.Font.Bold = true;
+            Cell(ws.Cells[row, 2], $"L{pos}", "F2F2F2");
+            Cell(ws.Cells[row, 3], chain.Count, "EBF3FB");
+            Cell(ws.Cells[row, 4], chain[0], "D9EAD3");
+            Cell(ws.Cells[row, 5], chain[^1], "FFF2CC");
+            Cell(ws.Cells[row, 6], spreadPkg, "F0F4FA");
+            Cell(ws.Cells[row, 7], "N/A（配置加密）", "F5F5F5");
+            ws.Cells[row, 7].Style.Font.Italic = true;
+            row++;
+        }
+
+        row += 2;
+
+        // ── 区块B：按链族分组的完整链展开 ──────────────────────────────────────
+        var blockBTitle = ws.Cells[row, 1, row, 7];
+        blockBTitle.Merge = true;
+        blockBTitle.Value = "▶ 完整合并链展开（按族群）— 含链头、各级、终点";
+        blockBTitle.Style.Font.Bold = true;
+        blockBTitle.Style.Fill.PatternType = ExcelFillStyle.Solid;
+        blockBTitle.Style.Fill.BackgroundColor.SetColor(HexColor("2F5496"));
+        blockBTitle.Style.Font.Color.SetColor(Color.White);
+        Border(blockBTitle);
+        ws.Row(row).Height = 22;
+        row++;
+
+        // 按 pb# 物品所在的链族分组
+        var allChains = new List<List<string>>();
+        foreach (var (type, _) in pairs)
+        {
+            if (isNotStart.Contains(type))
+                continue;
+            var chain = new List<string> { type };
+            var c = type;
+            while (mergedFrom.TryGetValue(c, out var next))
+            {
+                chain.Add(next);
+                c = next;
+            }
+            allChains.Add(chain);
+        }
+        allChains.Sort((a, b) => b.Count.CompareTo(a.Count));
+
+        var maxLen = allChains.Count > 0 ? allChains.Max(c => c.Count) : 1;
+        Header(ws.Cells[row, 1], "链头(L1)", "1F4E79");
+        Header(ws.Cells[row, 2], "链长", "1F4E79");
+        for (var j = 0; j < Math.Min(maxLen, 5); j++)
+            Header(ws.Cells[row, 3 + j], $"L{j + 1}", "2F5496");
+        row++;
+
+        foreach (var chain in allChains)
+        {
+            var isGenChain = chain.Any(item => pbItems.Contains(item));
+            var rowHex = isGenChain ? "D9EAD3" : "F5F5F5";
+            Cell(ws.Cells[row, 1], chain[0], rowHex);
+            ws.Cells[row, 1].Style.Font.Bold = isGenChain;
+            Cell(ws.Cells[row, 2], chain.Count, "EBF3FB");
+            for (var j = 0; j < Math.Min(chain.Count, 5); j++)
+            {
+                var isLast = j == chain.Count - 1;
+                Cell(ws.Cells[row, 3 + j], chain[j], isLast ? "FFF2CC" : "EBF3FB");
+            }
+            if (chain.Count > 5)
+                ws.Cells[row, 7].Value = $"…+{chain.Count - 5}级";
+            row++;
+        }
+
+        row += 2;
+
+        // ── 区块C：订单机制摘要 ───────────────────────────────────────────────
+        var blockCTitle = ws.Cells[row, 1, row, 7];
+        blockCTitle.Merge = true;
+        blockCTitle.Value = "▶ 订单机制（ChestOrderRandomConfig）— 关键参数摘要";
+        blockCTitle.Style.Font.Bold = true;
+        blockCTitle.Style.Fill.PatternType = ExcelFillStyle.Solid;
+        blockCTitle.Style.Fill.BackgroundColor.SetColor(HexColor("2F5496"));
+        blockCTitle.Style.Font.Color.SetColor(Color.White);
+        Border(blockCTitle);
+        ws.Row(row).Height = 22;
+        row++;
+
+        var orderKv = new[]
+        {
+            ("订单结构", "ChestOrder — 每个订单由1~3种物品组成，物品数量有Min/Max范围"),
+            ("物品数权重", "OneItemWeight / TwoItemsWeight / ThreeItemsWeight — 决定订单复杂度分布"),
+            ("刷新机制", "RefreshTime 字段控制（秒），具体值在加密配置中，字段名已确认"),
+            ("解锁条件", "UnlockLevel / PlayerMin / PlayerMax — 订单池按玩家等级分段"),
+            ("积分奖励", "Point 字段 — 完成订单获得积分，用于关卡推进"),
+            ("月卡差异", "sMonthPay / eMonthPay — 月卡玩家有独立的订单区间配置"),
+            ("与生成器关系", "订单需要的物品 = 合并链终点级物品；不感知当前棋盘状态（高置信，见Sheet7）"),
+            ("与动态权重关系", "生成器产出受 CurWeight=BaseW×CapFactor×ChainMultiple×RepeatFactor 调控（见Sheet7）"),
+        };
+
+        Header(ws.Cells[row, 1], "机制项", "1F4E79");
+        Header(ws.Cells[row, 2, row, 7], "说明", "2F5496");
+        ws.Cells[row, 2, row, 7].Merge = true;
+        row++;
+
+        var orderColors = new[] { "EBF3FB", "F0F4FA" };
+        for (var i = 0; i < orderKv.Length; i++)
+        {
+            var (key, val) = orderKv[i];
+            Cell(ws.Cells[row, 1], key, "F2F2F2");
+            ws.Cells[row, 1].Style.Font.Bold = true;
+            var valCell = ws.Cells[row, 2, row, 7];
+            valCell.Merge = true;
+            valCell.Value = val;
+            valCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            valCell.Style.Fill.BackgroundColor.SetColor(HexColor(orderColors[i % 2]));
+            valCell.Style.WrapText = true;
+            Border(valCell);
+            ws.Row(row).Height = 30;
+            row++;
+        }
+
+        // 列宽
+        ws.Column(1).Width = 22;
+        ws.Column(2).Width = 20;
+        ws.Column(3).Width = 20;
+        ws.Column(4).Width = 20;
+        ws.Column(5).Width = 20;
+        ws.Column(6).Width = 20;
+        ws.Column(7).Width = 20;
+    }
+
+    // ── Sheet 2：合并链 ───────────────────────────────────────────────────────
     private static void BuildMergeChainSheet(ExcelPackage pkg)
     {
         var ws = pkg.Workbook.Worksheets.Add("合并链");
-        ws.View.FreezePanes(2, 1);
 
         var (strings, _) = Load("AdventureItemModelConfig");
 
@@ -174,17 +431,32 @@ public static class GossipHarborWriter
         }
         chains.Sort((a, b) => b.Count.CompareTo(a.Count));
 
-        // 标题行
         var maxLen = chains.Count > 0 ? chains.Max(c => c.Count) : 1;
-        Header(ws.Cells[1, 1], "链序号", "1F4E79");
-        Header(ws.Cells[1, 2], "链长", "1F4E79");
-        for (var j = 0; j < maxLen; j++)
-            Header(ws.Cells[1, 3 + j], $"Lv.{j + 1}", "2F5496");
+        var colCount = 2 + maxLen;
 
-        // 数据行
+        // Row 1：机制说明
+        MechNote(
+            ws,
+            1,
+            1,
+            "【合并链】数据源：AdventureItemModelConfig（Frida内存扫描）。Type→MergedType逐级追踪，形成完整合并链。链长=合并级数，最终物品高亮黄色。",
+            colCount
+        );
+        ws.Row(1).Height = 70;
+
+        // Row 2：标题
+        Header(ws.Cells[2, 1], "链序号", "1F4E79");
+        Header(ws.Cells[2, 2], "链长", "1F4E79");
+        for (var j = 0; j < maxLen; j++)
+            Header(ws.Cells[2, 3 + j], $"Lv.{j + 1}", "2F5496");
+        ws.Row(2).Height = 22;
+
+        ws.View.FreezePanes(3, 1);
+
+        // 数据行（从 row 3 起）
         for (var i = 0; i < chains.Count; i++)
         {
-            var row = i + 2;
+            var row = i + 3;
             var chain = chains[i];
             Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
             Cell(ws.Cells[row, 2], chain.Count, "EBF3FB");
@@ -201,7 +473,7 @@ public static class GossipHarborWriter
             ws.Column(3 + j).Width = 26;
 
         // 统计行
-        var statRow = chains.Count + 3;
+        var statRow = chains.Count + 4;
         ws.Cells[statRow, 1].Value = "统计";
         ws.Cells[statRow, 1].Style.Font.Bold = true;
         ws.Cells[statRow, 2].Value = $"共 {chains.Count} 条链";
@@ -220,15 +492,29 @@ public static class GossipHarborWriter
         // c#  = cloud locked（初始锁定，开云后出现）
         var cells = strings.Where(s => !string.IsNullOrEmpty(s)).ToList();
 
-        Header(ws.Cells[1, 1], "格子编码", "1F4E79");
-        Header(ws.Cells[1, 2], "是否初始生成(pb)", "2F5496");
-        Header(ws.Cells[1, 3], "是否锁定(c)", "2F5496");
-        Header(ws.Cells[1, 4], "元素名称", "2F5496");
+        // Row 1：机制说明
+        MechNote(
+            ws,
+            1,
+            1,
+            "【棋盘布局】数据源：AdventureBoardModelConfig。pb#=生成器初始产出格，c#=云锁格（云消除后出现）。元素名为去前缀后的物品ID。",
+            4
+        );
+        ws.Row(1).Height = 70;
+
+        // Row 2：标题
+        Header(ws.Cells[2, 1], "格子编码", "1F4E79");
+        Header(ws.Cells[2, 2], "是否初始生成(pb)", "2F5496");
+        Header(ws.Cells[2, 3], "是否锁定(c)", "2F5496");
+        Header(ws.Cells[2, 4], "元素名称", "2F5496");
+        ws.Row(2).Height = 22;
+
+        ws.View.FreezePanes(3, 1);
 
         for (var i = 0; i < cells.Count; i++)
         {
             var raw = cells[i];
-            var row = i + 2;
+            var row = i + 3;
             var isPb = raw.Contains("pb#");
             var isC = Regex.IsMatch(raw, @"(?<![a-z])c#");
             var itemName = raw.Replace("pb#", "").Replace("c#", "");
@@ -245,7 +531,7 @@ public static class GossipHarborWriter
         ws.Column(4).Width = 30;
 
         // 统计
-        var statRow = cells.Count + 3;
+        var statRow = cells.Count + 4;
         ws.Cells[statRow, 1].Value = "统计";
         ws.Cells[statRow, 1].Style.Font.Bold = true;
         ws.Cells[statRow, 2].Value = $"总格子数: {cells.Count}";
@@ -259,13 +545,27 @@ public static class GossipHarborWriter
         var ws = pkg.Workbook.Worksheets.Add("订单配置");
         var (strings, numbers) = Load("ChestOrderRandomConfig");
 
-        Header(ws.Cells[1, 1], "字段名（字符串常量）", "1F4E79");
-        Header(ws.Cells[1, 2], "数值常量（按序）", "2F5496");
+        // Row 1：机制说明
+        MechNote(
+            ws,
+            1,
+            1,
+            "【订单配置】数据源：ChestOrderRandomConfig（Frida内存扫描）。字段名为Lua常量字符串，数值为对应配置值。RefreshTime=刷新间隔秒数，Weight=权重，Min/Max=物品数量范围。",
+            3
+        );
+        ws.Row(1).Height = 70;
+
+        // Row 2：标题
+        Header(ws.Cells[2, 1], "字段名（字符串常量）", "1F4E79");
+        Header(ws.Cells[2, 2], "数值常量（按序）", "2F5496");
+        ws.Row(2).Height = 22;
+
+        ws.View.FreezePanes(3, 1);
 
         var maxRows = Math.Max(strings.Count, numbers.Count);
         for (var i = 0; i < maxRows; i++)
         {
-            var row = i + 2;
+            var row = i + 3;
             if (i < strings.Count)
                 Cell(ws.Cells[row, 1], strings[i], "EBF3FB");
             if (i < numbers.Count)
@@ -296,10 +596,10 @@ public static class GossipHarborWriter
             ["eMonthPay"] = "月卡玩家订单区间止",
         };
 
-        Header(ws.Cells[1, 3], "字段说明", "2F5496");
+        Header(ws.Cells[2, 3], "字段说明", "2F5496");
         for (var i = 0; i < strings.Count; i++)
         {
-            var row = i + 2;
+            var row = i + 3;
             if (notes.TryGetValue(strings[i], out var note))
                 Cell(ws.Cells[row, 3], note, "F4CCCC");
         }
@@ -333,14 +633,28 @@ public static class GossipHarborWriter
             .Where(s => !luaKeywords.Contains(s) && !s.Contains(' ') && !s.Contains(':'))
             .ToList();
 
-        Header(ws.Cells[1, 1], "#", "1F4E79");
-        Header(ws.Cells[1, 2], "顾客名（英文）", "2F5496");
-        Header(ws.Cells[1, 3], "备注", "2F5496");
+        // Row 1：机制说明
+        MechNote(
+            ws,
+            1,
+            1,
+            "【顾客NPC】数据源：CustomerConfigName（Frida内存扫描）。已过滤Lua框架关键字，仅保留顾客ID字符串。备注列可手动补充中文名或角色说明。",
+            3
+        );
+        ws.Row(1).Height = 70;
+
+        // Row 2：标题
+        Header(ws.Cells[2, 1], "#", "1F4E79");
+        Header(ws.Cells[2, 2], "顾客名（英文）", "2F5496");
+        Header(ws.Cells[2, 3], "备注", "2F5496");
+        ws.Row(2).Height = 22;
+
+        ws.View.FreezePanes(3, 1);
 
         var colors = new[] { "EBF3FB", "D9EAD3", "FFF2CC", "FCE5CD", "E8DAEF", "D5DBDB" };
         for (var i = 0; i < customers.Count; i++)
         {
-            var row = i + 2;
+            var row = i + 3;
             var hex = colors[i % colors.Length];
             Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
             Cell(ws.Cells[row, 2], customers[i], hex);
@@ -356,7 +670,6 @@ public static class GossipHarborWriter
     private static void BuildBattleRobotSheet(ExcelPackage pkg)
     {
         var ws = pkg.Workbook.Worksheets.Add("排名赛数据");
-        ws.View.FreezePanes(2, 1);
 
         var (strings, numbers) = Load("BattleRobotConfig");
 
@@ -389,12 +702,25 @@ public static class GossipHarborWriter
             .Order()
             .ToList();
 
-        // 标题
-        Header(ws.Cells[1, 1], "#", "1F4E79");
-        Header(ws.Cells[1, 2], "分数", "1F4E79");
-        Header(ws.Cells[1, 3], "时间(分)", "2F5496");
-        Header(ws.Cells[1, 4], "难度", "2F5496");
-        Header(ws.Cells[1, 5], "分钟得分速率", "2F5496");
+        // Row 1：机制说明
+        MechNote(
+            ws,
+            1,
+            1,
+            "【排名赛数据】数据源：BattleRobotConfig（Frida内存扫描）。格式 score-time-difficulty，difficulty: 0=Easy, 1=Normal, 2=Hard。分钟速率=score/time，GroupId格式10x00y推测x=轮次。",
+            8
+        );
+        ws.Row(1).Height = 70;
+
+        // Row 2：标题
+        Header(ws.Cells[2, 1], "#", "1F4E79");
+        Header(ws.Cells[2, 2], "分数", "1F4E79");
+        Header(ws.Cells[2, 3], "时间(分)", "2F5496");
+        Header(ws.Cells[2, 4], "难度", "2F5496");
+        Header(ws.Cells[2, 5], "分钟得分速率", "2F5496");
+        ws.Row(2).Height = 22;
+
+        ws.View.FreezePanes(3, 1);
 
         var diffColors = new Dictionary<int, string>
         {
@@ -412,7 +738,7 @@ public static class GossipHarborWriter
         for (var i = 0; i < entries.Count; i++)
         {
             var e = entries[i];
-            var row = i + 2;
+            var row = i + 3;
             var hex = diffColors.GetValueOrDefault(e.Difficulty, "EBF3FB");
             Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
             Cell(ws.Cells[row, 2], e.Score, hex);
@@ -434,11 +760,11 @@ public static class GossipHarborWriter
 
         // 右侧：分组 ID 列表
         var gCol = 7;
-        Header(ws.Cells[1, gCol], "GroupId", "1F4E79");
-        Header(ws.Cells[1, gCol + 1], "分组轮数", "2F5496");
+        Header(ws.Cells[2, gCol], "GroupId", "1F4E79");
+        Header(ws.Cells[2, gCol + 1], "分组轮数", "2F5496");
         for (var i = 0; i < groupIds.Count; i++)
         {
-            var row = i + 2;
+            var row = i + 3;
             Cell(ws.Cells[row, gCol], groupIds[i], "EBF3FB");
             // groupId 格式：10x00y → x 是轮次，y 是序号（推测）
             var round = groupIds[i] / 100000;
@@ -446,7 +772,7 @@ public static class GossipHarborWriter
         }
 
         // 统计摘要
-        var statRow = entries.Count + 3;
+        var statRow = entries.Count + 4;
         ws.Cells[statRow, 1].Value = "统计";
         ws.Cells[statRow, 1].Style.Font.Bold = true;
         ws.Cells[statRow, 2].Value = $"总条目: {entries.Count}";
@@ -459,25 +785,25 @@ public static class GossipHarborWriter
     private static void BuildWeightSystemSheet(ExcelPackage pkg)
     {
         var ws = pkg.Workbook.Worksheets.Add("动态权重系统");
-        ws.View.FreezePanes(2, 1);
 
-        // 标题行
-        var titleCell = ws.Cells[1, 1, 1, 6];
-        titleCell.Merge = true;
-        titleCell.Value = "Gossip Harbor 动态权重系统 — Frida内存扫描置信度报告（扫描时间：2026-05-14，PID=3199）";
-        titleCell.Style.Font.Bold = true;
-        titleCell.Style.Font.Size = 12;
-        titleCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        titleCell.Style.Fill.BackgroundColor.SetColor(HexColor("1F4E79"));
-        titleCell.Style.Font.Color.SetColor(Color.White);
-        titleCell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-        Border(titleCell);
-        ws.Row(1).Height = 26;
+        // Row 1：机制说明
+        MechNote(
+            ws,
+            1,
+            1,
+            "【动态权重系统】Frida内存扫描置信度报告（2026-05-14，PID=3199）。CurWeight=BaseW×CapFactor×ChainMultiple×RepeatFactor。BaseW/ChainMultiple高置信，CapFactor中置信（隐式推断），BoardAware高置信负向（订单不感知棋盘）。",
+            6
+        );
+        ws.Row(1).Height = 70;
 
+        // Row 2：标题
         string[] headers = ["问题", "结论", "置信度", "关键证据字段/函数", "具体数值", "备注"];
         string[] hdrHex = ["1F4E79", "2F5496", "595959", "2F5496", "595959", "595959"];
         for (var j = 0; j < headers.Length; j++)
             Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+        ws.Row(2).Height = 22;
+
+        ws.View.FreezePanes(3, 1);
 
         // 4大问题的扫描结论
         var findings = new[]
@@ -635,7 +961,5 @@ public static class GossipHarborWriter
         ws.Column(4).Width = 32;
         ws.Column(5).Width = 28;
         ws.Column(6).Width = 30;
-
-        ws.Row(2).Height = 22;
     }
 }

@@ -49,7 +49,14 @@ namespace NumDesTools.Config
                 { "LogRetentionDays", "30" },
                 { "GitRootPath", "" },
                 { "ConflictSkipHashFiles", "false" },
-                { "SpotlightMode", "overlay" }
+                { "SpotlightMode", "overlay" },
+                {
+                    "OutputRootPath",
+                    Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                        "NumDesOutput"
+                    )
+                }
             };
 
         // 默认列表配置
