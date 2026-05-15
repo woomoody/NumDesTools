@@ -26,13 +26,11 @@ public partial class GitExportSelectWindow : Window
 
     public GitExportSelectWindow(string repoBasePath, string gitAuthor)
     {
-        WpfUiHelper.EnsureApplication();
         InitializeComponent();
         _repoBasePath = repoBasePath;
         _gitAuthor = gitAuthor;
         Loaded += (_, _) =>
         {
-            WpfUiHelper.ApplyDarkTitleBar(this);
             AuthorText.Text = string.IsNullOrEmpty(gitAuthor) ? "（未知）" : gitAuthor;
             RefreshFileList();
         };

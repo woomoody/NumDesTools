@@ -81,7 +81,6 @@ namespace NumDesTools.UI
 
         private BatchReplaceWindow()
         {
-            WpfUiHelper.ApplyDarkTheme(this);
             InitializeComponent();
             RuleRows.ItemsSource = _rows;
             HistoryList.ItemsSource = _history;

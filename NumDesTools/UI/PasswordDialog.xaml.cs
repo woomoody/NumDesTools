@@ -9,7 +9,6 @@ public partial class PasswordDialog : Window
 
     public PasswordDialog(string prompt)
     {
-        WpfUiHelper.ApplyDarkTheme(this);
         InitializeComponent();
         PromptText.Text = prompt;
     }

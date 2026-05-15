@@ -14,10 +14,6 @@ namespace NumDesTools.Scanner;
 public static class TravelTownWriter
 {
     private const string DataDir = @"C:\tmp\traveltown_lua";
-    private static readonly string OutputDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-        "workspace"
-    );
     private const string OutFileName = "竞品-TravelTown核心循环分析.xlsx";
 
     // ── 样式辅助（与 GossipHarborWriter 相同风格）─────────────────────────────
@@ -381,8 +377,7 @@ public static class TravelTownWriter
     public static void Run(string? outputDir = null)
     {
         ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
-        var dir = outputDir ?? OutputDir;
-        Directory.CreateDirectory(dir);
+        var dir = outputDir ?? OutputPaths.Reports;
         var outPath = Path.Combine(dir, OutFileName);
 
         using var pkg = new ExcelPackage();
@@ -396,6 +391,7 @@ public static class TravelTownWriter
 
         pkg.SaveAs(new FileInfo(outPath));
         Console.WriteLine($"[TravelTown] 已生成：{outPath}");
+        OutputPaths.GitCommit($"[TravelTown] 更新竞品分析报告 {DateTime.Today:yyyy-MM-dd}");
     }
 
     // ── Sheet 1：生成器链（Generators）────────────────────────────────────────

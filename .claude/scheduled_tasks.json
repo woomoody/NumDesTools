@@ -5,21 +5,20 @@
       "cron": "0 9 * * *",
       "prompt": "运行需求情报收集任务。调用 demand-collector agent，从以下渠道收集新内容并对比上次快照：\n1. 竞品拆包数据（C:\\tmp\\apk_inspect\\parsed_data\\datas\\ — 检查文件修改时间）\n2. 竞品实机数据分析（每次轮换一个竞品，按快照 last_apk_target_idx 字段轮换：Travel Town → Merge County → Magical Merge，对比本地 RemoteLocalizationJson / game_text_en.json 与快照中记录的主题/活动数量，若模拟器在线则先 ADB 拉取最新状态再分析）\n3. 工作项目 git log（C:\\M1Work、D:\\M2Work\\code，取最近24小时提交）\n4. 网络搜索（merge game / 合并游戏 相关，本次轮换关键词：merge puzzle game new event 2025 site:reddit.com）\n\n对比快照文件 C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\doc\\agents\\demand_snapshot.json：\n- 有新内容 → 生成或更新 doc/agents/output/{主题}.md，文档顶部插入更新记录行，然后通知用户\"[需求巡检] 发现新内容：{主题}\"\n- 无新内容 → 只回复：\"[需求巡检 {当前时间}] 无新内容，与上次相比无明显变化。\"\n\nagent 定义见：C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\.claude\\agents\\demand-collector.md（Section A2 含竞品分析完整流程）\n输出目录：C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\doc\\agents\\output\\\n快照文件：C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\doc\\agents\\demand_snapshot.json",
       "createdAt": 1778494005733,
-      "lastFiredAt": 1778722200410,
+      "lastFiredAt": 1778824528162,
       "recurring": true,
       "createdBySessionId": "d45b3e9b-1708-4915-a2b0-ec4baa4cc7b0",
-      "createdByPid": 22412,
-      "createdByProcStart": "639143494179134240"
+      "createdByPid": 21424
     },
     {
       "id": "b4a340d9",
       "cron": "32 9 * * 1-5",
       "prompt": "运行飞书每日扫描任务：dotnet run --project \"C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\NumDesTools.Scanner\\NumDesTools.Scanner.csproj\" -- --all --release",
       "createdAt": 1778722338755,
+      "lastFiredAt": 1778824528162,
       "recurring": true,
       "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
-      "createdByPid": 38656,
-      "createdByProcStart": "639143494521098340"
+      "createdByPid": 4676
     },
     {
       "id": "c81f548c",
@@ -27,8 +26,7 @@
       "prompt": "飞书每日扫描定时任务（job b4a340d9）将在今天到期，请续期：重新创建 Cron，每工作日 9:32 触发，命令为 `dotnet run --project \"C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\NumDesTools.Scanner\\NumDesTools.Scanner.csproj\" -- --all --release`，durable: true，recurring: true。同时创建新的7天后续期提醒。",
       "createdAt": 1778722343592,
       "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
-      "createdByPid": 38656,
-      "createdByProcStart": "639143494521098340"
+      "createdByPid": 4676
     }
   ]
 }

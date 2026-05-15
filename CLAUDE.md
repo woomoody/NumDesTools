@@ -65,6 +65,35 @@ Long operations use `ExcelAsyncUtil.QueueAsMacro()`. Never block the Excel UI th
 
 `ExcelDna.AddIn 1.9.0`, `EPPlus 8.2.0`, `MiniExcel 1.42.0`, `LibGit2Sharp 0.31.0`, `NLua`, `MathNet.Numerics`.
 
+### 输出目录规范
+
+所有值得保留的产出文件（xlsx 报告、md 分析文档、html、json 分析产物）统一写到 **`OutputRootPath`** 下，默认值为 `Documents\NumDesOutput\`（本地独立 git 仓库，不推送）。
+
+**子目录规范：**
+
+| 子目录 | 用途 |
+|--------|------|
+| `reports\` | xlsx/html 报告（竞品分析、地编信息、LTE 配置模版等） |
+| `analysis\` | md 分析文档（竞品深度分析、设计规范、配置草稿等） |
+| `misc\` | 插件偶发产出（溯源结果.xlsx、表格关系.json 等） |
+
+**写文件规则（CC 和代码都适用）：**
+- Scanner 代码：用 `OutputPaths.Reports` / `OutputPaths.Analysis` / `OutputPaths.Misc`（`NumDesTools.Scanner/OutputPaths.cs`），不要 hardcode 路径
+- 主插件代码：用 `OutputPaths.Reports` / `OutputPaths.Analysis` / `OutputPaths.Misc`（`NumDesTools/OutputPaths.cs`）
+- 新功能需要新子目录时：在对应 `OutputPaths.cs` 加一个属性，不要直接 `Path.Combine`
+- CC（我）手动写文件：直接写到 `OutputRootPath` 对应子目录，**写完立即执行**：
+  ```bash
+  git -C "C:\Users\cent\Documents\NumDesOutput" add -A
+  git -C "C:\Users\cent\Documents\NumDesOutput" diff --cached --quiet || git -C "C:\Users\cent\Documents\NumDesOutput" commit -m "[描述] 说明内容"
+  ```
+
+**不纳入 OutputRootPath 的：**
+- `Documents\workspace\plugin.log` — 运行日志
+- `Documents\NumDesTools\Config\` — 飞书工作流配置，路径被其他系统依赖
+- `AppData\NumDesTools\` — 个人操作历史
+- `C:\tmp\` — 原始 ADB 数据和中间产物
+- `M1Work\` 写回 — 游戏配置表，不是插件产出
+
 ### Excel 读写规范
 
 - **读取 xlsx** → EPPlus（`OfficeOpenXml`）。参考 `NumDesTools.Scanner/ExcelReader.cs`。

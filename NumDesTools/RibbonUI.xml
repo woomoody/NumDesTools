@@ -7,17 +7,17 @@
 
                 <!-- ══ 格式检查 ══ 常用开关大按钮 + 检查类归入下拉 -->
                 <group id='Group2' label='格式检查'>
-                    <button id='SheetMenu' size='large' getLabel='GetLableText' image='reason'
+                    <button id='SheetMenu' size='large' getLabel='GetLableText' image='nd_表格目录'
                             onAction='OnButtonClick'
                             screentip='点击创建表格目录，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.json' tag='表格目录开关' />
-                    <button id='CellHiLight' size='large' getLabel='GetLableText' image='reason'
+                    <button id='CellHiLight' size='large' getLabel='GetLableText' image='nd_高亮单元格'
                             onAction='OnButtonClick'
                             screentip='点击高亮显示一定范围内同值内容，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.json' tag='高亮单元格开关' />
-                    <button id='CheckSheetValue' size='large' getLabel='GetLableText' image='dart'
+                    <button id='CheckSheetValue' size='large' getLabel='GetLableText' image='nd_数据自检'
                             onAction='OnButtonClick'
                             screentip='点击启动表格关闭时数据自检，再次点击关闭! 报错请删除！配置路径：\Documents\NumDesGlobalKey.json' tag='数据自检开关' />
                     <separator id='Sep1' />
-                    <menu id='CheckMenu' label='检查工具&#13;' image='log' size='large'>
+                    <menu id='CheckMenu' label='检查工具&#13;' image='nd_检查工具' size='large'>
                         <button id='Button8' label='公式检查' imageMso='FormulaEvaluate' onAction='OnButtonClick'
                                 screentip='点击检查当前工作簿所有sheet中的公式，看是否有错误的连接，推荐合完表后进行检查' tag='公式检查开关' />
                         <button id='CheckHiddenCellVsto' label='检查隐藏(当前)' imageMso='FileDocumentInspect' onAction='OnButtonClick'
@@ -29,7 +29,7 @@
                         <button id='PowerQueryLinksUpdate' label='更新表格路径' imageMso='DataRefreshAll' onAction='OnButtonClick'
                                 screentip='更新PowerQuery表连接路径' tag='更新表格路径' />
                     </menu>
-                    <menu id='LuaExportMenu' label='导出Lua&#13;' image='scheme' size='large'>
+                    <menu id='LuaExportMenu' label='导出Lua&#13;' image='nd_导出Lua菜单' size='large'>
                         <button id='OutPutExcelDataToLua' label='Lua表格(当前)' imageMso='FileSave' onAction='OnButtonClick'
                                 screentip='将当前表格数据导出为Lua' tag='导出Lua数据' />
                         <button id='OutPutExcelDataToLuaAll' label='Lua表格(全量)' imageMso='ExportExcel' onAction='OnButtonClick'
@@ -39,7 +39,7 @@
 
                 <!-- ══ 自动填表 ══ -->
                 <group id='Group7' label='自动填表'>
-                    <menu id='AutoInsertExcelDataMenu' label='自动数据&#13;' image='database' size='large'>
+                    <menu id='AutoInsertExcelDataMenu' label='自动数据&#13;' image='nd_自动数据菜单' size='large'>
                         <button id='AutoInsertExcelData' label='自动数据LTE' imageMso='ConnectedToolSyncMenu'
                                 onAction='OnButtonClick' screentip='根据模板数据覆写N个类似数据到表格：EPPlusI' tag='自动数据LTE' />
                         <button id='AutoInsertExcelDataThread' label='自动数据LTE(多线程)' imageMso='ConnectionPoints'
@@ -51,9 +51,9 @@
                         <button id='AutoInsertExcelDataModelCreat' label='特殊写入' imageMso='ConnectedToolSyncMenu'
                                 onAction='OnButtonClick' screentip='修正已存在的表格值（例如：LTE皮肤xxx【模版】），无法自增或者批量替换：EPPlusI' tag='特殊写入' />
                     </menu>
-                    <button id='AutoInsertExcelDialog' size='large' label='自动数据&#13;(对话类)' image='ejs'
+                    <button id='AutoInsertExcelDialog' size='large' label='自动数据&#13;(对话类)' image='nd_自动数据对话类'
                             onAction='OnButtonClick' screentip='根据模板数据覆写对话数据表格：EPPlusI' tag='自动数据(对话类)' />
-                    <button id='AutoInsertIconFix' size='large' label='图片Fix' image='谷歌'
+                    <button id='AutoInsertIconFix' size='large' label='图片Fix' image='nd_图片Fix'
                             onAction='OnButtonClick' screentip='针对Icon.xlsx表格图片资源修正数据的同步，复制【Ctr+V】点击按钮执行' tag='图片Fix' />
                 </group>
 
@@ -63,7 +63,7 @@
                     <editBox id="ExcelSearchBoxEdit" label='输入查找值' onChange="ExcelOnEditBoxTextChanged"
                              sizeString="………………………………………………………"
                              screentip='前缀加*表示模糊搜索&#13;常规模版支持多ID：逗号/换行分隔，如 763601,763651' getText='GetEditBoxDefaultText'/>
-                    <menu id='ExcelSearchBoxMenu' label='全局搜索' image='key' size='large'>
+                    <menu id='ExcelSearchBoxMenu' label='全局搜索' image='nd_全局搜索菜单' size='large'>
                         <button id="ExcelSearchBoxButton1" label="全局搜索" screentip='全列，按照A-Z的顺序遍历文件'
                                 onAction='OnButtonClick' imageMso="FindDialogExcel" tag='全局搜索' />
                         <button id="ExcelSearchBoxButton3" label="全局搜索(多线程)" screentip='全列，按照A-Z的顺序遍历文件'
@@ -73,13 +73,13 @@
                         <button id="ExcelSearchBoxButton4" label="合并数据-关键词" screentip='合并Excel(Alice-Cove)当前关键词'
                                 onAction='OnButtonClick' imageMso="AdpNewTable" tag='合并数据-关键词' />
                     </menu>
-                    <menu id='AutoInsertExcelDataMenu2' label='创建数据' image='ejs' size='large'>
+                    <menu id='AutoInsertExcelDataMenu2' label='创建数据' image='nd_创建数据菜单' size='large'>
                         <button id="ModelDataCreat" label="常规模版" screentip='全局搜索关键词，输出表格数据，常规模版数据，例如：各类LTE、主岛活动常规【模版】&#13;支持多ID：输入框用逗号/换行分隔，如 763601,763651，每张表取最小行和最大行'
                                 onAction='OnButtonClick' imageMso="TableInsert" tag='常规模版' />
                         <button id="ModelDataCreat2" label="特殊模版" screentip='指定表格搜索关键词，输出表格数据，特殊模版数据，例如：LTE皮肤【模版】'
                                 onAction='OnButtonClick' imageMso="SheetInsert" tag='特殊模版' />
                     </menu>
-                    <menu id='CurrentSheetMenu' label='当前表操作' image='verilog' size='large'>
+                    <menu id='CurrentSheetMenu' label='当前表操作' image='nd_当前表操作菜单' size='large'>
                         <button id="BatchReplaceInSelectionBtn" label="批量替换" screentip='对选中单元格执行多组批量替换（Ctrl+Alt+H）'
                                 onAction='OnButtonClick' imageMso="ReplaceDialog" tag='批量替换' />
                         <button id="ExcelSearchBoxButton5" label="替换文本" screentip='搜索当前激活表格中包含特别的字符串并替换'
@@ -92,12 +92,12 @@
                                 onAction='OnButtonClick' imageMso="FormulaEvaluate" tag='搜索公式名' />
                     </menu>
                     <button id="ExcelDataToDb" size='large' label="数据DB化" screentip='备份Public下配置Excel文件数据库化，方便更高效的查询'
-                            onAction='OnButtonClick' image="log" tag='Excel数据DB化' />
+                            onAction='OnButtonClick' image='nd_Excel数据DB化' tag='Excel数据DB化' />
                 </group>
 
-                <!-- ══ 运营工具 ══ 生成活动合并菜单，验证活动合并菜单，其他直接按钮 -->
+                <!-- ══ 运营工具 ══ -->
                 <group id="Group9" label="运营工具">
-                    <menu id='ActivityGenMenu' label='生成活动&#13;' image='csharp' size='large'>
+                    <menu id='ActivityGenMenu' label='生成活动&#13;' image='nd_生成活动菜单' size='large'>
                         <button id="ActivityServerDataButton1" label="生成活动(活动名)" screentip='根据运营排期自动生成活动配置'
                                 onAction='OnButtonClick' imageMso="TableInsert" tag='生成活动(活动名)' />
                         <button id="ActivityServerDataButton2" label="生成活动(活动ID)" screentip='根据运营排期自动生成活动配置'
@@ -106,18 +106,18 @@
                                 onAction='OnButtonClick' imageMso="DataRefreshAll" tag='更新活动' />
                     </menu>
                     <button id="CompareExcelButton" size='large' label="对比Excel" screentip='对比不同版本同路径下的非#Excel文件，输出至【文档\#表格比对结果.xlsx】'
-                            onAction='OnButtonClick' image="console" tag='对比Excel' />
+                            onAction='OnButtonClick' image='nd_对比Excel' tag='对比Excel' />
                     <button id="MapExcelButton" size='large' label="溯源改动" screentip='根据对比结果和【文档\表格关系.json】溯源每条改动最终影响的表格，一般为ActivityClientData.xlsx，输出至【文档\#溯源结果.xlsx】'
-                            onAction='OnButtonClick' image="video" tag='溯源改动' />
+                            onAction='OnButtonClick' image='nd_溯源改动' tag='溯源改动' />
                     <button id="CheckFileFormat" size='large' label="检查数据&#13;格式" screentip='手动检查数据格式，取消隐藏，过滤符配置在\Document\NumDesToolsConfig.json'
-                            onAction='OnButtonClick' image="dart" tag='检查数据格式' />
+                            onAction='OnButtonClick' image='nd_检查数据格式' tag='检查数据格式' />
                     <button id="ActivityRulesUpdateButton" size='large' label="更新活动&#13;规则" screentip='扫描 EnumCmds/ActivityManager/LogicBase 自动补全 ActivityTableRules.json 的 typeTableMap（只增不改）'
-                            onAction='OnButtonClick' imageMso="DataRefreshAll" tag='更新活动规则' />
+                            onAction='OnButtonClick' image='nd_更新活动规则' tag='更新活动规则' />
                 </group>
 
                 <!-- ══ 冲突与活动 ══ -->
                 <group id='GroupConflictMain' label='冲突与活动'>
-                    <menu id='ExcelConflictMenuMain' label='xlsx冲突&#13;解决' image='diff' size='large'
+                    <menu id='ExcelConflictMenuMain' label='xlsx冲突&#13;解决' image='nd_xlsx冲突菜单' size='large'
                           screentip='解决 xlsx 文件的 Git 合并冲突，或手动对比两个 xlsx 文件'>
                         <button id="ExcelConflictGit"    label="解决Git冲突"   imageMso="ResolveConflict"
                                 onAction='OnButtonClick' screentip='自动检测 Git 冲突的 xlsx，逐格选择保留哪一方'
@@ -129,7 +129,7 @@
                                 onAction='OnButtonClick' screentip='浏览某个 xlsx 的 Git 提交历史，选历史版本与工作区或另一历史版本对比'
                                 tag='查看历史版本对比' />
                     </menu>
-                    <menu id='ActivityValidateMenuMain' label='验证活动&#13;' image='codecov' size='large'>
+                    <menu id='ActivityValidateMenuMain' label='验证活动&#13;' image='nd_验证活动菜单' size='large'>
                         <button id="ActivityTestAll" label="验证活动(全量)" screentip='验证所有活动配置表的跨表引用和字段规则'
                                 onAction='OnButtonClick' imageMso="DataValidation" tag='验证活动(全量)' />
                         <button id="ActivityTestById" label="验证活动(指定ID)" screentip='输入活动ID验证配置链完整性'
@@ -141,8 +141,8 @@
 
                 <!-- ══ 文件信息 ══ -->
                 <group id='FileInfo' label='文件信息'>
-                    <button id='CopyFileName' size='large' label='文件名称' image='document' onAction='OnButtonClick' tag='文件名称' />
-                    <button id='CopyFilePath' size='large' label='文件路径' image='file' onAction='OnButtonClick' tag='文件路径' />
+                    <button id='CopyFileName' size='large' label='文件名称' image='nd_文件名称' onAction='OnButtonClick' tag='文件名称' />
+                    <button id='CopyFilePath' size='large' label='文件路径' image='nd_文件路径' onAction='OnButtonClick' tag='文件路径' />
                     <labelControl id="BasePathLab" label=" 源表/目标" />
                     <editBox id="BasePathEdit" getText="GetFileInfo" onChange="FileInfoChanged"
                              sizeString="........................................................................."
@@ -162,48 +162,48 @@
             </tab>
             <tab id='SecondTab' label='NumDesToolsPlus' insertBeforeMso='TabHome'>
                 <group id='GroupMoved' label='常用工具'>
-                    <button id='Button4' size='large' label='标准格式' image='verilog'
+                    <button id='Button4' size='large' label='标准格式' image='nd_标准格式'
                             onAction='OnButtonClick' screentip='将选中单元格修改为标准格式' tag='标准格式' />
-                    <button id='Button5' size='large' getLabel='GetLableText' image='redux-reducer'
+                    <button id='Button5' size='large' getLabel='GetLableText' image='nd_放大镜'
                             onAction='OnButtonClick' screentip='放大镜开关，对当前选中单元格进行放大显示' tag='放大镜开关' />
-                    <menu id='FocusLightMenu' size='large' getLabel='GetLableText' image='email'
+                    <menu id='FocusLightMenu' size='large' getLabel='GetLableText' image='nd_聚光灯菜单'
                           screentip='聚光灯开关，高亮显示当前行列'>
                         <button id='FocusLightButton' label='Overlay模式（行列线）' imageMso='HighlighterMode'
                                 onAction='OnButtonClick' screentip='聚光灯Overlay模式：半透明行列十字线覆盖显示' tag='聚光灯-Overlay' />
                         <button id='FocusLightFillButton' label='填色模式（行列格）' imageMso='CellFillColorPicker'
                                 onAction='OnButtonClick' screentip='聚光灯填色模式：高亮当前行列所有单元格背景色' tag='聚光灯-填色' />
                     </menu>
-                    <button id='AutoMergeExcel' size='large' label='合并Excel&#13;(Alice-Cove)' image='dart'
+                    <button id='AutoMergeExcel' size='large' label='合并Excel&#13;(Alice-Cove)' image='nd_合并Excel'
                             onAction='OnButtonClick' screentip='合并Alice和Cove的Excel配置数据' tag='合并Excel(Alice-Cove)' />
-                    <button id='AutoSeachExcel' size='large' label='查验模版&#13;写入数据' image='document'
+                    <button id='AutoSeachExcel' size='large' label='查验模版&#13;写入数据' image='nd_查验模版写入数据'
                             onAction='OnButtonClick' screentip='查验模版写入数据是否正确' tag='查验模版写入数据' />
-                    <button id='AutoInsertNumChanges' size='large' label='活动奖励&#13;写入' image='console'
+                    <button id='AutoInsertNumChanges' size='large' label='活动奖励&#13;写入' image='nd_活动奖励写入'
                             onAction='OnButtonClick' screentip='活动奖励数据写入' tag='活动奖励写入' />
                 </group>
                 <group id='Group10' label='玩法计算'>
-                    <button id='Button15' size='large' label='Alice大富翁' image='dart' screentip='大富翁方案整理'
+                    <button id='Button15' size='large' label='Alice大富翁' image='nd_Alice大富翁' screentip='大富翁方案整理'
                             onAction='OnButtonClick' tag='Alice大富翁' />
-                    <button id='Button16' size='large' label='TM目标元素' image='ejs' screentip='Tm目标元素生成'
+                    <button id='Button16' size='large' label='TM目标元素' image='nd_TM目标元素' screentip='Tm目标元素生成'
                             onAction='OnButtonClick' tag='TM目标元素' />
-                    <button id='Button17' size='large' label='TM非目标元素' image='email' screentip='Tm非目标元素生成'
+                    <button id='Button17' size='large' label='TM非目标元素' image='nd_TM非目标元素' screentip='Tm非目标元素生成'
                             onAction='OnButtonClick' tag='TM目标元素' />
-                    <button id='Button_MagicBottle' size='large' label='移动魔瓶' image='cpp' screentip='移动魔瓶消耗模拟计算'
+                    <button id='Button_MagicBottle' size='large' label='移动魔瓶' image='nd_移动魔瓶' screentip='移动魔瓶消耗模拟计算'
                             onAction='OnButtonClick' tag='移动魔瓶' />
-                    <button id='Button_LoopRun' size='large' label='移动转盘' image='key' screentip='移动转盘随机方案机选'
+                    <button id='Button_LoopRun' size='large' label='移动转盘' image='nd_移动转盘' screentip='移动转盘随机方案机选'
                             onAction='OnButtonClick' tag='移动转盘' />
-                    <button id='Button_CardRatioSim' size='large' label='万能卡概率' image='zip' screentip='相册万能卡概率模拟'
+                    <button id='Button_CardRatioSim' size='large' label='万能卡概率' image='nd_万能卡概率' screentip='相册万能卡概率模拟'
                             onAction='OnButtonClick' tag='万能卡概率' />
-                    <button id='CheckColFromExcelMulti' size='large' label='删除冗余列' image='font'
+                    <button id='CheckColFromExcelMulti' size='large' label='删除冗余列' image='nd_删除冗余列'
                             onAction='OnButtonClick' screentip='删除表格冗余列，以及Chart1类的非法配置表，打开的表格不能格式错误' tag='批量整理表格格式' />
                 </group>
                 <group id='NormalFun' label='杂项'>
-                    <button id='ShowDnaLog' size='large' getLabel='GetLableText' image='ejs'
+                    <button id='ShowDnaLog' size='large' getLabel='GetLableText' image='nd_插件日志'
                             onAction='OnButtonClick' screentip='展示插件Log' tag='插件日志开关' />
-                    <button id='GlobalVariableDefault' size='large' label='默认配置' image='vscode'
+                    <button id='GlobalVariableDefault' size='large' label='默认配置' image='nd_默认配置'
                             onAction='OnButtonClick' screentip='恢复插件配置为默认' tag='默认配置' />
                 </group>
                 <group id='GroupAI' label='AI聚合'>
-                    <button id='ShowAI' size='large' getLabel='GetLableText' image='csharp'
+                    <button id='ShowAI' size='large' getLabel='GetLableText' image='nd_AI对话'
                             onAction='OnButtonClick' tag='AI对话开关' />
                     <dropDown id="AIConfig" label="AI配置选择" onAction="AIConfig_Select"
                               getSelectedItemID="AIConfig_Select_Default">

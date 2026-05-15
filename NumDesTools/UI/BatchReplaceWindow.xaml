@@ -2,13 +2,11 @@
     x:Class="NumDesTools.UI.BatchReplaceWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="批量替换 (Ctrl+Alt+H)"
     Width="560" Height="460"
     MinWidth="440" MinHeight="340"
     WindowStartupLocation="CenterScreen"
     ShowInTaskbar="True"
-    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
     KeyDown="Window_KeyDown"
     Closing="Window_Closing">
 
@@ -20,10 +18,10 @@
             <CheckBox x:Name="TopmostCheck" Content="窗口置顶"
                       VerticalAlignment="Center" Margin="0,0,16,0"
                       Checked="TopmostCheck_Changed" Unchecked="TopmostCheck_Changed"/>
-            <ui:Button x:Name="ExecuteBtn" Content="执行替换(Ctrl+Enter)"
-                       Width="140" Margin="0,0,8,0"
-                       Click="Execute_Click"/>
-            <ui:Button Content="清空" Width="60" Click="Clear_Click"/>
+            <Button x:Name="ExecuteBtn" Content="执行替换(Ctrl+Enter)"
+                    Width="140" Margin="0,0,8,0" IsDefault="False"
+                    Click="Execute_Click"/>
+            <Button Content="清空" Width="60" Click="Clear_Click"/>
         </StackPanel>
 
         <!-- 状态条 -->
@@ -77,10 +75,10 @@
                                                HorizontalAlignment="Center" Foreground="Gray"/>
                                     <TextBox Grid.Column="2" Text="{Binding To, UpdateSourceTrigger=PropertyChanged}"
                                              FontFamily="Consolas" Padding="3,2"/>
-                                    <ui:Button Grid.Column="3" Content="✕" FontSize="10" Margin="2,0,0,0"
-                                               Tag="{Binding}"
-                                               Click="RemoveRow_Click"
-                                               ToolTip="删除此行"/>
+                                    <Button Grid.Column="3" Content="✕" FontSize="10" Margin="2,0,0,0"
+                                            Tag="{Binding}"
+                                            Click="RemoveRow_Click"
+                                            ToolTip="删除此行"/>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -88,9 +86,9 @@
                 </ScrollViewer>
 
                 <!-- 添加行 -->
-                <ui:Button Grid.Row="2" Content="+ 添加一行" HorizontalAlignment="Left"
-                           Margin="0,6,0,0" Padding="8,3"
-                           Click="AddRow_Click"/>
+                <Button Grid.Row="2" Content="+ 添加一行" HorizontalAlignment="Left"
+                        Margin="0,6,0,0" Padding="8,3"
+                        Click="AddRow_Click"/>
             </Grid>
 
             <!-- 分隔条 -->
@@ -119,9 +117,9 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <ui:Button Grid.Row="2" Content="清空历史" Margin="0,4,0,0"
-                           HorizontalAlignment="Stretch" Padding="4,3"
-                           Click="ClearHistory_Click"/>
+                <Button Grid.Row="2" Content="清空历史" Margin="0,4,0,0"
+                        HorizontalAlignment="Stretch" Padding="4,3"
+                        Click="ClearHistory_Click"/>
             </Grid>
         </Grid>
     </DockPanel>

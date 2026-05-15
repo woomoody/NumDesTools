@@ -89,9 +89,7 @@ namespace NumDesTools.UI
         {
             DataContext = this;
             ApplyTheme();
-            WpfUiHelper.EnsureApplication();
             InitializeComponent();
-            Loaded += (_, _) => WpfUiHelper.ApplyDarkTitleBar(this);
 
             TextEditor.WordWrap = true;
             _originalText = string.Join("\n", initialTexts);
