@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using MahApps.Metro.Controls;
 using NumDesTools.ConflictResolver;
 using Action = System.Action;
 using Border = System.Windows.Controls.Border;
@@ -15,7 +16,7 @@ using WpfColor = System.Windows.Media.Color;
 
 namespace NumDesTools.UI;
 
-public partial class ExcelConflictWindow : Window
+public partial class ExcelConflictWindow : MetroWindow
 {
     private FileDiff _diff;
     private readonly bool _autoGitAdd;
@@ -23,6 +24,7 @@ public partial class ExcelConflictWindow : Window
 
     public ExcelConflictWindow(FileDiff diff, string? outPath = null, bool autoGitAdd = true)
     {
+        MahAppsHelper.EnsureInitialized();
         _suppressRefresh = true;
         InitializeComponent();
         _diff = diff;
@@ -53,6 +55,11 @@ public partial class ExcelConflictWindow : Window
         ConflictList.PreviewMouseMove           += ConflictList_DragMove;
         ConflictList.PreviewMouseLeftButtonUp   += ConflictList_DragEnd;
         ConflictList.PreviewMouseDown           += ConflictList_MiddleClick;
+
+        // 三个列表点击任意位置都触发详情（兜底：路由事件冒泡失效时仍有效）
+        ConflictList.PreviewMouseLeftButtonDown   += ListBox_ShowDetail;
+        OnlyOursList.PreviewMouseLeftButtonDown   += ListBox_ShowDetail;
+        OnlyTheirsList.PreviewMouseLeftButtonDown += ListBox_ShowDetail;
 
         // 把首次列表渲染推到窗口显示后，避免构造函数阻塞 ShowDialog
         Loaded += (_, _) =>
@@ -706,6 +713,21 @@ public partial class ExcelConflictWindow : Window
     internal void OnCellSelected(object sender, CellSelectedRoutedEventArgs e) =>
         ShowDetailForRow(e.Row);
 
+    private void ListBox_ShowDetail(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // 从点击位置向上找最近的 ConflictRowItem，取其 DataContext
+        var el = e.OriginalSource as DependencyObject;
+        while (el != null)
+        {
+            if (el is ConflictRowItem item && item.DataContext is RowConflict rc)
+            {
+                ShowDetailForRow(rc);
+                return;
+            }
+            el = VisualTreeHelper.GetParent(el);
+        }
+    }
+
     private static readonly SolidColorBrush DetailFgOurs = new(Color(0xA8, 0xC8, 0xFF));
     private static readonly SolidColorBrush DetailFgTheirs = new(Color(0xA8, 0xFF, 0xCA));
 
@@ -1287,6 +1309,16 @@ public partial class ExcelConflictWindow : Window
 
     private void ShowDetailForRow(RowConflict rc)
     {
+        // 详情面板折叠时自动展开
+        if (!_detailExpanded)
+        {
+            _detailExpanded = true;
+            RowDetail.MinHeight = 28;
+            RowDetail.Height = new GridLength(Math.Max(_detailExpandedHeight, 120));
+            DetailContent.Visibility = Visibility.Visible;
+            DetailChevron.Text = "▼ ";
+        }
+
         DetailRowKey.Text = $"ID: {rc.RowKey}  [{rc.DiffTypeBadge}]";
         DetailHint.Text = string.Empty;
 

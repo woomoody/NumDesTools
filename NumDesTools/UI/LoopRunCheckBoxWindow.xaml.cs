@@ -1,18 +1,17 @@
 using System.Windows;
+using MahApps.Metro.Controls;
 using CheckBox = System.Windows.Controls.CheckBox;
 
 namespace NumDesTools.UI
 {
-    /// <summary>
-    /// LoopRunCheckBoxWindow.xaml 的交互逻辑
-    /// </summary>
-    public partial class LoopRunCheckBoxWindow
+    public partial class LoopRunCheckBoxWindow : MetroWindow
     {
         private readonly List<object> _checkList;
         public List<object> SelectedList { get; private set; }
 
         public LoopRunCheckBoxWindow(List<object> inputCheckList)
         {
+            MahAppsHelper.EnsureInitialized();
             InitializeComponent();
             _checkList = inputCheckList;
             CreateCheckBoxes();

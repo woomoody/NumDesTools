@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Windows.Controls;
-using WpfWindow = System.Windows.Window;
+using MahApps.Metro.Controls;
 
 namespace NumDesTools.UI
 {
-    public partial class HelpWindow : WpfWindow
+    public partial class HelpWindow : MetroWindow
     {
         // ── 数据模型 ─────────────────────────────────────────────────────────────
 
@@ -770,6 +770,7 @@ code {
 
         public HelpWindow()
         {
+            MahAppsHelper.EnsureInitialized();
             InitializeComponent();
             BuildNavTree();
             HelpBrowser.NavigateToString(PlaceholderHtml);
