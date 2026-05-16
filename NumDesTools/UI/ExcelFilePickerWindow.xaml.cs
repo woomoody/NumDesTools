@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using MahApps.Metro.Controls;
 using Newtonsoft.Json;
 using Key = System.Windows.Input.Key;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -12,7 +13,7 @@ using Window = System.Windows.Window;
 
 namespace NumDesTools.UI;
 
-public partial class ExcelFilePickerWindow : Window
+public partial class ExcelFilePickerWindow : MetroWindow
 {
     private record FileEntry(string FullPath, string RelPath)
     {
@@ -37,7 +38,11 @@ public partial class ExcelFilePickerWindow : Window
 
     public ExcelFilePickerWindow(string rootDir)
     {
+        MahAppsHelper.EnsureInitialized();
         InitializeComponent();
+        var screen = System.Windows.SystemParameters.WorkArea;
+        Width = screen.Width * 0.55;
+        Height = screen.Height * 0.70;
         _rootDir = rootDir;
         RootLabel.Text = rootDir;
         LoadHistory();

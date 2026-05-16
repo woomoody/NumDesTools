@@ -1,16 +1,16 @@
-<Window
+<mah:MetroWindow
     x:Class="NumDesTools.UI.ExcelConflictWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     xmlns:ui="clr-namespace:NumDesTools.UI"
     Title="Excel 冲突解决"
     Width="1100" Height="760" MinWidth="800" MinHeight="560"
     WindowStartupLocation="CenterScreen"
     WindowState="Maximized"
-    Background="#1E1E1E"
     KeyDown="Window_EscClose">
 
-    <Window.Resources>
+    <mah:MetroWindow.Resources>
         <Style TargetType="Button" x:Key="ActionBtn">
             <Setter Property="Padding"          Value="10,4"/>
             <Setter Property="Margin"           Value="4,0"/>
@@ -32,7 +32,7 @@
             <Setter Property="Background" Value="#2A2A2A"/>
             <Setter Property="Padding"    Value="10,4"/>
         </Style>
-    </Window.Resources>
+    </mah:MetroWindow.Resources>
 
     <!--
         行布局:
@@ -517,4 +517,4 @@
         </Border>
 
     </Grid>
-</Window>
+</mah:MetroWindow>

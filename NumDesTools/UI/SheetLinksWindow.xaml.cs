@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using MahApps.Metro.Controls;
 using GraphX.Common.Enums;
 using GraphX.Controls;
 using GraphX.Logic.Algorithms.LayoutAlgorithms;
@@ -10,10 +11,11 @@ namespace NumDesTools.UI
     /// <summary>
     /// SheetLinksWindow.xaml 的交互逻辑
     /// </summary>
-    public partial class SheetLinksWindow
+    public partial class SheetLinksWindow : MetroWindow
     {
         public SheetLinksWindow()
         {
+            MahAppsHelper.EnsureInitialized();
             InitializeComponent();
 
             //// 创建图形

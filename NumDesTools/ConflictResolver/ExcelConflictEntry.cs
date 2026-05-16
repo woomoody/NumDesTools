@@ -1,10 +1,6 @@
 using System.Text;
 using LibGit2Sharp;
 using NumDesTools.UI;
-using Button = System.Windows.Forms.Button;
-using CheckBox = System.Windows.Forms.CheckBox;
-using Font = System.Drawing.Font;
-using ListBox = System.Windows.Forms.ListBox;
 
 namespace NumDesTools.ConflictResolver;
 
@@ -22,19 +18,12 @@ public static class ExcelConflictEntry
         var gitRoot = NumDesAddIn.GitRootPath;
         if (string.IsNullOrEmpty(gitRoot) || !Directory.Exists(gitRoot))
         {
-            MessageBox.Show(
-                "未配置 GitRootPath，请在 NumDesToolsConfig.json 中设置。",
-                "提示",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning
-            );
+            System.Windows.MessageBox.Show("未配置 GitRootPath，请在 NumDesToolsConfig.json 中设置。", "提示");
             return;
         }
 
-        // 持久化选择窗口，循环处理直到无冲突或用户关闭
-        Form? picker = null;
-        ListBox? lb = null;
-        CheckBox? skipHashCb = null;
+        GitConflictPickerWindow? picker = null;
+        string? lastSelected = null;
 
         while (true)
         {
@@ -52,24 +41,17 @@ public static class ExcelConflictEntry
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"读取 Git 状态失败：{ex.Message}",
-                    "错误",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
+                System.Windows.MessageBox.Show($"读取 Git 状态失败：{ex.Message}", "错误");
                 break;
             }
 
-            // 是否跳过 # 文件（以对方为准自动解决）
             bool skipHash =
-                skipHashCb?.Checked
+                picker?.SkipHash
                 ?? NumDesAddIn.GlobalValue.Value["ConflictSkipHashFiles"] == "true";
 
             List<string> conflictedFiles;
             if (skipHash)
             {
-                // # 文件自动接受 Theirs
                 using var repo = new Repository(gitRoot);
                 foreach (var p in allXlsx.Where(p => Path.GetFileName(p).Contains('#')))
                     AutoAcceptTheirs(repo, gitRoot, p);
@@ -83,121 +65,30 @@ public static class ExcelConflictEntry
             if (conflictedFiles.Count == 0)
             {
                 picker?.Close();
-                MessageBox.Show(
-                    "所有 xlsx 冲突已全部解决。",
-                    "完成",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                );
+                System.Windows.MessageBox.Show("所有 xlsx 冲突已全部解决。", "完成");
                 break;
             }
 
             string chosen;
             if (conflictedFiles.Count == 1 && picker == null)
             {
-                // 只剩一个且还没打开过选择窗口，直接处理
                 chosen = conflictedFiles[0];
             }
             else
             {
-                // 复用选择窗口（首次创建，后续刷新列表）
-                if (picker == null || picker.IsDisposed)
+                if (picker == null)
                 {
-                    picker = new Form
-                    {
-                        Text = "选择要解决的冲突文件",
-                        StartPosition = FormStartPosition.CenterScreen,
-                        FormBorderStyle = FormBorderStyle.Sizable,
-                        MaximizeBox = false,
-                        MinimumSize = new System.Drawing.Size(400, 260),
-                        BackColor = System.Drawing.Color.FromArgb(30, 30, 30),
-                        ForeColor = System.Drawing.Color.FromArgb(220, 220, 220),
-                    };
-
-                    lb = new ListBox
-                    {
-                        Dock = DockStyle.Fill,
-                        Font = new Font("Consolas", 10),
-                        BackColor = System.Drawing.Color.FromArgb(37, 37, 40),
-                        ForeColor = System.Drawing.Color.FromArgb(220, 220, 220),
-                        BorderStyle = BorderStyle.None,
-                        SelectionMode = SelectionMode.One,
-                        HorizontalScrollbar = true,
-                        IntegralHeight = false,
-                    };
-
-                    var bottomPanel = new Panel
-                    {
-                        Dock = DockStyle.Bottom,
-                        Height = 72,
-                        BackColor = System.Drawing.Color.FromArgb(37, 37, 40),
-                        Padding = new Padding(10, 8, 10, 8),
-                    };
-
-                    skipHashCb = new CheckBox
-                    {
-                        Text = "跳过 # 文件（以对方为准自动解决）",
-                        Dock = DockStyle.Top,
-                        Height = 26,
-                        Checked = NumDesAddIn.GlobalValue.Value["ConflictSkipHashFiles"] == "true",
-                        Font = new Font("微软雅黑", 9f),
-                        ForeColor = System.Drawing.Color.FromArgb(180, 180, 180),
-                    };
-                    skipHashCb.CheckedChanged += (_, _) =>
-                        NumDesAddIn.GlobalValue.SaveValue(
-                            "ConflictSkipHashFiles",
-                            skipHashCb.Checked ? "true" : "false"
-                        );
-
-                    var btn = new Button
-                    {
-                        Text = "解决选中文件",
-                        Dock = DockStyle.Bottom,
-                        Height = 34,
-                        FlatStyle = FlatStyle.Flat,
-                        BackColor = System.Drawing.Color.FromArgb(0, 122, 204),
-                        ForeColor = System.Drawing.Color.White,
-                        Font = new Font("微软雅黑", 10f, System.Drawing.FontStyle.Bold),
-                        Cursor = Cursors.Hand,
-                    };
-                    btn.FlatAppearance.BorderSize = 0;
-
-                    btn.Click += (_, _) =>
-                    {
-                        if (lb.SelectedItem != null)
-                            picker.DialogResult = DialogResult.OK;
-                    };
-                    bottomPanel.Controls.Add(skipHashCb);
-                    bottomPanel.Controls.Add(btn);
-
-                    picker.Controls.Add(lb);
-                    picker.Controls.Add(bottomPanel);
+                    picker = new GitConflictPickerWindow(conflictedFiles, skipHash);
+                }
+                else
+                {
+                    picker.RefreshList(conflictedFiles, lastSelected);
                 }
 
-                // 刷新列表，保留上次选中项
-                var prevSelected = lb!.SelectedItem?.ToString();
-                lb.Items.Clear();
-                lb.Items.AddRange(conflictedFiles.Cast<object>().ToArray());
-                var idx = prevSelected != null ? conflictedFiles.IndexOf(prevSelected) : -1;
-                lb.SelectedIndex = idx >= 0 ? idx : 0;
-
-                picker.Text = $"Git 冲突解决（剩余 {conflictedFiles.Count} 个）";
-
-                // 根据最长条目自动调整宽度（上限 900，下限 420）
-                using var g = lb.CreateGraphics();
-                var maxTextW = conflictedFiles
-                    .Select(f => (int)g.MeasureString(f, lb.Font).Width)
-                    .DefaultIfEmpty(0)
-                    .Max();
-                var listH = Math.Min(conflictedFiles.Count * lb.ItemHeight + 4, 400);
-                picker.ClientSize = new System.Drawing.Size(
-                    Math.Max(420, Math.Min(900, maxTextW + 32)),
-                    listH + 72 + 8 // 72 = bottomPanel height
-                );
-
-                if (picker.ShowDialog() != DialogResult.OK)
-                    break; // 用户点了关闭
-                chosen = lb.SelectedItem!.ToString()!;
+                if (picker.ShowDialog() != true)
+                    break;
+                chosen = picker.SelectedFile!;
+                lastSelected = chosen;
             }
 
             var workingFilePath = Path.Combine(
@@ -206,10 +97,8 @@ public static class ExcelConflictEntry
             );
             var applied = ExtractAndOpen(gitRoot, chosen, workingFilePath, autoGitAdd: true);
             if (!applied)
-                continue; // 用户点了取消，返回文件选择
+                continue;
         }
-
-        picker?.Dispose();
     }
 
     /// 从当前活动工作簿路径或 GitRootPath 推算 Excel 文件扫描根目录。
@@ -261,12 +150,7 @@ public static class ExcelConflictEntry
         var gitRoot = NumDesAddIn.GitRootPath;
         if (string.IsNullOrEmpty(gitRoot) || !Directory.Exists(gitRoot))
         {
-            MessageBox.Show(
-                "未配置 GitRootPath，请在 NumDesToolsConfig.json 中设置。",
-                "提示",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning
-            );
+            System.Windows.MessageBox.Show("未配置 GitRootPath，请在 NumDesToolsConfig.json 中设置。", "提示");
             return;
         }
 
@@ -288,466 +172,63 @@ public static class ExcelConflictEntry
             var relativePath = Path.GetRelativePath(gitRoot, absPath).Replace('\\', '/');
             var fileName = Path.GetFileName(absPath);
 
-            // 分页状态
-            const int PageSize = 30;
-            var allCommits =
-                new List<(
-                    string sha,
-                    string shortSha,
-                    string date,
-                    string author,
-                    string message
-                )>();
-            int loadedCount = 0;
-            bool isLoading = false;
-            bool hasMore = true;
-
-            var picker = new Form
-            {
-                Text = $"选择历史版本 — {fileName}",
-                StartPosition = FormStartPosition.CenterScreen,
-                FormBorderStyle = FormBorderStyle.Sizable,
-                MinimumSize = new System.Drawing.Size(700, 400),
-                BackColor = System.Drawing.Color.FromArgb(30, 30, 30),
-                ForeColor = System.Drawing.Color.FromArgb(220, 220, 220),
-            };
-
-            var lb = new ListBox
-            {
-                Dock = DockStyle.Fill,
-                Font = new Font("Consolas", 9.5f),
-                BackColor = System.Drawing.Color.FromArgb(37, 37, 40),
-                ForeColor = System.Drawing.Color.FromArgb(220, 220, 220),
-                BorderStyle = BorderStyle.None,
-                SelectionMode = SelectionMode.One,
-                HorizontalScrollbar = true,
-                IntegralHeight = false,
-            };
-
-            var statusLabel = new System.Windows.Forms.Label
-            {
-                Dock = DockStyle.Bottom,
-                Height = 18,
-                Text = "加载中…",
-                ForeColor = System.Drawing.Color.FromArgb(130, 130, 130),
-                Font = new Font("微软雅黑", 8f),
-                TextAlign = System.Drawing.ContentAlignment.MiddleLeft,
-                Padding = new Padding(8, 0, 0, 0),
-                BackColor = System.Drawing.Color.FromArgb(30, 30, 30),
-            };
-
-            var bottomPanel = new Panel
-            {
-                Dock = DockStyle.Bottom,
-                Height = 44,
-                BackColor = System.Drawing.Color.FromArgb(37, 37, 40),
-                Padding = new Padding(10, 6, 10, 6),
-            };
-
-            var btnVsWorking = new Button
-            {
-                Text = "与当前工作区对比",
-                Height = 32,
-                Width = 160,
-                Left = 10,
-                Top = 6,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = System.Drawing.Color.FromArgb(0, 122, 204),
-                ForeColor = System.Drawing.Color.White,
-                Font = new Font("微软雅黑", 9.5f, System.Drawing.FontStyle.Bold),
-                Cursor = Cursors.Hand,
-            };
-            btnVsWorking.FlatAppearance.BorderSize = 0;
-
-            var btnVsAnother = new Button
-            {
-                Text = "与另一历史版本对比",
-                Height = 32,
-                Width = 168,
-                Left = 180,
-                Top = 6,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = System.Drawing.Color.FromArgb(60, 80, 60),
-                ForeColor = System.Drawing.Color.White,
-                Font = new Font("微软雅黑", 9.5f, System.Drawing.FontStyle.Bold),
-                Cursor = Cursors.Hand,
-            };
-            btnVsAnother.FlatAppearance.BorderSize = 0;
-
-            btnVsWorking.Click += (_, _) =>
-            {
-                if (lb.SelectedItem != null)
-                {
-                    picker.Tag = "working";
-                    picker.DialogResult = DialogResult.OK;
-                }
-            };
-            btnVsAnother.Click += (_, _) =>
-            {
-                if (lb.SelectedItem != null)
-                {
-                    picker.Tag = "another";
-                    picker.DialogResult = DialogResult.OK;
-                }
-            };
-            bottomPanel.Controls.Add(btnVsWorking);
-            bottomPanel.Controls.Add(btnVsAnother);
-
-            picker.Controls.Add(lb);
-            picker.Controls.Add(statusLabel);
-            picker.Controls.Add(bottomPanel);
-            picker.ClientSize = new System.Drawing.Size(900, 500);
-            picker.WindowState = FormWindowState.Maximized;
-
-            // 追加一批到 ListBox
-            void AppendBatch(
-                IEnumerable<(
-                    string sha,
-                    string shortSha,
-                    string date,
-                    string author,
-                    string message
-                )> batch
-            )
-            {
-                lb.BeginUpdate();
-                foreach (var (_, shortSha, date, author, message) in batch)
-                    lb.Items.Add($"{shortSha}  {date}  {author, -16}  {message}");
-                lb.EndUpdate();
-            }
-
-            // 后台加载下一页（skip = 已加载数）
-            void LoadNextPage()
-            {
-                if (isLoading || !hasMore)
-                    return;
-                isLoading = true;
-                statusLabel.Text = "加载中…";
-
-                int skip = loadedCount;
-                System.Threading.ThreadPool.QueueUserWorkItem(_ =>
-                {
-                    List<(string, string, string, string, string)> page;
-                    try
-                    {
-                        page = ReadGitLogForFile(gitRoot, relativePath, skip, PageSize);
-                    }
-                    catch
-                    {
-                        page = [];
-                    }
-
-                    if (!picker.IsHandleCreated || picker.IsDisposed)
-                    {
-                        isLoading = false;
-                        return;
-                    }
-                    picker.BeginInvoke(
-                        (System.Action)(
-                            () =>
-                            {
-                                allCommits.AddRange(page);
-                                loadedCount += page.Count;
-                                hasMore = page.Count == PageSize;
-                                isLoading = false;
-
-                                AppendBatch(page);
-                                if (lb.Items.Count > 0 && lb.SelectedIndex < 0)
-                                    lb.SelectedIndex = 0;
-
-                                statusLabel.Text = hasMore
-                                    ? $"已加载 {loadedCount} 条，滚动到底加载更多"
-                                    : $"共 {loadedCount} 条，已全部加载";
-                            }
-                        )
-                    );
-                });
-            }
-
-            // 监听滚动：接近底部时加载下一页；Enter / 双击 = 与工作区对比；Esc = 关闭
-            lb.KeyDown += (_, e) =>
-            {
-                if (
-                    (e.KeyCode == Keys.Down || e.KeyCode == Keys.PageDown)
-                    && lb.TopIndex + lb.Height / lb.ItemHeight >= lb.Items.Count - 3
-                )
-                    LoadNextPage();
-                if (e.KeyCode == Keys.Enter && lb.SelectedItem != null)
-                {
-                    picker.Tag = "working";
-                    picker.DialogResult = DialogResult.OK;
-                }
-                if (e.KeyCode == Keys.Escape)
-                    picker.Close();
-            };
-            lb.MouseDoubleClick += (_, _) =>
-            {
-                if (lb.SelectedItem != null)
-                {
-                    picker.Tag = "working";
-                    picker.DialogResult = DialogResult.OK;
-                }
-            };
-            lb.MouseWheel += (_, e) =>
-            {
-                int delta = e.Delta > 0 ? -1 : 1;
-                int next = Math.Clamp(lb.SelectedIndex + delta, 0, lb.Items.Count - 1);
-                lb.SelectedIndex = next;
-                lb.TopIndex = Math.Max(
-                    0,
-                    next - lb.Height / (lb.ItemHeight > 0 ? lb.ItemHeight : 1) / 2
-                );
-                if (
-                    e.Delta < 0
-                    && lb.TopIndex + lb.Height / (lb.ItemHeight + 1) >= lb.Items.Count - 5
-                )
-                    LoadNextPage();
-            };
-            picker.KeyPreview = true;
-            picker.KeyDown += (_, e) =>
-            {
-                if (e.KeyCode == Keys.Escape)
-                    picker.Close();
-                if (e.KeyCode == Keys.Tab)
-                {
-                    lb.Focus();
-                    e.Handled = true;
-                }
-            };
-
-            picker.Load += (_, _) => LoadNextPage();
-
             var tmpDir = Path.Combine(Path.GetTempPath(), "NumDesExcelDiff");
             Directory.CreateDirectory(tmpDir);
+
+            GitHistoryPickerWindow.CommitEntry ToEntry(
+                (string sha, string shortSha, string date, string author, string message) c
+            ) => new(c.sha, $"{c.shortSha}  {c.date}  {c.author, -16}  {c.message}");
+
+            List<GitHistoryPickerWindow.CommitEntry> LoadPage(int skip, int size) =>
+                ReadGitLogForFile(gitRoot, relativePath, skip, size).Select(ToEntry).ToList();
 
             // 循环：对比窗口取消后回到历史选择器
             while (true)
             {
-                if (picker.ShowDialog() != DialogResult.OK)
+                var picker = new GitHistoryPickerWindow(
+                    $"选择历史版本 — {fileName}",
+                    LoadPage,
+                    ["working", "another"]
+                );
+                if (picker.ShowDialog() != true)
                     break;
 
-                var selectedIdx = lb.SelectedIndex;
-                var mode = picker.Tag?.ToString() ?? "working";
-                picker.Tag = null; // 清除，避免复用时残留
-
-                if (selectedIdx < 0 || selectedIdx >= allCommits.Count)
-                    continue;
-                var selectedSha = allCommits[selectedIdx].sha;
+                var selectedSha = picker.SelectedSha!;
+                var selectedShortSha = selectedSha[..Math.Min(7, selectedSha.Length)];
+                var mode = picker.SelectedMode!;
+                var snapshot = picker.LoadedEntries.ToList();
 
                 if (mode == "working")
                 {
-                    var histPath = Path.Combine(
-                        tmpDir,
-                        $"hist_{allCommits[selectedIdx].shortSha}_{fileName}"
-                    );
+                    var histPath = Path.Combine(tmpDir, $"hist_{selectedShortSha}_{fileName}");
                     try
                     {
                         GitShowBySha(gitRoot, selectedSha, relativePath, histPath);
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(
-                            $"提取历史版本失败：{ex.Message}",
-                            "错误",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error
-                        );
+                        System.Windows.MessageBox.Show($"提取历史版本失败：{ex.Message}", "错误");
                         continue;
                     }
                     OpenWindow(histPath, absPath, outPath: absPath, autoGitAdd: true);
-                    // 对比完成或取消后回到历史选择器
                 }
                 else
                 {
-                    // 第二个版本选择窗口
-                    var allCommits2 = new List<(
-                        string sha,
-                        string shortSha,
-                        string date,
-                        string author,
-                        string message
-                    )>(allCommits);
-                    int loadedCount2 = loadedCount;
-                    bool hasMore2 = hasMore;
-                    bool isLoading2 = false;
-
-                    var picker2 = new Form
-                    {
-                        Text = $"选择第二个历史版本 — {fileName}（第一个：{allCommits[selectedIdx].shortSha}）",
-                        StartPosition = FormStartPosition.CenterScreen,
-                        FormBorderStyle = FormBorderStyle.Sizable,
-                        MinimumSize = new System.Drawing.Size(700, 400),
-                        BackColor = System.Drawing.Color.FromArgb(30, 30, 30),
-                        ForeColor = System.Drawing.Color.FromArgb(220, 220, 220),
-                        ClientSize = new System.Drawing.Size(900, 500),
-                        WindowState = FormWindowState.Maximized,
-                    };
-                    var lb2 = new ListBox
-                    {
-                        Dock = DockStyle.Fill,
-                        Font = new Font("Consolas", 9.5f),
-                        BackColor = System.Drawing.Color.FromArgb(37, 37, 40),
-                        ForeColor = System.Drawing.Color.FromArgb(220, 220, 220),
-                        BorderStyle = BorderStyle.None,
-                        SelectionMode = SelectionMode.One,
-                        HorizontalScrollbar = true,
-                        IntegralHeight = false,
-                    };
-                    var statusLabel2 = new System.Windows.Forms.Label
-                    {
-                        Dock = DockStyle.Bottom,
-                        Height = 18,
-                        Text = hasMore2
-                            ? $"已加载 {loadedCount2} 条，滚动到底加载更多"
-                            : $"共 {loadedCount2} 条，已全部加载",
-                        ForeColor = System.Drawing.Color.FromArgb(130, 130, 130),
-                        Font = new Font("微软雅黑", 8f),
-                        TextAlign = System.Drawing.ContentAlignment.MiddleLeft,
-                        Padding = new Padding(8, 0, 0, 0),
-                        BackColor = System.Drawing.Color.FromArgb(30, 30, 30),
-                    };
-                    lb2.BeginUpdate();
-                    foreach (var (_, shortSha, date, author, message) in allCommits2)
-                        lb2.Items.Add($"{shortSha}  {date}  {author, -16}  {message}");
-                    lb2.EndUpdate();
-                    lb2.SelectedIndex = Math.Min(selectedIdx + 1, lb2.Items.Count - 1);
-
-                    void LoadNextPage2()
-                    {
-                        if (isLoading2 || !hasMore2)
-                            return;
-                        isLoading2 = true;
-                        statusLabel2.Text = "加载中…";
-                        int skip2 = loadedCount2;
-                        System.Threading.ThreadPool.QueueUserWorkItem(_ =>
-                        {
-                            List<(string, string, string, string, string)> page2;
-                            try
-                            {
-                                page2 = ReadGitLogForFile(gitRoot, relativePath, skip2, PageSize);
-                            }
-                            catch
-                            {
-                                page2 = [];
-                            }
-                            if (!picker2.IsHandleCreated || picker2.IsDisposed)
-                            {
-                                isLoading2 = false;
-                                return;
-                            }
-                            picker2.BeginInvoke(
-                                (System.Action)(
-                                    () =>
-                                    {
-                                        allCommits2.AddRange(page2);
-                                        loadedCount2 += page2.Count;
-                                        hasMore2 = page2.Count == PageSize;
-                                        isLoading2 = false;
-                                        lb2.BeginUpdate();
-                                        foreach (var (_, s, d, a, m) in page2)
-                                            lb2.Items.Add($"{s}  {d}  {a, -16}  {m}");
-                                        lb2.EndUpdate();
-                                        statusLabel2.Text = hasMore2
-                                            ? $"已加载 {loadedCount2} 条，滚动到底加载更多"
-                                            : $"共 {loadedCount2} 条，已全部加载";
-                                    }
-                                )
-                            );
-                        });
-                    }
-
-                    lb2.MouseWheel += (_, e) =>
-                    {
-                        int delta2 = e.Delta > 0 ? -1 : 1;
-                        int next2 = Math.Clamp(lb2.SelectedIndex + delta2, 0, lb2.Items.Count - 1);
-                        lb2.SelectedIndex = next2;
-                        lb2.TopIndex = Math.Max(
-                            0,
-                            next2 - lb2.Height / (lb2.ItemHeight > 0 ? lb2.ItemHeight : 1) / 2
-                        );
-                        if (
-                            e.Delta < 0
-                            && lb2.TopIndex + lb2.Height / (lb2.ItemHeight + 1)
-                                >= lb2.Items.Count - 5
-                        )
-                            LoadNextPage2();
-                    };
-                    lb2.KeyDown += (_, e) =>
-                    {
-                        if (
-                            (e.KeyCode == Keys.Down || e.KeyCode == Keys.PageDown)
-                            && lb2.TopIndex + lb2.Height / lb2.ItemHeight >= lb2.Items.Count - 3
-                        )
-                            LoadNextPage2();
-                        if (e.KeyCode == Keys.Enter && lb2.SelectedItem != null)
-                            picker2.DialogResult = DialogResult.OK;
-                        if (e.KeyCode == Keys.Escape)
-                            picker2.Close();
-                    };
-                    lb2.MouseDoubleClick += (_, _) =>
-                    {
-                        if (lb2.SelectedItem != null)
-                            picker2.DialogResult = DialogResult.OK;
-                    };
-                    picker2.KeyPreview = true;
-                    picker2.KeyDown += (_, e) =>
-                    {
-                        if (e.KeyCode == Keys.Escape)
-                            picker2.Close();
-                        if (e.KeyCode == Keys.Tab)
-                        {
-                            lb2.Focus();
-                            e.Handled = true;
-                        }
-                    };
-
-                    var bottomPanel2 = new Panel
-                    {
-                        Dock = DockStyle.Bottom,
-                        Height = 44,
-                        BackColor = System.Drawing.Color.FromArgb(37, 37, 40)
-                    };
-                    var btnOk2 = new Button
-                    {
-                        Text = "开始对比",
-                        Height = 32,
-                        Width = 110,
-                        Left = 10,
-                        Top = 6,
-                        FlatStyle = FlatStyle.Flat,
-                        BackColor = System.Drawing.Color.FromArgb(0, 122, 204),
-                        ForeColor = System.Drawing.Color.White,
-                        Font = new Font("微软雅黑", 9.5f, System.Drawing.FontStyle.Bold),
-                        Cursor = Cursors.Hand,
-                    };
-                    btnOk2.FlatAppearance.BorderSize = 0;
-                    btnOk2.Click += (_, _) =>
-                    {
-                        if (lb2.SelectedItem != null)
-                            picker2.DialogResult = DialogResult.OK;
-                    };
-                    bottomPanel2.Controls.Add(btnOk2);
-                    picker2.Controls.Add(lb2);
-                    picker2.Controls.Add(statusLabel2);
-                    picker2.Controls.Add(bottomPanel2);
-
-                    if (picker2.ShowDialog() != DialogResult.OK)
-                    {
-                        picker2.Dispose();
+                    var firstIdx = snapshot.FindIndex(e => e.Sha == selectedSha);
+                    var picker2 = new GitHistoryPickerWindow(
+                        $"选择第二个历史版本 — {fileName}（第一个：{selectedShortSha}）",
+                        LoadPage,
+                        ["ok"],
+                        snapshot,
+                        Math.Min(firstIdx + 1, snapshot.Count - 1)
+                    );
+                    if (picker2.ShowDialog() != true)
                         continue;
-                    } // 取消第二个版本选择 → 回历史选择器
-                    var selectedIdx2 = lb2.SelectedIndex;
-                    picker2.Dispose();
 
-                    var sha2 = allCommits2[selectedIdx2].sha;
-                    var histPath = Path.Combine(
-                        tmpDir,
-                        $"hist_{allCommits[selectedIdx].shortSha}_{fileName}"
-                    );
-                    var histPath2 = Path.Combine(
-                        tmpDir,
-                        $"hist_{allCommits2[selectedIdx2].shortSha}_{fileName}"
-                    );
+                    var sha2 = picker2.SelectedSha!;
+                    var shortSha2 = sha2[..Math.Min(7, sha2.Length)];
+                    var histPath = Path.Combine(tmpDir, $"hist_{selectedShortSha}_{fileName}");
+                    var histPath2 = Path.Combine(tmpDir, $"hist_{shortSha2}_{fileName}");
                     try
                     {
                         GitShowBySha(gitRoot, selectedSha, relativePath, histPath);
@@ -755,20 +236,12 @@ public static class ExcelConflictEntry
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(
-                            $"提取历史版本失败：{ex.Message}",
-                            "错误",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error
-                        );
+                        System.Windows.MessageBox.Show($"提取历史版本失败：{ex.Message}", "错误");
                         continue;
                     }
                     OpenWindow(histPath, histPath2, outPath: null, autoGitAdd: false);
-                    // 对比完成或取消后回到历史选择器
                 }
             }
-
-            picker.Dispose();
             // 历史窗口关闭后回到文件选择器
         } // end while(true)
     }
@@ -852,11 +325,9 @@ public static class ExcelConflictEntry
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
-                $"提取 Git 版本失败：{ex.Message}\n\n" + "请确认当前处于 merge 冲突状态（ORIG_HEAD 和 MERGE_HEAD 都存在）。",
-                "错误",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
+            System.Windows.MessageBox.Show(
+                $"提取 Git 版本失败：{ex.Message}\n\n请确认当前处于 merge 冲突状态（ORIG_HEAD 和 MERGE_HEAD 都存在）。",
+                "错误"
             );
             return false;
         }
@@ -1011,26 +482,7 @@ public static class ExcelConflictEntry
         FileDiff? diff = null;
         Exception? diffEx = null;
 
-        using var waitForm = new Form
-        {
-            Text = "正在解析差异…",
-            FormBorderStyle = FormBorderStyle.FixedDialog,
-            StartPosition = FormStartPosition.CenterScreen,
-            Size = new System.Drawing.Size(320, 80),
-            ControlBox = false,
-            BackColor = System.Drawing.Color.FromArgb(30, 30, 30),
-        };
-        waitForm.Controls.Add(
-            new System.Windows.Forms.Label
-            {
-                Text = "正在比较文件，请稍候…",
-                ForeColor = System.Drawing.Color.White,
-                AutoSize = true,
-                Left = 20,
-                Top = 20,
-            }
-        );
-
+        var waitWin = new DiffProgressWindow();
         var thread = new System.Threading.Thread(() =>
         {
             try
@@ -1043,43 +495,24 @@ public static class ExcelConflictEntry
             }
             finally
             {
-                // 用 BeginInvoke 避免：若 ShowDialog 尚未建立 Handle，Invoke 会抛异常
-                try
-                {
-                    waitForm.BeginInvoke((System.Action)waitForm.Close);
-                }
-                catch
-                { /* 窗口已销毁，忽略 */
-                }
+                waitWin.Dispatcher.BeginInvoke((System.Action)(() => waitWin.Close()));
             }
         })
         {
             IsBackground = true
         };
-
-        // 在 Load（Handle 已建立）后再启动线程，保证 BeginInvoke 安全
-        waitForm.Load += (_, _) => thread.Start();
-        waitForm.ShowDialog();
+        waitWin.Loaded += (_, _) => thread.Start();
+        waitWin.ShowDialog();
 
         if (diffEx != null)
         {
-            MessageBox.Show(
-                $"解析文件失败：{diffEx.Message}",
-                "错误",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
+            System.Windows.MessageBox.Show($"解析文件失败：{diffEx.Message}", "错误");
             return false;
         }
 
         if (diff!.TotalConflictRows == 0)
         {
-            MessageBox.Show(
-                "两个文件内容完全一致，没有需要解决的冲突。",
-                "无差异",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information
-            );
+            System.Windows.MessageBox.Show("两个文件内容完全一致，没有需要解决的冲突。", "无差异");
             return true;
         }
 
