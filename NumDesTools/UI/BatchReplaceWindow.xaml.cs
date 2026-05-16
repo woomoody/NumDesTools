@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using ExcelDna.Integration;
+using MahApps.Metro.Controls;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MessageBox = System.Windows.MessageBox;
 using Window = System.Windows.Window;
@@ -54,7 +55,7 @@ namespace NumDesTools.UI
     }
 
     // ── 主窗口 ───────────────────────────────────────────
-    public partial class BatchReplaceWindow : Window
+    public partial class BatchReplaceWindow : MetroWindow
     {
         private static BatchReplaceWindow? _instance;
         private static readonly string HistoryFile = Path.Combine(
@@ -81,6 +82,7 @@ namespace NumDesTools.UI
 
         private BatchReplaceWindow()
         {
+            MahAppsHelper.EnsureInitialized();
             InitializeComponent();
             RuleRows.ItemsSource = _rows;
             HistoryList.ItemsSource = _history;

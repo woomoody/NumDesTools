@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using MahApps.Metro.Controls;
 using NumDesTools.ExcelToLua;
 using Border = System.Windows.Controls.Border;
 using CheckBox = System.Windows.Controls.CheckBox;
@@ -8,7 +9,7 @@ using Window = System.Windows.Window;
 
 namespace NumDesTools.UI;
 
-public partial class GitExportSelectWindow : Window
+public partial class GitExportSelectWindow : MetroWindow
 {
     // 每个文件条目：路径 + 来源标签
     private record FileEntry(string Path, string Source);
@@ -26,6 +27,7 @@ public partial class GitExportSelectWindow : Window
 
     public GitExportSelectWindow(string repoBasePath, string gitAuthor)
     {
+        MahAppsHelper.EnsureInitialized();
         InitializeComponent();
         _repoBasePath = repoBasePath;
         _gitAuthor = gitAuthor;
@@ -261,7 +263,7 @@ public partial class GitExportSelectWindow : Window
             var commits = SvnGitTools.GetCommitList(_repoBasePath, 50);
             CommitCombo.ItemsSource = commits
                 .Select(c => new CommitItem(
-                    $"{c.ShortSha}  {c.When:MM-dd HH:mm}  [{c.Author}]  {c.Message}",
+                    $"{c.ShortSha}  {c.When:MM-dd HH:mm}  {c.Author,-16}  {c.Message}",
                     c.Sha
                 ))
                 .ToList();

@@ -1,84 +1,16 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Media;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Rendering;
+using MahApps.Metro.Controls;
 using MessageBox = System.Windows.MessageBox;
-using Microsoft.Win32;
 
 namespace NumDesTools.UI
 {
-    public partial class SuperFindAndReplaceWindow : INotifyPropertyChanged
+    public partial class SuperFindAndReplaceWindow : MetroWindow
     {
-        public SolidColorBrush BgMain { get; private set; } = new(Colors.White);
-        public SolidColorBrush BgPanel { get; private set; } = new(Colors.White);
-        public SolidColorBrush BgInput { get; private set; } = new(Colors.White);
-        public SolidColorBrush FgMain { get; private set; } = new(Colors.Black);
-        public SolidColorBrush FgDim { get; private set; } = new(Colors.Gray);
-        public SolidColorBrush BorderCol { get; private set; } = new(Colors.Gray);
-        public SolidColorBrush AccentCol { get; private set; } = new(Colors.DodgerBlue);
-
-        public System.Windows.Media.Color HighlightColor { get; private set; } = System.Windows.Media.Colors.Yellow;
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        private void Notify([CallerMemberName] string? n = null) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
-
-        private static SolidColorBrush B(byte r, byte g, byte b) =>
-            new(System.Windows.Media.Color.FromRgb(r, g, b));
-
-        private static bool IsDarkMode()
-        {
-            try
-            {
-                var v = Registry.GetValue(
-                    @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
-                    "AppsUseLightTheme",
-                    1
-                );
-                return v is int i && i == 0;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private void ApplyTheme()
-        {
-            if (IsDarkMode())
-            {
-                BgMain = B(0x1E, 0x1E, 0x1E);
-                BgPanel = B(0x16, 0x16, 0x16);
-                BgInput = B(0x2D, 0x2D, 0x2D);
-                FgMain = B(0xD4, 0xD4, 0xD4);
-                FgDim = B(0x88, 0x88, 0x88);
-                BorderCol = B(0x55, 0x55, 0x55);
-                AccentCol = B(0x0E, 0x63, 0x9C);
-                HighlightColor = System.Windows.Media.Color.FromRgb(0xB8, 0x86, 0x00);
-            }
-            else
-            {
-                BgMain = new SolidColorBrush(Colors.White);
-                BgPanel = B(0xF3, 0xF3, 0xF3);
-                BgInput = new SolidColorBrush(Colors.White);
-                FgMain = B(0x1E, 0x1E, 0x1E);
-                FgDim = B(0x66, 0x66, 0x66);
-                BorderCol = B(0xCC, 0xCC, 0xCC);
-                AccentCol = B(0x00, 0x78, 0xD4);
-                HighlightColor = System.Windows.Media.Colors.Yellow;
-            }
-            Notify(nameof(BgMain));
-            Notify(nameof(BgPanel));
-            Notify(nameof(BgInput));
-            Notify(nameof(FgMain));
-            Notify(nameof(FgDim));
-            Notify(nameof(BorderCol));
-            Notify(nameof(AccentCol));
-            Notify(nameof(HighlightColor));
-        }
+        public System.Windows.Media.Color HighlightColor { get; private set; } =
+            System.Windows.Media.Color.FromRgb(0xB8, 0x86, 0x00);
 
         private readonly TextMarkerService _textMarkerService;
         private readonly string _originalText;
@@ -87,8 +19,7 @@ namespace NumDesTools.UI
 
         public SuperFindAndReplaceWindow(List<dynamic> initialTexts)
         {
-            DataContext = this;
-            ApplyTheme();
+            MahAppsHelper.EnsureInitialized();
             InitializeComponent();
 
             TextEditor.WordWrap = true;
