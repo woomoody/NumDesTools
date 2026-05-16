@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Drawing;
 using System.Runtime.Versioning;
 using Microsoft.Office.Core;
 using CommandBar = Microsoft.Office.Core.CommandBar;
@@ -49,51 +50,28 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
         }
     }
 
+    private const string BtnTagPrefix = "NumDesTools_";
+
     private void CleanExistingButtons(CommandBar commandBar)
     {
-        var tagsToDelete = new[]
-        {
-            "自选表格写入",
-            "当前项目Lan",
-            "合并项目Lan",
-            "合并表格Row",
-            "合并表格Col",
-            "打开表格",
-            "对话写入",
-            "对话写入（new）",
-            "打开关联表格",
-            "LTE配置导出-首次",
-            "LTE配置导出-更新（-*#）",
-            "自选表格写入（new）",
-            "自定义复制",
-            "克隆数据",
-            "克隆数据All",
-            "LTE基础数据-首次",
-            "LTE基础数据-更新",
-            "LTE任务数据-首次",
-            "LTE任务数据-更新",
-            "LTE地组数据-首次",
-            "LTE地组数据-更新",
-            "LTE生成地组"
-        };
-
+        var toDelete = new List<CommandBarControl>();
         foreach (var item in commandBar.Controls)
         {
             try
             {
-                if (item is CommandBarControl control)
-                {
-                    if (tagsToDelete.Contains(control.Tag))
-                    {
-                        control.Delete();
-                        Marshal.ReleaseComObject(control);
-                    }
-                }
+                if (item is CommandBarControl control && control.Tag?.StartsWith(BtnTagPrefix) == true)
+                    toDelete.Add(control);
             }
-            catch
+            catch { }
+        }
+        foreach (var control in toDelete)
+        {
+            try
             {
-                // 忽略删除失败
+                control.Delete();
+                Marshal.ReleaseComObject(control);
             }
+            catch { }
         }
     }
 
@@ -122,33 +100,38 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 Condition: sheetName.Contains("【模板】"),
                 Tag: "自选表格写入",
                 Caption: "自选表格写入",
-                Handler: ExcelDataAutoInsertMulti.RightClickInsertData
+                Handler: ExcelDataAutoInsertMulti.RightClickInsertData,
+                ImageName: "nd_自动数据LTE_16"
             ),
             new(
                 Condition: bookName.Contains("#【自动填表】多语言对话"),
                 Tag: "当前项目Lan",
                 Caption: "当前项目Lan",
-                Handler: PubMetToExcelFunc.OpenBaseLanExcel
+                Handler: PubMetToExcelFunc.OpenBaseLanExcel,
+                ImageName: "nd_合并数据关键词_16"
             ),
             new(
                 Condition: bookName.Contains("#【自动填表】多语言对话"),
                 Tag: "合并项目Lan",
                 Caption: "合并项目Lan",
-                Handler: PubMetToExcelFunc.OpenMergeLanExcel
+                Handler: PubMetToExcelFunc.OpenMergeLanExcel,
+                ImageName: "nd_合并数据关键词_16"
             ),
             new(
                 Condition: (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables"))
                     || bookPath.Contains(@"Public\Excels\Localizations"),
                 Tag: "合并表格Row",
                 Caption: "合并表格Row",
-                Handler: ExcelDataAutoInsertCopyMulti.RightClickMergeData
+                Handler: ExcelDataAutoInsertCopyMulti.RightClickMergeData,
+                ImageName: "nd_合并数据关键词_16"
             ),
             new(
                 Condition: (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables"))
                     || bookPath.Contains(@"Public\Excels\Localizations"),
                 Tag: "合并表格Col",
                 Caption: "合并表格Col",
-                Handler: ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol
+                Handler: ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol,
+                ImageName: "nd_合并数据关键词_16"
             ),
             new(
                 Condition: (targetValue != null && targetValue.Contains(".xlsx")),
@@ -156,25 +139,29 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 Caption: "打开表格",
                 Handler: new _CommandBarButtonEvents_ClickEventHandler(
                     PubMetToExcelFunc.RightOpenExcelByActiveCell
-                )
+                ),
+                ImageName: "nd_表格目录"
             ),
             new(
                 Condition: sheetName == "多语言对话【模板】",
                 Tag: "对话写入",
                 Caption: "对话写入(末尾)",
-                Handler: ExcelDataAutoInsertLanguage.AutoInsertDataByUd
+                Handler: ExcelDataAutoInsertLanguage.AutoInsertDataByUd,
+                ImageName: "nd_自动数据对话类"
             ),
             new(
                 Condition: sheetName == "多语言对话【模板】",
                 Tag: "对话写入（new）",
                 Caption: "对话写入(末尾)(new)",
-                Handler: ExcelDataAutoInsertLanguage.AutoInsertDataByUdNew
+                Handler: ExcelDataAutoInsertLanguage.AutoInsertDataByUdNew,
+                ImageName: "nd_自动数据对话类"
             ),
             new(
                 Condition: !bookName.Contains("#") && target.Column > 2,
                 Tag: "打开关联表格",
                 Caption: "打开关联表格",
-                Handler: PubMetToExcelFunc.RightOpenLinkExcelByActiveCell
+                Handler: PubMetToExcelFunc.RightOpenLinkExcelByActiveCell,
+                ImageName: "nd_表格目录"
             ),
             new(
                 Condition: sheetName == "LTE【基础】"
@@ -184,7 +171,8 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                     || sheetName == "LTE【地组】",
                 Tag: "LTE配置导出-首次",
                 Caption: "LTE配置导出-首次",
-                Handler: LteData.ExportLteDataConfigFirst
+                Handler: LteData.ExportLteDataConfigFirst,
+                ImageName: "nd_常规模版_16"
             ),
             new(
                 Condition: sheetName == "LTE【基础】"
@@ -194,85 +182,107 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                     || sheetName == "LTE【地组】",
                 Tag: "LTE配置导出-更新（-*#）",
                 Caption: "LTE配置导出-更新（-*#）",
-                Handler: LteData.ExportLteDataConfigUpdate
+                Handler: LteData.ExportLteDataConfigUpdate,
+                ImageName: "nd_更新活动_16"
             ),
             new(
                 Condition: sheetName.Contains("【模板】"),
                 Tag: "自选表格写入（new）",
                 Caption: "自选表格写入（new）",
-                Handler: ExcelDataAutoInsertMultiNew.RightClickInsertDataNew
+                Handler: ExcelDataAutoInsertMultiNew.RightClickInsertDataNew,
+                ImageName: "nd_自动数据New_16"
             ),
             new(
                 Condition: bookName.Contains("RechargeGP") && target.Column == 1,
                 Tag: "克隆数据",
                 Caption: "克隆数据-Recharge",
-                Handler: ExcelDataAutoInsertCopyActivity.RightClickCloneData
+                Handler: ExcelDataAutoInsertCopyActivity.RightClickCloneData,
+                ImageName: "nd_生成活动ID_16"
             ),
             new(
                 Condition: bookName.Contains("RechargeGP") && target.Column == 1,
                 Tag: "克隆数据All",
                 Caption: "克隆数据-Recharge-All",
-                Handler: ExcelDataAutoInsertCopyActivity.RightClickCloneAllData
+                Handler: ExcelDataAutoInsertCopyActivity.RightClickCloneAllData,
+                ImageName: "nd_生成活动ID_16"
             ),
             new(
                 Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【设计】"),
                 Tag: "LTE基础数据-首次",
                 Caption: "LTE基础数据-首次",
-                Handler: LteData.FirstCopyValue
+                Handler: LteData.FirstCopyValue,
+                ImageName: "nd_常规模版_16"
             ),
             new(
                 Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【设计】"),
                 Tag: "LTE基础数据-更新",
                 Caption: "LTE基础数据-更新",
-                Handler: LteData.UpdateCopyValue
+                Handler: LteData.UpdateCopyValue,
+                ImageName: "nd_更新活动_16"
             ),
             new(
                 Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【任务】"),
                 Tag: "LTE任务数据-首次",
                 Caption: "LTE任务数据-首次",
-                Handler: LteData.FirstCopyTaskValue
+                Handler: LteData.FirstCopyTaskValue,
+                ImageName: "nd_常规模版_16"
             ),
             new(
                 Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【任务】"),
                 Tag: "LTE任务数据-更新",
                 Caption: "LTE任务数据-更新",
-                Handler: LteData.UpdateCopyTaskValue
+                Handler: LteData.UpdateCopyTaskValue,
+                ImageName: "nd_更新活动_16"
             ),
             new(
                 Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【地组】"),
                 Tag: "LTE地组数据-首次",
                 Caption: "LTE地组数据-首次",
-                Handler: LteData.FirstCopyFieldValue
+                Handler: LteData.FirstCopyFieldValue,
+                ImageName: "nd_常规模版_16"
             ),
             new(
                 Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【地组】"),
                 Tag: "LTE地组数据-更新",
                 Caption: "LTE地组数据-更新",
-                Handler: LteData.UpdateCopyFieldValue
+                Handler: LteData.UpdateCopyFieldValue,
+                ImageName: "nd_更新活动_16"
             ),
             new(
                 Condition: bookName.Contains("地上"),
                 Tag: "LTE生成地组",
                 Caption: "LTE生成地组",
-                Handler: LteData.GroundDataSim
+                Handler: LteData.GroundDataSim,
+                ImageName: "nd_生成活动菜单"
             ),
-            // 其他按钮配置...
             new(
-                Condition: true, // 默认显示的按钮
+                Condition: true,
                 Tag: "自定义复制",
                 Caption: "去重复制",
-                Handler: LteData.FilterRepeatValueCopy
+                Handler: LteData.FilterRepeatValueCopy,
+                ImageName: "nd_批量替换_16"
             )
         };
 
-        // 添加有效按钮
-        foreach (var config in buttonConfigs.Where(b => b.Condition))
+        var validConfigs = buttonConfigs.Where(b => b.Condition).ToList();
+        if (validConfigs.Count == 0)
+            return;
+
+        // 自定义按钮顺序插入菜单顶部，自定义按钮之间无分隔线
+        for (int i = 0; i < validConfigs.Count; i++)
+            AddSafeButton(commandBar, validConfigs[i], position: i + 1);
+
+        // 分隔线加在紧接自定义按钮后的第一个原生项上，与系统菜单区隔
+        try
         {
-            AddSafeButton(commandBar, config);
+            var nativeFirst = commandBar.Controls[validConfigs.Count + 1] as CommandBarControl;
+            if (nativeFirst != null)
+                nativeFirst.BeginGroup = true;
         }
+        catch { }
     }
 
-    private void AddSafeButton(CommandBar commandBar, ButtonConfig config)
+    private void AddSafeButton(CommandBar commandBar, ButtonConfig config, int position = 1)
     {
         try
         {
@@ -280,22 +290,35 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 MsoControlType.msoControlButton,
                 Type.Missing,
                 Type.Missing,
-                1,
+                position,
                 true
             );
 
             var button = control as CommandBarButton;
             if (button == null)
             {
-                // 处理转换失败的情况
-                PluginLog.Verbose($"添加按钮失败: 无法转换为 CommandBarButton");
                 Marshal.ReleaseComObject(control);
                 return;
             }
 
-            button.Tag = config.Tag;
-            button.Caption = config.Caption;
-            button.Style = MsoButtonStyle.msoButtonIconAndCaption;
+            button.Tag = BtnTagPrefix + config.Tag;
+            button.Caption = "[策] " + config.Caption;
+
+            var pic = config.ImageName != null ? LoadPicture(config.ImageName) : null;
+            if (pic != null)
+            {
+                button.Picture = pic;
+                button.Style = MsoButtonStyle.msoButtonIconAndCaption;
+            }
+            else if (config.FaceId > 0)
+            {
+                button.FaceId = config.FaceId;
+                button.Style = MsoButtonStyle.msoButtonIconAndCaption;
+            }
+            else
+            {
+                button.Style = MsoButtonStyle.msoButtonCaption;
+            }
 
             // 包装点击事件
             button.Click += (CommandBarButton btn, ref bool cancel) =>
@@ -407,6 +430,48 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
         bool Condition,
         string Tag,
         string Caption,
-        _CommandBarButtonEvents_ClickEventHandler Handler
+        _CommandBarButtonEvents_ClickEventHandler Handler,
+        int FaceId = 0,
+        string? ImageName = null
     );
+
+    private static readonly ConcurrentDictionary<string, stdole.IPictureDisp?> _picCache = new();
+
+    // imageKey = RibbonResources 中的资源名（不含 .png 后缀）
+    private static stdole.IPictureDisp? LoadPicture(string imageKey)
+    {
+        return _picCache.GetOrAdd(imageKey, key =>
+        {
+            try
+            {
+                if (RibbonResources.ResourceManager.GetObject(key) is not Bitmap bmp)
+                    return null;
+                return BitmapToPicture(bmp);
+            }
+            catch
+            {
+                return null;
+            }
+        });
+    }
+
+    // AxHost trick: the only reliable managed way to get IPictureDisp from a Bitmap
+    private sealed class PicHelper : System.Windows.Forms.AxHost
+    {
+        private PicHelper() : base(string.Empty) { }
+        public static stdole.IPictureDisp Convert(System.Drawing.Image img) =>
+            (stdole.IPictureDisp)GetIPictureDispFromPicture(img);
+    }
+
+    private static stdole.IPictureDisp BitmapToPicture(Bitmap bmp)
+    {
+        if (bmp.Width == 16 && bmp.Height == 16)
+            return PicHelper.Convert(bmp);
+
+        using var resized = new Bitmap(16, 16, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using var g = Graphics.FromImage(resized);
+        g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+        g.DrawImage(bmp, 0, 0, 16, 16);
+        return PicHelper.Convert(resized);
+    }
 }

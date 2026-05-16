@@ -1,19 +1,18 @@
 using System.Windows;
 using System.Windows.Controls;
+using MahApps.Metro.Controls;
 using Orientation = System.Windows.Controls.Orientation;
 using TextBox = System.Windows.Controls.TextBox;
 
 namespace NumDesTools.UI
 {
-    /// <summary>
-    /// InputFormularWindow.xaml 的交互逻辑
-    /// </summary>
-    public partial class InputFormularWindow
+    public partial class InputFormularWindow : MetroWindow
     {
         public List<string> UserInputs { get; private set; }
 
         public InputFormularWindow(List<string> strings)
         {
+            MahAppsHelper.EnsureInitialized();
             InitializeComponent();
             UserInputs = [];
 

@@ -1,16 +1,17 @@
 using System.Windows;
+using MahApps.Metro.Controls;
 using Key = System.Windows.Input.Key;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
-using Window = System.Windows.Window;
 
 namespace NumDesTools.UI;
 
-public partial class InputBoxDialog : Window
+public partial class InputBoxDialog : MetroWindow
 {
     public string Input { get; private set; } = string.Empty;
 
     public InputBoxDialog(string prompt, string title)
     {
+        MahAppsHelper.EnsureInitialized();
         InitializeComponent();
         Title = title;
         PromptText.Text = prompt;

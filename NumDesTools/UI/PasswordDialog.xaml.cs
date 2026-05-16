@@ -1,14 +1,15 @@
 using System.Windows;
-using Window = System.Windows.Window;
+using MahApps.Metro.Controls;
 
 namespace NumDesTools.UI;
 
-public partial class PasswordDialog : Window
+public partial class PasswordDialog : MetroWindow
 {
     public string Password { get; private set; } = string.Empty;
 
     public PasswordDialog(string prompt)
     {
+        MahAppsHelper.EnsureInitialized();
         InitializeComponent();
         PromptText.Text = prompt;
     }

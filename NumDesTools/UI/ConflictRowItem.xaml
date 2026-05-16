@@ -7,7 +7,8 @@
         <StackPanel>
 
             <!-- 行头：ID + 类型 + 操作按钮 -->
-            <Grid x:Name="HeaderGrid" Background="#2A2A2A" MinHeight="28">
+            <Grid x:Name="HeaderGrid" Background="#2A2A2A" MinHeight="28"
+                  PreviewMouseLeftButtonDown="HeaderGrid_MouseLeftButtonDown" Cursor="Hand">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
