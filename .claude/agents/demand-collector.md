@@ -587,6 +587,189 @@ with open(SNAPSHOT, 'w', encoding='utf-8') as f:
 
 ---
 
+---
+
+## Section E — 新游戏上线监控 + 用户偏好学习
+
+### E0 — 触发时机
+
+本 Section 由 **每2小时一次的专项 Cron**（`release-monitor`）驱动，与每日9am的巡检 Cron 独立。
+
+- **工作日 10:00–18:00**：扫描完成后立即推送摘要给用户
+- **其余时间（晚上/早上/周末）**：只扫描、写入 `pending_releases.json`，**不推送**，等下一个工作时间窗口一起发
+
+区分逻辑（执行时判断）：
+```python
+import datetime
+now = datetime.datetime.now()
+is_workday = now.weekday() < 5          # 0=周一 … 4=周五
+is_workhour = 10 <= now.hour < 18
+should_push = is_workday and is_workhour
+```
+
+---
+
+### E1 — 数据源：新游戏上线情报
+
+每次执行 **2 个 WebSearch**：手机组和 Steam 组**各取1个**，保证平台均衡。年份用当前年（2026）。
+
+**手机组（4个，按 `last_mobile_idx` 轮换，每次 +1，mod 4）：**
+```
+组M0: "new mobile game release iOS android this week 2026"
+组M1: "new ios android game launch top free charts 2026"
+组M2: "new casual mobile game this week highly rated 2026"
+组M3: "best new mobile games this week 2026"
+```
+
+**Steam 组（4个，按 `last_steam_idx` 轮换，每次 +1，mod 4）：**
+```
+组S0: "new game launch steam this week top charts 2026"
+组S1: "steam new release today top seller 2026"
+组S2: "indie game launch steam top new release 2026"
+组S3: "new game trending steam 2026"
+```
+
+每次取 `组M{last_mobile_idx % 4}` + `组S{last_steam_idx % 4}` 各搜一次，搜索后提取所有出现的**具体游戏名 + 平台（iOS/Android/Steam）+ 发布日期/状态**，输出结构化列表。
+
+---
+
+### E2 — 游戏纳入规则
+
+**全量推送，不做偏好过滤。** 所有从搜索结果中发现的新游戏都纳入推送，目的是跳出信息茧房、覆盖更广的信息面。
+
+---
+
+### E3 — 推送格式
+
+**工作时间立即推送时**，输出到对话窗口。每款游戏编号，内容要丰富，让用户无需搜索就能判断是否感兴趣：
+
+```
+[新游戏上线播报 {日期}] 本次 {N} 款（含积压 {M} 款）
+
+① 游戏名（平台 | 类型标签）
+  💰 免费/付费（价格） | ⭐ 评分或"暂无评分"
+  🎮 玩法：2-3句，说清核心循环和特色机制（例：三消+农场经营，道具合成解锁故事章节）
+  📊 竞品相关：与我方的相关度 高/中/低 + 一句理由（例：高——同为3合消除+叙事驱动）
+  🔥 亮点/口碑：来自评测/评论的关键词，或上线后排行表现（例："首周iOS免费榜Top20"）
+
+② ...
+③ ...
+
+──────────────────────────────────
+💬 回复编号可查看深度分析，例如发 "3" 或 "3 7"
+```
+
+**单条 record 存入 pending_releases.json 时**，同时存储分析字段，方便推送时直接使用：
+```json
+{
+  "name": "...",
+  "platform": "iOS/Android/Steam",
+  "genre": "...",
+  "price": "免费 / $X.XX",
+  "rating": "4.2 / 暂无",
+  "gameplay_desc": "核心玩法2-3句",
+  "competitor_relevance": "高/中/低",
+  "competitor_reason": "一句理由",
+  "highlights": "口碑/排行关键词",
+  "discovered_at": "2026-05-15T23:10:00",
+  "pushed_at": null,
+  "source": "pocketgamer/steam/..."
+}
+```
+
+---
+
+### E4 — 数字回复：深度分析
+
+用户在对话中发送编号（如 `3` 或 `3 7`）时，表示**想了解这些游戏的详细信息**，不代表喜好记录。
+
+对照快照 `last_pushed_list` 字段找到对应游戏，针对每款游戏做深度分析并输出：
+
+```
+🔍 {游戏名} 深度分析
+
+📌 基本信息
+  开发商 / 发行商：
+  上线日期 / 状态：
+  平台：
+  价格 / 商业模式：
+
+🎮 玩法详解
+  核心循环：（详细描述主循环，3-5句）
+  进度系统：（等级/赛季/成就等）
+  付费设计：（内购项目、付费卡口）
+  社交/多人要素：
+
+📊 市场表现
+  上线后排行表现（有数据则填）
+  评分 / 评论关键词
+  目标用户画像
+
+🎯 对我方游戏的参考价值
+  与 MergeLand Alice（3合农场+叙事）的相关度：高/中/低
+  可借鉴的具体设计点：
+  需警惕的竞争威胁：
+```
+
+推送时将编号列表写回快照（供后续数字解析用）：
+```python
+snapshot["last_pushed_list"] = [
+    {"idx": i+1, "name": g["name"], "genre": g["genre"], "platform": g["platform"]}
+    for i, g in enumerate(pushed_games)
+]
+```
+
+---
+
+### E5 — 工作时间窗口推送积压内容
+
+**每天工作日首次进入工作时间（10:00）** 时，检查 `pending_releases.json`：
+
+```python
+import json, os, datetime
+
+PENDING = r"C:\tmp\pending_releases.json"
+if os.path.exists(PENDING):
+    with open(PENDING, encoding='utf-8') as f:
+        pend = json.load(f)
+
+    # 取出所有 pushed_at=null 的记录（未推送过的）
+    unpushed = [r for r in pend.get("records", []) if r.get("pushed_at") is None]
+
+    if unpushed:
+        # 推送给用户
+        # 推送后只更新 pushed_at，数据永久保留在 records 里
+        now_str = datetime.datetime.now().isoformat()
+        for r in unpushed:
+            r["pushed_at"] = now_str
+
+        with open(PENDING, 'w', encoding='utf-8') as f:
+            json.dump(pend, f, ensure_ascii=False, indent=2)
+```
+
+**数据不删除**——`pushed_at` 为 null = 待推送，有值 = 已推送，历史记录永久留存在 `records` 数组里。
+
+推送格式在积压内容前加标题行：
+```
+[新游戏积压播报] 以下是非工作时间段发现的 {N} 款新游戏：
+```
+
+---
+
+### E6 — 快照字段（写回 demand_snapshot.json）
+
+每次 Section E 执行后，将以下字段合并到快照：
+```python
+snapshot_e = {
+    "last_mobile_idx": (last.get("last_mobile_idx", -1) + 1) % 4,   # 手机组轮换
+    "last_steam_idx":  (last.get("last_steam_idx",  -1) + 1) % 4,   # Steam组轮换
+    "last_release_scan_ts": datetime.datetime.now().isoformat(),
+    "pending_release_count": len(pending_games),
+}
+```
+
+---
+
 ## 关键路径
 
 | 文件 | 用途 |
@@ -594,6 +777,8 @@ with open(SNAPSHOT, 'w', encoding='utf-8') as f:
 | `C:\Pro\...\doc\agents\output\` | 分析文档输出目录 |
 | `C:\Pro\...\doc\agents\demand_snapshot.json` | 巡检快照（含竞品轮换状态） |
 | `C:\tmp\competitors.json` | 竞品注册表（手动或自动追加） |
+| `C:\tmp\game_preferences.json` | 用户游戏偏好档案（E4 反馈学习） |
+| `C:\tmp\pending_releases.json` | 非工作时间积压的新游戏推送列表 |
 | `C:\tmp\apk_inspect\parsed_data\` | 竞品 APK 拆包静态数据 |
 | `C:\tmp\traveltown\remotedb\RemoteLocalizationJson` | Travel Town 实机本地化 |
 | `C:\tmp\mftown\game_text_en.json` | Merge County 本地化 |
