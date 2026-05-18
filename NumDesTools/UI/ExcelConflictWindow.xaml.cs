@@ -52,13 +52,13 @@ public partial class ExcelConflictWindow : MetroWindow
 
         // 拖拽多选 + 单行切换选中
         ConflictList.PreviewMouseLeftButtonDown += ConflictList_DragStart;
-        ConflictList.PreviewMouseMove           += ConflictList_DragMove;
-        ConflictList.PreviewMouseLeftButtonUp   += ConflictList_DragEnd;
-        ConflictList.PreviewMouseDown           += ConflictList_MiddleClick;
+        ConflictList.PreviewMouseMove += ConflictList_DragMove;
+        ConflictList.PreviewMouseLeftButtonUp += ConflictList_DragEnd;
+        ConflictList.PreviewMouseDown += ConflictList_MiddleClick;
 
         // 三个列表点击任意位置都触发详情（兜底：路由事件冒泡失效时仍有效）
-        ConflictList.PreviewMouseLeftButtonDown   += ListBox_ShowDetail;
-        OnlyOursList.PreviewMouseLeftButtonDown   += ListBox_ShowDetail;
+        ConflictList.PreviewMouseLeftButtonDown += ListBox_ShowDetail;
+        OnlyOursList.PreviewMouseLeftButtonDown += ListBox_ShowDetail;
         OnlyTheirsList.PreviewMouseLeftButtonDown += ListBox_ShowDetail;
 
         // 把首次列表渲染推到窗口显示后，避免构造函数阻塞 ShowDialog
@@ -92,10 +92,9 @@ public partial class ExcelConflictWindow : MetroWindow
     // section 展开状态（VSCode 风格：折叠=28px标题栏，展开=记忆高度）
     private bool _sectionOnlyOursExpanded = false;
     private bool _sectionOnlyTheirsExpanded = false;
-    private bool _detailExpanded = true;
+    private bool _navExpanded = true;
     private double _oursExpandedHeight = 200;
     private double _theirsExpandedHeight = 200;
-    private double _detailExpandedHeight = 180;
 
     // 滚动条总宽度（列宽之和），SizeChanged 时重新计算 Maximum/Viewport
     private double _conflictTotalWidth = 0;
@@ -395,21 +394,9 @@ public partial class ExcelConflictWindow : MetroWindow
 
     private void DetailHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        _detailExpanded = !_detailExpanded;
-        if (_detailExpanded)
-        {
-            RowDetail.MinHeight = 28;
-            RowDetail.Height = new GridLength(Math.Max(_detailExpandedHeight, 120));
-        }
-        else
-        {
-            if (RowDetail.ActualHeight > 28)
-                _detailExpandedHeight = RowDetail.ActualHeight;
-            RowDetail.MinHeight = 28;
-            RowDetail.Height = new GridLength(28);
-        }
-        DetailContent.Visibility = _detailExpanded ? Visibility.Visible : Visibility.Collapsed;
-        DetailChevron.Text = _detailExpanded ? "▼ " : "▶ ";
+        _navExpanded = !_navExpanded;
+        NavColumn.Width = _navExpanded ? new GridLength(280) : new GridLength(28);
+        DetailChevron.Text = _navExpanded ? "◀ " : "▶ ";
     }
 
     private void ScrollToFirstConflictColumn()
@@ -1309,16 +1296,6 @@ public partial class ExcelConflictWindow : MetroWindow
 
     private void ShowDetailForRow(RowConflict rc)
     {
-        // 详情面板折叠时自动展开
-        if (!_detailExpanded)
-        {
-            _detailExpanded = true;
-            RowDetail.MinHeight = 28;
-            RowDetail.Height = new GridLength(Math.Max(_detailExpandedHeight, 120));
-            DetailContent.Visibility = Visibility.Visible;
-            DetailChevron.Text = "▼ ";
-        }
-
         DetailRowKey.Text = $"ID: {rc.RowKey}  [{rc.DiffTypeBadge}]";
         DetailHint.Text = string.Empty;
 
@@ -1446,10 +1423,12 @@ public partial class ExcelConflictWindow : MetroWindow
     private void FilterSelect_Click(object sender, RoutedEventArgs e)
     {
         var keyword = FilterBox.Text.Trim();
-        if (string.IsNullOrEmpty(keyword)) return;
+        if (string.IsNullOrEmpty(keyword))
+            return;
 
         var items = ConflictList.ItemsSource as System.Collections.IList;
-        if (items == null) return;
+        if (items == null)
+            return;
 
         ClearRowSelection();
 
@@ -1457,14 +1436,16 @@ public partial class ExcelConflictWindow : MetroWindow
 
         foreach (var item in items)
         {
-            if (item is not RowConflict rc) continue;
+            if (item is not RowConflict rc)
+                continue;
 
             bool match = isNumeric
                 ? rc.RowKey.Contains(keyword, StringComparison.Ordinal)
                 : rc.RowKey.Contains(keyword, StringComparison.OrdinalIgnoreCase)
-                  || rc.DisplayName.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+                    || rc.DisplayName.Contains(keyword, StringComparison.OrdinalIgnoreCase);
 
-            if (!match) continue;
+            if (!match)
+                continue;
             rc.IsSelected = true;
             _selectedRows.Add(rc);
         }
@@ -1499,17 +1480,23 @@ public partial class ExcelConflictWindow : MetroWindow
             var hit = src;
             while (hit != null)
             {
-                if (hit is System.Windows.Controls.Button) return;
+                if (hit is System.Windows.Controls.Button)
+                    return;
                 hit = System.Windows.Media.VisualTreeHelper.GetParent(hit);
-                if (hit is System.Windows.Controls.ListBox) break;
+                if (hit is System.Windows.Controls.ListBox)
+                    break;
             }
         }
 
         _dragStartIndex = GetRowIndexAtPoint(e.GetPosition(ConflictList));
-        if (_dragStartIndex < 0) return;
+        if (_dragStartIndex < 0)
+            return;
 
         // Ctrl+点击：切换单行选中，不清除其他行
-        if ((System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) != 0)
+        if (
+            (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control)
+            != 0
+        )
         {
             ToggleRowAt(_dragStartIndex);
             UpdateSelectionButtons();
@@ -1522,21 +1509,28 @@ public partial class ExcelConflictWindow : MetroWindow
         ConflictList.CaptureMouse();
     }
 
-    private void ConflictList_MiddleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void ConflictList_MiddleClick(
+        object sender,
+        System.Windows.Input.MouseButtonEventArgs e
+    )
     {
-        if (e.ChangedButton != System.Windows.Input.MouseButton.Middle) return;
+        if (e.ChangedButton != System.Windows.Input.MouseButton.Middle)
+            return;
         if (e.OriginalSource is DependencyObject src)
         {
             var hit = src;
             while (hit != null)
             {
-                if (hit is System.Windows.Controls.Button) return;
+                if (hit is System.Windows.Controls.Button)
+                    return;
                 hit = System.Windows.Media.VisualTreeHelper.GetParent(hit);
-                if (hit is System.Windows.Controls.ListBox) break;
+                if (hit is System.Windows.Controls.ListBox)
+                    break;
             }
         }
         var idx = GetRowIndexAtPoint(e.GetPosition(ConflictList));
-        if (idx < 0) return;
+        if (idx < 0)
+            return;
         ToggleRowAt(idx);
         UpdateSelectionButtons();
         e.Handled = true;
@@ -1545,8 +1539,10 @@ public partial class ExcelConflictWindow : MetroWindow
     private void ToggleRowAt(int idx)
     {
         var items = ConflictList.ItemsSource as System.Collections.IList;
-        if (items == null || idx >= items.Count) return;
-        if (items[idx] is not RowConflict rc) return;
+        if (items == null || idx >= items.Count)
+            return;
+        if (items[idx] is not RowConflict rc)
+            return;
         if (rc.IsSelected)
         {
             rc.IsSelected = false;
@@ -1561,18 +1557,21 @@ public partial class ExcelConflictWindow : MetroWindow
 
     private void ConflictList_DragMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (!_isDragging || e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
+        if (!_isDragging || e.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
+            return;
         var idx = GetRowIndexAtPoint(e.GetPosition(ConflictList));
-        if (idx < 0) return;
+        if (idx < 0)
+            return;
         ClearRowSelection();
         int from = Math.Min(_dragStartIndex, idx);
-        int to   = Math.Max(_dragStartIndex, idx);
+        int to = Math.Max(_dragStartIndex, idx);
         SetRangeSelected(from, to, true);
     }
 
     private void ConflictList_DragEnd(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (!_isDragging) return;
+        if (!_isDragging)
+            return;
         _isDragging = false;
         ConflictList.ReleaseMouseCapture();
         UpdateSelectionButtons();
@@ -1587,7 +1586,8 @@ public partial class ExcelConflictWindow : MetroWindow
             if (hit is ListBoxItem lbi)
             {
                 var items = ConflictList.ItemsSource as System.Collections.IList;
-                if (items == null) return -1;
+                if (items == null)
+                    return -1;
                 return items.IndexOf(lbi.DataContext);
             }
             hit = System.Windows.Media.VisualTreeHelper.GetParent(hit);
@@ -1598,14 +1598,16 @@ public partial class ExcelConflictWindow : MetroWindow
     private void SetRangeSelected(int from, int to, bool selected)
     {
         var items = ConflictList.ItemsSource as System.Collections.IList;
-        if (items == null) return;
+        if (items == null)
+            return;
         _selectedRows.Clear();
         for (int i = from; i <= to && i < items.Count; i++)
         {
             if (items[i] is RowConflict rc)
             {
                 rc.IsSelected = selected;
-                if (selected) _selectedRows.Add(rc);
+                if (selected)
+                    _selectedRows.Add(rc);
             }
         }
     }
@@ -1651,8 +1653,8 @@ public partial class ExcelConflictWindow : MetroWindow
     private void Apply_Click(object sender, RoutedEventArgs e)
     {
         // 检查未处理的冲突行
-        var unresolved = _diff.Sheets
-            .SelectMany(s => s.Rows)
+        var unresolved = _diff
+            .Sheets.SelectMany(s => s.Rows)
             .Where(r => r.DiffType != RowDiffType.Same && !r.IsResolved)
             .ToList();
 
@@ -1660,7 +1662,9 @@ public partial class ExcelConflictWindow : MetroWindow
         {
             var names = unresolved
                 .Take(5)
-                .Select(r => string.IsNullOrEmpty(r.DisplayName) ? r.RowKey : $"{r.RowKey} {r.DisplayName}");
+                .Select(r =>
+                    string.IsNullOrEmpty(r.DisplayName) ? r.RowKey : $"{r.RowKey} {r.DisplayName}"
+                );
             var preview = string.Join("\n  ", names);
             var more = unresolved.Count > 5 ? $"\n  …共 {unresolved.Count} 行" : string.Empty;
 
@@ -1726,19 +1730,26 @@ public partial class ExcelConflictWindow : MetroWindow
         }
 
         // 等布局完成后滚动
-        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, (Action)(() =>
-        {
-            var items = ConflictList.ItemsSource as System.Collections.IList;
-            if (items == null) return;
-            var idx = items.IndexOf(target);
-            if (idx < 0) return;
-            ConflictList.ScrollIntoView(target);
-            // 高亮未处理行，方便用户找到
-            target.IsSelected = true;
-            if (!_selectedRows.Contains(target))
-                _selectedRows.Add(target);
-            UpdateSelectionButtons();
-        }));
+        Dispatcher.BeginInvoke(
+            System.Windows.Threading.DispatcherPriority.Background,
+            (Action)(
+                () =>
+                {
+                    var items = ConflictList.ItemsSource as System.Collections.IList;
+                    if (items == null)
+                        return;
+                    var idx = items.IndexOf(target);
+                    if (idx < 0)
+                        return;
+                    ConflictList.ScrollIntoView(target);
+                    // 高亮未处理行，方便用户找到
+                    target.IsSelected = true;
+                    if (!_selectedRows.Contains(target))
+                        _selectedRows.Add(target);
+                    UpdateSelectionButtons();
+                }
+            )
+        );
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e)

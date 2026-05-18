@@ -14,14 +14,15 @@ namespace NumDesTools.ConflictResolver;
 /// </summary>
 public static class ExcelConflictDiffer
 {
-    public static FileDiff Diff(string oursPath, string theirsPath)
+    /// <param name="basePath">merge-base 版本的 xlsx 路径，有值时对 Modified 行做三方预选</param>
+    public static FileDiff Diff(string oursPath, string theirsPath, string? basePath = null)
     {
         var safeOurs = EnsureXmlNamespace(oursPath);
         var safeTheirs = EnsureXmlNamespace(theirsPath);
+        var safeBase = basePath != null ? EnsureXmlNamespace(basePath) : null;
 
         var fileName = Path.GetFileName(oursPath);
 
-        // 读取 sheet 列表
         List<string> sheetNames;
         using (var pkg = new ExcelPackage(new FileInfo(safeOurs)))
         {
@@ -34,14 +35,25 @@ public static class ExcelConflictDiffer
             }
         }
 
-        // 并行读取两个文件，每个文件一次 ExcelPackage 打开，同时取 meta
         SheetBundle oursBundle = default;
         SheetBundle theirsBundle = default;
+        SheetBundle baseBundle = default;
 
-        Parallel.Invoke(
-            () => oursBundle = ReadAllSheets(safeOurs, sheetNames, readMeta: true),
-            () => theirsBundle = ReadAllSheets(safeTheirs, sheetNames, readMeta: false)
-        );
+        if (safeBase != null)
+        {
+            Parallel.Invoke(
+                () => oursBundle = ReadAllSheets(safeOurs, sheetNames, readMeta: true),
+                () => theirsBundle = ReadAllSheets(safeTheirs, sheetNames, readMeta: false),
+                () => baseBundle = ReadAllSheets(safeBase, sheetNames, readMeta: false)
+            );
+        }
+        else
+        {
+            Parallel.Invoke(
+                () => oursBundle = ReadAllSheets(safeOurs, sheetNames, readMeta: true),
+                () => theirsBundle = ReadAllSheets(safeTheirs, sheetNames, readMeta: false)
+            );
+        }
 
         var sheetDiffs = new List<SheetDiff>(sheetNames.Count);
         foreach (var sheet in sheetNames)
@@ -50,13 +62,17 @@ public static class ExcelConflictDiffer
             var theirsData = theirsBundle.Sheets.TryGetValue(sheet, out var td)
                 ? td
                 : new SheetData();
-            sheetDiffs.Add(DiffSheets(sheet, oursData, theirsData));
+            SheetData? baseData =
+                safeBase != null && baseBundle.Sheets.TryGetValue(sheet, out var bd) ? bd : null;
+            sheetDiffs.Add(DiffSheets(sheet, oursData, theirsData, baseData));
         }
 
         if (safeOurs != oursPath)
             TryDelete(safeOurs);
         if (safeTheirs != theirsPath)
             TryDelete(safeTheirs);
+        if (safeBase != null && safeBase != basePath)
+            TryDelete(safeBase);
 
         return new FileDiff(oursPath, theirsPath, sheetDiffs);
     }
@@ -189,7 +205,12 @@ public static class ExcelConflictDiffer
 
     // ── Diff ──────────────────────────────────────────────────────────────────
 
-    private static SheetDiff DiffSheets(string sheetName, SheetData ours, SheetData theirs)
+    private static SheetDiff DiffSheets(
+        string sheetName,
+        SheetData ours,
+        SheetData theirs,
+        SheetData? baseData
+    )
     {
         var oursColumns = ours.Columns ?? [];
         var theirsColumns = theirs.Columns ?? [];
@@ -208,13 +229,22 @@ public static class ExcelConflictDiffer
         int oursKeyIdx = oursColumns.IndexOf(keyCol);
         int theirsKeyIdx = theirsColumns.IndexOf(keyCol);
 
-        // 预建 allCols[i] → oursColumns/theirsColumns 下标映射，避免 DiffRow 每次 O(n) 查找
         var oursColIdxMap = BuildColIndexMap(allCols, oursColumns);
         var theirsColIdxMap = BuildColIndexMap(allCols, theirsColumns);
 
-        // 构建 key → 行索引映射
         var oursDict = BuildKeyIndex(ours.Rows, oursKeyIdx);
         var theirsDict = BuildKeyIndex(theirs.Rows, theirsKeyIdx);
+
+        // base 数据（三方对比用）
+        Dictionary<string, int>? baseDict = null;
+        int[] baseColIdxMap = [];
+        if (baseData is { Rows: { Count: > 0 } } bd)
+        {
+            var baseCols = bd.Columns ?? [];
+            var baseKeyIdx = baseCols.IndexOf(keyCol);
+            baseDict = BuildKeyIndex(bd.Rows, baseKeyIdx);
+            baseColIdxMap = BuildColIndexMap(allCols, baseCols);
+        }
 
         var rows = new List<RowConflict>(oursDict.Count + theirsDict.Count / 4);
 
@@ -229,7 +259,6 @@ public static class ExcelConflictDiffer
 
                 if (cells.Count == 0)
                 {
-                    // Same 行：两侧相同，只存一份（OursFullRow），TheirsFullRow 指向同一对象节省内存
                     var rowDict = MakeRowDict(oursRow, oursColumns);
                     rows.Add(
                         new RowConflict
@@ -245,6 +274,22 @@ public static class ExcelConflictDiffer
                 }
                 else
                 {
+                    // 三方对比：有 base 行时对每个冲突格预选
+                    string[]? baseRow = null;
+                    if (baseDict != null && baseDict.TryGetValue(key, out int baseRowIdx))
+                        baseRow = baseData!.Value.Rows[baseRowIdx];
+
+                    ApplyBasePreselect(
+                        cells,
+                        oursRow,
+                        theirsRow,
+                        baseRow,
+                        oursColIdxMap,
+                        theirsColIdxMap,
+                        baseColIdxMap,
+                        allCols
+                    );
+
                     rows.Add(
                         new RowConflict
                         {
@@ -300,6 +345,57 @@ public static class ExcelConflictDiffer
             LabelRow = ours.LabelRow ?? new(),
             AllColumns = allCols,
         };
+    }
+
+    // 三方对比：根据 base 行对 cells 中的每个格预选——
+    // 只有 ours 改了 → 选 Ours；只有 theirs 改了 → 选 Theirs；双方都改了 → 不标 IsExplicit
+    private static void ApplyBasePreselect(
+        List<CellConflict> cells,
+        string[] oursRow,
+        string[] theirsRow,
+        string[]? baseRow,
+        int[] oursColIdxMap,
+        int[] theirsColIdxMap,
+        int[] baseColIdxMap,
+        List<string> allCols
+    )
+    {
+        if (baseRow == null)
+            return;
+
+        // 建立 colName → allCols 下标映射，避免每次线性搜索
+        var colPosMap = new Dictionary<string, int>(allCols.Count, StringComparer.Ordinal);
+        for (int i = 0; i < allCols.Count; i++)
+            colPosMap[allCols[i]] = i;
+
+        foreach (var cell in cells)
+        {
+            if (!colPosMap.TryGetValue(cell.ColName, out int ai))
+                continue;
+
+            int oi = oursColIdxMap[ai];
+            int ti = theirsColIdxMap[ai];
+            int bi = baseColIdxMap.Length > ai ? baseColIdxMap[ai] : -1;
+
+            var oursVal = oi >= 0 && oi < oursRow.Length ? oursRow[oi] : string.Empty;
+            var theirsVal = ti >= 0 && ti < theirsRow.Length ? theirsRow[ti] : string.Empty;
+            var baseVal = bi >= 0 && bi < baseRow.Length ? baseRow[bi] : string.Empty;
+
+            bool oursChanged = !string.Equals(oursVal, baseVal, StringComparison.Ordinal);
+            bool theirsChanged = !string.Equals(theirsVal, baseVal, StringComparison.Ordinal);
+
+            if (oursChanged && !theirsChanged)
+            {
+                cell.Choice = ConflictChoice.Ours;
+                cell.IsExplicit = true;
+            }
+            else if (theirsChanged && !oursChanged)
+            {
+                cell.Choice = ConflictChoice.Theirs;
+                cell.IsExplicit = true;
+            }
+            // 双方都改了：保持默认（Choice=Ours, IsExplicit=false），让用户手动处理
+        }
     }
 
     private static Dictionary<string, int> BuildKeyIndex(List<string[]> rows, int keyColIdx)

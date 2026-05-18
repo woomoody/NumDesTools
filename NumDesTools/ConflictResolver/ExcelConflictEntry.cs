@@ -317,6 +317,7 @@ public static class ExcelConflictEntry
 
         var oursPath = Path.Combine(tmpDir, "ours_" + Path.GetFileName(relativePath));
         var theirsPath = Path.Combine(tmpDir, "theirs_" + Path.GetFileName(relativePath));
+        var basePath = Path.Combine(tmpDir, "base_" + Path.GetFileName(relativePath));
 
         try
         {
@@ -332,7 +333,26 @@ public static class ExcelConflictEntry
             return false;
         }
 
-        return OpenWindow(oursPath, theirsPath, outPath: workingFilePath, autoGitAdd: autoGitAdd);
+        // 提取 merge-base 版本用于三方预选（失败不影响主流程）
+        string? resolvedBasePath = null;
+        try
+        {
+            var baseSha = RunGit(gitRoot, "merge-base ORIG_HEAD MERGE_HEAD").Trim();
+            if (!string.IsNullOrEmpty(baseSha))
+            {
+                GitShowBySha(gitRoot, baseSha, relativePath, basePath);
+                resolvedBasePath = basePath;
+            }
+        }
+        catch { }
+
+        return OpenWindow(
+            oursPath,
+            theirsPath,
+            outPath: workingFilePath,
+            autoGitAdd: autoGitAdd,
+            basePath: resolvedBasePath
+        );
     }
 
     private static void GitShow(string gitRoot, string rev, string relativePath, string outFile)
@@ -475,10 +495,10 @@ public static class ExcelConflictEntry
         string oursPath,
         string theirsPath,
         string? outPath,
-        bool autoGitAdd
+        bool autoGitAdd,
+        string? basePath = null
     )
     {
-        // 大文件 Diff 可能耗时数秒，放到后台线程并显示等待框，避免 UI 卡死
         FileDiff? diff = null;
         Exception? diffEx = null;
 
@@ -487,7 +507,7 @@ public static class ExcelConflictEntry
         {
             try
             {
-                diff = ExcelConflictDiffer.Diff(oursPath, theirsPath);
+                diff = ExcelConflictDiffer.Diff(oursPath, theirsPath, basePath);
             }
             catch (Exception ex)
             {

@@ -4124,6 +4124,10 @@ public class LteData
             {
                 fixData = $"[[8,{fieldConditonTargetId},{fieldConditonTargetLast}]]";
             }
+            else if (fieldConditonTargetType.StartsWith("兑-材料"))
+            {
+                fixData = $"[[12,{fieldConditonTargetId},-1]]";
+            }
             else
             {
                 fixData = $"[[7,{fieldConditonTargetId}]]";

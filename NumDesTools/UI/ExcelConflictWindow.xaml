@@ -421,70 +421,81 @@
 
         <!-- ══ 详情面板 ══ -->
         <Border Grid.Row="11" Background="#161616" BorderBrush="#3A3A3A" BorderThickness="0,1,0,0">
-            <Grid ClipToBounds="True">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="28"/>   <!-- 标题栏 -->
-                    <RowDefinition Height="*"/>    <!-- 内容 -->
-                </Grid.RowDefinitions>
+            <!-- 左右两栏：左=可折叠导航列，右=字段对比（始终可见） -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="NavColumn" Width="280" MinWidth="28" MaxWidth="500"/>
+                    <ColumnDefinition Width="4"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-                <!-- 标题栏（可点击折叠） -->
-                <Border Grid.Row="0" x:Name="DetailHeaderBar" Background="#1A2A1A"
-                        Cursor="Hand" MouseLeftButtonDown="DetailHeader_Click">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
-                        <TextBlock x:Name="DetailChevron" Text="▼ " Foreground="#88FF88" FontSize="11" FontWeight="Bold"/>
-                        <TextBlock Text="详情" Foreground="#88FF88" FontSize="11" FontWeight="Bold"/>
-                        <TextBlock x:Name="DetailRowKey" Foreground="#A8C8FF" FontSize="11" Margin="8,0,0,0"/>
-                        <TextBlock x:Name="DetailHint" Foreground="#555" FontSize="10"
-                                   Margin="12,0,0,0" Text="点击任意行查看完整值对比"/>
-                    </StackPanel>
-                </Border>
+                <!-- 左侧：标题栏 + 导航列表 -->
+                <Grid Grid.Column="0" Background="#111" ClipToBounds="True">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="28"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                <!-- 内容（变更导航 + 字段对比） -->
-                <Grid Grid.Row="1" x:Name="DetailContent">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="280" MinWidth="150" MaxWidth="500"/>
-                        <ColumnDefinition Width="4"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Border Grid.Column="0" Background="#111" BorderBrush="#333" BorderThickness="0,0,1,0">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <Border Grid.Row="0" Background="#1A1A1A" Padding="6,4">
-                                <TextBlock Foreground="#888" FontSize="10">变更导航（当前Sheet）</TextBlock>
-                            </Border>
-                            <ListBox x:Name="ChangeNavList" Grid.Row="1"
-                                     Background="Transparent" BorderThickness="0"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                     SelectionChanged="ChangeNavList_SelectionChanged">
-                                <ListBox.ItemContainerStyle>
-                                    <Style TargetType="ListBoxItem">
-                                        <Setter Property="Padding"     Value="0"/>
-                                        <Setter Property="Background"  Value="Transparent"/>
-                                        <Setter Property="BorderThickness" Value="0"/>
-                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                        <Style.Triggers>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter Property="Background" Value="#1A3A6E"/>
-                                            </Trigger>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#252535"/>
-                                            </Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </ListBox.ItemContainerStyle>
-                            </ListBox>
-                        </Grid>
+                    <!-- 标题栏（点击折叠/展开导航列） -->
+                    <Border Grid.Row="0" x:Name="DetailHeaderBar" Background="#1A2A1A"
+                            Cursor="Hand" MouseLeftButtonDown="DetailHeader_Click"
+                            BorderBrush="#333" BorderThickness="0,0,0,1">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                            <TextBlock x:Name="DetailChevron" Text="◀ " Foreground="#88FF88" FontSize="11" FontWeight="Bold"/>
+                            <TextBlock Text="导航" Foreground="#88FF88" FontSize="11" FontWeight="Bold"/>
+                        </StackPanel>
                     </Border>
 
-                    <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch"
-                                  Background="#2A2A2A" Cursor="SizeWE" ResizeDirection="Columns"/>
+                    <Border Grid.Row="1" Background="#1A1A1A" Padding="6,4"
+                            BorderBrush="#333" BorderThickness="0,0,0,1">
+                        <TextBlock Foreground="#888" FontSize="10">变更导航（当前Sheet）</TextBlock>
+                    </Border>
 
-                    <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto"
+                    <ListBox x:Name="ChangeNavList" Grid.Row="2"
+                             Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             SelectionChanged="ChangeNavList_SelectionChanged">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding"     Value="0"/>
+                                <Setter Property="Background"  Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#1A3A6E"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#252535"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+                </Grid>
+
+                <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch"
+                              Background="#2A2A2A" Cursor="SizeWE" ResizeDirection="Columns"/>
+
+                <!-- 右侧：标题栏 + 字段对比（始终可见） -->
+                <Grid Grid.Column="2" Background="#161616">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="28"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="#1A1A2A"
+                            BorderBrush="#333" BorderThickness="0,0,0,1">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                            <TextBlock x:Name="DetailRowKey" Foreground="#A8C8FF" FontSize="11"/>
+                            <TextBlock x:Name="DetailHint" Foreground="#555" FontSize="10"
+                                       Margin="12,0,0,0" Text="点击任意行查看完整值对比"/>
+                        </StackPanel>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Auto">
                         <StackPanel x:Name="DetailPanel" Margin="4"/>
                     </ScrollViewer>

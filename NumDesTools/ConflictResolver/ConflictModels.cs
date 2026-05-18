@@ -186,7 +186,8 @@ public class RowConflict : INotifyPropertyChanged
         get => _isSelected;
         set
         {
-            if (_isSelected == value) return;
+            if (_isSelected == value)
+                return;
             _isSelected = value;
             OnPropertyChanged();
         }
