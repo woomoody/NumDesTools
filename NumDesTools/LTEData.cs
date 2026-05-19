@@ -74,18 +74,21 @@ public class LteData
         };
     public static (string Name, string Email) GitConfig = SvnGitTools.GetGitUserInfo();
 
-    #region LTE数据配置导出
-    //导出LTE数据配置
-    public static void ExportLteDataConfigFirst(CommandBarButton ctrl, ref bool cancelDefault)
+    private static void RunLteCommand(
+        CommandBarButton ctrl,
+        ref bool cancelDefault,
+        string commandName,
+        System.Action body
+    )
     {
+        cancelDefault = true;
         try
         {
-            cancelDefault = true; // 阻止默认事件
-            ExportLteDataConfig(true, GitConfig.Name);
+            body();
         }
         catch (Exception ex)
         {
-            PluginLog.Write($"[LTEData] ExportLteDataConfigFirst CRASH: {ex}");
+            PluginLog.Write($"[LTEData] {commandName} CRASH: {ex}");
             MessageBox.Show(
                 $"操作失败，已记录日志。\n{ex.Message}",
                 "错误",
@@ -95,146 +98,132 @@ public class LteData
         }
     }
 
-    public static void ExportLteDataConfigUpdate(CommandBarButton ctrl, ref bool cancelDefault)
-    {
-        try
-        {
-            cancelDefault = true; // 阻止默认事件
-            ExportLteDataConfig(false, GitConfig.Name);
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"[LTEData] ExportLteDataConfigUpdate CRASH: {ex}");
-            MessageBox.Show(
-                $"操作失败，已记录日志。\n{ex.Message}",
-                "错误",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
-        }
-    }
+    #region LTE数据配置导出
+    //导出LTE数据配置
+    public static void ExportLteDataConfigFirst(CommandBarButton ctrl, ref bool cancelDefault) =>
+        RunLteCommand(
+            ctrl,
+            ref cancelDefault,
+            nameof(ExportLteDataConfigFirst),
+            () => ExportLteDataConfig(true, GitConfig.Name)
+        );
+
+    public static void ExportLteDataConfigUpdate(CommandBarButton ctrl, ref bool cancelDefault) =>
+        RunLteCommand(
+            ctrl,
+            ref cancelDefault,
+            nameof(ExportLteDataConfigUpdate),
+            () => ExportLteDataConfig(false, GitConfig.Name)
+        );
 
     public static void ExportLteDataConfig(bool isFirst, string userName)
     {
-        try
+        //Epplus获取[LTE配置【导出】]表的ListObject
+        var sheet = Wk.ActiveSheet;
+        var sheetName = sheet.Name;
+        var outputData = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "LTE配置【导出】"
+        );
+
+        // 自动匹配不同用户名的配置
+        if (userName == null)
         {
-            //Epplus获取[LTE配置【导出】]表的ListObject
-            var sheet = Wk.ActiveSheet;
-            var sheetName = sheet.Name;
-            var outputData = PubMetToExcel.GetExcelListObjects(
-                WkPath,
-                "#【A-LTE】数值大纲.xlsx",
-                "LTE配置【导出】"
+            userName = String.Empty;
+        }
+        var listName = $"{sheetName}_通配符{userName}";
+        if (!outputData.ContainsKey(listName))
+        {
+            var choose1 = MessageBox.Show(
+                $"配置表没有包含【{userName}】的配置，是否使用默认用户配置Yes",
+                "确认",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
             );
-
-            // 自动匹配不同用户名的配置
-            if (userName == null)
+            if (choose1 == DialogResult.Yes)
             {
-                userName = String.Empty;
-            }
-            var listName = $"{sheetName}_通配符{userName}";
-            if (!outputData.ContainsKey(listName))
-            {
-                var choose1 = MessageBox.Show(
-                    $"配置表没有包含【{userName}】的配置，是否使用默认用户配置Yes",
-                    "确认",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question
-                );
-                if (choose1 == DialogResult.Yes)
-                {
-                    listName = $"{sheetName}_通配符";
-                }
-                else
-                {
-                    var selfInputName = Interaction.InputBox("输入使用的配置用户名", "自定义用户名");
-
-                    listName = $"{sheetName}_通配符{selfInputName}";
-
-                    if (!outputData.ContainsKey(listName))
-                    {
-                        var choose2 = MessageBox.Show(
-                            $"输入的用户名【{selfInputName}】配置不存在，使用默认配置Yes,终止导出操作No",
-                            "确认",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Question
-                        );
-                        if (choose2 == DialogResult.Yes)
-                        {
-                            listName = $"{sheetName}_通配符";
-                        }
-                        else
-                        {
-                            return;
-                        }
-                    }
-                }
-            }
-
-            var outputWildcardArray = outputData[listName];
-            var outputWildcardDic = PubMetToExcel.TwoDArrayToDicFirstKeyStr(outputWildcardArray);
-            var outputWildDic = outputWildcardDic
-                .Concat(_outputWildcardPubDic)
-                .GroupBy(k => k.Key)
-                .ToDictionary(g => g.Key, g => g.Last().Value);
-
-            //Epplus获取[#LTE数据模版]表的ListObject
-            if (GetModelValue(out var modelValueAll, "#LTE数据模版"))
-            {
-                return;
-            }
-
-            if (_sheetTypeMap.ContainsKey(sheetName))
-            {
-                var kv = _sheetTypeMap[sheetName];
-                string id = kv.Item1;
-                string idType = kv.Item2;
-                //获取【当前表】ListObject
-                var sheetListObject = sheet.ListObjects[sheetName];
-                if (sheetListObject == null)
-                {
-                    MessageBox.Show($"{sheetName}不存在{sheetName}的名称，请检查");
-                    return;
-                }
-
-                Range sheetListObjectRange = sheetListObject.Range;
-
-                // 获取基础数据
-                object[,] sheetBaseArray = sheetListObjectRange.Value2;
-
-                // 获取更新标识数据
-                int isFirstTagStartRow = sheetListObjectRange.Row;
-                int isFirstTagStartCol = sheetListObjectRange.Column;
-                int isFirstTagEndRow = sheetListObjectRange.Rows.Count - 1 + isFirstTagStartRow;
-
-                Range firstTagRange = sheet.Range[
-                    sheet.Cells[isFirstTagStartRow, isFirstTagStartCol - 1],
-                    sheet.Cells[isFirstTagEndRow, isFirstTagStartCol - 1]
-                ];
-
-                object[,] firstTagArray = firstTagRange.Value2;
-
-                // 合并数据
-                var mergeBaseArray = PubMetToExcel.Merge2DArrays1(sheetBaseArray, firstTagArray);
-
-                var sheetBaseDic = PubMetToExcel.TwoDArrayToDictionaryFirstRowKey(mergeBaseArray);
-                //执行导出逻辑
-                BaseSheet(sheetBaseDic, outputWildDic, modelValueAll, id, idType, isFirst);
+                listName = $"{sheetName}_通配符";
             }
             else
             {
-                MessageBox.Show($"{sheetName}有误，请对比#【A-LTE】配置模版");
+                var selfInputName = Interaction.InputBox("输入使用的配置用户名", "自定义用户名");
+
+                listName = $"{sheetName}_通配符{selfInputName}";
+
+                if (!outputData.ContainsKey(listName))
+                {
+                    var choose2 = MessageBox.Show(
+                        $"输入的用户名【{selfInputName}】配置不存在，使用默认配置Yes,终止导出操作No",
+                        "确认",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question
+                    );
+                    if (choose2 == DialogResult.Yes)
+                    {
+                        listName = $"{sheetName}_通配符";
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
             }
         }
-        catch (Exception ex)
+
+        var outputWildcardArray = outputData[listName];
+        var outputWildcardDic = PubMetToExcel.TwoDArrayToDicFirstKeyStr(outputWildcardArray);
+        var outputWildDic = outputWildcardDic
+            .Concat(_outputWildcardPubDic)
+            .GroupBy(k => k.Key)
+            .ToDictionary(g => g.Key, g => g.Last().Value);
+
+        //Epplus获取[#LTE数据模版]表的ListObject
+        if (GetModelValue(out var modelValueAll, "#LTE数据模版"))
         {
-            PluginLog.Write($"[LTEData] ExportLteDataConfig CRASH: {ex}");
-            MessageBox.Show(
-                $"操作失败，已记录日志。\n{ex.Message}",
-                "错误",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
+            return;
+        }
+
+        if (_sheetTypeMap.ContainsKey(sheetName))
+        {
+            var kv = _sheetTypeMap[sheetName];
+            string id = kv.Item1;
+            string idType = kv.Item2;
+            //获取【当前表】ListObject
+            var sheetListObject = sheet.ListObjects[sheetName];
+            if (sheetListObject == null)
+            {
+                MessageBox.Show($"{sheetName}不存在{sheetName}的名称，请检查");
+                return;
+            }
+
+            Range sheetListObjectRange = sheetListObject.Range;
+
+            // 获取基础数据
+            object[,] sheetBaseArray = sheetListObjectRange.Value2;
+
+            // 获取更新标识数据
+            int isFirstTagStartRow = sheetListObjectRange.Row;
+            int isFirstTagStartCol = sheetListObjectRange.Column;
+            int isFirstTagEndRow = sheetListObjectRange.Rows.Count - 1 + isFirstTagStartRow;
+
+            Range firstTagRange = sheet.Range[
+                sheet.Cells[isFirstTagStartRow, isFirstTagStartCol - 1],
+                sheet.Cells[isFirstTagEndRow, isFirstTagStartCol - 1]
+            ];
+
+            object[,] firstTagArray = firstTagRange.Value2;
+
+            // 合并数据
+            var mergeBaseArray = PubMetToExcel.Merge2DArrays1(sheetBaseArray, firstTagArray);
+
+            var sheetBaseDic = PubMetToExcel.TwoDArrayToDictionaryFirstRowKey(mergeBaseArray);
+            //执行导出逻辑
+            BaseSheet(sheetBaseDic, outputWildDic, modelValueAll, id, idType, isFirst);
+        }
+        else
+        {
+            MessageBox.Show($"{sheetName}有误，请对比#【A-LTE】配置模版");
         }
     }
 
@@ -1031,365 +1020,354 @@ public class LteData
 
     #region LTE基础数据计算
     //去重复制
-    public static void FilterRepeatValueCopy(CommandBarButton ctrl, ref bool cancelDefault)
-    {
-        try
-        {
-            cancelDefault = true; // 阻止默认事件
-            //去重
-            var mergedArray = FilterRepeatValue("", "", true);
-            //复制
-            PubMetToExcel.CopyArrayToClipboard(mergedArray);
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"[LTEData] FilterRepeatValueCopy CRASH: {ex}");
-            MessageBox.Show(
-                $"操作失败，已记录日志。\n{ex.Message}",
-                "错误",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
-        }
-    }
+    public static void FilterRepeatValueCopy(CommandBarButton ctrl, ref bool cancelDefault) =>
+        RunLteCommand(
+            ctrl,
+            ref cancelDefault,
+            nameof(FilterRepeatValueCopy),
+            () =>
+            {
+                var mergedArray = FilterRepeatValue("", "", true);
+                PubMetToExcel.CopyArrayToClipboard(mergedArray);
+            }
+        );
 
     //首次写入数据（指定范围内数据去重）
-    public static void FirstCopyValue(CommandBarButton ctrl, ref bool cancelDefault)
-    {
-        try
-        {
-            cancelDefault = true; // 阻止默认事件
-            object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
-            object[,] copyTilteArray = ColTitleValue(ActivityDataMinIndex, ActivityDataMaxIndex);
-
-            var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
-            if (baseList == null)
+    public static void FirstCopyValue(CommandBarButton ctrl, ref bool cancelDefault) =>
+        RunLteCommand(
+            ctrl,
+            ref cancelDefault,
+            nameof(FirstCopyValue),
+            () =>
             {
-                MessageBox.Show("LTE【基础】中的名称表-基础不存在");
-                return;
-            }
-            var findList = PubMetToExcel.GetExcelListObjects("LTE【寻找】", "LTE【寻找】");
-            if (findList == null)
-            {
-                MessageBox.Show("LTE【寻找】中的名称表-寻找不存在");
-                return;
-            }
-            //基础数据修改依赖数据
-            var listObjectsDic = PubMetToExcel.GetExcelListObjects(
-                WkPath,
-                "#【A-LTE】数值大纲.xlsx",
-                "#各类枚举"
-            );
-            var dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
-            if (dataTypeArray == null)
-                return;
+                object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
+                object[,] copyTilteArray = ColTitleValue(
+                    ActivityDataMinIndex,
+                    ActivityDataMaxIndex
+                );
 
-            //基础数据整理
-            var copyData = BaseData(copyArray, dataTypeArray, copyTilteArray);
-            copyArray = copyData.fixArray;
-            copyTilteArray = copyData.fixTitleArray;
-            var colCount = copyTilteArray.Length;
-            var errorTypeList = copyData.errorTypeList;
-
-            if (errorTypeList.Count != 0)
-            {
-                var emptyKeyErrors = errorTypeList.Where(e => e.StartsWith('[')).ToList();
-                var unknownTypeErrors = errorTypeList.Where(e => !e.StartsWith('[')).ToList();
-                var sb = new StringBuilder("基础数据存在以下问题，请修复后重试：\n");
-                if (emptyKeyErrors.Count > 0)
-                    sb.AppendLine(
-                        $"\n【类型字段为空】共 {emptyKeyErrors.Count} 行：\n"
-                            + string.Join("\n", emptyKeyErrors)
-                    );
-                if (unknownTypeErrors.Count > 0)
+                var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+                if (baseList == null)
                 {
-                    var unknownOnly = new HashSet<string>(unknownTypeErrors);
-                    sb.AppendLine($"\n【类型不在枚举中】{string.Join(", ", unknownOnly)}");
+                    MessageBox.Show("LTE【基础】中的名称表-基础不存在");
+                    return;
                 }
-                MessageBox.Show(sb.ToString());
-                return;
+                var findList = PubMetToExcel.GetExcelListObjects("LTE【寻找】", "LTE【寻找】");
+                if (findList == null)
+                {
+                    MessageBox.Show("LTE【寻找】中的名称表-寻找不存在");
+                    return;
+                }
+                //基础数据修改依赖数据
+                var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+                    WkPath,
+                    "#【A-LTE】数值大纲.xlsx",
+                    "#各类枚举"
+                );
+                var dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
+                if (dataTypeArray == null)
+                    return;
+
+                //基础数据整理
+                var copyData = BaseData(copyArray, dataTypeArray, copyTilteArray);
+                copyArray = copyData.fixArray;
+                copyTilteArray = copyData.fixTitleArray;
+                var colCount = copyTilteArray.Length;
+                var errorTypeList = copyData.errorTypeList;
+
+                if (errorTypeList.Count != 0)
+                {
+                    var emptyKeyErrors = errorTypeList.Where(e => e.StartsWith('[')).ToList();
+                    var unknownTypeErrors = errorTypeList.Where(e => !e.StartsWith('[')).ToList();
+                    var sb = new StringBuilder("基础数据存在以下问题，请修复后重试：\n");
+                    if (emptyKeyErrors.Count > 0)
+                        sb.AppendLine(
+                            $"\n【类型字段为空】共 {emptyKeyErrors.Count} 行：\n"
+                                + string.Join("\n", emptyKeyErrors)
+                        );
+                    if (unknownTypeErrors.Count > 0)
+                    {
+                        var unknownOnly = new HashSet<string>(unknownTypeErrors);
+                        sb.AppendLine($"\n【类型不在枚举中】{string.Join(", ", unknownOnly)}");
+                    }
+                    MessageBox.Show(sb.ToString());
+                    return;
+                }
+                ////基础List数据清理
+                ////baseList.DataBodyRange.ClearContents();
+                ////基础List行数刷新
+                ////int newRowCount = copyArray.GetLength(0);
+                ////baseList.Resize(baseList.Range.Resize[newRowCount + 1, baseList.Range.Columns.Count]);
+                ////baseList.DataBodyRange.Value2 = copyArray;
+
+                ////基础标记数据删除
+                ////var sheet = Wk.Worksheets["LTE【基础】"];
+                ////var oldTagRange = sheet.Range["A2:A10000"];
+                ////oldTagRange.Value2 = null;
+                ////基础标记数据写入
+                ////var tagRange = sheet.Range[sheet.Cells[2, 1], sheet.Cells[copyArray.GetLength(0) + 1, 1]];
+                ////tagRange.Value2 = "+";
+
+                //非Com写入数据,索引从0开始,效率确实更高,读取还是ListObject更方便
+                var sheetName = "LTE【基础】";
+                var rowMax = copyArray.GetLength(0);
+
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    1,
+                    10000,
+                    BaseDataStartCol,
+                    colCount,
+                    null
+                );
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    1,
+                    rowMax,
+                    BaseDataStartCol,
+                    colCount,
+                    copyArray
+                );
+
+                PubMetToExcel.WriteExcelDataC(sheetName, 0, 0, BaseDataStartCol, colCount, null);
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    0,
+                    0,
+                    BaseDataStartCol,
+                    colCount,
+                    copyTilteArray
+                );
+
+                baseList.Resize(baseList.Range.Resize[rowMax + 1, baseList.Range.Columns.Count]);
+
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    1,
+                    10000,
+                    BaseDataTagCol,
+                    BaseDataTagCol,
+                    null
+                );
+                object[,] writeArray = new object[rowMax, 1];
+                for (int i = 0; i < rowMax; i++)
+                    writeArray[i, 0] = "+";
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    1,
+                    rowMax,
+                    BaseDataTagCol,
+                    BaseDataTagCol,
+                    writeArray
+                );
+
+                var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+                if (fieldGroupList == null)
+                {
+                    MessageBox.Show("#道具信息中的名称【道具信息】不存在");
+                    return;
+                }
+                object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
+                if (fieldGroupArray == null)
+                    return;
+
+                // 寻找优先级数据
+                var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+                    WkPath,
+                    "#【A-LTE】数值大纲.xlsx",
+                    "#寻找优先级"
+                );
+                var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
+                if (findRankDataArray == null)
+                    return;
+
+                var baseActivityIdArray = PubMetToExcel.ReadExcelDataC("LTE【基础】", 0, 0, 1, 1);
+                double baseActivityId = baseActivityIdArray?[0, 0] is double d ? d : 0;
+
+                //寻找数据整理
+                var findArray = FindData(
+                    copyArray,
+                    dataTypeArray,
+                    fieldGroupArray,
+                    copyTilteArray,
+                    findRankDataArray,
+                    baseActivityId
+                );
+                //寻找List数据清理
+                findList.DataBodyRange.ClearContents();
+                //寻找List行数刷新
+                int newFindRowCount = findArray.GetLength(0);
+                findList.Resize(
+                    baseList.Range.Resize[newFindRowCount + 1, findList.Range.Columns.Count]
+                );
+                findList.DataBodyRange.Value2 = findArray;
+
+                //寻找标记数据删除
+                var sheetFind = Wk.Worksheets["LTE【寻找】"];
+                var oldTagFindRange = sheetFind.Range["A2:A10000"];
+                oldTagFindRange.Value2 = null;
+                //寻找标记数据写入
+                var tagFindRange = sheetFind.Range[
+                    sheetFind.Cells[2, 1],
+                    sheetFind.Cells[findArray.GetLength(0) + 1, 1]
+                ];
+                tagFindRange.Value2 = "+";
+
+                var sheetFindName = "LTE【寻找】";
+                var rowFindMax = findArray.GetLength(0);
+
+                PubMetToExcel.WriteExcelDataC(
+                    sheetFindName,
+                    1,
+                    10000,
+                    FindDataStartCol,
+                    FindDataEndCol,
+                    null
+                );
+                PubMetToExcel.WriteExcelDataC(
+                    sheetFindName,
+                    1,
+                    rowFindMax,
+                    FindDataStartCol,
+                    FindDataEndCol,
+                    findArray
+                );
+
+                findList.Resize(
+                    findList.Range.Resize[rowFindMax + 1, findList.Range.Columns.Count]
+                );
+
+                object[,] writeFindArray = new object[rowFindMax, 1];
+                for (int i = 0; i < rowFindMax; i++)
+                    writeFindArray[i, 0] = "+";
+                PubMetToExcel.WriteExcelDataC(
+                    sheetFindName,
+                    1,
+                    10000,
+                    FindDataTagCol,
+                    FindDataTagCol,
+                    null
+                );
+                PubMetToExcel.WriteExcelDataC(
+                    sheetFindName,
+                    1,
+                    rowFindMax,
+                    FindDataTagCol,
+                    FindDataTagCol,
+                    writeFindArray
+                );
             }
-            ////基础List数据清理
-            ////baseList.DataBodyRange.ClearContents();
-            ////基础List行数刷新
-            ////int newRowCount = copyArray.GetLength(0);
-            ////baseList.Resize(baseList.Range.Resize[newRowCount + 1, baseList.Range.Columns.Count]);
-            ////baseList.DataBodyRange.Value2 = copyArray;
-
-            ////基础标记数据删除
-            ////var sheet = Wk.Worksheets["LTE【基础】"];
-            ////var oldTagRange = sheet.Range["A2:A10000"];
-            ////oldTagRange.Value2 = null;
-            ////基础标记数据写入
-            ////var tagRange = sheet.Range[sheet.Cells[2, 1], sheet.Cells[copyArray.GetLength(0) + 1, 1]];
-            ////tagRange.Value2 = "+";
-
-            //非Com写入数据,索引从0开始,效率确实更高,读取还是ListObject更方便
-            var sheetName = "LTE【基础】";
-            var rowMax = copyArray.GetLength(0);
-
-            PubMetToExcel.WriteExcelDataC(sheetName, 1, 10000, BaseDataStartCol, colCount, null);
-            PubMetToExcel.WriteExcelDataC(
-                sheetName,
-                1,
-                rowMax,
-                BaseDataStartCol,
-                colCount,
-                copyArray
-            );
-
-            PubMetToExcel.WriteExcelDataC(sheetName, 0, 0, BaseDataStartCol, colCount, null);
-            PubMetToExcel.WriteExcelDataC(
-                sheetName,
-                0,
-                0,
-                BaseDataStartCol,
-                colCount,
-                copyTilteArray
-            );
-
-            baseList.Resize(baseList.Range.Resize[rowMax + 1, baseList.Range.Columns.Count]);
-
-            PubMetToExcel.WriteExcelDataC(
-                sheetName,
-                1,
-                10000,
-                BaseDataTagCol,
-                BaseDataTagCol,
-                null
-            );
-            object[,] writeArray = new object[rowMax, 1];
-            for (int i = 0; i < rowMax; i++)
-                writeArray[i, 0] = "+";
-            PubMetToExcel.WriteExcelDataC(
-                sheetName,
-                1,
-                rowMax,
-                BaseDataTagCol,
-                BaseDataTagCol,
-                writeArray
-            );
-
-            var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
-            if (fieldGroupList == null)
-            {
-                MessageBox.Show("#道具信息中的名称【道具信息】不存在");
-                return;
-            }
-            object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
-            if (fieldGroupArray == null)
-                return;
-
-            // 寻找优先级数据
-            var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
-                WkPath,
-                "#【A-LTE】数值大纲.xlsx",
-                "#寻找优先级"
-            );
-            var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
-            if (findRankDataArray == null)
-                return;
-
-            var baseActivityIdArray = PubMetToExcel.ReadExcelDataC("LTE【基础】", 0, 0, 1, 1);
-            double baseActivityId = baseActivityIdArray?[0, 0] is double d ? d : 0;
-
-            //寻找数据整理
-            var findArray = FindData(
-                copyArray,
-                dataTypeArray,
-                fieldGroupArray,
-                copyTilteArray,
-                findRankDataArray,
-                baseActivityId
-            );
-            //寻找List数据清理
-            findList.DataBodyRange.ClearContents();
-            //寻找List行数刷新
-            int newFindRowCount = findArray.GetLength(0);
-            findList.Resize(
-                baseList.Range.Resize[newFindRowCount + 1, findList.Range.Columns.Count]
-            );
-            findList.DataBodyRange.Value2 = findArray;
-
-            //寻找标记数据删除
-            var sheetFind = Wk.Worksheets["LTE【寻找】"];
-            var oldTagFindRange = sheetFind.Range["A2:A10000"];
-            oldTagFindRange.Value2 = null;
-            //寻找标记数据写入
-            var tagFindRange = sheetFind.Range[
-                sheetFind.Cells[2, 1],
-                sheetFind.Cells[findArray.GetLength(0) + 1, 1]
-            ];
-            tagFindRange.Value2 = "+";
-
-            var sheetFindName = "LTE【寻找】";
-            var rowFindMax = findArray.GetLength(0);
-
-            PubMetToExcel.WriteExcelDataC(
-                sheetFindName,
-                1,
-                10000,
-                FindDataStartCol,
-                FindDataEndCol,
-                null
-            );
-            PubMetToExcel.WriteExcelDataC(
-                sheetFindName,
-                1,
-                rowFindMax,
-                FindDataStartCol,
-                FindDataEndCol,
-                findArray
-            );
-
-            findList.Resize(findList.Range.Resize[rowFindMax + 1, findList.Range.Columns.Count]);
-
-            object[,] writeFindArray = new object[rowFindMax, 1];
-            for (int i = 0; i < rowFindMax; i++)
-                writeFindArray[i, 0] = "+";
-            PubMetToExcel.WriteExcelDataC(
-                sheetFindName,
-                1,
-                10000,
-                FindDataTagCol,
-                FindDataTagCol,
-                null
-            );
-            PubMetToExcel.WriteExcelDataC(
-                sheetFindName,
-                1,
-                rowFindMax,
-                FindDataTagCol,
-                FindDataTagCol,
-                writeFindArray
-            );
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"[LTEData] FirstCopyValue CRASH: {ex}");
-            MessageBox.Show(
-                $"操作失败，已记录日志。\n{ex.Message}",
-                "错误",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
-        }
-    }
+        );
 
     //更新写入数据（指定范围内数据去重），比对数据，更新数据状态
-    public static void UpdateCopyValue(CommandBarButton ctrl, ref bool cancelDefault)
-    {
-        try
-        {
-            cancelDefault = true; // 阻止默认事件
-            object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
-            object[,] copyTitleArray = ColTitleValue(ActivityDataMinIndex, ActivityDataMaxIndex);
-
-            var list = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
-            if (list == null)
+    public static void UpdateCopyValue(CommandBarButton ctrl, ref bool cancelDefault) =>
+        RunLteCommand(
+            ctrl,
+            ref cancelDefault,
+            nameof(UpdateCopyValue),
+            () =>
             {
-                MessageBox.Show("LTE【基础】中的名称表-基础不存在");
-                return;
-            }
-            var findList = PubMetToExcel.GetExcelListObjects("LTE【寻找】", "LTE【寻找】");
-            if (findList == null)
-            {
-                MessageBox.Show("LTE【寻找】中的名称表-寻找不存在");
-                return;
-            }
+                object[,] copyArray = FilterRepeatValue(ActivityDataMinIndex, ActivityDataMaxIndex);
+                object[,] copyTitleArray = ColTitleValue(
+                    ActivityDataMinIndex,
+                    ActivityDataMaxIndex
+                );
 
-            //基础数据修改依赖数据
-            var listObjectsDic = PubMetToExcel.GetExcelListObjects(
-                WkPath,
-                "#【A-LTE】数值大纲.xlsx",
-                "#各类枚举"
-            );
-            var dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
-            if (dataTypeArray == null)
-                return;
-
-            //基础数据整理
-            var copyData = BaseData(copyArray, dataTypeArray, copyTitleArray);
-            copyArray = copyData.fixArray;
-            copyTitleArray = copyData.fixTitleArray;
-            var colCount = copyTitleArray.Length;
-            var errorTypeList = copyData.errorTypeList;
-
-            if (errorTypeList.Count != 0)
-            {
-                var emptyKeyErrors = errorTypeList.Where(e => e.StartsWith('[')).ToList();
-                var unknownTypeErrors = errorTypeList.Where(e => !e.StartsWith('[')).ToList();
-                var sb = new StringBuilder("基础数据存在以下问题，请修复后重试：\n");
-                if (emptyKeyErrors.Count > 0)
-                    sb.AppendLine(
-                        $"\n【类型字段为空】共 {emptyKeyErrors.Count} 行：\n"
-                            + string.Join("\n", emptyKeyErrors)
-                    );
-                if (unknownTypeErrors.Count > 0)
+                var list = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+                if (list == null)
                 {
-                    var unknownOnly = new HashSet<string>(unknownTypeErrors);
-                    sb.AppendLine($"\n【类型不在枚举中】{string.Join(", ", unknownOnly)}");
+                    MessageBox.Show("LTE【基础】中的名称表-基础不存在");
+                    return;
                 }
-                MessageBox.Show(sb.ToString());
-                return;
+                var findList = PubMetToExcel.GetExcelListObjects("LTE【寻找】", "LTE【寻找】");
+                if (findList == null)
+                {
+                    MessageBox.Show("LTE【寻找】中的名称表-寻找不存在");
+                    return;
+                }
+
+                //基础数据修改依赖数据
+                var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+                    WkPath,
+                    "#【A-LTE】数值大纲.xlsx",
+                    "#各类枚举"
+                );
+                var dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
+                if (dataTypeArray == null)
+                    return;
+
+                //基础数据整理
+                var copyData = BaseData(copyArray, dataTypeArray, copyTitleArray);
+                copyArray = copyData.fixArray;
+                copyTitleArray = copyData.fixTitleArray;
+                var colCount = copyTitleArray.Length;
+                var errorTypeList = copyData.errorTypeList;
+
+                if (errorTypeList.Count != 0)
+                {
+                    var emptyKeyErrors = errorTypeList.Where(e => e.StartsWith('[')).ToList();
+                    var unknownTypeErrors = errorTypeList.Where(e => !e.StartsWith('[')).ToList();
+                    var sb = new StringBuilder("基础数据存在以下问题，请修复后重试：\n");
+                    if (emptyKeyErrors.Count > 0)
+                        sb.AppendLine(
+                            $"\n【类型字段为空】共 {emptyKeyErrors.Count} 行：\n"
+                                + string.Join("\n", emptyKeyErrors)
+                        );
+                    if (unknownTypeErrors.Count > 0)
+                    {
+                        var unknownOnly = new HashSet<string>(unknownTypeErrors);
+                        sb.AppendLine($"\n【类型不在枚举中】{string.Join(", ", unknownOnly)}");
+                    }
+                    MessageBox.Show(sb.ToString());
+                    return;
+                }
+
+                WriteDymaicData(copyArray, list, "LTE【基础】", 1, colCount);
+
+                PubMetToExcel.WriteExcelDataC("LTE【基础】", 0, 0, BaseDataStartCol, colCount, null);
+                PubMetToExcel.WriteExcelDataC(
+                    "LTE【基础】",
+                    0,
+                    0,
+                    BaseDataStartCol,
+                    colCount,
+                    copyTitleArray
+                );
+
+                var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+                if (fieldGroupList == null)
+                {
+                    MessageBox.Show("#道具信息中的名称【道具信息】不存在");
+                    return;
+                }
+                object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
+                if (fieldGroupArray == null)
+                    return;
+
+                // 寻找优先级数据
+                var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+                    WkPath,
+                    "#【A-LTE】数值大纲.xlsx",
+                    "#寻找优先级"
+                );
+                var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
+                if (findRankDataArray == null)
+                    return;
+
+                //寻找数据整理
+                var baseActivityIdArray2 = PubMetToExcel.ReadExcelDataC("LTE【基础】", 0, 0, 1, 1);
+                double baseActivityId2 = baseActivityIdArray2?[0, 0] is double d2 ? d2 : 0;
+                var findArray = FindData(
+                    copyArray,
+                    dataTypeArray,
+                    fieldGroupArray,
+                    copyTitleArray,
+                    findRankDataArray,
+                    baseActivityId2
+                );
+                WriteDymaicData(findArray, findList, "LTE【寻找】", 1, 9);
             }
-
-            WriteDymaicData(copyArray, list, "LTE【基础】", 1, colCount);
-
-            PubMetToExcel.WriteExcelDataC("LTE【基础】", 0, 0, BaseDataStartCol, colCount, null);
-            PubMetToExcel.WriteExcelDataC(
-                "LTE【基础】",
-                0,
-                0,
-                BaseDataStartCol,
-                colCount,
-                copyTitleArray
-            );
-
-            var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
-            if (fieldGroupList == null)
-            {
-                MessageBox.Show("#道具信息中的名称【道具信息】不存在");
-                return;
-            }
-            object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
-            if (fieldGroupArray == null)
-                return;
-
-            // 寻找优先级数据
-            var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
-                WkPath,
-                "#【A-LTE】数值大纲.xlsx",
-                "#寻找优先级"
-            );
-            var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
-            if (findRankDataArray == null)
-                return;
-
-            //寻找数据整理
-            var baseActivityIdArray2 = PubMetToExcel.ReadExcelDataC("LTE【基础】", 0, 0, 1, 1);
-            double baseActivityId2 = baseActivityIdArray2?[0, 0] is double d2 ? d2 : 0;
-            var findArray = FindData(
-                copyArray,
-                dataTypeArray,
-                fieldGroupArray,
-                copyTitleArray,
-                findRankDataArray,
-                baseActivityId2
-            );
-            WriteDymaicData(findArray, findList, "LTE【寻找】", 1, 9);
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"[LTEData] UpdateCopyValue CRASH: {ex}");
-            MessageBox.Show(
-                $"操作失败，已记录日志。\n{ex.Message}",
-                "错误",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
-        }
-    }
+        );
 
     // "图1-1" → "图1"；null 或无 "-" 时安全返回空字符串
     private static string MapPrefix(string val) =>
@@ -2814,277 +2792,261 @@ public class LteData
     #region LTE任务数据计算
 
     //首次写入数据
-    public static void FirstCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault)
-    {
-        try
-        {
-            cancelDefault = true; // 阻止默认事件
-            var sheetName = "LTE【任务】";
-            var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
-            double activtiyId = (double)colIndexArray[0, 0];
-
-            object[,] copyTaskArray = FilterRepeatValue(
-                ActivityDataMinIndex,
-                ActivityDataMaxIndex,
-                false,
-                false
-            );
-
-            var taskList = PubMetToExcel.GetExcelListObjects("LTE【任务】", "LTE【任务】");
-            if (taskList == null)
+    public static void FirstCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault) =>
+        RunLteCommand(
+            ctrl,
+            ref cancelDefault,
+            nameof(FirstCopyTaskValue),
+            () =>
             {
-                MessageBox.Show("LTE【任务】中的名称表-任务不存在");
-                return;
+                var sheetName = "LTE【任务】";
+                var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
+                double activtiyId = (double)colIndexArray[0, 0];
+
+                object[,] copyTaskArray = FilterRepeatValue(
+                    ActivityDataMinIndex,
+                    ActivityDataMaxIndex,
+                    false,
+                    false
+                );
+
+                var taskList = PubMetToExcel.GetExcelListObjects("LTE【任务】", "LTE【任务】");
+                if (taskList == null)
+                {
+                    MessageBox.Show("LTE【任务】中的名称表-任务不存在");
+                    return;
+                }
+
+                var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+                if (baseList == null)
+                {
+                    MessageBox.Show("LTE【基础】中的名称表-基础不存在");
+                    return;
+                }
+                object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
+                if (baseArray == null)
+                    return;
+                if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
+                {
+                    MessageBox.Show("LTE【基础】标题行读取失败");
+                    return;
+                }
+
+                var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+                if (fieldGroupList == null)
+                {
+                    MessageBox.Show("#道具信息中的名称【道具信息】不存在");
+                    return;
+                }
+                object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
+                if (fieldGroupArray == null)
+                    return;
+
+                //基础数据修改依赖数据
+                var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+                    WkPath,
+                    "#【A-LTE】数值大纲.xlsx",
+                    "#各类枚举"
+                );
+                object[,] taskDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "任务类型");
+                if (taskDataTypeArray == null)
+                    return;
+                object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
+                if (dataTypeArray == null)
+                    return;
+
+                // 寻找优先级数据
+                var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+                    WkPath,
+                    "#【A-LTE】数值大纲.xlsx",
+                    "#寻找优先级"
+                );
+                var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
+                if (findRankDataArray == null)
+                    return;
+
+                //任务数据整理
+                var copyTaskData = TaskData(
+                    copyTaskArray,
+                    taskDataTypeArray,
+                    baseArray,
+                    activtiyId,
+                    fieldGroupArray,
+                    baseTitleArray,
+                    findRankDataArray,
+                    dataTypeArray
+                );
+                copyTaskArray = copyTaskData.taskArray;
+                var errorTypeList = copyTaskData.errorTypeList;
+                if (errorTypeList.Count != 0)
+                {
+                    //基础数据中存在错误类型
+                    var errorTypeListOnly = new HashSet<string>(errorTypeList);
+                    var errorStr = string.Join(",", errorTypeListOnly);
+                    MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
+                }
+
+                //非Com写入数据,索引从0开始,效率确实更高,读取还是ListObject更方便
+
+                var rowMax = copyTaskArray.GetLength(0);
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    1,
+                    10000,
+                    TaskDataStartCol,
+                    TaskDataEndCol,
+                    null
+                );
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    1,
+                    rowMax,
+                    TaskDataStartCol,
+                    TaskDataEndCol,
+                    copyTaskArray
+                );
+
+                // 标题更新
+                object[,] newTitleArray = PubMetToExcel.ConvertList1ToArrayRow(_taskTitleArray);
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    0,
+                    0,
+                    TaskDataStartCol,
+                    TaskDataEndCol,
+                    newTitleArray
+                );
+
+                taskList.Resize(taskList.Range.Resize[rowMax + 1, taskList.Range.Columns.Count]);
+
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    1,
+                    10000,
+                    TaskDataTagCol,
+                    TaskDataTagCol,
+                    null
+                );
+                object[,] writeArray = new object[rowMax, 1];
+                for (int i = 0; i < rowMax; i++)
+                    writeArray[i, 0] = "+";
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    1,
+                    rowMax,
+                    TaskDataTagCol,
+                    TaskDataTagCol,
+                    writeArray
+                );
             }
-
-            var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
-            if (baseList == null)
-            {
-                MessageBox.Show("LTE【基础】中的名称表-基础不存在");
-                return;
-            }
-            object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
-            if (baseArray == null)
-                return;
-            if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
-            {
-                MessageBox.Show("LTE【基础】标题行读取失败");
-                return;
-            }
-
-            var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
-            if (fieldGroupList == null)
-            {
-                MessageBox.Show("#道具信息中的名称【道具信息】不存在");
-                return;
-            }
-            object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
-            if (fieldGroupArray == null)
-                return;
-
-            //基础数据修改依赖数据
-            var listObjectsDic = PubMetToExcel.GetExcelListObjects(
-                WkPath,
-                "#【A-LTE】数值大纲.xlsx",
-                "#各类枚举"
-            );
-            object[,] taskDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "任务类型");
-            if (taskDataTypeArray == null)
-                return;
-            object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
-            if (dataTypeArray == null)
-                return;
-
-            // 寻找优先级数据
-            var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
-                WkPath,
-                "#【A-LTE】数值大纲.xlsx",
-                "#寻找优先级"
-            );
-            var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
-            if (findRankDataArray == null)
-                return;
-
-            //任务数据整理
-            var copyTaskData = TaskData(
-                copyTaskArray,
-                taskDataTypeArray,
-                baseArray,
-                activtiyId,
-                fieldGroupArray,
-                baseTitleArray,
-                findRankDataArray,
-                dataTypeArray
-            );
-            copyTaskArray = copyTaskData.taskArray;
-            var errorTypeList = copyTaskData.errorTypeList;
-            if (errorTypeList.Count != 0)
-            {
-                //基础数据中存在错误类型
-                var errorTypeListOnly = new HashSet<string>(errorTypeList);
-                var errorStr = string.Join(",", errorTypeListOnly);
-                MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
-            }
-
-            //非Com写入数据,索引从0开始,效率确实更高,读取还是ListObject更方便
-
-            var rowMax = copyTaskArray.GetLength(0);
-            PubMetToExcel.WriteExcelDataC(
-                sheetName,
-                1,
-                10000,
-                TaskDataStartCol,
-                TaskDataEndCol,
-                null
-            );
-            PubMetToExcel.WriteExcelDataC(
-                sheetName,
-                1,
-                rowMax,
-                TaskDataStartCol,
-                TaskDataEndCol,
-                copyTaskArray
-            );
-
-            // 标题更新
-            object[,] newTitleArray = PubMetToExcel.ConvertList1ToArrayRow(_taskTitleArray);
-            PubMetToExcel.WriteExcelDataC(
-                sheetName,
-                0,
-                0,
-                TaskDataStartCol,
-                TaskDataEndCol,
-                newTitleArray
-            );
-
-            taskList.Resize(taskList.Range.Resize[rowMax + 1, taskList.Range.Columns.Count]);
-
-            PubMetToExcel.WriteExcelDataC(
-                sheetName,
-                1,
-                10000,
-                TaskDataTagCol,
-                TaskDataTagCol,
-                null
-            );
-            object[,] writeArray = new object[rowMax, 1];
-            for (int i = 0; i < rowMax; i++)
-                writeArray[i, 0] = "+";
-            PubMetToExcel.WriteExcelDataC(
-                sheetName,
-                1,
-                rowMax,
-                TaskDataTagCol,
-                TaskDataTagCol,
-                writeArray
-            );
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"[LTEData] FirstCopyTaskValue CRASH: {ex}");
-            MessageBox.Show(
-                $"操作失败，已记录日志。\n{ex.Message}",
-                "错误",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
-        }
-    }
+        );
 
     //更新写入数据
-    public static void UpdateCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault)
-    {
-        try
-        {
-            cancelDefault = true; // 阻止默认事件
-            var sheetName = "LTE【任务】";
-            var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
-            double activtiyId = (double)colIndexArray[0, 0];
-
-            object[,] copyTaskArray = FilterRepeatValue(
-                ActivityDataMinIndex,
-                ActivityDataMaxIndex,
-                false,
-                false
-            );
-
-            var taskList = PubMetToExcel.GetExcelListObjects("LTE【任务】", "LTE【任务】");
-            if (taskList == null)
+    public static void UpdateCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault) =>
+        RunLteCommand(
+            ctrl,
+            ref cancelDefault,
+            nameof(UpdateCopyTaskValue),
+            () =>
             {
-                MessageBox.Show("LTE【任务】中的名称表-任务不存在");
-                return;
+                var sheetName = "LTE【任务】";
+                var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
+                double activtiyId = (double)colIndexArray[0, 0];
+
+                object[,] copyTaskArray = FilterRepeatValue(
+                    ActivityDataMinIndex,
+                    ActivityDataMaxIndex,
+                    false,
+                    false
+                );
+
+                var taskList = PubMetToExcel.GetExcelListObjects("LTE【任务】", "LTE【任务】");
+                if (taskList == null)
+                {
+                    MessageBox.Show("LTE【任务】中的名称表-任务不存在");
+                    return;
+                }
+
+                var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+                if (baseList == null)
+                {
+                    MessageBox.Show("LTE【基础】中的名称表-基础不存在");
+                    return;
+                }
+                object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
+                if (baseArray == null)
+                    return;
+                if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
+                {
+                    MessageBox.Show("LTE【基础】标题行读取失败");
+                    return;
+                }
+
+                var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+                if (fieldGroupList == null)
+                {
+                    MessageBox.Show("#道具信息中的名称【道具信息】不存在");
+                    return;
+                }
+                object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
+                if (fieldGroupArray == null)
+                    return;
+
+                //基础数据修改依赖数据
+                var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+                    WkPath,
+                    "#【A-LTE】数值大纲.xlsx",
+                    "#各类枚举"
+                );
+                object[,] taskDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "任务类型");
+                if (taskDataTypeArray == null)
+                    return;
+                object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
+                if (dataTypeArray == null)
+                    return;
+
+                // 寻找优先级数据
+                var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+                    WkPath,
+                    "#【A-LTE】数值大纲.xlsx",
+                    "#寻找优先级"
+                );
+                var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
+                if (findRankDataArray == null)
+                    return;
+
+                //任务数据整理
+                var copyTaskData = TaskData(
+                    copyTaskArray,
+                    taskDataTypeArray,
+                    baseArray,
+                    activtiyId,
+                    fieldGroupArray,
+                    baseTitleArray,
+                    findRankDataArray,
+                    dataTypeArray
+                );
+                copyTaskArray = copyTaskData.taskArray;
+                var errorTypeList = copyTaskData.errorTypeList;
+
+                if (errorTypeList.Count != 0)
+                {
+                    //基础数据中存在错误类型
+                    var errorTypeListOnly = new HashSet<string>(errorTypeList);
+                    var errorStr = string.Join(",", errorTypeListOnly);
+                    MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
+                }
+
+                WriteDymaicData(
+                    copyTaskArray,
+                    taskList,
+                    "LTE【任务】",
+                    TaskDataStartCol,
+                    TaskDataEndCol,
+                    TaskDataTagCol
+                );
             }
-
-            var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
-            if (baseList == null)
-            {
-                MessageBox.Show("LTE【基础】中的名称表-基础不存在");
-                return;
-            }
-            object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
-            if (baseArray == null)
-                return;
-            if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
-            {
-                MessageBox.Show("LTE【基础】标题行读取失败");
-                return;
-            }
-
-            var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
-            if (fieldGroupList == null)
-            {
-                MessageBox.Show("#道具信息中的名称【道具信息】不存在");
-                return;
-            }
-            object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
-            if (fieldGroupArray == null)
-                return;
-
-            //基础数据修改依赖数据
-            var listObjectsDic = PubMetToExcel.GetExcelListObjects(
-                WkPath,
-                "#【A-LTE】数值大纲.xlsx",
-                "#各类枚举"
-            );
-            object[,] taskDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "任务类型");
-            if (taskDataTypeArray == null)
-                return;
-            object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
-            if (dataTypeArray == null)
-                return;
-
-            // 寻找优先级数据
-            var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
-                WkPath,
-                "#【A-LTE】数值大纲.xlsx",
-                "#寻找优先级"
-            );
-            var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
-            if (findRankDataArray == null)
-                return;
-
-            //任务数据整理
-            var copyTaskData = TaskData(
-                copyTaskArray,
-                taskDataTypeArray,
-                baseArray,
-                activtiyId,
-                fieldGroupArray,
-                baseTitleArray,
-                findRankDataArray,
-                dataTypeArray
-            );
-            copyTaskArray = copyTaskData.taskArray;
-            var errorTypeList = copyTaskData.errorTypeList;
-
-            if (errorTypeList.Count != 0)
-            {
-                //基础数据中存在错误类型
-                var errorTypeListOnly = new HashSet<string>(errorTypeList);
-                var errorStr = string.Join(",", errorTypeListOnly);
-                MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
-            }
-
-            WriteDymaicData(
-                copyTaskArray,
-                taskList,
-                "LTE【任务】",
-                TaskDataStartCol,
-                TaskDataEndCol,
-                TaskDataTagCol
-            );
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"[LTEData] UpdateCopyTaskValue CRASH: {ex}");
-            MessageBox.Show(
-                $"操作失败，已记录日志。\n{ex.Message}",
-                "错误",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
-        }
-    }
+        );
 
     private static bool CheckLandmarkIdExists(
         Dictionary<string, List<string>> baseDic,
@@ -3445,404 +3407,382 @@ public class LteData
     #endregion
 
     #region LTE地组数据计算
-    public static void GroundDataSim(CommandBarButton ctrl, ref bool cancelDefault)
-    {
-        try
-        {
-            cancelDefault = true; // 阻止默认事件
-            var selectedRange = NumDesAddIn.App.Selection;
-            var targetWorkbookName = "地组工具.xlsx";
-            var selectedSheet = NumDesAddIn.App.ActiveSheet;
-            string targetSheetName = selectedSheet.Name;
-
-            Workbook targetWorkbook = null;
-
-            if (selectedRange == null)
-                throw new InvalidOperationException("没有选中的单元格");
-
-            // 3. 查找已打开的目标工作簿（按名称匹配）
-            foreach (Workbook workbook in NumDesAddIn.App.Workbooks)
+    public static void GroundDataSim(CommandBarButton ctrl, ref bool cancelDefault) =>
+        RunLteCommand(
+            ctrl,
+            ref cancelDefault,
+            nameof(GroundDataSim),
+            () =>
             {
-                if (workbook.Name.Equals(targetWorkbookName, StringComparison.OrdinalIgnoreCase))
+                var selectedRange = NumDesAddIn.App.Selection;
+                var targetWorkbookName = "地组工具.xlsx";
+                var selectedSheet = NumDesAddIn.App.ActiveSheet;
+                string targetSheetName = selectedSheet.Name;
+
+                Workbook targetWorkbook = null;
+
+                if (selectedRange == null)
+                    throw new InvalidOperationException("没有选中的单元格");
+
+                // 3. 查找已打开的目标工作簿（按名称匹配）
+                foreach (Workbook workbook in NumDesAddIn.App.Workbooks)
                 {
-                    targetWorkbook = workbook;
-                    break;
-                }
-            }
-
-            if (targetWorkbook == null)
-                throw new FileNotFoundException($"工作簿 '{targetWorkbookName}' 未打开");
-
-            // 4. 获取目标工作表
-            var targetSheet = targetWorkbook.Sheets[targetSheetName] as Worksheet;
-            if (targetSheet == null)
-                throw new ArgumentException($"目标工作表 '{targetSheetName}' 不存在");
-
-            // 5. 写入值和背景色到目标位置
-            var targetRange = targetSheet.Range[selectedRange.Address];
-
-            //// 同步值
-            //targetRange.Value = "1";
-
-            //// 同步背景色（使用RGB颜色）
-            //targetRange.Interior.Color = 0xFFFF00;
-
-            //// 颜色和数值怎么同步过去？要兼容target已经填的值和颜色
-
-            var targetSheetNameSplit = targetSheetName.Split("_");
-            var mapIndex = targetSheetNameSplit.Last();
-
-            // 组成导出的字符串并复制到剪切板
-            try
-            {
-                // 使用字典存储每个selectedValue对应的所有targetValue
-                var valueMapping = new Dictionary<string, HashSet<string>>();
-
-                // 遍历所有单元格
-                for (int i = 1; i <= selectedRange.Rows.Count; i++)
-                {
-                    for (int j = 1; j <= selectedRange.Columns.Count; j++)
+                    if (
+                        workbook.Name.Equals(targetWorkbookName, StringComparison.OrdinalIgnoreCase)
+                    )
                     {
-                        try
-                        {
-                            // 获取源单元格的值
-                            var cell = selectedRange.Cells[i, j];
-                            var selectedValue = cell.Value?.ToString()?.Trim() ?? "";
-
-                            // 获取目标区域对应单元格的值
-                            var targetCell = targetRange.Cells[i, j];
-                            var targetValue = targetCell.Value?.ToString()?.Trim() ?? "";
-
-                            // 添加到字典
-                            if (!string.IsNullOrEmpty(selectedValue))
-                            {
-                                if (!valueMapping.ContainsKey(selectedValue))
-                                {
-                                    valueMapping[selectedValue] = new HashSet<string>();
-                                }
-                                valueMapping[selectedValue].Add(targetValue);
-                            }
-                        }
-                        catch (Exception cellEx)
-                        {
-                            LogDisplay.RecordLine($"处理单元格[{i},{j}]时出错: {cellEx.Message}");
-                            PluginLog.Write($"[LTEData] 单元格异常 [{i},{j}]: {cellEx}");
-                        }
+                        targetWorkbook = workbook;
+                        break;
                     }
                 }
 
-                // 构建输出字符串
-                var valueString = new StringBuilder();
+                if (targetWorkbook == null)
+                    throw new FileNotFoundException($"工作簿 '{targetWorkbookName}' 未打开");
 
-                foreach (var kvp in valueMapping)
+                // 4. 获取目标工作表
+                var targetSheet = targetWorkbook.Sheets[targetSheetName] as Worksheet;
+                if (targetSheet == null)
+                    throw new ArgumentException($"目标工作表 '{targetSheetName}' 不存在");
+
+                // 5. 写入值和背景色到目标位置
+                var targetRange = targetSheet.Range[selectedRange.Address];
+
+                //// 同步值
+                //targetRange.Value = "1";
+
+                //// 同步背景色（使用RGB颜色）
+                //targetRange.Interior.Color = 0xFFFF00;
+
+                //// 颜色和数值怎么同步过去？要兼容target已经填的值和颜色
+
+                var targetSheetNameSplit = targetSheetName.Split("_");
+                var mapIndex = targetSheetNameSplit.Last();
+
+                // 组成导出的字符串并复制到剪切板
+                try
                 {
-                    string selectedValue = kvp.Key;
-                    var targetValues = kvp.Value;
+                    // 使用字典存储每个selectedValue对应的所有targetValue
+                    var valueMapping = new Dictionary<string, HashSet<string>>();
 
-                    if (targetValues.Count == 1)
+                    // 遍历所有单元格
+                    for (int i = 1; i <= selectedRange.Rows.Count; i++)
                     {
-                        // 只有一个对应值
-                        valueString.AppendLine(
-                            $"{selectedValue}\t{mapIndex}\t{targetValues.First()}"
-                        );
+                        for (int j = 1; j <= selectedRange.Columns.Count; j++)
+                        {
+                            try
+                            {
+                                // 获取源单元格的值
+                                var cell = selectedRange.Cells[i, j];
+                                var selectedValue = cell.Value?.ToString()?.Trim() ?? "";
+
+                                // 获取目标区域对应单元格的值
+                                var targetCell = targetRange.Cells[i, j];
+                                var targetValue = targetCell.Value?.ToString()?.Trim() ?? "";
+
+                                // 添加到字典
+                                if (!string.IsNullOrEmpty(selectedValue))
+                                {
+                                    if (!valueMapping.ContainsKey(selectedValue))
+                                    {
+                                        valueMapping[selectedValue] = new HashSet<string>();
+                                    }
+                                    valueMapping[selectedValue].Add(targetValue);
+                                }
+                            }
+                            catch (Exception cellEx)
+                            {
+                                LogDisplay.RecordLine($"处理单元格[{i},{j}]时出错: {cellEx.Message}");
+                                PluginLog.Write($"[LTEData] 单元格异常 [{i},{j}]: {cellEx}");
+                            }
+                        }
+                    }
+
+                    // 构建输出字符串
+                    var valueString = new StringBuilder();
+
+                    foreach (var kvp in valueMapping)
+                    {
+                        string selectedValue = kvp.Key;
+                        var targetValues = kvp.Value;
+
+                        if (targetValues.Count == 1)
+                        {
+                            // 只有一个对应值
+                            valueString.AppendLine(
+                                $"{selectedValue}\t{mapIndex}\t{targetValues.First()}"
+                            );
+                        }
+                        else
+                        {
+                            // 多个对应值，用逗号分隔
+                            string combinedTargetValues = string.Join("\t", targetValues);
+                            valueString.AppendLine(
+                                $"{selectedValue}\t{mapIndex}\t{combinedTargetValues}"
+                            );
+                        }
+                    }
+
+                    // 复制到剪切板
+                    if (valueString.Length > 0)
+                    {
+                        Clipboard.SetText(valueString.ToString());
                     }
                     else
                     {
-                        // 多个对应值，用逗号分隔
-                        string combinedTargetValues = string.Join("\t", targetValues);
-                        valueString.AppendLine(
-                            $"{selectedValue}\t{mapIndex}\t{combinedTargetValues}"
+                        MessageBox.Show(
+                            "没有有效数据可复制",
+                            "提示",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning
                         );
                     }
                 }
-
-                // 复制到剪切板
-                if (valueString.Length > 0)
+                catch (Exception ex)
                 {
-                    Clipboard.SetText(valueString.ToString());
-                }
-                else
-                {
+                    PluginLog.Write($"[LTEData] 复制剪切板失败: {ex}");
                     MessageBox.Show(
-                        "没有有效数据可复制",
-                        "提示",
+                        $"复制到剪切板失败: {ex.Message}",
+                        "错误",
                         MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning
+                        MessageBoxIcon.Error
                     );
                 }
             }
-            catch (Exception ex)
-            {
-                PluginLog.Write($"[LTEData] 复制剪切板失败: {ex}");
-                MessageBox.Show(
-                    $"复制到剪切板失败: {ex.Message}",
-                    "错误",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
-            }
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"[LTEData] GroundDataSim CRASH: {ex}");
-            MessageBox.Show(
-                $"操作失败，已记录日志。\n{ex.Message}",
-                "错误",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
-        }
-    }
+        );
 
     //首次写入数据
-    public static void FirstCopyFieldValue(CommandBarButton ctrl, ref bool cancelDefault)
-    {
-        try
-        {
-            cancelDefault = true; // 阻止默认事件
-            var sheetName = "LTE【地组】";
-            var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
-            double activtiyId = (double)colIndexArray[0, 0];
-
-            object[,] copyFieldArray = FilterRepeatValue(
-                ActivityDataMinIndex,
-                ActivityDataMaxIndex,
-                false,
-                false
-            );
-
-            var filedList = PubMetToExcel.GetExcelListObjects("LTE【地组】", "LTE【地组】");
-            if (filedList == null)
+    public static void FirstCopyFieldValue(CommandBarButton ctrl, ref bool cancelDefault) =>
+        RunLteCommand(
+            ctrl,
+            ref cancelDefault,
+            nameof(FirstCopyFieldValue),
+            () =>
             {
-                MessageBox.Show("LTE【地组】中的名称表-任务不存在");
-                return;
+                var sheetName = "LTE【地组】";
+                var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
+                double activtiyId = (double)colIndexArray[0, 0];
+
+                object[,] copyFieldArray = FilterRepeatValue(
+                    ActivityDataMinIndex,
+                    ActivityDataMaxIndex,
+                    false,
+                    false
+                );
+
+                var filedList = PubMetToExcel.GetExcelListObjects("LTE【地组】", "LTE【地组】");
+                if (filedList == null)
+                {
+                    MessageBox.Show("LTE【地组】中的名称表-任务不存在");
+                    return;
+                }
+
+                var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+                if (baseList == null)
+                {
+                    MessageBox.Show("LTE【基础】中的名称表-基础不存在");
+                    return;
+                }
+                object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
+                if (baseArray == null)
+                    return;
+                if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
+                {
+                    MessageBox.Show("LTE【基础】标题行读取失败");
+                    return;
+                }
+
+                var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+                if (fieldGroupList == null)
+                {
+                    MessageBox.Show("#道具信息中的名称【道具信息】不存在");
+                    return;
+                }
+                object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
+                if (fieldGroupArray == null)
+                    return;
+
+                //基础数据修改依赖数据
+                var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+                    WkPath,
+                    "#【A-LTE】数值大纲.xlsx",
+                    "#各类枚举"
+                );
+
+                object[,] fieldDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "地组类型");
+                if (fieldDataTypeArray == null)
+                    return;
+                object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
+                if (dataTypeArray == null)
+                    return;
+
+                // 寻找优先级数据
+                var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+                    WkPath,
+                    "#【A-LTE】数值大纲.xlsx",
+                    "#寻找优先级"
+                );
+                var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
+                if (findRankDataArray == null)
+                    return;
+
+                //地组数据整理
+                var copyFiledData = FiledData(
+                    copyFieldArray,
+                    fieldDataTypeArray,
+                    baseArray,
+                    activtiyId,
+                    fieldGroupArray,
+                    baseTitleArray,
+                    findRankDataArray,
+                    dataTypeArray
+                );
+                copyFieldArray = copyFiledData.fieldArray;
+                var errorTypeList = copyFiledData.errorTypeList;
+                if (errorTypeList.Count != 0)
+                {
+                    //基础数据中存在错误类型
+                    var errorTypeListOnly = new HashSet<string>(errorTypeList);
+                    var errorStr = string.Join(",", errorTypeListOnly);
+                    MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
+                }
+
+                //非Com写入数据,索引从0开始,效率确实更高,读取还是ListObject更方便
+
+                var rowMax = copyFieldArray.GetLength(0);
+
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    1,
+                    10000,
+                    FieldDataStartCol,
+                    FieldDataEndCol,
+                    null
+                );
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    1,
+                    rowMax,
+                    FieldDataStartCol,
+                    FieldDataEndCol,
+                    copyFieldArray
+                );
+
+                filedList.Resize(filedList.Range.Resize[rowMax + 1, filedList.Range.Columns.Count]);
+
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    1,
+                    10000,
+                    FieldDataTagCol,
+                    FieldDataTagCol,
+                    null
+                );
+                object[,] writeArray = new object[rowMax, 1];
+                for (int i = 0; i < rowMax; i++)
+                    writeArray[i, 0] = "+";
+                PubMetToExcel.WriteExcelDataC(
+                    sheetName,
+                    1,
+                    rowMax,
+                    FieldDataTagCol,
+                    FieldDataTagCol,
+                    writeArray
+                );
             }
-
-            var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
-            if (baseList == null)
-            {
-                MessageBox.Show("LTE【基础】中的名称表-基础不存在");
-                return;
-            }
-            object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
-            if (baseArray == null)
-                return;
-            if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
-            {
-                MessageBox.Show("LTE【基础】标题行读取失败");
-                return;
-            }
-
-            var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
-            if (fieldGroupList == null)
-            {
-                MessageBox.Show("#道具信息中的名称【道具信息】不存在");
-                return;
-            }
-            object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
-            if (fieldGroupArray == null)
-                return;
-
-            //基础数据修改依赖数据
-            var listObjectsDic = PubMetToExcel.GetExcelListObjects(
-                WkPath,
-                "#【A-LTE】数值大纲.xlsx",
-                "#各类枚举"
-            );
-
-            object[,] fieldDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "地组类型");
-            if (fieldDataTypeArray == null)
-                return;
-            object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
-            if (dataTypeArray == null)
-                return;
-
-            // 寻找优先级数据
-            var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
-                WkPath,
-                "#【A-LTE】数值大纲.xlsx",
-                "#寻找优先级"
-            );
-            var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
-            if (findRankDataArray == null)
-                return;
-
-            //地组数据整理
-            var copyFiledData = FiledData(
-                copyFieldArray,
-                fieldDataTypeArray,
-                baseArray,
-                activtiyId,
-                fieldGroupArray,
-                baseTitleArray,
-                findRankDataArray,
-                dataTypeArray
-            );
-            copyFieldArray = copyFiledData.fieldArray;
-            var errorTypeList = copyFiledData.errorTypeList;
-            if (errorTypeList.Count != 0)
-            {
-                //基础数据中存在错误类型
-                var errorTypeListOnly = new HashSet<string>(errorTypeList);
-                var errorStr = string.Join(",", errorTypeListOnly);
-                MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
-            }
-
-            //非Com写入数据,索引从0开始,效率确实更高,读取还是ListObject更方便
-
-            var rowMax = copyFieldArray.GetLength(0);
-
-            PubMetToExcel.WriteExcelDataC(
-                sheetName,
-                1,
-                10000,
-                FieldDataStartCol,
-                FieldDataEndCol,
-                null
-            );
-            PubMetToExcel.WriteExcelDataC(
-                sheetName,
-                1,
-                rowMax,
-                FieldDataStartCol,
-                FieldDataEndCol,
-                copyFieldArray
-            );
-
-            filedList.Resize(filedList.Range.Resize[rowMax + 1, filedList.Range.Columns.Count]);
-
-            PubMetToExcel.WriteExcelDataC(
-                sheetName,
-                1,
-                10000,
-                FieldDataTagCol,
-                FieldDataTagCol,
-                null
-            );
-            object[,] writeArray = new object[rowMax, 1];
-            for (int i = 0; i < rowMax; i++)
-                writeArray[i, 0] = "+";
-            PubMetToExcel.WriteExcelDataC(
-                sheetName,
-                1,
-                rowMax,
-                FieldDataTagCol,
-                FieldDataTagCol,
-                writeArray
-            );
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"[LTEData] FirstCopyFieldValue CRASH: {ex}");
-            MessageBox.Show(
-                $"操作失败，已记录日志。\n{ex.Message}",
-                "错误",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
-        }
-    }
+        );
 
     //更新写入数据
-    public static void UpdateCopyFieldValue(CommandBarButton ctrl, ref bool cancelDefault)
-    {
-        try
-        {
-            cancelDefault = true; // 阻止默认事件
-            var sheetName = "LTE【地组】";
-            var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
-            double activtiyId = (double)colIndexArray[0, 0];
-
-            object[,] copyFieldArray = FilterRepeatValue(
-                ActivityDataMinIndex,
-                ActivityDataMaxIndex,
-                false,
-                false
-            );
-
-            var fieldList = PubMetToExcel.GetExcelListObjects("LTE【地组】", "LTE【地组】");
-            if (fieldList == null)
+    public static void UpdateCopyFieldValue(CommandBarButton ctrl, ref bool cancelDefault) =>
+        RunLteCommand(
+            ctrl,
+            ref cancelDefault,
+            nameof(UpdateCopyFieldValue),
+            () =>
             {
-                MessageBox.Show("LTE【任务】中的名称表-任务不存在");
-                return;
+                var sheetName = "LTE【地组】";
+                var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
+                double activtiyId = (double)colIndexArray[0, 0];
+
+                object[,] copyFieldArray = FilterRepeatValue(
+                    ActivityDataMinIndex,
+                    ActivityDataMaxIndex,
+                    false,
+                    false
+                );
+
+                var fieldList = PubMetToExcel.GetExcelListObjects("LTE【地组】", "LTE【地组】");
+                if (fieldList == null)
+                {
+                    MessageBox.Show("LTE【任务】中的名称表-任务不存在");
+                    return;
+                }
+
+                var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+                if (baseList == null)
+                {
+                    MessageBox.Show("LTE【基础】中的名称表-基础不存在");
+                    return;
+                }
+                object[,] baseArray = baseList.DataBodyRange.Value2;
+                object[,] baseTitleArray = baseList.HeaderRowRange.Value2;
+
+                var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+                if (fieldGroupList == null)
+                {
+                    MessageBox.Show("#道具信息中的名称【道具信息】不存在");
+                    return;
+                }
+                object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
+
+                //基础数据修改依赖数据
+                var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+                    WkPath,
+                    "#【A-LTE】数值大纲.xlsx",
+                    "#各类枚举"
+                );
+                object[,] fieldDataTypeArray = listObjectsDic["地组类型"];
+                object[,] dataTypeArray = listObjectsDic["数据类型"];
+
+                // 寻找优先级数据
+                var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+                    WkPath,
+                    "#【A-LTE】数值大纲.xlsx",
+                    "#寻找优先级"
+                );
+                var findRankDataArray = findRanklistObjectsDic["寻找方案"];
+
+                //任务数据整理
+                var copyFiledData = FiledData(
+                    copyFieldArray,
+                    fieldDataTypeArray,
+                    baseArray,
+                    activtiyId,
+                    fieldGroupArray,
+                    baseTitleArray,
+                    findRankDataArray,
+                    dataTypeArray
+                );
+                copyFieldArray = copyFiledData.fieldArray;
+                var errorTypeList = copyFiledData.errorTypeList;
+
+                if (errorTypeList.Count != 0)
+                {
+                    //基础数据中存在错误类型
+                    var errorTypeListOnly = new HashSet<string>(errorTypeList);
+                    var errorStr = string.Join(",", errorTypeListOnly);
+                    MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
+                }
+
+                WriteDymaicData(
+                    copyFieldArray,
+                    fieldList,
+                    "LTE【地组】",
+                    FieldDataStartCol,
+                    FieldDataEndCol,
+                    FieldDataTagCol
+                );
             }
-
-            var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
-            if (baseList == null)
-            {
-                MessageBox.Show("LTE【基础】中的名称表-基础不存在");
-                return;
-            }
-            object[,] baseArray = baseList.DataBodyRange.Value2;
-            object[,] baseTitleArray = baseList.HeaderRowRange.Value2;
-
-            var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
-            if (fieldGroupList == null)
-            {
-                MessageBox.Show("#道具信息中的名称【道具信息】不存在");
-                return;
-            }
-            object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
-
-            //基础数据修改依赖数据
-            var listObjectsDic = PubMetToExcel.GetExcelListObjects(
-                WkPath,
-                "#【A-LTE】数值大纲.xlsx",
-                "#各类枚举"
-            );
-            object[,] fieldDataTypeArray = listObjectsDic["地组类型"];
-            object[,] dataTypeArray = listObjectsDic["数据类型"];
-
-            // 寻找优先级数据
-            var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
-                WkPath,
-                "#【A-LTE】数值大纲.xlsx",
-                "#寻找优先级"
-            );
-            var findRankDataArray = findRanklistObjectsDic["寻找方案"];
-
-            //任务数据整理
-            var copyFiledData = FiledData(
-                copyFieldArray,
-                fieldDataTypeArray,
-                baseArray,
-                activtiyId,
-                fieldGroupArray,
-                baseTitleArray,
-                findRankDataArray,
-                dataTypeArray
-            );
-            copyFieldArray = copyFiledData.fieldArray;
-            var errorTypeList = copyFiledData.errorTypeList;
-
-            if (errorTypeList.Count != 0)
-            {
-                //基础数据中存在错误类型
-                var errorTypeListOnly = new HashSet<string>(errorTypeList);
-                var errorStr = string.Join(",", errorTypeListOnly);
-                MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
-            }
-
-            WriteDymaicData(
-                copyFieldArray,
-                fieldList,
-                "LTE【地组】",
-                FieldDataStartCol,
-                FieldDataEndCol,
-                FieldDataTagCol
-            );
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"[LTEData] UpdateCopyFieldValue CRASH: {ex}");
-            MessageBox.Show(
-                $"操作失败，已记录日志。\n{ex.Message}",
-                "错误",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
-        }
-    }
+        );
 
     //原始数据改造
     private static (object[,] fieldArray, List<string> errorTypeList) FiledData(
