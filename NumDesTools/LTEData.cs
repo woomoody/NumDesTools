@@ -3256,7 +3256,7 @@ public class LteData
         return (taskArray, errorTypeList);
     }
 
-    private static List<string> FixTaskData(
+    internal static List<string> FixTaskData(
         string taskTypeName,
         string taskDialogId,
         string taskTagetName,
@@ -3880,7 +3880,7 @@ public class LteData
         return (fieldArray, errorTypeList);
     }
 
-    private static (string fixData, string findData, string fieldConditonTargetId) FixFieldData(
+    internal static (string fixData, string findData, string fieldConditonTargetId) FixFieldData(
         string fieldConditonTarget,
         string fieldConditonTargetRank,
         string fieldConditonTargetType,
