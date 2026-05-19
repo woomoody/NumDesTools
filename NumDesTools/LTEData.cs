@@ -2782,244 +2782,158 @@ public class LteData
 
     #region LTE任务数据计算
 
-    //首次写入数据
     public static void FirstCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault) =>
         RunLteCommand(
             ctrl,
             ref cancelDefault,
             nameof(FirstCopyTaskValue),
-            () =>
-            {
-                var sheetName = "LTE【任务】";
-                var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
-                double activtiyId = (double)colIndexArray[0, 0];
-
-                object[,] copyTaskArray = FilterRepeatValue(
-                    ActivityDataMinIndex,
-                    ActivityDataMaxIndex,
-                    false,
-                    false
-                );
-
-                var taskList = RequireListObject("LTE【任务】", "LTE【任务】");
-                if (taskList == null)
-                    return;
-
-                var baseList = RequireListObject("LTE【基础】", "LTE【基础】");
-                if (baseList == null)
-                    return;
-                object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
-                if (baseArray == null)
-                    return;
-                if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
-                {
-                    MessageBox.Show("LTE【基础】标题行读取失败");
-                    return;
-                }
-
-                var fieldGroupList = RequireListObject("#道具信息", "道具信息");
-                if (fieldGroupList == null)
-                    return;
-                object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
-                if (fieldGroupArray == null)
-                    return;
-
-                //基础数据修改依赖数据
-                var listObjectsDic = PubMetToExcel.GetExcelListObjects(
-                    WkPath,
-                    "#【A-LTE】数值大纲.xlsx",
-                    "#各类枚举"
-                );
-                object[,] taskDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "任务类型");
-                if (taskDataTypeArray == null)
-                    return;
-                object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
-                if (dataTypeArray == null)
-                    return;
-
-                // 寻找优先级数据
-                var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
-                    WkPath,
-                    "#【A-LTE】数值大纲.xlsx",
-                    "#寻找优先级"
-                );
-                var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
-                if (findRankDataArray == null)
-                    return;
-
-                //任务数据整理
-                var copyTaskData = TaskData(
-                    copyTaskArray,
-                    taskDataTypeArray,
-                    baseArray,
-                    activtiyId,
-                    fieldGroupArray,
-                    baseTitleArray,
-                    findRankDataArray,
-                    dataTypeArray
-                );
-                copyTaskArray = copyTaskData.taskArray;
-                var errorTypeList = copyTaskData.errorTypeList;
-                if (errorTypeList.Count != 0)
-                {
-                    //基础数据中存在错误类型
-                    var errorTypeListOnly = new HashSet<string>(errorTypeList);
-                    var errorStr = string.Join(",", errorTypeListOnly);
-                    MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
-                }
-
-                //非Com写入数据,索引从0开始,效率确实更高,读取还是ListObject更方便
-
-                var rowMax = copyTaskArray.GetLength(0);
-                PubMetToExcel.WriteExcelDataC(
-                    sheetName,
-                    1,
-                    10000,
-                    TaskDataStartCol,
-                    TaskDataEndCol,
-                    null
-                );
-                PubMetToExcel.WriteExcelDataC(
-                    sheetName,
-                    1,
-                    rowMax,
-                    TaskDataStartCol,
-                    TaskDataEndCol,
-                    copyTaskArray
-                );
-
-                // 标题更新
-                object[,] newTitleArray = PubMetToExcel.ConvertList1ToArrayRow(_taskTitleArray);
-                PubMetToExcel.WriteExcelDataC(
-                    sheetName,
-                    0,
-                    0,
-                    TaskDataStartCol,
-                    TaskDataEndCol,
-                    newTitleArray
-                );
-
-                taskList.Resize(taskList.Range.Resize[rowMax + 1, taskList.Range.Columns.Count]);
-
-                PubMetToExcel.WriteExcelDataC(
-                    sheetName,
-                    1,
-                    10000,
-                    TaskDataTagCol,
-                    TaskDataTagCol,
-                    null
-                );
-                object[,] writeArray = new object[rowMax, 1];
-                for (int i = 0; i < rowMax; i++)
-                    writeArray[i, 0] = "+";
-                PubMetToExcel.WriteExcelDataC(
-                    sheetName,
-                    1,
-                    rowMax,
-                    TaskDataTagCol,
-                    TaskDataTagCol,
-                    writeArray
-                );
-            }
+            () => CopyTaskValueCore(isFirst: true)
         );
 
-    //更新写入数据
     public static void UpdateCopyTaskValue(CommandBarButton ctrl, ref bool cancelDefault) =>
         RunLteCommand(
             ctrl,
             ref cancelDefault,
             nameof(UpdateCopyTaskValue),
-            () =>
-            {
-                var sheetName = "LTE【任务】";
-                var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
-                double activtiyId = (double)colIndexArray[0, 0];
-
-                object[,] copyTaskArray = FilterRepeatValue(
-                    ActivityDataMinIndex,
-                    ActivityDataMaxIndex,
-                    false,
-                    false
-                );
-
-                var taskList = RequireListObject("LTE【任务】", "LTE【任务】");
-                if (taskList == null)
-                    return;
-
-                var baseList = RequireListObject("LTE【基础】", "LTE【基础】");
-                if (baseList == null)
-                    return;
-                object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
-                if (baseArray == null)
-                    return;
-                if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
-                {
-                    MessageBox.Show("LTE【基础】标题行读取失败");
-                    return;
-                }
-
-                var fieldGroupList = RequireListObject("#道具信息", "道具信息");
-                if (fieldGroupList == null)
-                    return;
-                object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
-                if (fieldGroupArray == null)
-                    return;
-
-                //基础数据修改依赖数据
-                var listObjectsDic = PubMetToExcel.GetExcelListObjects(
-                    WkPath,
-                    "#【A-LTE】数值大纲.xlsx",
-                    "#各类枚举"
-                );
-                object[,] taskDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "任务类型");
-                if (taskDataTypeArray == null)
-                    return;
-                object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
-                if (dataTypeArray == null)
-                    return;
-
-                // 寻找优先级数据
-                var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
-                    WkPath,
-                    "#【A-LTE】数值大纲.xlsx",
-                    "#寻找优先级"
-                );
-                var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
-                if (findRankDataArray == null)
-                    return;
-
-                //任务数据整理
-                var copyTaskData = TaskData(
-                    copyTaskArray,
-                    taskDataTypeArray,
-                    baseArray,
-                    activtiyId,
-                    fieldGroupArray,
-                    baseTitleArray,
-                    findRankDataArray,
-                    dataTypeArray
-                );
-                copyTaskArray = copyTaskData.taskArray;
-                var errorTypeList = copyTaskData.errorTypeList;
-
-                if (errorTypeList.Count != 0)
-                {
-                    //基础数据中存在错误类型
-                    var errorTypeListOnly = new HashSet<string>(errorTypeList);
-                    var errorStr = string.Join(",", errorTypeListOnly);
-                    MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
-                }
-
-                WriteDymaicData(
-                    copyTaskArray,
-                    taskList,
-                    "LTE【任务】",
-                    TaskDataStartCol,
-                    TaskDataEndCol,
-                    TaskDataTagCol
-                );
-            }
+            () => CopyTaskValueCore(isFirst: false)
         );
+
+    private static void CopyTaskValueCore(bool isFirst)
+    {
+        var sheetName = "LTE【任务】";
+        var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
+        double activtiyId = (double)colIndexArray[0, 0];
+
+        object[,] copyTaskArray = FilterRepeatValue(
+            ActivityDataMinIndex,
+            ActivityDataMaxIndex,
+            false,
+            false
+        );
+
+        var taskList = RequireListObject("LTE【任务】", "LTE【任务】");
+        if (taskList == null)
+            return;
+
+        var baseList = RequireListObject("LTE【基础】", "LTE【基础】");
+        if (baseList == null)
+            return;
+        object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
+        if (baseArray == null)
+            return;
+        if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
+        {
+            MessageBox.Show("LTE【基础】标题行读取失败");
+            return;
+        }
+
+        var fieldGroupList = RequireListObject("#道具信息", "道具信息");
+        if (fieldGroupList == null)
+            return;
+        object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
+        if (fieldGroupArray == null)
+            return;
+
+        var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#各类枚举"
+        );
+        object[,] taskDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "任务类型");
+        if (taskDataTypeArray == null)
+            return;
+        object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
+        if (dataTypeArray == null)
+            return;
+
+        var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#寻找优先级"
+        );
+        var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
+        if (findRankDataArray == null)
+            return;
+
+        var copyTaskData = TaskData(
+            copyTaskArray,
+            taskDataTypeArray,
+            baseArray,
+            activtiyId,
+            fieldGroupArray,
+            baseTitleArray,
+            findRankDataArray,
+            dataTypeArray
+        );
+        copyTaskArray = copyTaskData.taskArray;
+        var errorTypeList = copyTaskData.errorTypeList;
+        if (errorTypeList.Count != 0)
+        {
+            var errorTypeListOnly = new HashSet<string>(errorTypeList);
+            MessageBox.Show($"任务数据中存在以下错误类型：{string.Join(",", errorTypeListOnly)}");
+        }
+
+        if (isFirst)
+        {
+            var rowMax = copyTaskArray.GetLength(0);
+            PubMetToExcel.WriteExcelDataC(
+                sheetName,
+                1,
+                10000,
+                TaskDataStartCol,
+                TaskDataEndCol,
+                null
+            );
+            PubMetToExcel.WriteExcelDataC(
+                sheetName,
+                1,
+                rowMax,
+                TaskDataStartCol,
+                TaskDataEndCol,
+                copyTaskArray
+            );
+            object[,] newTitleArray = PubMetToExcel.ConvertList1ToArrayRow(_taskTitleArray);
+            PubMetToExcel.WriteExcelDataC(
+                sheetName,
+                0,
+                0,
+                TaskDataStartCol,
+                TaskDataEndCol,
+                newTitleArray
+            );
+            taskList.Resize(taskList.Range.Resize[rowMax + 1, taskList.Range.Columns.Count]);
+            PubMetToExcel.WriteExcelDataC(
+                sheetName,
+                1,
+                10000,
+                TaskDataTagCol,
+                TaskDataTagCol,
+                null
+            );
+            object[,] writeArray = new object[rowMax, 1];
+            for (int i = 0; i < rowMax; i++)
+                writeArray[i, 0] = "+";
+            PubMetToExcel.WriteExcelDataC(
+                sheetName,
+                1,
+                rowMax,
+                TaskDataTagCol,
+                TaskDataTagCol,
+                writeArray
+            );
+        }
+        else
+        {
+            WriteDymaicData(
+                copyTaskArray,
+                taskList,
+                sheetName,
+                TaskDataStartCol,
+                TaskDataEndCol,
+                TaskDataTagCol
+            );
+        }
+    }
 
     private static bool CheckLandmarkIdExists(
         Dictionary<string, List<string>> baseDic,
@@ -3523,221 +3437,149 @@ public class LteData
             }
         );
 
-    //首次写入数据
     public static void FirstCopyFieldValue(CommandBarButton ctrl, ref bool cancelDefault) =>
         RunLteCommand(
             ctrl,
             ref cancelDefault,
             nameof(FirstCopyFieldValue),
-            () =>
-            {
-                var sheetName = "LTE【地组】";
-                var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
-                double activtiyId = (double)colIndexArray[0, 0];
-
-                object[,] copyFieldArray = FilterRepeatValue(
-                    ActivityDataMinIndex,
-                    ActivityDataMaxIndex,
-                    false,
-                    false
-                );
-
-                var filedList = RequireListObject("LTE【地组】", "LTE【地组】");
-                if (filedList == null)
-                    return;
-
-                var baseList = RequireListObject("LTE【基础】", "LTE【基础】");
-                if (baseList == null)
-                    return;
-                object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
-                if (baseArray == null)
-                    return;
-                if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
-                {
-                    MessageBox.Show("LTE【基础】标题行读取失败");
-                    return;
-                }
-
-                var fieldGroupList = RequireListObject("#道具信息", "道具信息");
-                if (fieldGroupList == null)
-                    return;
-                object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
-                if (fieldGroupArray == null)
-                    return;
-
-                //基础数据修改依赖数据
-                var listObjectsDic = PubMetToExcel.GetExcelListObjects(
-                    WkPath,
-                    "#【A-LTE】数值大纲.xlsx",
-                    "#各类枚举"
-                );
-
-                object[,] fieldDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "地组类型");
-                if (fieldDataTypeArray == null)
-                    return;
-                object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
-                if (dataTypeArray == null)
-                    return;
-
-                // 寻找优先级数据
-                var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
-                    WkPath,
-                    "#【A-LTE】数值大纲.xlsx",
-                    "#寻找优先级"
-                );
-                var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
-                if (findRankDataArray == null)
-                    return;
-
-                //地组数据整理
-                var copyFiledData = FiledData(
-                    copyFieldArray,
-                    fieldDataTypeArray,
-                    baseArray,
-                    activtiyId,
-                    fieldGroupArray,
-                    baseTitleArray,
-                    findRankDataArray,
-                    dataTypeArray
-                );
-                copyFieldArray = copyFiledData.fieldArray;
-                var errorTypeList = copyFiledData.errorTypeList;
-                if (errorTypeList.Count != 0)
-                {
-                    //基础数据中存在错误类型
-                    var errorTypeListOnly = new HashSet<string>(errorTypeList);
-                    var errorStr = string.Join(",", errorTypeListOnly);
-                    MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
-                }
-
-                //非Com写入数据,索引从0开始,效率确实更高,读取还是ListObject更方便
-
-                var rowMax = copyFieldArray.GetLength(0);
-
-                PubMetToExcel.WriteExcelDataC(
-                    sheetName,
-                    1,
-                    10000,
-                    FieldDataStartCol,
-                    FieldDataEndCol,
-                    null
-                );
-                PubMetToExcel.WriteExcelDataC(
-                    sheetName,
-                    1,
-                    rowMax,
-                    FieldDataStartCol,
-                    FieldDataEndCol,
-                    copyFieldArray
-                );
-
-                filedList.Resize(filedList.Range.Resize[rowMax + 1, filedList.Range.Columns.Count]);
-
-                PubMetToExcel.WriteExcelDataC(
-                    sheetName,
-                    1,
-                    10000,
-                    FieldDataTagCol,
-                    FieldDataTagCol,
-                    null
-                );
-                object[,] writeArray = new object[rowMax, 1];
-                for (int i = 0; i < rowMax; i++)
-                    writeArray[i, 0] = "+";
-                PubMetToExcel.WriteExcelDataC(
-                    sheetName,
-                    1,
-                    rowMax,
-                    FieldDataTagCol,
-                    FieldDataTagCol,
-                    writeArray
-                );
-            }
+            () => CopyFieldValueCore(isFirst: true)
         );
 
-    //更新写入数据
     public static void UpdateCopyFieldValue(CommandBarButton ctrl, ref bool cancelDefault) =>
         RunLteCommand(
             ctrl,
             ref cancelDefault,
             nameof(UpdateCopyFieldValue),
-            () =>
-            {
-                var sheetName = "LTE【地组】";
-                var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
-                double activtiyId = (double)colIndexArray[0, 0];
-
-                object[,] copyFieldArray = FilterRepeatValue(
-                    ActivityDataMinIndex,
-                    ActivityDataMaxIndex,
-                    false,
-                    false
-                );
-
-                var fieldList = RequireListObject("LTE【地组】", "LTE【地组】");
-                if (fieldList == null)
-                    return;
-
-                var baseList = RequireListObject("LTE【基础】", "LTE【基础】");
-                if (baseList == null)
-                    return;
-                object[,] baseArray = baseList.DataBodyRange.Value2;
-                object[,] baseTitleArray = baseList.HeaderRowRange.Value2;
-
-                var fieldGroupList = RequireListObject("#道具信息", "道具信息");
-                if (fieldGroupList == null)
-                    return;
-                object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
-
-                //基础数据修改依赖数据
-                var listObjectsDic = PubMetToExcel.GetExcelListObjects(
-                    WkPath,
-                    "#【A-LTE】数值大纲.xlsx",
-                    "#各类枚举"
-                );
-                object[,] fieldDataTypeArray = listObjectsDic["地组类型"];
-                object[,] dataTypeArray = listObjectsDic["数据类型"];
-
-                // 寻找优先级数据
-                var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
-                    WkPath,
-                    "#【A-LTE】数值大纲.xlsx",
-                    "#寻找优先级"
-                );
-                var findRankDataArray = findRanklistObjectsDic["寻找方案"];
-
-                //任务数据整理
-                var copyFiledData = FiledData(
-                    copyFieldArray,
-                    fieldDataTypeArray,
-                    baseArray,
-                    activtiyId,
-                    fieldGroupArray,
-                    baseTitleArray,
-                    findRankDataArray,
-                    dataTypeArray
-                );
-                copyFieldArray = copyFiledData.fieldArray;
-                var errorTypeList = copyFiledData.errorTypeList;
-
-                if (errorTypeList.Count != 0)
-                {
-                    //基础数据中存在错误类型
-                    var errorTypeListOnly = new HashSet<string>(errorTypeList);
-                    var errorStr = string.Join(",", errorTypeListOnly);
-                    MessageBox.Show($"任务数据中存在以下错误类型：{errorStr}");
-                }
-
-                WriteDymaicData(
-                    copyFieldArray,
-                    fieldList,
-                    "LTE【地组】",
-                    FieldDataStartCol,
-                    FieldDataEndCol,
-                    FieldDataTagCol
-                );
-            }
+            () => CopyFieldValueCore(isFirst: false)
         );
+
+    private static void CopyFieldValueCore(bool isFirst)
+    {
+        var sheetName = "LTE【地组】";
+        var colIndexArray = PubMetToExcel.ReadExcelDataC(sheetName, 0, 0, 1, 1);
+        double activtiyId = (double)colIndexArray[0, 0];
+
+        object[,] copyFieldArray = FilterRepeatValue(
+            ActivityDataMinIndex,
+            ActivityDataMaxIndex,
+            false,
+            false
+        );
+
+        var fieldList = RequireListObject("LTE【地组】", "LTE【地组】");
+        if (fieldList == null)
+            return;
+
+        var baseList = RequireListObject("LTE【基础】", "LTE【基础】");
+        if (baseList == null)
+            return;
+        object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
+        if (baseArray == null)
+            return;
+        if (baseList.HeaderRowRange?.Value2 is not object[,] baseTitleArray)
+        {
+            MessageBox.Show("LTE【基础】标题行读取失败");
+            return;
+        }
+
+        var fieldGroupList = RequireListObject("#道具信息", "道具信息");
+        if (fieldGroupList == null)
+            return;
+        object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
+        if (fieldGroupArray == null)
+            return;
+
+        var listObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#各类枚举"
+        );
+        object[,] fieldDataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "地组类型");
+        if (fieldDataTypeArray == null)
+            return;
+        object[,] dataTypeArray = GetTableData(listObjectsDic, "#各类枚举", "数据类型");
+        if (dataTypeArray == null)
+            return;
+
+        var findRanklistObjectsDic = PubMetToExcel.GetExcelListObjects(
+            WkPath,
+            "#【A-LTE】数值大纲.xlsx",
+            "#寻找优先级"
+        );
+        var findRankDataArray = GetTableData(findRanklistObjectsDic, "#寻找优先级", "寻找方案");
+        if (findRankDataArray == null)
+            return;
+
+        var copyFiledData = FiledData(
+            copyFieldArray,
+            fieldDataTypeArray,
+            baseArray,
+            activtiyId,
+            fieldGroupArray,
+            baseTitleArray,
+            findRankDataArray,
+            dataTypeArray
+        );
+        copyFieldArray = copyFiledData.fieldArray;
+        var errorTypeList = copyFiledData.errorTypeList;
+        if (errorTypeList.Count != 0)
+        {
+            var errorTypeListOnly = new HashSet<string>(errorTypeList);
+            MessageBox.Show($"地组数据中存在以下错误类型：{string.Join(",", errorTypeListOnly)}");
+        }
+
+        if (isFirst)
+        {
+            var rowMax = copyFieldArray.GetLength(0);
+            PubMetToExcel.WriteExcelDataC(
+                sheetName,
+                1,
+                10000,
+                FieldDataStartCol,
+                FieldDataEndCol,
+                null
+            );
+            PubMetToExcel.WriteExcelDataC(
+                sheetName,
+                1,
+                rowMax,
+                FieldDataStartCol,
+                FieldDataEndCol,
+                copyFieldArray
+            );
+            fieldList.Resize(fieldList.Range.Resize[rowMax + 1, fieldList.Range.Columns.Count]);
+            PubMetToExcel.WriteExcelDataC(
+                sheetName,
+                1,
+                10000,
+                FieldDataTagCol,
+                FieldDataTagCol,
+                null
+            );
+            object[,] writeArray = new object[rowMax, 1];
+            for (int i = 0; i < rowMax; i++)
+                writeArray[i, 0] = "+";
+            PubMetToExcel.WriteExcelDataC(
+                sheetName,
+                1,
+                rowMax,
+                FieldDataTagCol,
+                FieldDataTagCol,
+                writeArray
+            );
+        }
+        else
+        {
+            WriteDymaicData(
+                copyFieldArray,
+                fieldList,
+                sheetName,
+                FieldDataStartCol,
+                FieldDataEndCol,
+                FieldDataTagCol
+            );
+        }
+    }
 
     //原始数据改造
     private static (object[,] fieldArray, List<string> errorTypeList) FiledData(
