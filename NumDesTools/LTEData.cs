@@ -42,7 +42,7 @@ public class LteData
     private const int FieldDataStartCol = 14;
     private const int FieldDataEndCol = 23;
 
-    // baseDic 原始列索引（与 LTE【基础】表列顺序对应，BaseData() 追加的计算列不在此定义）
+    // baseDic 原始列索引（与 LTE【基础】表列顺序对应）
     private const int BaseDicColPrefabId = 1;
     private const int BaseDicColIconId = 2;
     private const int BaseDicColFirstMap = 3;
@@ -51,6 +51,12 @@ public class LteData
     private const int BaseDicColPackage = 6;
     private const int BaseDicColLevel = 7;
     private const int BaseDicColType = 8;
+
+    // baseDic 计算列索引（由 BaseData() 按顺序 .Add() 追加，原始列之后）
+    private const int BaseDicCalcFindType = 9;
+    private const int BaseDicCalcFindDetailType = 10;
+    private const int BaseDicCalcLinkMax = 11;
+    private const int BaseDicCalcFiveMergeTip = 12;
 
     // WriteExcelDataC 的"清空到末行"哨兵值
     private const int ClearToLastRow = 10000;
@@ -1733,7 +1739,7 @@ public class LteData
 
             //五合提示
             string fiveMergeTip = string.Empty;
-            string rank = SafeGet(baseDic, key, 7);
+            string rank = SafeGet(baseDic, key, BaseDicColLevel);
 
             if (int.TryParse(rank, out int rankNum))
             {
@@ -1754,11 +1760,11 @@ public class LteData
             var idNameList = new List<int> { 11, 13, 15, 17, 19, 21, 23, 25 };
             var countNumList = new List<int> { 12, 14, 16, 18, 20, 22, 24, 26 };
 
-            string firstPos = SafeGet(baseDic, key, 3);
+            string firstPos = SafeGet(baseDic, key, BaseDicColFirstMap);
             var firstPosPre = MapPrefix(firstPos);
 
-            int onlyNum = 4;
-            int num = 5;
+            int onlyNum = BaseDicColOnlyName;
+            int num = BaseDicColName;
 
             int countNum = 0;
             foreach (var idName in idNameList)
