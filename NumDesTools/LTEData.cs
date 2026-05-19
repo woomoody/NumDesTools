@@ -42,6 +42,27 @@ public class LteData
     private const int FieldDataStartCol = 14;
     private const int FieldDataEndCol = 23;
 
+    // baseDic 原始列索引（与 LTE【基础】表列顺序对应，BaseData() 追加的计算列不在此定义）
+    private const int BaseDicColPrefabId = 1;
+    private const int BaseDicColIconId = 2;
+    private const int BaseDicColFirstMap = 3;
+    private const int BaseDicColOnlyName = 4;
+    private const int BaseDicColName = 5;
+    private const int BaseDicColPackage = 6;
+    private const int BaseDicColLevel = 7;
+    private const int BaseDicColType = 8;
+
+    // WriteExcelDataC 的"清空到末行"哨兵值
+    private const int ClearToLastRow = 10000;
+
+    // 活动编号除数（设计表 B1 存储的是 activityId * 10000）
+    private const int ActivityIdDivisor = 10000;
+
+    // LTE 任务/地组 寻找关系格式串片段
+    private const string FindLinkMapEntrance = "{20,\"UILteMapEntrance\",";
+    private const string FindLinkEndNormal = "},{8,9999}";
+    private const string FindLinkEndPortal = "},{8,9993}";
+
     private static readonly List<object> _taskTitleArray = new List<object>()
     {
         "任务编号",
@@ -68,7 +89,9 @@ public class LteData
     private static readonly Dictionary<string, string> _outputWildcardPubDic =
         new()
         {
-            ["活动编号"] = (_pubWildSheet.Range[ActivityIdIndex].Value2 / 10000)?.ToString(),
+            ["活动编号"] = (
+                _pubWildSheet.Range[ActivityIdIndex].Value2 / ActivityIdDivisor
+            )?.ToString(),
             ["活动备注"] = _pubWildSheet.Range[ActivityNameMinIndex].Value2?.ToString(),
             ["活动地组"] = _pubWildSheet.Range[ActivityFieldIndex].Value2?.ToString()
         };
@@ -1118,7 +1141,7 @@ public class LteData
                 PubMetToExcel.WriteExcelDataC(
                     sheetName,
                     1,
-                    10000,
+                    ClearToLastRow,
                     BaseDataStartCol,
                     colCount,
                     null
@@ -1147,7 +1170,7 @@ public class LteData
                 PubMetToExcel.WriteExcelDataC(
                     sheetName,
                     1,
-                    10000,
+                    ClearToLastRow,
                     BaseDataTagCol,
                     BaseDataTagCol,
                     null
@@ -1204,7 +1227,7 @@ public class LteData
 
                 //寻找标记数据删除
                 var sheetFind = Wk.Worksheets["LTE【寻找】"];
-                var oldTagFindRange = sheetFind.Range["A2:A10000"];
+                var oldTagFindRange = sheetFind.Range[$"A2:A{ClearToLastRow}"];
                 oldTagFindRange.Value2 = null;
                 //寻找标记数据写入
                 var tagFindRange = sheetFind.Range[
@@ -1219,7 +1242,7 @@ public class LteData
                 PubMetToExcel.WriteExcelDataC(
                     sheetFindName,
                     1,
-                    10000,
+                    ClearToLastRow,
                     FindDataStartCol,
                     FindDataEndCol,
                     null
@@ -1243,7 +1266,7 @@ public class LteData
                 PubMetToExcel.WriteExcelDataC(
                     sheetFindName,
                     1,
-                    10000,
+                    ClearToLastRow,
                     FindDataTagCol,
                     FindDataTagCol,
                     null
@@ -1655,22 +1678,22 @@ public class LteData
             Debug.Print($"数据编号：{key}");
 
             // 资源编号和图片编号
-            string prefabId = baseDic[key][1];
+            string prefabId = baseDic[key][BaseDicColPrefabId];
             if (string.IsNullOrEmpty(prefabId))
             {
-                baseDic[key][1] = key;
+                baseDic[key][BaseDicColPrefabId] = key;
             }
-            string iconId = baseDic[key][2];
+            string iconId = baseDic[key][BaseDicColIconId];
             if (string.IsNullOrEmpty(iconId))
             {
-                baseDic[key][2] = key;
+                baseDic[key][BaseDicColIconId] = key;
             }
 
             //寻找类型、寻找细类
             string findType;
             string findDetailType;
 
-            string itemType = baseDic[key][8];
+            string itemType = baseDic[key][BaseDicColType];
 
             if (string.IsNullOrEmpty(itemType))
             {
@@ -1694,10 +1717,10 @@ public class LteData
 
             //链长
             string linkMax = string.Empty;
-            string currentName = SafeGet(baseDic, key, 6);
+            string currentName = SafeGet(baseDic, key, BaseDicColPackage);
             int countCurrent = baseDic
-                .Values.Where(list => list.Count > 6)
-                .Count(list => list[6] == currentName);
+                .Values.Where(list => list.Count > BaseDicColPackage)
+                .Count(list => list[BaseDicColPackage] == currentName);
 
             if (itemType.Contains("链"))
             {
@@ -1800,7 +1823,8 @@ public class LteData
                     string matchId = baseDic
                         .FirstOrDefault(kv =>
                             kv.Value.Count > 17
-                            && MapPrefix(kv.Value[3]) + kv.Value[11] == orginOnlyNum
+                            && MapPrefix(kv.Value[BaseDicColFirstMap]) + kv.Value[11]
+                                == orginOnlyNum
                         )
                         .Key;
                     if (matchId == null)
@@ -1808,7 +1832,8 @@ public class LteData
                         matchId = baseDic
                             .FirstOrDefault(kv =>
                                 kv.Value.Count > 17
-                                && MapPrefix(kv.Value[3]) + kv.Value[13] == orginOnlyNum
+                                && MapPrefix(kv.Value[BaseDicColFirstMap]) + kv.Value[13]
+                                    == orginOnlyNum
                             )
                             .Key;
                     }
@@ -1817,7 +1842,8 @@ public class LteData
                         matchId = baseDic
                             .FirstOrDefault(kv =>
                                 kv.Value.Count > 17
-                                && MapPrefix(kv.Value[3]) + kv.Value[15] == orginOnlyNum
+                                && MapPrefix(kv.Value[BaseDicColFirstMap]) + kv.Value[15]
+                                    == orginOnlyNum
                             )
                             .Key;
                     }
@@ -1826,7 +1852,8 @@ public class LteData
                         matchId = baseDic
                             .FirstOrDefault(kv =>
                                 kv.Value.Count > 17
-                                && MapPrefix(kv.Value[3]) + kv.Value[17] == orginOnlyNum
+                                && MapPrefix(kv.Value[BaseDicColFirstMap]) + kv.Value[17]
+                                    == orginOnlyNum
                             )
                             .Key;
                     }
@@ -2019,9 +2046,9 @@ public class LteData
                                     .Add(
                                         findLinks
                                             + findLinks31
-                                            + "{20,\"UILteMapEntrance\","
+                                            + FindLinkMapEntrance
                                             + mapId
-                                            + "},{8,9993}"
+                                            + FindLinkEndPortal
                                     );
                             }
                         }
@@ -3110,9 +3137,9 @@ public class LteData
                 findLinks =
                     findLinks
                     + findLinks31
-                    + "{20,\"UILteMapEntrance\","
+                    + FindLinkMapEntrance
                     + taskTargetMapId
-                    + "},{8,9999}";
+                    + FindLinkEndNormal;
                 taskColDataList.Add(findLinks);
 
                 // 限时任务数据
@@ -3184,9 +3211,9 @@ public class LteData
                 findSubLinks =
                     findSubLinks
                     + findSubLinks31
-                    + "{20,\"UILteMapEntrance\","
+                    + FindLinkMapEntrance
                     + taskSubTargetMapId
-                    + "},{8,9999}";
+                    + FindLinkEndNormal;
                 taskSubColDataList.Add(findSubLinks);
 
                 // 限时任务数据
@@ -3239,8 +3266,11 @@ public class LteData
         if (taskTagetName != string.Empty)
         {
             taskTagetId =
-                baseDic.FirstOrDefault(kv => kv.Value.Count > 5 && kv.Value[5] == taskTagetName).Key
-                ?? string.Empty;
+                baseDic
+                    .FirstOrDefault(kv =>
+                        kv.Value.Count > BaseDicColName && kv.Value[BaseDicColName] == taskTagetName
+                    )
+                    .Key ?? string.Empty;
             if (taskTagetId == string.Empty)
             {
                 MessageBox.Show($"目标名\"{taskTagetName}\"在基础数据中不存在");
@@ -3738,9 +3768,9 @@ public class LteData
                 findLinks =
                     findLinks
                     + findLinks31
-                    + "{20,\"UILteMapEntrance\","
+                    + FindLinkMapEntrance
                     + taskTargetMapId
-                    + "},{8,9999}";
+                    + FindLinkEndNormal;
                 SkipFieldTarget:
                 ;
             }
@@ -3748,7 +3778,9 @@ public class LteData
             // 消耗寻找
             var fieldCostTarget = copyFieldArray[i, 10]?.ToString() ?? String.Empty;
             string fieldFindId2 = baseDic
-                .FirstOrDefault(kv => kv.Value.Count > 5 && kv.Value[5] == fieldCostTarget)
+                .FirstOrDefault(kv =>
+                    kv.Value.Count > BaseDicColName && kv.Value[BaseDicColName] == fieldCostTarget
+                )
                 .Key;
 
             string findLinks2 = string.Empty;
@@ -3795,9 +3827,9 @@ public class LteData
                 findLinks2 =
                     findLinks2
                     + findLinks231
-                    + "{20,\"UILteMapEntrance\","
+                    + FindLinkMapEntrance
                     + taskTarget2MapId
-                    + "},{8,9999}";
+                    + FindLinkEndNormal;
             }
             else
             {
@@ -3840,10 +3872,16 @@ public class LteData
 
         var fieldConditonTargetId =
             baseDic
-                .FirstOrDefault(kv => kv.Value.Count > 5 && kv.Value[5] == fieldConditonTarget)
+                .FirstOrDefault(kv =>
+                    kv.Value.Count > BaseDicColName
+                    && kv.Value[BaseDicColName] == fieldConditonTarget
+                )
                 .Key
             ?? baseDic
-                .FirstOrDefault(kv => kv.Value.Count > 4 && kv.Value[4] == fieldConditonTarget)
+                .FirstOrDefault(kv =>
+                    kv.Value.Count > BaseDicColOnlyName
+                    && kv.Value[BaseDicColOnlyName] == fieldConditonTarget
+                )
                 .Key;
 
         if (fieldConditonTargetId == null)
@@ -3852,9 +3890,12 @@ public class LteData
             return (string.Empty, string.Empty, string.Empty);
         }
 
-        var fieldConditonTargetName = baseDic[fieldConditonTargetId][6];
+        var fieldConditonTargetName = baseDic[fieldConditonTargetId][BaseDicColPackage];
         var fieldConditonTargetLast = baseDic
-            .LastOrDefault(kv => kv.Value.Count > 4 && kv.Value[6] == fieldConditonTargetName)
+            .LastOrDefault(kv =>
+                kv.Value.Count > BaseDicColPackage
+                && kv.Value[BaseDicColPackage] == fieldConditonTargetName
+            )
             .Key;
 
         var fieldConditonTargetPic = fieldConditonTargetId.Substring(0, 8) + "00";
