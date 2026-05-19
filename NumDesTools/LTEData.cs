@@ -2166,294 +2166,32 @@ public class LteData
 
         if (findRankDic.TryGetValue(targetType, out var findTargetRankList))
         {
-            // 1层寻找
-            var findRankLinks1 = FindRankLinks(
+            (findLinks, findLinks31, findTips) = FindLinksWithRank(
+                findTargetDetailType,
                 findTargetId,
                 baseDic,
                 titleList,
                 dataTypeDic,
+                findRankDic,
                 findTargetRankList,
+                fieldGroupDic,
                 targetTypeIndex,
                 findTargetDetailTypeIndex,
                 findTargetTypeIndex
             );
-
-            if (findRankLinks1.Count > 0)
-            {
-                findLinks += LinksBuild(
-                    findRankLinks1,
-                    fieldGroupDic,
-                    baseDic,
-                    titleList
-                ).findLinks;
-                findLinks31 += LinksBuild(findRankLinks1, null, null, null).findLinks31;
-            }
-
-            // 2层寻找
-            var findRankLinks2 = new List<(string, string, string, string)>();
-            foreach (var rankLinks1 in findRankLinks1)
-            {
-                if (rankLinks1.hasFind != "1")
-                {
-                    var target2Id = rankLinks1.targetId;
-                    if (target2Id == findTargetId)
-                        continue;
-                    if (!baseDic.ContainsKey(target2Id))
-                        continue;
-                    var target2Type = SafeGet(baseDic, target2Id, targetTypeIndex);
-                    if (findRankDic.TryGetValue(target2Type, out var findTarget2RankList))
-                    {
-                        var findRankLinksTemp = FindRankLinks(
-                            target2Id,
-                            baseDic,
-                            titleList,
-                            dataTypeDic,
-                            findTarget2RankList,
-                            targetTypeIndex,
-                            findTargetDetailTypeIndex,
-                            findTargetTypeIndex
-                        );
-
-                        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-                        findRankLinks2.Union(findRankLinksTemp);
-                    }
-                }
-            }
-
-            if (findRankLinks2.Count > 0)
-            {
-                findLinks += LinksBuild(
-                    findRankLinks2,
-                    fieldGroupDic,
-                    baseDic,
-                    titleList
-                ).findLinks;
-                findLinks31 += LinksBuild(findRankLinks2, null, null, null).findLinks31;
-            }
-
-            // 寻找界面提示使用最后的id，因为其他id可能没有图片资源
-            var finalMatch = findRankLinks1.LastOrDefault();
-            if (findRankLinks1.Count == 0)
-            {
-                findTips = "{1,\"tip_obstacleItem\",2}";
-            }
-            if (findTargetDetailType == "4")
-            {
-                findTips =
-                    "{3,"
-                    + findTargetId.Substring(0, findTargetId.Length - 2)
-                    + "00,"
-                    + finalMatch.targetId
-                    + "}";
-            }
-            else
-            {
-                findTips = "{1,\"tip_obstacleItem\",1," + finalMatch.targetId + "}";
-            }
         }
         else
         {
-            // 传统寻找--无优先级
-            Debug.Print($"【#寻找优先级】表中不存在：{targetType}");
-
-            //1层查找
-            if (findTargetDetailType == string.Empty)
-            {
-                findTargetDetailType = "未找到细类";
-            }
-            if (findTargetType == "19")
-            {
-                findLinks +=
-                    "{" + findTargetType + "," + findTargetDetailType + "," + findTargetId + "},";
-            }
-            else if (findTargetType == "1")
-            {
-                findLinks += "{" + findTargetType + "," + findTargetId + "},";
-                findLinks31 += "{" + 31 + "," + findTargetId + "},";
-            }
-            else
-            {
-                findLinks += "{" + findTargetType + "," + findTargetId + "},";
-            }
-
-            if (findTaregtfieldLinks != string.Empty)
-            {
-                findLinks += findTaregtfieldLinks;
-            }
-
-            int outPutIdGroupIndex = titleList.IndexOf("产出ID组");
-            // 2层查找
-            List<string> matchedIDsOri = baseDic
-                .Where(kv =>
-                    kv.Value.Count > outPutIdGroupIndex
-                    && kv.Value[outPutIdGroupIndex].Contains(findTargetId)
-                )
-                .Select(kv => kv.Key)
-                .ToList();
-
-            //没有直接匹配的，需要继续查找（按照链的规则,要验证类型）
-            List<string> matchedIDsEnd = new();
-            if (targetType.Contains("链"))
-            {
-                var findTargetId01 = findTargetId.Substring(0, findTargetId.Length - 2) + "01";
-                List<string> matchedIDs01 = baseDic
-                    .Where(kv =>
-                        kv.Value.Count > outPutIdGroupIndex
-                        && kv.Value[outPutIdGroupIndex].Contains(findTargetId01)
-                    )
-                    .Select(kv => kv.Key)
-                    .ToList();
-
-                var findTargetId02 = findTargetId.Substring(0, findTargetId.Length - 2) + "02";
-                List<string> matchedIDs02 = baseDic
-                    .Where(kv =>
-                        kv.Value.Count > outPutIdGroupIndex
-                        && kv.Value[outPutIdGroupIndex].Contains(findTargetId02)
-                    )
-                    .Select(kv => kv.Key)
-                    .ToList();
-
-                var findTargetId03 = findTargetId.Substring(0, findTargetId.Length - 2) + "03";
-                List<string> matchedIDs03 = baseDic
-                    .Where(kv =>
-                        kv.Value.Count > outPutIdGroupIndex
-                        && kv.Value[outPutIdGroupIndex].Contains(findTargetId03)
-                    )
-                    .Select(kv => kv.Key)
-                    .ToList();
-
-                matchedIDsEnd.AddRange(matchedIDsOri);
-                matchedIDsEnd.AddRange(matchedIDs01);
-                matchedIDsEnd.AddRange(matchedIDs02);
-                matchedIDsEnd.AddRange(matchedIDs03);
-            }
-
-            //// 按照优先级选择最后一个匹配项
-            //string finalMatchedId = matchedIDsOri.LastOrDefault()
-            //                     ?? matchedIDs03.LastOrDefault()
-            //                     ?? matchedIDs02.LastOrDefault()
-            //                     ?? matchedIDs01.LastOrDefault()
-            //                     ??String.Empty;
-
-
-
-            // 3层查找
-            List<string> matchedIDsOri3 = new();
-
-            if (matchedIDsEnd.Count > 0)
-            {
-                foreach (var findTargetId2 in matchedIDsEnd)
-                {
-                    matchedIDsOri3.AddRange(
-                        baseDic
-                            .Where(kv =>
-                                kv.Value.Count > outPutIdGroupIndex
-                                && kv.Value[outPutIdGroupIndex].Contains(findTargetId2)
-                            )
-                            .Select(kv => kv.Key)
-                            .ToList()
-                    );
-                }
-            }
-            matchedIDsEnd.AddRange(matchedIDsOri3);
-
-            // 寻找字符串格式化
-            List<string> matchedIDs = new HashSet<string>(matchedIDsEnd).ToList();
-
-            // 寻找界面提示使用最后的id，因为其他id可能没有图片资源
-            string finalMatchedId = matchedIDs.LastOrDefault() ?? string.Empty;
-
-            if (matchedIDs.Count == 0)
-            {
-                findTips = "{1,\"tip_obstacleItem\",2}";
-            }
-            else
-            {
-                //// 针对找自己的情况做出区分
-                //if (findLinks.Contains("{1,"))
-                //{
-                //    findLinks = string.Empty;
-                //}
-
-                int itemCount = 0;
-                foreach (var findTargetId3 in matchedIDs)
-                {
-                    if (findTargetId3 != string.Empty && baseDic.ContainsKey(findTargetId3))
-                    {
-                        var findTargetType3 = SafeGet(
-                            baseDic,
-                            findTargetId3,
-                            titleList.IndexOf("寻找类型")
-                        );
-                        var findTargetDetailType3 = SafeGet(
-                            baseDic,
-                            findTargetId3,
-                            titleList.IndexOf("寻找细类")
-                        );
-                        var findTargetNickName3 = SafeGet(
-                            baseDic,
-                            findTargetId3,
-                            titleList.IndexOf("代号")
-                        );
-
-                        var findTaregtfieldLinks3 = FieldGroupLinks(
-                            fieldGroupDic,
-                            findTargetNickName3
-                        );
-
-                        if (findTargetType3 != string.Empty)
-                        {
-                            if (findTargetDetailType3 == string.Empty)
-                            {
-                                findTargetDetailType3 = "未找到细类";
-                            }
-                            if (findTargetType3 == "19")
-                            {
-                                findLinks +=
-                                    "{"
-                                    + findTargetType3
-                                    + ","
-                                    + findTargetDetailType3
-                                    + ","
-                                    + findTargetId3
-                                    + "},";
-                            }
-                            else if (findTargetType3 == "1")
-                            {
-                                findLinks += "{" + findTargetType3 + "," + findTargetId3 + "},";
-                                findLinks31 += "{" + 31 + "," + findTargetId3 + "},";
-                            }
-                            else
-                            {
-                                findLinks += "{" + findTargetType3 + "," + findTargetId3 + "},";
-                            }
-
-                            if (findTaregtfieldLinks3 != string.Empty)
-                            {
-                                findLinks += findTaregtfieldLinks3;
-                            }
-
-                            if (itemCount == 0)
-                            {
-                                if (findTargetDetailType == "4")
-                                {
-                                    findTips =
-                                        "{3,"
-                                        + findTargetId.Substring(0, findTargetId.Length - 2)
-                                        + "00,"
-                                        + finalMatchedId
-                                        + "}";
-                                }
-                                else
-                                {
-                                    findTips = "{1,\"tip_obstacleItem\",1," + finalMatchedId + "}";
-                                }
-                            }
-                        }
-                    }
-                    itemCount++;
-                }
-            }
+            (findLinks, findLinks31, findTips) = FindLinksWithoutRank(
+                findTargetDetailType,
+                findTargetType,
+                findTargetId,
+                targetType,
+                baseDic,
+                titleList,
+                fieldGroupDic,
+                findTaregtfieldLinks
+            );
         }
         // 去重
         findLinks = RemoveDuplicateBracketsLinqOrdered(findLinks);
@@ -2470,6 +2208,279 @@ public class LteData
         }
 
         return (findLinks, findLinks31);
+    }
+
+    // 有优先级寻找：按 findRankDic 定义的层级递归展开，最多 2 层
+    private static (string findLinks, string findLinks31, string findTips) FindLinksWithRank(
+        string findTargetDetailType,
+        string findTargetId,
+        Dictionary<string, List<string>> baseDic,
+        List<string> titleList,
+        Dictionary<string, List<string>> dataTypeDic,
+        Dictionary<string, List<string>> findRankDic,
+        List<string> findTargetRankList,
+        Dictionary<string, List<string>> fieldGroupDic,
+        int targetTypeIndex,
+        int findTargetDetailTypeIndex,
+        int findTargetTypeIndex
+    )
+    {
+        var findLinks = string.Empty;
+        var findLinks31 = string.Empty;
+        var findTips = string.Empty;
+
+        // 1层寻找
+        var findRankLinks1 = FindRankLinks(
+            findTargetId,
+            baseDic,
+            titleList,
+            dataTypeDic,
+            findTargetRankList,
+            targetTypeIndex,
+            findTargetDetailTypeIndex,
+            findTargetTypeIndex
+        );
+
+        if (findRankLinks1.Count > 0)
+        {
+            findLinks += LinksBuild(findRankLinks1, fieldGroupDic, baseDic, titleList).findLinks;
+            findLinks31 += LinksBuild(findRankLinks1, null, null, null).findLinks31;
+        }
+
+        // 2层寻找
+        var findRankLinks2 = new List<(string, string, string, string)>();
+        foreach (var rankLinks1 in findRankLinks1)
+        {
+            if (rankLinks1.hasFind != "1")
+            {
+                var target2Id = rankLinks1.targetId;
+                if (target2Id == findTargetId)
+                    continue;
+                if (!baseDic.ContainsKey(target2Id))
+                    continue;
+                var target2Type = SafeGet(baseDic, target2Id, targetTypeIndex);
+                if (findRankDic.TryGetValue(target2Type, out var findTarget2RankList))
+                {
+                    var findRankLinksTemp = FindRankLinks(
+                        target2Id,
+                        baseDic,
+                        titleList,
+                        dataTypeDic,
+                        findTarget2RankList,
+                        targetTypeIndex,
+                        findTargetDetailTypeIndex,
+                        findTargetTypeIndex
+                    );
+                    // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+                    findRankLinks2.Union(findRankLinksTemp);
+                }
+            }
+        }
+
+        if (findRankLinks2.Count > 0)
+        {
+            findLinks += LinksBuild(findRankLinks2, fieldGroupDic, baseDic, titleList).findLinks;
+            findLinks31 += LinksBuild(findRankLinks2, null, null, null).findLinks31;
+        }
+
+        // 寻找界面提示使用最后的id，因为其他id可能没有图片资源
+        var finalMatch = findRankLinks1.LastOrDefault();
+        if (findRankLinks1.Count == 0)
+        {
+            findTips = "{1,\"tip_obstacleItem\",2}";
+        }
+        if (findTargetDetailType == "4")
+        {
+            findTips =
+                "{3,"
+                + findTargetId.Substring(0, findTargetId.Length - 2)
+                + "00,"
+                + finalMatch.targetId
+                + "}";
+        }
+        else
+        {
+            findTips = "{1,\"tip_obstacleItem\",1," + finalMatch.targetId + "}";
+        }
+
+        return (findLinks, findLinks31, findTips);
+    }
+
+    // 传统寻找（无优先级）：按产出ID组向上逐层查找，最多 3 层
+    private static (string findLinks, string findLinks31, string findTips) FindLinksWithoutRank(
+        string findTargetDetailType,
+        string findTargetType,
+        string findTargetId,
+        string targetType,
+        Dictionary<string, List<string>> baseDic,
+        List<string> titleList,
+        Dictionary<string, List<string>> fieldGroupDic,
+        string findTaregtfieldLinks
+    )
+    {
+        var findLinks = string.Empty;
+        var findLinks31 = string.Empty;
+        var findTips = string.Empty;
+
+        PluginLog.Write($"[LteData][FindLinks] 【#寻找优先级】表中不存在：{targetType}");
+
+        //1层查找
+        if (findTargetDetailType == string.Empty)
+            findTargetDetailType = "未找到细类";
+
+        if (findTargetType == "19")
+        {
+            findLinks +=
+                "{" + findTargetType + "," + findTargetDetailType + "," + findTargetId + "},";
+        }
+        else if (findTargetType == "1")
+        {
+            findLinks += "{" + findTargetType + "," + findTargetId + "},";
+            findLinks31 += "{" + 31 + "," + findTargetId + "},";
+        }
+        else
+        {
+            findLinks += "{" + findTargetType + "," + findTargetId + "},";
+        }
+
+        if (findTaregtfieldLinks != string.Empty)
+            findLinks += findTaregtfieldLinks;
+
+        int outPutIdGroupIndex = titleList.IndexOf("产出ID组");
+        // 2层查找
+        List<string> matchedIDsOri = baseDic
+            .Where(kv =>
+                kv.Value.Count > outPutIdGroupIndex
+                && kv.Value[outPutIdGroupIndex].Contains(findTargetId)
+            )
+            .Select(kv => kv.Key)
+            .ToList();
+
+        // 没有直接匹配的，需要继续查找（按照链的规则，要验证类型）
+        List<string> matchedIDsEnd = new();
+        if (targetType.Contains("链"))
+        {
+            var findTargetId01 = findTargetId.Substring(0, findTargetId.Length - 2) + "01";
+            var findTargetId02 = findTargetId.Substring(0, findTargetId.Length - 2) + "02";
+            var findTargetId03 = findTargetId.Substring(0, findTargetId.Length - 2) + "03";
+            foreach (
+                var variantId in new[]
+                {
+                    findTargetId,
+                    findTargetId01,
+                    findTargetId02,
+                    findTargetId03
+                }
+            )
+            {
+                matchedIDsEnd.AddRange(
+                    baseDic
+                        .Where(kv =>
+                            kv.Value.Count > outPutIdGroupIndex
+                            && kv.Value[outPutIdGroupIndex].Contains(variantId)
+                        )
+                        .Select(kv => kv.Key)
+                );
+            }
+        }
+
+        // 3层查找
+        if (matchedIDsEnd.Count > 0)
+        {
+            var layer3 = new List<string>();
+            foreach (var findTargetId2 in matchedIDsEnd)
+            {
+                layer3.AddRange(
+                    baseDic
+                        .Where(kv =>
+                            kv.Value.Count > outPutIdGroupIndex
+                            && kv.Value[outPutIdGroupIndex].Contains(findTargetId2)
+                        )
+                        .Select(kv => kv.Key)
+                );
+            }
+            matchedIDsEnd.AddRange(layer3);
+        }
+
+        // 寻找字符串格式化（去重）
+        List<string> matchedIDs = new HashSet<string>(matchedIDsEnd).ToList();
+        string finalMatchedId = matchedIDs.LastOrDefault() ?? string.Empty;
+
+        if (matchedIDs.Count == 0)
+        {
+            findTips = "{1,\"tip_obstacleItem\",2}";
+        }
+        else
+        {
+            int itemCount = 0;
+            foreach (var findTargetId3 in matchedIDs)
+            {
+                if (findTargetId3 != string.Empty && baseDic.ContainsKey(findTargetId3))
+                {
+                    var findTargetType3 = SafeGet(
+                        baseDic,
+                        findTargetId3,
+                        titleList.IndexOf("寻找类型")
+                    );
+                    var findTargetDetailType3 = SafeGet(
+                        baseDic,
+                        findTargetId3,
+                        titleList.IndexOf("寻找细类")
+                    );
+                    var findTargetNickName3 = SafeGet(
+                        baseDic,
+                        findTargetId3,
+                        titleList.IndexOf("代号")
+                    );
+                    var findTaregtfieldLinks3 = FieldGroupLinks(fieldGroupDic, findTargetNickName3);
+
+                    if (findTargetType3 != string.Empty)
+                    {
+                        if (findTargetDetailType3 == string.Empty)
+                            findTargetDetailType3 = "未找到细类";
+
+                        if (findTargetType3 == "19")
+                        {
+                            findLinks +=
+                                "{"
+                                + findTargetType3
+                                + ","
+                                + findTargetDetailType3
+                                + ","
+                                + findTargetId3
+                                + "},";
+                        }
+                        else if (findTargetType3 == "1")
+                        {
+                            findLinks += "{" + findTargetType3 + "," + findTargetId3 + "},";
+                            findLinks31 += "{" + 31 + "," + findTargetId3 + "},";
+                        }
+                        else
+                        {
+                            findLinks += "{" + findTargetType3 + "," + findTargetId3 + "},";
+                        }
+
+                        if (findTaregtfieldLinks3 != string.Empty)
+                            findLinks += findTaregtfieldLinks3;
+
+                        if (itemCount == 0)
+                        {
+                            findTips =
+                                findTargetDetailType == "4"
+                                    ? "{3,"
+                                        + findTargetId.Substring(0, findTargetId.Length - 2)
+                                        + "00,"
+                                        + finalMatchedId
+                                        + "}"
+                                    : "{1,\"tip_obstacleItem\",1," + finalMatchedId + "}";
+                        }
+                    }
+                }
+                itemCount++;
+            }
+        }
+
+        return (findLinks, findLinks31, findTips);
     }
 
     private static (string findLinks, string findLinks31) LinksBuild(
