@@ -263,7 +263,9 @@ internal static class LteCore
             return (value + int.Parse(funDy1)).ToString();
         }
 
-        Debug.Print($"Mer: cannot parse dependsValue as long");
+        PluginLog.Write(
+            $"[Mer] cannot parse as long: funDepends={funDepends} dependsValue={dependsValue} funDy1={funDy1} itemId={itemId}"
+        );
         return dependsValue;
     }
 

@@ -366,6 +366,14 @@ public static class PubMetToExcel
         );
 
         var listObjectDataDic = new Dictionary<string, object[,]>();
+        if (sheet is null)
+        {
+            PluginLog.Write(
+                $"[GetExcelListObjects] sheet '{sheetName}' not found in {excelName} (path={excelPath})"
+            );
+            excel?.Dispose();
+            return listObjectDataDic;
+        }
         foreach (var table in sheet.Tables)
         {
             if (table != null)
@@ -2461,7 +2469,13 @@ public static class PubMetToExcel
         {
             if (sheetName.Contains("#") || sheetName.Contains("Chart"))
                 continue;
-            var rows = MiniExcel.Query(wkFullPath, sheetName: sheetName, configuration: NumDesAddIn.OnOffMiniExcelCatches).ToList();
+            var rows = MiniExcel
+                .Query(
+                    wkFullPath,
+                    sheetName: sheetName,
+                    configuration: NumDesAddIn.OnOffMiniExcelCatches
+                )
+                .ToList();
 
             if (rows.Count <= 4)
             {
