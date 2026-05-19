@@ -513,6 +513,22 @@ public class LteData
     //    return cellValues;
     //}
 
+    private sealed record RowWriteContext(
+        ExcelWorksheet TargetSheet,
+        ExcelPackage TargetExcel,
+        int WriteCol,
+        string[] ColTitles,
+        string[] ColTypes,
+        KeyValuePair<string, Dictionary<(object, object), string>> ModelSheet,
+        Dictionary<string, string> ExportWildcardData,
+        Dictionary<string, string> ExportWildcardDyData,
+        Dictionary<string, Dictionary<string, List<string>>> StrDictionary,
+        Dictionary<string, List<string>> BaseData,
+        string Id,
+        HashSet<string> DataRepeatWritten,
+        List<(string, int, int, string, string, string)> CheckResult
+    );
+
     private static void BaseSheet(
         Dictionary<string, List<string>> baseData,
         Dictionary<string, string> exportWildcardData,
@@ -608,6 +624,21 @@ public class LteData
                 var dataRepeatWritten = new HashSet<string>();
                 var modelSheetTypes = new HashSet<object>(
                     modelSheet.Value.Keys.Select(k => k.Item1)
+                );
+                var rowCtx = new RowWriteContext(
+                    targetSheet,
+                    targetExcel,
+                    writeCol,
+                    colTitles,
+                    colTypes,
+                    modelSheet,
+                    exportWildcardData,
+                    exportWildcardDyData,
+                    strDictionary,
+                    baseData,
+                    id,
+                    dataRepeatWritten,
+                    checkResult
                 );
 
                 // 阶段一：收集操作意图，不修改表
@@ -825,23 +856,11 @@ public class LteData
                         );
 
                     bool wrote = WriteRowData(
-                        targetSheet,
-                        targetExcel,
+                        rowCtx,
                         writeRow,
-                        writeCol,
                         itemId,
                         itemType,
                         idCount,
-                        colTitles,
-                        colTypes,
-                        modelSheet,
-                        exportWildcardData,
-                        exportWildcardDyData,
-                        strDictionary,
-                        baseData,
-                        id,
-                        dataRepeatWritten,
-                        checkResult,
                         isFirst: true
                     );
                     if (wrote)
@@ -864,23 +883,11 @@ public class LteData
                         );
 
                     bool wrote = WriteRowData(
-                        targetSheet,
-                        targetExcel,
+                        rowCtx,
                         writeRow,
-                        writeCol,
                         itemId,
                         itemType,
                         idCount,
-                        colTitles,
-                        colTypes,
-                        modelSheet,
-                        exportWildcardData,
-                        exportWildcardDyData,
-                        strDictionary,
-                        baseData,
-                        id,
-                        dataRepeatWritten,
-                        checkResult,
                         isFirst: true
                     );
                     if (wrote)
@@ -919,62 +926,53 @@ public class LteData
     }
 
     private static bool WriteRowData(
-        ExcelWorksheet targetSheet,
-        ExcelPackage targetExcel,
+        RowWriteContext ctx,
         int writeRow,
-        int writeCol,
         string itemId,
         string itemType,
         int idCount,
-        string[] colTitles,
-        string[] colTypes,
-        KeyValuePair<string, Dictionary<(object, object), string>> modelSheet,
-        Dictionary<string, string> exportWildcardData,
-        Dictionary<string, string> exportWildcardDyData,
-        Dictionary<string, Dictionary<string, List<string>>> strDictionary,
-        Dictionary<string, List<string>> baseData,
-        string id,
-        HashSet<string> dataRepeatWritten,
-        List<(string, int, int, string, string, string)> checkResult,
         bool isFirst
     )
     {
         bool wrote = false;
-        for (int j = 2; j <= writeCol; j++)
+        for (int j = 2; j <= ctx.WriteCol; j++)
         {
-            var cellTitle = colTitles[j];
+            var cellTitle = ctx.ColTitles[j];
             if (cellTitle == "")
                 continue;
             if (
-                !modelSheet.Value.TryGetValue((itemType, (object)cellTitle), out var cellModelValue)
+                !ctx.ModelSheet.Value.TryGetValue(
+                    (itemType, (object)cellTitle),
+                    out var cellModelValue
+                )
             )
                 continue;
 
             var cellRealValue = AnalyzeWildcard(
                 cellModelValue,
-                exportWildcardData,
-                exportWildcardDyData,
-                strDictionary,
-                baseData,
-                id,
+                ctx.ExportWildcardData,
+                ctx.ExportWildcardDyData,
+                ctx.StrDictionary,
+                ctx.BaseData,
+                ctx.Id,
                 itemId
             );
 
             if (j == 2 && cellRealValue == string.Empty)
                 break;
-            if (j == 2 && dataRepeatWritten.Contains(cellRealValue))
+            if (j == 2 && ctx.DataRepeatWritten.Contains(cellRealValue))
                 break;
             if (j == 2)
-                dataRepeatWritten.Add(cellRealValue);
+                ctx.DataRepeatWritten.Add(cellRealValue);
 
-            if (!isFirst && targetSheet.Cells[writeRow, j].Value?.ToString() == cellRealValue)
+            if (!isFirst && ctx.TargetSheet.Cells[writeRow, j].Value?.ToString() == cellRealValue)
                 continue;
 
             var newErrors = PubMetToExcel.ExcelCellValueFormatCheck(
                 cellRealValue,
-                colTypes[j],
-                targetSheet.Name,
-                targetExcel.File.FullName,
+                ctx.ColTypes[j],
+                ctx.TargetSheet.Name,
+                ctx.TargetExcel.File.FullName,
                 writeRow - 1,
                 j - 1
             );
@@ -982,12 +980,12 @@ public class LteData
                 PluginLog.Write(
                     $"[LTEData][格式错误] itemId={itemId} {e.Item4} R{e.Item2}C{e.Item3}: {e.Item5} = {e.Item1}"
                 );
-            checkResult.AddRange(
+            ctx.CheckResult.AddRange(
                 newErrors.Select(e =>
                     ($"itemId={itemId} {e.Item1}", e.Item2, e.Item3, e.Item4, e.Item5, e.Item6)
                 )
             );
-            targetSheet.Cells[writeRow, j].Value = cellRealValue;
+            ctx.TargetSheet.Cells[writeRow, j].Value = cellRealValue;
             wrote = true;
         }
         return wrote;
