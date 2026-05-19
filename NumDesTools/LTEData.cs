@@ -723,14 +723,28 @@ public class LteData
 
                     foreach (var (col, val, colType) in rowWriteData)
                     {
+                        var newErrors = PubMetToExcel.ExcelCellValueFormatCheck(
+                            val,
+                            colType,
+                            targetSheet.Name,
+                            targetExcel.File.FullName,
+                            rowIndex - 1,
+                            col - 1
+                        );
+                        foreach (var e in newErrors)
+                            PluginLog.Write(
+                                $"[LTEData][格式错误] itemId={itemId} {e.Item4} R{e.Item2}C{e.Item3}: {e.Item5} = {e.Item1}"
+                            );
                         checkResult.AddRange(
-                            PubMetToExcel.ExcelCellValueFormatCheck(
-                                val,
-                                colType,
-                                targetSheet.Name,
-                                targetExcel.File.FullName,
-                                rowIndex - 1,
-                                col - 1
+                            newErrors.Select(e =>
+                                (
+                                    $"itemId={itemId} {e.Item1}",
+                                    e.Item2,
+                                    e.Item3,
+                                    e.Item4,
+                                    e.Item5,
+                                    e.Item6
+                                )
                             )
                         );
                         targetSheet.Cells[rowIndex, col].Value = val;
@@ -929,14 +943,21 @@ public class LteData
             if (!isFirst && targetSheet.Cells[writeRow, j].Value?.ToString() == cellRealValue)
                 continue;
 
+            var newErrors = PubMetToExcel.ExcelCellValueFormatCheck(
+                cellRealValue,
+                colTypes[j],
+                targetSheet.Name,
+                targetExcel.File.FullName,
+                writeRow - 1,
+                j - 1
+            );
+            foreach (var e in newErrors)
+                PluginLog.Write(
+                    $"[LTEData][格式错误] itemId={itemId} {e.Item4} R{e.Item2}C{e.Item3}: {e.Item5} = {e.Item1}"
+                );
             checkResult.AddRange(
-                PubMetToExcel.ExcelCellValueFormatCheck(
-                    cellRealValue,
-                    colTypes[j],
-                    targetSheet.Name,
-                    targetExcel.File.FullName,
-                    writeRow - 1,
-                    j - 1
+                newErrors.Select(e =>
+                    ($"itemId={itemId} {e.Item1}", e.Item2, e.Item3, e.Item4, e.Item5, e.Item6)
                 )
             );
             targetSheet.Cells[writeRow, j].Value = cellRealValue;
@@ -4080,18 +4101,21 @@ public class LteData
         var findData = string.Empty;
         var fixIcon = string.Empty;
 
-        var fieldConditonTargetId = baseDic
-            .FirstOrDefault(kv => kv.Value.Count > 5 && kv.Value[5] == fieldConditonTarget)
-            .Key;
+        var fieldConditonTargetId =
+            baseDic
+                .FirstOrDefault(kv => kv.Value.Count > 5 && kv.Value[5] == fieldConditonTarget)
+                .Key
+            ?? baseDic
+                .FirstOrDefault(kv => kv.Value.Count > 4 && kv.Value[4] == fieldConditonTarget)
+                .Key;
 
         if (fieldConditonTargetId == null)
         {
             MessageBox.Show($"{fieldConditonTarget}:找不到ID，检查【基础】表");
+            return (string.Empty, string.Empty, string.Empty);
         }
 
-        var fieldConditonTargetName = baseDic[
-            fieldConditonTargetId ?? throw new InvalidOperationException()
-        ][6];
+        var fieldConditonTargetName = baseDic[fieldConditonTargetId][6];
         var fieldConditonTargetLast = baseDic
             .LastOrDefault(kv => kv.Value.Count > 4 && kv.Value[6] == fieldConditonTargetName)
             .Key;

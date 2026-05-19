@@ -705,6 +705,11 @@ should_push = is_workday and is_workhour
   评分 / 评论关键词
   目标用户画像
 
+🎬 视频参考
+  B站：（用 WebSearch 搜"游戏名 site:bilibili.com"，找评测/实机演示视频，给出链接）
+  YouTube：（用 WebSearch 搜"游戏名 gameplay review youtube"，找实机演示视频，给出链接）
+  （找不到则填"暂无"）
+
 🎯 对我方游戏的参考价值
   与 MergeLand Alice（3合农场+叙事）的相关度：高/中/低
   可借鉴的具体设计点：
