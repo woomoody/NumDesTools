@@ -311,7 +311,7 @@ public class LteData
             }
             else
             {
-                Debug.Print("表格不存在");
+                PluginLog.Write("[LteData][GetModelValue] 表格不存在");
             }
         }
         modelExcel?.Dispose();
@@ -1679,7 +1679,7 @@ public class LteData
             if (string.IsNullOrEmpty(key))
                 continue;
 
-            Debug.Print($"数据编号：{key}");
+            PluginLog.Write($"[LteData][BaseData] 数据编号：{key}");
 
             // 资源编号和图片编号
             string prefabId = baseDic[key][BaseDicColPrefabId];
@@ -2663,7 +2663,7 @@ public class LteData
                         Convert.ToDouble(findTargetId) + 30 + Convert.ToDouble(findRankParams1)
                     ).ToString(CultureInfo.CurrentCulture);
 
-                    Debug.Print($"谁找1：{findTargetId},找谁：{targetId}");
+                    PluginLog.Write($"[LteData][FindRankLinks] 谁找1：{findTargetId},找谁：{targetId}");
 
                     if (!baseDic.ContainsKey(targetId))
                     {
@@ -2671,7 +2671,9 @@ public class LteData
                             Convert.ToDouble(findTargetId) + 60 + Convert.ToDouble(findRankParams1)
                         ).ToString(CultureInfo.CurrentCulture);
 
-                        Debug.Print($"谁找2：{findTargetId},找谁：{targetId}");
+                        PluginLog.Write(
+                            $"[LteData][FindRankLinks] 谁找2：{findTargetId},找谁：{targetId}"
+                        );
 
                         if (!baseDic.ContainsKey(targetId))
                             targetId = (
@@ -2680,7 +2682,9 @@ public class LteData
                                 + Convert.ToDouble(findRankParams1)
                             ).ToString(CultureInfo.CurrentCulture);
 
-                        Debug.Print($"谁找3：{findTargetId},找谁：{targetId}");
+                        PluginLog.Write(
+                            $"[LteData][FindRankLinks] 谁找3：{findTargetId},找谁：{targetId}"
+                        );
 
                         if (!baseDic.ContainsKey(targetId))
                         {
@@ -2695,7 +2699,9 @@ public class LteData
                             }
                         }
 
-                        Debug.Print($"谁找4：{findTargetId},找谁：{targetId}");
+                        PluginLog.Write(
+                            $"[LteData][FindRankLinks] 谁找4：{findTargetId},找谁：{targetId}"
+                        );
                     }
                 }
                 // 来源：Any-链-源 — 追溯链的最低级版本(01)的产出来源
@@ -3295,7 +3301,7 @@ public class LteData
                 ? baseDic[taskTagetId][titleList.IndexOf("类型")]
                 : string.Empty;
 
-            Debug.Print($"原始目标ID：{taskTagetId}");
+            PluginLog.Write($"[LteData][FixTaskData] 原始目标ID：{taskTagetId}");
 
             if (
                 taskTagetType.Contains("地标-3")
@@ -3309,7 +3315,7 @@ public class LteData
                     Convert.ToDouble(taskTagetId) - Convert.ToDouble(taskTagetRank) + 1
                 ).ToString(CultureInfo.InvariantCulture);
 
-                Debug.Print($"改造目标ID：{taskTagetId}");
+                PluginLog.Write($"[LteData][FixTaskData] 改造目标ID：{taskTagetId}");
             }
         }
         if (taskDialogId != string.Empty)
