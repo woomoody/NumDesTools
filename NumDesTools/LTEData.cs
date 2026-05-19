@@ -98,6 +98,15 @@ public class LteData
         }
     }
 
+    // 读取当前工作簿中指定 sheet 的 ListObject；找不到时弹提示并返回 null
+    private static ListObject RequireListObject(string sheetName, string tableName)
+    {
+        var list = PubMetToExcel.GetExcelListObjects(sheetName, tableName);
+        if (list == null)
+            MessageBox.Show($"「{sheetName}」中找不到名称为「{tableName}」的表格，请检查");
+        return list;
+    }
+
     #region LTE数据配置导出
     //导出LTE数据配置
     public static void ExportLteDataConfigFirst(CommandBarButton ctrl, ref bool cancelDefault) =>
@@ -1046,18 +1055,12 @@ public class LteData
                     ActivityDataMaxIndex
                 );
 
-                var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+                var baseList = RequireListObject("LTE【基础】", "LTE【基础】");
                 if (baseList == null)
-                {
-                    MessageBox.Show("LTE【基础】中的名称表-基础不存在");
                     return;
-                }
-                var findList = PubMetToExcel.GetExcelListObjects("LTE【寻找】", "LTE【寻找】");
+                var findList = RequireListObject("LTE【寻找】", "LTE【寻找】");
                 if (findList == null)
-                {
-                    MessageBox.Show("LTE【寻找】中的名称表-寻找不存在");
                     return;
-                }
                 //基础数据修改依赖数据
                 var listObjectsDic = PubMetToExcel.GetExcelListObjects(
                     WkPath,
@@ -1161,12 +1164,9 @@ public class LteData
                     writeArray
                 );
 
-                var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+                var fieldGroupList = RequireListObject("#道具信息", "道具信息");
                 if (fieldGroupList == null)
-                {
-                    MessageBox.Show("#道具信息中的名称【道具信息】不存在");
                     return;
-                }
                 object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
                 if (fieldGroupArray == null)
                     return;
@@ -1273,18 +1273,12 @@ public class LteData
                     ActivityDataMaxIndex
                 );
 
-                var list = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+                var list = RequireListObject("LTE【基础】", "LTE【基础】");
                 if (list == null)
-                {
-                    MessageBox.Show("LTE【基础】中的名称表-基础不存在");
                     return;
-                }
-                var findList = PubMetToExcel.GetExcelListObjects("LTE【寻找】", "LTE【寻找】");
+                var findList = RequireListObject("LTE【寻找】", "LTE【寻找】");
                 if (findList == null)
-                {
-                    MessageBox.Show("LTE【寻找】中的名称表-寻找不存在");
                     return;
-                }
 
                 //基础数据修改依赖数据
                 var listObjectsDic = PubMetToExcel.GetExcelListObjects(
@@ -1334,12 +1328,9 @@ public class LteData
                     copyTitleArray
                 );
 
-                var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+                var fieldGroupList = RequireListObject("#道具信息", "道具信息");
                 if (fieldGroupList == null)
-                {
-                    MessageBox.Show("#道具信息中的名称【道具信息】不存在");
                     return;
-                }
                 object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
                 if (fieldGroupArray == null)
                     return;
@@ -2810,19 +2801,13 @@ public class LteData
                     false
                 );
 
-                var taskList = PubMetToExcel.GetExcelListObjects("LTE【任务】", "LTE【任务】");
+                var taskList = RequireListObject("LTE【任务】", "LTE【任务】");
                 if (taskList == null)
-                {
-                    MessageBox.Show("LTE【任务】中的名称表-任务不存在");
                     return;
-                }
 
-                var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+                var baseList = RequireListObject("LTE【基础】", "LTE【基础】");
                 if (baseList == null)
-                {
-                    MessageBox.Show("LTE【基础】中的名称表-基础不存在");
                     return;
-                }
                 object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
                 if (baseArray == null)
                     return;
@@ -2832,12 +2817,9 @@ public class LteData
                     return;
                 }
 
-                var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+                var fieldGroupList = RequireListObject("#道具信息", "道具信息");
                 if (fieldGroupList == null)
-                {
-                    MessageBox.Show("#道具信息中的名称【道具信息】不存在");
                     return;
-                }
                 object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
                 if (fieldGroupArray == null)
                     return;
@@ -2960,19 +2942,13 @@ public class LteData
                     false
                 );
 
-                var taskList = PubMetToExcel.GetExcelListObjects("LTE【任务】", "LTE【任务】");
+                var taskList = RequireListObject("LTE【任务】", "LTE【任务】");
                 if (taskList == null)
-                {
-                    MessageBox.Show("LTE【任务】中的名称表-任务不存在");
                     return;
-                }
 
-                var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+                var baseList = RequireListObject("LTE【基础】", "LTE【基础】");
                 if (baseList == null)
-                {
-                    MessageBox.Show("LTE【基础】中的名称表-基础不存在");
                     return;
-                }
                 object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
                 if (baseArray == null)
                     return;
@@ -2982,12 +2958,9 @@ public class LteData
                     return;
                 }
 
-                var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+                var fieldGroupList = RequireListObject("#道具信息", "道具信息");
                 if (fieldGroupList == null)
-                {
-                    MessageBox.Show("#道具信息中的名称【道具信息】不存在");
                     return;
-                }
                 object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
                 if (fieldGroupArray == null)
                     return;
@@ -3569,19 +3542,13 @@ public class LteData
                     false
                 );
 
-                var filedList = PubMetToExcel.GetExcelListObjects("LTE【地组】", "LTE【地组】");
+                var filedList = RequireListObject("LTE【地组】", "LTE【地组】");
                 if (filedList == null)
-                {
-                    MessageBox.Show("LTE【地组】中的名称表-任务不存在");
                     return;
-                }
 
-                var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+                var baseList = RequireListObject("LTE【基础】", "LTE【基础】");
                 if (baseList == null)
-                {
-                    MessageBox.Show("LTE【基础】中的名称表-基础不存在");
                     return;
-                }
                 object[,] baseArray = GetBodyRange(baseList, "LTE【基础】");
                 if (baseArray == null)
                     return;
@@ -3591,12 +3558,9 @@ public class LteData
                     return;
                 }
 
-                var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+                var fieldGroupList = RequireListObject("#道具信息", "道具信息");
                 if (fieldGroupList == null)
-                {
-                    MessageBox.Show("#道具信息中的名称【道具信息】不存在");
                     return;
-                }
                 object[,] fieldGroupArray = GetBodyRange(fieldGroupList, "道具信息");
                 if (fieldGroupArray == null)
                     return;
@@ -3710,28 +3674,19 @@ public class LteData
                     false
                 );
 
-                var fieldList = PubMetToExcel.GetExcelListObjects("LTE【地组】", "LTE【地组】");
+                var fieldList = RequireListObject("LTE【地组】", "LTE【地组】");
                 if (fieldList == null)
-                {
-                    MessageBox.Show("LTE【任务】中的名称表-任务不存在");
                     return;
-                }
 
-                var baseList = PubMetToExcel.GetExcelListObjects("LTE【基础】", "LTE【基础】");
+                var baseList = RequireListObject("LTE【基础】", "LTE【基础】");
                 if (baseList == null)
-                {
-                    MessageBox.Show("LTE【基础】中的名称表-基础不存在");
                     return;
-                }
                 object[,] baseArray = baseList.DataBodyRange.Value2;
                 object[,] baseTitleArray = baseList.HeaderRowRange.Value2;
 
-                var fieldGroupList = PubMetToExcel.GetExcelListObjects("#道具信息", "道具信息");
+                var fieldGroupList = RequireListObject("#道具信息", "道具信息");
                 if (fieldGroupList == null)
-                {
-                    MessageBox.Show("#道具信息中的名称【道具信息】不存在");
                     return;
-                }
                 object[,] fieldGroupArray = fieldGroupList.DataBodyRange.Value2;
 
                 //基础数据修改依赖数据
