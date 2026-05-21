@@ -1220,26 +1220,6 @@ public class LteData
                     findRankDataArray,
                     baseActivityId
                 );
-                //寻找List数据清理
-                findList.DataBodyRange.ClearContents();
-                //寻找List行数刷新
-                int newFindRowCount = findArray.GetLength(0);
-                findList.Resize(
-                    baseList.Range.Resize[newFindRowCount + 1, findList.Range.Columns.Count]
-                );
-                findList.DataBodyRange.Value2 = findArray;
-
-                //寻找标记数据删除
-                var sheetFind = Wk.Worksheets["LTE【寻找】"];
-                var oldTagFindRange = sheetFind.Range[$"A2:A{ClearToLastRow}"];
-                oldTagFindRange.Value2 = null;
-                //寻找标记数据写入
-                var tagFindRange = sheetFind.Range[
-                    sheetFind.Cells[2, 1],
-                    sheetFind.Cells[findArray.GetLength(0) + 1, 1]
-                ];
-                tagFindRange.Value2 = "+";
-
                 var sheetFindName = "LTE【寻找】";
                 var rowFindMax = findArray.GetLength(0);
 
@@ -2161,7 +2141,11 @@ public class LteData
 
         var findTargetNickName = SafeGet(baseDic, findTargetId, titleList.IndexOf("代号"));
         var findTargetOnlyNickName = SafeGet(baseDic, findTargetId, titleList.IndexOf("唯一代号"));
-        var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName, findTargetOnlyNickName);
+        var findTaregtfieldLinks = FieldGroupLinks(
+            fieldGroupDic,
+            findTargetNickName,
+            findTargetOnlyNickName
+        );
         var targetTypeIndex = titleList.IndexOf("类型");
         var targetType = SafeGet(baseDic, findTargetId, targetTypeIndex);
 
@@ -2433,8 +2417,16 @@ public class LteData
                         findTargetId3,
                         titleList.IndexOf("代号")
                     );
-                    var findTargetOnlyNickName3 = SafeGet(baseDic, findTargetId, titleList.IndexOf("唯一代号"));
-                    var findTaregtfieldLinks3 = FieldGroupLinks(fieldGroupDic, findTargetNickName3, findTargetOnlyNickName3);
+                    var findTargetOnlyNickName3 = SafeGet(
+                        baseDic,
+                        findTargetId,
+                        titleList.IndexOf("唯一代号")
+                    );
+                    var findTaregtfieldLinks3 = FieldGroupLinks(
+                        fieldGroupDic,
+                        findTargetNickName3,
+                        findTargetOnlyNickName3
+                    );
 
                     if (findTargetType3 != string.Empty)
                     {
@@ -2529,8 +2521,16 @@ public class LteData
                     rankLinks.targetId,
                     titleList.IndexOf("代号")
                 );
-                var findTargetOnlyNickName = SafeGet(baseDic, rankLinks.targetId, titleList.IndexOf("唯一代号"));
-                var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName, findTargetOnlyNickName);
+                var findTargetOnlyNickName = SafeGet(
+                    baseDic,
+                    rankLinks.targetId,
+                    titleList.IndexOf("唯一代号")
+                );
+                var findTaregtfieldLinks = FieldGroupLinks(
+                    fieldGroupDic,
+                    findTargetNickName,
+                    findTargetOnlyNickName
+                );
 
                 if (findTaregtfieldLinks != string.Empty)
                     findLinks += findTaregtfieldLinks;
@@ -2787,7 +2787,7 @@ public class LteData
 
         if (fieldGroupDic.ContainsKey(findTargetNickName))
         {
-            fieldList = fieldGroupDic[findTargetNickName]; 
+            fieldList = fieldGroupDic[findTargetNickName];
         }
         else
         {
@@ -2795,7 +2795,7 @@ public class LteData
             {
                 fieldList = fieldGroupDic[findTargetOnlyNickName];
             }
-            
+        }
             if (fieldList.Count > 2)
             {
                 var fieldMap = fieldList[1];
@@ -2833,7 +2833,7 @@ public class LteData
                     }
                 }
             }
-        }
+        
 
         return fieldLinks;
     }
