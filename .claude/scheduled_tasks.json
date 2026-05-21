@@ -1,56 +1,43 @@
 {
   "tasks": [
     {
-      "id": "cee37cbd",
-      "cron": "0 9 * * *",
-      "prompt": "运行需求情报收集任务。调用 demand-collector agent，从以下渠道收集新内容并对比上次快照：\n1. 竞品拆包数据（C:\\tmp\\apk_inspect\\parsed_data\\datas\\ — 检查文件修改时间）\n2. 竞品实机数据分析（每次轮换一个竞品，按快照 last_apk_target_idx 字段轮换：Travel Town → Merge County → Magical Merge，对比本地 RemoteLocalizationJson / game_text_en.json 与快照中记录的主题/活动数量，若模拟器在线则先 ADB 拉取最新状态再分析）\n3. 工作项目 git log（C:\\M1Work、D:\\M2Work\\code，取最近24小时提交）\n4. 网络搜索（merge game / 合并游戏 相关，本次轮换关键词：merge puzzle game new event 2025 site:reddit.com）\n\n对比快照文件 C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\doc\\agents\\demand_snapshot.json：\n- 有新内容 → 生成或更新 doc/agents/output/{主题}.md，文档顶部插入更新记录行，然后通知用户\"[需求巡检] 发现新内容：{主题}\"\n- 无新内容 → 只回复：\"[需求巡检 {当前时间}] 无新内容，与上次相比无明显变化。\"\n\nagent 定义见：C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\.claude\\agents\\demand-collector.md（Section A2 含竞品分析完整流程）\n输出目录：C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\doc\\agents\\output\\\n快照文件：C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\doc\\agents\\demand_snapshot.json",
-      "createdAt": 1778494005733,
-      "lastFiredAt": 1779068871872,
-      "recurring": true,
-      "createdBySessionId": "d45b3e9b-1708-4915-a2b0-ec4baa4cc7b0",
-      "createdByPid": 91664,
-      "createdByProcStart": "639147128940784290"
-    },
-    {
-      "id": "b4a340d9",
-      "cron": "32 9 * * 1-5",
-      "prompt": "运行飞书每日扫描任务：dotnet run --project \"C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\NumDesTools.Scanner\\NumDesTools.Scanner.csproj\" -- --all --release",
-      "createdAt": 1778722338755,
-      "lastFiredAt": 1779070012364,
-      "recurring": true,
-      "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
-      "createdByPid": 67856,
-      "createdByProcStart": "639147205189012200"
-    },
-    {
-      "id": "c81f548c",
-      "cron": "32 9 21 5 *",
-      "prompt": "飞书每日扫描定时任务（job b4a340d9）将在今天到期，请续期：重新创建 Cron，每工作日 9:32 触发，命令为 `dotnet run --project \"C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\NumDesTools.Scanner\\NumDesTools.Scanner.csproj\" -- --all --release`，durable: true，recurring: true。同时创建新的7天后续期提醒。",
-      "createdAt": 1778722343592,
-      "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
-      "createdByPid": 67856,
-      "createdByProcStart": "639147205189012200"
-    },
-    {
       "id": "5d40440c",
       "cron": "15 10 * * 1-5",
       "prompt": "执行新游戏上线监控（工作时间：收集 + 推送）。\n\n调用 demand-collector agent，执行完整流程：\n\n**E1 — 游戏新作搜索（手机+Steam各1个）**\n\n读取快照 `C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\doc\\agents\\demand_snapshot.json` 中的 `last_mobile_idx`（没有则默认 -1），取 `(last_mobile_idx + 1) % 4` 对应手机组关键词；读取 `last_steam_idx`（没有则默认 -1），取 `(last_steam_idx + 1) % 4` 对应 Steam 组关键词。\n\n手机组（M0-M3）:\n  M0: \"new mobile game release iOS android this week 2026\"\n  M1: \"new ios android game launch top free charts 2026\"\n  M2: \"new casual mobile game this week highly rated 2026\"\n  M3: \"best new mobile games this week 2026\"\n\nSteam组（S0-S3）:\n  S0: \"new game launch steam this week top charts 2026\"\n  S1: \"steam new release today top seller 2026\"\n  S2: \"indie game launch steam top new release 2026\"\n  S3: \"new game trending steam 2026\"\n\n各用 WebSearch 搜索1次，从结果中提取新上线或近期发布的游戏（不重复纳入 pending_releases.json 已有记录）。\n\n**E2 — 全量推送，不做偏好过滤**\n\n所有发现的新游戏都纳入推送。\n\n**E3 — 推送格式**\n\n```\n🎮 本周新游速报（{日期}）\n\n{序号}. {游戏名} [{平台}]\n   {类型} · {一句话概括}\n   {价格/商业模式}\n\n回复编号可查看深度分析，例如发 \"3\" 或 \"3 7\"\n```\n\n**E4 — 深度分析触发**\n\n若用户发送了纯数字（如 \"3\" 或 \"3 7\"），按以下步骤处理：\n1. 读取快照中的 `last_pushed_list`，找到对应游戏\n2. 用 WebSearch 搜索该游戏详细信息\n3. 额外各搜一次视频：WebSearch \"游戏名 site:bilibili.com\"、WebSearch \"游戏名 gameplay review youtube\"\n4. 输出深度分析卡：\n\n```\n🔍 {游戏名} 深度分析\n\n📌 基本信息\n  开发商/发行商：\n  上线日期：\n  平台：\n  价格/商业模式：\n\n🎮 玩法详解\n  核心循环（3-5句）：\n  进度系统：\n  付费设计：\n  社交/多人要素：\n\n📊 市场表现\n  排行/热度：\n  评分/评论关键词：\n  目标用户画像：\n\n🎬 视频参考\n  B站：（搜到则给链接，搜不到填\"暂无\"）\n  YouTube：（搜到则给链接，搜不到填\"暂无\"）\n\n🎯 对我方游戏（MergeLand Alice，3合并+农场+叙事）的参考价值\n  相关度：高/中/低\n  可借鉴设计点：\n  需警惕竞争威胁：\n```\n\n**E5 — 持久化**\n\n写入快照：`last_mobile_idx`、`last_steam_idx`、`last_pushed_list`（每项含 seq/name/platform/genre）、`last_run_push`（当前时间）。\n新游戏追加写入 `C:\\tmp\\pending_releases.json`（`pushed_at` 设为当前时间）。",
       "createdAt": 1779091200560,
+      "lastFiredAt": 1779333826980,
       "recurring": true,
       "createdBySessionId": "d45b3e9b-1708-4915-a2b0-ec4baa4cc7b0",
-      "createdByPid": 91664,
-      "createdByProcStart": "639147128940784290"
+      "createdByPid": 42584
     },
     {
       "id": "5eb76b5c",
       "cron": "47 8,20,22 * * *",
       "prompt": "执行新游戏上线监控（非工作时间段：只收集，不推送）。\n\n调用 demand-collector agent，执行静默收集流程：\n\n**E1 — 游戏新作搜索（手机+Steam各1个）**\n\n读取快照 `C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\doc\\agents\\demand_snapshot.json` 中的 `last_mobile_idx`（没有则默认 -1），取 `(last_mobile_idx + 1) % 4`；读取 `last_steam_idx`（没有则默认 -1），取 `(last_steam_idx + 1) % 4`。\n\n手机组（M0-M3）:\n  M0: \"new mobile game release iOS android this week 2026\"\n  M1: \"new ios android game launch top free charts 2026\"\n  M2: \"new casual mobile game this week highly rated 2026\"\n  M3: \"best new mobile games this week 2026\"\n\nSteam组（S0-S3）:\n  S0: \"new game launch steam this week top charts 2026\"\n  S1: \"steam new release today top seller 2026\"\n  S2: \"indie game launch steam top new release 2026\"\n  S3: \"new game trending steam 2026\"\n\n各用 WebSearch 搜索1次，提取新上线游戏（不重复纳入已有记录）。\n\n**E2 — 静默模式：只收集，不推送**\n\n将新游戏写入 `C:\\tmp\\pending_releases.json`（`pushed_at` 设为 null）。\n\n**E3 — 更新快照**\n\n写入：`last_mobile_idx`、`last_steam_idx`、`last_run_silent`（当前时间）。\n\n**E4 — 输出一行摘要**\n\n`[静默收集] 新增 N 条记录（手机: 游戏名, Steam: 游戏名），已写入 pending_releases.json`\n\n注意：深度分析（含B站/YouTube视频搜索）仅在用户主动发数字时触发，静默收集不执行。",
       "createdAt": 1779091212269,
-      "lastFiredAt": 1779117420665,
+      "lastFiredAt": 1779326798234,
       "recurring": true,
       "createdBySessionId": "d45b3e9b-1708-4915-a2b0-ec4baa4cc7b0",
-      "createdByPid": 91664,
-      "createdByProcStart": "639147128940784290"
+      "createdByPid": 42584
+    },
+    {
+      "id": "baf9978d",
+      "cron": "32 9 * * 1-5",
+      "prompt": "运行飞书每日扫描任务：dotnet run --project \"C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\NumDesTools.Scanner\\NumDesTools.Scanner.csproj\" -- --all --release",
+      "createdAt": 1779327141621,
+      "recurring": true,
+      "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
+      "createdByPid": 26548,
+      "createdByProcStart": "639148116511081930"
+    },
+    {
+      "id": "11c4cfcc",
+      "cron": "32 9 28 5 *",
+      "prompt": "飞书每日扫描定时任务（job baf9978d）将在今天到期，请续期：重新创建 Cron，每工作日 9:32 触发，命令为 `dotnet run --project \"C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\NumDesTools.Scanner\\NumDesTools.Scanner.csproj\" -- --all --release`，durable: true，recurring: true。同时创建新的7天后续期提醒。",
+      "createdAt": 1779327147334,
+      "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
+      "createdByPid": 26548,
+      "createdByProcStart": "639148116511081930"
     }
   ]
 }
