@@ -2160,7 +2160,8 @@ public class LteData
         }
 
         var findTargetNickName = SafeGet(baseDic, findTargetId, titleList.IndexOf("代号"));
-        var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName);
+        var findTargetOnlyNickName = SafeGet(baseDic, findTargetId, titleList.IndexOf("唯一代号"));
+        var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName, findTargetOnlyNickName);
         var targetTypeIndex = titleList.IndexOf("类型");
         var targetType = SafeGet(baseDic, findTargetId, targetTypeIndex);
 
@@ -2432,7 +2433,8 @@ public class LteData
                         findTargetId3,
                         titleList.IndexOf("代号")
                     );
-                    var findTaregtfieldLinks3 = FieldGroupLinks(fieldGroupDic, findTargetNickName3);
+                    var findTargetOnlyNickName3 = SafeGet(baseDic, findTargetId, titleList.IndexOf("唯一代号"));
+                    var findTaregtfieldLinks3 = FieldGroupLinks(fieldGroupDic, findTargetNickName3, findTargetOnlyNickName3);
 
                     if (findTargetType3 != string.Empty)
                     {
@@ -2527,8 +2529,8 @@ public class LteData
                     rankLinks.targetId,
                     titleList.IndexOf("代号")
                 );
-
-                var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName);
+                var findTargetOnlyNickName = SafeGet(baseDic, rankLinks.targetId, titleList.IndexOf("唯一代号"));
+                var findTaregtfieldLinks = FieldGroupLinks(fieldGroupDic, findTargetNickName, findTargetOnlyNickName);
 
                 if (findTaregtfieldLinks != string.Empty)
                     findLinks += findTaregtfieldLinks;
@@ -2776,15 +2778,24 @@ public class LteData
 
     private static string FieldGroupLinks(
         Dictionary<string, List<string>> fieldGroupDic,
-        string findTargetNickName
+        string findTargetNickName,
+        string findTargetOnlyNickName
     )
     {
         string fieldLinks = String.Empty;
+        var fieldList = new List<string>();
 
         if (fieldGroupDic.ContainsKey(findTargetNickName))
         {
-            var fieldList = fieldGroupDic[findTargetNickName];
-
+            fieldList = fieldGroupDic[findTargetNickName]; 
+        }
+        else
+        {
+            if (fieldGroupDic.ContainsKey(findTargetOnlyNickName))
+            {
+                fieldList = fieldGroupDic[findTargetOnlyNickName];
+            }
+            
             if (fieldList.Count > 2)
             {
                 var fieldMap = fieldList[1];
