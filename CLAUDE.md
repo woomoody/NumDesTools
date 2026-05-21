@@ -94,6 +94,13 @@ Long operations use `ExcelAsyncUtil.QueueAsMacro()`. Never block the Excel UI th
 - `C:\tmp\` — 原始 ADB 数据和中间产物
 - `M1Work\` 写回 — 游戏配置表，不是插件产出
 
+### 源文件编码
+
+**C# 源文件必须用 UTF-8 保存**，禁止 GBK/ANSI。GBK 编码的中文提交后在 Git 里变成乱码（`"链"` → `"��"`），后续修复极易还原错误引发业务 bug（曾因此将类型判断 `"链"` 错误还原为 `"合"`，导致 ID 计算逻辑反转）。
+
+- Visual Studio：文件 → 高级保存选项 → UTF-8
+- 提交前 `git diff` 检查中文是否正常，出现方块乱码立即排查编码再提交
+
 ### Excel 读写规范
 
 - **读取 xlsx** → EPPlus（`OfficeOpenXml`）。参考 `NumDesTools.Scanner/ExcelReader.cs`。

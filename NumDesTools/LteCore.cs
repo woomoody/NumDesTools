@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -74,6 +75,8 @@ internal static class LteCore
                             funDy3,
                             idList
                         ),
+
+                    "Mul" => Mul(exportWildcardDyData, funDepends, funDy1),
 
                     "Mer" => Mer(exportWildcardDyData, funDepends, itemId, funDy1),
 
@@ -246,6 +249,28 @@ internal static class LteCore
         }
 
         return fixWildcardValue;
+    }
+
+    public static string Mul(
+        Dictionary<string, string> exportWildcardDyData,
+        string funDepends,
+        string funDy1
+    )
+    {
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "1" : funDy1;
+
+        if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue))
+            return string.Empty;
+
+        if (
+            double.TryParse(dependsValue, out double val) && double.TryParse(funDy1, out double mul)
+        )
+            return (val * mul).ToString(CultureInfo.InvariantCulture);
+
+        PluginLog.Write(
+            $"[Mul] cannot parse: funDepends={funDepends} dependsValue={dependsValue} funDy1={funDy1}"
+        );
+        return dependsValue;
     }
 
     public static string Mer(
