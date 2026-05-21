@@ -214,7 +214,7 @@ internal static class LteCore
 
         funDy2 = string.IsNullOrEmpty(funDy2) ? "00" : funDy2;
 
-        funDy3 = string.IsNullOrEmpty(funDy3) ? "链长" : funDy3;
+        funDy3 = string.IsNullOrEmpty(funDy3) ? "链类最大值" : funDy3;
 
         string fixWildcardValue = Set(exportWildcardDyData, funDepends, funDy1, funDy2);
 
@@ -345,7 +345,7 @@ internal static class LteCore
         {
             var merType = baseData["类型"][merIndex];
 
-            if (!merType.Contains("合"))
+            if (!merType.Contains("链"))
             {
                 mer = "11010001";
             }
@@ -365,7 +365,7 @@ internal static class LteCore
         List<string> idList
     )
     {
-        funDy1 = string.IsNullOrEmpty(funDy1) ? "链长" : funDy1;
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "链类最大值" : funDy1;
 
         if (!exportWildcardDyData.TryGetValue(funDepends, out var dependsValue))
             return string.Empty;
@@ -376,7 +376,7 @@ internal static class LteCore
 
         int baseMax = 0;
 
-        if (funDy1 != "链长")
+        if (funDy1 != "链类最大值")
         {
             return string.Empty;
         }
@@ -423,7 +423,7 @@ internal static class LteCore
         string funDy2
     )
     {
-        funDy1 = string.IsNullOrEmpty(funDy1) ? "数量1" : funDy1;
+        funDy1 = string.IsNullOrEmpty(funDy1) ? "消耗量组" : funDy1;
 
         funDy2 = string.IsNullOrEmpty(funDy2) ? "" : funDy2;
 

@@ -15,14 +15,17 @@ namespace NumDesTools.Scanner;
 internal class Program
 {
     // ── 配置路径 ─────────────────────────────────────────────────────────────
-    private const string ConfigDir = @"C:\Users\cent\Documents\NumDesTools\Config";
+    private static readonly string ConfigDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        "NumDesTools", "Config"
+    );
     private const string ActivityXlsx = @"C:\M1Work\public\Excels\Tables\ActivityClientData.xlsx";
-    private const string RulesPath = ConfigDir + @"\ActivityTableRules.json";
+    private static readonly string RulesPath = Path.Combine(ConfigDir, "ActivityTableRules.json");
 
     private const string McpToken = "m-002580b6-b3db-405a-aab8-007f927ef4eb";
     private const string ProjectKey = "t89j73";
-    private const string WrittenItemsPath = ConfigDir + @"\written_items.json";
-    private const string NoPermItemsPath = ConfigDir + @"\no_permission_items.json";
+    private static readonly string WrittenItemsPath = Path.Combine(ConfigDir, "written_items.json");
+    private static readonly string NoPermItemsPath = Path.Combine(ConfigDir, "no_permission_items.json");
 
     // ── 已写入记录 ───────────────────────────────────────────────────────────
     private static HashSet<string> LoadWrittenItems()

@@ -3,32 +3,90 @@ Claude Code 每日 Token 使用统计
 扫描 ~/.claude/projects/ 下所有 .jsonl 会话文件，按日期汇总 token 用量
 
 计价基准 (claude-opus-4-x, 美元/MTok):
-  input        $3.00
-  output       $15.00
-  cache_read   $0.30
-  cache_write  $3.75
+  input        $5.00
+  output       $25.00
+  cache_read   $0.50
+  cache_write  $6.25
 """
 import os
 import json
 import sys
+import subprocess
+import tempfile
 from collections import defaultdict
 from datetime import datetime
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-BASE = os.path.expanduser(r'~/.claude/projects')
+REMOTE_SSH  = "admin@100.96.48.30"
+REMOTE_PATH = r"C:\Users\admin\.claude\projects"
 
 # 计价单位: 美元 / 百万 token (MTok)
 PRICE = {
-    'input':       3.00,
-    'output':      15.00,
-    'cache_read':  0.30,
-    'cache_write': 3.75,
+    'input':       5.00,
+    'output':      25.00,
+    'cache_read':  0.50,
+    'cache_write': 6.25,
 }
 
 def calc_cost(inp, out, cr, cw):
     return (inp * PRICE['input'] + out * PRICE['output']
             + cr * PRICE['cache_read'] + cw * PRICE['cache_write']) / 1_000_000
+
+BASES = [
+    (os.path.expanduser(r'~/.claude/projects'), '[local]'),
+]
+
+def _pull_remote_jsonl():
+    """通过 SSH 读取远程 jsonl，yield (proj_key, date_str, inp, out, cr, cw)"""
+    r = subprocess.run(
+        ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
+         REMOTE_SSH, f'dir "{REMOTE_PATH}" /s /b'],
+        capture_output=True, text=True, timeout=30
+    )
+    if r.returncode != 0:
+        print(f"  [warn] 远程 SSH 不可用，跳过远程数据", file=sys.stderr)
+        return
+    for fpath in r.stdout.splitlines():
+        fpath = fpath.strip()
+        if not fpath.endswith('.jsonl'):
+            continue
+        rel = fpath[len(REMOTE_PATH):].lstrip('\\')
+        proj_key = "[remote]" + rel.split('\\')[0]
+        r2 = subprocess.run(
+            ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
+             REMOTE_SSH, f'type "{fpath}"'],
+            capture_output=True, text=True, encoding='utf-8', errors='ignore', timeout=30
+        )
+        for line in r2.stdout.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+            ts = obj.get('timestamp') or obj.get('ts') or obj.get('created_at')
+            if not ts:
+                msg = obj.get('message', {})
+                if isinstance(msg, dict):
+                    ts = msg.get('timestamp') or msg.get('created_at')
+            if not ts:
+                continue
+            try:
+                date_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d') if isinstance(ts, (int, float)) else str(ts)[:10]
+            except Exception:
+                continue
+            usage = obj.get('usage') or (obj.get('message') or {}).get('usage')
+            if not isinstance(usage, dict):
+                continue
+            inp = usage.get('input_tokens', 0) or 0
+            out = usage.get('output_tokens', 0) or 0
+            cr  = usage.get('cache_read_input_tokens', 0) or 0
+            cw  = usage.get('cache_creation_input_tokens', 0) or 0
+            if inp + out + cr + cw == 0:
+                continue
+            yield proj_key, date_str, inp, out, cr, cw
 
 # date -> {input, output, cache_read, cache_write}
 daily = defaultdict(lambda: {'input': 0, 'output': 0, 'cache_read': 0, 'cache_write': 0})
@@ -37,73 +95,88 @@ proj_daily = defaultdict(lambda: defaultdict(lambda: {'input': 0, 'output': 0, '
 total_msgs = 0
 skipped = 0
 
-for proj in sorted(os.listdir(BASE)):
-    proj_path = os.path.join(BASE, proj)
-    if not os.path.isdir(proj_path):
+for BASE, prefix in BASES:
+    if not os.path.isdir(BASE):
         continue
-    for f in sorted(os.listdir(proj_path)):
-        if not f.endswith('.jsonl'):
+    for proj in sorted(os.listdir(BASE)):
+        proj_path = os.path.join(BASE, proj)
+        if not os.path.isdir(proj_path):
             continue
-        fpath = os.path.join(proj_path, f)
-        try:
-            with open(fpath, 'r', encoding='utf-8') as fp:
-                for line in fp:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        obj = json.loads(line)
-                    except json.JSONDecodeError:
-                        skipped += 1
-                        continue
+        proj_key = f"{prefix}{proj}"
+        for dirpath, _, files in os.walk(proj_path):
+          for f in sorted(files):
+            if not f.endswith('.jsonl'):
+                continue
+            fpath = os.path.join(dirpath, f)
+            try:
+                with open(fpath, 'r', encoding='utf-8') as fp:
+                    for line in fp:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            obj = json.loads(line)
+                        except json.JSONDecodeError:
+                            skipped += 1
+                            continue
 
-                    # 提取时间戳
-                    ts = obj.get('timestamp') or obj.get('ts') or obj.get('created_at')
-                    if not ts:
-                        # 尝试从 message 里取
-                        msg = obj.get('message', {})
-                        if isinstance(msg, dict):
-                            ts = msg.get('timestamp') or msg.get('created_at')
-                    if not ts:
-                        continue
+                        ts = obj.get('timestamp') or obj.get('ts') or obj.get('created_at')
+                        if not ts:
+                            msg = obj.get('message', {})
+                            if isinstance(msg, dict):
+                                ts = msg.get('timestamp') or msg.get('created_at')
+                        if not ts:
+                            continue
 
-                    try:
-                        if isinstance(ts, (int, float)):
-                            date_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
-                        else:
-                            date_str = str(ts)[:10]
-                    except Exception:
-                        continue
+                        try:
+                            if isinstance(ts, (int, float)):
+                                date_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+                            else:
+                                date_str = str(ts)[:10]
+                        except Exception:
+                            continue
 
-                    # 提取 usage
-                    usage = None
-                    if 'usage' in obj:
-                        usage = obj['usage']
-                    elif isinstance(obj.get('message'), dict):
-                        usage = obj['message'].get('usage')
+                        usage = None
+                        if 'usage' in obj:
+                            usage = obj['usage']
+                        elif isinstance(obj.get('message'), dict):
+                            usage = obj['message'].get('usage')
 
-                    if not isinstance(usage, dict):
-                        continue
+                        if not isinstance(usage, dict):
+                            continue
 
-                    inp = usage.get('input_tokens', 0) or 0
-                    out = usage.get('output_tokens', 0) or 0
-                    cr  = usage.get('cache_read_input_tokens', 0) or 0
-                    cw  = usage.get('cache_creation_input_tokens', 0) or 0
+                        inp = usage.get('input_tokens', 0) or 0
+                        out = usage.get('output_tokens', 0) or 0
+                        cr  = usage.get('cache_read_input_tokens', 0) or 0
+                        cw  = usage.get('cache_creation_input_tokens', 0) or 0
 
-                    if inp + out + cr + cw == 0:
-                        continue
+                        if inp + out + cr + cw == 0:
+                            continue
 
-                    total_msgs += 1
-                    daily[date_str]['input']      += inp
-                    daily[date_str]['output']     += out
-                    daily[date_str]['cache_read'] += cr
-                    daily[date_str]['cache_write']+= cw
-                    proj_daily[proj][date_str]['input']      += inp
-                    proj_daily[proj][date_str]['output']     += out
-                    proj_daily[proj][date_str]['cache_read'] += cr
-                    proj_daily[proj][date_str]['cache_write']+= cw
-        except Exception as e:
-            print(f'  [warn] 读取失败 {fpath}: {e}')
+                        total_msgs += 1
+                        daily[date_str]['input']       += inp
+                        daily[date_str]['output']      += out
+                        daily[date_str]['cache_read']  += cr
+                        daily[date_str]['cache_write'] += cw
+                        proj_daily[proj_key][date_str]['input']       += inp
+                        proj_daily[proj_key][date_str]['output']      += out
+                        proj_daily[proj_key][date_str]['cache_read']  += cr
+                        proj_daily[proj_key][date_str]['cache_write'] += cw
+            except Exception as e:
+                print(f'  [warn] 读取失败 {fpath}: {e}')
+
+# ── 远程数据 ──────────────────────────────────────────────────────────────────
+print("  正在读取远程数据...", flush=True)
+for proj_key, date_str, inp, out, cr, cw in _pull_remote_jsonl():
+    total_msgs += 1
+    daily[date_str]['input']       += inp
+    daily[date_str]['output']      += out
+    daily[date_str]['cache_read']  += cr
+    daily[date_str]['cache_write'] += cw
+    proj_daily[proj_key][date_str]['input']       += inp
+    proj_daily[proj_key][date_str]['output']      += out
+    proj_daily[proj_key][date_str]['cache_read']  += cr
+    proj_daily[proj_key][date_str]['cache_write'] += cw
 
 # ── 输出 ──────────────────────────────────────────────────────────────────────
 SEP = '─' * 108
@@ -111,7 +184,7 @@ SEP = '─' * 108
 print()
 print('╔══════════════════════════════════════════════════════════════════════════════════════════════════════════╗')
 print('║              Claude Code  每日 Token 使用统计                                                           ║')
-print('║  计价: input $3/MTok  output $15/MTok  cache_read $0.30/MTok  cache_write $3.75/MTok                   ║')
+print('║  计价: input $5/MTok  output $25/MTok  cache_read $0.50/MTok  cache_write $6.25/MTok                   ║')
 print('╚══════════════════════════════════════════════════════════════════════════════════════════════════════════╝')
 print(f'  扫描消息条数: {total_msgs:,}  |  跳过损坏行: {skipped}')
 print()
@@ -135,17 +208,19 @@ print(SEP)
 
 print()
 print('── 按项目汇总 ──')
-for proj in sorted(proj_daily.keys()):
+print(f"  {'项目':<44} {'input':>10}  {'output':>10}  {'cache_r':>12}  {'cache_w':>12}  {'费用(USD)':>10}")
+print(f"  {'─'*44} {'─'*10}  {'─'*10}  {'─'*12}  {'─'*12}  {'─'*10}")
+for proj in sorted(proj_daily.keys(), key=lambda p: -sum(calc_cost(d['input'],d['output'],d['cache_read'],d['cache_write']) for d in proj_daily[p].values())):
     pd = proj_daily[proj]
     pi = po = pcr = pcw = 0
     for d in pd.values():
         pi += d['input']; po += d['output']
         pcr += d['cache_read']; pcw += d['cache_write']
-    if pi + po == 0:
+    if pi + po + pcr + pcw == 0:
         continue
     pcost = calc_cost(pi, po, pcr, pcw)
-    short = proj[-40:] if len(proj) > 40 else proj
-    print(f"  {short:<42}  input={pi:>10,}  output={po:>10,}  实计={pi+po:>10,}  费用=${pcost:.4f}")
+    short = proj[-44:] if len(proj) > 44 else proj
+    print(f"  {short:<44} {pi:>10,}  {po:>10,}  {pcr:>12,}  {pcw:>12,}  ${pcost:>9.4f}")
 
 print()
 

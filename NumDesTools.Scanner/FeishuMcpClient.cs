@@ -10,7 +10,7 @@ namespace NumDesTools.Scanner;
 /// </summary>
 public static class FeishuMcpClient
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(120) };
 
     public static string McpToken  { get; set; } = string.Empty;
     public static string McpUrl    { get; set; } = "https://project.feishu.cn/mcp_server/v1";

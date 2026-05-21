@@ -24,7 +24,8 @@
       "Bash(grep -rn '\"[^\"]*\\\\\\\\\\\\\\\\[^\"]*\"' NumDesTools/*.cs)",
       "Bash(grep -v '^\\\\$\\\\|\"\\\\[{')",
       "Bash(grep -v \"^\\\\$\\\\|DateTime\\\\.Now\\\\b\")",
-      "Bash(grep -v \"^--$\")"
+      "Bash(grep -v \"^--$\")",
+      "WebFetch(domain:www.148apps.com)"
     ]
   }
 }

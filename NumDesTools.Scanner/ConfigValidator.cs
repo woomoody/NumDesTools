@@ -10,8 +10,12 @@ namespace NumDesTools.Scanner;
 public static class ConfigValidator
 {
     private const string TablesDir = @"C:\M1Work\Public\Excels\Tables";
-    private const string RulesPath = @"C:\Users\cent\Documents\NumDesTools\Config\ActivityTableRules.json";
-    private const string ReportDir = @"C:\Users\cent\Documents\NumDesTools\Config";
+    private static readonly string ConfigDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        "NumDesTools", "Config"
+    );
+    private static readonly string RulesPath = Path.Combine(ConfigDir, "ActivityTableRules.json");
+    private static readonly string ReportDir = ConfigDir;
 
     public static int Run(string[] args)
     {
