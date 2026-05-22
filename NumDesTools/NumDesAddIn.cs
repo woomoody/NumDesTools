@@ -479,17 +479,31 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         //注册动态参数函数
         ExcelIntegration.RegisterUnhandledExceptionHandler(ex => "!!! ERROR: " + ex);
-        ExcelRegistration
-            .GetExcelFunctions()
-            .ProcessAsyncRegistrations(true)
-            .ProcessParamsRegistrations()
-            .RegisterFunctions();
+        try
+        {
+            ExcelRegistration
+                .GetExcelFunctions()
+                .ProcessAsyncRegistrations(true)
+                .ProcessParamsRegistrations()
+                .RegisterFunctions();
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[NumDesTools] RegisterFunctions exception (non-fatal): {ex.Message}");
+        }
 
         //添加动态参数自定函数注册后，需要重新刷新下智能感应提示
         IntelliSenseServer.Refresh();
 
         //注册动态命令函数
-        ExcelRegistration.GetExcelCommands().RegisterCommands();
+        try
+        {
+            ExcelRegistration.GetExcelCommands().RegisterCommands();
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[NumDesTools] RegisterCommands exception (non-fatal): {ex.Message}");
+        }
 
         //添加快捷键触发,可以自定义快捷键，例如： Ctrl+Alt+L
         App.OnKey("^%l", "ShowDnaLog");
