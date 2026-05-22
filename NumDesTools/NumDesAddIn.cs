@@ -495,22 +495,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //添加动态参数自定函数注册后，需要重新刷新下智能感应提示
         IntelliSenseServer.Refresh();
 
-        //注册动态命令函数
-        try
-        {
-            ExcelRegistration.GetExcelCommands().RegisterCommands();
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"[NumDesTools] RegisterCommands exception (non-fatal): {ex.Message}");
-        }
+        //注册动态命令函数并绑定快捷键
+        RegisterCommandsWithShortcuts();
 
         //添加快捷键触发
         App.OnKey("^%l", "ShowDnaLog");
-        App.OnKey("^%f", "SuperFindAndReplace");
-        App.OnKey("^%h", "BatchReplaceInSelection");
-        App.OnKey("^%n", "ExtractLongNumberAndSearchImage");
-        App.OnKey("^%g", "LteItemTypeHelpGifShow");
 
         // 授权验证：放在所有注册完成之后，验证失败只锁按钮不杀进程
         _authorized = CheckRes();
@@ -534,6 +523,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.OnKey("^%h");
         App.OnKey("^%n");
         App.OnKey("^%g");
+        UnregisterCommands();
 
         ReleaseComObjects();
     }
@@ -542,6 +532,66 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         _menuManager.UD_RightClickButton(sh, target, ref cancel);
     }
+
+    // (method, shortcut) pairs — shortcut empty string means no hotkey
+    private static readonly (string Method, string Shortcut)[] _commands =
+    [
+        (nameof(SuperFindAndReplace), "^%f"),
+        (nameof(BatchReplaceInSelection), "^%h"),
+        (nameof(ExtractLongNumberAndSearchImage), "^%n"),
+        (nameof(LteItemTypeHelpGifShow), "^%g"),
+    ];
+
+    private static readonly List<int> _commandHandles = [];
+
+    private void RegisterCommandsWithShortcuts()
+    {
+        var xllName = Path.GetFileNameWithoutExtension(ExcelDnaUtil.XllPath);
+        foreach (var (method, shortcut) in _commands)
+        {
+            try
+            {
+                var handle = (int)
+                    XlCall.Excel(
+                        XlCall.xlfRegister,
+                        ExcelDnaUtil.XllPath,
+                        method,
+                        "A",
+                        method,
+                        ExcelMissing.Value,
+                        2, // macro type 2 = command
+                        xllName,
+                        ExcelMissing.Value,
+                        ExcelMissing.Value,
+                        ExcelMissing.Value,
+                        ExcelMissing.Value,
+                        shortcut
+                    );
+                _commandHandles.Add(handle);
+                if (!string.IsNullOrEmpty(shortcut))
+                    App.OnKey(shortcut, method);
+            }
+            catch (Exception ex)
+            {
+                PluginLog.Write($"[NumDesTools] RegisterCommand {method} failed: {ex.Message}");
+            }
+        }
+    }
+
+    private void UnregisterCommands()
+    {
+        foreach (var (_, shortcut) in _commands)
+            if (!string.IsNullOrEmpty(shortcut))
+                App.OnKey(shortcut);
+        foreach (var handle in _commandHandles)
+            try
+            {
+                XlCall.Excel(XlCall.xlfUnregister, handle);
+            }
+            catch { }
+        _commandHandles.Clear();
+    }
+
     #endregion
 
     #region 插件验证
