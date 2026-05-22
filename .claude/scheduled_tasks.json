@@ -1,44 +1,31 @@
 {
   "tasks": [
     {
-      "id": "5d40440c",
-      "cron": "15 10 * * 1-5",
-      "prompt": "执行新游戏上线监控（工作时间：收集 + 推送）。\n\n调用 demand-collector agent，执行完整流程：\n\n**E1 — 游戏新作搜索（手机+Steam各1个）**\n\n读取快照 `C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\doc\\agents\\demand_snapshot.json` 中的 `last_mobile_idx`（没有则默认 -1），取 `(last_mobile_idx + 1) % 4` 对应手机组关键词；读取 `last_steam_idx`（没有则默认 -1），取 `(last_steam_idx + 1) % 4` 对应 Steam 组关键词。\n\n手机组（M0-M3）:\n  M0: \"new mobile game release iOS android this week 2026\"\n  M1: \"new ios android game launch top free charts 2026\"\n  M2: \"new casual mobile game this week highly rated 2026\"\n  M3: \"best new mobile games this week 2026\"\n\nSteam组（S0-S3）:\n  S0: \"new game launch steam this week top charts 2026\"\n  S1: \"steam new release today top seller 2026\"\n  S2: \"indie game launch steam top new release 2026\"\n  S3: \"new game trending steam 2026\"\n\n各用 WebSearch 搜索1次，从结果中提取新上线或近期发布的游戏（不重复纳入 pending_releases.json 已有记录）。\n\n**E2 — 全量推送，不做偏好过滤**\n\n所有发现的新游戏都纳入推送。\n\n**E3 — 推送格式**\n\n```\n🎮 本周新游速报（{日期}）\n\n{序号}. {游戏名} [{平台}]\n   {类型} · {一句话概括}\n   {价格/商业模式}\n\n回复编号可查看深度分析，例如发 \"3\" 或 \"3 7\"\n```\n\n**E4 — 深度分析触发**\n\n若用户发送了纯数字（如 \"3\" 或 \"3 7\"），按以下步骤处理：\n1. 读取快照中的 `last_pushed_list`，找到对应游戏\n2. 用 WebSearch 搜索该游戏详细信息\n3. 额外各搜一次视频：WebSearch \"游戏名 site:bilibili.com\"、WebSearch \"游戏名 gameplay review youtube\"\n4. 输出深度分析卡：\n\n```\n🔍 {游戏名} 深度分析\n\n📌 基本信息\n  开发商/发行商：\n  上线日期：\n  平台：\n  价格/商业模式：\n\n🎮 玩法详解\n  核心循环（3-5句）：\n  进度系统：\n  付费设计：\n  社交/多人要素：\n\n📊 市场表现\n  排行/热度：\n  评分/评论关键词：\n  目标用户画像：\n\n🎬 视频参考\n  B站：（搜到则给链接，搜不到填\"暂无\"）\n  YouTube：（搜到则给链接，搜不到填\"暂无\"）\n\n🎯 对我方游戏（MergeLand Alice，3合并+农场+叙事）的参考价值\n  相关度：高/中/低\n  可借鉴设计点：\n  需警惕竞争威胁：\n```\n\n**E5 — 持久化**\n\n写入快照：`last_mobile_idx`、`last_steam_idx`、`last_pushed_list`（每项含 seq/name/platform/genre）、`last_run_push`（当前时间）。\n新游戏追加写入 `C:\\tmp\\pending_releases.json`（`pushed_at` 设为当前时间）。",
-      "createdAt": 1779091200560,
-      "lastFiredAt": 1779420383242,
-      "recurring": true,
-      "createdBySessionId": "d45b3e9b-1708-4915-a2b0-ec4baa4cc7b0",
-      "createdByPid": 42584
-    },
-    {
-      "id": "5eb76b5c",
-      "cron": "47 8,20,22 * * *",
-      "prompt": "执行新游戏上线监控（非工作时间段：只收集，不推送）。\n\n调用 demand-collector agent，执行静默收集流程：\n\n**E1 — 游戏新作搜索（手机+Steam各1个）**\n\n读取快照 `C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\doc\\agents\\demand_snapshot.json` 中的 `last_mobile_idx`（没有则默认 -1），取 `(last_mobile_idx + 1) % 4`；读取 `last_steam_idx`（没有则默认 -1），取 `(last_steam_idx + 1) % 4`。\n\n手机组（M0-M3）:\n  M0: \"new mobile game release iOS android this week 2026\"\n  M1: \"new ios android game launch top free charts 2026\"\n  M2: \"new casual mobile game this week highly rated 2026\"\n  M3: \"best new mobile games this week 2026\"\n\nSteam组（S0-S3）:\n  S0: \"new game launch steam this week top charts 2026\"\n  S1: \"steam new release today top seller 2026\"\n  S2: \"indie game launch steam top new release 2026\"\n  S3: \"new game trending steam 2026\"\n\n各用 WebSearch 搜索1次，提取新上线游戏（不重复纳入已有记录）。\n\n**E2 — 静默模式：只收集，不推送**\n\n将新游戏写入 `C:\\tmp\\pending_releases.json`（`pushed_at` 设为 null）。\n\n**E3 — 更新快照**\n\n写入：`last_mobile_idx`、`last_steam_idx`、`last_run_silent`（当前时间）。\n\n**E4 — 输出一行摘要**\n\n`[静默收集] 新增 N 条记录（手机: 游戏名, Steam: 游戏名），已写入 pending_releases.json`\n\n注意：深度分析（含B站/YouTube视频搜索）仅在用户主动发数字时触发，静默收集不执行。",
-      "createdAt": 1779091212269,
-      "lastFiredAt": 1779412620156,
-      "recurring": true,
-      "createdBySessionId": "d45b3e9b-1708-4915-a2b0-ec4baa4cc7b0",
-      "createdByPid": 42584
-    },
-    {
-      "id": "baf9978d",
+      "id": "7227389e",
       "cron": "32 9 * * 1-5",
-      "prompt": "运行飞书每日扫描任务：dotnet run --project \"C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\NumDesTools.Scanner\\NumDesTools.Scanner.csproj\" -- --all --release",
-      "createdAt": 1779327141621,
-      "lastFiredAt": 1779415320792,
+      "prompt": "在远端执行飞书每日扫描任务。\n\nStep 1 — 启动远端 Scanner（后台，等待完成）：\n```\nssh -o BatchMode=yes admin@100.96.48.30 \"powershell -Command \\\"Start-Process -FilePath 'C:\\\\Users\\\\admin\\\\scanner\\\\NumDesTools.Scanner.exe' -ArgumentList '--all','--release' -RedirectStandardOutput 'C:\\\\tmp\\\\scanner_out.log' -RedirectStandardError 'C:\\\\tmp\\\\scanner_err.log' -NoNewWindow -Wait\\\"\"\n```\n\nStep 2 — 把结果 scp 推回本机（注意：路径用双引号，不用单引号）：\n```\nssh -o BatchMode=yes admin@100.96.48.30 \"scp \\\"C:\\\\Users\\\\admin\\\\Documents\\\\NumDesTools\\\\Config\\\\pending_comments_$(date +%Y-%m-%d).md\\\" cent@100.108.252.11:\\\"C:/Users/cent/Documents/NumDesTools/Config/pending_comments_$(date +%Y-%m-%d).md\\\" 2>&1\"\n```\n\nStep 3 — 读取远端输出查看扫描结果：\n```\nssh -o BatchMode=yes admin@100.96.48.30 \"type C:\\\\tmp\\\\scanner_out.log 2>&1\"\n```\n\n把扫描结果摘要显示给用户（新增待写入评论的条目列表）。若有新条目提示用户：审阅文件已同步到本机 C:\\Users\\cent\\Documents\\NumDesTools\\Config\\，可手动运行 Scanner 输入 y 写入飞书。",
+      "createdAt": 1779433496625,
       "recurring": true,
-      "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
-      "createdByPid": 9436,
-      "createdByProcStart": "639150558923125980"
+      "createdBySessionId": "dd93351b-5a9e-4a08-a2b4-afb72c465329",
+      "createdByPid": 52480
     },
     {
-      "id": "11c4cfcc",
-      "cron": "32 9 28 5 *",
-      "prompt": "飞书每日扫描定时任务（job baf9978d）将在今天到期，请续期：重新创建 Cron，每工作日 9:32 触发，命令为 `dotnet run --project \"C:\\Pro\\ExcelToolsAlbum\\ExcelDna-Pro\\NumDesTools\\NumDesTools.Scanner\\NumDesTools.Scanner.csproj\" -- --all --release`，durable: true，recurring: true。同时创建新的7天后续期提醒。",
-      "createdAt": 1779327147334,
-      "createdBySessionId": "3e96063c-cc3a-4e33-a76e-6cea51950a8c",
-      "createdByPid": 9436,
-      "createdByProcStart": "639150558923125980"
+      "id": "cc15ae1e",
+      "cron": "15 10 * * 1-5",
+      "prompt": "执行竞品情报收集任务（工作时间：收集+分析+推送）。\n\nStep 1 — 本机 ADB 采集：\n检查 ADB 是否在线：\n```\ncmd.exe /c \"\\\"C:\\Program Files\\Netease\\MuMu Player 12\\shell\\adb.exe\\\" devices 2>&1\"\n```\n若在线，对每个竞品执行 adb pull（从 C:\\tmp\\competitors.json 读 package）。\n写 C:\\tmp\\adb_collect_result.json 记录结果。\n若不在线，直接写 adb_online: false 继续。\n\nStep 2 — scp 推到远端：\n```\nscp \"C:/tmp/competitors.json\" \"admin@100.96.48.30:C:/tmp/competitors.json\"\nscp \"C:/tmp/adb_collect_result.json\" \"admin@100.96.48.30:C:/tmp/adb_collect_result.json\"\n```\n若 ADB 在线且有新数据，也推竞品目录：\n```\nscp -r \"C:/tmp/mftown/\" \"admin@100.96.48.30:C:/tmp/mftown/\"\nscp -r \"C:/tmp/traveltown/\" \"admin@100.96.48.30:C:/tmp/traveltown/\"\n```\n\nStep 3 — SSH 触发远端分析（同步，等待完成）：\n```\nssh -o BatchMode=yes admin@100.96.48.30 \"C:\\\\Users\\\\admin\\\\AppData\\\\Roaming\\\\npm\\\\claude.cmd --dangerously-skip-permissions -p \\\"以 demand-collector-remote agent 身份执行竞品情报分析。should_push=True，工作时间，分析完成后推送新游戏播报。完成后把产出 scp 推回 cent@100.108.252.11 对应路径，然后通过反向 SSH 触发本机 git commit：ssh cent@100.108.252.11 \\\\\\\"git -C C:/Users/cent/Documents/NumDesOutput add -A && git -C C:/Users/cent/Documents/NumDesOutput diff --cached --quiet || git -C C:/Users/cent/Documents/NumDesOutput commit -m \\\\\\\\\\\\\\\"[远端分析] 竞品情报巡检 $(date +%Y-%m-%d)\\\\\\\\\\\\\\\"\\\\\\\"\\\" 2>&1\" | tail -30\n```\n\n把远端输出中的新游戏播报摘要显示给用户。",
+      "createdAt": 1779433904852,
+      "recurring": true,
+      "createdBySessionId": "dd93351b-5a9e-4a08-a2b4-afb72c465329",
+      "createdByPid": 52480
+    },
+    {
+      "id": "b04196be",
+      "cron": "47 8,20,22 * * *",
+      "prompt": "执行竞品情报收集任务（非工作时间：只采集+分析，不推送）。\n\nStep 1 — 本机 ADB 采集（同工作时间流程）：\n检查 ADB，pull 竞品数据，写 adb_collect_result.json。\n\nStep 2 — scp 推到远端（同工作时间流程）。\n\nStep 3 — SSH 触发远端分析（同步，静默模式）：\n```\nssh -o BatchMode=yes admin@100.96.48.30 \"C:\\\\Users\\\\admin\\\\AppData\\\\Roaming\\\\npm\\\\claude.cmd --dangerously-skip-permissions -p \\\"以 demand-collector-remote agent 身份执行竞品情报分析。should_push=False，非工作时间静默模式，不推送新游戏播报，只写入 pending_releases.json。完成后把产出 scp 推回 cent@100.108.252.11 对应路径，然后通过反向 SSH 触发本机 git commit：ssh cent@100.108.252.11 \\\\\\\"git -C C:/Users/cent/Documents/NumDesOutput add -A && git -C C:/Users/cent/Documents/NumDesOutput diff --cached --quiet || git -C C:/Users/cent/Documents/NumDesOutput commit -m \\\\\\\\\\\\\\\"[远端分析] 竞品情报巡检 $(date +%Y-%m-%d)\\\\\\\\\\\\\\\"\\\\\\\"\\\" 2>&1\" | tail -5\n```\n\n静默完成，简短告知用户：已触发远端竞品巡检（非工作时间静默模式）。",
+      "createdAt": 1779433912562,
+      "recurring": true,
+      "createdBySessionId": "dd93351b-5a9e-4a08-a2b4-afb72c465329",
+      "createdByPid": 52480
     }
   ]
 }
