@@ -505,8 +505,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             PluginLog.Write($"[NumDesTools] RegisterCommands exception (non-fatal): {ex.Message}");
         }
 
-        //添加快捷键触发,可以自定义快捷键，例如： Ctrl+Alt+L
+        //添加快捷键触发
         App.OnKey("^%l", "ShowDnaLog");
+        App.OnKey("^%f", "SuperFindAndReplace");
+        App.OnKey("^%h", "BatchReplaceInSelection");
+        App.OnKey("^%n", "ExtractLongNumberAndSearchImage");
+        App.OnKey("^%g", "LteItemTypeHelpGifShow");
 
         // 授权验证：放在所有注册完成之后，验证失败只锁按钮不杀进程
         _authorized = CheckRes();
@@ -524,8 +528,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         App.WorkbookBeforeClose -= ExcelApp_WorkbookBeforeClose;
         App.SheetBeforeRightClick -= OnSheetRightClick;
 
-        //解除快捷键触发，例如： Ctrl+Alt+L
+        //解除快捷键触发
         App.OnKey("^%l");
+        App.OnKey("^%f");
+        App.OnKey("^%h");
+        App.OnKey("^%n");
+        App.OnKey("^%g");
 
         ReleaseComObjects();
     }
