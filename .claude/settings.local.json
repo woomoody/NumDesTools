@@ -25,7 +25,19 @@
       "Bash(grep -v '^\\\\$\\\\|\"\\\\[{')",
       "Bash(grep -v \"^\\\\$\\\\|DateTime\\\\.Now\\\\b\")",
       "Bash(grep -v \"^--$\")",
-      "WebFetch(domain:www.148apps.com)"
+      "WebFetch(domain:www.148apps.com)",
+      "WebFetch(domain:duckduckgo.com)",
+      "WebFetch(domain:html.duckduckgo.com)",
+      "WebFetch(domain:store.steampowered.com)",
+      "WebFetch(domain:www.gamegrin.com)",
+      "WebFetch(domain:www.minireview.io)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\cent\\Documents\\NumDesOutput\\analysis",
+      "C:\\Users\\cent\\.ssh",
+      "C:\\Program Files\\Netease\\MuMu Player 12\\vms\\MuMuPlayer-12.0-0",
+      "C:\\Users\\cent\\AppData\\Roaming\\UnityHub",
+      "C:\\Users\\cent\\.MUMUVMM"
     ]
   }
 }

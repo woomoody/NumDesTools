@@ -30,6 +30,8 @@
                 FontSize="14"
                 ShowLineNumbers="True"
                 WordWrap="True"
+                Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
                 HorizontalScrollBarVisibility="Auto"
                 VerticalScrollBarVisibility="Auto"/>
         </Border>
