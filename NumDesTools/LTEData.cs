@@ -91,16 +91,19 @@ public class LteData
     private const string ActivityNameMinIndex = "E1";
     private const string ActivityFieldIndex = "G1";
 
-    private static readonly Worksheet _pubWildSheet = Wk.Worksheets["LTE【设计】"];
-    private static readonly Dictionary<string, string> _outputWildcardPubDic =
-        new()
+    private static Dictionary<string, string> OutputWildcardPubDic
+    {
+        get
         {
-            ["活动编号"] = (
-                _pubWildSheet.Range[ActivityIdIndex].Value2 / ActivityIdDivisor
-            )?.ToString(),
-            ["活动备注"] = _pubWildSheet.Range[ActivityNameMinIndex].Value2?.ToString(),
-            ["活动地组"] = _pubWildSheet.Range[ActivityFieldIndex].Value2?.ToString()
-        };
+            var sheet = Wk.Worksheets["LTE【设计】"];
+            return new Dictionary<string, string>
+            {
+                ["活动编号"] = (sheet.Range[ActivityIdIndex].Value2 / ActivityIdDivisor)?.ToString(),
+                ["活动备注"] = sheet.Range[ActivityNameMinIndex].Value2?.ToString(),
+                ["活动地组"] = sheet.Range[ActivityFieldIndex].Value2?.ToString(),
+            };
+        }
+    }
     public static (string Name, string Email) GitConfig = SvnGitTools.GetGitUserInfo();
 
     private static void RunLteCommand(
@@ -212,7 +215,7 @@ public class LteData
         var outputWildcardArray = outputData[listName];
         var outputWildcardDic = PubMetToExcel.TwoDArrayToDicFirstKeyStr(outputWildcardArray);
         var outputWildDic = outputWildcardDic
-            .Concat(_outputWildcardPubDic)
+            .Concat(OutputWildcardPubDic)
             .GroupBy(k => k.Key)
             .ToDictionary(g => g.Key, g => g.Last().Value);
 
@@ -662,7 +665,39 @@ public class LteData
                         if (status is not ("+" or "-" or "*"))
                             continue;
 
-                        idRowIndex.TryGetValue(itemId, out int existingRow);
+                        // 用构造 ID 查索引：帮助表等场景 id 列模版展开后与原表 itemId 不同
+                        foreach (var wildcardDy in exportWildcardData)
+                            GetDyWildcardValue(
+                                baseData,
+                                exportWildcardDyData,
+                                wildcardDy.Key,
+                                wildcardDy.Value,
+                                idCount
+                            );
+                        var idColModelValue =
+                            colTitles[2] != ""
+                            && modelSheet.Value.TryGetValue(
+                                (itemType, (object)colTitles[2]),
+                                out var idModel
+                            )
+                                ? idModel
+                                : null;
+                        var lookupId =
+                            idColModelValue != null
+                                ? AnalyzeWildcard(
+                                    idColModelValue,
+                                    exportWildcardData,
+                                    exportWildcardDyData,
+                                    strDictionary,
+                                    baseData,
+                                    id,
+                                    itemId
+                                )
+                                : itemId;
+                        if (string.IsNullOrEmpty(lookupId))
+                            lookupId = itemId;
+
+                        idRowIndex.TryGetValue(lookupId, out int existingRow);
 
                         if (existingRow != 0)
                         {
@@ -1873,7 +1908,7 @@ public class LteData
             //先在唯一ID中查找
             var spawnMatchId = string.Empty;
 
-            if (spawnName != null)
+            if (!string.IsNullOrEmpty(spawnName))
             {
                 spawnMatchId = baseDic
                     .FirstOrDefault(kv =>
@@ -2796,44 +2831,43 @@ public class LteData
                 fieldList = fieldGroupDic[findTargetOnlyNickName];
             }
         }
-            if (fieldList.Count > 2)
+        if (fieldList.Count > 2)
+        {
+            var fieldMap = fieldList[1];
+            var fieldPrefix = OutputWildcardPubDic["活动地组"];
+            double fieldIndex = 0;
+            if (double.TryParse(fieldMap, out double fileMapDouble))
             {
-                var fieldMap = fieldList[1];
-                var fieldPrefix = _outputWildcardPubDic["活动地组"];
-                double fieldIndex = 0;
-                if (double.TryParse(fieldMap, out double fileMapDouble))
+                if (double.TryParse(fieldPrefix, out double fieldPrefixDouble))
                 {
-                    if (double.TryParse(fieldPrefix, out double fieldPrefixDouble))
-                    {
-                        fieldIndex = fileMapDouble * 100 + fieldPrefixDouble;
-                    }
+                    fieldIndex = fileMapDouble * 100 + fieldPrefixDouble;
                 }
+            }
 
-                fieldList = fieldList
-                    .Skip(2)
-                    .Where(str => !string.IsNullOrEmpty(str)) // 过滤空字符串和null
-                    .Where(str => str != "0") // 过滤空字符串和null
-                    .OrderBy(str => str) // 按字母顺序排序
-                    .ToList();
+            fieldList = fieldList
+                .Skip(2)
+                .Where(str => !string.IsNullOrEmpty(str)) // 过滤空字符串和null
+                .Where(str => str != "0") // 过滤空字符串和null
+                .OrderBy(str => str) // 按字母顺序排序
+                .ToList();
 
-                if (fieldIndex > 0)
+            if (fieldIndex > 0)
+            {
+                for (int i = 0; i < fieldList.Count; i++)
                 {
-                    for (int i = 0; i < fieldList.Count; i++)
+                    var fieldValue = fieldList[i];
+                    if (double.TryParse(fieldValue, out double fieldValueDouble))
                     {
-                        var fieldValue = fieldList[i];
-                        if (double.TryParse(fieldValue, out double fieldValueDouble))
-                        {
-                            fieldLinks +=
-                                "{4,"
-                                + (fieldIndex + fieldValueDouble + 1).ToString(
-                                    CultureInfo.InvariantCulture
-                                )
-                                + "},";
-                        }
+                        fieldLinks +=
+                            "{4,"
+                            + (fieldIndex + fieldValueDouble + 1).ToString(
+                                CultureInfo.InvariantCulture
+                            )
+                            + "},";
                     }
                 }
             }
-        
+        }
 
         return fieldLinks;
     }
