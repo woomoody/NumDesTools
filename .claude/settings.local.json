@@ -30,7 +30,8 @@
       "WebFetch(domain:html.duckduckgo.com)",
       "WebFetch(domain:store.steampowered.com)",
       "WebFetch(domain:www.gamegrin.com)",
-      "WebFetch(domain:www.minireview.io)"
+      "WebFetch(domain:www.minireview.io)",
+      "Edit(~/.claude/skills/remote-cc/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\cent\\Documents\\NumDesOutput\\analysis",
