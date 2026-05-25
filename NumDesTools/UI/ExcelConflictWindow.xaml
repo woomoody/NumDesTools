@@ -80,6 +80,16 @@
                     <TextBlock x:Name="FileNameText" Foreground="White" FontSize="12"
                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                MaxWidth="300" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Text}"/>
+                    <Separator x:Name="OursLabelSep" Width="1" Background="#555" Margin="10,0" Visibility="Collapsed"/>
+                    <TextBlock x:Name="OursLabelText" Foreground="#7AB4FF" FontSize="11" FontFamily="Consolas"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               MaxWidth="220" Visibility="Collapsed"
+                               ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Text}"/>
+                    <Separator x:Name="TheirsLabelSep" Width="1" Background="#555" Margin="10,0" Visibility="Collapsed"/>
+                    <TextBlock x:Name="TheirsLabelText" Foreground="#7AFFB4" FontSize="11" FontFamily="Consolas"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               MaxWidth="220" Visibility="Collapsed"
+                               ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Text}"/>
                     <Separator Width="1" Background="#555" Margin="10,0"/>
                     <TextBox x:Name="FilterBox"
                              Width="180" Height="22" VerticalContentAlignment="Center"
