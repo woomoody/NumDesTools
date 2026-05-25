@@ -437,7 +437,15 @@ public static class ExcelConflictEntry
             // cherry-pick --no-commit 不写 CHERRY_PICK_HEAD，直接传 commit SHA
             var knownTheirsSha =
                 isCherryPick && selectedCommits.Count == 1 ? selectedCommits[0] : null;
-            ExtractAndOpen(gitRoot, chosen, workingPath, autoGitAdd: true, knownTheirsSha);
+            var applied = ExtractAndOpen(
+                gitRoot,
+                chosen,
+                workingPath,
+                autoGitAdd: true,
+                knownTheirsSha
+            );
+            if (!applied)
+                continue;
         }
     }
 
@@ -606,13 +614,30 @@ public static class ExcelConflictEntry
                     catch { }
                 }
 
-                return OpenWindow(
+                var result = OpenWindow(
                     oursPath,
                     theirsPath,
                     outPath: workingFilePath,
                     autoGitAdd: autoGitAdd,
                     basePath: resolvedBasePath
                 );
+
+                // "无差异"时 OpenWindow 返回 true 但不做 git add，冲突仍在 Index → 补做
+                if (result && autoGitAdd)
+                {
+                    try
+                    {
+                        using var repo2 = new Repository(gitRoot);
+                        if (repo2.Index.Conflicts[normPath] != null)
+                        {
+                            repo2.Index.Add(normPath);
+                            repo2.Index.Write();
+                        }
+                    }
+                    catch { }
+                }
+
+                return result;
             }
         }
         catch (Exception ex)
