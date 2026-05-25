@@ -193,7 +193,14 @@ public static class ExcelConflictEntry
                         System.Windows.MessageBox.Show($"提取历史版本失败：{ex.Message}", "错误");
                         continue;
                     }
-                    OpenWindow(histPath, absPath, outPath: absPath, autoGitAdd: true);
+                    OpenWindow(
+                        histPath,
+                        absPath,
+                        outPath: absPath,
+                        autoGitAdd: true,
+                        oursLabel: selectedShortSha,
+                        theirsLabel: "工作区"
+                    );
                 }
                 else
                 {
@@ -222,7 +229,14 @@ public static class ExcelConflictEntry
                         System.Windows.MessageBox.Show($"提取历史版本失败：{ex.Message}", "错误");
                         continue;
                     }
-                    OpenWindow(histPath, histPath2, outPath: null, autoGitAdd: false);
+                    OpenWindow(
+                        histPath,
+                        histPath2,
+                        outPath: null,
+                        autoGitAdd: false,
+                        oursLabel: selectedShortSha,
+                        theirsLabel: shortSha2
+                    );
                 }
             }
             // 历史窗口关闭后回到文件选择器
@@ -523,6 +537,43 @@ public static class ExcelConflictEntry
         }
     }
 
+    // 从 repo 当前状态推算 ours/theirs 的简短标签（分支@sha8）
+    private static (string? ours, string? theirs) ResolveConflictLabels(
+        Repository repo,
+        string? knownTheirsSha
+    )
+    {
+        try
+        {
+            var oursBranch = repo.Head.FriendlyName;
+            var oursSha = repo.Head.Tip?.Sha[..8] ?? "?";
+            var oursLabel = $"{oursBranch}@{oursSha}";
+
+            string? theirsLabel = null;
+            var gitDir = repo.Info.Path;
+            var theirsSha =
+                knownTheirsSha
+                ?? ReadGitHeadFile(gitDir, "CHERRY_PICK_HEAD")
+                ?? ReadGitHeadFile(gitDir, "MERGE_HEAD");
+            if (theirsSha != null)
+            {
+                var commit = repo.Lookup<Commit>(theirsSha);
+                var sha8 = theirsSha.Length >= 8 ? theirsSha[..8] : theirsSha;
+                // 尝试找出对应分支名
+                var branch = repo
+                    .Branches.Where(b => !b.IsRemote && b.Tip?.Sha == commit?.Sha)
+                    .Select(b => b.FriendlyName)
+                    .FirstOrDefault();
+                theirsLabel = branch != null ? $"{branch}@{sha8}" : sha8;
+            }
+            return (oursLabel, theirsLabel);
+        }
+        catch
+        {
+            return (null, null);
+        }
+    }
+
     // 返回 true=已应用/完成，false=用户取消
     // knownTheirsSha：cherry-pick --no-commit 不写 CHERRY_PICK_HEAD，调用方直接传 commit SHA
     private static bool ExtractAndOpen(
@@ -548,6 +599,8 @@ public static class ExcelConflictEntry
             var conflict = repo.Index.Conflicts[normPath];
             if (conflict != null)
             {
+                var (oursLabel, theirsLabel) = ResolveConflictLabels(repo, knownTheirsSha);
+
                 void WriteBlob(IndexEntry? entry, string outFile)
                 {
                     if (entry == null)
@@ -596,7 +649,9 @@ public static class ExcelConflictEntry
                     theirsPath,
                     outPath: workingFilePath,
                     autoGitAdd: autoGitAdd,
-                    basePath: resolvedBasePath
+                    basePath: resolvedBasePath,
+                    oursLabel: oursLabel,
+                    theirsLabel: theirsLabel
                 );
 
                 // "无差异"时 OpenWindow 返回 true 但不做 git add，冲突仍在 Index → 补做
@@ -792,7 +847,9 @@ public static class ExcelConflictEntry
         string theirsPath,
         string? outPath,
         bool autoGitAdd,
-        string? basePath = null
+        string? basePath = null,
+        string? oursLabel = null,
+        string? theirsLabel = null
     )
     {
         FileDiff? diff = null;
@@ -832,7 +889,7 @@ public static class ExcelConflictEntry
             return true;
         }
 
-        var win = new ExcelConflictWindow(diff, outPath, autoGitAdd);
+        var win = new ExcelConflictWindow(diff, outPath, autoGitAdd, oursLabel, theirsLabel);
         return win.ShowDialog() == true;
     }
 }

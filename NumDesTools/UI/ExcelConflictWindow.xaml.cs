@@ -22,7 +22,13 @@ public partial class ExcelConflictWindow : MetroWindow
     private readonly bool _autoGitAdd;
     private readonly Dictionary<string, ObservableCollection<RowConflict>> _sheetRows = new();
 
-    public ExcelConflictWindow(FileDiff diff, string? outPath = null, bool autoGitAdd = true)
+    public ExcelConflictWindow(
+        FileDiff diff,
+        string? outPath = null,
+        bool autoGitAdd = true,
+        string? oursLabel = null,
+        string? theirsLabel = null
+    )
     {
         MahAppsHelper.EnsureInitialized();
         _suppressRefresh = true;
@@ -32,6 +38,18 @@ public partial class ExcelConflictWindow : MetroWindow
         _outPath = outPath ?? diff.OursPath;
 
         FileNameText.Text = Path.GetFileName(diff.OursPath);
+        if (!string.IsNullOrEmpty(oursLabel))
+        {
+            OursLabelText.Text = $"我的: {oursLabel}";
+            OursLabelText.Visibility = Visibility.Visible;
+            OursLabelSep.Visibility = Visibility.Visible;
+        }
+        if (!string.IsNullOrEmpty(theirsLabel))
+        {
+            TheirsLabelText.Text = $"他的: {theirsLabel}";
+            TheirsLabelText.Visibility = Visibility.Visible;
+            TheirsLabelSep.Visibility = Visibility.Visible;
+        }
         // 冲突行（Modified）：驱动冲突行列头 + 冲突行滚动条
         ConflictRowItem.OnConflictScrollOffsetChanged = offset =>
         {
