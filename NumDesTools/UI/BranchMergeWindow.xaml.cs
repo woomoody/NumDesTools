@@ -20,6 +20,7 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
 
     public BranchMergeWindow(string gitRoot)
     {
+        MahAppsHelper.EnsureInitialized();
         InitializeComponent();
         _gitRoot = gitRoot;
         Loaded += OnLoaded;
