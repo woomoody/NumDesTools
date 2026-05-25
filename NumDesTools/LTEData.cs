@@ -2250,10 +2250,7 @@ public class LteData
         var findLinks31 = string.Empty;
         var findTips = string.Empty;
 
-        if(findTargetId == "7621011204")
-        {
-            var abc = 0;
-        }
+     
         // 1层寻找
         var findRankLinks1 = FindRankLinks(
             findTargetId,
@@ -2318,24 +2315,32 @@ public class LteData
             findLinks31 += LinksBuild(findRankLinks2, null, null, null).findLinks31;
         }
 
+        if(findTargetId == "7636010201")
+        {
+            var abc = 1;
+        }
+
         // 寻找界面提示使用最后的id，因为其他id可能没有图片资源
-        var finalMatchId = findItemGroup.LastOrDefault();
-        if (findRankLinks1.Count == 0)
+        var finalMatchId = findItemGroup.FirstOrDefault();
+        if (findRankLinks1.Count == 0 || finalMatchId is null or "")
         {
             findTips = "{1,\"tip_obstacleItem\",2}";
         }
-        if (findTargetDetailType == "4")
-        {
-            findTips =
-                "{3,"
-                + findTargetId.Substring(0, findTargetId.Length - 2)
-                + "00,"
-                + finalMatchId
-                + "}";
-        }
         else
         {
-            findTips = "{1,\"tip_obstacleItem\",1," + finalMatchId + "}";
+            if (findTargetDetailType == "4")
+            {
+                findTips =
+                    "{3,"
+                    + findTargetId.Substring(0, findTargetId.Length - 2)
+                    + "00,"
+                    + finalMatchId
+                    + "}";
+            }
+            else
+            {
+                findTips = "{1,\"tip_obstacleItem\",1," + finalMatchId + "}";
+            }
         }
 
         return (findLinks, findLinks31, findTips);
