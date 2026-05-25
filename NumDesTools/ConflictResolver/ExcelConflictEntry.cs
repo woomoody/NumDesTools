@@ -550,6 +550,25 @@ public static class ExcelConflictEntry
         var theirsPath = Path.Combine(tmpDir, "theirs_" + Path.GetFileName(relativePath));
         var basePath = Path.Combine(tmpDir, "base_" + Path.GetFileName(relativePath));
 
+        // 诊断：打印 gitRoot、实际 .git 路径、目录内容
+        try
+        {
+            using var diagRepo = new Repository(gitRoot);
+            var gitDir = diagRepo.Info.Path;
+            var headFiles = Directory.GetFiles(gitDir, "*HEAD*").Select(Path.GetFileName);
+            PluginLog.Write(
+                $"[BranchMerge] gitRoot={gitRoot} | gitDir={gitDir} | HEAD files: {string.Join(", ", headFiles)}"
+            );
+            var conflicts = diagRepo
+                .Index.Conflicts.Select(c => c.Ours?.Path ?? c.Theirs?.Path ?? "?")
+                .Take(10);
+            PluginLog.Write($"[BranchMerge] conflicts: {string.Join(", ", conflicts)}");
+        }
+        catch (Exception diagEx)
+        {
+            PluginLog.Write($"[BranchMerge] diag error: {diagEx.Message}");
+        }
+
         // LibGit2Sharp Lookup 不支持 CHERRY_PICK_HEAD 符号引用，直接读文件拿 SHA
         string? theirsSha =
             ResolveHeadFileSha(gitRoot, "CHERRY_PICK_HEAD")
