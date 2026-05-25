@@ -583,9 +583,21 @@ public static class ExcelConflictEntry
                     if (theirsSha != null)
                     {
                         var sha8 = theirsSha.Length >= 8 ? theirsSha[..8] : theirsSha;
-                        var branchPart = theirsBranchHint ?? sha8;
-                        theirsLabel =
-                            theirsBranchHint != null ? $"{theirsBranchHint}  ({sha8})" : sha8;
+                        if (theirsBranchHint != null)
+                        {
+                            theirsLabel = $"{theirsBranchHint}  ({sha8})";
+                        }
+                        else
+                        {
+                            var theirsBranch = repo.Branches
+                                .Where(b => b.Tip?.Sha == theirsSha)
+                                .OrderBy(b => b.IsRemote)
+                                .Select(b => b.FriendlyName)
+                                .FirstOrDefault();
+                            theirsLabel = theirsBranch != null
+                                ? $"{theirsBranch}  ({sha8})"
+                                : sha8;
+                        }
                     }
                     else
                     {
