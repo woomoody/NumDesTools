@@ -15,7 +15,7 @@
         <mah:ProgressRing IsActive="True" Width="32" Height="32"
                           Foreground="{DynamicResource MahApps.Brushes.Accent}"
                           HorizontalAlignment="Center"/>
-        <TextBlock Text="正在比较文件，请稍候…"
+        <TextBlock x:Name="MsgText" Text="正在比较文件，请稍候…"
                    Foreground="{DynamicResource MahApps.Brushes.Gray3}"
                    FontSize="12" Margin="0,10,0,0"
                    HorizontalAlignment="Center"/>

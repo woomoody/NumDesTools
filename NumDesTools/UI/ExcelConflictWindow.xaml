@@ -516,6 +516,20 @@
                     <TextBlock x:Name="StatRows"  Foreground="White" FontSize="12" Margin="0,0,16,0"/>
                     <TextBlock Foreground="#888"  FontSize="12">冲突格: </TextBlock>
                     <TextBlock x:Name="StatCells" Foreground="White" FontSize="12"/>
+                    <Separator x:Name="BranchInfoSep" Width="1" Background="#444" Margin="16,0" Visibility="Collapsed"/>
+                    <!-- 当前工作区 -->
+                    <TextBlock x:Name="HeadBranchText" Foreground="#888" FontSize="11"
+                               VerticalAlignment="Center" Visibility="Collapsed"/>
+                    <Separator x:Name="BranchInfoSep2" Width="1" Background="#444" Margin="12,0" Visibility="Collapsed"/>
+                    <!-- 我的版本 -->
+                    <TextBlock x:Name="OursInfoText" FontSize="11"
+                               VerticalAlignment="Center" Visibility="Collapsed"/>
+                    <TextBlock Foreground="#555" FontSize="11" Margin="10,0"
+                               VerticalAlignment="Center" Text="vs"
+                               x:Name="BranchVsText" Visibility="Collapsed"/>
+                    <!-- 他的版本 -->
+                    <TextBlock x:Name="TheirsInfoText" FontSize="11"
+                               VerticalAlignment="Center" Visibility="Collapsed"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal">

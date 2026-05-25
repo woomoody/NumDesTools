@@ -315,6 +315,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ExcelConflictGit"] = _ => ExcelConflictEntry.OpenGitConflict(),
             ["ExcelConflictManual"] = _ => ExcelConflictEntry.OpenManualCompare(),
             ["ExcelConflictHistory"] = _ => ExcelConflictEntry.OpenGitHistory(),
+            ["ExcelBranchMerge"] = _ => ExcelConflictEntry.OpenBranchMerge(),
             ["HelpButton"] = _ => new NumDesTools.UI.HelpWindow().Show()
         };
     }

@@ -128,6 +128,10 @@
                         <button id="ExcelConflictHistory" label="查看历史版本对比" imageMso="SourceControlShowHistory"
                                 onAction='OnButtonClick' screentip='浏览某个 xlsx 的 Git 提交历史，选历史版本与工作区或另一历史版本对比'
                                 tag='查看历史版本对比' />
+                        <menuSeparator id="ConflictSep1"/>
+                        <button id="ExcelBranchMerge" label="分支合并/Cherry-pick" imageMso="SourceControlMerge"
+                                onAction='OnButtonClick' screentip='将另一分支合并到当前分支，或摘取指定 commit，冲突 xlsx 用可视化窗口解决'
+                                tag='分支合并CherryPick' />
                     </menu>
                     <menu id='ActivityValidateMenuMain' label='验证活动&#13;' image='nd_验证活动菜单' size='large'>
                         <button id="ActivityTestAll" label="验证活动(全量)" screentip='验证所有活动配置表的跨表引用和字段规则'
