@@ -434,7 +434,10 @@ public static class ExcelConflictEntry
                 gitRoot,
                 chosen.Replace('/', Path.DirectorySeparatorChar)
             );
-            ExtractAndOpen(gitRoot, chosen, workingPath, autoGitAdd: true);
+            // cherry-pick --no-commit 不写 CHERRY_PICK_HEAD，直接传 commit SHA
+            var knownTheirsSha =
+                isCherryPick && selectedCommits.Count == 1 ? selectedCommits[0] : null;
+            ExtractAndOpen(gitRoot, chosen, workingPath, autoGitAdd: true, knownTheirsSha);
         }
     }
 
@@ -536,91 +539,90 @@ public static class ExcelConflictEntry
     }
 
     // 返回 true=已应用/完成，false=用户取消
+    // knownTheirsSha：cherry-pick --no-commit 不写 CHERRY_PICK_HEAD，调用方直接传 commit SHA
     private static bool ExtractAndOpen(
         string gitRoot,
         string relativePath,
         string workingFilePath,
-        bool autoGitAdd
+        bool autoGitAdd,
+        string? knownTheirsSha = null
     )
     {
         var tmpDir = Path.Combine(Path.GetTempPath(), "NumDesExcelDiff");
         Directory.CreateDirectory(tmpDir);
 
+        var normPath = relativePath.Replace('\\', '/');
         var oursPath = Path.Combine(tmpDir, "ours_" + Path.GetFileName(relativePath));
         var theirsPath = Path.Combine(tmpDir, "theirs_" + Path.GetFileName(relativePath));
         var basePath = Path.Combine(tmpDir, "base_" + Path.GetFileName(relativePath));
 
-        // 诊断：打印 gitRoot、实际 .git 路径、目录内容
+        // 优先从 Index conflict blob 直接提取：不依赖任何 HEAD 文件，merge 和 cherry-pick 均适用
         try
         {
-            using var diagRepo = new Repository(gitRoot);
-            var gitDir = diagRepo.Info.Path;
-            var headFiles = Directory.GetFiles(gitDir, "*HEAD*").Select(Path.GetFileName);
-            PluginLog.Write(
-                $"[BranchMerge] gitRoot={gitRoot} | gitDir={gitDir} | HEAD files: {string.Join(", ", headFiles)}"
-            );
-            var conflicts = diagRepo
-                .Index.Conflicts.Select(c => c.Ours?.Path ?? c.Theirs?.Path ?? "?")
-                .Take(10);
-            PluginLog.Write($"[BranchMerge] conflicts: {string.Join(", ", conflicts)}");
-        }
-        catch (Exception diagEx)
-        {
-            PluginLog.Write($"[BranchMerge] diag error: {diagEx.Message}");
-        }
+            using var repo = new Repository(gitRoot);
+            var conflict = repo.Index.Conflicts[normPath];
+            if (conflict != null)
+            {
+                void WriteBlob(IndexEntry? entry, string outFile)
+                {
+                    if (entry == null)
+                        return;
+                    var blob = repo.Lookup<Blob>(entry.Id);
+                    using var src = blob.GetContentStream();
+                    using var dst = new FileStream(outFile, FileMode.Create, FileAccess.Write);
+                    src.CopyTo(dst);
+                }
 
-        // LibGit2Sharp Lookup 不支持 CHERRY_PICK_HEAD 符号引用，直接读文件拿 SHA
-        string? theirsSha =
-            ResolveHeadFileSha(gitRoot, "CHERRY_PICK_HEAD")
-            ?? ResolveHeadFileSha(gitRoot, "MERGE_HEAD");
+                WriteBlob(conflict.Ours, oursPath);
 
-        if (theirsSha == null)
-        {
-            System.Windows.MessageBox.Show(
-                "当前不处于 merge/cherry-pick 冲突状态（未找到 MERGE_HEAD 或 CHERRY_PICK_HEAD）。",
-                "错误"
-            );
-            return false;
-        }
+                // Theirs：优先用 Index conflict blob，fallback 到 knownTheirsSha / HEAD 文件
+                if (conflict.Theirs != null)
+                {
+                    WriteBlob(conflict.Theirs, theirsPath);
+                }
+                else if (knownTheirsSha != null)
+                {
+                    GitShowBySha(gitRoot, knownTheirsSha, relativePath, theirsPath);
+                }
+                else
+                {
+                    var theirsSha =
+                        ReadGitHeadFile(repo.Info.Path, "CHERRY_PICK_HEAD")
+                        ?? ReadGitHeadFile(repo.Info.Path, "MERGE_HEAD");
+                    if (theirsSha == null)
+                        throw new InvalidOperationException("找不到 theirs 版本");
+                    GitShowBySha(gitRoot, theirsSha, relativePath, theirsPath);
+                }
 
-        var oursSha = ResolveHeadFileSha(gitRoot, "ORIG_HEAD");
-        if (oursSha == null)
-        {
-            System.Windows.MessageBox.Show("未找到 ORIG_HEAD，无法提取冲突版本。", "错误");
-            return false;
-        }
+                // merge-base（失败不影响主流程）
+                string? resolvedBasePath = null;
+                if (conflict.Ancestor != null)
+                {
+                    try
+                    {
+                        WriteBlob(conflict.Ancestor, basePath);
+                        resolvedBasePath = basePath;
+                    }
+                    catch { }
+                }
 
-        try
-        {
-            GitShowBySha(gitRoot, oursSha, relativePath, oursPath);
-            GitShowBySha(gitRoot, theirsSha, relativePath, theirsPath);
+                return OpenWindow(
+                    oursPath,
+                    theirsPath,
+                    outPath: workingFilePath,
+                    autoGitAdd: autoGitAdd,
+                    basePath: resolvedBasePath
+                );
+            }
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"提取 Git 版本失败：{ex.Message}", "错误");
+            System.Windows.MessageBox.Show($"提取冲突版本失败：{ex.Message}", "错误");
             return false;
         }
 
-        // 提取 merge-base 版本用于三方预选（失败不影响主流程）
-        string? resolvedBasePath = null;
-        try
-        {
-            var baseSha = RunGit(gitRoot, $"merge-base {oursSha} {theirsSha}").Trim();
-            if (!string.IsNullOrEmpty(baseSha))
-            {
-                GitShowBySha(gitRoot, baseSha, relativePath, basePath);
-                resolvedBasePath = basePath;
-            }
-        }
-        catch { }
-
-        return OpenWindow(
-            oursPath,
-            theirsPath,
-            outPath: workingFilePath,
-            autoGitAdd: autoGitAdd,
-            basePath: resolvedBasePath
-        );
+        System.Windows.MessageBox.Show($"在 Index 中找不到冲突条目：{relativePath}", "错误");
+        return false;
     }
 
     // 直接读 gitDir（.git/ 路径）下的 HEAD 文件
