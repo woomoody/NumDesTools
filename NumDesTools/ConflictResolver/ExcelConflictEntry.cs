@@ -508,9 +508,10 @@ public static class ExcelConflictEntry
                 gitRoot,
                 relativePath.Replace('/', Path.DirectorySeparatorChar)
             );
+            var gitDir = repo.Info.Path;
             var theirsSha =
-                ResolveHeadFileSha(gitRoot, "CHERRY_PICK_HEAD")
-                ?? ResolveHeadFileSha(gitRoot, "MERGE_HEAD");
+                ReadGitHeadFile(gitDir, "CHERRY_PICK_HEAD")
+                ?? ReadGitHeadFile(gitDir, "MERGE_HEAD");
             if (theirsSha == null)
                 return;
             var commit = repo.Lookup<Commit>(theirsSha);
@@ -603,14 +604,28 @@ public static class ExcelConflictEntry
         );
     }
 
-    // 读 .git/<name> 文件中的 SHA（ORIG_HEAD / MERGE_HEAD / CHERRY_PICK_HEAD 等）
-    private static string? ResolveHeadFileSha(string gitRoot, string name)
+    // 直接读 gitDir（.git/ 路径）下的 HEAD 文件
+    private static string? ReadGitHeadFile(string gitDir, string name)
     {
-        var path = Path.Combine(gitRoot, ".git", name);
+        var path = Path.Combine(gitDir, name);
         if (!File.Exists(path))
             return null;
         var sha = File.ReadAllText(path).Trim();
         return string.IsNullOrEmpty(sha) ? null : sha;
+    }
+
+    // 通过 gitRoot 工作区路径定位 .git/ 目录后读取 HEAD 文件
+    private static string? ResolveHeadFileSha(string gitRoot, string name)
+    {
+        try
+        {
+            using var repo = new Repository(gitRoot);
+            return ReadGitHeadFile(repo.Info.Path, name);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static void GitShow(string gitRoot, string rev, string relativePath, string outFile)
