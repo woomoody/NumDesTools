@@ -363,3 +363,13 @@ MigrationBackup/
 FodyWeavers.xsd
 /doc/agents
 *.lscache
+
+# Claude Code 运行时状态
+.claude/scheduled_tasks.json
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+
+# 发布产物
+packFromBin/scanner_publish/
+packFromBin/scanner_tmp/
+packFromBin/conflict_tool/
