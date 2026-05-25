@@ -17,7 +17,8 @@ internal class Program
     // ── 配置路径 ─────────────────────────────────────────────────────────────
     private static readonly string ConfigDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-        "NumDesTools", "Config"
+        "NumDesTools",
+        "Config"
     );
     private const string ActivityXlsx = @"C:\M1Work\public\Excels\Tables\ActivityClientData.xlsx";
     private static readonly string RulesPath = Path.Combine(ConfigDir, "ActivityTableRules.json");
@@ -25,7 +26,10 @@ internal class Program
     private const string McpToken = "m-002580b6-b3db-405a-aab8-007f927ef4eb";
     private const string ProjectKey = "t89j73";
     private static readonly string WrittenItemsPath = Path.Combine(ConfigDir, "written_items.json");
-    private static readonly string NoPermItemsPath = Path.Combine(ConfigDir, "no_permission_items.json");
+    private static readonly string NoPermItemsPath = Path.Combine(
+        ConfigDir,
+        "no_permission_items.json"
+    );
 
     // ── 已写入记录 ───────────────────────────────────────────────────────────
     private static HashSet<string> LoadWrittenItems()
@@ -724,8 +728,10 @@ internal class Program
         sb.AppendLine("# 飞书缺陷分析报告");
         sb.AppendLine($"生成时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine(
-            $"共 {pending.Count} 条 | 可写入飞书：{writable.Count} 条 | 关键词未命中（仅报告）：{skipped.Count} 条\n\n---\n"
+            $"共 {pending.Count} 条 | 可写入飞书：{writable.Count} 条 | 关键词未命中（仅报告）：{skipped.Count} 条"
         );
+        sb.Append(BuildBugStatsSummary(pending));
+        sb.AppendLine("\n---\n");
 
         if (writable.Count > 0)
         {
@@ -755,7 +761,9 @@ internal class Program
         var sb = new StringBuilder();
         sb.AppendLine("# 飞书评论待写入审阅\n");
         sb.AppendLine($"生成时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        sb.AppendLine($"共 {pending.Count} 条待写入\n\n---\n");
+        sb.AppendLine($"共 {pending.Count} 条待写入\n");
+        sb.Append(BuildStoryStatsSummary(pending));
+        sb.AppendLine("\n---\n");
         foreach (var item in pending)
         {
             sb.AppendLine($"## [{item.Id}] {item.Name}\n");
@@ -765,6 +773,257 @@ internal class Program
             sb.AppendLine("```\n\n---\n");
         }
         File.WriteAllText(docPath, sb.ToString(), Encoding.UTF8);
+    }
+
+    private static string BuildStoryStatsSummary(List<PendingItem> pending)
+    {
+        if (pending.Count == 0)
+            return "";
+
+        var sb = new StringBuilder();
+        sb.AppendLine("\n## 宏观统计\n");
+
+        // 活动类型分类（按 Name 关键词）
+        var typeGroups = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["LTE 限时地图"] = [],
+            ["BattlePass / 季节BP"] = [],
+            ["合并玩法 (二合/砸冰)"] = [],
+            ["礼包 / 商业化"] = [],
+            ["BumperHarvest / 联盟"] = [],
+            ["Bingo / 小游戏"] = [],
+            ["其他需求"] = [],
+        };
+
+        foreach (var item in pending)
+        {
+            var n = item.Name;
+            if (n.Contains("LTE") || n.Contains("限时地图") || n.Contains("寻宝玩法"))
+                typeGroups["LTE 限时地图"].Add(item.Name);
+            else if (
+                n.Contains("BP")
+                || n.Contains("BattlePass")
+                || n.Contains("通行证")
+                || n.Contains("季节")
+            )
+                typeGroups["BattlePass / 季节BP"].Add(item.Name);
+            else if (n.Contains("二合") || n.Contains("砸冰") || n.Contains("V4") || n.Contains("V6"))
+                typeGroups["合并玩法 (二合/砸冰)"].Add(item.Name);
+            else if (
+                n.Contains("礼包")
+                || n.Contains("商业化")
+                || n.Contains("付费")
+                || n.Contains("超级卡")
+                || n.Contains("奖励翻转")
+                || n.Contains("邮票")
+                || n.Contains("线性")
+            )
+                typeGroups["礼包 / 商业化"].Add(item.Name);
+            else if (n.Contains("联盟") || n.Contains("BumperHarvest") || n.Contains("Bumper"))
+                typeGroups["BumperHarvest / 联盟"].Add(item.Name);
+            else if (n.Contains("Bingo") || n.Contains("气球") || n.Contains("宝箱"))
+                typeGroups["Bingo / 小游戏"].Add(item.Name);
+            else
+                typeGroups["其他需求"].Add(item.Name);
+        }
+
+        sb.AppendLine("### 活动类型分布\n");
+        sb.AppendLine("| 类型 | 数量 | 占比 |");
+        sb.AppendLine("|------|------|------|");
+        foreach (
+            var (type, items) in typeGroups
+                .Where(kv => kv.Value.Count > 0)
+                .OrderByDescending(kv => kv.Value.Count)
+        )
+        {
+            var pct = (double)items.Count / pending.Count * 100;
+            sb.AppendLine($"| {type} | {items.Count} | {pct:F0}% |");
+        }
+
+        // 续期 vs 首期
+        var renewal = pending.Count(p =>
+            p.Comment.Contains("续期")
+            || System.Text.RegularExpressions.Regex.IsMatch(p.Name, @"第\d+期")
+        );
+        var firstTime = pending.Count - renewal;
+        sb.AppendLine($"\n### 续期 vs 首期\n");
+        sb.AppendLine($"- 首期/全新：**{firstTime}** 条");
+        sb.AppendLine($"- 续期迭代：**{renewal}** 条");
+
+        // 高频涉及表格 Top 5
+        var tableFreq = pending
+            .SelectMany(p => p.Tables)
+            .GroupBy(t => t)
+            .OrderByDescending(g => g.Count())
+            .Take(5)
+            .ToList();
+
+        if (tableFreq.Count > 0)
+        {
+            sb.AppendLine($"\n### 高频配置表 Top 5\n");
+            sb.AppendLine("| 表名 | 出现次数 |");
+            sb.AppendLine("|------|---------|");
+            foreach (var g in tableFreq)
+                sb.AppendLine($"| {g.Key} | {g.Count()} |");
+        }
+
+        // 平均涉及表数
+        var avgTables = pending.Average(p => p.Tables.Count);
+        var maxItem = pending.MaxBy(p => p.Tables.Count);
+        sb.AppendLine($"\n### 配置复杂度\n");
+        sb.AppendLine($"- 平均涉及表数：**{avgTables:F1}** 张");
+        if (maxItem is not null)
+            sb.AppendLine(
+                $"- 最复杂需求：**{Truncate(maxItem.Name.ReplaceLineEndings(" "), 40)}**（{maxItem.Tables.Count} 张表）"
+            );
+
+        return sb.ToString();
+    }
+
+    private static string BuildBugStatsSummary(List<PendingItem> pending)
+    {
+        if (pending.Count == 0)
+            return "";
+
+        var sb = new StringBuilder();
+        sb.AppendLine("\n## 宏观统计\n");
+
+        // ── 第一层：所属活动模块 ──────────────────────────────────────────────
+        var moduleGroups = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in pending)
+        {
+            var n = item.Name;
+            string module;
+            if (
+                n.Contains("LTE")
+                || n.Contains("限时地图")
+                || n.Contains("寻宝")
+                || n.Contains("解谜玩法")
+                || n.Contains("闯关")
+            )
+                module = "LTE 限时地图";
+            else if (
+                n.Contains("BP")
+                || n.Contains("BattlePass")
+                || n.Contains("通行证")
+                || n.Contains("季节")
+            )
+                module = "BattlePass / 季节BP";
+            else if (n.Contains("二合") || n.Contains("砸冰") || n.Contains("V4") || n.Contains("V6"))
+                module = "合并玩法";
+            else if (n.Contains("礼包") || n.Contains("商业化") || n.Contains("付费") || n.Contains("超级卡"))
+                module = "礼包 / 商业化";
+            else if (n.Contains("关卡岛") || n.Contains("地编") || n.Contains("地图"))
+                module = "关卡岛 / 地编";
+            else if (n.Contains("公会") || n.Contains("联盟") || n.Contains("社交"))
+                module = "公会 / 社交";
+            else
+                module = "其他";
+            moduleGroups[module] = moduleGroups.GetValueOrDefault(module) + 1;
+        }
+
+        sb.AppendLine("### 所属活动模块\n");
+        sb.AppendLine("| 模块 | 数量 | 占比 |");
+        sb.AppendLine("|------|------|------|");
+        foreach (var (mod, cnt) in moduleGroups.OrderByDescending(kv => kv.Value))
+            sb.AppendLine($"| {mod} | {cnt} | {(double)cnt / pending.Count * 100:F0}% |");
+
+        // ── 第二层：症状类型（宽泛匹配，覆盖自然语言描述） ─────────────────
+        var symptomDefs = new (string Label, string[] Keywords)[]
+        {
+            ("多语言 / 文案", ["多语言", "翻译", "文案", "文字", "本地化", "语言缺失", "语言", "key"]),
+            (
+                "UI / 界面 / 位置",
+                [
+                    "界面",
+                    "位置",
+                    "UI",
+                    "图标",
+                    "样式",
+                    "切图",
+                    "排版",
+                    "布局",
+                    "弹窗",
+                    "显示",
+                    "展示",
+                    "帮助图",
+                    "遮挡",
+                    "云层"
+                ]
+            ),
+            ("缺失 / 不显示", ["缺失", "缺少", "不显示", "未显示", "没有", "丢失", "消失"]),
+            ("合成 / 链条", ["合成", "主链", "链条", "三合", "二合", "合并", "merge", "产出不够", "材料不够"]),
+            ("任务 / 触发", ["任务", "触发", "不触发", "不生效", "无法触发", "卡住", "卡死", "卡关", "寻找"]),
+            ("奖励 / 数值", ["奖励", "数值", "数量", "价格", "积分", "得分"]),
+            ("配置 / 数据", ["配置", "数据错误", "表格", "配表", "error", "报错"]),
+            ("崩溃 / 闪退", ["崩溃", "闪退", "crash", "卡顿", "ANR"]),
+            ("标识 / 图标", ["标识", "图标", "icon", "角标", "标记", "蛛网"]),
+            ("NPC / 地标", ["NPC", "地标", "建造", "建筑"]),
+        };
+
+        // 每条 bug 按优先级匹配第一个命中的症状（避免重复计数）
+        var symptomCounts = new Dictionary<string, int>();
+        var uncategorized = 0;
+        foreach (var item in pending)
+        {
+            var matched = false;
+            foreach (var def in symptomDefs)
+            {
+                if (
+                    def.Keywords.Any(kw =>
+                        item.Name.Contains(kw, StringComparison.OrdinalIgnoreCase)
+                    )
+                )
+                {
+                    symptomCounts[def.Label] = symptomCounts.GetValueOrDefault(def.Label) + 1;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched)
+                uncategorized++;
+        }
+
+        sb.AppendLine("\n### 缺陷症状分布\n");
+        sb.AppendLine("| 症状 | 数量 | 占比 |");
+        sb.AppendLine("|------|------|------|");
+        foreach (var (label, count) in symptomCounts.OrderByDescending(kv => kv.Value))
+            sb.AppendLine($"| {label} | {count} | {(double)count / pending.Count * 100:F0}% |");
+        if (uncategorized > 0)
+            sb.AppendLine(
+                $"| 症状未识别 | {uncategorized} | {(double)uncategorized / pending.Count * 100:F0}% |"
+            );
+
+        // ── 可写入 vs 跳过 ──────────────────────────────────────────────────
+        var writable = pending.Count(p => !p.SkipComment);
+        var skipped = pending.Count(p => p.SkipComment);
+        sb.AppendLine($"\n### 可分析率\n");
+        sb.AppendLine(
+            $"- 关键词命中（可写飞书）：**{writable}** 条 ({(double)writable / pending.Count * 100:F0}%)"
+        );
+        sb.AppendLine(
+            $"- 关键词未命中（仅记录）：**{skipped}** 条 ({(double)skipped / pending.Count * 100:F0}%)"
+        );
+
+        // ── LTE 专项：涉及最多 bug 的活动 ID Top 5 ─────────────────────────
+        var actIdPattern = new System.Text.RegularExpressions.Regex(@"\b7\d{5}\b");
+        var actFreq = pending
+            .SelectMany(p => actIdPattern.Matches(p.Name).Select(m => m.Value))
+            .GroupBy(id => id)
+            .OrderByDescending(g => g.Count())
+            .Take(5)
+            .ToList();
+
+        if (actFreq.Count > 0)
+        {
+            sb.AppendLine("\n### Bug 最集中的活动 ID Top 5\n");
+            sb.AppendLine("| 活动ID | Bug数量 |");
+            sb.AppendLine("|--------|---------|");
+            foreach (var g in actFreq)
+                sb.AppendLine($"| {g.Key} | {g.Count()} |");
+        }
+
+        return sb.ToString();
     }
 
     // ── 工具 ─────────────────────────────────────────────────────────────────
