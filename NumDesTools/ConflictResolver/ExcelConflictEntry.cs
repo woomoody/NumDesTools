@@ -499,7 +499,7 @@ public static class ExcelConflictEntry
 
     // ── 内部 ─────────────────────────────────────────────────────────────────
 
-    // 文件名含 # 或全部 sheet 含 #：直接用 MERGE_HEAD（对方）版本覆盖工作区并 git add
+    // 文件名含 # 或全部 sheet 含 #：直接用对方版本覆盖工作区并 git add
     private static void AutoAcceptTheirs(Repository repo, string gitRoot, string relativePath)
     {
         try
@@ -508,7 +508,10 @@ public static class ExcelConflictEntry
                 gitRoot,
                 relativePath.Replace('/', Path.DirectorySeparatorChar)
             );
-            var commit = repo.Lookup<Commit>("MERGE_HEAD");
+            var theirsRef = File.Exists(Path.Combine(gitRoot, ".git", "CHERRY_PICK_HEAD"))
+                ? "CHERRY_PICK_HEAD"
+                : "MERGE_HEAD";
+            var commit = repo.Lookup<Commit>(theirsRef);
             if (commit == null)
                 return;
             var entry = commit[relativePath.Replace('\\', '/')];
@@ -544,15 +547,20 @@ public static class ExcelConflictEntry
         var theirsPath = Path.Combine(tmpDir, "theirs_" + Path.GetFileName(relativePath));
         var basePath = Path.Combine(tmpDir, "base_" + Path.GetFileName(relativePath));
 
+        // cherry-pick 冲突用 CHERRY_PICK_HEAD，merge 冲突用 MERGE_HEAD
+        var theirsRef = File.Exists(Path.Combine(gitRoot, ".git", "CHERRY_PICK_HEAD"))
+            ? "CHERRY_PICK_HEAD"
+            : "MERGE_HEAD";
+
         try
         {
             GitShow(gitRoot, "ORIG_HEAD", relativePath, oursPath);
-            GitShow(gitRoot, "MERGE_HEAD", relativePath, theirsPath);
+            GitShow(gitRoot, theirsRef, relativePath, theirsPath);
         }
         catch (Exception ex)
         {
             System.Windows.MessageBox.Show(
-                $"提取 Git 版本失败：{ex.Message}\n\n请确认当前处于 merge 冲突状态（ORIG_HEAD 和 MERGE_HEAD 都存在）。",
+                $"提取 Git 版本失败：{ex.Message}\n\n请确认当前处于 merge/cherry-pick 冲突状态。",
                 "错误"
             );
             return false;
@@ -562,7 +570,7 @@ public static class ExcelConflictEntry
         string? resolvedBasePath = null;
         try
         {
-            var baseSha = RunGit(gitRoot, "merge-base ORIG_HEAD MERGE_HEAD").Trim();
+            var baseSha = RunGit(gitRoot, $"merge-base ORIG_HEAD {theirsRef}").Trim();
             if (!string.IsNullOrEmpty(baseSha))
             {
                 GitShowBySha(gitRoot, baseSha, relativePath, basePath);
