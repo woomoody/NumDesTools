@@ -648,7 +648,8 @@ public static class ExcelConflictEntry
                     autoGitAdd: autoGitAdd,
                     basePath: resolvedBasePath,
                     oursLabel: oursLabel,
-                    theirsLabel: theirsLabel
+                    theirsLabel: theirsLabel,
+                    headBranch: repo.Head.FriendlyName
                 );
 
                 // "无差异"时 OpenWindow 返回 true 但不做 git add，冲突仍在 Index → 补做
@@ -846,7 +847,8 @@ public static class ExcelConflictEntry
         bool autoGitAdd,
         string? basePath = null,
         string? oursLabel = null,
-        string? theirsLabel = null
+        string? theirsLabel = null,
+        string? headBranch = null
     )
     {
         FileDiff? diff = null;
@@ -886,7 +888,14 @@ public static class ExcelConflictEntry
             return true;
         }
 
-        var win = new ExcelConflictWindow(diff, outPath, autoGitAdd, oursLabel, theirsLabel);
+        var win = new ExcelConflictWindow(
+            diff,
+            outPath,
+            autoGitAdd,
+            oursLabel,
+            theirsLabel,
+            headBranch
+        );
         return win.ShowDialog() == true;
     }
 }

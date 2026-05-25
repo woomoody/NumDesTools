@@ -27,7 +27,8 @@ public partial class ExcelConflictWindow : MetroWindow
         string? outPath = null,
         bool autoGitAdd = true,
         string? oursLabel = null,
-        string? theirsLabel = null
+        string? theirsLabel = null,
+        string? headBranch = null
     )
     {
         MahAppsHelper.EnsureInitialized();
@@ -38,17 +39,7 @@ public partial class ExcelConflictWindow : MetroWindow
         _outPath = outPath ?? diff.OursPath;
 
         FileNameText.Text = Path.GetFileName(diff.OursPath);
-        if (!string.IsNullOrEmpty(oursLabel) || !string.IsNullOrEmpty(theirsLabel))
-        {
-            var parts = new List<string>();
-            if (!string.IsNullOrEmpty(oursLabel))
-                parts.Add($"我的版本：{oursLabel}");
-            if (!string.IsNullOrEmpty(theirsLabel))
-                parts.Add($"他的版本：{theirsLabel}");
-            BranchInfoText.Text = string.Join("    ", parts);
-            BranchInfoText.Visibility = Visibility.Visible;
-            BranchInfoSep.Visibility = Visibility.Visible;
-        }
+        SetBranchInfo(oursLabel, theirsLabel, headBranch);
         // 冲突行（Modified）：驱动冲突行列头 + 冲突行滚动条
         ConflictRowItem.OnConflictScrollOffsetChanged = offset =>
         {
@@ -1779,6 +1770,58 @@ public partial class ExcelConflictWindow : MetroWindow
     {
         StatRows.Text = _diff.TotalConflictRows.ToString();
         StatCells.Text = _diff.TotalConflictCells.ToString();
+    }
+
+    private void SetBranchInfo(string? oursLabel, string? theirsLabel, string? headBranch)
+    {
+        if (string.IsNullOrEmpty(oursLabel) && string.IsNullOrEmpty(theirsLabel))
+            return;
+
+        // 当前工作区标签
+        if (!string.IsNullOrEmpty(headBranch))
+        {
+            HeadBranchText.Text = $"工作区：{headBranch}";
+            HeadBranchText.Visibility = Visibility.Visible;
+            BranchInfoSep.Visibility = Visibility.Visible;
+            BranchInfoSep2.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            BranchInfoSep.Visibility = Visibility.Visible;
+            BranchInfoSep2.Visibility = Visibility.Collapsed;
+        }
+
+        // 判断哪个版本是当前工作区分支（用 oursLabel/theirsLabel 的第一个 token 与 headBranch 比较）
+        static string FirstToken(string s) => s.Split(' ', 2)[0].Trim();
+        bool oursIsCurrent =
+            !string.IsNullOrEmpty(headBranch)
+            && !string.IsNullOrEmpty(oursLabel)
+            && FirstToken(oursLabel) == headBranch;
+        bool theirsIsCurrent =
+            !string.IsNullOrEmpty(headBranch)
+            && !string.IsNullOrEmpty(theirsLabel)
+            && FirstToken(theirsLabel) == headBranch;
+
+        // 当前工作区版本用白色，另一侧用灰色；两侧都非当前时都用灰色
+        var currentColor = new SolidColorBrush(Color(0xFF, 0xFF, 0xFF));
+        var otherColor = new SolidColorBrush(Color(0x88, 0x88, 0x88));
+
+        if (!string.IsNullOrEmpty(oursLabel))
+        {
+            var suffix = oursIsCurrent ? "  [当前]" : string.Empty;
+            OursInfoText.Text = $"我的：{oursLabel}{suffix}";
+            OursInfoText.Foreground = oursIsCurrent ? currentColor : otherColor;
+            OursInfoText.Visibility = Visibility.Visible;
+        }
+        if (!string.IsNullOrEmpty(theirsLabel))
+        {
+            var suffix = theirsIsCurrent ? "  [当前]" : string.Empty;
+            TheirsInfoText.Text = $"他的：{theirsLabel}{suffix}";
+            TheirsInfoText.Foreground = theirsIsCurrent ? currentColor : otherColor;
+            TheirsInfoText.Visibility = Visibility.Visible;
+        }
+        if (!string.IsNullOrEmpty(oursLabel) && !string.IsNullOrEmpty(theirsLabel))
+            BranchVsText.Visibility = Visibility.Visible;
     }
 
     private void Window_EscClose(object sender, System.Windows.Input.KeyEventArgs e)
