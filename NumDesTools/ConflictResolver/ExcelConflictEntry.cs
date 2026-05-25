@@ -508,10 +508,12 @@ public static class ExcelConflictEntry
                 gitRoot,
                 relativePath.Replace('/', Path.DirectorySeparatorChar)
             );
-            var theirsRef = File.Exists(Path.Combine(gitRoot, ".git", "CHERRY_PICK_HEAD"))
-                ? "CHERRY_PICK_HEAD"
-                : "MERGE_HEAD";
-            var commit = repo.Lookup<Commit>(theirsRef);
+            var theirsSha =
+                ResolveHeadFileSha(gitRoot, "CHERRY_PICK_HEAD")
+                ?? ResolveHeadFileSha(gitRoot, "MERGE_HEAD");
+            if (theirsSha == null)
+                return;
+            var commit = repo.Lookup<Commit>(theirsSha);
             if (commit == null)
                 return;
             var entry = commit[relativePath.Replace('\\', '/')];
@@ -547,22 +549,35 @@ public static class ExcelConflictEntry
         var theirsPath = Path.Combine(tmpDir, "theirs_" + Path.GetFileName(relativePath));
         var basePath = Path.Combine(tmpDir, "base_" + Path.GetFileName(relativePath));
 
-        // cherry-pick 冲突用 CHERRY_PICK_HEAD，merge 冲突用 MERGE_HEAD
-        var theirsRef = File.Exists(Path.Combine(gitRoot, ".git", "CHERRY_PICK_HEAD"))
-            ? "CHERRY_PICK_HEAD"
-            : "MERGE_HEAD";
+        // LibGit2Sharp Lookup 不支持 CHERRY_PICK_HEAD 符号引用，直接读文件拿 SHA
+        string? theirsSha =
+            ResolveHeadFileSha(gitRoot, "CHERRY_PICK_HEAD")
+            ?? ResolveHeadFileSha(gitRoot, "MERGE_HEAD");
+
+        if (theirsSha == null)
+        {
+            System.Windows.MessageBox.Show(
+                "当前不处于 merge/cherry-pick 冲突状态（未找到 MERGE_HEAD 或 CHERRY_PICK_HEAD）。",
+                "错误"
+            );
+            return false;
+        }
+
+        var oursSha = ResolveHeadFileSha(gitRoot, "ORIG_HEAD");
+        if (oursSha == null)
+        {
+            System.Windows.MessageBox.Show("未找到 ORIG_HEAD，无法提取冲突版本。", "错误");
+            return false;
+        }
 
         try
         {
-            GitShow(gitRoot, "ORIG_HEAD", relativePath, oursPath);
-            GitShow(gitRoot, theirsRef, relativePath, theirsPath);
+            GitShowBySha(gitRoot, oursSha, relativePath, oursPath);
+            GitShowBySha(gitRoot, theirsSha, relativePath, theirsPath);
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show(
-                $"提取 Git 版本失败：{ex.Message}\n\n请确认当前处于 merge/cherry-pick 冲突状态。",
-                "错误"
-            );
+            System.Windows.MessageBox.Show($"提取 Git 版本失败：{ex.Message}", "错误");
             return false;
         }
 
@@ -570,7 +585,7 @@ public static class ExcelConflictEntry
         string? resolvedBasePath = null;
         try
         {
-            var baseSha = RunGit(gitRoot, $"merge-base ORIG_HEAD {theirsRef}").Trim();
+            var baseSha = RunGit(gitRoot, $"merge-base {oursSha} {theirsSha}").Trim();
             if (!string.IsNullOrEmpty(baseSha))
             {
                 GitShowBySha(gitRoot, baseSha, relativePath, basePath);
@@ -586,6 +601,16 @@ public static class ExcelConflictEntry
             autoGitAdd: autoGitAdd,
             basePath: resolvedBasePath
         );
+    }
+
+    // 读 .git/<name> 文件中的 SHA（ORIG_HEAD / MERGE_HEAD / CHERRY_PICK_HEAD 等）
+    private static string? ResolveHeadFileSha(string gitRoot, string name)
+    {
+        var path = Path.Combine(gitRoot, ".git", name);
+        if (!File.Exists(path))
+            return null;
+        var sha = File.ReadAllText(path).Trim();
+        return string.IsNullOrEmpty(sha) ? null : sha;
     }
 
     private static void GitShow(string gitRoot, string rev, string relativePath, string outFile)
