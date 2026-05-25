@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>xlsx-conflict</AssemblyName>
+    <RootNamespace>NumDesTools</RootNamespace>
+    <StartupObject>NumDesTools.ConflictTool.Program</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EPPlus" Version="8.2.0" />
+    <PackageReference Include="LibGit2Sharp" Version="0.31.0" />
+    <PackageReference Include="MahApps.Metro" Version="2.4.10" />
+    <PackageReference Include="MiniExcel" Version="1.42.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+  <!-- Link 主插件里已有的冲突解决代码 -->
+  <ItemGroup>
+    <Compile Include="..\NumDesTools\ConflictResolver\ConflictApplier.cs" />
+    <Compile Include="..\NumDesTools\ConflictResolver\ConflictModels.cs" />
+    <Compile Include="..\NumDesTools\ConflictResolver\ExcelConflictDiffer.cs" />
+    <Compile Include="..\NumDesTools\SvnGitTools.cs" />
+    <Compile Include="..\NumDesTools\UI\MahAppsHelper.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Include="..\NumDesTools\UI\GitConflictPickerWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="..\NumDesTools\UI\GitConflictPickerWindow.xaml.cs" />
+    <Page Include="..\NumDesTools\UI\ConflictRowItem.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="..\NumDesTools\UI\ConflictRowItem.xaml.cs" />
+    <Page Include="..\NumDesTools\UI\ExcelConflictWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="..\NumDesTools\UI\ExcelConflictWindow.xaml.cs" />
+  </ItemGroup>
+
+</Project>
