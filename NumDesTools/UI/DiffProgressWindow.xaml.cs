@@ -9,4 +9,13 @@ public partial class DiffProgressWindow : MetroWindow
         MahAppsHelper.EnsureInitialized();
         InitializeComponent();
     }
+
+    public DiffProgressWindow(string title, string message)
+        : this()
+    {
+        Title = title;
+        MsgText.Text = message;
+    }
+
+    public void SetStatus(string message) => Dispatcher.Invoke(() => MsgText.Text = message);
 }

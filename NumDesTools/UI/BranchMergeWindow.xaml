@@ -13,6 +13,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -29,8 +30,8 @@
                          Foreground="{DynamicResource MahApps.Brushes.Text}"/>
         </StackPanel>
 
-        <!-- 目标分支 -->
-        <Grid Grid.Row="1" Margin="0,0,0,8">
+        <!-- 目标分支（Merge 模式可选；Cherry 模式隐藏，固定为当前分支） -->
+        <Grid x:Name="TargetRow" Grid.Row="1" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="110"/>
                 <ColumnDefinition Width="*"/>
@@ -42,8 +43,22 @@
                       SelectionChanged="TargetBranch_Changed"/>
         </Grid>
 
+        <!-- 当前分支只读提示（Cherry 模式专用） -->
+        <Grid x:Name="CurrentBranchRow" Grid.Row="2" Visibility="Collapsed" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="110"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="当前分支" VerticalAlignment="Center"
+                       Foreground="{DynamicResource MahApps.Brushes.Gray3}" FontSize="11"/>
+            <TextBlock x:Name="CurrentBranchLabel" Grid.Column="1"
+                       VerticalAlignment="Center"
+                       FontFamily="Consolas" FontSize="11"
+                       Foreground="{DynamicResource MahApps.Brushes.Text}"/>
+        </Grid>
+
         <!-- 来源分支 -->
-        <Grid x:Name="MergeSourceRow" Grid.Row="2" Margin="0,0,0,8">
+        <Grid x:Name="MergeSourceRow" Grid.Row="3" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="110"/>
                 <ColumnDefinition Width="*"/>
@@ -55,8 +70,8 @@
                       SelectionChanged="SourceBranch_Changed"/>
         </Grid>
 
-        <!-- Cherry-pick 模式：commit 列表（占满剩余空间） -->
-        <Grid x:Name="CherryCommitRow" Grid.Row="3" Visibility="Collapsed">
+        <!-- Cherry-pick 模式：commit 列表 -->
+        <Grid x:Name="CherryCommitRow" Grid.Row="4" Visibility="Collapsed">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -87,7 +102,7 @@
         </Grid>
 
         <!-- 底部按钮 -->
-        <Border Grid.Row="4"
+        <Border Grid.Row="5"
                 BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
                 BorderThickness="0,1,0,0"
                 Padding="0,8,0,0" Margin="0,8,0,0">
@@ -103,7 +118,7 @@
                            Foreground="{DynamicResource MahApps.Brushes.Gray3}"
                            FontSize="11" TextWrapping="Wrap"/>
                 <Button x:Name="OkButton" Grid.Column="1" Content="开始合并"
-                        Width="100" Height="28" IsDefault="True"
+                        Width="110" Height="28" IsDefault="True"
                         Style="{DynamicResource MahApps.Styles.Button.Square.Accent}"
                         Click="Ok_Click"/>
                 <Button Grid.Column="3" Content="取消"
