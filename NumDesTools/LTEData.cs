@@ -1,6 +1,7 @@
 using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Documents;
 using Microsoft.VisualBasic;
 using NumDesTools.UI;
 using OfficeOpenXml;
@@ -2249,6 +2250,10 @@ public class LteData
         var findLinks31 = string.Empty;
         var findTips = string.Empty;
 
+        if(findTargetId == "7621011204")
+        {
+            var abc = 0;
+        }
         // 1层寻找
         var findRankLinks1 = FindRankLinks(
             findTargetId,
@@ -2260,6 +2265,11 @@ public class LteData
             findTargetDetailTypeIndex,
             findTargetTypeIndex
         );
+
+        var findItemGroup = findRankLinks1
+            .Where(x => x.targetFindDetailType != "4")
+            .Select(x => x.targetId)
+            .ToList();
 
         if (findRankLinks1.Count > 0)
         {
@@ -2291,8 +2301,13 @@ public class LteData
                         findTargetDetailTypeIndex,
                         findTargetTypeIndex
                     );
+                    var findItemGroupTemp = findRankLinksTemp
+                        .Where(x => x.targetFindDetailType != "4")
+                        .Select(x => x.targetId)
+                        .ToList();
                     // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
                     findRankLinks2.Union(findRankLinksTemp);
+                    findItemGroup.Union(findItemGroupTemp);
                 }
             }
         }
@@ -2304,7 +2319,7 @@ public class LteData
         }
 
         // 寻找界面提示使用最后的id，因为其他id可能没有图片资源
-        var finalMatch = findRankLinks1.LastOrDefault();
+        var finalMatchId = findItemGroup.LastOrDefault();
         if (findRankLinks1.Count == 0)
         {
             findTips = "{1,\"tip_obstacleItem\",2}";
@@ -2315,12 +2330,12 @@ public class LteData
                 "{3,"
                 + findTargetId.Substring(0, findTargetId.Length - 2)
                 + "00,"
-                + finalMatch.targetId
+                + finalMatchId
                 + "}";
         }
         else
         {
-            findTips = "{1,\"tip_obstacleItem\",1," + finalMatch.targetId + "}";
+            findTips = "{1,\"tip_obstacleItem\",1," + finalMatchId + "}";
         }
 
         return (findLinks, findLinks31, findTips);

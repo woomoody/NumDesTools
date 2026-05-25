@@ -7,25 +7,30 @@
       "createdAt": 1779433496625,
       "recurring": true,
       "createdBySessionId": "dd93351b-5a9e-4a08-a2b4-afb72c465329",
-      "createdByPid": 52480
+      "createdByPid": 33848,
+      "createdByProcStart": "639150620544525990",
+      "lastFiredAt": 1779674520366
     },
     {
-      "id": "cc15ae1e",
+      "id": "28869fe4",
       "cron": "15 10 * * 1-5",
-      "prompt": "执行竞品情报收集任务（工作时间：收集+分析+推送）。\n\nStep 1 — 本机 ADB 采集：\n检查 ADB 是否在线：\n```\ncmd.exe /c \"\\\"C:\\Program Files\\Netease\\MuMu Player 12\\shell\\adb.exe\\\" devices 2>&1\"\n```\n若在线，对每个竞品执行 adb pull（从 C:\\tmp\\competitors.json 读 package）。\n写 C:\\tmp\\adb_collect_result.json 记录结果。\n若不在线，直接写 adb_online: false 继续。\n\nStep 2 — scp 推到远端：\n```\nscp \"C:/tmp/competitors.json\" \"admin@100.96.48.30:C:/tmp/competitors.json\"\nscp \"C:/tmp/adb_collect_result.json\" \"admin@100.96.48.30:C:/tmp/adb_collect_result.json\"\n```\n若 ADB 在线且有新数据，也推竞品目录：\n```\nscp -r \"C:/tmp/mftown/\" \"admin@100.96.48.30:C:/tmp/mftown/\"\nscp -r \"C:/tmp/traveltown/\" \"admin@100.96.48.30:C:/tmp/traveltown/\"\n```\n\nStep 3 — SSH 触发远端分析（同步，等待完成）：\n```\nssh -o BatchMode=yes admin@100.96.48.30 \"C:\\\\Users\\\\admin\\\\AppData\\\\Roaming\\\\npm\\\\claude.cmd --dangerously-skip-permissions -p \\\"以 demand-collector-remote agent 身份执行竞品情报分析。should_push=True，工作时间，分析完成后推送新游戏播报。完成后把产出 scp 推回 cent@100.108.252.11 对应路径，然后通过反向 SSH 触发本机 git commit：ssh cent@100.108.252.11 \\\\\\\"git -C C:/Users/cent/Documents/NumDesOutput add -A && git -C C:/Users/cent/Documents/NumDesOutput diff --cached --quiet || git -C C:/Users/cent/Documents/NumDesOutput commit -m \\\\\\\\\\\\\\\"[远端分析] 竞品情报巡检 $(date +%Y-%m-%d)\\\\\\\\\\\\\\\"\\\\\\\"\\\" 2>&1\" | tail -30\n```\n\n把远端输出中的新游戏播报摘要显示给用户。",
-      "createdAt": 1779433904852,
+      "prompt": "执行竞品情报收集任务（工作时间：收集+分析+推送）。\n\nStep 1 — 本机 ADB 采集：\n检查 ADB：cmd.exe /c \"\\\"C:\\Program Files\\Netease\\MuMu Player 12\\shell\\adb.exe\\\" devices 2>&1\"\n若在线，对每个竞品执行 adb pull（从 C:\\tmp\\competitors.json 读 package）。\n写 C:\\tmp\\adb_collect_result.json 记录结果（adb_online true/false，pulled 列表）。\n若不在线，直接写 adb_online: false。\n\nStep 2 — scp 推到远端：\nscp \"C:/tmp/competitors.json\" \"admin@100.96.48.30:C:/tmp/competitors.json\"\nscp \"C:/tmp/adb_collect_result.json\" \"admin@100.96.48.30:C:/tmp/adb_collect_result.json\"\n若 ADB 在线有新数据，也推各竞品目录。\n\nStep 3 — SSH 触发远端分析（注意：用单引号包裹整个 ssh 命令，避免本机 bash 展开 $）：\nssh -o BatchMode=yes admin@100.96.48.30 'C:\\Users\\admin\\AppData\\Roaming\\npm\\claude.cmd --dangerously-skip-permissions --agent demand-collector-remote -p \"should_push=True，工作时间，分析完成后推送新游戏播报。完成后把产出 scp 推回 cent@100.108.252.11 对应路径，然后通过反向 SSH 触发本机 git commit。\" 2>&1' | tail -15\n\n把远端输出中的新游戏播报摘要显示给用户。",
+      "createdAt": 1779456275715,
       "recurring": true,
       "createdBySessionId": "dd93351b-5a9e-4a08-a2b4-afb72c465329",
-      "createdByPid": 52480
+      "createdByPid": 33848,
+      "createdByProcStart": "639150620544525990"
     },
     {
-      "id": "b04196be",
+      "id": "84245341",
       "cron": "47 8,20,22 * * *",
-      "prompt": "执行竞品情报收集任务（非工作时间：只采集+分析，不推送）。\n\nStep 1 — 本机 ADB 采集（同工作时间流程）：\n检查 ADB，pull 竞品数据，写 adb_collect_result.json。\n\nStep 2 — scp 推到远端（同工作时间流程）。\n\nStep 3 — SSH 触发远端分析（同步，静默模式）：\n```\nssh -o BatchMode=yes admin@100.96.48.30 \"C:\\\\Users\\\\admin\\\\AppData\\\\Roaming\\\\npm\\\\claude.cmd --dangerously-skip-permissions -p \\\"以 demand-collector-remote agent 身份执行竞品情报分析。should_push=False，非工作时间静默模式，不推送新游戏播报，只写入 pending_releases.json。完成后把产出 scp 推回 cent@100.108.252.11 对应路径，然后通过反向 SSH 触发本机 git commit：ssh cent@100.108.252.11 \\\\\\\"git -C C:/Users/cent/Documents/NumDesOutput add -A && git -C C:/Users/cent/Documents/NumDesOutput diff --cached --quiet || git -C C:/Users/cent/Documents/NumDesOutput commit -m \\\\\\\\\\\\\\\"[远端分析] 竞品情报巡检 $(date +%Y-%m-%d)\\\\\\\\\\\\\\\"\\\\\\\"\\\" 2>&1\" | tail -5\n```\n\n静默完成，简短告知用户：已触发远端竞品巡检（非工作时间静默模式）。",
-      "createdAt": 1779433912562,
+      "prompt": "执行竞品情报收集任务（非工作时间：只采集+分析，不推送）。\n\nStep 1 — 本机 ADB 采集：\n检查 ADB：cmd.exe /c \"\\\"C:\\Program Files\\Netease\\MuMu Player 12\\shell\\adb.exe\\\" devices 2>&1\"\n若在线，对每个竞品执行 adb pull（从 C:\\tmp\\competitors.json 读 package）。\n写 C:\\tmp\\adb_collect_result.json（adb_online true/false，pulled 列表）。\n若不在线，直接写 adb_online: false。\n\nStep 2 — scp 推到远端：\nscp \"C:/tmp/competitors.json\" \"admin@100.96.48.30:C:/tmp/competitors.json\"\nscp \"C:/tmp/adb_collect_result.json\" \"admin@100.96.48.30:C:/tmp/adb_collect_result.json\"\n\nStep 3 — SSH 触发远端分析（注意：用单引号包裹整个 ssh 命令，避免本机 bash 展开 $）：\nssh -o BatchMode=yes admin@100.96.48.30 'C:\\Users\\admin\\AppData\\Roaming\\npm\\claude.cmd --dangerously-skip-permissions --agent demand-collector-remote -p \"should_push=False，非工作时间静默模式，不推送新游戏播报，只写入 pending_releases.json。完成后把产出 scp 推回 cent@100.108.252.11 对应路径，然后通过反向 SSH 触发本机 git commit。\" 2>&1' | tail -5\n\n静默完成后告知用户：已触发远端竞品巡检（非工作时间静默模式）。",
+      "createdAt": 1779456283772,
+      "lastFiredAt": 1779671820616,
       "recurring": true,
       "createdBySessionId": "dd93351b-5a9e-4a08-a2b4-afb72c465329",
-      "createdByPid": 52480
+      "createdByPid": 33848,
+      "createdByProcStart": "639150620544525990"
     }
   ]
 }
