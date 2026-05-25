@@ -137,6 +137,17 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
             LoadCommits();
     }
 
+    private void SourceBranch_Changed(
+        object sender,
+        System.Windows.Controls.SelectionChangedEventArgs e
+    )
+    {
+        if (_loading)
+            return;
+        if (IsCherryPick)
+            LoadCommits();
+    }
+
     private void Ok_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrEmpty(TargetBranch))
