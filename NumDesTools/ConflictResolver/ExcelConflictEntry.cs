@@ -22,8 +22,8 @@ public static class ExcelConflictEntry
             return;
         }
 
-        GitConflictPickerWindow? picker = null;
         string? lastSelected = null;
+        bool skipHash = NumDesAddIn.GlobalValue.Value["ConflictSkipHashFiles"] == "true";
 
         while (true)
         {
@@ -45,10 +45,6 @@ public static class ExcelConflictEntry
                 break;
             }
 
-            bool skipHash =
-                picker?.SkipHash
-                ?? NumDesAddIn.GlobalValue.Value["ConflictSkipHashFiles"] == "true";
-
             List<string> conflictedFiles;
             if (skipHash)
             {
@@ -64,32 +60,19 @@ public static class ExcelConflictEntry
 
             if (conflictedFiles.Count == 0)
             {
-                picker?.Close();
                 System.Windows.MessageBox.Show("所有 xlsx 冲突已全部解决。", "完成");
                 break;
             }
 
-            string chosen;
-            if (conflictedFiles.Count == 1 && picker == null)
-            {
-                chosen = conflictedFiles[0];
-            }
-            else
-            {
-                if (picker == null)
-                {
-                    picker = new GitConflictPickerWindow(conflictedFiles, skipHash);
-                }
-                else
-                {
-                    picker.RefreshList(conflictedFiles, lastSelected);
-                }
-
-                if (picker.ShowDialog() != true)
-                    break;
-                chosen = picker.SelectedFile!;
-                lastSelected = chosen;
-            }
+            // 每次都 new，避免 ShowDialog 在已关闭窗口上重复调用；始终显示 picker 确保用户可返回上层
+            var picker = new GitConflictPickerWindow(conflictedFiles, skipHash);
+            picker.RefreshList(conflictedFiles, lastSelected);
+            skipHash = picker.SkipHash;
+            if (picker.ShowDialog() != true)
+                break;
+            var chosen = picker.SelectedFile!;
+            lastSelected = chosen;
+            skipHash = picker.SkipHash;
 
             var workingFilePath = Path.Combine(
                 gitRoot,
@@ -369,8 +352,7 @@ public static class ExcelConflictEntry
             return;
         }
 
-        // 有 xlsx 冲突：复用冲突解决循环
-        GitConflictPickerWindow? filePicker = null;
+        // 有 xlsx 冲突：逐文件解决循环
         string? lastSelected = null;
 
         while (true)
@@ -393,7 +375,6 @@ public static class ExcelConflictEntry
 
             if (remaining.Count == 0)
             {
-                filePicker?.Close();
                 var r = System.Windows.MessageBox.Show(
                     $"所有 xlsx 冲突已解决。\n（非 xlsx 冲突需手动处理）\n\n是否执行 commit？",
                     "完成",
@@ -409,33 +390,22 @@ public static class ExcelConflictEntry
                 break;
             }
 
-            string chosen;
-            if (remaining.Count == 1 && filePicker == null)
+            // 每次都 new，避免 ShowDialog 在已关闭窗口上重复调用；始终显示 picker 确保用户可返回上层
+            var filePicker = new GitConflictPickerWindow(remaining, false);
+            filePicker.RefreshList(remaining, lastSelected);
+            if (filePicker.ShowDialog() != true)
             {
-                chosen = remaining[0];
+                var r = System.Windows.MessageBox.Show(
+                    $"是否中止 {operation}（git {operation} --abort）？\n取消将保留当前冲突状态。",
+                    "中止操作",
+                    System.Windows.MessageBoxButton.YesNo
+                );
+                if (r == System.Windows.MessageBoxResult.Yes)
+                    AbortOperation(gitRoot, isCherryPick);
+                break;
             }
-            else
-            {
-                if (filePicker == null)
-                    filePicker = new GitConflictPickerWindow(remaining, false);
-                else
-                    filePicker.RefreshList(remaining, lastSelected);
-
-                if (filePicker.ShowDialog() != true)
-                {
-                    // 用户取消 → abort
-                    var r = System.Windows.MessageBox.Show(
-                        $"是否中止 {operation}（git {operation} --abort）？\n取消将保留当前冲突状态。",
-                        "中止操作",
-                        System.Windows.MessageBoxButton.YesNo
-                    );
-                    if (r == System.Windows.MessageBoxResult.Yes)
-                        AbortOperation(gitRoot, isCherryPick);
-                    break;
-                }
-                chosen = filePicker.SelectedFile!;
-                lastSelected = chosen;
-            }
+            var chosen = filePicker.SelectedFile!;
+            lastSelected = chosen;
 
             var workingPath = Path.Combine(
                 gitRoot,
