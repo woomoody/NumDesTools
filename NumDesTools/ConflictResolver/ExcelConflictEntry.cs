@@ -284,45 +284,52 @@ public static class ExcelConflictEntry
         var selectedCommits = picker.SelectedCommits;
         string operation = isCherryPick ? "cherry-pick" : "merge";
 
-        // 用进度窗包住 checkout + merge/cherry-pick，避免用户误以为卡死
+        // git 操作放后台线程，进度窗 ShowDialog 阻塞 UI 线程，动画才能正常跑
         string? gitError = null;
         var progressWin = new NumDesTools.UI.DiffProgressWindow(
             $"正在执行 {operation}…",
             $"正在准备 {operation}，请稍候…"
         );
-        progressWin.Show();
-
-        try
+        progressWin.Loaded += (_, _) =>
         {
-            // 切换到目标分支
-            progressWin.SetStatus($"正在切换到目标分支 {target}…");
-            var currentBranch = RunGit(gitRoot, "rev-parse --abbrev-ref HEAD").Trim();
-            if (currentBranch != target)
-                RunGit(gitRoot, $"checkout \"{target}\"");
-
-            // 执行 merge / cherry-pick
-            if (isCherryPick)
+            var bgThread = new System.Threading.Thread(() =>
             {
-                var shas = string.Join(" ", selectedCommits.Select(s => $"\"{s}\""));
-                progressWin.SetStatus($"正在 cherry-pick {selectedCommits.Count} 个 commit…");
-                RunGit(gitRoot, $"cherry-pick --no-commit {shas}");
-            }
-            else
-            {
-                progressWin.SetStatus($"正在 merge {source} → {target}…");
-                RunGit(gitRoot, $"merge --no-commit --no-ff \"{source}\"");
-            }
+                try
+                {
+                    progressWin.SetStatus($"正在切换到目标分支 {target}…");
+                    var currentBranch = RunGit(gitRoot, "rev-parse --abbrev-ref HEAD").Trim();
+                    if (currentBranch != target)
+                        RunGit(gitRoot, $"checkout \"{target}\"");
 
-            progressWin.SetStatus("正在检查冲突…");
-        }
-        catch (Exception ex)
-        {
-            gitError = ex.Message;
-        }
-        finally
-        {
-            progressWin.Close();
-        }
+                    if (isCherryPick)
+                    {
+                        var shas = string.Join(" ", selectedCommits.Select(s => $"\"{s}\""));
+                        progressWin.SetStatus($"正在 cherry-pick {selectedCommits.Count} 个 commit…");
+                        RunGit(gitRoot, $"cherry-pick --no-commit {shas}");
+                    }
+                    else
+                    {
+                        progressWin.SetStatus($"正在 merge {source} → {target}…");
+                        RunGit(gitRoot, $"merge --no-commit --no-ff \"{source}\"");
+                    }
+
+                    progressWin.SetStatus("正在检查冲突…");
+                }
+                catch (Exception ex)
+                {
+                    gitError = ex.Message;
+                }
+                finally
+                {
+                    progressWin.Dispatcher.BeginInvoke((System.Action)(() => progressWin.Close()));
+                }
+            })
+            {
+                IsBackground = true,
+            };
+            bgThread.Start();
+        };
+        progressWin.ShowDialog();
 
         if (gitError != null)
         {
