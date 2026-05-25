@@ -38,17 +38,16 @@ public partial class ExcelConflictWindow : MetroWindow
         _outPath = outPath ?? diff.OursPath;
 
         FileNameText.Text = Path.GetFileName(diff.OursPath);
-        if (!string.IsNullOrEmpty(oursLabel))
+        if (!string.IsNullOrEmpty(oursLabel) || !string.IsNullOrEmpty(theirsLabel))
         {
-            OursLabelText.Text = $"我的: {oursLabel}";
-            OursLabelText.Visibility = Visibility.Visible;
-            OursLabelSep.Visibility = Visibility.Visible;
-        }
-        if (!string.IsNullOrEmpty(theirsLabel))
-        {
-            TheirsLabelText.Text = $"他的: {theirsLabel}";
-            TheirsLabelText.Visibility = Visibility.Visible;
-            TheirsLabelSep.Visibility = Visibility.Visible;
+            var parts = new List<string>();
+            if (!string.IsNullOrEmpty(oursLabel))
+                parts.Add($"我的版本：{oursLabel}");
+            if (!string.IsNullOrEmpty(theirsLabel))
+                parts.Add($"他的版本：{theirsLabel}");
+            BranchInfoText.Text = string.Join("    ", parts);
+            BranchInfoText.Visibility = Visibility.Visible;
+            BranchInfoSep.Visibility = Visibility.Visible;
         }
         // 冲突行（Modified）：驱动冲突行列头 + 冲突行滚动条
         ConflictRowItem.OnConflictScrollOffsetChanged = offset =>
