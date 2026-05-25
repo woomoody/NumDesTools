@@ -10,12 +10,18 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
     public record CommitEntry(string Sha, string Display);
 
     public bool IsCherryPick => CherryRadio.IsChecked == true;
-    public string? TargetBranch => TargetBranchBox.SelectedItem as string;
+
+    // Cherry 模式：目标固定为当前分支
+    public string? TargetBranch =>
+        IsCherryPick ? _currentBranch : TargetBranchBox.SelectedItem as string;
+
     public string? SourceBranch => SourceBranchBox.SelectedItem as string;
+
     public IReadOnlyList<string> SelectedCommits =>
         CommitList.SelectedItems.Cast<CommitEntry>().Select(c => c.Sha).ToList();
 
     private readonly string _gitRoot;
+    private string? _currentBranch;
     private bool _loading;
 
     public BranchMergeWindow(string gitRoot)
@@ -36,7 +42,7 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
         try
         {
             using var repo = new Repository(_gitRoot);
-            var current = repo.Head.FriendlyName;
+            _currentBranch = repo.Head.FriendlyName;
             var branches = repo
                 .Branches.Where(b => !b.IsRemote)
                 .Select(b => b.FriendlyName)
@@ -47,10 +53,10 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
             TargetBranchBox.ItemsSource = branches;
             SourceBranchBox.ItemsSource = branches;
 
-            TargetBranchBox.SelectedItem = current;
-            // 来源默认选非当前分支的第一个
+            TargetBranchBox.SelectedItem = _currentBranch;
+            CurrentBranchLabel.Text = _currentBranch;
             SourceBranchBox.SelectedItem =
-                branches.FirstOrDefault(b => b != current) ?? branches.FirstOrDefault();
+                branches.FirstOrDefault(b => b != _currentBranch) ?? branches.FirstOrDefault();
             _loading = false;
 
             if (IsCherryPick)
@@ -66,7 +72,7 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
     {
         CommitList.Items.Clear();
         var source = SourceBranchBox.SelectedItem as string;
-        var target = TargetBranchBox.SelectedItem as string;
+        var target = IsCherryPick ? _currentBranch : TargetBranchBox.SelectedItem as string;
         if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(target) || source == target)
             return;
 
@@ -78,7 +84,6 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
             if (sourceBranch == null || targetBranch == null)
                 return;
 
-            // 列出 source 比 target 多出的 commits
             var mergeBase = repo.ObjectDatabase.FindMergeBase(sourceBranch.Tip, targetBranch.Tip);
             var commits = repo
                 .Commits.QueryBy(
@@ -114,16 +119,19 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
 
         if (IsCherryPick)
         {
-            MergeSourceRow.Visibility = Visibility.Visible; // 来源分支两种模式都需要
+            TargetRow.Visibility = Visibility.Collapsed;
+            CurrentBranchRow.Visibility = Visibility.Visible;
             CherryCommitRow.Visibility = Visibility.Visible;
             OkButton.Content = "开始 Cherry-pick";
             LoadCommits();
         }
         else
         {
-            MergeSourceRow.Visibility = Visibility.Visible;
+            TargetRow.Visibility = Visibility.Visible;
+            CurrentBranchRow.Visibility = Visibility.Collapsed;
             CherryCommitRow.Visibility = Visibility.Collapsed;
             OkButton.Content = "开始合并";
+            StatusText.Text = string.Empty;
         }
     }
 

@@ -282,39 +282,51 @@ public static class ExcelConflictEntry
         var source = picker.SourceBranch!;
         var isCherryPick = picker.IsCherryPick;
         var selectedCommits = picker.SelectedCommits;
+        string operation = isCherryPick ? "cherry-pick" : "merge";
 
-        // 切换到目标分支
+        // 用进度窗包住 checkout + merge/cherry-pick，避免用户误以为卡死
+        string? gitError = null;
+        var progressWin = new NumDesTools.UI.DiffProgressWindow(
+            $"正在执行 {operation}…",
+            $"正在准备 {operation}，请稍候…"
+        );
+        progressWin.Show();
+
         try
         {
+            // 切换到目标分支
+            progressWin.SetStatus($"正在切换到目标分支 {target}…");
             var currentBranch = RunGit(gitRoot, "rev-parse --abbrev-ref HEAD").Trim();
             if (currentBranch != target)
-            {
-                var checkoutResult = RunGit(gitRoot, $"checkout \"{target}\"");
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Windows.MessageBox.Show($"切换到目标分支失败：{ex.Message}", "错误");
-            return;
-        }
+                RunGit(gitRoot, $"checkout \"{target}\"");
 
-        // 执行 merge / cherry-pick（--no-commit 让我们有机会处理冲突）
-        string operation = isCherryPick ? "cherry-pick" : "merge";
-        try
-        {
+            // 执行 merge / cherry-pick
             if (isCherryPick)
             {
                 var shas = string.Join(" ", selectedCommits.Select(s => $"\"{s}\""));
+                progressWin.SetStatus($"正在 cherry-pick {selectedCommits.Count} 个 commit…");
                 RunGit(gitRoot, $"cherry-pick --no-commit {shas}");
             }
             else
             {
+                progressWin.SetStatus($"正在 merge {source} → {target}…");
                 RunGit(gitRoot, $"merge --no-commit --no-ff \"{source}\"");
             }
+
+            progressWin.SetStatus("正在检查冲突…");
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"执行 {operation} 失败：{ex.Message}", "错误");
+            gitError = ex.Message;
+        }
+        finally
+        {
+            progressWin.Close();
+        }
+
+        if (gitError != null)
+        {
+            System.Windows.MessageBox.Show($"执行 {operation} 失败：{gitError}", "错误");
             return;
         }
 
@@ -383,7 +395,10 @@ public static class ExcelConflictEntry
                 if (r == System.Windows.MessageBoxResult.Yes)
                     CommitMerge(gitRoot, isCherryPick, source, selectedCommits);
                 else
-                    System.Windows.MessageBox.Show("未提交，请手动执行 git commit 或 git merge --abort。", "提示");
+                    System.Windows.MessageBox.Show(
+                        "未提交，请手动执行 git commit 或 git merge --abort。",
+                        "提示"
+                    );
                 break;
             }
 
@@ -415,7 +430,10 @@ public static class ExcelConflictEntry
                 lastSelected = chosen;
             }
 
-            var workingPath = Path.Combine(gitRoot, chosen.Replace('/', Path.DirectorySeparatorChar));
+            var workingPath = Path.Combine(
+                gitRoot,
+                chosen.Replace('/', Path.DirectorySeparatorChar)
+            );
             ExtractAndOpen(gitRoot, chosen, workingPath, autoGitAdd: true);
         }
     }
