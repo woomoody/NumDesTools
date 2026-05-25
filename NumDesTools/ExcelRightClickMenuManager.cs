@@ -413,11 +413,14 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
 
     public void Dispose()
     {
-        // 清理COM对象
         if (_excelApp != null)
         {
-            _excelApp.ScreenUpdating = true;
-            _excelApp.Calculation = XlCalculation.xlCalculationAutomatic;
+            try
+            {
+                _excelApp.ScreenUpdating = true;
+                _excelApp.Calculation = XlCalculation.xlCalculationAutomatic;
+            }
+            catch (COMException) { }
             Marshal.ReleaseComObject(_excelApp);
         }
     }

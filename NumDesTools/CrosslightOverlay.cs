@@ -281,7 +281,9 @@ internal static class CrosslightController
         }
         else
         {
-            ExcelAsyncUtil.QueueAsMacro(CrosslightOverlay.Instance.UpdateCross);
+            var overlay = CrosslightOverlay.Instance;
+            if (overlay != null)
+                ExcelAsyncUtil.QueueAsMacro(overlay.UpdateCross);
         }
     }
 
@@ -296,7 +298,9 @@ internal static class CrosslightController
         }
         else
         {
-            ExcelAsyncUtil.QueueAsMacro(CrosslightOverlay.Instance.UpdateCross);
+            var overlay = CrosslightOverlay.Instance;
+            if (overlay != null)
+                ExcelAsyncUtil.QueueAsMacro(overlay.UpdateCross);
         }
     }
 
@@ -312,11 +316,9 @@ internal static class CrosslightController
         CellSpotlightHighlighter.ClearAll();
     }
 
-    private static void OnWindowActivate(object wb, object wn) =>
-        TriggerCurrent();
+    private static void OnWindowActivate(object wb, object wn) => TriggerCurrent();
 
-    private static void OnSheetDeactivate(object sh) =>
-        CellSpotlightHighlighter.ClearAll();
+    private static void OnSheetDeactivate(object sh) => CellSpotlightHighlighter.ClearAll();
 
     private static void OnWorkbookBeforeClose(Workbook wb, ref bool cancel) =>
         CellSpotlightHighlighter.ClearAll();
