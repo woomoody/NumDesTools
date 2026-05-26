@@ -279,62 +279,170 @@ public static class ExcelConflictEntry
         var source = picker.SourceBranch!;
         var isCherryPick = picker.IsCherryPick;
         var selectedCommits = picker.SelectedCommits;
-        string operation = isCherryPick ? "cherry-pick" : "merge";
 
-        // git 操作放后台线程，进度窗 ShowDialog 阻塞 UI 线程，动画才能正常跑
-        string? gitError = null;
-        var progressWin = new NumDesTools.UI.DiffProgressWindow(
-            $"正在执行 {operation}…",
-            $"正在准备 {operation}，请稍候…"
-        );
-        progressWin.Loaded += (_, _) =>
+        // 切换到目标分支
+        string? switchError = null;
+        var switchWin = new NumDesTools.UI.DiffProgressWindow("正在切换分支…", $"正在切换到 {target}…");
+        switchWin.Loaded += (_, _) =>
         {
-            var bgThread = new System.Threading.Thread(() =>
+            var t = new System.Threading.Thread(() =>
             {
                 try
                 {
-                    progressWin.SetStatus($"正在切换到目标分支 {target}…");
-                    var currentBranch = RunGit(gitRoot, "rev-parse --abbrev-ref HEAD").Trim();
-                    if (currentBranch != target)
+                    var cur = RunGit(gitRoot, "rev-parse --abbrev-ref HEAD").Trim();
+                    if (cur != target)
                         RunGit(gitRoot, $"checkout \"{target}\"");
-
-                    if (isCherryPick)
-                    {
-                        var shas = string.Join(" ", selectedCommits.Select(s => $"\"{s}\""));
-                        progressWin.SetStatus($"正在 cherry-pick {selectedCommits.Count} 个 commit…");
-                        RunGit(gitRoot, $"cherry-pick --no-commit {shas}");
-                    }
-                    else
-                    {
-                        progressWin.SetStatus($"正在 merge {source} → {target}…");
-                        RunGit(gitRoot, $"merge --no-commit --no-ff \"{source}\"");
-                    }
-
-                    progressWin.SetStatus("正在检查冲突…");
                 }
                 catch (Exception ex)
                 {
-                    gitError = ex.Message;
+                    switchError = ex.Message;
                 }
                 finally
                 {
-                    progressWin.Dispatcher.BeginInvoke((System.Action)(() => progressWin.Close()));
+                    switchWin.Dispatcher.BeginInvoke((System.Action)(() => switchWin.Close()));
                 }
             })
             {
                 IsBackground = true,
             };
-            bgThread.Start();
+            t.Start();
         };
-        progressWin.ShowDialog();
+        switchWin.ShowDialog();
 
-        if (gitError != null)
+        if (switchError != null)
         {
-            System.Windows.MessageBox.Show($"执行 {operation} 失败：{gitError}", "错误");
+            System.Windows.MessageBox.Show($"切换分支失败：{switchError}", "错误");
             return;
         }
 
-        // 检查是否有 xlsx 冲突
+        if (isCherryPick)
+        {
+            // 多 commit cherry-pick：逐个执行，每个单独解冲突并 commit
+            for (var i = 0; i < selectedCommits.Count; i++)
+            {
+                var sha = selectedCommits[i];
+                var sha8 = sha[..Math.Min(8, sha.Length)];
+                var label = $"[{i + 1}/{selectedCommits.Count}] {sha8}";
+
+                string? pickError = null;
+                var progressWin = new NumDesTools.UI.DiffProgressWindow(
+                    $"cherry-pick {label}…",
+                    $"正在 cherry-pick {label}…"
+                );
+                progressWin.Loaded += (_, _) =>
+                {
+                    var t = new System.Threading.Thread(() =>
+                    {
+                        try
+                        {
+                            RunGit(gitRoot, $"cherry-pick --no-commit \"{sha}\"");
+                        }
+                        catch (Exception ex)
+                        {
+                            pickError = ex.Message;
+                        }
+                        finally
+                        {
+                            progressWin.Dispatcher.BeginInvoke(
+                                (System.Action)(() => progressWin.Close())
+                            );
+                        }
+                    })
+                    {
+                        IsBackground = true,
+                    };
+                    t.Start();
+                };
+                progressWin.ShowDialog();
+
+                if (pickError != null)
+                {
+                    System.Windows.MessageBox.Show($"cherry-pick {label} 失败：{pickError}", "错误");
+                    AbortOperation(gitRoot, isCherryPick: true);
+                    return;
+                }
+
+                // 解当前 commit 的 xlsx 冲突
+                var aborted = false;
+                if (!ResolveXlsxConflicts(gitRoot, sha, source, target, label, ref aborted))
+                {
+                    if (aborted)
+                        AbortOperation(gitRoot, isCherryPick: true);
+                    return;
+                }
+
+                // commit 当前 cherry-pick
+                CommitCherryPick(gitRoot, sha, sha8);
+            }
+
+            System.Windows.MessageBox.Show(
+                $"cherry-pick 完成，共 {selectedCommits.Count} 个 commit。",
+                "完成"
+            );
+        }
+        else
+        {
+            // merge：一次性执行，统一解冲突后 commit
+            string? mergeError = null;
+            var progressWin = new NumDesTools.UI.DiffProgressWindow(
+                $"正在 merge {source} → {target}…",
+                $"正在 merge {source} → {target}，请稍候…"
+            );
+            progressWin.Loaded += (_, _) =>
+            {
+                var t = new System.Threading.Thread(() =>
+                {
+                    try
+                    {
+                        RunGit(gitRoot, $"merge --no-commit --no-ff \"{source}\"");
+                    }
+                    catch (Exception ex)
+                    {
+                        mergeError = ex.Message;
+                    }
+                    finally
+                    {
+                        progressWin.Dispatcher.BeginInvoke(
+                            (System.Action)(() => progressWin.Close())
+                        );
+                    }
+                })
+                {
+                    IsBackground = true,
+                };
+                t.Start();
+            };
+            progressWin.ShowDialog();
+
+            if (mergeError != null)
+            {
+                System.Windows.MessageBox.Show($"merge 失败：{mergeError}", "错误");
+                return;
+            }
+
+            var aborted = false;
+            if (!ResolveXlsxConflicts(gitRoot, null, source, target, null, ref aborted))
+            {
+                if (aborted)
+                    AbortOperation(gitRoot, isCherryPick: false);
+                return;
+            }
+
+            CommitMerge(gitRoot, source);
+        }
+    }
+
+    // 解当前暂存区中所有 xlsx 冲突，返回 true=全部解完可继续，false=用户中止
+    // aborted 输出：用户选择了中止操作
+    private static bool ResolveXlsxConflicts(
+        string gitRoot,
+        string? knownTheirsSha,
+        string source,
+        string target,
+        string? progressLabel,
+        ref bool aborted
+    )
+    {
         List<string> conflictedXlsx;
         try
         {
@@ -349,26 +457,23 @@ public static class ExcelConflictEntry
         catch (Exception ex)
         {
             System.Windows.MessageBox.Show($"读取冲突列表失败：{ex.Message}", "错误");
-            AbortOperation(gitRoot, isCherryPick);
-            return;
+            return false;
         }
+
+        var suffix = progressLabel != null ? $"\n（{progressLabel}）" : string.Empty;
+        var isCherryPick = knownTheirsSha != null || progressLabel != null;
 
         if (conflictedXlsx.Count == 0)
         {
-            // 无冲突或冲突全是非 xlsx，询问是否直接 commit
             var r = System.Windows.MessageBox.Show(
-                $"{operation} 完成，没有 xlsx 冲突。\n（非 xlsx 冲突需手动处理）\n\n是否执行 commit？",
-                "完成",
+                $"没有 xlsx 冲突。{suffix}\n（非 xlsx 冲突需手动处理）\n\n是否继续 commit？",
+                "无 xlsx 冲突",
                 System.Windows.MessageBoxButton.YesNo
             );
-            if (r == System.Windows.MessageBoxResult.Yes)
-                CommitMerge(gitRoot, isCherryPick, source, selectedCommits);
-            return;
+            return r == System.Windows.MessageBoxResult.Yes;
         }
 
-        // 有 xlsx 冲突：逐文件解决循环
         string? lastSelected = null;
-
         while (true)
         {
             List<string> remaining;
@@ -388,46 +493,27 @@ public static class ExcelConflictEntry
             }
 
             if (remaining.Count == 0)
-            {
-                var r = System.Windows.MessageBox.Show(
-                    $"所有 xlsx 冲突已解决。\n（非 xlsx 冲突需手动处理）\n\n是否执行 commit？",
-                    "完成",
-                    System.Windows.MessageBoxButton.YesNo
-                );
-                if (r == System.Windows.MessageBoxResult.Yes)
-                    CommitMerge(gitRoot, isCherryPick, source, selectedCommits);
-                else
-                    System.Windows.MessageBox.Show(
-                        "未提交，请手动执行 git commit 或 git merge --abort。",
-                        "提示"
-                    );
-                break;
-            }
+                return true;
 
-            // 每次都 new，避免 ShowDialog 在已关闭窗口上重复调用；始终显示 picker 确保用户可返回上层
             var filePicker = new GitConflictPickerWindow(remaining, false);
             filePicker.RefreshList(remaining, lastSelected);
             if (filePicker.ShowDialog() != true)
             {
                 var r = System.Windows.MessageBox.Show(
-                    $"是否中止 {operation}（git {operation} --abort）？\n取消将保留当前冲突状态。",
+                    $"是否中止操作？{suffix}\n取消将保留当前冲突状态。",
                     "中止操作",
                     System.Windows.MessageBoxButton.YesNo
                 );
-                if (r == System.Windows.MessageBoxResult.Yes)
-                    AbortOperation(gitRoot, isCherryPick);
-                break;
+                aborted = r == System.Windows.MessageBoxResult.Yes;
+                return false;
             }
+
             var chosen = filePicker.SelectedFile!;
             lastSelected = chosen;
-
             var workingPath = Path.Combine(
                 gitRoot,
                 chosen.Replace('/', Path.DirectorySeparatorChar)
             );
-            // cherry-pick --no-commit 不写 CHERRY_PICK_HEAD，直接传 commit SHA
-            var knownTheirsSha =
-                isCherryPick && selectedCommits.Count == 1 ? selectedCommits[0] : null;
             var applied = ExtractAndOpen(
                 gitRoot,
                 chosen,
@@ -440,22 +526,32 @@ public static class ExcelConflictEntry
             if (!applied)
                 continue;
         }
+
+        return true;
     }
 
-    private static void CommitMerge(
-        string gitRoot,
-        bool isCherryPick,
-        string source,
-        IReadOnlyList<string> cherryCommits
-    )
+    private static void CommitCherryPick(string gitRoot, string sha, string sha8)
     {
         try
         {
-            string msg = isCherryPick
-                ? $"cherry-pick: {string.Join(", ", cherryCommits.Select(s => s[..Math.Min(8, s.Length)]))}"
-                : $"Merge branch '{source}'";
-            RunGit(gitRoot, $"commit -m \"{msg}\"");
-            System.Windows.MessageBox.Show("commit 完成。", "成功");
+            // 取原 commit message 作为提交信息
+            var msg = RunGit(gitRoot, $"log -1 --format=%s \"{sha}\"").Trim();
+            if (string.IsNullOrEmpty(msg))
+                msg = $"cherry-pick {sha8}";
+            RunGit(gitRoot, $"commit -m \"{msg.Replace("\"", "\\\"")}\"");
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"commit 失败：{ex.Message}", "错误");
+        }
+    }
+
+    private static void CommitMerge(string gitRoot, string source)
+    {
+        try
+        {
+            RunGit(gitRoot, $"commit -m \"Merge branch '{source}'\"");
+            System.Windows.MessageBox.Show("merge commit 完成。", "成功");
         }
         catch (Exception ex)
         {
@@ -589,14 +685,12 @@ public static class ExcelConflictEntry
                         }
                         else
                         {
-                            var theirsBranch = repo.Branches
-                                .Where(b => b.Tip?.Sha == theirsSha)
+                            var theirsBranch = repo
+                                .Branches.Where(b => b.Tip?.Sha == theirsSha)
                                 .OrderBy(b => b.IsRemote)
                                 .Select(b => b.FriendlyName)
                                 .FirstOrDefault();
-                            theirsLabel = theirsBranch != null
-                                ? $"{theirsBranch}  ({sha8})"
-                                : sha8;
+                            theirsLabel = theirsBranch != null ? $"{theirsBranch}  ({sha8})" : sha8;
                         }
                     }
                     else
