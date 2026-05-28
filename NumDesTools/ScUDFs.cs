@@ -1932,11 +1932,6 @@ public class ExcelUdf
             {
                 try
                 {
-                    // 获取 API Key、Url 、model
-                    var apiKey = NumDesAddIn.ApiKey;
-                    var apiUrl = NumDesAddIn.ApiUrl;
-                    var apiModel = NumDesAddIn.ApiModel;
-
                     // 处理 sourceLan 数据
                     var sourceLanStr = ProcessInputRange(sourceLan, ignoreValue, @"\n");
 
@@ -1944,49 +1939,17 @@ public class ExcelUdf
                     var lanTypeStr = ProcessInputRange(lanType, ignoreValue, ",");
 
                     // 构造系统提示内容
-                    var sysContent = NumDesAddIn.ChatGptSysContentTransferAss + "翻译为：" + lanTypeStr;
+                    var sysContent = NumDesAddIn.ChatSysContentTransferAss + "翻译为：" + lanTypeStr;
 
-                    // 构造请求体
-                    object requestBody = null;
-                    if (apiModel.Contains("gpt"))
-                        requestBody = new
-                        {
-                            model = apiModel,
-                            messages = new[]
-                            {
-                                new { role = "system", content = sysContent },
-                                new { role = "user", content = sourceLanStr }
-                            },
-                            max_tokens = 10000
-                        };
-                    else if (apiModel.Contains("deepseek"))
-                        requestBody = new
-                        {
-                            model = apiModel,
-
-                            messages = new[]
-                            {
-                                new { content = sysContent, role = "system" },
-                                new { content = sourceLanStr, role = "user" }
-                            },
-                            max_tokens = 2048,
-                            frequency_penalty = 0,
-                            presence_penalty = 0,
-                            response_format = new { type = "text" },
-                            stop = (string)null,
-                            stream = false,
-                            stream_options = (object)null,
-                            temperature = 1,
-                            top_p = 1,
-                            tools = (object)null,
-                            tool_choice = "none",
-                            logprobs = false,
-                            top_logprobs = (object)null
-                        };
-
-                    // 调用 Chat API
+                    // 调用 Chat API（统一走 LiteLLM）
                     var response = ChatApiClient
-                        .CallApiAsync(requestBody, apiKey, apiUrl)
+                        .CallApiAsync(
+                            NumDesAddIn.LiteLLMModel,
+                            sysContent,
+                            sourceLanStr,
+                            NumDesAddIn.LiteLLMApiKey,
+                            NumDesAddIn.LiteLLMApiUrl
+                        )
                         .GetAwaiter()
                         .GetResult();
 
