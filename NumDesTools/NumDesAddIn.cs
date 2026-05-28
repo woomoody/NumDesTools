@@ -76,22 +76,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public static string CheckSheetValueText = GlobalValue.Value["CheckSheetValueText"];
     public static string ShowDnaLogText = GlobalValue.Value["ShowDnaLogText"];
     public static string ShowAiText = GlobalValue.Value["ShowAIText"];
-    public static string ApiKey = GlobalValue.Value["ApiKey"];
-    public static string ApiUrl = GlobalValue.Value["ApiUrl"];
-    public static string ApiModel = GlobalValue.Value["ApiModel"];
-    public static string ChatGptApiKey = GlobalValue.Value["ChatGptApiKey"];
-    public static string ChatGptApiUrl = GlobalValue.Value["ChatGptApiUrl"];
-    public static string ChatGptApiModel = GlobalValue.Value["ChatGptApiModel"];
-    public static string DeepSeektApiKey = GlobalValue.Value["DeepSeektApiKey"];
-    public static string DeepSeektApiUrl = GlobalValue.Value["DeepSeektApiUrl"];
-    public static string DeepSeektApiModel = GlobalValue.Value["DeepSeektApiModel"];
+    public static string LiteLLMApiKey = GlobalValue.Value["LiteLLMApiKey"];
+    public static string LiteLLMApiUrl = GlobalValue.Value["LiteLLMApiUrl"];
+    public static string LiteLLMModel = GlobalValue.Value["LiteLLMModel"];
+    public static List<string> LiteLLMModelList = GlobalValue
+        .Value["LiteLLMModelList"]
+        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+        .ToList();
     public static string GitRootPath = GlobalValue.Value["GitRootPath"];
 
-    public static string ChatGptSysContentExcelAss = GlobalValue.Value["ChatGptSysContentExcelAss"];
+    public static string ChatSysContentExcelAss = GlobalValue.Value["ChatSysContentExcelAss"];
 
-    public static string ChatGptSysContentTransferAss = GlobalValue.Value[
-        "ChatGptSysContentTransferAss"
-    ];
+    public static string ChatSysContentTransferAss = GlobalValue.Value["ChatSysContentTransferAss"];
 
     public static CommandBarButton Btn;
     public static Application App = (Application)ExcelDnaUtil.Application;
@@ -239,6 +235,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "CheckSheetValue" => CheckSheetValueText,
             "ShowDnaLog" => ShowDnaLogText,
             "ShowAI" => ShowAiText,
+            "ShowAIAgent" => _showAgentText,
             _ => ""
         };
         return latext;
@@ -300,6 +297,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["Button_LoopRun"] = LoopRun_Click,
             ["Button_CardRatioSim"] = CardRatioSim_Click,
             ["ShowAI"] = ShowAIText_Click,
+            ["ShowAIAgent"] = _ => ShowAIAgent(),
             ["AutoInsertIconFix"] = AutoInsertIconFix_Click,
             ["Button99991"] = TestBar1_Click,
             ["Button99992"] = TestBar2_Click,
@@ -1068,6 +1066,44 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         else
         {
             NumDesCTP.DeleteCTP(true, ctpName);
+        }
+
+        var aiCtpName = "AI对话-Excel";
+        if (ShowAiText == "AI对话：开启")
+        {
+            NumDesCTP.DeleteCTP(true, aiCtpName);
+            _chatAiChatMenuCtp = (AiChatTaskPanel)
+                NumDesCTP.ShowCTP(
+                    1000,
+                    aiCtpName,
+                    true,
+                    aiCtpName,
+                    new AiChatTaskPanel(),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+        }
+        else
+        {
+            NumDesCTP.DeleteCTP(true, aiCtpName);
+        }
+
+        var agentCtpName = "AI Agent-Excel";
+        if (_showAgentText == "Agent模式：开启")
+        {
+            NumDesCTP.DeleteCTP(true, agentCtpName);
+            _agentCtp = (AIAgentPanel)
+                NumDesCTP.ShowCTP(
+                    1000,
+                    agentCtpName,
+                    true,
+                    agentCtpName,
+                    new AIAgentPanel(),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+        }
+        else
+        {
+            NumDesCTP.DeleteCTP(true, agentCtpName);
         }
 
         // 获取当前工作簿是否有Git路径
@@ -3179,7 +3215,36 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         ShowDnaLog();
     }
 
-    //打开插件ChatGPT窗口
+    private static string _showAgentText = "Agent模式：关闭";
+    private static AIAgentPanel _agentCtp;
+
+    [ExcelCommand]
+    public static void ShowAIAgent()
+    {
+        _showAgentText = _showAgentText == "Agent模式：开启" ? "Agent模式：关闭" : "Agent模式：开启";
+        CustomRibbon?.InvalidateControl("ShowAIAgent");
+
+        var ctpName = "AI Agent-Excel";
+        if (_showAgentText == "Agent模式：开启")
+        {
+            GlobalValue.ReadOrCreate();
+            NumDesCTP.DeleteCTP(true, ctpName);
+            _agentCtp = (AIAgentPanel)
+                NumDesCTP.ShowCTP(
+                    1000,
+                    ctpName,
+                    true,
+                    ctpName,
+                    new AIAgentPanel(),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
+        }
+        else
+        {
+            NumDesCTP.DeleteCTP(true, ctpName);
+        }
+    }
+
     [ExcelCommand]
     public static void ShowAi()
     {
@@ -3217,58 +3282,38 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         ShowAi();
     }
 
-    public void AIConfig_Select(IRibbonControl control, string selectedId, int selectedIndex)
+    public void AIModelSelect(IRibbonControl control, string selectedId, int selectedIndex)
     {
         if (control == null)
             throw new ArgumentNullException(nameof(control));
 
-        GlobalValue.ReadOrCreate();
-
-        if (selectedId == "ChatGPT")
-        {
-            ApiKey = GlobalValue.Value["ChatGptApiKey"];
-            ApiUrl = GlobalValue.Value["ChatGptApiUrl"];
-            ApiModel = GlobalValue.Value["ChatGptApiModel"];
-        }
-        else if (selectedId == "DeepSeek")
-        {
-            ApiKey = GlobalValue.Value["DeepSeektApiKey"];
-            ApiUrl = GlobalValue.Value["DeepSeektApiUrl"];
-            ApiModel = GlobalValue.Value["DeepSeektApiModel"];
-        }
-
-        GlobalValue.SaveValue("ApiKey", ApiKey);
-        GlobalValue.SaveValue("ApiUrl", ApiUrl);
-        GlobalValue.SaveValue("ApiModel", ApiModel);
+        LiteLLMModel = selectedId;
+        GlobalValue.SaveValue("LiteLLMModel", LiteLLMModel);
     }
 
-    public string AIConfig_Select_Default(IRibbonControl control)
+    public string AIModelSelect_Default(IRibbonControl control)
     {
         if (control == null)
             throw new ArgumentNullException(nameof(control));
-        if (ApiKey == "" || ApiKey == ChatGptApiKey)
-        {
-            ApiKey = ChatGptApiKey;
-            ApiUrl = ChatGptApiUrl;
-            ApiModel = ChatGptApiModel;
-            GlobalValue.SaveValue("ApiKey", ApiKey);
-            GlobalValue.SaveValue("ApiUrl", ApiUrl);
-            GlobalValue.SaveValue("ApiModel", ApiModel);
-            return "ChatGPT";
-        }
+        return LiteLLMModel;
+    }
 
-        if (ApiKey == DeepSeektApiKey)
-        {
-            ApiKey = DeepSeektApiKey;
-            ApiUrl = DeepSeektApiUrl;
-            ApiModel = DeepSeektApiModel;
-            GlobalValue.SaveValue("ApiKey", ApiKey);
-            GlobalValue.SaveValue("ApiUrl", ApiUrl);
-            GlobalValue.SaveValue("ApiModel", ApiModel);
-            return "DeepSeek";
-        }
+    public int AIModelSelect_ItemCount(IRibbonControl control) => LiteLLMModelList.Count;
 
-        return "ChatGPT";
+    public string AIModelSelect_ItemId(IRibbonControl control, int index) =>
+        LiteLLMModelList.Count > index ? LiteLLMModelList[index] : "";
+
+    public string AIModelSelect_ItemLabel(IRibbonControl control, int index) =>
+        LiteLLMModelList.Count > index ? LiteLLMModelList[index] : "";
+
+    public static async Task RefreshModelListAsync()
+    {
+        var models = await ChatApiClient.FetchModelsAsync(LiteLLMApiKey, LiteLLMApiUrl);
+        if (models.Count == 0)
+            return;
+        LiteLLMModelList = models;
+        GlobalValue.SaveValue("LiteLLMModelList", string.Join(",", models));
+        CustomRibbon?.InvalidateControl("AIModelSelect");
     }
 
     //全局变量恢复为默认值
@@ -3289,7 +3334,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (result != DialogResult.Yes)
             return;
 
-        GlobalValue.ResetToDefault("ApiKey", "ChatGptApiKey", "DeepSeektApiKey");
+        GlobalValue.ResetToDefault("LiteLLMApiKey");
 
         ResetGlobalVariables();
 
@@ -3308,17 +3353,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         CheckSheetValueText = GlobalValue.DefaultValue["CheckSheetValueText"];
         ShowDnaLogText = GlobalValue.DefaultValue["ShowDnaLogText"];
         ShowAiText = GlobalValue.DefaultValue["ShowAIText"];
-        ApiKey = GlobalValue.DefaultValue["ApiKey"];
-        ApiUrl = GlobalValue.DefaultValue["ApiUrl"];
-        ApiModel = GlobalValue.DefaultValue["ApiModel"];
-        ChatGptApiKey = GlobalValue.DefaultValue["ChatGptApiKey"];
-        ChatGptApiUrl = GlobalValue.DefaultValue["ChatGptApiUrl"];
-        ChatGptApiModel = GlobalValue.DefaultValue["ChatGptApiModel"];
-        DeepSeektApiKey = GlobalValue.DefaultValue["DeepSeektApiKey"];
-        DeepSeektApiUrl = GlobalValue.DefaultValue["DeepSeektApiUrl"];
-        DeepSeektApiModel = GlobalValue.DefaultValue["DeepSeektApiModel"];
-        ChatGptSysContentExcelAss = GlobalValue.DefaultValue["ChatGptSysContentExcelAss"];
-        ChatGptSysContentTransferAss = GlobalValue.DefaultValue["ChatGptSysContentTransferAss"];
+        LiteLLMApiKey = GlobalValue.DefaultValue["LiteLLMApiKey"];
+        LiteLLMApiUrl = GlobalValue.DefaultValue["LiteLLMApiUrl"];
+        LiteLLMModel = GlobalValue.DefaultValue["LiteLLMModel"];
+        LiteLLMModelList = GlobalValue
+            .DefaultValue["LiteLLMModelList"]
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
+        ChatSysContentExcelAss = GlobalValue.DefaultValue["ChatSysContentExcelAss"];
+        ChatSysContentTransferAss = GlobalValue.DefaultValue["ChatSysContentTransferAss"];
     }
 
     // 刷新 Ribbon 控件的方法

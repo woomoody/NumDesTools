@@ -305,63 +305,73 @@ public class SelfGetRangePixels
 //自定义ChatApi
 public class ChatApiClient
 {
-    private static readonly HttpClient Client;
+    private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromMinutes(3) };
 
-    // 静态构造函数确保只初始化一次
-    static ChatApiClient()
-    {
-        Client = new HttpClient { Timeout = TimeSpan.FromMinutes(3) };
-    }
+    // 构建 OpenAI 兼容请求体（LiteLLM 统一格式）
+    private static object BuildRequestBody(
+        string model,
+        IEnumerable<object> messages,
+        bool stream = true
+    ) =>
+        new
+        {
+            model,
+            messages,
+            max_tokens = 10000,
+            temperature = 0.5,
+            stream,
+        };
 
-    public static async Task<string> CallApiAsync(object requestBody, string apiKey, string apiUrl)
+    // 非流式调用（用于 UDF 等需要等待完整结果的场景）
+    public static async Task<string> CallApiAsync(
+        string model,
+        string systemContent,
+        string userContent,
+        string apiKey,
+        string apiUrl
+    )
     {
         if (string.IsNullOrEmpty(apiKey))
-        {
             throw new ArgumentException("API 密钥不能为空。");
-        }
 
-        Client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-
-        string jsonBody = JsonConvert.SerializeObject(requestBody);
-        var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-
-        HttpResponseMessage response = await Client.PostAsync(apiUrl, content);
-
-        if (response.IsSuccessStatusCode)
+        var messages = new object[]
         {
-            string responseContent = await response.Content.ReadAsStringAsync();
-            dynamic jsonResponse = JsonConvert.DeserializeObject(responseContent);
+            new { role = "system", content = systemContent ?? "" },
+            new { role = "user", content = userContent },
+        };
+        var body = BuildRequestBody(model, messages, stream: false);
 
-            if (
-                jsonResponse != null
-                && (jsonResponse.choices == null || jsonResponse.choices.Count == 0)
-            )
-            {
-                throw new Exception("API 响应中没有返回有效的 choices 数据。");
-            }
+        using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
+        request.Content = new StringContent(
+            JsonConvert.SerializeObject(body),
+            Encoding.UTF8,
+            "application/json"
+        );
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-            var reponseThink = jsonResponse?.choices[0].message.reasoning_content.ToString();
-            var reponseResult = jsonResponse?.choices[0].message.content.ToString();
-            string reponseText = "[思考]\n" + reponseThink + "\n[思考]\n" + reponseResult;
+        var response = await Client.SendAsync(request);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+            throw new Exception($"API 调用失败 {response.StatusCode}：{responseContent}");
 
-            return reponseText;
-        }
-
-        string errorContent = await response.Content.ReadAsStringAsync();
-        throw new Exception($"API 调用失败，状态码：{response.StatusCode}，错误信息：{errorContent}");
+        var json = JObject.Parse(responseContent);
+        return json["choices"]?[0]?["message"]?["content"]?.ToString() ?? "";
     }
 
+    // 流式调用（Chat 面板用）
     public static async Task CallApiStreamAsync(
-        object requestBody,
+        string model,
+        IReadOnlyList<object> messages,
         string apiKey,
         string apiUrl,
         Action<string> onChunkReceived,
         Action onCompleted = null
     )
     {
+        var body = BuildRequestBody(model, messages);
         using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
         request.Content = new StringContent(
-            JsonConvert.SerializeObject(requestBody),
+            JsonConvert.SerializeObject(body),
             Encoding.UTF8,
             "application/json"
         );
@@ -380,28 +390,45 @@ public class ChatApiClient
         {
             var line = await reader.ReadLineAsync();
             if (line?.StartsWith("data: ") == true)
-            {
                 ProcessLine(line["data: ".Length..], onChunkReceived);
-            }
         }
         onCompleted?.Invoke();
     }
 
+    // 拉取可用模型列表
+    public static async Task<List<string>> FetchModelsAsync(string apiKey, string apiUrl)
+    {
+        try
+        {
+            var modelsUrl = apiUrl.Replace("/chat/completions", "/models");
+            using var request = new HttpRequestMessage(HttpMethod.Get, modelsUrl);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            using var response = await Client.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+                return [];
+            var json = JObject.Parse(await response.Content.ReadAsStringAsync());
+            return json["data"]
+                    ?.Select(m => m["id"]?.ToString())
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .ToList() ?? [];
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"FetchModels 失败: {ex.Message}");
+            return [];
+        }
+    }
+
     private static void ProcessLine(string json, Action<string> handler)
     {
+        if (json == "[DONE]")
+            return;
         try
         {
             var obj = JObject.Parse(json);
             var content = obj["choices"]?[0]?["delta"]?["content"]?.ToString();
-            var contentRes = obj["choices"]?[0]?["delta"]?["reasoning_content"]?.ToString();
-            if (string.IsNullOrEmpty(content))
-            {
-                handler(contentRes);
-            }
-            else
-            {
+            if (!string.IsNullOrEmpty(content))
                 handler(content);
-            }
         }
         catch (Exception ex)
         {
@@ -460,15 +487,17 @@ public class ChatHistoryManager
         await command.ExecuteNonQueryAsync();
     }
 
-    // 读取聊天记录
-    public List<ChatMessage> LoadChatHistory()
+    // 读取聊天记录（limit=-1 全量，否则取最近 N 条）
+    public List<ChatMessage> LoadChatHistory(int limit = 50)
     {
         var chatHistory = new List<ChatMessage>();
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
         var command = connection.CreateCommand();
         command.CommandText =
-            "SELECT Role, Message, IsUser, Timestamp FROM ChatHistory ORDER BY Timestamp ASC";
+            limit > 0
+                ? $"SELECT Role, Message, IsUser, Timestamp FROM ChatHistory WHERE Timestamp > '0002-01-01' ORDER BY Timestamp DESC LIMIT {limit}"
+                : "SELECT Role, Message, IsUser, Timestamp FROM ChatHistory WHERE Timestamp > '0002-01-01' ORDER BY Timestamp DESC";
 
         using var reader = command.ExecuteReader();
         while (reader.Read())
@@ -479,12 +508,21 @@ public class ChatHistoryManager
                     Role = reader.GetString(0),
                     Message = reader.GetString(1),
                     IsUser = reader.GetInt32(2) == 1,
-                    Timestamp = reader.GetDateTime(3)
+                    Timestamp = reader.GetDateTime(3),
                 }
             );
         }
-
+        chatHistory.Reverse(); // 倒序取出后翻转，保持时间正序
         return chatHistory;
+    }
+
+    public int GetHistoryCount()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM ChatHistory WHERE Timestamp > '0002-01-01'";
+        return Convert.ToInt32(command.ExecuteScalar());
     }
 }
 
