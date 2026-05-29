@@ -1,7 +1,9 @@
 using System.Runtime.InteropServices;
+using System.Windows.Input;
 using System.Windows.Interop;
 using ControlzEx.Theming;
 using MahApps.Metro.Controls;
+using SWWindow = System.Windows.Window;
 
 namespace NumDesTools.UI;
 
@@ -39,50 +41,70 @@ internal static class MahAppsHelper
         ThemeManager.Current.ChangeTheme(app, "Dark.Steel");
     }
 
-    internal static void SetExcelOwner(System.Windows.Window window)
+    internal static void SetExcelOwner(SWWindow window)
     {
         var excelHwnd = (IntPtr)ExcelDnaUtil.WindowHandle;
 
         window.SourceInitialized += (_, _) =>
         {
-            var helper = new WindowInteropHelper(window);
-            var hwnd = helper.Handle;
-
-            // WPF 的 set_OwnerHandle 在 ShowDialog 启动后会抛 InvalidOperationException（_showingAsDialog 守卫）。
-            // 用 Win32 SetWindowLong(GWL_HWNDPARENT) 直接写父窗口，绕过 WPF 托管层检查，
-            // 同时兼容 Show() 和 ShowDialog() 两种打开方式。
-            SetWindowLong(hwnd, GwlHwndparent, excelHwnd.ToInt32());
-
-            // ReleaseCapture + PostMessage(SC_MOVE) 是非阻塞拖动：
-            // PostMessage 把消息投入队列后立即返回，不进入 Win32 modal loop，
-            // Excel 宿主消息泵不会被阻塞。
-            // 不走 WPF DragMove()：DragMove 在 HwndSourceHook 时序下 Mouse.LeftButton 尚未变 Pressed，
-            // 内部检查会静默失败。
-            var hwndSource = HwndSource.FromHwnd(hwnd);
-            hwndSource?.AddHook(
-                (IntPtr h, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) =>
-                {
-                    const int WmNclbuttondown = 0x00A1;
-                    const int HtCaption = 2;
-                    if (
-                        msg == WmNclbuttondown
-                        && wParam.ToInt32() == HtCaption
-                        && window.WindowState == System.Windows.WindowState.Normal
-                    )
-                    {
-                        handled = true;
-                        ReleaseCapture();
-                        PostMessage(h, WmSyscommand, new IntPtr(ScMove | HtCaption), IntPtr.Zero);
-                    }
-                    return IntPtr.Zero;
-                }
-            );
+            // ShowDialog 调用后 WPF 的 set_OwnerHandle 会抛异常（_showingAsDialog 守卫），
+            // 用 SetWindowLong(GWL_HWNDPARENT) 直接写 Win32 父窗口关系，兼容 Show/ShowDialog。
+            SetWindowLong(new WindowInteropHelper(window).Handle, GwlHwndparent, excelHwnd.ToInt32());
         };
 
-        // EnsureHandle() 预建 HWND 并同步触发上方的 SourceInitialized 回调，
-        // 必须在 Show/ShowDialog 之前调用，否则 SourceInitialized 在 ShowDialog 内触发时
-        // _showingAsDialog 已为 true，此时再设父窗口关系会受 WPF 守卫阻断。
+        // EnsureHandle 预建 HWND，使 SourceInitialized 在 ShowDialog 进入前同步触发，
+        // 此时 _showingAsDialog 尚为 false，SetWindowLong 调用安全。
         new WindowInteropHelper(window).EnsureHandle();
+
+        // 纯 WPF 拖动：所有 Win32 SC_MOVE/DragMove 方案在 Excel 宿主消息泵下均失效，
+        // 在 Loaded 后找 PART_TitleBar，用 MouseMove 直接更新 Left/Top 绕开 Win32 modal loop。
+        window.Loaded += (_, _) => AttachTitleBarDrag(window);
+    }
+
+    private static void AttachTitleBarDrag(SWWindow window)
+    {
+        if (window.Template?.FindName("PART_TitleBar", window) is not System.Windows.UIElement titleBar)
+            return;
+
+        System.Windows.Point dragStart = default;
+        double winLeft = 0, winTop = 0;
+        bool dragging = false;
+
+        titleBar.MouseLeftButtonDown += (_, e) =>
+        {
+            if (window.WindowState != System.Windows.WindowState.Normal)
+                return;
+            dragging = true;
+            dragStart = e.GetPosition(null);
+            winLeft = window.Left;
+            winTop = window.Top;
+            titleBar.CaptureMouse();
+            e.Handled = true;
+        };
+
+        titleBar.MouseMove += (_, e) =>
+        {
+            if (!dragging || e.LeftButton != MouseButtonState.Pressed)
+            {
+                if (dragging)
+                {
+                    dragging = false;
+                    titleBar.ReleaseMouseCapture();
+                }
+                return;
+            }
+            var cur = e.GetPosition(null);
+            window.Left = winLeft + (cur.X - dragStart.X);
+            window.Top = winTop + (cur.Y - dragStart.Y);
+        };
+
+        titleBar.MouseLeftButtonUp += (_, _) =>
+        {
+            dragging = false;
+            titleBar.ReleaseMouseCapture();
+        };
+
+        titleBar.LostMouseCapture += (_, _) => dragging = false;
     }
 
     internal static void ApplyDarkTitleBar(MetroWindow window)
@@ -98,17 +120,9 @@ internal static class MahAppsHelper
     }
 
     private const int GwlHwndparent = -8;
-    private const int WmSyscommand = 0x0112;
-    private const int ScMove = 0xF010;
 
     [DllImport("user32.dll")]
     private static extern int SetWindowLong(IntPtr hwnd, int nIndex, int dwNewLong);
-
-    [DllImport("user32.dll")]
-    private static extern bool ReleaseCapture();
-
-    [DllImport("user32.dll")]
-    private static extern bool PostMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(
