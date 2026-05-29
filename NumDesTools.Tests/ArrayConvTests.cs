@@ -82,6 +82,22 @@ public class ArrayConvTests
         Assert.Equal(new[] { "k1", "v1" }, dict["k1"]);
     }
 
+    // ── TwoDArrayToDicFirstKeyStr (P1 bug regression) ──────────────────────
+
+    [Fact]
+    public void TwoDArrayToDicFirstKeyStr_JoinsAllCols_NotLastOnly()
+    {
+        // Bug: string.Join("#", singleString) iterated chars; now fixed to join all cols
+        object[,] arr =
+        {
+            { "k1", "a", "b", "c" },
+            { "k2", "x", "y", "z" },
+        };
+        var dict = PubMetToExcel.TwoDArrayToDicFirstKeyStr(arr);
+        Assert.Equal("k1#a#b#c", dict["k1"]);
+        Assert.Equal("k2#x#y#z", dict["k2"]);
+    }
+
     // ── IsValidArray ────────────────────────────────────────────────────────
 
     [Fact]

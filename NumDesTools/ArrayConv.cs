@@ -634,10 +634,10 @@ public static partial class PubMetToExcel
             if (string.IsNullOrEmpty(key))
                 continue;
 
-            string row = String.Empty;
+            var cols = new List<string>();
             for (int j = 0; j < array.GetLength(1); j++)
-                row = string.Join("#", array[i, j]?.ToString());
-            dict[key] = row;
+                cols.Add(array[i, j]?.ToString() ?? string.Empty);
+            dict[key] = string.Join("#", cols);
         }
         return dict;
     }
@@ -687,10 +687,10 @@ public static partial class PubMetToExcel
             if (string.IsNullOrEmpty(key))
                 continue;
 
-            string row = String.Empty;
+            var cols = new List<string>();
             for (int j = 1; j <= array.GetLength(1); j++)
-                row = string.Join("#", array[i, j]?.ToString());
-            dict[key] = row;
+                cols.Add(array[i, j]?.ToString() ?? string.Empty);
+            dict[key] = string.Join("#", cols);
         }
         return dict;
     }

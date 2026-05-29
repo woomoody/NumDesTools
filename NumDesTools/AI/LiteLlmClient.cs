@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -33,7 +34,8 @@ public class LiteLlmClient : ILlmClient
         string systemContent,
         string userContent,
         string apiKey,
-        string apiUrl
+        string apiUrl,
+        CancellationToken ct = default
     )
     {
         if (string.IsNullOrEmpty(apiKey))
@@ -54,7 +56,7 @@ public class LiteLlmClient : ILlmClient
         );
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-        var response = await Client.SendAsync(request);
+        var response = await Client.SendAsync(request, ct);
         var responseContent = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
             throw new Exception($"API 调用失败 {response.StatusCode}：{responseContent}");
@@ -69,7 +71,8 @@ public class LiteLlmClient : ILlmClient
         string apiKey,
         string apiUrl,
         System.Action<string> onChunkReceived,
-        System.Action? onCompleted = null
+        System.Action? onCompleted = null,
+        CancellationToken ct = default
     )
     {
         var body = BuildRequestBody(model, messages);
@@ -83,7 +86,8 @@ public class LiteLlmClient : ILlmClient
 
         using var response = await Client.SendAsync(
             request,
-            HttpCompletionOption.ResponseHeadersRead
+            HttpCompletionOption.ResponseHeadersRead,
+            ct
         );
         response.EnsureSuccessStatusCode();
 

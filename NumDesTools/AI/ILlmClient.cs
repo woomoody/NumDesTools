@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NumDesTools.AI;
@@ -12,7 +13,8 @@ public interface ILlmClient
         string systemContent,
         string userContent,
         string apiKey,
-        string apiUrl
+        string apiUrl,
+        CancellationToken ct = default
     );
 
     Task CallStreamAsync(
@@ -21,7 +23,8 @@ public interface ILlmClient
         string apiKey,
         string apiUrl,
         System.Action<string> onChunkReceived,
-        System.Action? onCompleted = null
+        System.Action? onCompleted = null,
+        CancellationToken ct = default
     );
 
     Task<List<string>> FetchModelsAsync(string apiKey, string apiUrl);
