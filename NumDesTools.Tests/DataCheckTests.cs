@@ -289,7 +289,7 @@ public class DataCheckTests
 
         var (_, _, leftRx, rightRx) = regexes[0];
         // "(" 是正则特殊字符，必须被转义才能正确匹配字面量
-        Assert.Equal(1, leftRx.Matches("(a,b)").Count);
-        Assert.Equal(1, rightRx.Matches("(a,b)").Count);
+        Assert.Single(leftRx.Matches("(a,b)"));
+        Assert.Single(rightRx.Matches("(a,b)"));
     }
 }

@@ -64,6 +64,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private static bool _authorized = true;
     public static GlobalVariable GlobalValue = new();
+
+    /// <summary>强类型配置入口，双轨并行期间与静态字段同步读写同一份 JSON。</summary>
+    public static AppConfig Config = new(GlobalValue);
     public static string LabelText = GlobalValue.Value["LabelText"];
     public static string FocusLabelText = GlobalValue.Value["FocusLabelText"];
     public static string LabelTextRoleDataPreview = GlobalValue.Value["LabelTextRoleDataPreview"];
@@ -1395,10 +1398,22 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (rowCount < 2)
             return new List<dynamic>();
 
-        // 一次 COM 调用取全部值，避免逐格往返
-        var raw = (object[,])usedRange.Value2;
+        return RawArrayToRows((object[,])usedRange.Value2);
+    }
 
-        // 用 Excel 列字母作为 key（A/B/C…），与 MiniExcel 无 header 模式一致
+    /// <summary>
+    /// 将 UsedRange.Value2 返回的 1-based 二维数组转为字典列表。
+    /// 列名使用 Excel 列字母（A/B/C…），与 MiniExcel 无 header 模式一致。
+    /// </summary>
+    internal static List<dynamic> RawArrayToRows(object[,] raw)
+    {
+        // raw 是 1-based：raw[1,1] 是第一行第一列
+        var rowCount = raw.GetUpperBound(0);
+        var colCount = raw.GetUpperBound(1);
+
+        if (rowCount < 2)
+            return new List<dynamic>();
+
         var result = new List<dynamic>();
         for (int r = 1; r <= rowCount; r++)
         {
