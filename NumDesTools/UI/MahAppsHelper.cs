@@ -47,8 +47,7 @@ internal static class MahAppsHelper
 
     private static void AttachTitleBarDrag(System.Windows.Window window)
     {
-        // PART_TitleBar 实际类型是 MetroThumbContentControl，它会吃掉 MouseLeftButtonDown，
-        // 必须用 PreviewMouseLeftButtonDown 才能在 Thumb 处理前拿到事件。
+        // PART_TitleBar 是 MetroThumbContentControl，会吞 MouseLeftButtonDown，用 Preview 截获。
         if (
             window.Template?.FindName("PART_TitleBar", window)
             is not System.Windows.UIElement titleBar
@@ -56,56 +55,64 @@ internal static class MahAppsHelper
             return;
 
         var hwnd = new WindowInteropHelper(window).Handle;
-        System.Windows.Point dragStartScreen = default;
-        int winX = 0,
+        var hwndSource = HwndSource.FromHwnd(hwnd);
+        if (hwndSource is null)
+            return;
+
+        int dragStartX = 0,
+            dragStartY = 0,
+            winX = 0,
             winY = 0;
         bool dragging = false;
 
+        // PreviewMouseLeftButtonDown 用于记录起点并用 Win32 SetCapture 接管后续消息。
+        // 之后的 WM_MOUSEMOVE / WM_LBUTTONUP 直接从 HwndSourceHook 处理，
+        // 完全绕开 WPF 输入管道，与原生拖动同等流畅。
         titleBar.PreviewMouseLeftButtonDown += (_, e) =>
         {
             if (window.WindowState != System.Windows.WindowState.Normal)
                 return;
-            dragStartScreen = titleBar.PointToScreen(e.GetPosition(titleBar));
+            GetCursorPos(out var pt);
+            dragStartX = pt.X;
+            dragStartY = pt.Y;
             GetWindowRect(hwnd, out var r);
             winX = r.Left;
             winY = r.Top;
             dragging = true;
-            titleBar.CaptureMouse();
+            SetCapture(hwnd);
+            e.Handled = true;
         };
 
-        titleBar.PreviewMouseMove += (_, e) =>
-        {
-            if (!dragging || e.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
+        hwndSource.AddHook(
+            (IntPtr h, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) =>
             {
-                if (dragging)
+                const int WmMousemove = 0x0200;
+                const int WmLbuttonup = 0x0202;
+                const int WmCapturechanged = 0x0215;
+
+                if (msg == WmMousemove && dragging)
+                {
+                    GetCursorPos(out var pt);
+                    SetWindowPos(
+                        hwnd,
+                        IntPtr.Zero,
+                        winX + (pt.X - dragStartX),
+                        winY + (pt.Y - dragStartY),
+                        0,
+                        0,
+                        SwpNosize | SwpNozorder | SwpNoactivate
+                    );
+                    handled = true;
+                }
+                else if ((msg == WmLbuttonup || msg == WmCapturechanged) && dragging)
                 {
                     dragging = false;
-                    titleBar.ReleaseMouseCapture();
+                    ReleaseCapture();
+                    handled = msg == WmLbuttonup;
                 }
-                return;
+                return IntPtr.Zero;
             }
-            var cur = titleBar.PointToScreen(e.GetPosition(titleBar));
-            var dx = (int)(cur.X - dragStartScreen.X);
-            var dy = (int)(cur.Y - dragStartScreen.Y);
-            // SetWindowPos 直接移动 Win32 窗口，不触发 WPF 布局重排，流畅度与原生拖动一致
-            SetWindowPos(
-                hwnd,
-                IntPtr.Zero,
-                winX + dx,
-                winY + dy,
-                0,
-                0,
-                SwpNosize | SwpNozorder | SwpNoactivate
-            );
-        };
-
-        titleBar.PreviewMouseLeftButtonUp += (_, _) =>
-        {
-            dragging = false;
-            titleBar.ReleaseMouseCapture();
-        };
-
-        titleBar.LostMouseCapture += (_, _) => dragging = false;
+        );
     }
 
     internal static void ApplyDarkTitleBar(MetroWindow window)
@@ -132,6 +139,22 @@ internal static class MahAppsHelper
             Right,
             Bottom;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Point
+    {
+        public int X,
+            Y;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out Point pt);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetCapture(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ReleaseCapture();
 
     [DllImport("user32.dll")]
     private static extern bool SetWindowPos(
