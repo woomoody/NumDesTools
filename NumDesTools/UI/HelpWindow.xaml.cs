@@ -777,53 +777,6 @@ code {
             InitializeComponent();
             BuildNavTree();
             HelpBrowser.NavigateToString(PlaceholderHtml);
-
-            Loaded += (_, _) => AttachDragDiagnostics();
-        }
-
-        private void AttachDragDiagnostics()
-        {
-            // 验证假设1：PART_TitleBar 能否通过 Template.FindName 找到
-            var titleBar = Template?.FindName("PART_TitleBar", this) as System.Windows.UIElement;
-            PluginLog.Write($"[DragDiag] PART_TitleBar found={titleBar is not null}, type={titleBar?.GetType().Name ?? "null"}");
-
-            if (titleBar is null)
-            {
-                // 备用：枚举模板所有命名元素，找出实际名称
-                var names = new System.Text.StringBuilder();
-                EnumTemplateNames(this, names);
-                PluginLog.Write($"[DragDiag] template named elements: {names}");
-                return;
-            }
-
-            // 验证假设2：MouseLeftButtonDown 是否能在标题栏触发（MahApps Thumb 是否吃掉了事件）
-            titleBar.MouseLeftButtonDown += (_, e) =>
-            {
-                var pos = e.GetPosition(null);
-                PluginLog.Write($"[DragDiag] TitleBar.MouseLeftButtonDown pos={pos} handled={e.Handled}");
-            };
-
-            // 验证假设3：Preview 事件（在 Thumb 处理之前）是否能触发
-            titleBar.PreviewMouseLeftButtonDown += (_, e) =>
-            {
-                var pos = e.GetPosition(null);
-                PluginLog.Write($"[DragDiag] TitleBar.PreviewMouseLeftButtonDown pos={pos} winLeft={Left} winTop={Top}");
-            };
-
-            titleBar.MouseMove += (_, e) =>
-            {
-                if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
-                    PluginLog.Write($"[DragDiag] TitleBar.MouseMove(LBPressed) pos={e.GetPosition(null)}");
-            };
-        }
-
-        private static void EnumTemplateNames(System.Windows.Controls.Control root, System.Text.StringBuilder sb)
-        {
-            if (root.Template is null) return;
-            var fi = typeof(System.Windows.FrameworkTemplate).GetField(
-                "_nameMap", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (fi?.GetValue(root.Template) is System.Collections.Hashtable map)
-                foreach (var key in map.Keys) sb.Append(key).Append(',');
         }
 
         // ── 从嵌入资源 JSON 加载帮助数据，失败则回退到硬编码 ─────────────────────
