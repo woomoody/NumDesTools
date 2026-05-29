@@ -13,7 +13,7 @@ namespace NumDesTools.ExcelToLua
         {
             get
             {
-                var basePath = NumDesAddIn.BasePath;
+                var basePath = AppServices.Config.Paths.BasePath;
                 string jsonBaseFolder;
 
                 if (
@@ -194,7 +194,7 @@ namespace NumDesTools.ExcelToLua
             List<string> files = new List<string>();
             Regex fileRegex = new Regex(@"(\w+/[^~#].+?\.xlsx?)");
 
-            string basePath = Path.Combine(NumDesAddIn.BasePath, "./../../public/Excels");
+            string basePath = Path.Combine(AppServices.Config.Paths.BasePath, "./../../public/Excels");
 
             // ReSharper disable once UnusedParameter.Local
             process.OutputDataReceived += (sender, e) =>

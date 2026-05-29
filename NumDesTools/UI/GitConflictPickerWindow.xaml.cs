@@ -68,7 +68,7 @@ public partial class GitConflictPickerWindow : MetroWindow
 
     private void SkipHash_Changed(object sender, RoutedEventArgs e)
     {
-        NumDesAddIn.GlobalValue.SaveValue(
+        AppServices.GlobalValue.SaveValue(
             "ConflictSkipHashFiles",
             SkipHashBox.IsChecked == true ? "true" : "false"
         );

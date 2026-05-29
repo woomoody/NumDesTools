@@ -456,6 +456,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //        }
         //#endif
 
+        AppServices.Init(App, GlobalValue, Config);
+
         var xllBuildTime = File.GetLastWriteTime(ExcelDnaUtil.XllPath)
             .ToString("yyyy-MM-dd HH:mm:ss");
         PluginLog.Write(

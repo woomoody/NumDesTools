@@ -40,8 +40,8 @@ public static class ExcelDataAutoInsertMultiNew
     //初始化参数
     private static void InitializeVariables()
     {
-        _indexWk = NumDesAddIn.App.ActiveWorkbook;
-        _sheet = NumDesAddIn.App.ActiveSheet;
+        _indexWk = AppServices.App.ActiveWorkbook;
+        _sheet = AppServices.App.ActiveSheet;
         _excelPath = _indexWk.Path;
 
         _sheetData = PubMetToExcel.ExcelDataToList(_sheet);
@@ -128,14 +128,14 @@ public static class ExcelDataAutoInsertMultiNew
                 var ignoreStr = ignore.ToString();
                 if (ignoreStr == "跳过")
                 {
-                    NumDesAddIn.App.StatusBar = "跳过" + "<" + excelName;
+                    AppServices.App.StatusBar = "跳过" + "<" + excelName;
                     excelCount++;
                     continue;
                 }
             }
 
             List<(string, string, string)> error = CopyData(excelName);
-            NumDesAddIn.App.StatusBar =
+            AppServices.App.StatusBar =
                 "写入数据" + "<" + excelCount + "/" + _modelId.Count + ">" + excelName;
             _errorExcelList.Add(error);
             excelCount++;
@@ -144,7 +144,7 @@ public static class ExcelDataAutoInsertMultiNew
         var errorLog = PubMetToExcel.ErrorLogAnalysis(_errorExcelList, _sheet);
         if (errorLog == "")
         {
-            NumDesAddIn.App.StatusBar = "完成写入";
+            AppServices.App.StatusBar = "完成写入";
             return;
         }
 
@@ -157,7 +157,7 @@ public static class ExcelDataAutoInsertMultiNew
         cancelDefault = true; // 阻止默认事件
         InitializeVariables();
 
-        var cell = NumDesAddIn.App.Selection;
+        var cell = AppServices.App.Selection;
         var rowStart = cell.Row;
         var rowCountNew = cell.Rows.Count;
         var rowEnd = rowStart + rowCountNew - 1;
@@ -179,7 +179,7 @@ public static class ExcelDataAutoInsertMultiNew
             if (excelName == null)
                 continue;
             List<(string, string, string)> error = CopyData(excelName);
-            NumDesAddIn.App.StatusBar =
+            AppServices.App.StatusBar =
                 "写入数据" + "<" + i + "/" + newExcelList.Count + ">" + excelName;
             _errorExcelList.Add(error);
         }

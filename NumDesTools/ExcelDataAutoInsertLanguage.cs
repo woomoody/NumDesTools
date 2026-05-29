@@ -11,7 +11,7 @@ public static class ExcelDataAutoInsertLanguage
 {
     public static void AutoInsertData()
     {
-        var workBook = NumDesAddIn.App.ActiveWorkbook;
+        var workBook = AppServices.App.ActiveWorkbook;
         var excelPath = workBook.Path;
         var sourceSheet = workBook.Worksheets["多语言对话【模板】"];
         var fixSheet = workBook.Worksheets["数据修改"];
@@ -30,7 +30,7 @@ public static class ExcelDataAutoInsertLanguage
             classSheet,
             emoSheet,
             excelPath,
-            NumDesAddIn.App
+            AppServices.App
         );
 
         if (error.Count != 0)
@@ -472,7 +472,7 @@ public static class ExcelDataAutoInsertLanguage
     {
         cancelDefault = true; // 阻止默认事件
 
-        var workBook = NumDesAddIn.App.ActiveWorkbook;
+        var workBook = AppServices.App.ActiveWorkbook;
         var excelPath = workBook.Path;
         var sourceSheet = workBook.Worksheets["多语言对话【模板】"];
         var fixSheet = workBook.Worksheets["数据修改"];
@@ -491,7 +491,7 @@ public static class ExcelDataAutoInsertLanguage
             classSheet,
             emoSheet,
             excelPath,
-            NumDesAddIn.App
+            AppServices.App
         );
 
         if (error.Count != 0)
@@ -504,7 +504,7 @@ public static class ExcelDataAutoInsertLanguage
             ErrorLogCtp.CreateCtpNormal(errorLog);
         }
 
-        NumDesAddIn.App.StatusBar = "导出完成";
+        AppServices.App.StatusBar = "导出完成";
         Marshal.ReleaseComObject(sourceSheet);
         Marshal.ReleaseComObject(fixSheet);
         Marshal.ReleaseComObject(classSheet);
@@ -931,7 +931,7 @@ public static class ExcelDataAutoInsertLanguage
     public static void AutoInsertDataByUdNew(CommandBarButton ctrl, ref bool cancelDefault)
     {
         cancelDefault = true; // 阻止默认事件
-        var workBook = NumDesAddIn.App.ActiveWorkbook;
+        var workBook = AppServices.App.ActiveWorkbook;
         var excelPath = workBook.Path;
 
         // 获取基础数据
@@ -1003,7 +1003,7 @@ public static class ExcelDataAutoInsertLanguage
             ErrorLogCtp.CreateCtpNormal(error);
         }
 
-        NumDesAddIn.App.StatusBar = "导出完成";
+        AppServices.App.StatusBar = "导出完成";
         Marshal.ReleaseComObject(sourceSheet);
         Marshal.ReleaseComObject(fixSheet);
         Marshal.ReleaseComObject(roleSheet);
@@ -1186,7 +1186,7 @@ public static class ExcelDataAutoInsertLanguage
             if (dataWritten) // 只有在写入数据时才保存
             {
                 targetExcel.Save();
-                NumDesAddIn.App.StatusBar = $"导出：{fixSheetName}";
+                AppServices.App.StatusBar = $"导出：{fixSheetName}";
             }
             targetExcel?.Dispose();
         }

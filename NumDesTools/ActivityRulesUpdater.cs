@@ -62,7 +62,7 @@ public static class ActivityRulesUpdater
         report.AppendLine($"时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         report.AppendLine();
 
-        ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = "更新规则：读取枚举...");
+        ExcelAsyncUtil.QueueAsMacro(() => AppServices.App.StatusBar = "更新规则：读取枚举...");
 
         // 1. 解析 ActivityType 枚举 → { 枚举名 → type数字 }
         var enumMap = ParseActivityTypeEnum(report);
@@ -79,11 +79,11 @@ public static class ActivityRulesUpdater
         }
 
         // 2. 解析 ActivityManager → { 枚举名 → LogicBase类名 }
-        ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = "更新规则：读取 ActivityManager...");
+        ExcelAsyncUtil.QueueAsMacro(() => AppServices.App.StatusBar = "更新规则：读取 ActivityManager...");
         var logicMap = ParseActivityManagerMapping(report);
 
         // 3. 对每个 LogicBase 扫描 Tables.Xxx[activityID] → { LogicBase类名 → 子表luaKey }
-        ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = "更新规则：扫描 LogicBase 文件...");
+        ExcelAsyncUtil.QueueAsMacro(() => AppServices.App.StatusBar = "更新规则：扫描 LogicBase 文件...");
         var tableMap = BuildLogicToTableMap(logicMap.Values.Distinct().ToList(), report);
 
         // 4. 合并：enumName → typeNum → logicBase → luaKey
@@ -101,7 +101,7 @@ public static class ActivityRulesUpdater
         report.AppendLine();
 
         // 5. 读取现有 JSON，只追加 typeTableMap 中缺失的项
-        ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = "更新规则：写入 JSON...");
+        ExcelAsyncUtil.QueueAsMacro(() => AppServices.App.StatusBar = "更新规则：写入 JSON...");
         var (added, skipped) = PatchRulesJson(inferred, report);
 
         report.AppendLine();
@@ -111,7 +111,7 @@ public static class ActivityRulesUpdater
         var statusMsg = $"规则更新完成（新增 {added} 条）";
         ExcelAsyncUtil.QueueAsMacro(() =>
         {
-            NumDesAddIn.App.StatusBar = statusMsg;
+            AppServices.App.StatusBar = statusMsg;
             ErrorLogCtp.DisposeCtp();
             PluginLog.Write(reportText);
             ErrorLogCtp.CreateCtpNormal(reportText);

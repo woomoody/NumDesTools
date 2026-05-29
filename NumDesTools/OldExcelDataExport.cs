@@ -251,7 +251,7 @@ public static class ExcelSheetDataIsError
                 );
                 filePath1 =
                     Directory.GetCurrentDirectory()
-                    + NumDesAddIn.TempPath
+                    + AppServices.Config.Paths.TempPath
                     + @"\"
                     + indexTxt
                     + @".txt";
@@ -408,7 +408,7 @@ public static class ExcelSheetDataIsError2
                 );
                 filePath =
                     Directory.GetCurrentDirectory()
-                    + NumDesAddIn.TempPath
+                    + AppServices.Config.Paths.TempPath
                     + @"\"
                     + indexTxt
                     + @".txt";
@@ -765,7 +765,7 @@ public static class ExcelSheetData
 
     public static void CellFormat()
     {
-        var app = NumDesAddIn.App;
+        var app = AppServices.App;
         try
         {
             Worksheet activeSheet = app.ActiveSheet;
@@ -791,7 +791,7 @@ public static class ExcelSheetData
 
     public static void GetDataToTxt(string sheetName, string outFilePath)
     {
-        Worksheet ws = NumDesAddIn.App.Worksheets[sheetName];
+        Worksheet ws = AppServices.App.Worksheets[sheetName];
         var rowCnt = ws.UsedRange.Rows.Count;
         var colCnt = ws.UsedRange.Columns.Count;
         var range = ws.Range[ws.Cells[1, 1], ws.Cells[rowCnt, colCnt]];

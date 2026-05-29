@@ -471,11 +471,11 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         PopulateModelList();
         ChatOutput.NavigateToString(HtmlTemplate);
         ChatOutput.Navigating += ChatOutput_Navigating;
-        CustomInstructionInput.Text = NumDesAddIn.Config.Ui.AgentCustomInstruction;
+        CustomInstructionInput.Text = AppServices.Config.Ui.AgentCustomInstruction;
         CustomInstructionInput.LostFocus += (_, _) =>
         {
-            NumDesAddIn.Config.Ui.AgentCustomInstruction = CustomInstructionInput.Text;
-            NumDesAddIn.Config.Save("AgentCustomInstruction", CustomInstructionInput.Text);
+            AppServices.Config.Ui.AgentCustomInstruction = CustomInstructionInput.Text;
+            AppServices.Config.Save("AgentCustomInstruction", CustomInstructionInput.Text);
         };
     }
 
@@ -493,7 +493,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         {
             ExcelAsyncUtil.QueueAsMacro(() =>
             {
-                dynamic app = NumDesAddIn.App;
+                dynamic app = AppServices.App;
                 if (address.Contains('!'))
                 {
                     var parts = address.Split('!');
@@ -513,12 +513,12 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     private void PopulateModelList()
     {
         ModelComboBox.Items.Clear();
-        var models = NumDesAddIn.LiteLLMModelList;
+        var models = AppServices.Config.Llm.ModelList;
         if (models.Count == 0)
-            models = [NumDesAddIn.LiteLLMModel];
+            models = [AppServices.Config.Llm.Model];
         foreach (var m in models)
             ModelComboBox.Items.Add(m);
-        var current = NumDesAddIn.LiteLLMModel;
+        var current = AppServices.Config.Llm.Model;
         ModelComboBox.SelectedItem = ModelComboBox.Items.Contains(current)
             ? current
             : ModelComboBox.Items[0];
@@ -577,9 +577,9 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
     private async Task RunAgentLoopAsync(string userTask, CancellationToken ct)
     {
-        var model = ModelComboBox.SelectedItem as string ?? NumDesAddIn.LiteLLMModel;
-        var apiKey = NumDesAddIn.LiteLLMApiKey;
-        var apiUrl = NumDesAddIn.LiteLLMApiUrl;
+        var model = ModelComboBox.SelectedItem as string ?? AppServices.Config.Llm.Model;
+        var apiKey = AppServices.Config.Llm.ApiKey;
+        var apiUrl = AppServices.Config.Llm.ChatCompletionsUrl;
         var maxSteps = (int)(MaxStepsInput.Value ?? 10);
 
         if (_history.Count == 0)
@@ -709,7 +709,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             var args = JObject.Parse(argsJson);
             return toolName switch
             {
-                "read_selection" => PubMetToExcel.ArrayToArrayStr(NumDesAddIn.App.Selection.Value2),
+                "read_selection" => PubMetToExcel.ArrayToArrayStr(AppServices.App.Selection.Value2),
                 "write_range" => ToolWriteRange(
                     args["address"]?.ToString() ?? "",
                     args["value"]?.ToString() ?? ""
@@ -784,7 +784,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
     private static string ToolWriteRange(string address, string value)
     {
-        dynamic ws = NumDesAddIn.App.ActiveSheet;
+        dynamic ws = AppServices.App.ActiveSheet;
         var range = ws.Range[address];
         var lines = value.Split('\n');
         for (var r = 0; r < lines.Length; r++)
@@ -798,7 +798,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
     private static string ToolRunFormula(string address, string formula)
     {
-        dynamic ws = NumDesAddIn.App.ActiveSheet;
+        dynamic ws = AppServices.App.ActiveSheet;
         var cell = ws.Range[address];
         cell.Formula = formula;
         return $"{address} = {cell.Value2}";
@@ -829,7 +829,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     // 推断 Lua 导出目录（复用 ExcelExporter.JsonBaseFolder 同套逻辑）
     private static string GetLuaTablesDir()
     {
-        var basePath = NumDesAddIn.BasePath;
+        var basePath = AppServices.Config.Paths.BasePath;
         if (string.IsNullOrEmpty(basePath))
             return "";
         string jsonBase;
@@ -868,8 +868,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     private static dynamic FindSheet(string sheetName)
     {
         if (string.IsNullOrEmpty(sheetName))
-            return NumDesAddIn.App.ActiveSheet;
-        foreach (dynamic wb in NumDesAddIn.App.Workbooks)
+            return AppServices.App.ActiveSheet;
+        foreach (dynamic wb in AppServices.App.Workbooks)
         {
             foreach (dynamic ws in wb.Sheets)
             {
@@ -912,7 +912,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     private static string ToolListSheets()
     {
         var sb = new System.Text.StringBuilder();
-        foreach (dynamic wb in NumDesAddIn.App.Workbooks)
+        foreach (dynamic wb in AppServices.App.Workbooks)
         {
             sb.AppendLine($"[{wb.Name}]");
             foreach (dynamic ws in wb.Sheets)
@@ -927,7 +927,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     private static string ToolGetWorkbookStructure()
     {
         var sb = new System.Text.StringBuilder();
-        foreach (dynamic wb in NumDesAddIn.App.Workbooks)
+        foreach (dynamic wb in AppServices.App.Workbooks)
         {
             sb.AppendLine($"=== {wb.Name} ===");
             foreach (dynamic ws in wb.Sheets)
@@ -960,8 +960,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     private static string ToolBatchWrite(string sheetName, JArray writes)
     {
         dynamic ws = string.IsNullOrEmpty(sheetName)
-            ? NumDesAddIn.App.ActiveSheet
-            : NumDesAddIn.App.ActiveWorkbook.Sheets[sheetName];
+            ? AppServices.App.ActiveSheet
+            : AppServices.App.ActiveWorkbook.Sheets[sheetName];
         var count = 0;
         foreach (var item in writes)
         {
@@ -986,7 +986,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     {
         try
         {
-            dynamic wb = NumDesAddIn.App.ActiveWorkbook;
+            dynamic wb = AppServices.App.ActiveWorkbook;
             var wasSaved = (bool)wb.Saved;
             var vbProj = wb.VBProject;
             var module = vbProj.VBComponents.Add(1); // vbext_ct_StdModule = 1
@@ -995,7 +995,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             var match = System.Text.RegularExpressions.Regex.Match(code, @"Sub\s+(\w+)\s*\(");
             if (match.Success)
                 macroName = wb.Name + "!" + module.Name + "." + match.Groups[1].Value;
-            NumDesAddIn.App.Run(macroName);
+            AppServices.App.Run(macroName);
             vbProj.VBComponents.Remove(module);
             // 模块删除后恢复 Saved 状态，避免保存时弹出提示
             wb.Saved = wasSaved;
@@ -1090,12 +1090,12 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     private static string ToolDescribeData(string sheetName, string rangeAddress)
     {
         dynamic ws = string.IsNullOrEmpty(sheetName)
-            ? NumDesAddIn.App.ActiveSheet
+            ? AppServices.App.ActiveSheet
             : FindSheet(sheetName);
         if (ws is null)
             return $"找不到 Sheet '{sheetName}'";
         dynamic range = string.IsNullOrEmpty(rangeAddress)
-            ? NumDesAddIn.App.Selection
+            ? AppServices.App.Selection
             : ws.Range[rangeAddress];
         var values = range.Value2 as object[,];
         if (values is null)
@@ -1150,7 +1150,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     private static string ToolDetectPatterns(string sheetName, string colAddress)
     {
         dynamic ws = string.IsNullOrEmpty(sheetName)
-            ? NumDesAddIn.App.ActiveSheet
+            ? AppServices.App.ActiveSheet
             : FindSheet(sheetName);
         if (ws is null)
             return $"找不到 Sheet '{sheetName}'";
@@ -1236,7 +1236,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         }
         if (!string.IsNullOrEmpty(writeSheet) && !string.IsNullOrEmpty(writeStartCell))
         {
-            var ws = FindSheet(writeSheet) ?? NumDesAddIn.App.ActiveSheet;
+            var ws = FindSheet(writeSheet) ?? AppServices.App.ActiveSheet;
             dynamic range = ws.Range[writeStartCell];
             for (var i = 0; i < result.Count; i++)
                 range.Cells[i + 1, 1] = Math.Round(result[i], 2);
@@ -1252,7 +1252,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         int trials
     )
     {
-        var ws = FindSheet(sheetName) ?? NumDesAddIn.App.ActiveSheet;
+        var ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
         dynamic used = ws.UsedRange;
         int rows = used.Rows.Count;
 
@@ -1323,7 +1323,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         double maxRatio
     )
     {
-        var ws = FindSheet(sheetName) ?? NumDesAddIn.App.ActiveSheet;
+        var ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
         dynamic range = ws.Range[colAddress];
         var values = range.Value2 as object[,];
         if (values is null)
@@ -1367,7 +1367,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
     private static string ToolCostCurveFit(string sheetName, string colAddress)
     {
-        var ws = FindSheet(sheetName) ?? NumDesAddIn.App.ActiveSheet;
+        var ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
         dynamic range = ws.Range[colAddress];
         var values = range.Value2 as object[,];
         if (values is null)

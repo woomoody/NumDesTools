@@ -13,7 +13,7 @@ public static class ExcelDataAutoInsertActivityServer
 
     public static void Source(bool isNames)
     {
-        var indexWk = NumDesAddIn.App.ActiveWorkbook;
+        var indexWk = AppServices.App.ActiveWorkbook;
 
         var sourceSheet = indexWk.Worksheets["运营排期"];
         var targetSheet = indexWk.Worksheets["Sheet1"];
@@ -353,7 +353,7 @@ public static class ExcelDataAutoInsertActivityServer
 
     public static void ModeDataUpdate()
     {
-        var wk = NumDesAddIn.App.ActiveWorkbook;
+        var wk = AppServices.App.ActiveWorkbook;
         var basePath = wk.Path;
 
         var baseList = PubMetToExcel.GetExcelListObjects("活动枚举", "活动枚举");

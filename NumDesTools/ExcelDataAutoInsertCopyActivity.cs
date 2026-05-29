@@ -7,7 +7,7 @@ public static class ExcelDataAutoInsertCopyActivity
     public static void RightClickCloneData(CommandBarButton ctrl, ref bool cancelDefault)
     {
         cancelDefault = true; // 阻止默认事件
-        var wkPath = NumDesAddIn.App.ActiveWorkbook.Path;
+        var wkPath = AppServices.App.ActiveWorkbook.Path;
         var excelNames = new List<string>()
         {
             "RechargeAmazon.xlsx",
@@ -53,7 +53,7 @@ public static class ExcelDataAutoInsertCopyActivity
     public static void RightClickCloneAllData(CommandBarButton ctrl, ref bool cancelDefault)
     {
         cancelDefault = true; // 阻止默认事件
-        var wkPath = NumDesAddIn.App.ActiveWorkbook.Path;
+        var wkPath = AppServices.App.ActiveWorkbook.Path;
         var excelNames = new List<string>()
         {
             "RechargeAmazon.xlsx",

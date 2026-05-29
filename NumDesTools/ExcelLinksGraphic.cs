@@ -7,7 +7,7 @@ public class ExcelLinksGraphic
 {
     public static void Graph()
     {
-        var workbook = NumDesAddIn.App.ActiveWorkbook;
+        var workbook = AppServices.App.ActiveWorkbook;
         var sheet = workbook.ActiveSheet;
         var mainExcel = new Dictionary<string, List<string>>();
         var usedRange = sheet.UsedRange;

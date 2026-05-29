@@ -14,7 +14,7 @@ namespace NumDesTools;
 /// </summary>
 public class ExcelUdf
 {
-    private static readonly dynamic IndexWk = NumDesAddIn.App.ActiveWorkbook;
+    private static readonly dynamic IndexWk = AppServices.App.ActiveWorkbook;
     private static readonly dynamic ExcelPath = IndexWk.Path;
 
     [ExcelFunction(
@@ -191,7 +191,7 @@ public class ExcelUdf
     {
         if (inputRange is ExcelReference cellRef)
         {
-            var sheet = NumDesAddIn.App.ActiveSheet;
+            var sheet = AppServices.App.ActiveSheet;
             var rangeRow = cellRef.RowFirst + 1;
             var rangeCol = cellRef.ColumnFirst + 1;
             var rangeValue = sheet.Cells[rangeRow, rangeCol].Value;
@@ -459,7 +459,7 @@ public class ExcelUdf
     {
         if (address is ExcelReference cellRef)
         {
-            var sheet = NumDesAddIn.App.ActiveSheet;
+            var sheet = AppServices.App.ActiveSheet;
             var rangeRow = cellRef.RowFirst + 1;
             var rangeCol = cellRef.ColumnFirst + 1;
             var range = sheet.Cells[rangeRow, rangeCol];
@@ -486,7 +486,7 @@ public class ExcelUdf
     {
         var cellRef = (ExcelReference)XlCall.Excel(XlCall.xlfCaller);
         var address = (string)XlCall.Excel(XlCall.xlfReftext, cellRef, true);
-        var sheet = NumDesAddIn.App.ActiveSheet;
+        var sheet = AppServices.App.ActiveSheet;
         var range = sheet.Range[address];
         var canConvertToInt = int.TryParse(inputValue, out var intValue);
         if (!canConvertToInt)
@@ -1437,7 +1437,7 @@ public class ExcelUdf
     //    Match match = Regex.Match(fullName, @"\]([^!]+)");
     //    string sheetName = match.Success ? match.Groups[1].Value.Trim('\'') : "地编关系";
 
-    //    var app = NumDesAddIn.App;
+    //    var app = AppServices.App;
     //    Worksheet targetSheet = app.Sheets[sheetName];
 
     //    Range targetRange = targetSheet.Range[
@@ -1939,16 +1939,16 @@ public class ExcelUdf
                     var lanTypeStr = ProcessInputRange(lanType, ignoreValue, ",");
 
                     // 构造系统提示内容
-                    var sysContent = NumDesAddIn.ChatSysContentTransferAss + "翻译为：" + lanTypeStr;
+                    var sysContent = AppServices.Config.AiPrompts.TransferAssistant + "翻译为：" + lanTypeStr;
 
                     // 调用 Chat API（统一走 LiteLLM）
                     var response = ChatApiClient
                         .CallApiAsync(
-                            NumDesAddIn.LiteLLMModel,
+                            AppServices.Config.Llm.Model,
                             sysContent,
                             sourceLanStr,
-                            NumDesAddIn.LiteLLMApiKey,
-                            NumDesAddIn.LiteLLMApiUrl
+                            AppServices.Config.Llm.ApiKey,
+                            AppServices.Config.Llm.ChatCompletionsUrl
                         )
                         .GetAwaiter()
                         .GetResult();

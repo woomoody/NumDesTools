@@ -58,7 +58,7 @@ public partial class ExcelFilePickerWindow : MetroWindow
     private void LoadHistory()
     {
         if (
-            !NumDesAddIn.GlobalValue.Value.TryGetValue(HistoryKey, out var json)
+            !AppServices.GlobalValue.Value.TryGetValue(HistoryKey, out var json)
             || string.IsNullOrEmpty(json)
         )
             return;
@@ -75,7 +75,7 @@ public partial class ExcelFilePickerWindow : MetroWindow
     private void SaveHistory()
     {
         var json = JsonConvert.SerializeObject(_history);
-        NumDesAddIn.GlobalValue.SaveValue(HistoryKey, json);
+        AppServices.GlobalValue.SaveValue(HistoryKey, json);
     }
 
     private void RecordSearch(string keyword)

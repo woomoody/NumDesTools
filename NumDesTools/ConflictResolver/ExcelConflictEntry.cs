@@ -15,7 +15,7 @@ public static class ExcelConflictEntry
     /// </summary>
     public static void OpenGitConflict()
     {
-        var gitRoot = NumDesAddIn.GitRootPath;
+        var gitRoot = AppServices.Config.Git.RootPath;
         if (string.IsNullOrEmpty(gitRoot) || !Directory.Exists(gitRoot))
         {
             System.Windows.MessageBox.Show(
@@ -26,7 +26,7 @@ public static class ExcelConflictEntry
         }
 
         string? lastSelected = null;
-        bool skipHash = NumDesAddIn.Config.Git.SkipHashFiles;
+        bool skipHash = AppServices.Config.Git.SkipHashFiles;
 
         while (true)
         {
@@ -96,7 +96,7 @@ public static class ExcelConflictEntry
         // 1. 从当前活动工作簿路径推算
         try
         {
-            var wbPath = (string)NumDesAddIn.App.ActiveWorkbook.FullName;
+            var wbPath = (string)AppServices.App.ActiveWorkbook.FullName;
             if (!string.IsNullOrEmpty(wbPath))
             {
                 var dir = Path.GetDirectoryName(wbPath);
@@ -133,7 +133,7 @@ public static class ExcelConflictEntry
     /// </summary>
     public static void OpenGitHistory()
     {
-        var gitRoot = NumDesAddIn.GitRootPath;
+        var gitRoot = AppServices.Config.Git.RootPath;
         if (string.IsNullOrEmpty(gitRoot) || !Directory.Exists(gitRoot))
         {
             System.Windows.MessageBox.Show(
@@ -143,7 +143,7 @@ public static class ExcelConflictEntry
             return;
         }
 
-        NumDesAddIn.GlobalValue.Value.TryGetValue("HistoryFileLastDir", out var lastDir);
+        AppServices.GlobalValue.Value.TryGetValue("HistoryFileLastDir", out var lastDir);
 
         while (true)
         {
@@ -151,7 +151,7 @@ public static class ExcelConflictEntry
             var filePicker = new NumDesTools.UI.ExcelFilePickerWindow(pickRoot);
             if (filePicker.ShowDialog() != true || filePicker.SelectedFile == null)
                 return;
-            NumDesAddIn.GlobalValue.SaveValue(
+            AppServices.GlobalValue.SaveValue(
                 "HistoryFileLastDir",
                 Path.GetDirectoryName(filePicker.SelectedFile) ?? gitRoot
             );
@@ -254,7 +254,7 @@ public static class ExcelConflictEntry
     /// </summary>
     public static void OpenBranchMerge()
     {
-        var gitRoot = NumDesAddIn.GitRootPath;
+        var gitRoot = AppServices.Config.Git.RootPath;
         if (string.IsNullOrEmpty(gitRoot) || !Directory.Exists(gitRoot))
         {
             System.Windows.MessageBox.Show(

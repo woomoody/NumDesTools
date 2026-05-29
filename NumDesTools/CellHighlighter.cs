@@ -12,7 +12,7 @@ internal static class ViewportHelper
         if (usedRange is null)
             return null;
 
-        var win = NumDesAddIn.App.ActiveWindow;
+        var win = AppServices.App.ActiveWindow;
         if (win == null)
             return usedRange;
 
@@ -22,7 +22,7 @@ internal static class ViewportHelper
             try
             {
                 var pr = win.Panes[i].VisibleRange;
-                visible = visible == null ? pr : NumDesAddIn.App.Union(visible, pr);
+                visible = visible == null ? pr : AppServices.App.Union(visible, pr);
             }
             catch { }
         }
@@ -30,7 +30,7 @@ internal static class ViewportHelper
         if (visible == null)
             return usedRange;
 
-        return NumDesAddIn.App.Intersect(usedRange, visible) ?? usedRange;
+        return AppServices.App.Intersect(usedRange, visible) ?? usedRange;
     }
 }
 
@@ -135,7 +135,7 @@ internal static class CellHighlighter
         _lastSheet = null;
     }
 
-    private static Application App => NumDesAddIn.App;
+    private static Application App => AppServices.App;
 }
 
 internal static class CellSpotlightHighlighter
@@ -232,7 +232,7 @@ internal static class CellSpotlightHighlighter
         _lastSheet = null;
     }
 
-    private static Application App => NumDesAddIn.App;
+    private static Application App => AppServices.App;
 }
 
 internal static class CellHighlightController
@@ -267,7 +267,7 @@ internal static class CellHighlightController
 
     private static void OnSelectionChange(object sh, Range target)
     {
-        if (NumDesAddIn.App.CutCopyMode != 0)
+        if (AppServices.App.CutCopyMode != 0)
             return;
         if (sh is Worksheet ws)
             CellHighlighter.Highlight(ws, target);

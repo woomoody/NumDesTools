@@ -21,7 +21,7 @@ namespace NumDesTools;
 /// </summary>
 public static class PubMetToExcel
 {
-    private static readonly Workbook Wk = NumDesAddIn.App.ActiveWorkbook;
+    private static readonly Workbook Wk = AppServices.App.ActiveWorkbook;
 
     #region EPPlus与Excel
 
@@ -534,7 +534,7 @@ public static class PubMetToExcel
     [ExcelFunction(IsHidden = true)]
     public static int ExcelRangePixelsX(double targetX)
     {
-        var workArea = NumDesAddIn.App.ActiveWindow;
+        var workArea = AppServices.App.ActiveWindow;
         var targetXPoint = targetX * 1.67;
         var targetXPixels = workArea.PointsToScreenPixelsX((int)targetXPoint);
         return targetXPixels;
@@ -543,7 +543,7 @@ public static class PubMetToExcel
     [ExcelFunction(IsHidden = true)]
     public static int ExcelRangePixelsY(double targetY)
     {
-        var workArea = NumDesAddIn.App.ActiveWindow;
+        var workArea = AppServices.App.ActiveWindow;
         var targetYPoint = targetY * 1.67;
         var targetYPixels = workArea.PointsToScreenPixelsY((int)targetYPoint);
         return targetYPixels;
@@ -656,7 +656,7 @@ public static class PubMetToExcel
         List<List<object>> sheetData
     ) ExcelDataToListBySelfToEnd(dynamic workSheet, int dataRow, int dataCol, int headRow)
     {
-        Range selectRange = NumDesAddIn.App.Selection;
+        Range selectRange = AppServices.App.Selection;
         Range usedRange = workSheet.UsedRange;
         int dataRowEnd;
         int dataColEnd;
@@ -1056,7 +1056,7 @@ public static class PubMetToExcel
             }
 
             currentCount++;
-            NumDesAddIn.App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
+            AppServices.App.StatusBar = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
         }
 
         var tupleError = ("", "", 0, 0);
@@ -1154,8 +1154,8 @@ public static class PubMetToExcel
                 return;
             }
 
-            NumDesAddIn.App.ScreenUpdating = false;
-            var workbook = NumDesAddIn.App.Workbooks.Open(filePath);
+            AppServices.App.ScreenUpdating = false;
+            var workbook = AppServices.App.Workbooks.Open(filePath);
 
             Worksheet worksheet = null;
             try
@@ -1177,12 +1177,12 @@ public static class PubMetToExcel
                 var realCellAddress = $"B{cellAddressDefault}:Z{cellAddressDefault}";
                 var cellRange = worksheet.Range[realCellAddress];
 
-                NumDesAddIn.App.ScreenUpdating = true;
+                AppServices.App.ScreenUpdating = true;
                 worksheet.Activate();
                 cellRange.Select();
             }
 
-            NumDesAddIn.App.ScreenUpdating = true;
+            AppServices.App.ScreenUpdating = true;
         }
         catch (Exception e)
         {

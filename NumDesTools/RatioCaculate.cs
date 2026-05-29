@@ -9,7 +9,7 @@ public class RatioCaculate
 {
     public static void CacCardCollect()
     {
-        var workBook = NumDesAddIn.App.ActiveWorkbook;
+        var workBook = AppServices.App.ActiveWorkbook;
         var collectCardGroup = workBook.Worksheets["CollectCardGroup"];
         var collectCardInfo = workBook.Worksheets["CollectCardInfo"];
         var collectCardRarity = workBook.Worksheets["CollectCardRarity"];

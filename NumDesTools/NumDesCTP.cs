@@ -40,7 +40,7 @@ public class NumDesCTP
         CustomTaskPane ctpWPF;
         if (!isWPF)
         {
-            var excelApp = NumDesAddIn.App;
+            var excelApp = AppServices.App;
             if (!ctpsWF.TryGetValue(name, out ctpWF))
             {
                 ExcelAsyncUtil.QueueAsMacro(() =>

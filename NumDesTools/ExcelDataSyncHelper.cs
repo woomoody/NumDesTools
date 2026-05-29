@@ -6,7 +6,7 @@ namespace NumDesTools;
 
 public static class ExcelDataSyncHelper
 {
-    private static dynamic ExcelApp => NumDesAddIn.App;
+    private static dynamic ExcelApp => AppServices.App;
 
     #region 公共接口方法
 
@@ -20,7 +20,7 @@ public static class ExcelDataSyncHelper
         Dictionary<string, Dictionary<string, List<string>>> replaceValues
     )
     {
-        NumDesAddIn.App.StatusBar = false;
+        AppServices.App.StatusBar = false;
         var timer = Stopwatch.StartNew();
 
         try
@@ -66,7 +66,7 @@ public static class ExcelDataSyncHelper
         Dictionary<string, Dictionary<string, List<string>>> replaceValues
     )
     {
-        NumDesAddIn.App.StatusBar = false;
+        AppServices.App.StatusBar = false;
         var timer = Stopwatch.StartNew();
 
         try

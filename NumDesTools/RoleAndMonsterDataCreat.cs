@@ -13,12 +13,12 @@ public class CellSelectChangePro
 {
     public CellSelectChangePro()
     {
-        NumDesAddIn.App.SheetSelectionChange += GetCellValueMulti;
+        AppServices.App.SheetSelectionChange += GetCellValueMulti;
     }
 
     private static void GetCellValueMulti(object sh, Range range)
     {
-        Worksheet ws2 = NumDesAddIn.App.ActiveSheet;
+        Worksheet ws2 = AppServices.App.ActiveSheet;
         var name = ws2.Name;
         if (name == "角色基础")
         {
@@ -26,7 +26,7 @@ public class CellSelectChangePro
                 return;
             if (range.Row < 16 || range.Column is < 5 or > 21)
             {
-                NumDesAddIn.App.StatusBar = "当前行不是角色数据行，另选一行";
+                AppServices.App.StatusBar = "当前行不是角色数据行，另选一行";
             }
             else
             {
@@ -34,12 +34,12 @@ public class CellSelectChangePro
                 if (roleName != null)
                 {
                     ws2.Range["X1"].Value2 = roleName;
-                    NumDesAddIn.App.StatusBar =
+                    AppServices.App.StatusBar =
                         "角色：【" + roleName + "】数据已经更新，右侧查看~！~→→→→→→→→→→→→→→→~！~";
                 }
                 else
                 {
-                    NumDesAddIn.App.StatusBar = "当前行没有角色数据，另选一行";
+                    AppServices.App.StatusBar = "当前行没有角色数据，另选一行";
                 }
             }
         }
@@ -49,7 +49,7 @@ public class CellSelectChangePro
 #pragma warning disable CA1416
             NumDesAddIn.CustomRibbon.InvalidateControl("Button14");
 #pragma warning restore CA1416
-            NumDesAddIn.App.StatusBar = "当前非【角色基础】表，数据预览功能关闭";
+            AppServices.App.StatusBar = "当前非【角色基础】表，数据预览功能关闭";
         }
     }
 }

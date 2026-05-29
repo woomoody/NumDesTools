@@ -262,7 +262,7 @@ public class ExcelDataByVsto
 
     public void GetExcelObj()
     {
-        dynamic app = NumDesAddIn.App;
+        dynamic app = AppServices.App;
         dynamic activeWorkbook = app.ActiveWorkbook;
         dynamic activeSheet = app.ActiveSheet;
         string activeWorkbookPath = activeWorkbook.Path;

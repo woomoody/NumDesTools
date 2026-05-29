@@ -4,10 +4,10 @@ public class VstoExcel
 {
     public static void FixHiddenCellVsto(string[] files)
     {
-        NumDesAddIn.App.Visible = false;
-        NumDesAddIn.App.ScreenUpdating = false;
-        NumDesAddIn.App.DisplayAlerts = false;
-        NumDesAddIn.App.EnableEvents = false;
+        AppServices.App.Visible = false;
+        AppServices.App.ScreenUpdating = false;
+        AppServices.App.DisplayAlerts = false;
+        AppServices.App.EnableEvents = false;
         string errorLog = String.Empty;
         //取消隐藏
         foreach (var file in files)
@@ -17,7 +17,7 @@ public class VstoExcel
             {
                 continue;
             }
-            var workBook = NumDesAddIn.App.Workbooks.Open(file);
+            var workBook = AppServices.App.Workbooks.Open(file);
             if (workBook == null)
             {
                 errorLog += $"{file}不存在\n";
@@ -36,10 +36,10 @@ public class VstoExcel
             workBook.Close(false);
         }
 
-        NumDesAddIn.App.Visible = true;
-        NumDesAddIn.App.ScreenUpdating = true;
-        NumDesAddIn.App.DisplayAlerts = true;
-        NumDesAddIn.App.EnableEvents = true;
+        AppServices.App.Visible = true;
+        AppServices.App.ScreenUpdating = true;
+        AppServices.App.DisplayAlerts = true;
+        AppServices.App.EnableEvents = true;
 
         if (!String.IsNullOrEmpty(errorLog))
         {

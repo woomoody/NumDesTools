@@ -179,7 +179,7 @@ public class AiPromptConfig(GlobalVariable store)
         set => store.Value["ChatSysContentExcelAss"] = value;
     }
 
-    public string TranslationAssistant
+    public string TransferAssistant
     {
         get => store.Value.GetValueOrDefault("ChatSysContentTransferAss", "");
         set => store.Value["ChatSysContentTransferAss"] = value;

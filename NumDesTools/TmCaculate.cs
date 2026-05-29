@@ -2,7 +2,7 @@
 
 public class TmCaculate
 {
-    private static readonly dynamic Wk = NumDesAddIn.App.ActiveWorkbook;
+    private static readonly dynamic Wk = AppServices.App.ActiveWorkbook;
 
     public static void CreatTmTargetEle()
     {
