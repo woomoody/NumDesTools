@@ -40,7 +40,12 @@ internal static class MahAppsHelper
 
     internal static void SetExcelOwner(System.Windows.Window window)
     {
-        new WindowInteropHelper(window).Owner = (IntPtr)ExcelDnaUtil.WindowHandle;
+        var excelHwnd = (IntPtr)ExcelDnaUtil.WindowHandle;
+        // SourceInitialized: HWND 刚建立，此时设置 Owner 才可靠
+        window.SourceInitialized += (_, _) =>
+        {
+            new WindowInteropHelper(window).Owner = excelHwnd;
+        };
     }
 
     internal static void ApplyDarkTitleBar(MetroWindow window)
