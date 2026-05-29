@@ -471,10 +471,10 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         PopulateModelList();
         ChatOutput.NavigateToString(HtmlTemplate);
         ChatOutput.Navigating += ChatOutput_Navigating;
-        CustomInstructionInput.Text = AppServices.Config.Ui.AgentCustomInstruction;
+        CustomInstructionInput.Text = AppServices.Config.Agent.CustomInstruction;
         CustomInstructionInput.LostFocus += (_, _) =>
         {
-            AppServices.Config.Ui.AgentCustomInstruction = CustomInstructionInput.Text;
+            AppServices.Config.Agent.CustomInstruction = CustomInstructionInput.Text;
             AppServices.Config.Save("AgentCustomInstruction", CustomInstructionInput.Text);
         };
     }
