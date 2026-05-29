@@ -7,7 +7,6 @@
     Title="Excel 冲突解决"
     Width="1100" Height="760" MinWidth="800" MinHeight="560"
     WindowStartupLocation="CenterScreen"
-    WindowState="Maximized"
     KeyDown="Window_EscClose">
 
     <mah:MetroWindow.Resources>

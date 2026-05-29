@@ -5,7 +5,7 @@
     xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     Title="Sheet链接关系"
     Width="1600" Height="900"
-    WindowState="Maximized"
+    WindowStartupLocation="CenterScreen"
     KeyDown="Window_EscClose">
     <Grid x:Name="BaseGrid" />
 </mah:MetroWindow>
