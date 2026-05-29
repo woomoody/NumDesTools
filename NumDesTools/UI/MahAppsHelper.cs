@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using ControlzEx.Theming;
 using MahApps.Metro.Controls;
@@ -54,19 +55,20 @@ internal static class MahAppsHelper
         )
             return;
 
+        var hwnd = new WindowInteropHelper(window).Handle;
         System.Windows.Point dragStartScreen = default;
-        double winLeft = 0,
-            winTop = 0;
+        int winX = 0,
+            winY = 0;
         bool dragging = false;
 
         titleBar.PreviewMouseLeftButtonDown += (_, e) =>
         {
             if (window.WindowState != System.Windows.WindowState.Normal)
                 return;
-            // GetPosition(null) 返回 WPF 逻辑坐标，需转屏幕像素坐标才能和 window.Left/Top 对齐
             dragStartScreen = titleBar.PointToScreen(e.GetPosition(titleBar));
-            winLeft = window.Left;
-            winTop = window.Top;
+            GetWindowRect(hwnd, out var r);
+            winX = r.Left;
+            winY = r.Top;
             dragging = true;
             titleBar.CaptureMouse();
         };
@@ -83,8 +85,18 @@ internal static class MahAppsHelper
                 return;
             }
             var cur = titleBar.PointToScreen(e.GetPosition(titleBar));
-            window.Left = winLeft + (cur.X - dragStartScreen.X);
-            window.Top = winTop + (cur.Y - dragStartScreen.Y);
+            var dx = (int)(cur.X - dragStartScreen.X);
+            var dy = (int)(cur.Y - dragStartScreen.Y);
+            // SetWindowPos 直接移动 Win32 窗口，不触发 WPF 布局重排，流畅度与原生拖动一致
+            SetWindowPos(
+                hwnd,
+                IntPtr.Zero,
+                winX + dx,
+                winY + dy,
+                0,
+                0,
+                SwpNosize | SwpNozorder | SwpNoactivate
+            );
         };
 
         titleBar.PreviewMouseLeftButtonUp += (_, _) =>
@@ -108,7 +120,34 @@ internal static class MahAppsHelper
         };
     }
 
-    [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
+    private const uint SwpNosize = 0x0001;
+    private const uint SwpNozorder = 0x0004;
+    private const uint SwpNoactivate = 0x0010;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Rect
+    {
+        public int Left,
+            Top,
+            Right,
+            Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(
+        IntPtr hwnd,
+        IntPtr hwndAfter,
+        int x,
+        int y,
+        int cx,
+        int cy,
+        uint flags
+    );
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hwnd, out Rect rect);
+
+    [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(
         IntPtr hwnd,
         int attr,
