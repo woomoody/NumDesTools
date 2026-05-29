@@ -61,7 +61,7 @@ namespace NumDesTools.Advance
                 if (root.Files.TryGetValue(name, out var entry) && entry.Mtime == mtime)
                     continue; // 未修改，跳过
 
-                NumDesAddIn.App.StatusBar = $"索引更新: {name}";
+                AppServices.App.StatusBar = $"索引更新: {name}";
                 var prefixes = ExtractPrefixes(file);
                 root.Files[name] = new IndexEntry { Mtime = mtime, Prefixes = prefixes };
                 changed = true;

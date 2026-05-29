@@ -11,8 +11,8 @@ public static class ExcelDataAutoInsertMulti
 {
     public static void InsertData(dynamic isMulti)
     {
-        var indexWk = NumDesAddIn.App.ActiveWorkbook;
-        var sheet = NumDesAddIn.App.ActiveSheet;
+        var indexWk = AppServices.App.ActiveWorkbook;
+        var sheet = AppServices.App.ActiveSheet;
         var excelPath = indexWk.Path;
         var colsCount = sheet.UsedRange.Columns.Count;
         var sheetData = PubMetToExcel.ExcelDataToList(sheet);
@@ -63,7 +63,7 @@ public static class ExcelDataAutoInsertMulti
                 var ignoreStr = ignore.ToString();
                 if (ignoreStr == "跳过")
                 {
-                    NumDesAddIn.App.StatusBar = "跳过" + "<" + excelName;
+                    AppServices.App.StatusBar = "跳过" + "<" + excelName;
                     excelCount++;
                     continue;
                 }
@@ -81,7 +81,7 @@ public static class ExcelDataAutoInsertMulti
                 cellColor,
                 writeMode
             );
-            NumDesAddIn.App.StatusBar =
+            AppServices.App.StatusBar =
                 "写入数据" + "<" + excelCount + "/" + modelId.Count + ">" + excelName;
             errorExcelList.Add(error);
             excelCount++;
@@ -90,7 +90,7 @@ public static class ExcelDataAutoInsertMulti
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
-            NumDesAddIn.App.StatusBar = "完成写入";
+            AppServices.App.StatusBar = "完成写入";
             return;
         }
 
@@ -102,8 +102,8 @@ public static class ExcelDataAutoInsertMulti
     {
         cancelDefault = true; // 阻止默认事件
 
-        var indexWk = NumDesAddIn.App.ActiveWorkbook;
-        var sheet = NumDesAddIn.App.ActiveSheet;
+        var indexWk = AppServices.App.ActiveWorkbook;
+        var sheet = AppServices.App.ActiveSheet;
         var excelPath = indexWk.Path;
         var colsCount = sheet.UsedRange.Columns.Count;
         var sheetData = PubMetToExcel.ExcelDataToList(sheet);
@@ -138,7 +138,7 @@ public static class ExcelDataAutoInsertMulti
             colFixKeyCount
         );
         var errorExcelList = new List<List<(string, string, string)>>();
-        var cell = NumDesAddIn.App.Selection;
+        var cell = AppServices.App.Selection;
         var rowStart = cell.Row;
         var rowCountNew = cell.Rows.Count;
         var rowEnd = rowStart + rowCountNew - 1;
@@ -170,7 +170,7 @@ public static class ExcelDataAutoInsertMulti
                 cellColor,
                 writeMode
             );
-            NumDesAddIn.App.StatusBar =
+            AppServices.App.StatusBar =
                 "写入数据" + "<" + i + "/" + newExcelList.Count + ">" + excelName;
             errorExcelList.Add(error);
         }
@@ -198,7 +198,7 @@ public static class ExcelDataAutoInsertMulti
         dynamic writeMode
     )
     {
-        var wk = NumDesAddIn.App.ActiveWorkbook;
+        var wk = AppServices.App.ActiveWorkbook;
         var wkPath = wk.Path;
 
         var errorExcelLog = "";

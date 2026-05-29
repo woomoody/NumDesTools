@@ -63,6 +63,7 @@
     <EmbeddedResource Include="RibbonUI.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
+    <EmbeddedResource Include="Resources\help.json" />
     <Content Include="image\dart.png" />
     <Content Include="image\lacrosse.png" />
     <EmbeddedResource Include="image\sofa.png" />

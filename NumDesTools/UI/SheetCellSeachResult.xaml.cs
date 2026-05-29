@@ -90,7 +90,7 @@ namespace NumDesTools.UI
                 {
                     try
                     {
-                        var workbook = NumDesAddIn.App.Workbooks.Open(
+                        var workbook = AppServices.App.Workbooks.Open(
                             Filename: filePath,
                             UpdateLinks: 0, // 不更新外部链接
                             ReadOnly: false, // 可读写模式
@@ -101,15 +101,15 @@ namespace NumDesTools.UI
                     }
                     catch (COMException)
                     {
-                        sheet = NumDesAddIn.App.Worksheets[sheetName];
+                        sheet = AppServices.App.Worksheets[sheetName];
                     }
                 }
                 else
                 {
-                    sheet = NumDesAddIn.App.Worksheets[sheetName];
+                    sheet = AppServices.App.Worksheets[sheetName];
                 }
                 // 关闭所有打开的备注编辑框，不隐藏角标
-                NumDesAddIn.App.DisplayCommentIndicator =
+                AppServices.App.DisplayCommentIndicator =
                     XlCommentDisplayMode.xlCommentIndicatorOnly;
 
                 sheet.Select();

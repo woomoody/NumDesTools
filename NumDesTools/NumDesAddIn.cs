@@ -169,8 +169,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         if (FocusLabelText == "聚光灯：开启")
         {
-            var mode = GlobalValue.Value.TryGetValue("SpotlightMode", out var m) ? m : "overlay";
-            CrosslightController.Enable(App, mode == "fill");
+            CrosslightController.Enable(App, Config.Ui.SpotlightMode == "fill");
         }
     }
 
@@ -456,6 +455,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //            }
         //        }
         //#endif
+
+        AppServices.Init(App, GlobalValue, Config);
 
         var xllBuildTime = File.GetLastWriteTime(ExcelDnaUtil.XllPath)
             .ToString("yyyy-MM-dd HH:mm:ss");
@@ -3184,13 +3185,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private void ToggleFocusLight(string mode)
     {
-        var currentMode = GlobalValue.Value.TryGetValue("SpotlightMode", out var m) ? m : "overlay";
-        bool turningOn = FocusLabelText != "聚光灯：开启" || currentMode != mode;
+        bool turningOn = FocusLabelText != "聚光灯：开启" || Config.Ui.SpotlightMode != mode;
 
         if (turningOn)
         {
             FocusLabelText = "聚光灯：开启";
-            GlobalValue.SaveValue("SpotlightMode", mode);
+            Config.Ui.SpotlightMode = mode;
+            Config.Save("SpotlightMode", mode);
             CrosslightController.Enable(App, mode == "fill");
         }
         else
@@ -3333,31 +3334,48 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     [ExcelCommand]
     public static void ShowAi()
     {
-        ShowAiText = ShowAiText == "AI对话：开启" ? "AI对话：关闭" : "AI对话：开启";
-        CustomRibbon.InvalidateControl("ShowAI");
-
-        var ctpName = "AI对话-Excel";
-        if (ShowAiText == "AI对话：开启")
+        try
         {
-            GlobalValue.ReadOrCreate();
+            ShowAiText = ShowAiText == "AI对话：开启" ? "AI对话：关闭" : "AI对话：开启";
+            CustomRibbon.InvalidateControl("ShowAI");
 
-            NumDesCTP.DeleteCTP(true, ctpName);
-            _chatAiChatMenuCtp = (AiChatTaskPanel)
-                NumDesCTP.ShowCTP(
-                    1000,
-                    ctpName,
-                    true,
-                    ctpName,
-                    new AiChatTaskPanel(),
-                    MsoCTPDockPosition.msoCTPDockPositionRight
-                );
+            var ctpName = "AI对话-Excel";
+            if (ShowAiText == "AI对话：开启")
+            {
+                GlobalValue.ReadOrCreate();
+
+                NumDesCTP.DeleteCTP(true, ctpName);
+                PluginLog.Write($"[ShowAi] 构造 AiChatTaskPanel");
+                var panel = new AiChatTaskPanel();
+                PluginLog.Write($"[ShowAi] 调用 ShowCTP");
+                _chatAiChatMenuCtp = (AiChatTaskPanel)
+                    NumDesCTP.ShowCTP(
+                        1000,
+                        ctpName,
+                        true,
+                        ctpName,
+                        panel,
+                        MsoCTPDockPosition.msoCTPDockPositionRight
+                    );
+                PluginLog.Write($"[ShowAi] ShowCTP 完成, result={_chatAiChatMenuCtp is not null}");
+            }
+            else
+            {
+                NumDesCTP.DeleteCTP(true, ctpName);
+            }
+
+            GlobalValue.SaveValue("ShowAIText", ShowAiText);
         }
-        else
+        catch (Exception ex)
         {
-            NumDesCTP.DeleteCTP(true, ctpName);
+            PluginLog.Write($"[ShowAi] 异常: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+            MessageBox.Show(
+                $"AI对话打开失败:\n{ex.Message}",
+                "错误",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
         }
-
-        GlobalValue.SaveValue("ShowAIText", ShowAiText);
     }
 
     public void ShowAIText_Click(IRibbonControl control)

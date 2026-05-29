@@ -108,7 +108,7 @@ public sealed class CellSelectChangeTip : Form
         // 记录当前滚动位置，用于滚动检测
         try
         {
-            var win = NumDesAddIn.App.ActiveWindow;
+            var win = AppServices.App.ActiveWindow;
             _lastScrollRow = win.ScrollRow;
             _lastScrollCol = win.ScrollColumn;
         }
@@ -137,7 +137,7 @@ public sealed class CellSelectChangeTip : Form
     {
         try
         {
-            var win = NumDesAddIn.App.ActiveWindow;
+            var win = AppServices.App.ActiveWindow;
             if (win.ScrollRow != _lastScrollRow || win.ScrollColumn != _lastScrollCol)
                 ClearBubble();
         }
@@ -158,7 +158,7 @@ public sealed class CellSelectChangeTip : Form
                 return; // 气泡本身（不应发生，但防御）
             // 比较进程 ID：前台窗口属于 Excel 进程则保留
             GetWindowThreadProcessId(fg, out uint fgPid);
-            GetWindowThreadProcessId((IntPtr)NumDesAddIn.App.Hwnd, out uint excelPid);
+            GetWindowThreadProcessId((IntPtr)AppServices.App.Hwnd, out uint excelPid);
             if (fgPid != excelPid)
                 ClearBubble();
         }
@@ -208,7 +208,7 @@ public sealed class CellSelectChangeTip : Form
 
     public static void OnSelectionChange(object sh, Range target)
     {
-        if (NumDesAddIn.App.CutCopyMode != 0)
+        if (AppServices.App.CutCopyMode != 0)
             return;
         ExcelAsyncUtil.QueueAsMacro(() => TryShow(target));
     }

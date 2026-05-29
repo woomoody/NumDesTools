@@ -24,7 +24,7 @@ namespace NumDesTools;
 /// </summary>
 public static class PubMetToExcelFunc
 {
-    private static readonly dynamic Wk = NumDesAddIn.App.ActiveWorkbook;
+    private static readonly dynamic Wk = AppServices.App.ActiveWorkbook;
 
     private static readonly string WkPath = Wk.Path;
 
@@ -53,13 +53,13 @@ public static class PubMetToExcelFunc
         dynamic tempWorkbook;
         try
         {
-            tempWorkbook = NumDesAddIn.App.Workbooks.Open(
+            tempWorkbook = AppServices.App.Workbooks.Open(
                 rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx"
             );
         }
         catch
         {
-            tempWorkbook = NumDesAddIn.App.Workbooks.Add();
+            tempWorkbook = AppServices.App.Workbooks.Add();
             tempWorkbook.SaveAs(rootPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
         }
 
@@ -86,9 +86,9 @@ public static class PubMetToExcelFunc
     public static void RightOpenExcelByActiveCell(CommandBarButton ctrl, ref bool cancelDefault)
     {
         cancelDefault = true; // 阻止默认事件
-        var sheet = NumDesAddIn.App.ActiveSheet;
-        var selectCell = NumDesAddIn.App.ActiveCell;
-        var workBook = NumDesAddIn.App.ActiveWorkbook;
+        var sheet = AppServices.App.ActiveSheet;
+        var selectCell = AppServices.App.ActiveCell;
+        var workBook = AppServices.App.ActiveWorkbook;
         var workBookName = workBook.Name;
         var workbookPath = workBook.Path;
         workbookPath = Path.GetDirectoryName(workbookPath);
@@ -159,9 +159,9 @@ public static class PubMetToExcelFunc
     {
         cancelDefault = true; // 阻止默认事件
 
-        var sheet = NumDesAddIn.App.ActiveSheet;
-        var selectCell = NumDesAddIn.App.ActiveCell;
-        var workBook = NumDesAddIn.App.ActiveWorkbook;
+        var sheet = AppServices.App.ActiveSheet;
+        var selectCell = AppServices.App.ActiveCell;
+        var workBook = AppServices.App.ActiveWorkbook;
         var workBookName = workBook.Name;
         var workbookPath = workBook.Path;
         var sheetName = sheet.Name;
@@ -319,7 +319,7 @@ public static class PubMetToExcelFunc
                 var data = excelObj.ReadToDic(sheetTarget, 6, 7, [7, 8], 2);
                 var selectCellCol = selectCell.Column;
                 var selectCellRow = selectCell.Row;
-                var sheet = NumDesAddIn.App.ActiveSheet;
+                var sheet = AppServices.App.ActiveSheet;
                 var typeCell = sheet.Cells[selectCellRow, selectCellCol - 1];
                 string typeValue = typeCell.Value.ToString();
                 if (data.TryGetValue(typeValue, out var valueList))
@@ -554,8 +554,8 @@ public static class PubMetToExcelFunc
     {
         cancelDefault = true; // 阻止默认事件
 
-        var selectCell = NumDesAddIn.App.ActiveCell;
-        var basePath = NumDesAddIn.App.ActiveWorkbook.Path;
+        var selectCell = AppServices.App.ActiveCell;
+        var basePath = AppServices.App.ActiveWorkbook.Path;
         var newPath = Path.GetDirectoryName(Path.GetDirectoryName(basePath));
         newPath = newPath + @"\Excels\Localizations\Localizations.xlsx";
         var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(newPath);
@@ -573,8 +573,8 @@ public static class PubMetToExcelFunc
     {
         cancelDefault = true; // 阻止默认事件
 
-        var selectCell = NumDesAddIn.App.ActiveCell;
-        var basePath = NumDesAddIn.App.ActiveWorkbook.Path;
+        var selectCell = AppServices.App.ActiveCell;
+        var basePath = AppServices.App.ActiveWorkbook.Path;
         var mergePath = "";
         var documentsFolder = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         var filePath = Path.Combine(documentsFolder, "mergePath.txt");
@@ -998,7 +998,7 @@ public static class PubMetToExcelFunc
                 result[i, 0] = sheetIndex[i];
             }
 
-            var workSheet = NumDesAddIn.App.ActiveSheet;
+            var workSheet = AppServices.App.ActiveSheet;
             if (workSheet.Name.Contains("文件目录"))
             {
                 var targetRange = workSheet.Range["E6:E" + (rowCount + 5)];
@@ -1014,7 +1014,7 @@ public static class PubMetToExcelFunc
 
     public static void FormularBaseCheck()
     {
-        var app = NumDesAddIn.App;
+        var app = AppServices.App;
         var wk = app.ActiveWorkbook;
         var basePath = wk.Path;
 
@@ -1085,8 +1085,8 @@ public static class PubMetToExcelFunc
 
             if (replaceFixLinks != null)
             {
-                NumDesAddIn.App.ScreenUpdating = false;
-                NumDesAddIn.App.Calculation = XlCalculation.xlCalculationManual;
+                AppServices.App.ScreenUpdating = false;
+                AppServices.App.Calculation = XlCalculation.xlCalculationManual;
 
                 // 遍历所有工作表
                 foreach (Worksheet worksheet in wk.Worksheets)
@@ -1170,8 +1170,8 @@ public static class PubMetToExcelFunc
                     }
                 }
 
-                NumDesAddIn.App.Calculation = XlCalculation.xlCalculationAutomatic;
-                NumDesAddIn.App.ScreenUpdating = true;
+                AppServices.App.Calculation = XlCalculation.xlCalculationAutomatic;
+                AppServices.App.ScreenUpdating = true;
             }
         }
     }
@@ -1473,7 +1473,7 @@ public static class PubMetToExcelFunc
 
             currentCount++;
             var statusMsg1 = $"正在检查第 {currentCount}/{totalCount} 个文件: {changedFile}";
-            ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = statusMsg1);
+            ExcelAsyncUtil.QueueAsMacro(() => AppServices.App.StatusBar = statusMsg1);
         }
     }
 
@@ -1562,7 +1562,7 @@ public static class PubMetToExcelFunc
     //替换查找的字符
     public static void ReplaceValueFormat(string specialCharsStr)
     {
-        var indexWk = NumDesAddIn.App.ActiveWorkbook;
+        var indexWk = AppServices.App.ActiveWorkbook;
 
         var sourceSheet = indexWk.Worksheets["Sheet1"];
 
@@ -1625,7 +1625,7 @@ public static class PubMetToExcelFunc
     //查找字符
     public static void SeachValueFormat(string specialCharsStr)
     {
-        var indexWk = NumDesAddIn.App.ActiveWorkbook;
+        var indexWk = AppServices.App.ActiveWorkbook;
 
         var sourceSheet = indexWk.Worksheets["Sheet1"];
 
@@ -2390,7 +2390,7 @@ public static class PubMetToExcelFunc
 
             currentCount++;
             var statusMsg2 = "正在检查第" + currentCount + "/" + count + "个文件:" + file;
-            ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = statusMsg2);
+            ExcelAsyncUtil.QueueAsMacro(() => AppServices.App.StatusBar = statusMsg2);
         }
 
         return targetList;
@@ -2835,7 +2835,7 @@ public static class PubMetToExcelFunc
             if (n % 10 == 0 || n == count)
             {
                 var msg = $"正在检查第 {n}/{count} 个文件...";
-                ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = msg);
+                ExcelAsyncUtil.QueueAsMacro(() => AppServices.App.StatusBar = msg);
             }
         };
 
@@ -2942,7 +2942,7 @@ public static class PubMetToExcelFunc
             if (n % 10 == 0 || n == count)
             {
                 var msg = $"正在检查第 {n}/{count} 个文件...";
-                ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = msg);
+                ExcelAsyncUtil.QueueAsMacro(() => AppServices.App.StatusBar = msg);
             }
         };
 

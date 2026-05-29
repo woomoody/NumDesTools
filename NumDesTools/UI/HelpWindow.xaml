@@ -5,7 +5,6 @@
     xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     Title="NumDesTools 帮助"
     Width="1100" Height="700"
-    WindowState="Maximized"
     WindowStartupLocation="CenterScreen"
     FontFamily="微软雅黑"
     KeyDown="Window_EscClose">

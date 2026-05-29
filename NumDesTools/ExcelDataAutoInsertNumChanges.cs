@@ -52,7 +52,7 @@ public class ExcelDataAutoInsertNumChanges
     {
         if (_excelPath == null)
         {
-            var wk = NumDesAddIn.App.ActiveWorkbook;
+            var wk = AppServices.App.ActiveWorkbook;
             _excelPath = wk.Path;
         }
         foreach (var eachExcelData in data)

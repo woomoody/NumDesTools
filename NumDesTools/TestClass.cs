@@ -16,7 +16,7 @@ public class ScreenCoordinateFix
     [ExcelCommand]
     public static void GetCorrectScreenCoordinates()
     {
-        var excelApp = NumDesAddIn.App;
+        var excelApp = AppServices.App;
         Range range = excelApp.Selection as Range;
         if (range == null)
             return;

@@ -15,7 +15,7 @@ public class LteData
     public static IExcelHost ExcelHostInstance { get; set; }
 
     private static Workbook Wk =>
-        (ExcelHostInstance?.GetActiveWorkbook() as Workbook) ?? NumDesAddIn.App.ActiveWorkbook;
+        (ExcelHostInstance?.GetActiveWorkbook() as Workbook) ?? AppServices.App.ActiveWorkbook;
 
     private static string WkPath => Wk.Path;
 
@@ -325,7 +325,7 @@ public class LteData
     //个别导出LTE数据配置
     //public static void ExportLteDataConfigSelf(CommandBarButton ctrl, ref bool cancelDefault)
     //{
-    //    NumDesAddIn.App.StatusBar = false;
+    //    AppServices.App.StatusBar = false;
     //    var sw = new Stopwatch();
     //    sw.Start();
 
@@ -384,7 +384,7 @@ public class LteData
 
     //    sw.Stop();
     //    var ts2 = sw.ElapsedMilliseconds;
-    //    NumDesAddIn.App.StatusBar = "导出完成，用时：" + ts2;
+    //    AppServices.App.StatusBar = "导出完成，用时：" + ts2;
     //}
 
     //private static (
@@ -396,7 +396,7 @@ public class LteData
     //) ReadExportSheetInfo()
     //{
     //    Worksheet ws = Wk.ActiveSheet;
-    //    var selectRange = NumDesAddIn.App.Selection;
+    //    var selectRange = AppServices.App.Selection;
     //    string baseSheetName = selectRange.Value2.ToString();
     //    int selectRow = selectRange.Row;
     //    int selectCol = selectRange.Column;
@@ -491,7 +491,7 @@ public class LteData
     //private static List<string> GetCellValuesFromUserInput(string sheetName)
     //{
     //    Range selectedRange =
-    //        NumDesAddIn.App.InputBox($"请用鼠标选择{sheetName}单元格（Ctr，可多选）", "选择单元格", Type: 8) as Range;
+    //        AppServices.App.InputBox($"请用鼠标选择{sheetName}单元格（Ctr，可多选）", "选择单元格", Type: 8) as Range;
 
     //    if (selectedRange == null)
     //    {
@@ -600,7 +600,7 @@ public class LteData
 
             if (targetSheet != null)
             {
-                NumDesAddIn.App.StatusBar = $"导出：{modelSheetName}";
+                AppServices.App.StatusBar = $"导出：{modelSheetName}";
 
                 var writeCol = targetSheet.Dimension.End.Column;
 
@@ -1574,7 +1574,7 @@ public class LteData
         bool isFilter = true
     )
     {
-        var excel = NumDesAddIn.App;
+        var excel = AppServices.App;
 
         var sheet = excel.ActiveSheet as Worksheet;
 
@@ -1646,7 +1646,7 @@ public class LteData
     //指定列范围的数据[字段名]
     private static object[,] ColTitleValue(string min, string max)
     {
-        var excel = NumDesAddIn.App;
+        var excel = AppServices.App;
 
         var sheet = excel.ActiveSheet as Worksheet;
 
@@ -3417,9 +3417,9 @@ public class LteData
             nameof(GroundDataSim),
             () =>
             {
-                var selectedRange = NumDesAddIn.App.Selection;
+                var selectedRange = AppServices.App.Selection;
                 var targetWorkbookName = "地组工具.xlsx";
-                var selectedSheet = NumDesAddIn.App.ActiveSheet;
+                var selectedSheet = AppServices.App.ActiveSheet;
                 string targetSheetName = selectedSheet.Name;
 
                 Workbook targetWorkbook = null;
@@ -3428,7 +3428,7 @@ public class LteData
                     throw new InvalidOperationException("没有选中的单元格");
 
                 // 3. 查找已打开的目标工作簿（按名称匹配）
-                foreach (Workbook workbook in NumDesAddIn.App.Workbooks)
+                foreach (Workbook workbook in AppServices.App.Workbooks)
                 {
                     if (
                         workbook.Name.Equals(targetWorkbookName, StringComparison.OrdinalIgnoreCase)

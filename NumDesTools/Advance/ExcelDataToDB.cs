@@ -357,13 +357,13 @@ namespace NumDesTools.Advance
                     continue;
                 }
 
-                NumDesAddIn.App.StatusBar = $"DB同步: {Path.GetFileName(file)}";
+                AppServices.App.StatusBar = $"DB同步: {Path.GetFileName(file)}";
                 UpdateSingleExcelFile(connection, file, UpdateMode.Overwrite);
                 StoreMtime(connection, fullPath, mtime);
                 updated++;
             }
 
-            NumDesAddIn.App.StatusBar = $"DB同步完成（更新{updated}，跳过{skipped}）";
+            AppServices.App.StatusBar = $"DB同步完成（更新{updated}，跳过{skipped}）";
             VerifyRowMappings(dbPath);
         }
 

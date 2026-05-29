@@ -10,8 +10,8 @@ public static class ExcelDataAutoInsertCopyMulti
 {
     public static void SearchData(dynamic isMulti)
     {
-        var indexWk = NumDesAddIn.App.ActiveWorkbook;
-        var sheet = NumDesAddIn.App.ActiveSheet;
+        var indexWk = AppServices.App.ActiveWorkbook;
+        var sheet = AppServices.App.ActiveSheet;
         var excelPath = indexWk.Path;
         var sheetData = PubMetToExcel.ExcelDataToList(sheet);
         var title = sheetData.Item1;
@@ -36,7 +36,7 @@ public static class ExcelDataAutoInsertCopyMulti
         {
             var excelName = key.Key;
             var targetExcelPath =
-                excelPath != NumDesAddIn.TempPath ? NumDesAddIn.TempPath : NumDesAddIn.BasePath;
+                excelPath != AppServices.Config.Paths.TempPath ? AppServices.Config.Paths.TempPath : AppServices.Config.Paths.BasePath;
             List<(string, string, string)> errorList = PubMetToExcel.SetExcelObjectEpPlus(
                 targetExcelPath,
                 excelName,
@@ -110,7 +110,7 @@ public static class ExcelDataAutoInsertCopyMulti
             targetExcel?.Dispose();
             sourcExcel?.Dispose();
 
-            NumDesAddIn.App.StatusBar =
+            AppServices.App.StatusBar =
                 "遍历表格" + "<" + excelCount + "/" + modelIdNew.Count + ">" + excelName;
             errorExcelList.Add(errorList);
             excelCount++;
@@ -123,11 +123,11 @@ public static class ExcelDataAutoInsertCopyMulti
             dynamic tempWorkbook;
             try
             {
-                tempWorkbook = NumDesAddIn.App.Workbooks.Open(excelPath + @"\#合并表格数据缓存.xlsx");
+                tempWorkbook = AppServices.App.Workbooks.Open(excelPath + @"\#合并表格数据缓存.xlsx");
             }
             catch
             {
-                tempWorkbook = NumDesAddIn.App.Workbooks.Add();
+                tempWorkbook = AppServices.App.Workbooks.Add();
                 tempWorkbook.SaveAs(excelPath + @"\Excels\Tables\#合并表格数据缓存.xlsx");
             }
 
@@ -152,8 +152,8 @@ public static class ExcelDataAutoInsertCopyMulti
             ];
             tempDataRange.Value = tempDataArray;
             tempWorkbook.Save();
-            NumDesAddIn.App.Visible = true;
-            NumDesAddIn.App.StatusBar = "完成统计";
+            AppServices.App.Visible = true;
+            AppServices.App.StatusBar = "完成统计";
             return;
         }
 
@@ -163,8 +163,8 @@ public static class ExcelDataAutoInsertCopyMulti
 
     public static void MergeData(dynamic isMulti)
     {
-        var indexWk = NumDesAddIn.App.ActiveWorkbook;
-        var sheet = NumDesAddIn.App.ActiveSheet;
+        var indexWk = AppServices.App.ActiveWorkbook;
+        var sheet = AppServices.App.ActiveSheet;
         var excelPath = indexWk.Path;
         var sheetData = PubMetToExcel.ExcelDataToList(sheet);
         var title = sheetData.Item1;
@@ -192,7 +192,7 @@ public static class ExcelDataAutoInsertCopyMulti
                 excelPath,
                 cellColor
             );
-            NumDesAddIn.App.StatusBar =
+            AppServices.App.StatusBar =
                 "写入数据" + "<" + excelCount + "/" + modelIdNew.Count + ">" + excelName;
             errorExcelList.Add(error);
             excelCount++;
@@ -201,7 +201,7 @@ public static class ExcelDataAutoInsertCopyMulti
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
-            NumDesAddIn.App.StatusBar = "完成写入";
+            AppServices.App.StatusBar = "完成写入";
             return;
         }
 
@@ -339,14 +339,14 @@ public static class ExcelDataAutoInsertCopyMulti
     {
         cancelDefault = true; // 阻止默认事件
 
-        var indexWk = NumDesAddIn.App.ActiveWorkbook;
-        var sheet = NumDesAddIn.App.ActiveSheet;
+        var indexWk = AppServices.App.ActiveWorkbook;
+        var sheet = AppServices.App.ActiveSheet;
         var excelPath = indexWk.Path;
         var excelName = indexWk.Name;
         ErrorLogCtp.DisposeCtp();
         var errorExcelList = new List<List<(string, string, string)>>();
         List<(string, string, string)> error = AutoCopyDataRight(
-            NumDesAddIn.App,
+            AppServices.App,
             excelPath,
             excelName,
             sheet
@@ -469,24 +469,24 @@ public static class ExcelDataAutoInsertCopyMulti
     {
         cancelDefault = true; // 阻止默认事件
 
-        NumDesAddIn.App.StatusBar = false;
+        AppServices.App.StatusBar = false;
         var sw = new Stopwatch();
         sw.Start();
 
-        var indexWk = NumDesAddIn.App.ActiveWorkbook;
-        var sheet = NumDesAddIn.App.ActiveSheet;
+        var indexWk = AppServices.App.ActiveWorkbook;
+        var sheet = AppServices.App.ActiveSheet;
         var excelPath = indexWk.Path;
         var excelName = indexWk.Name;
         ErrorLogCtp.DisposeCtp();
         var errorExcelList = new List<List<(string, string, string)>>();
-        var error = AutoCopyDataRightCol(NumDesAddIn.App, excelPath, excelName);
+        var error = AutoCopyDataRightCol(AppServices.App, excelPath, excelName);
         errorExcelList.Add(error);
         var errorLog = PubMetToExcel.ErrorLogAnalysis(errorExcelList, sheet);
         if (errorLog == "")
         {
             sw.Stop();
             var ts1 = sw.ElapsedMilliseconds;
-            NumDesAddIn.App.StatusBar = "完成写入：" + ts1;
+            AppServices.App.StatusBar = "完成写入：" + ts1;
             return;
         }
 
@@ -495,7 +495,7 @@ public static class ExcelDataAutoInsertCopyMulti
 
         sw.Stop();
         var ts2 = sw.ElapsedMilliseconds;
-        NumDesAddIn.App.StatusBar = "完成写入：" + ts2;
+        AppServices.App.StatusBar = "完成写入：" + ts2;
     }
 
     private static List<(string, string, string)> AutoCopyDataRightCol(

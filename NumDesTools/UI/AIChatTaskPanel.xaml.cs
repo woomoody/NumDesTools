@@ -46,13 +46,13 @@ public partial class AiChatTaskPanel
     private void PopulateModelList()
     {
         ModelComboBox.Items.Clear();
-        var models = NumDesAddIn.LiteLLMModelList;
+        var models = AppServices.Config.Llm.ModelList;
         if (models.Count == 0)
-            models = [NumDesAddIn.LiteLLMModel];
+            models = [AppServices.Config.Llm.Model];
         foreach (var m in models)
             ModelComboBox.Items.Add(m);
 
-        var current = NumDesAddIn.LiteLLMModel;
+        var current = AppServices.Config.Llm.Model;
         ModelComboBox.SelectedItem = ModelComboBox.Items.Contains(current)
             ? current
             : ModelComboBox.Items[0];
@@ -100,8 +100,8 @@ function clearAll(){document.body.innerHTML=''}
     {
         if (ModelComboBox.SelectedItem is string model)
         {
-            NumDesAddIn.LiteLLMModel = model;
-            NumDesAddIn.GlobalValue.SaveValue("LiteLLMModel", model);
+            AppServices.Config.Llm.Model = model;
+            AppServices.GlobalValue.SaveValue("LiteLLMModel", model);
         }
     }
 
@@ -169,15 +169,15 @@ function clearAll(){document.body.innerHTML=''}
 
     private async void ProcessInput()
     {
-        var apiKey = NumDesAddIn.LiteLLMApiKey;
-        var apiUrl = NumDesAddIn.LiteLLMApiUrl;
-        var model = NumDesAddIn.LiteLLMModel;
+        var apiKey = AppServices.Config.Llm.ApiKey;
+        var apiUrl = AppServices.Config.Llm.ChatCompletionsUrl;
+        var model = AppServices.Config.Llm.Model;
 
         var userInput = PromptInput.Document.Text.Trim();
 
         if (userInput.StartsWith("###"))
         {
-            var sel = NumDesAddIn.App.Selection;
+            var sel = AppServices.App.Selection;
             var val = PubMetToExcel.ArrayToArrayStr(sel.Value2);
             userInput = val + "," + userInput["###".Length..];
         }
@@ -186,7 +186,7 @@ function clearAll(){document.body.innerHTML=''}
             return;
 
         // 构建带上下文的消息列表
-        var sysContent = NumDesAddIn.ChatSysContentExcelAss;
+        var sysContent = AppServices.Config.AiPrompts.ExcelAssistant;
         var messages = new List<object> { new { role = "system", content = sysContent }, };
         messages.AddRange(_history.TakeLast(MaxHistoryRounds * 2));
         messages.Add(new { role = "user", content = userInput });
@@ -259,7 +259,7 @@ function clearAll(){document.body.innerHTML=''}
             if (string.IsNullOrEmpty(_currentResponseId))
             {
                 _currentResponseId = $"msg-{DateTime.Now.Ticks}";
-                var model = NumDesAddIn.LiteLLMModel;
+                var model = AppServices.Config.Llm.Model;
                 AppendRawHtml(
                     $"<div id='{_currentResponseId}' class='message-container'>"
                         + $"<div class='message system'>"

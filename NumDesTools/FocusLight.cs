@@ -54,7 +54,7 @@
 
         public static void Calculate()
         {
-            var sheet = NumDesAddIn.App.ActiveSheet;
+            var sheet = AppServices.App.ActiveSheet;
             if (sheet == null)
                 return;
             AddCondition(sheet);

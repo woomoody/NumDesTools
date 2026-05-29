@@ -20,7 +20,7 @@ namespace NumDesTools.UI
     // ReSharper disable once RedundantExtendsListEntry
     public partial class SheetListControl : UserControl
     {
-        public static Application ExcelApp = NumDesAddIn.App;
+        public static Application ExcelApp = AppServices.App;
         public ObservableCollection<SelfComSheetCollect> Sheets { get; } = [];
 
         public SheetListControl()

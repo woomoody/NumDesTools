@@ -269,7 +269,7 @@ public static class ActivityConfigTester
     }
 
     private static void SetStatus(object msg) =>
-        ExcelAsyncUtil.QueueAsMacro(() => NumDesAddIn.App.StatusBar = msg);
+        ExcelAsyncUtil.QueueAsMacro(() => AppServices.App.StatusBar = msg);
 
     // ─── 核心流程 ─────────────────────────────────────────────────────────────────
 
@@ -320,7 +320,7 @@ public static class ActivityConfigTester
         var msg = errorCount > 0 ? $"发现 {errorCount} 个配置问题，查看右侧报告面板。" : "所有活动配置验证通过！";
         ExcelAsyncUtil.QueueAsMacro(() =>
         {
-            NumDesAddIn.App.StatusBar = false;
+            AppServices.App.StatusBar = false;
             ErrorLogCtp.DisposeCtp();
             PluginLog.Write(reportText);
             ErrorLogCtp.CreateCtpNormal(reportText);

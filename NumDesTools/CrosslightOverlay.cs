@@ -43,7 +43,7 @@ internal sealed class CrosslightOverlay : IDisposable
         var cursor = Cursor.Position;
 
         // Excel 主窗口范围（同 CellSelectChangeTip 的 Screen.FromPoint(cursor).WorkingArea 思路）
-        GetWindowRect((IntPtr)NumDesAddIn.App.Hwnd, out var rc);
+        GetWindowRect((IntPtr)AppServices.App.Hwnd, out var rc);
 
         int left = rc.Left;
         int top = rc.Top;
@@ -58,7 +58,7 @@ internal sealed class CrosslightOverlay : IDisposable
 
         try
         {
-            var win = NumDesAddIn.App.ActiveWindow;
+            var win = AppServices.App.ActiveWindow;
             if (win != null)
             {
                 _lastScrollRow = win.ScrollRow;
@@ -84,7 +84,7 @@ internal sealed class CrosslightOverlay : IDisposable
     {
         try
         {
-            var win = NumDesAddIn.App.ActiveWindow;
+            var win = AppServices.App.ActiveWindow;
             if (win == null)
                 return;
             if (win.ScrollRow != _lastScrollRow || win.ScrollColumn != _lastScrollCol)
@@ -104,7 +104,7 @@ internal sealed class CrosslightOverlay : IDisposable
         {
             var fg = GetForegroundWindow();
             GetWindowThreadProcessId(fg, out uint fgPid);
-            GetWindowThreadProcessId((IntPtr)NumDesAddIn.App.Hwnd, out uint excelPid);
+            GetWindowThreadProcessId((IntPtr)AppServices.App.Hwnd, out uint excelPid);
             if (fgPid != excelPid)
                 ClearCross();
         }
@@ -271,8 +271,8 @@ internal static class CrosslightController
             {
                 try
                 {
-                    var ws = NumDesAddIn.App.ActiveSheet as Worksheet;
-                    var sel = NumDesAddIn.App.Selection as Range;
+                    var ws = AppServices.App.ActiveSheet as Worksheet;
+                    var sel = AppServices.App.Selection as Range;
                     if (ws != null && sel != null)
                         CellSpotlightHighlighter.Highlight(ws, sel);
                 }
@@ -289,7 +289,7 @@ internal static class CrosslightController
 
     private static void OnSelectionChange(object sh, Range target)
     {
-        if (NumDesAddIn.App.CutCopyMode != 0)
+        if (AppServices.App.CutCopyMode != 0)
             return;
         if (_fillMode)
         {
