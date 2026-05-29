@@ -13,6 +13,7 @@ namespace NumDesTools.UI
         public InputFormularWindow(List<string> strings)
         {
             MahAppsHelper.EnsureInitialized();
+            MahAppsHelper.SetExcelOwner(this);
             InitializeComponent();
             UserInputs = [];
 
@@ -21,20 +22,20 @@ namespace NumDesTools.UI
                 StackPanel panel = new StackPanel
                 {
                     Orientation = Orientation.Vertical,
-                    Margin = new Thickness(0, 5, 0, 5)
+                    Margin = new Thickness(0, 5, 0, 5),
                 };
 
                 TextBlock textBlock = new TextBlock
                 {
                     Text = $"错误链接：{str}",
                     Width = 450,
-                    TextWrapping = TextWrapping.Wrap
+                    TextWrapping = TextWrapping.Wrap,
                 };
                 TextBox textBox = new TextBox
                 {
                     Width = 450,
                     Margin = new Thickness(0, 5, 0, 0),
-                    Text = str
+                    Text = str,
                 };
 
                 panel.Children.Add(textBlock);

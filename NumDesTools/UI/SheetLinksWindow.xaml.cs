@@ -1,9 +1,9 @@
 using System.Windows.Input;
-using MahApps.Metro.Controls;
 using GraphX.Common.Enums;
 using GraphX.Controls;
 using GraphX.Logic.Algorithms.LayoutAlgorithms;
 using GraphX.Logic.Models;
+using MahApps.Metro.Controls;
 using MessageBox = System.Windows.MessageBox;
 
 namespace NumDesTools.UI
@@ -16,6 +16,7 @@ namespace NumDesTools.UI
         public SheetLinksWindow()
         {
             MahAppsHelper.EnsureInitialized();
+            MahAppsHelper.SetExcelOwner(this);
             InitializeComponent();
 
             //// 创建图形
@@ -32,7 +33,6 @@ namespace NumDesTools.UI
             //// 添加边
             //var e1 = new SelfGraphXEdge(v1, v2);
             //graph.AddEdge(e1);
-
 
             // 创建一个 CompoundGraph 实例
             var graph = new CompoundGraph<SelfGraphXVertex, SelfGraphXEdge>();

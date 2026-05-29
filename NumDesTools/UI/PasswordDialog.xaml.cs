@@ -10,6 +10,7 @@ public partial class PasswordDialog : MetroWindow
     public PasswordDialog(string prompt)
     {
         MahAppsHelper.EnsureInitialized();
+        MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
         PromptText.Text = prompt;
     }

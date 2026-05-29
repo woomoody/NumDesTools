@@ -7,6 +7,7 @@ public partial class DiffProgressWindow : MetroWindow
     public DiffProgressWindow()
     {
         MahAppsHelper.EnsureInitialized();
+        MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
     }
 

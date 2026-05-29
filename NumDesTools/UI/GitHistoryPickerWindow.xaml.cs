@@ -36,6 +36,7 @@ public partial class GitHistoryPickerWindow : MetroWindow
     )
     {
         MahAppsHelper.EnsureInitialized();
+        MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
 
         Title = title;

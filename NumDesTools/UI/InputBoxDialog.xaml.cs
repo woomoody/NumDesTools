@@ -12,6 +12,7 @@ public partial class InputBoxDialog : MetroWindow
     public InputBoxDialog(string prompt, string title)
     {
         MahAppsHelper.EnsureInitialized();
+        MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
         Title = title;
         PromptText.Text = prompt;

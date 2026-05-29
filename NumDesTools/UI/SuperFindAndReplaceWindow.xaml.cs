@@ -20,6 +20,7 @@ namespace NumDesTools.UI
         public SuperFindAndReplaceWindow(List<dynamic> initialTexts)
         {
             MahAppsHelper.EnsureInitialized();
+            MahAppsHelper.SetExcelOwner(this);
             InitializeComponent();
 
             TextEditor.WordWrap = true;
@@ -46,7 +47,13 @@ namespace NumDesTools.UI
             var startIndex = 0;
             int matchCount = 0;
             while (
-                (startIndex = text.IndexOf(selectedText, startIndex, StringComparison.OrdinalIgnoreCase)) != -1
+                (
+                    startIndex = text.IndexOf(
+                        selectedText,
+                        startIndex,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                ) != -1
             )
             {
                 var marker = _textMarkerService.Create(startIndex, selectedText.Length);
@@ -62,7 +69,12 @@ namespace NumDesTools.UI
             var selectedText = TextEditor.SelectedText;
             if (string.IsNullOrEmpty(selectedText))
             {
-                MessageBox.Show("请先选择需要替换的文本！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    "请先选择需要替换的文本！",
+                    "提示",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
                 return;
             }
 
@@ -106,7 +118,10 @@ namespace NumDesTools.UI
                 Close();
             if (
                 e.Key == System.Windows.Input.Key.Enter
-                && (System.Windows.Input.Keyboard.Modifiers & System.Windows.Input.ModifierKeys.Control) != 0
+                && (
+                    System.Windows.Input.Keyboard.Modifiers
+                    & System.Windows.Input.ModifierKeys.Control
+                ) != 0
             )
             {
                 Confirm_Click(sender, e);
@@ -133,15 +148,18 @@ namespace NumDesTools.UI
             if (!strTextView.VisualLinesValid)
                 return;
             foreach (var marker in _markers)
-                foreach (var rect in BackgroundGeometryBuilder.GetRectsForSegment(strTextView, marker))
-                    drawingContext.DrawRectangle(
-                        new SolidColorBrush(marker.BackgroundColor),
-                        null,
-                        new Rect(rect.Location, rect.Size)
-                    );
+            foreach (var rect in BackgroundGeometryBuilder.GetRectsForSegment(strTextView, marker))
+                drawingContext.DrawRectangle(
+                    new SolidColorBrush(marker.BackgroundColor),
+                    null,
+                    new Rect(rect.Location, rect.Size)
+                );
         }
 
-        public void Transform(ITextRunConstructionContext context, IList<VisualLineElement> elements) { }
+        public void Transform(
+            ITextRunConstructionContext context,
+            IList<VisualLineElement> elements
+        ) { }
 
         public TextMarker Create(int offset, int length)
         {

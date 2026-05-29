@@ -32,6 +32,7 @@ public partial class ExcelConflictWindow : MetroWindow
     )
     {
         MahAppsHelper.EnsureInitialized();
+        MahAppsHelper.SetExcelOwner(this);
         _suppressRefresh = true;
         InitializeComponent();
         _diff = diff;
@@ -88,7 +89,7 @@ public partial class ExcelConflictWindow : MetroWindow
     {
         ConflictOnly,
         Context,
-        All
+        All,
     }
 
     private readonly string _outPath;
@@ -143,7 +144,7 @@ public partial class ExcelConflictWindow : MetroWindow
                 Tag = sheet.SheetName,
                 Foreground = sheet.HasConflict
                     ? System.Windows.Media.Brushes.OrangeRed
-                    : System.Windows.Media.Brushes.Gray
+                    : System.Windows.Media.Brushes.Gray,
             };
             SheetTabs.Items.Add(tab);
         }
@@ -167,7 +168,8 @@ public partial class ExcelConflictWindow : MetroWindow
             sheetDiff
                 ?.Rows.Where(r => r.DiffType == RowDiffType.Modified)
                 .SelectMany(r => r.Cells.Select(c => c.ColName))
-                .ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>(StringComparer.Ordinal);
+                .ToHashSet(StringComparer.Ordinal)
+            ?? new HashSet<string>(StringComparer.Ordinal);
 
         bool hideNonConflict = HideNoConflictCols.IsChecked == true;
         if (sheetDiff != null)
@@ -831,7 +833,7 @@ public partial class ExcelConflictWindow : MetroWindow
             var colBtnRow = new StackPanel
             {
                 Orientation = System.Windows.Controls.Orientation.Horizontal,
-                Margin = new Thickness(4, 0, 4, 4)
+                Margin = new Thickness(4, 0, 4, 4),
             };
             var cellCapture = cell;
             colBtnRow.Children.Add(
@@ -874,7 +876,7 @@ public partial class ExcelConflictWindow : MetroWindow
                     Text = "我的",
                     Foreground = DetailFgMuted,
                     FontSize = 9,
-                    Margin = new Thickness(0, 0, 0, 2)
+                    Margin = new Thickness(0, 0, 0, 2),
                 }
             );
             oursPanel.Children.Add(
@@ -888,7 +890,7 @@ public partial class ExcelConflictWindow : MetroWindow
             var theirsBorder = new Border
             {
                 Background = DetailBgTheirs,
-                Padding = new Thickness(6, 4, 6, 4)
+                Padding = new Thickness(6, 4, 6, 4),
             };
             var theirsPanel = new StackPanel();
             theirsPanel.Children.Add(
@@ -897,7 +899,7 @@ public partial class ExcelConflictWindow : MetroWindow
                     Text = "他的",
                     Foreground = DetailFgMuted,
                     FontSize = 9,
-                    Margin = new Thickness(0, 0, 0, 2)
+                    Margin = new Thickness(0, 0, 0, 2),
                 }
             );
             theirsPanel.Children.Add(
@@ -995,7 +997,7 @@ public partial class ExcelConflictWindow : MetroWindow
             FontSize = 11,
             TextWrapping = TextWrapping.NoWrap,
             TextTrimming = TextTrimming.CharacterEllipsis,
-            ToolTip = string.IsNullOrEmpty(text) ? null : text
+            ToolTip = string.IsNullOrEmpty(text) ? null : text,
         };
 
         // 空值直接显示
@@ -1115,7 +1117,7 @@ public partial class ExcelConflictWindow : MetroWindow
         {
             Padding = new Thickness(0),
             IsEnabled = true,
-            Background = System.Windows.Media.Brushes.Transparent
+            Background = System.Windows.Media.Brushes.Transparent,
         };
         var fg = new SolidColorBrush(
             (WpfColor)System.Windows.Media.ColorConverter.ConvertFromString(fgHex)
@@ -1133,14 +1135,14 @@ public partial class ExcelConflictWindow : MetroWindow
 
         var labelPanel = new StackPanel
         {
-            Orientation = System.Windows.Controls.Orientation.Horizontal
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
         };
         var chevron = new TextBlock
         {
             Text = "▼ ",
             Foreground = fg,
             FontSize = 10,
-            VerticalAlignment = VerticalAlignment.Center
+            VerticalAlignment = VerticalAlignment.Center,
         };
         labelPanel.Children.Add(chevron);
         labelPanel.Children.Add(
@@ -1150,7 +1152,7 @@ public partial class ExcelConflictWindow : MetroWindow
                 Foreground = fg,
                 FontSize = 11,
                 FontWeight = FontWeights.Bold,
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
             }
         );
         labelPanel.Children.Add(
@@ -1159,7 +1161,7 @@ public partial class ExcelConflictWindow : MetroWindow
                 Text = $" ({rows.Count})",
                 Foreground = new SolidColorBrush(WpfColor.FromRgb(0x88, 0x88, 0x88)),
                 FontSize = 10,
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
             }
         );
         Grid.SetColumn(labelPanel, 0);
@@ -1168,7 +1170,7 @@ public partial class ExcelConflictWindow : MetroWindow
         // 全选按钮
         var btnPanel = new StackPanel
         {
-            Orientation = System.Windows.Controls.Orientation.Horizontal
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
         };
         btnPanel.Children.Add(
             MakeColBatchBtn(
@@ -1215,12 +1217,12 @@ public partial class ExcelConflictWindow : MetroWindow
             {
                 Tag = rc,
                 Padding = new Thickness(0),
-                ToolTip = tooltip
+                ToolTip = tooltip,
             };
             var panel = new StackPanel
             {
                 Orientation = System.Windows.Controls.Orientation.Horizontal,
-                Margin = new Thickness(16, 1, 4, 1)
+                Margin = new Thickness(16, 1, 4, 1),
             };
             panel.Children.Add(
                 new TextBlock
@@ -1388,11 +1390,9 @@ public partial class ExcelConflictWindow : MetroWindow
             ApplyToggleStyle(ViewContext, ViewContext.IsChecked == true, Color(0x1A, 0x5C, 0x3A));
             ApplyToggleStyle(ViewAll, ViewAll.IsChecked == true, Color(0x3A, 0x2A, 0x00));
             _viewMode =
-                ViewConflictOnly.IsChecked == true
-                    ? ViewMode.ConflictOnly
-                    : ViewAll.IsChecked == true
-                        ? ViewMode.All
-                        : ViewMode.Context;
+                ViewConflictOnly.IsChecked == true ? ViewMode.ConflictOnly
+                : ViewAll.IsChecked == true ? ViewMode.All
+                : ViewMode.Context;
             _suppressRefresh = false;
             RefreshConflictList();
         }
@@ -1700,7 +1700,7 @@ public partial class ExcelConflictWindow : MetroWindow
                     Title = "保存合并结果",
                     Filter = "Excel 文件|*.xlsx",
                     FileName = Path.GetFileName(_outPath),
-                    InitialDirectory = Path.GetDirectoryName(_outPath)
+                    InitialDirectory = Path.GetDirectoryName(_outPath),
                 };
                 if (dlg.ShowDialog() != true)
                     return;
@@ -1721,7 +1721,12 @@ public partial class ExcelConflictWindow : MetroWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"写回失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(
+                $"写回失败：{ex.Message}",
+                "错误",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error
+            );
         }
     }
 

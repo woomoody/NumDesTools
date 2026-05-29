@@ -39,6 +39,7 @@ public partial class ExcelFilePickerWindow : MetroWindow
     public ExcelFilePickerWindow(string rootDir)
     {
         MahAppsHelper.EnsureInitialized();
+        MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
         var screen = System.Windows.SystemParameters.WorkArea;
         Width = screen.Width * 0.55;

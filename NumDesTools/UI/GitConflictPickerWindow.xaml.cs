@@ -14,6 +14,7 @@ public partial class GitConflictPickerWindow : MetroWindow
     public GitConflictPickerWindow(IReadOnlyList<string> files, bool skipHash)
     {
         MahAppsHelper.EnsureInitialized();
+        MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
 
         SkipHashBox.IsChecked = skipHash;

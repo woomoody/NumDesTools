@@ -1,3 +1,4 @@
+using System.Windows.Interop;
 using ControlzEx.Theming;
 using MahApps.Metro.Controls;
 
@@ -30,14 +31,16 @@ internal static class MahAppsHelper
             }
         )
         {
-            var rd = new System.Windows.ResourceDictionary
-            {
-                Source = new Uri(uri),
-            };
+            var rd = new System.Windows.ResourceDictionary { Source = new Uri(uri) };
             app.Resources.MergedDictionaries.Add(rd);
         }
 
         ThemeManager.Current.ChangeTheme(app, "Dark.Steel");
+    }
+
+    internal static void SetExcelOwner(System.Windows.Window window)
+    {
+        new WindowInteropHelper(window).Owner = (IntPtr)ExcelDnaUtil.WindowHandle;
     }
 
     internal static void ApplyDarkTitleBar(MetroWindow window)

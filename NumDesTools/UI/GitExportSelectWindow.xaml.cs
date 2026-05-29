@@ -28,6 +28,7 @@ public partial class GitExportSelectWindow : MetroWindow
     public GitExportSelectWindow(string repoBasePath, string gitAuthor)
     {
         MahAppsHelper.EnsureInitialized();
+        MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
         _repoBasePath = repoBasePath;
         _gitAuthor = gitAuthor;
@@ -123,11 +124,10 @@ public partial class GitExportSelectWindow : MetroWindow
             Margin = new Thickness(0),
         };
 
-        var sourceColor = entry.Source.StartsWith("历史")
-            ? "#88CCFF"
-            : entry.Source == "指定提交"
-                ? "#FFD080"
-                : "#88FF88";
+        var sourceColor =
+            entry.Source.StartsWith("历史") ? "#88CCFF"
+            : entry.Source == "指定提交" ? "#FFD080"
+            : "#88FF88";
         var sourceBrush = new SolidColorBrush(
             (System.Windows.Media.Color)
                 System.Windows.Media.ColorConverter.ConvertFromString(sourceColor)
@@ -138,11 +138,9 @@ public partial class GitExportSelectWindow : MetroWindow
             Background = new SolidColorBrush(
                 (System.Windows.Media.Color)
                     System.Windows.Media.ColorConverter.ConvertFromString(
-                        entry.Source.StartsWith("历史")
-                            ? "#1A3A6E"
-                            : entry.Source == "指定提交"
-                                ? "#3A2800"
-                                : "#1A3A1A"
+                        entry.Source.StartsWith("历史") ? "#1A3A6E"
+                        : entry.Source == "指定提交" ? "#3A2800"
+                        : "#1A3A1A"
                     )
             ),
             CornerRadius = new CornerRadius(3),
@@ -263,7 +261,7 @@ public partial class GitExportSelectWindow : MetroWindow
             var commits = SvnGitTools.GetCommitList(_repoBasePath, 50);
             CommitCombo.ItemsSource = commits
                 .Select(c => new CommitItem(
-                    $"{c.ShortSha}  {c.When:MM-dd HH:mm}  {c.Author,-16}  {c.Message}",
+                    $"{c.ShortSha}  {c.When:MM-dd HH:mm}  {c.Author, -16}  {c.Message}",
                     c.Sha
                 ))
                 .ToList();

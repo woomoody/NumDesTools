@@ -27,6 +27,7 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
     public BranchMergeWindow(string gitRoot)
     {
         MahAppsHelper.EnsureInitialized();
+        MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
         _gitRoot = gitRoot;
         Loaded += OnLoaded;

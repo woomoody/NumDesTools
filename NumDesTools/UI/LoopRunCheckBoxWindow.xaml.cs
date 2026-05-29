@@ -12,6 +12,7 @@ namespace NumDesTools.UI
         public LoopRunCheckBoxWindow(List<object> inputCheckList)
         {
             MahAppsHelper.EnsureInitialized();
+            MahAppsHelper.SetExcelOwner(this);
             InitializeComponent();
             _checkList = inputCheckList;
             CreateCheckBoxes();
@@ -26,7 +27,7 @@ namespace NumDesTools.UI
                 {
                     Tag = check.ToString(),
                     Content = check + "倍率",
-                    Margin = new Thickness(5)
+                    Margin = new Thickness(5),
                 };
                 CheckBoxContainer.Children.Add(checkBox);
             }

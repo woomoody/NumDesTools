@@ -773,6 +773,7 @@ code {
         public HelpWindow()
         {
             MahAppsHelper.EnsureInitialized();
+            MahAppsHelper.SetExcelOwner(this);
             InitializeComponent();
             BuildNavTree();
             HelpBrowser.NavigateToString(PlaceholderHtml);
