@@ -1183,15 +1183,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var specialChars = checkConfig.SpecialKeyList;
             var coupleRegexes = PubMetToExcelFunc.BuildCoupleRegexes(checkConfig.CoupleKeyList);
 
-            var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
-            foreach (var sheetName in sheetNames)
+            foreach (Worksheet sheet in wb.Sheets)
             {
+                var sheetName = sheet.Name;
                 if (sheetName.Contains("#") || sheetName.Contains("Chart"))
                     continue;
 
-                var rows = MiniExcel
-                    .Query(wkFullPath, sheetName: sheetName, configuration: OnOffMiniExcelCatches)
-                    .ToList();
+                // 直接从已在内存中的 workbook 读取，跳过 MiniExcel 磁盘 IO
+                var rows = ComSheetToRows(sheet);
                 if (rows.Count <= 4)
                     continue;
 
@@ -1379,6 +1378,36 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //        package.Save(); // 覆盖原文件
         //    }
         //}
+    }
+
+    /// <summary>
+    /// 将已在 Excel 内存中的 Worksheet 转为 MiniExcel Query 风格的行列表，
+    /// 避免重新读磁盘。UsedRange.Value2 一次 COM 调用取全量二维数组。
+    /// </summary>
+    private static List<dynamic> ComSheetToRows(Worksheet sheet)
+    {
+        var usedRange = sheet.UsedRange;
+        if (usedRange == null)
+            return new List<dynamic>();
+
+        var rowCount = usedRange.Rows.Count;
+        var colCount = usedRange.Columns.Count;
+        if (rowCount < 2)
+            return new List<dynamic>();
+
+        // 一次 COM 调用取全部值，避免逐格往返
+        var raw = (object[,])usedRange.Value2;
+
+        // 用 Excel 列字母作为 key（A/B/C…），与 MiniExcel 无 header 模式一致
+        var result = new List<dynamic>();
+        for (int r = 1; r <= rowCount; r++)
+        {
+            var dict = new Dictionary<string, object>();
+            for (int c = 1; c <= colCount; c++)
+                dict[PubMetToExcel.ConvertToExcelColumn(c)] = raw[r, c];
+            result.Add(dict);
+        }
+        return result;
     }
 
     public void AllWorkbookOutPut_Click(IRibbonControl control)
