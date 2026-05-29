@@ -1072,13 +1072,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (ShowAiText == "AI对话：开启")
         {
             NumDesCTP.DeleteCTP(true, aiCtpName);
+            _chatAiChatMenuCtp ??= new AiChatTaskPanel();
             _chatAiChatMenuCtp = (AiChatTaskPanel)
                 NumDesCTP.ShowCTP(
                     1000,
                     aiCtpName,
                     true,
                     aiCtpName,
-                    new AiChatTaskPanel(),
+                    _chatAiChatMenuCtp,
                     MsoCTPDockPosition.msoCTPDockPositionRight
                 );
         }
@@ -1091,13 +1092,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (_showAgentText == "Agent模式：开启")
         {
             NumDesCTP.DeleteCTP(true, agentCtpName);
+            _agentCtp ??= new AIAgentPanel();
             _agentCtp = (AIAgentPanel)
                 NumDesCTP.ShowCTP(
                     1000,
                     agentCtpName,
                     true,
                     agentCtpName,
-                    new AIAgentPanel(),
+                    _agentCtp,
                     MsoCTPDockPosition.msoCTPDockPositionRight
                 );
         }
