@@ -41,10 +41,32 @@ internal static class MahAppsHelper
     internal static void SetExcelOwner(System.Windows.Window window)
     {
         var excelHwnd = (IntPtr)ExcelDnaUtil.WindowHandle;
-        // SourceInitialized: HWND 刚建立，此时设置 Owner 才可靠
         window.SourceInitialized += (_, _) =>
         {
-            new WindowInteropHelper(window).Owner = excelHwnd;
+            var helper = new WindowInteropHelper(window);
+            helper.Owner = excelHwnd;
+
+            // MahApps 标题栏拖动走 Win32 SC_MOVE 同步 modal loop，Excel 消息泵阻塞时会卡死。
+            // 改为拦截 WM_NCLBUTTONDOWN(HTCAPTION) 后调 WPF DragMove()，走 WPF InputManager，
+            // 不依赖 Win32 modal loop，能在 Excel 宿主的消息泵下正常工作。
+            var hwndSource = HwndSource.FromHwnd(helper.Handle);
+            hwndSource?.AddHook(
+                (IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) =>
+                {
+                    const int WmNclbuttondown = 0x00A1;
+                    const int HtCaption = 2;
+                    if (
+                        msg == WmNclbuttondown
+                        && wParam.ToInt32() == HtCaption
+                        && window.WindowState == System.Windows.WindowState.Normal
+                    )
+                    {
+                        handled = true;
+                        window.DragMove();
+                    }
+                    return IntPtr.Zero;
+                }
+            );
         };
     }
 

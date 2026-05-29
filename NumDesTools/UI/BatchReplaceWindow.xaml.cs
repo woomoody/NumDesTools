@@ -83,13 +83,10 @@ namespace NumDesTools.UI
         private BatchReplaceWindow()
         {
             MahAppsHelper.EnsureInitialized();
+            MahAppsHelper.SetExcelOwner(this);
             InitializeComponent();
             RuleRows.ItemsSource = _rows;
             HistoryList.ItemsSource = _history;
-
-            // 挂到 Excel 主窗口，使 WPF 窗口能正常接收键盘输入
-            var helper = new WindowInteropHelper(this);
-            helper.Owner = (IntPtr)ExcelDnaUtil.WindowHandle;
 
             LoadHistory();
             if (_rows.Count == 0)
@@ -241,7 +238,7 @@ namespace NumDesTools.UI
                     {
                         Rules = h
                             .Rules.Select(r => new RuleSerialized { From = r.From, To = r.To })
-                            .ToList()
+                            .ToList(),
                     })
                     .ToList();
                 File.WriteAllText(
