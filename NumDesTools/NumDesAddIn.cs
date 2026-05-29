@@ -169,8 +169,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         if (FocusLabelText == "聚光灯：开启")
         {
-            var mode = GlobalValue.Value.TryGetValue("SpotlightMode", out var m) ? m : "overlay";
-            CrosslightController.Enable(App, mode == "fill");
+            CrosslightController.Enable(App, Config.Ui.SpotlightMode == "fill");
         }
     }
 
@@ -3184,13 +3183,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private void ToggleFocusLight(string mode)
     {
-        var currentMode = GlobalValue.Value.TryGetValue("SpotlightMode", out var m) ? m : "overlay";
-        bool turningOn = FocusLabelText != "聚光灯：开启" || currentMode != mode;
+        bool turningOn = FocusLabelText != "聚光灯：开启" || Config.Ui.SpotlightMode != mode;
 
         if (turningOn)
         {
             FocusLabelText = "聚光灯：开启";
-            GlobalValue.SaveValue("SpotlightMode", mode);
+            Config.Ui.SpotlightMode = mode;
+            Config.Save("SpotlightMode", mode);
             CrosslightController.Enable(App, mode == "fill");
         }
         else

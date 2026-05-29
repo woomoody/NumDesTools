@@ -18,12 +18,15 @@ public static class ExcelConflictEntry
         var gitRoot = NumDesAddIn.GitRootPath;
         if (string.IsNullOrEmpty(gitRoot) || !Directory.Exists(gitRoot))
         {
-            System.Windows.MessageBox.Show("未配置 GitRootPath，请在 NumDesToolsConfig.json 中设置。", "提示");
+            System.Windows.MessageBox.Show(
+                "未配置 GitRootPath，请在 NumDesToolsConfig.json 中设置。",
+                "提示"
+            );
             return;
         }
 
         string? lastSelected = null;
-        bool skipHash = NumDesAddIn.GlobalValue.Value["ConflictSkipHashFiles"] == "true";
+        bool skipHash = NumDesAddIn.Config.Git.SkipHashFiles;
 
         while (true)
         {
@@ -133,7 +136,10 @@ public static class ExcelConflictEntry
         var gitRoot = NumDesAddIn.GitRootPath;
         if (string.IsNullOrEmpty(gitRoot) || !Directory.Exists(gitRoot))
         {
-            System.Windows.MessageBox.Show("未配置 GitRootPath，请在 NumDesToolsConfig.json 中设置。", "提示");
+            System.Windows.MessageBox.Show(
+                "未配置 GitRootPath，请在 NumDesToolsConfig.json 中设置。",
+                "提示"
+            );
             return;
         }
 
@@ -251,7 +257,10 @@ public static class ExcelConflictEntry
         var gitRoot = NumDesAddIn.GitRootPath;
         if (string.IsNullOrEmpty(gitRoot) || !Directory.Exists(gitRoot))
         {
-            System.Windows.MessageBox.Show("未配置 GitRootPath，请在 NumDesToolsConfig.json 中设置。", "提示");
+            System.Windows.MessageBox.Show(
+                "未配置 GitRootPath，请在 NumDesToolsConfig.json 中设置。",
+                "提示"
+            );
             return;
         }
 
@@ -282,7 +291,10 @@ public static class ExcelConflictEntry
 
         // 切换到目标分支
         string? switchError = null;
-        var switchWin = new NumDesTools.UI.DiffProgressWindow("正在切换分支…", $"正在切换到 {target}…");
+        var switchWin = new NumDesTools.UI.DiffProgressWindow(
+            "正在切换分支…",
+            $"正在切换到 {target}…"
+        );
         switchWin.Loaded += (_, _) =>
         {
             var t = new System.Threading.Thread(() =>
@@ -357,7 +369,10 @@ public static class ExcelConflictEntry
 
                 if (pickError != null)
                 {
-                    System.Windows.MessageBox.Show($"cherry-pick {label} 失败：{pickError}", "错误");
+                    System.Windows.MessageBox.Show(
+                        $"cherry-pick {label} 失败：{pickError}",
+                        "错误"
+                    );
                     AbortOperation(gitRoot, isCherryPick: true);
                     return;
                 }
@@ -580,7 +595,7 @@ public static class ExcelConflictEntry
         using var dlgA = new OpenFileDialog
         {
             Title = "选择【我的】文件（OURS / 基础版本）",
-            Filter = "Excel 文件|*.xlsx"
+            Filter = "Excel 文件|*.xlsx",
         };
         if (dlgA.ShowDialog() != DialogResult.OK)
             return;
@@ -589,7 +604,7 @@ public static class ExcelConflictEntry
         {
             Title = "选择【他的】文件（THEIRS / 对比版本）",
             Filter = "Excel 文件|*.xlsx",
-            InitialDirectory = Path.GetDirectoryName(dlgA.FileName)
+            InitialDirectory = Path.GetDirectoryName(dlgA.FileName),
         };
         if (dlgB.ShowDialog() != DialogResult.OK)
             return;
@@ -834,7 +849,8 @@ public static class ExcelConflictEntry
         Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
         using var repo = new Repository(gitRoot);
         var commit =
-            repo.Lookup<Commit>(sha) ?? throw new InvalidOperationException($"找不到提交：{sha[..8]}");
+            repo.Lookup<Commit>(sha)
+            ?? throw new InvalidOperationException($"找不到提交：{sha[..8]}");
         var entry =
             commit[relativePath.Replace('\\', '/')]
             ?? throw new InvalidOperationException($"提交 {sha[..8]} 中找不到文件：{relativePath}");
@@ -900,7 +916,7 @@ public static class ExcelConflictEntry
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 StandardOutputEncoding = Encoding.UTF8,
-            }
+            },
         };
         proc.Start();
         var output = proc.StandardOutput.ReadToEnd();
@@ -977,7 +993,7 @@ public static class ExcelConflictEntry
             }
         })
         {
-            IsBackground = true
+            IsBackground = true,
         };
         waitWin.Loaded += (_, _) => thread.Start();
         waitWin.ShowDialog();

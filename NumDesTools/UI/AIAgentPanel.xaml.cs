@@ -48,7 +48,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 {
                     type = "object",
                     properties = new { },
-                    required = Array.Empty<string>()
+                    required = Array.Empty<string>(),
                 },
             },
         },
@@ -64,8 +64,16 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     type = "object",
                     properties = new
                     {
-                        address = new { type = "string", description = "单元格地址，如 A1 或 B2:B10" },
-                        value = new { type = "string", description = "要写入的值，多行用\\n分隔，多列用\\t分隔" },
+                        address = new
+                        {
+                            type = "string",
+                            description = "单元格地址，如 A1 或 B2:B10",
+                        },
+                        value = new
+                        {
+                            type = "string",
+                            description = "要写入的值，多行用\\n分隔，多列用\\t分隔",
+                        },
                     },
                     required = new[] { "address", "value" },
                 },
@@ -101,7 +109,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 {
                     type = "object",
                     properties = new { },
-                    required = Array.Empty<string>()
+                    required = Array.Empty<string>(),
                 },
             },
         },
@@ -120,7 +128,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                         sheet_name = new
                         {
                             type = "string",
-                            description = "Sheet 名称，留空则读取当前活动 Sheet"
+                            description = "Sheet 名称，留空则读取当前活动 Sheet",
                         },
                         max_rows = new { type = "integer", description = "最多读取行数，默认 50" },
                     },
@@ -170,7 +178,11 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     type = "object",
                     properties = new
                     {
-                        sheet_name = new { type = "string", description = "Sheet 名称，留空则用当前活动 Sheet" },
+                        sheet_name = new
+                        {
+                            type = "string",
+                            description = "Sheet 名称，留空则用当前活动 Sheet",
+                        },
                         writes = new
                         {
                             type = "array",
@@ -202,7 +214,11 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     type = "object",
                     properties = new
                     {
-                        code = new { type = "string", description = "完整的 VBA Sub 代码，包含 Sub...End Sub" },
+                        code = new
+                        {
+                            type = "string",
+                            description = "完整的 VBA Sub 代码，包含 Sub...End Sub",
+                        },
                     },
                     required = new[] { "code" },
                 },
@@ -221,9 +237,21 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     properties = new
                     {
                         source_sheet = new { type = "string", description = "要检查的 Sheet 名称" },
-                        source_col = new { type = "string", description = "要检查的列名或列号（如 'activityID' 或 'B'），从第2行开始（第1行为列名）" },
-                        target_sheet = new { type = "string", description = "合法值所在的 Sheet 名称" },
-                        target_col = new { type = "string", description = "合法值所在的列名或列号" },
+                        source_col = new
+                        {
+                            type = "string",
+                            description = "要检查的列名或列号（如 'activityID' 或 'B'），从第2行开始（第1行为列名）",
+                        },
+                        target_sheet = new
+                        {
+                            type = "string",
+                            description = "合法值所在的 Sheet 名称",
+                        },
+                        target_col = new
+                        {
+                            type = "string",
+                            description = "合法值所在的列名或列号",
+                        },
                     },
                     required = new[] { "source_sheet", "source_col", "target_sheet", "target_col" },
                 },
@@ -241,7 +269,11 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     type = "object",
                     properties = new
                     {
-                        table_name = new { type = "string", description = "Lua 表文件名（不含扩展名），如 LteData、ActivityBpData" },
+                        table_name = new
+                        {
+                            type = "string",
+                            description = "Lua 表文件名（不含扩展名），如 LteData、ActivityBpData",
+                        },
                         max_rows = new { type = "integer", description = "最多返回行数，默认 100" },
                     },
                     required = new[] { "table_name" },
@@ -263,70 +295,175 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 },
             },
         },
-        new { type = "function", function = new {
-            name = "describe_data",
-            description = "统计指定范围的数据概况：行列数、空值率、类型分布、数值范围/均值/标准差",
-            parameters = new { type = "object", properties = new {
-                sheet_name = new { type = "string", description = "Sheet 名，留空用当前 Sheet" },
-                range = new { type = "string", description = "单元格范围如 A1:D100，留空用当前选区" },
-            }, required = Array.Empty<string>() },
-        }},
-        new { type = "function", function = new {
-            name = "detect_patterns",
-            description = "对指定列检测：异常值（3σ）、趋势（递增/递减）、重复值",
-            parameters = new { type = "object", properties = new {
-                sheet_name = new { type = "string", description = "Sheet 名，留空用当前 Sheet" },
-                col_range = new { type = "string", description = "列范围如 B2:B100" },
-            }, required = new[] { "col_range" } },
-        }},
-        new { type = "function", function = new {
-            name = "sim_progression",
-            description = "模拟数值增长曲线：给定初始值和增长方式，生成 N 步数据，可直接写入表格",
-            parameters = new { type = "object", properties = new {
-                init_val = new { type = "number", description = "初始值" },
-                growth_rate = new { type = "number", description = "增长率（线性为每步增量，倍率为倍数，幂次为指数）" },
-                growth_type = new { type = "string", description = "增长类型：linear/multiply/power，默认 multiply" },
-                steps = new { type = "integer", description = "步数，默认 10" },
-                write_sheet = new { type = "string", description = "写入 Sheet 名，留空只输出不写入" },
-                write_start_cell = new { type = "string", description = "写入起始单元格如 A2" },
-            }, required = new[] { "init_val", "growth_rate" } },
-        }},
-        new { type = "function", function = new {
-            name = "calc_drop_expectation",
-            description = "分析掉落表：计算每个物品的期望产出、标准差、至少掉落1次的概率",
-            parameters = new { type = "object", properties = new {
-                sheet_name = new { type = "string", description = "Sheet 名，留空用当前 Sheet" },
-                item_col = new { type = "string", description = "物品名列名或列字母" },
-                prob_col = new { type = "string", description = "概率列名或列字母" },
-                trials = new { type = "integer", description = "模拟抽取次数，默认 100" },
-            }, required = new[] { "item_col", "prob_col" } },
-        }},
-        new { type = "function", function = new {
-            name = "balance_check",
-            description = "检查数值列的相邻增长比是否在合理范围内，用于验证关卡/升级曲线是否平衡",
-            parameters = new { type = "object", properties = new {
-                sheet_name = new { type = "string", description = "Sheet 名，留空用当前 Sheet" },
-                col_range = new { type = "string", description = "列范围如 C2:C50" },
-                min_ratio = new { type = "number", description = "最小增长比，默认 1.0" },
-                max_ratio = new { type = "number", description = "最大增长比，默认 2.0" },
-            }, required = new[] { "col_range" } },
-        }},
-        new { type = "function", function = new {
-            name = "cost_curve_fit",
-            description = "对升级消耗/关卡数值列拟合增长曲线，输出线性和指数拟合公式及 R² 值",
-            parameters = new { type = "object", properties = new {
-                sheet_name = new { type = "string", description = "Sheet 名，留空用当前 Sheet" },
-                col_range = new { type = "string", description = "列范围如 D2:D30" },
-            }, required = new[] { "col_range" } },
-        }},
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "describe_data",
+                description = "统计指定范围的数据概况：行列数、空值率、类型分布、数值范围/均值/标准差",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        sheet_name = new
+                        {
+                            type = "string",
+                            description = "Sheet 名，留空用当前 Sheet",
+                        },
+                        range = new
+                        {
+                            type = "string",
+                            description = "单元格范围如 A1:D100，留空用当前选区",
+                        },
+                    },
+                    required = Array.Empty<string>(),
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "detect_patterns",
+                description = "对指定列检测：异常值（3σ）、趋势（递增/递减）、重复值",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        sheet_name = new
+                        {
+                            type = "string",
+                            description = "Sheet 名，留空用当前 Sheet",
+                        },
+                        col_range = new { type = "string", description = "列范围如 B2:B100" },
+                    },
+                    required = new[] { "col_range" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "sim_progression",
+                description = "模拟数值增长曲线：给定初始值和增长方式，生成 N 步数据，可直接写入表格",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        init_val = new { type = "number", description = "初始值" },
+                        growth_rate = new
+                        {
+                            type = "number",
+                            description = "增长率（线性为每步增量，倍率为倍数，幂次为指数）",
+                        },
+                        growth_type = new
+                        {
+                            type = "string",
+                            description = "增长类型：linear/multiply/power，默认 multiply",
+                        },
+                        steps = new { type = "integer", description = "步数，默认 10" },
+                        write_sheet = new
+                        {
+                            type = "string",
+                            description = "写入 Sheet 名，留空只输出不写入",
+                        },
+                        write_start_cell = new
+                        {
+                            type = "string",
+                            description = "写入起始单元格如 A2",
+                        },
+                    },
+                    required = new[] { "init_val", "growth_rate" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "calc_drop_expectation",
+                description = "分析掉落表：计算每个物品的期望产出、标准差、至少掉落1次的概率",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        sheet_name = new
+                        {
+                            type = "string",
+                            description = "Sheet 名，留空用当前 Sheet",
+                        },
+                        item_col = new { type = "string", description = "物品名列名或列字母" },
+                        prob_col = new { type = "string", description = "概率列名或列字母" },
+                        trials = new { type = "integer", description = "模拟抽取次数，默认 100" },
+                    },
+                    required = new[] { "item_col", "prob_col" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "balance_check",
+                description = "检查数值列的相邻增长比是否在合理范围内，用于验证关卡/升级曲线是否平衡",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        sheet_name = new
+                        {
+                            type = "string",
+                            description = "Sheet 名，留空用当前 Sheet",
+                        },
+                        col_range = new { type = "string", description = "列范围如 C2:C50" },
+                        min_ratio = new { type = "number", description = "最小增长比，默认 1.0" },
+                        max_ratio = new { type = "number", description = "最大增长比，默认 2.0" },
+                    },
+                    required = new[] { "col_range" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "cost_curve_fit",
+                description = "对升级消耗/关卡数值列拟合增长曲线，输出线性和指数拟合公式及 R² 值",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        sheet_name = new
+                        {
+                            type = "string",
+                            description = "Sheet 名，留空用当前 Sheet",
+                        },
+                        col_range = new { type = "string", description = "列范围如 D2:D30" },
+                    },
+                    required = new[] { "col_range" },
+                },
+            },
+        },
     ];
 
     // 匹配 Sheet1!A1:B5 / A1:B5 / A1 形式的单元格地址
-    private static readonly System.Text.RegularExpressions.Regex CellAddressRegex =
-        new(
-            @"(?<![""'#>\/])(?:([A-Za-z0-9_一-龥]+)!)?([A-Z]{1,3}\d+(?::[A-Z]{1,3}\d+)?)\b",
-            System.Text.RegularExpressions.RegexOptions.None
-        );
+    private static readonly System.Text.RegularExpressions.Regex CellAddressRegex = new(
+        @"(?<![""'#>\/])(?:([A-Za-z0-9_一-龥]+)!)?([A-Z]{1,3}\d+(?::[A-Z]{1,3}\d+)?)\b",
+        System.Text.RegularExpressions.RegexOptions.None
+    );
 
     public AIAgentPanel()
     {
@@ -334,12 +471,12 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         PopulateModelList();
         ChatOutput.NavigateToString(HtmlTemplate);
         ChatOutput.Navigating += ChatOutput_Navigating;
-        var saved = NumDesAddIn.GlobalValue.Value.ContainsKey("AgentCustomInstruction")
-            ? NumDesAddIn.GlobalValue.Value["AgentCustomInstruction"]
-            : "";
-        CustomInstructionInput.Text = saved;
+        CustomInstructionInput.Text = NumDesAddIn.Config.Ui.AgentCustomInstruction;
         CustomInstructionInput.LostFocus += (_, _) =>
-            NumDesAddIn.GlobalValue.SaveValue("AgentCustomInstruction", CustomInstructionInput.Text);
+        {
+            NumDesAddIn.Config.Ui.AgentCustomInstruction = CustomInstructionInput.Text;
+            NumDesAddIn.Config.Save("AgentCustomInstruction", CustomInstructionInput.Text);
+        };
     }
 
     private static void ChatOutput_Navigating(
@@ -448,7 +585,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         if (_history.Count == 0)
         {
             var customInstruction = Dispatcher.Invoke(() => CustomInstructionInput.Text.Trim());
-            var systemContent = "你是一个专业的 Excel 数据助手兼游戏数值策划助手，可以对当前工作簿进行全面操作和分析。\n"
+            var systemContent =
+                "你是一个专业的 Excel 数据助手兼游戏数值策划助手，可以对当前工作簿进行全面操作和分析。\n"
                 + "工作流程：1) 先用 get_workbook_structure 或 list_sheets 了解所有打开工作簿的结构；"
                 + "2) 用 read_sheet 读取相关数据；"
                 + "3) 用 write_range/batch_write 写入结果。\n"
@@ -489,7 +627,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     {
                         role = "assistant",
                         content = content ?? "",
-                        tool_calls = toolCalls
+                        tool_calls = toolCalls,
                     }
                 );
 
@@ -508,7 +646,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                         {
                             role = "tool",
                             tool_call_id = toolCallId,
-                            content = result
+                            content = result,
                         }
                     );
                 }
@@ -540,7 +678,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             messages,
             tools = ToolDefinitions,
             tool_choice = "auto",
-            max_tokens = 4000
+            max_tokens = 4000,
         };
         using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(3) };
         using var req = new System.Net.Http.HttpRequestMessage(
@@ -572,81 +710,69 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             return toolName switch
             {
                 "read_selection" => PubMetToExcel.ArrayToArrayStr(NumDesAddIn.App.Selection.Value2),
-                "write_range"
-                    => ToolWriteRange(
-                        args["address"]?.ToString() ?? "",
-                        args["value"]?.ToString() ?? ""
-                    ),
-                "run_formula"
-                    => ToolRunFormula(
-                        args["address"]?.ToString() ?? "",
-                        args["formula"]?.ToString() ?? ""
-                    ),
+                "write_range" => ToolWriteRange(
+                    args["address"]?.ToString() ?? "",
+                    args["value"]?.ToString() ?? ""
+                ),
+                "run_formula" => ToolRunFormula(
+                    args["address"]?.ToString() ?? "",
+                    args["formula"]?.ToString() ?? ""
+                ),
                 "list_udfs" => ToolListUdfs(),
-                "read_sheet"
-                    => ToolReadSheet(
-                        args["sheet_name"]?.ToString() ?? "",
-                        (int)(args["max_rows"] ?? 50)
-                    ),
+                "read_sheet" => ToolReadSheet(
+                    args["sheet_name"]?.ToString() ?? "",
+                    (int)(args["max_rows"] ?? 50)
+                ),
                 "list_sheets" => ToolListSheets(),
                 "get_workbook_structure" => ToolGetWorkbookStructure(),
-                "batch_write"
-                    => ToolBatchWrite(
-                        args["sheet_name"]?.ToString() ?? "",
-                        args["writes"] as JArray ?? []
-                    ),
+                "batch_write" => ToolBatchWrite(
+                    args["sheet_name"]?.ToString() ?? "",
+                    args["writes"] as JArray ?? []
+                ),
                 "run_vba_macro" => ToolRunVbaMacro(args["code"]?.ToString() ?? ""),
-                "check_cross_ref"
-                    => ToolCheckCrossRef(
-                        args["source_sheet"]?.ToString() ?? "",
-                        args["source_col"]?.ToString() ?? "",
-                        args["target_sheet"]?.ToString() ?? "",
-                        args["target_col"]?.ToString() ?? ""
-                    ),
-                "read_lua_table"
-                    => ToolReadLuaTable(
-                        args["table_name"]?.ToString() ?? "",
-                        (int)(args["max_rows"] ?? 100)
-                    ),
+                "check_cross_ref" => ToolCheckCrossRef(
+                    args["source_sheet"]?.ToString() ?? "",
+                    args["source_col"]?.ToString() ?? "",
+                    args["target_sheet"]?.ToString() ?? "",
+                    args["target_col"]?.ToString() ?? ""
+                ),
+                "read_lua_table" => ToolReadLuaTable(
+                    args["table_name"]?.ToString() ?? "",
+                    (int)(args["max_rows"] ?? 100)
+                ),
                 "list_lua_tables" => ToolListLuaTables(),
-                "describe_data"
-                    => ToolDescribeData(
-                        args["sheet_name"]?.ToString() ?? "",
-                        args["range"]?.ToString() ?? ""
-                    ),
-                "detect_patterns"
-                    => ToolDetectPatterns(
-                        args["sheet_name"]?.ToString() ?? "",
-                        args["col_range"]?.ToString() ?? ""
-                    ),
-                "sim_progression"
-                    => ToolSimProgression(
-                        (double)(args["init_val"] ?? 100),
-                        (double)(args["growth_rate"] ?? 1.1),
-                        args["growth_type"]?.ToString() ?? "multiply",
-                        (int)(args["steps"] ?? 10),
-                        args["write_sheet"]?.ToString() ?? "",
-                        args["write_start_cell"]?.ToString() ?? ""
-                    ),
-                "calc_drop_expectation"
-                    => ToolCalcDropExpectation(
-                        args["sheet_name"]?.ToString() ?? "",
-                        args["item_col"]?.ToString() ?? "",
-                        args["prob_col"]?.ToString() ?? "",
-                        (int)(args["trials"] ?? 100)
-                    ),
-                "balance_check"
-                    => ToolBalanceCheck(
-                        args["sheet_name"]?.ToString() ?? "",
-                        args["col_range"]?.ToString() ?? "",
-                        (double)(args["min_ratio"] ?? 1.0),
-                        (double)(args["max_ratio"] ?? 2.0)
-                    ),
-                "cost_curve_fit"
-                    => ToolCostCurveFit(
-                        args["sheet_name"]?.ToString() ?? "",
-                        args["col_range"]?.ToString() ?? ""
-                    ),
+                "describe_data" => ToolDescribeData(
+                    args["sheet_name"]?.ToString() ?? "",
+                    args["range"]?.ToString() ?? ""
+                ),
+                "detect_patterns" => ToolDetectPatterns(
+                    args["sheet_name"]?.ToString() ?? "",
+                    args["col_range"]?.ToString() ?? ""
+                ),
+                "sim_progression" => ToolSimProgression(
+                    (double)(args["init_val"] ?? 100),
+                    (double)(args["growth_rate"] ?? 1.1),
+                    args["growth_type"]?.ToString() ?? "multiply",
+                    (int)(args["steps"] ?? 10),
+                    args["write_sheet"]?.ToString() ?? "",
+                    args["write_start_cell"]?.ToString() ?? ""
+                ),
+                "calc_drop_expectation" => ToolCalcDropExpectation(
+                    args["sheet_name"]?.ToString() ?? "",
+                    args["item_col"]?.ToString() ?? "",
+                    args["prob_col"]?.ToString() ?? "",
+                    (int)(args["trials"] ?? 100)
+                ),
+                "balance_check" => ToolBalanceCheck(
+                    args["sheet_name"]?.ToString() ?? "",
+                    args["col_range"]?.ToString() ?? "",
+                    (double)(args["min_ratio"] ?? 1.0),
+                    (double)(args["max_ratio"] ?? 2.0)
+                ),
+                "cost_curve_fit" => ToolCostCurveFit(
+                    args["sheet_name"]?.ToString() ?? "",
+                    args["col_range"]?.ToString() ?? ""
+                ),
                 _ => $"未知工具: {toolName}",
             };
         }
@@ -707,11 +833,18 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         if (string.IsNullOrEmpty(basePath))
             return "";
         string jsonBase;
-        if (basePath.Contains("Lte资源映射") || basePath.Contains("二合")
-            || basePath.Contains("工会") || basePath.Contains("克朗代克"))
+        if (
+            basePath.Contains("Lte资源映射")
+            || basePath.Contains("二合")
+            || basePath.Contains("工会")
+            || basePath.Contains("克朗代克")
+        )
             jsonBase = Path.GetFullPath(Path.Combine(basePath, "./../../../../"));
-        else if (basePath.Contains("Configs") || basePath.Contains("UIs")
-            || basePath.Contains("Localizations"))
+        else if (
+            basePath.Contains("Configs")
+            || basePath.Contains("UIs")
+            || basePath.Contains("Localizations")
+        )
             jsonBase = Path.GetFullPath(Path.Combine(basePath, "./../../"));
         else
             jsonBase = Path.GetFullPath(Path.Combine(basePath, "./../../../"));
@@ -727,7 +860,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         var wbBaseName = Path.GetFileNameWithoutExtension(wbName);
         if (wbBaseName.Contains('$'))
             return (string)ws.Name; // 多Sheet模式：用 Sheet 名
-        return wbBaseName;          // 单Sheet模式：用工作簿名
+        return wbBaseName; // 单Sheet模式：用工作簿名
     }
 
     // 在所有打开的工作簿中查找指定 Sheet
@@ -744,7 +877,13 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 if (string.Equals((string)ws.Name, sheetName, StringComparison.OrdinalIgnoreCase))
                     return ws;
                 // 匹配对应的 Lua 表名
-                if (string.Equals(GetLuaTableName(ws), sheetName, StringComparison.OrdinalIgnoreCase))
+                if (
+                    string.Equals(
+                        GetLuaTableName(ws),
+                        sheetName,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
                     return ws;
             }
         }
@@ -950,10 +1089,14 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
     private static string ToolDescribeData(string sheetName, string rangeAddress)
     {
-        dynamic ws = string.IsNullOrEmpty(sheetName) ? NumDesAddIn.App.ActiveSheet : FindSheet(sheetName);
+        dynamic ws = string.IsNullOrEmpty(sheetName)
+            ? NumDesAddIn.App.ActiveSheet
+            : FindSheet(sheetName);
         if (ws is null)
             return $"找不到 Sheet '{sheetName}'";
-        dynamic range = string.IsNullOrEmpty(rangeAddress) ? NumDesAddIn.App.Selection : ws.Range[rangeAddress];
+        dynamic range = string.IsNullOrEmpty(rangeAddress)
+            ? NumDesAddIn.App.Selection
+            : ws.Range[rangeAddress];
         var values = range.Value2 as object[,];
         if (values is null)
             return "选区为空";
@@ -967,15 +1110,24 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         var nums = new List<double>();
 
         for (var r = 1; r <= rows; r++)
-            for (var c = 1; c <= cols; c++)
+        for (var c = 1; c <= cols; c++)
+        {
+            var v = values[r, c];
+            if (v is null || v.ToString() == "")
+                empty++;
+            else if (v is double d)
             {
-                var v = values[r, c];
-                if (v is null || v.ToString() == "")
-                    empty++;
-                else if (v is double d) { numeric++; nums.Add(d); }
-                else if (double.TryParse(v.ToString(), out var p)) { numeric++; nums.Add(p); }
-                else text++;
+                numeric++;
+                nums.Add(d);
             }
+            else if (double.TryParse(v.ToString(), out var p))
+            {
+                numeric++;
+                nums.Add(p);
+            }
+            else
+                text++;
+        }
 
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"范围：{rows}行 × {cols}列，共 {total} 个单元格");
@@ -997,7 +1149,9 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
     private static string ToolDetectPatterns(string sheetName, string colAddress)
     {
-        dynamic ws = string.IsNullOrEmpty(sheetName) ? NumDesAddIn.App.ActiveSheet : FindSheet(sheetName);
+        dynamic ws = string.IsNullOrEmpty(sheetName)
+            ? NumDesAddIn.App.ActiveSheet
+            : FindSheet(sheetName);
         if (ws is null)
             return $"找不到 Sheet '{sheetName}'";
         dynamic range = ws.Range[colAddress];
@@ -1010,8 +1164,10 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         for (var r = 1; r <= rows; r++)
         {
             var v = values[r, 1];
-            if (v is double d) nums.Add((r, d));
-            else if (double.TryParse(v?.ToString(), out var p)) nums.Add((r, p));
+            if (v is double d)
+                nums.Add((r, d));
+            else if (double.TryParse(v?.ToString(), out var p))
+                nums.Add((r, p));
         }
         if (nums.Count < 2)
             return "数值不足，无法分析";
@@ -1024,20 +1180,32 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         // 异常值（偏离均值 3σ）
         var anomalies = nums.Where(x => Math.Abs(x.val - avg) > 3 * std).ToList();
         if (anomalies.Count > 0)
-            sb.AppendLine($"⚠️ 异常值（3σ）：" + string.Join(", ", anomalies.Select(x => $"行{x.row}={x.val}")));
+            sb.AppendLine(
+                $"⚠️ 异常值（3σ）："
+                    + string.Join(", ", anomalies.Select(x => $"行{x.row}={x.val}"))
+            );
         else
             sb.AppendLine("✅ 无异常值（3σ内）");
 
         // 趋势
-        var diffs = Enumerable.Range(0, nums.Count - 1).Select(i => nums[i + 1].val - nums[i].val).ToList();
+        var diffs = Enumerable
+            .Range(0, nums.Count - 1)
+            .Select(i => nums[i + 1].val - nums[i].val)
+            .ToList();
         var posCount = diffs.Count(d => d > 0);
         var negCount = diffs.Count(d => d < 0);
-        if (posCount > nums.Count * 0.8) sb.AppendLine("📈 趋势：持续递增");
-        else if (negCount > nums.Count * 0.8) sb.AppendLine("📉 趋势：持续递减");
-        else sb.AppendLine("↕️ 趋势：无明显单调性");
+        if (posCount > nums.Count * 0.8)
+            sb.AppendLine("📈 趋势：持续递增");
+        else if (negCount > nums.Count * 0.8)
+            sb.AppendLine("📉 趋势：持续递减");
+        else
+            sb.AppendLine("↕️ 趋势：无明显单调性");
 
         // 重复值
-        var dupes = vals.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => $"{g.Key}×{g.Count()}").ToList();
+        var dupes = vals.GroupBy(x => x)
+            .Where(g => g.Count() > 1)
+            .Select(g => $"{g.Key}×{g.Count()}")
+            .ToList();
         if (dupes.Count > 0)
             sb.AppendLine($"🔁 重复值：" + string.Join(", ", dupes));
 
@@ -1045,7 +1213,13 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     }
 
     private static string ToolSimProgression(
-        double initVal, double growthRate, string growthType, int steps, string writeSheet, string writeStartCell)
+        double initVal,
+        double growthRate,
+        string growthType,
+        int steps,
+        string writeSheet,
+        string writeStartCell
+    )
     {
         var result = new List<double>();
         var cur = initVal;
@@ -1071,7 +1245,12 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         return "模拟结果：\n" + string.Join("\n", result.Select((v, i) => $"第{i + 1}步: {v:F2}"));
     }
 
-    private static string ToolCalcDropExpectation(string sheetName, string itemCol, string probCol, int trials)
+    private static string ToolCalcDropExpectation(
+        string sheetName,
+        string itemCol,
+        string probCol,
+        int trials
+    )
     {
         var ws = FindSheet(sheetName) ?? NumDesAddIn.App.ActiveSheet;
         dynamic used = ws.UsedRange;
@@ -1082,12 +1261,19 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         {
             int cols2 = used.Columns.Count;
             for (var c = 1; c <= cols2; c++)
-                if (string.Equals(used.Cells[1, c].Value2?.ToString(), colName, StringComparison.OrdinalIgnoreCase))
+                if (
+                    string.Equals(
+                        used.Cells[1, c].Value2?.ToString(),
+                        colName,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
                     return c;
             if (colName.Length <= 2 && colName.All(char.IsLetter))
             {
                 var idx = 0;
-                foreach (var ch in colName.ToUpper()) idx = idx * 26 + (ch - 'A' + 1);
+                foreach (var ch in colName.ToUpper())
+                    idx = idx * 26 + (ch - 'A' + 1);
                 return idx;
             }
             return -1;
@@ -1095,60 +1281,79 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
         var ic = FindCol(itemCol);
         var pc = FindCol(probCol);
-        if (ic < 0 || pc < 0) return $"找不到列 '{itemCol}' 或 '{probCol}'";
+        if (ic < 0 || pc < 0)
+            return $"找不到列 '{itemCol}' 或 '{probCol}'";
 
         var items = new List<(string name, double prob)>();
         double totalProb = 0;
         for (var r = 2; r <= rows; r++)
         {
             var name = used.Cells[r, ic].Value2?.ToString() ?? "";
-            if (string.IsNullOrEmpty(name)) continue;
-            if (!double.TryParse(used.Cells[r, pc].Value2?.ToString(), out double prob)) continue;
+            if (string.IsNullOrEmpty(name))
+                continue;
+            if (!double.TryParse(used.Cells[r, pc].Value2?.ToString(), out double prob))
+                continue;
             items.Add((name, prob));
             totalProb += prob;
         }
-        if (items.Count == 0) return "未找到有效掉落数据";
+        if (items.Count == 0)
+            return "未找到有效掉落数据";
 
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"掉落表分析（{trials} 次抽取期望）：");
-        var probStatus = Math.Abs(totalProb - 1) < 0.01 ? "正常✅" : $"⚠️偏差{Math.Abs(totalProb - 1):F4}";
+        var probStatus =
+            Math.Abs(totalProb - 1) < 0.01 ? "正常✅" : $"⚠️偏差{Math.Abs(totalProb - 1):F4}";
         sb.AppendLine($"总概率：{totalProb:F4}（{probStatus}）");
         foreach (var (name, prob) in items)
         {
             var exp = prob * trials;
             var stdDev = Math.Sqrt(trials * prob * (1 - prob));
             var pAtLeastOne = 1 - Math.Pow(1 - prob, trials);
-            sb.AppendLine($"  {name}: 概率={prob:P2}, 期望={exp:F1}次, σ={stdDev:F1}, 至少1次概率={pAtLeastOne:P1}");
+            sb.AppendLine(
+                $"  {name}: 概率={prob:P2}, 期望={exp:F1}次, σ={stdDev:F1}, 至少1次概率={pAtLeastOne:P1}"
+            );
         }
         return sb.ToString();
     }
 
-    private static string ToolBalanceCheck(string sheetName, string colAddress, double minRatio, double maxRatio)
+    private static string ToolBalanceCheck(
+        string sheetName,
+        string colAddress,
+        double minRatio,
+        double maxRatio
+    )
     {
         var ws = FindSheet(sheetName) ?? NumDesAddIn.App.ActiveSheet;
         dynamic range = ws.Range[colAddress];
         var values = range.Value2 as object[,];
-        if (values is null) return "无数据";
+        if (values is null)
+            return "无数据";
 
         int rows = values.GetLength(0);
         var nums = new List<(int row, double val)>();
         for (var r = 1; r <= rows; r++)
         {
             var v = values[r, 1];
-            if (v is double d) nums.Add((r, d));
-            else if (double.TryParse(v?.ToString(), out var p)) nums.Add((r, p));
+            if (v is double d)
+                nums.Add((r, d));
+            else if (double.TryParse(v?.ToString(), out var p))
+                nums.Add((r, p));
         }
-        if (nums.Count < 2) return "数值不足";
+        if (nums.Count < 2)
+            return "数值不足";
 
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"平衡性检查（相邻增长比约束：{minRatio:F2} ~ {maxRatio:F2}）：");
         var violations = new List<string>();
         for (var i = 1; i < nums.Count; i++)
         {
-            if (nums[i - 1].val == 0) continue;
+            if (nums[i - 1].val == 0)
+                continue;
             var ratio = nums[i].val / nums[i - 1].val;
             if (ratio < minRatio || ratio > maxRatio)
-                violations.Add($"行{nums[i].row}: {nums[i - 1].val}→{nums[i].val}，比值={ratio:F3}");
+                violations.Add(
+                    $"行{nums[i].row}: {nums[i - 1].val}→{nums[i].val}，比值={ratio:F3}"
+                );
         }
         if (violations.Count == 0)
             sb.AppendLine($"✅ 全部 {nums.Count - 1} 个相邻比值均在范围内");
@@ -1165,40 +1370,52 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         var ws = FindSheet(sheetName) ?? NumDesAddIn.App.ActiveSheet;
         dynamic range = ws.Range[colAddress];
         var values = range.Value2 as object[,];
-        if (values is null) return "无数据";
+        if (values is null)
+            return "无数据";
 
         int rows = values.GetLength(0);
         var nums = new List<double>();
         for (var r = 1; r <= rows; r++)
         {
             var v = values[r, 1];
-            if (v is double d) nums.Add(d);
-            else if (double.TryParse(v?.ToString(), out var p)) nums.Add(p);
+            if (v is double d)
+                nums.Add(d);
+            else if (double.TryParse(v?.ToString(), out var p))
+                nums.Add(p);
         }
-        if (nums.Count < 3) return "数据点不足（需至少3个）";
+        if (nums.Count < 3)
+            return "数据点不足（需至少3个）";
 
         int n = nums.Count;
         var x = Enumerable.Range(1, n).Select(i => (double)i).ToList();
 
         // 线性拟合 y = a + bx
-        double sx = x.Sum(), sy = nums.Sum();
-        double sxx = x.Sum(v => v * v), sxy = x.Zip(nums, (a, b) => a * b).Sum();
+        double sx = x.Sum(),
+            sy = nums.Sum();
+        double sxx = x.Sum(v => v * v),
+            sxy = x.Zip(nums, (a, b) => a * b).Sum();
         double b_lin = (n * sxy - sx * sy) / (n * sxx - sx * sx);
         double a_lin = (sy - b_lin * sx) / n;
-        double r2_lin = 1 - nums.Zip(x, (y, xi) => Math.Pow(y - (a_lin + b_lin * xi), 2)).Sum()
-            / nums.Select(y => Math.Pow(y - nums.Average(), 2)).Sum();
+        double r2_lin =
+            1
+            - nums.Zip(x, (y, xi) => Math.Pow(y - (a_lin + b_lin * xi), 2)).Sum()
+                / nums.Select(y => Math.Pow(y - nums.Average(), 2)).Sum();
 
         // 指数拟合 y = a * e^(bx)，对 ln(y) 做线性拟合
         var lnY = nums.Where(v => v > 0).Select(v => Math.Log(v)).ToList();
         double r2_exp = 0;
-        double a_exp = 0, b_exp = 0;
+        double a_exp = 0,
+            b_exp = 0;
         if (lnY.Count == n)
         {
-            double sly = lnY.Sum(), slxy = x.Zip(lnY, (a, b) => a * b).Sum();
+            double sly = lnY.Sum(),
+                slxy = x.Zip(lnY, (a, b) => a * b).Sum();
             b_exp = (n * slxy - sx * sly) / (n * sxx - sx * sx);
             a_exp = Math.Exp((sly - b_exp * sx) / n);
-            r2_exp = 1 - nums.Zip(x, (y, xi) => Math.Pow(y - a_exp * Math.Exp(b_exp * xi), 2)).Sum()
-                / nums.Select(y => Math.Pow(y - nums.Average(), 2)).Sum();
+            r2_exp =
+                1
+                - nums.Zip(x, (y, xi) => Math.Pow(y - a_exp * Math.Exp(b_exp * xi), 2)).Sum()
+                    / nums.Select(y => Math.Pow(y - nums.Average(), 2)).Sum();
         }
 
         var sb = new System.Text.StringBuilder();
@@ -1217,7 +1434,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             return "无法推断 Lua 目录，请确认 BasePath 配置正确";
         if (!Directory.Exists(luaDir))
             return $"目录不存在：{luaDir}";
-        var files = Directory.GetFiles(luaDir, "*.lua")
+        var files = Directory
+            .GetFiles(luaDir, "*.lua")
             .Select(f => Path.GetFileNameWithoutExtension(f))
             .OrderBy(n => n)
             .ToList();
@@ -1244,10 +1462,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             lua.DoFile(luaFile);
 
             // Lua 导出文件通常是 local data = {...} return data 或 tableName = {...}
-            var tableObj =
-                lua[tableName]
-                ?? lua["data"]
-                ?? lua.GetTable(tableName);
+            var tableObj = lua[tableName] ?? lua["data"] ?? lua.GetTable(tableName);
             if (tableObj is not NLua.LuaTable table)
                 return $"无法解析 Lua 表 '{tableName}'，请确认文件结构";
 
