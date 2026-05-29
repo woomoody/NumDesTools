@@ -17,7 +17,6 @@ namespace NumDesTools;
 /// <summary>
 /// 公共的Excel自定义类
 /// </summary>
-
 //自定义Com表格容器类
 public class SelfComSheetCollect : INotifyPropertyChanged
 {
@@ -201,7 +200,7 @@ public class SelfExcelFileCollector(string currentPath)
             Path.Combine(GetParentDirectory(rootPath, 0), "Localizations"),
             Path.Combine(GetParentDirectory(rootPath, 0), "UIs"),
             Path.Combine(GetParentDirectory(rootPath, 0), "Tables", "克朗代克"),
-            Path.Combine(GetParentDirectory(rootPath, 0), "Tables", "二合")
+            Path.Combine(GetParentDirectory(rootPath, 0), "Tables", "二合"),
         };
 
         var files = paths
@@ -230,7 +229,7 @@ public class SelfExcelFileCollector(string currentPath)
     {
         FullPath, //完整路径
         FileNameWithExt, //带扩展名
-        FileNameWithoutExt //不带扩展名
+        FileNameWithoutExt, //不带扩展名
     }
 
     public Dictionary<
@@ -257,7 +256,7 @@ public class SelfExcelFileCollector(string currentPath)
                 KeyMode.FullPath => fullPath,
                 KeyMode.FileNameWithExt => fileNameWithExt,
                 KeyMode.FileNameWithoutExt => fileNameWithoutExt,
-                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
+                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null),
             };
 
             fileMd5Dictionary[key] = (fullPath, fileNameWithExt, fileNameWithoutExt, md5);
@@ -302,229 +301,36 @@ public class SelfGetRangePixels
     public static void GetRangePixels() { }
 }
 
-//自定义ChatApi
-public class ChatApiClient
+// ChatApiClient / ChatMessage / ChatHistoryManager 已迁移至 NumDesTools.AI 命名空间，
+// 此处保留转发壳供旧调用方零改动过渡。
+public static class ChatApiClient
 {
-    private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromMinutes(3) };
+    private static readonly NumDesTools.AI.LiteLlmClient _impl = new();
 
-    // 构建 OpenAI 兼容请求体（LiteLLM 统一格式）
-    private static object BuildRequestBody(
-        string model,
-        IEnumerable<object> messages,
-        bool stream = true
-    ) =>
-        new
-        {
-            model,
-            messages,
-            max_tokens = 10000,
-            temperature = 0.5,
-            stream,
-        };
-
-    // 非流式调用（用于 UDF 等需要等待完整结果的场景）
-    public static async Task<string> CallApiAsync(
+    public static Task<string> CallApiAsync(
         string model,
         string systemContent,
         string userContent,
         string apiKey,
         string apiUrl
-    )
-    {
-        if (string.IsNullOrEmpty(apiKey))
-            throw new ArgumentException("API 密钥不能为空。");
+    ) => _impl.CallAsync(model, systemContent, userContent, apiKey, apiUrl);
 
-        var messages = new object[]
-        {
-            new { role = "system", content = systemContent ?? "" },
-            new { role = "user", content = userContent },
-        };
-        var body = BuildRequestBody(model, messages, stream: false);
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-        request.Content = new StringContent(
-            JsonConvert.SerializeObject(body),
-            Encoding.UTF8,
-            "application/json"
-        );
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-
-        var response = await Client.SendAsync(request);
-        var responseContent = await response.Content.ReadAsStringAsync();
-        if (!response.IsSuccessStatusCode)
-            throw new Exception($"API 调用失败 {response.StatusCode}：{responseContent}");
-
-        var json = JObject.Parse(responseContent);
-        return json["choices"]?[0]?["message"]?["content"]?.ToString() ?? "";
-    }
-
-    // 流式调用（Chat 面板用）
-    public static async Task CallApiStreamAsync(
+    public static Task CallApiStreamAsync(
         string model,
         IReadOnlyList<object> messages,
         string apiKey,
         string apiUrl,
         Action<string> onChunkReceived,
         Action onCompleted = null
-    )
-    {
-        var body = BuildRequestBody(model, messages);
-        using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-        request.Content = new StringContent(
-            JsonConvert.SerializeObject(body),
-            Encoding.UTF8,
-            "application/json"
-        );
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+    ) => _impl.CallStreamAsync(model, messages, apiKey, apiUrl, onChunkReceived, onCompleted);
 
-        using var response = await Client.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead
-        );
-        response.EnsureSuccessStatusCode();
-
-        using var stream = await response.Content.ReadAsStreamAsync();
-        using var reader = new StreamReader(stream);
-
-        while (!reader.EndOfStream)
-        {
-            var line = await reader.ReadLineAsync();
-            if (line?.StartsWith("data: ") == true)
-                ProcessLine(line["data: ".Length..], onChunkReceived);
-        }
-        onCompleted?.Invoke();
-    }
-
-    // 拉取可用模型列表
-    public static async Task<List<string>> FetchModelsAsync(string apiKey, string apiUrl)
-    {
-        try
-        {
-            var modelsUrl = apiUrl.Replace("/chat/completions", "/models");
-            using var request = new HttpRequestMessage(HttpMethod.Get, modelsUrl);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-            using var response = await Client.SendAsync(request);
-            if (!response.IsSuccessStatusCode)
-                return [];
-            var json = JObject.Parse(await response.Content.ReadAsStringAsync());
-            return json["data"]
-                    ?.Select(m => m["id"]?.ToString())
-                    .Where(id => !string.IsNullOrEmpty(id))
-                    .ToList() ?? [];
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"FetchModels 失败: {ex.Message}");
-            return [];
-        }
-    }
-
-    private static void ProcessLine(string json, Action<string> handler)
-    {
-        if (json == "[DONE]")
-            return;
-        try
-        {
-            var obj = JObject.Parse(json);
-            var content = obj["choices"]?[0]?["delta"]?["content"]?.ToString();
-            if (!string.IsNullOrEmpty(content))
-                handler(content);
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"解析失败: {ex.Message}");
-        }
-    }
+    public static Task<List<string>> FetchModelsAsync(string apiKey, string apiUrl) =>
+        _impl.FetchModelsAsync(apiKey, apiUrl);
 }
 
-//Chat聊天记录存取
-public class ChatMessage
-{
-    public string Role { get; set; } // 用户或系统
-    public string Message { get; set; } // 消息内容
-    public bool IsUser { get; set; } // 是否是用户消息
-    public DateTime Timestamp { get; set; } // 消息时间戳
-    public bool IsStreaming { get; set; } // 新增字段标识流式消息
-}
+public class ChatMessage : NumDesTools.AI.ChatMessage { }
 
-public class ChatHistoryManager
-{
-    private readonly string _connectionString =
-        $"Data Source={Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ChatHistory.db")}";
-
-    public ChatHistoryManager()
-    {
-        // 初始化数据库和表
-        using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
-        var command = connection.CreateCommand();
-        command.CommandText =
-            @"
-                CREATE TABLE IF NOT EXISTS ChatHistory (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Role TEXT NOT NULL,
-                    Message TEXT NOT NULL,
-                    IsUser INTEGER NOT NULL,
-                    Timestamp DATETIME NOT NULL
-                )";
-        command.ExecuteNonQuery();
-    }
-
-    // 保存聊天记录
-    public async Task SaveChatMessageAsync(ChatMessage message)
-    {
-        using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
-        var command = connection.CreateCommand();
-        command.CommandText =
-            @"
-                INSERT INTO ChatHistory (Role, Message, IsUser, Timestamp)
-                VALUES (@Role, @Message, @IsUser, @Timestamp)";
-        command.Parameters.AddWithValue("@Role", message.Role);
-        command.Parameters.AddWithValue("@Message", message.Message);
-        command.Parameters.AddWithValue("@IsUser", message.IsUser ? 1 : 0);
-        command.Parameters.AddWithValue("@Timestamp", message.Timestamp);
-        await command.ExecuteNonQueryAsync();
-    }
-
-    // 读取聊天记录（limit=-1 全量，否则取最近 N 条）
-    public List<ChatMessage> LoadChatHistory(int limit = 50)
-    {
-        var chatHistory = new List<ChatMessage>();
-        using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
-        var command = connection.CreateCommand();
-        command.CommandText =
-            limit > 0
-                ? $"SELECT Role, Message, IsUser, Timestamp FROM ChatHistory WHERE Timestamp > '0002-01-01' ORDER BY Timestamp DESC LIMIT {limit}"
-                : "SELECT Role, Message, IsUser, Timestamp FROM ChatHistory WHERE Timestamp > '0002-01-01' ORDER BY Timestamp DESC";
-
-        using var reader = command.ExecuteReader();
-        while (reader.Read())
-        {
-            chatHistory.Add(
-                new ChatMessage
-                {
-                    Role = reader.GetString(0),
-                    Message = reader.GetString(1),
-                    IsUser = reader.GetInt32(2) == 1,
-                    Timestamp = reader.GetDateTime(3),
-                }
-            );
-        }
-        chatHistory.Reverse(); // 倒序取出后翻转，保持时间正序
-        return chatHistory;
-    }
-
-    public int GetHistoryCount()
-    {
-        using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
-        var command = connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(*) FROM ChatHistory WHERE Timestamp > '0002-01-01'";
-        return Convert.ToInt32(command.ExecuteScalar());
-    }
-}
+public class ChatHistoryManager : NumDesTools.AI.ChatHistoryManager { }
 
 //自动检测运行环境
 public class SelfEnvironmentDetector
@@ -545,7 +351,7 @@ public class SelfEnvironmentDetector
                 Arguments = arguments,
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
             };
 
             using Process process = Process.Start(psi);
@@ -582,7 +388,7 @@ public class SelfEnvironmentDetector
             {
                 FileName = installerPath,
                 Arguments = "/quiet /norestart", // 安装程序参数（根据需要修改）
-                UseShellExecute = true // 使用 Shell 执行
+                UseShellExecute = true, // 使用 Shell 执行
             };
 
             using Process process = Process.Start(psi);
