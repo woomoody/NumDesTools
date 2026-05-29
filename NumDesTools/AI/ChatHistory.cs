@@ -22,27 +22,28 @@ public class ChatHistoryManager
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
-        var cmd = connection.CreateCommand();
-        cmd.CommandText =
-            @"
-                CREATE TABLE IF NOT EXISTS ChatHistory (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Role TEXT NOT NULL,
-                    Message TEXT NOT NULL,
-                    IsUser INTEGER NOT NULL,
-                    Timestamp DATETIME NOT NULL,
-                    SessionId TEXT NOT NULL DEFAULT ''
-                );
-                -- 历史数据无 SessionId 列时自动补列（SQLite 支持 ADD COLUMN）
-                ALTER TABLE ChatHistory ADD COLUMN SessionId TEXT NOT NULL DEFAULT '' ON CONFLICT IGNORE;";
+
+        var create = connection.CreateCommand();
+        create.CommandText =
+            @"CREATE TABLE IF NOT EXISTS ChatHistory (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Role TEXT NOT NULL,
+                Message TEXT NOT NULL,
+                IsUser INTEGER NOT NULL,
+                Timestamp DATETIME NOT NULL,
+                SessionId TEXT NOT NULL DEFAULT ''
+            )";
+        create.ExecuteNonQuery();
+
+        // 为旧库补列，列已存在时 ALTER TABLE 会抛异常，直接吞掉
         try
         {
-            cmd.ExecuteNonQuery();
+            var alter = connection.CreateCommand();
+            alter.CommandText =
+                "ALTER TABLE ChatHistory ADD COLUMN SessionId TEXT NOT NULL DEFAULT ''";
+            alter.ExecuteNonQuery();
         }
-        catch
-        {
-            // ADD COLUMN 在列已存在时会抛，吞掉即可
-        }
+        catch { }
     }
 
     public async Task SaveChatMessageAsync(ChatMessage message)

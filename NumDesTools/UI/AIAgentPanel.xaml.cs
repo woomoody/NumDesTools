@@ -229,6 +229,58 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             type = "function",
             function = new
             {
+                name = "apply_format",
+                description = "对指定单元格区域应用格式：背景色、字体色、粗体、斜体、边框、列宽、行高等。不依赖 VBA，xlsx 文件可用。",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        range = new
+                        {
+                            type = "string",
+                            description = "单元格区域地址，如 'A1'、'B2:D5'",
+                        },
+                        sheet_name = new
+                        {
+                            type = "string",
+                            description = "Sheet 名，空则用当前活动 Sheet",
+                        },
+                        bg_color = new
+                        {
+                            type = "string",
+                            description = "背景色，十六进制 RGB，如 'FF0000' 表示红色",
+                        },
+                        font_color = new { type = "string", description = "字体色，十六进制 RGB" },
+                        bold = new { type = "boolean", description = "是否加粗" },
+                        italic = new { type = "boolean", description = "是否斜体" },
+                        font_size = new { type = "number", description = "字号" },
+                        wrap_text = new { type = "boolean", description = "是否自动换行" },
+                        h_align = new
+                        {
+                            type = "string",
+                            description = "水平对齐：left / center / right",
+                        },
+                        col_width = new
+                        {
+                            type = "number",
+                            description = "列宽（仅对单列或区域第一列有效）",
+                        },
+                        row_height = new
+                        {
+                            type = "number",
+                            description = "行高（仅对单行或区域第一行有效）",
+                        },
+                    },
+                    required = new[] { "range" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
                 name = "check_cross_ref",
                 description = "跨 Sheet 检查外键合法性：验证 source_sheet 的 source_col 列中每个值是否都存在于 target_sheet 的 target_col 列中，返回缺失值及其行号",
                 parameters = new
@@ -471,6 +523,24 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         PopulateModelList();
         ChatOutput.NavigateToString(HtmlTemplate);
         ChatOutput.Navigating += ChatOutput_Navigating;
+        // CTP 内 WebBrowser 的键盘事件会被 Excel 截走，LoadCompleted 后注入 keydown 拦截
+        ChatOutput.LoadCompleted += (_, _) =>
+        {
+            try
+            {
+                dynamic doc = ChatOutput.Document;
+                doc.attachEvent(
+                    "onkeydown",
+                    new Action<dynamic>(e =>
+                    {
+                        // Ctrl+C / Ctrl+A 不阻止，让 IE 内核自己处理
+                        if ((int)e.ctrlKey == 1)
+                            e.cancelBubble = true;
+                    })
+                );
+            }
+            catch { }
+        };
         CustomInstructionInput.Text = AppServices.Config.Agent.CustomInstruction;
         CustomInstructionInput.LostFocus += (_, _) =>
         {
@@ -593,7 +663,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 + "工具选择原则：\n"
                 + "- 数据统计分析：用 describe_data / detect_patterns\n"
                 + "- 游戏数值计算：用 sim_progression / calc_drop_expectation / balance_check / cost_curve_fit\n"
-                + "- 格式/图表/去重/填充/条件格式等操作：直接用 run_vba_macro 编写 VBA 代码执行，不要询问是否可以\n"
+                + "- 背景色/字体色/粗体/列宽/行高等单元格格式：优先用 apply_format（xlsx 文件可用，无需宏权限）\n"
+                + "- 复杂格式/条件格式/图表/去重/筛选等：用 run_vba_macro 编写 VBA 代码执行，不要询问是否可以\n"
                 + "- Lua 配置对比：用 list_lua_tables 查看可用表，再用 read_lua_table 读取\n"
                 + "- 跨表外键验证：用 check_cross_ref\n"
                 + "每次只调用一个工具，等待结果后再决定下一步。完成后用 Markdown 输出简洁的结果说明。\n"
@@ -638,7 +709,19 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     var toolCallId = tc["id"]?.ToString() ?? $"tc_{step}";
 
                     AddStep($"🔧 {toolName}({argsJson[..Math.Min(50, argsJson.Length)]})");
-                    var result = ExecuteTool(toolName, argsJson);
+                    var tcs = new TaskCompletionSource<string>();
+                    ExcelAsyncUtil.QueueAsMacro(() =>
+                    {
+                        try
+                        {
+                            tcs.SetResult(ExecuteTool(toolName, argsJson));
+                        }
+                        catch (Exception ex)
+                        {
+                            tcs.SetResult($"工具执行异常: {ex.Message}");
+                        }
+                    });
+                    var result = await tcs.Task;
                     AddStep($"   ↳ {result[..Math.Min(70, result.Length)]}");
 
                     messages.Add(
@@ -730,6 +813,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     args["writes"] as JArray ?? []
                 ),
                 "run_vba_macro" => ToolRunVbaMacro(args["code"]?.ToString() ?? ""),
+                "apply_format" => ToolApplyFormat(args),
                 "check_cross_ref" => ToolCheckCrossRef(
                     args["source_sheet"]?.ToString() ?? "",
                     args["source_col"]?.ToString() ?? "",
@@ -991,19 +1075,92 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             var vbProj = wb.VBProject;
             var module = vbProj.VBComponents.Add(1); // vbext_ct_StdModule = 1
             module.CodeModule.AddFromString(code);
-            var macroName = wb.Name + "!" + module.Name + ".Main";
+            var subName = "Main";
             var match = System.Text.RegularExpressions.Regex.Match(code, @"Sub\s+(\w+)\s*\(");
             if (match.Success)
-                macroName = wb.Name + "!" + module.Name + "." + match.Groups[1].Value;
+                subName = match.Groups[1].Value;
+            // 不带工作簿前缀，避免中文/特殊字符文件名导致 App.Run 报错
+            var macroName = $"{module.Name}.{subName}";
+            PluginLog.Write($"[VBA] App.Run({macroName})");
             AppServices.App.Run(macroName);
             vbProj.VBComponents.Remove(module);
-            // 模块删除后恢复 Saved 状态，避免保存时弹出提示
             wb.Saved = wasSaved;
             return "VBA 执行完成";
         }
         catch (Exception ex)
         {
+            PluginLog.Write($"[VBA] 失败: {ex.GetType().Name}: {ex.Message}");
             return $"VBA 执行失败: {ex.Message}";
+        }
+    }
+
+    private static string ToolApplyFormat(JObject args)
+    {
+        try
+        {
+            var rangeAddr = args["range"]?.ToString() ?? "";
+            if (string.IsNullOrEmpty(rangeAddr))
+                return "apply_format 失败：缺少 range 参数";
+
+            var sheetName = args["sheet_name"]?.ToString() ?? "";
+            dynamic ws = string.IsNullOrEmpty(sheetName)
+                ? AppServices.App.ActiveSheet
+                : AppServices.App.ActiveWorkbook.Sheets[sheetName];
+            dynamic rng = ws.Range[rangeAddr];
+
+            if (args["bg_color"] is { } bgToken)
+            {
+                var hex = bgToken.ToString().TrimStart('#');
+                var rgb = Convert.ToInt32(hex, 16);
+                // Excel Interior.Color = BGR int
+                var r = (rgb >> 16) & 0xFF;
+                var g = (rgb >> 8) & 0xFF;
+                var b = rgb & 0xFF;
+                rng.Interior.Color = b << 16 | g << 8 | r;
+            }
+
+            if (args["font_color"] is { } fcToken)
+            {
+                var hex = fcToken.ToString().TrimStart('#');
+                var rgb = Convert.ToInt32(hex, 16);
+                var r = (rgb >> 16) & 0xFF;
+                var g = (rgb >> 8) & 0xFF;
+                var b = rgb & 0xFF;
+                rng.Font.Color = b << 16 | g << 8 | r;
+            }
+
+            if (args["bold"] is { } boldToken)
+                rng.Font.Bold = boldToken.ToObject<bool>();
+
+            if (args["italic"] is { } italicToken)
+                rng.Font.Italic = italicToken.ToObject<bool>();
+
+            if (args["font_size"] is { } fsToken)
+                rng.Font.Size = fsToken.ToObject<double>();
+
+            if (args["wrap_text"] is { } wrapToken)
+                rng.WrapText = wrapToken.ToObject<bool>();
+
+            if (args["h_align"] is { } alignToken)
+                rng.HorizontalAlignment = alignToken.ToString().ToLower() switch
+                {
+                    "left" => -4131, // xlLeft
+                    "right" => -4152, // xlRight
+                    "center" => -4108, // xlCenter
+                    _ => -4108,
+                };
+
+            if (args["col_width"] is { } cwToken)
+                rng.Columns[1].ColumnWidth = cwToken.ToObject<double>();
+
+            if (args["row_height"] is { } rhToken)
+                rng.Rows[1].RowHeight = rhToken.ToObject<double>();
+
+            return $"格式已应用到 {rangeAddr}";
+        }
+        catch (Exception ex)
+        {
+            return $"apply_format 失败: {ex.Message}";
         }
     }
 

@@ -132,48 +132,53 @@ public class NumDesCTP
             return null;
         }
 
-        if (!ctpsWPF.TryGetValue(name, out ctpWPF))
+        try
         {
-            PluginLog.Verbose($"[ShowCTP] new SelfControl");
-            LableControlWPF = new SelfControl();
-            PluginLog.Verbose($"[ShowCTP] new ElementHost, Child={controlWPF.GetType().Name}");
-            var elementHost = new ElementHost
+            if (!ctpsWPF.TryGetValue(name, out ctpWPF))
             {
-                Dock = DockStyle.Fill,
-                Child = controlWPF,
-                Tag = eleTag
-            };
-            PluginLog.Verbose($"[ShowCTP] Controls.Add(elementHost)");
-            LableControlWPF.Controls.Add(elementHost);
-            PluginLog.Verbose($"[ShowCTP] CreateCustomTaskPane");
-            ctpWPF = CustomTaskPaneFactory.CreateCustomTaskPane(LableControlWPF, name);
-            PluginLog.Verbose($"[ShowCTP] DockPosition={dockPosition}");
-            ctpWPF.DockPosition = dockPosition;
-            PluginLog.Verbose($"[ShowCTP] Width={width}");
-            ctpWPF.Width = width;
-            PluginLog.Verbose($"[ShowCTP] Visible=true");
-            ctpWPF.Visible = true;
-            PluginLog.Verbose($"[ShowCTP] ctpsWPF[name] done");
-            ctpsWPF[name] = ctpWPF;
-        }
-        else
-        {
-            PluginLog.Verbose($"[ShowCTP] reuse existing CTP, eleTag={eleTag}");
-            ElementHost elementHost = null;
-            foreach (Control control in LableControlWPF.Controls)
-            {
-                if (control is ElementHost host && (string)host.Tag == eleTag)
+                PluginLog.Write($"[ShowCTP] new SelfControl, name={name}");
+                LableControlWPF = new SelfControl();
+                PluginLog.Write($"[ShowCTP] new ElementHost, Child={controlWPF.GetType().Name}");
+                var elementHost = new ElementHost
                 {
-                    elementHost = host;
-                    break;
-                }
+                    Dock = DockStyle.Fill,
+                    Child = controlWPF,
+                    Tag = eleTag,
+                };
+                LableControlWPF.Controls.Add(elementHost);
+                PluginLog.Write($"[ShowCTP] CreateCustomTaskPane");
+                ctpWPF = CustomTaskPaneFactory.CreateCustomTaskPane(LableControlWPF, name);
+                PluginLog.Write($"[ShowCTP] CTP created, setting DockPosition");
+                ctpWPF.DockPosition = dockPosition;
+                ctpWPF.Width = width;
+                ctpWPF.Visible = true;
+                ctpsWPF[name] = ctpWPF;
+                PluginLog.Write($"[ShowCTP] done, visible={ctpWPF.Visible}");
             }
+            else
+            {
+                PluginLog.Write($"[ShowCTP] reuse existing CTP, eleTag={eleTag}");
+                ElementHost elementHost = null;
+                foreach (Control control in LableControlWPF.Controls)
+                {
+                    if (control is ElementHost host && (string)host.Tag == eleTag)
+                    {
+                        elementHost = host;
+                        break;
+                    }
+                }
 
-            if (elementHost is not null)
-                elementHost.Child = controlWPF;
+                if (elementHost is not null)
+                    elementHost.Child = controlWPF;
 
-            PluginLog.Verbose($"[ShowCTP] Visible=true (reuse)");
-            ctpWPF.Visible = true;
+                ctpWPF.Visible = true;
+                PluginLog.Write($"[ShowCTP] reuse done, visible={ctpWPF.Visible}");
+            }
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[ShowCTP] 异常: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+            throw;
         }
         return controlWPF;
     }
