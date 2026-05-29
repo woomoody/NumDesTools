@@ -50,7 +50,6 @@ using TabControl = System.Windows.Forms.TabControl;
 
 #pragma warning disable CA1416
 
-
 namespace NumDesTools;
 
 /// <summary>
@@ -115,10 +114,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     }
 
     // MiniExcel本地缓存管理
-    public static OpenXmlConfiguration OnOffMiniExcelCatches =
-        new() { EnableSharedStringCache = false };
-    public static OpenXmlConfiguration SelfSizeMiniExcelCatches =
-        new() { SharedStringCacheSize = 500 * 1024 * 1024 };
+    public static OpenXmlConfiguration OnOffMiniExcelCatches = new()
+    {
+        EnableSharedStringCache = false,
+    };
+    public static OpenXmlConfiguration SelfSizeMiniExcelCatches = new()
+    {
+        SharedStringCacheSize = 500 * 1024 * 1024,
+    };
 
     #region 释放COM
 
@@ -236,7 +239,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "ShowDnaLog" => ShowDnaLogText,
             "ShowAI" => ShowAiText,
             "ShowAIAgent" => _showAgentText,
-            _ => ""
+            _ => "",
         };
         return latext;
     }
@@ -314,7 +317,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ExcelConflictManual"] = _ => ExcelConflictEntry.OpenManualCompare(),
             ["ExcelConflictHistory"] = _ => ExcelConflictEntry.OpenGitHistory(),
             ["ExcelBranchMerge"] = _ => ExcelConflictEntry.OpenBranchMerge(),
-            ["HelpButton"] = _ => new NumDesTools.UI.HelpWindow().Show()
+            ["HelpButton"] = _ => new NumDesTools.UI.HelpWindow().Show(),
         };
     }
 
@@ -556,7 +559,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     }
                     else
                     {
-                        MessageBox.Show("密码错误！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show(
+                            "密码错误！",
+                            "错误",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
                         return false;
                     }
                 }
@@ -617,7 +625,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             [DayOfWeek.Saturday] = new() { "9527", "6", "999", "周六不加班" },
 
             // 周日
-            [DayOfWeek.Sunday] = new() { "9527", "烈士", "000000" }
+            [DayOfWeek.Sunday] = new() { "9527", "烈士", "000000" },
         };
 
         return passwordDictionary[day];
@@ -682,7 +690,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 // 将二维数组赋值回选中区域
                 selectedRange.Value2 = updatedValues;
 
-                LogDisplay.RecordLine($"[{DateTime.Now}] , 替换完成，共处理{selectedRange.Count} 个单元格");
+                LogDisplay.RecordLine(
+                    $"[{DateTime.Now}] , 替换完成，共处理{selectedRange.Count} 个单元格"
+                );
 
                 sw.Stop();
                 var ts2 = sw.ElapsedMilliseconds;
@@ -885,7 +895,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     {
                         "图片备注",
                         "点击↓↓链接打开图片",
-                        Path.Combine(searchContent, $"{selectValue}.gif")
+                        Path.Combine(searchContent, $"{selectValue}.gif"),
                     };
                 }
             }
@@ -1167,6 +1177,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         if (!wkFileName.Contains("#") && !wkFileName.Contains("Config"))
         {
+            // 预建校验配置，所有 sheet 共享，避免每次重新读 JSON
+            var checkConfig = new NumDesTools.Config.GlobalVariable();
+            var normalChars = checkConfig.NormaKeyList;
+            var specialChars = checkConfig.SpecialKeyList;
+            var coupleRegexes = PubMetToExcelFunc.BuildCoupleRegexes(checkConfig.CoupleKeyList);
+
             var sheetNames = MiniExcel.GetSheetNames(wkFullPath);
             foreach (var sheetName in sheetNames)
             {
@@ -1182,8 +1198,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 // 数据查重
                 sourceData.AddRange(PubMetToExcelFunc.CheckRepeatValue(rows, sheetName));
 
-                // 数据合法性
-                sourceData.AddRange(PubMetToExcelFunc.CheckValueFormat(rows, sheetName));
+                // 数据合法性（传入预编译配置）
+                sourceData.AddRange(
+                    PubMetToExcelFunc.CheckValueFormat(
+                        rows,
+                        sheetName,
+                        normalChars,
+                        specialChars,
+                        coupleRegexes
+                    )
+                );
 
                 // 数组类ID合法性验证
                 if (wkFileName.Contains("MapTaskGiftData"))
@@ -1302,34 +1326,40 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     var wss = wb.Sheets;
                     foreach (Worksheet sheet in wss)
                     {
-                        if (!sheet.Name.Contains("#"))
+                        if (sheet.Name.Contains("#"))
+                            continue;
+
+                        var usedRange = sheet.UsedRange;
+                        var usedColMax = usedRange.Columns.Count;
+
+                        // 批量读取第2行所有列字段名，避免逐单元格 COM 往返
+                        var headerRange = sheet.Range[
+                            sheet.Cells[2, 1],
+                            sheet.Cells[2, usedColMax]
+                        ];
+                        var headerValues = (object[,])headerRange.Value2;
+
+                        var firstFieldValue = headerValues[1, 1]?.ToString();
+                        if (firstFieldValue != "#")
                         {
-                            var usedRange = sheet.UsedRange;
-                            var usedColMax = usedRange.Columns.Count;
-                            var firstFiledValue = (sheet.Cells[2, 1] as Range)?.Value2?.ToString();
-                            if (firstFiledValue != "#")
+                            MessageBox.Show(
+                                $"{sheet.Name}-A列没有#，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
+                            );
+                            cancel = true;
+                        }
+                        else
+                        {
+                            for (int i = 1; i <= usedColMax; i++)
                             {
-                                MessageBox.Show(
-                                    $"{sheet.Name}-A列没有#，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
-                                );
-                                cancel = true;
-                            }
-                            else
-                            {
-                                for (int i = 1; i <= usedColMax; i++)
+                                var fieldValue = headerValues[1, i]?.ToString();
+                                if (string.IsNullOrEmpty(fieldValue))
                                 {
-                                    var filedValue = (
-                                        sheet.Cells[2, i] as Range
-                                    )?.Value2?.ToString();
-                                    if (string.IsNullOrEmpty(filedValue))
-                                    {
-                                        var colName = PubMetToExcel.ConvertToExcelColumn(i);
-                                        MessageBox.Show(
-                                            $"{sheet.Name}-{colName}列（或之后）字段为空，但有数据，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
-                                        );
-                                        cancel = true;
-                                        break;
-                                    }
+                                    var colName = PubMetToExcel.ConvertToExcelColumn(i);
+                                    MessageBox.Show(
+                                        $"{sheet.Name}-{colName}列（或之后）字段为空，但有数据，不规范【该表有可能非配置表，建议加#区别】，删除该列之后所有数据"
+                                    );
+                                    cancel = true;
+                                    break;
                                 }
                             }
                         }
@@ -1369,21 +1399,21 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 Size = new Size(500, 800),
                 MaximizeBox = false,
                 MinimizeBox = false,
-                Text = @"表格汇总"
+                Text = @"表格汇总",
             };
             var gb = new Panel
             {
                 BackColor = Color.FromArgb(255, 225, 225, 225),
                 AutoScroll = true,
                 Location = new Point(f.Left + 20, f.Top + 20),
-                Size = new Size(f.Width - 55, f.Height - 200)
+                Size = new Size(f.Width - 55, f.Height - 200),
             };
             f.Controls.Add(gb);
             var bt3 = new Button
             {
                 Name = "button3",
                 Text = @"导出",
-                Location = new Point(f.Left + 360, f.Top + 680)
+                Location = new Point(f.Left + 360, f.Top + 680),
             };
             f.Controls.Add(bt3);
 
@@ -1416,7 +1446,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     Tag = "cb_file" + fileCount,
                     Name = "*CB_file*" + fileCount,
                     Checked = true,
-                    Location = new Point(25, 10 + (fileCount - 1) * 30)
+                    Location = new Point(25, 10 + (fileCount - 1) * 30),
                 };
                 gb.Controls.Add(cb);
                 fileCount++;
@@ -1429,7 +1459,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var checkBox1 = new CheckBox
             {
                 Location = new Point(f.Left + 20, f.Top + 680),
-                Text = @"全选"
+                Text = @"全选",
             };
             f.Controls.Add(checkBox1);
             checkBox1.Click += CheckBox1Click;
@@ -1620,7 +1650,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             if (fileTemp.Contains("@")) { }
             else
             {
-                MessageBox.Show(@"没有找到关联表格" + cellAdress + @"是[" + fileTemp + @"]格式不对：xxx@xxx");
+                MessageBox.Show(
+                    @"没有找到关联表格" + cellAdress + @"是[" + fileTemp + @"]格式不对：xxx@xxx"
+                );
             }
         }
         else
@@ -1648,7 +1680,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
             else
             {
-                MessageBox.Show(@"没有找到关联表格" + cellAdress + @"是[" + fileTemp + @"]格式不对：xxx@xxx");
+                MessageBox.Show(
+                    @"没有找到关联表格" + cellAdress + @"是[" + fileTemp + @"]格式不对：xxx@xxx"
+                );
             }
         }
         else
@@ -1671,21 +1705,21 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 Size = new Size(500, 800),
                 MaximizeBox = false,
                 MinimizeBox = false,
-                Text = @"表格汇总"
+                Text = @"表格汇总",
             };
             var gb = new Panel
             {
                 BackColor = Color.FromArgb(255, 225, 225, 225),
                 AutoScroll = true,
                 Location = new Point(f.Left + 20, f.Top + 20),
-                Size = new Size(f.Width - 55, f.Height - 200)
+                Size = new Size(f.Width - 55, f.Height - 200),
             };
             f.Controls.Add(gb);
             var bt3 = new Button
             {
                 Name = "button3",
                 Text = @"导出",
-                Location = new Point(f.Left + 360, f.Top + 680)
+                Location = new Point(f.Left + 360, f.Top + 680),
             };
             f.Controls.Add(bt3);
 
@@ -1715,7 +1749,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     Tag = "cb" + i,
                     Name = "*CB*" + i,
                     Checked = true,
-                    Location = new Point(25, 10 + (i - 1) * 30)
+                    Location = new Point(25, 10 + (i - 1) * 30),
                 };
                 gb.Controls.Add(cb);
             }
@@ -1727,7 +1761,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var checkBox1 = new CheckBox
             {
                 Location = new Point(f.Left + 20, f.Top + 680),
-                Text = @"全选"
+                Text = @"全选",
             };
             f.Controls.Add(checkBox1);
             checkBox1.Click += CheckBox1Click;
@@ -1843,7 +1877,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var path = outFilePath + @"\" + sheetName.Substring(0, sheetName.Length - 4) + ".txt";
             if (errorLog == "")
             {
-                var endTips = path + "~@~导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + "秒";
+                var endTips =
+                    path + "~@~导出完成!用时:" + Math.Round(milliseconds / 1000, 2) + "秒";
                 App.StatusBar = endTips;
             }
             else
@@ -1891,7 +1926,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             if (control == null)
                 throw new ArgumentNullException(nameof(control));
             LabelTextRoleDataPreview =
-                LabelTextRoleDataPreview == "角色数据预览：开启" ? "角色数据预览：关闭" : "角色数据预览：开启";
+                LabelTextRoleDataPreview == "角色数据预览：开启"
+                    ? "角色数据预览：关闭"
+                    : "角色数据预览：开启";
             CustomRibbon.InvalidateControl("Button14");
             _cellSelectChangePro ??= new CellSelectChangePro();
             App.StatusBar = false;
@@ -2799,7 +2836,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //    PluginLog.Write("NoValue");
         //}
 
-
         //// 使用线性多线程查找
         //var partitioner = Partitioner.Create(0, rows.Count);
         //var localResults = new ConcurrentBag<List<(string, string, int, string)>>();
@@ -3156,7 +3192,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         if (control == null)
             throw new ArgumentNullException(nameof(control));
-        CheckSheetValueText = CheckSheetValueText == "数据自检：开启" ? "数据自检：关闭" : "数据自检：开启";
+        CheckSheetValueText =
+            CheckSheetValueText == "数据自检：开启" ? "数据自检：关闭" : "数据自检：开启";
         CustomRibbon.InvalidateControl("CheckSheetValue");
 
         var ctpName = "错误数据";
@@ -3184,7 +3221,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         if (control == null)
             throw new ArgumentNullException(nameof(control));
-        CellHiLightText = CellHiLightText == "高亮单元格：开启" ? "高亮单元格：关闭" : "高亮单元格：开启";
+        CellHiLightText =
+            CellHiLightText == "高亮单元格：开启" ? "高亮单元格：关闭" : "高亮单元格：开启";
         CustomRibbon.InvalidateControl("CellHiLight");
 
         if (CellHiLightText == "高亮单元格：开启")
@@ -3223,7 +3261,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     [ExcelCommand]
     public static void ShowAIAgent()
     {
-        _showAgentText = _showAgentText == "Agent模式：开启" ? "Agent模式：关闭" : "Agent模式：开启";
+        _showAgentText =
+            _showAgentText == "Agent模式：开启" ? "Agent模式：关闭" : "Agent模式：开启";
         CustomRibbon?.InvalidateControl("ShowAIAgent");
 
         var ctpName = "AI Agent-Excel";
@@ -3451,7 +3490,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             catch (Exception ex)
             {
                 PluginLog.Write($"[ActivityTestAll CRASH] {ex}");
-                ExcelAsyncUtil.QueueAsMacro(() => MessageBox.Show(ex.Message, "验证活动（全量）出错"));
+                ExcelAsyncUtil.QueueAsMacro(() =>
+                    MessageBox.Show(ex.Message, "验证活动（全量）出错")
+                );
             }
         });
     }
@@ -3471,7 +3512,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             catch (Exception ex)
             {
                 PluginLog.Write($"[ActivityTestById CRASH] {ex}");
-                ExcelAsyncUtil.QueueAsMacro(() => MessageBox.Show(ex.Message, "验证活动（指定ID）出错"));
+                ExcelAsyncUtil.QueueAsMacro(() =>
+                    MessageBox.Show(ex.Message, "验证活动（指定ID）出错")
+                );
             }
         });
     }
@@ -3494,7 +3537,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             catch (Exception ex)
             {
                 PluginLog.Write($"[ActivityTestGitChanged CRASH] {ex}");
-                ExcelAsyncUtil.QueueAsMacro(() => MessageBox.Show(ex.Message, "验证活动（Git改动）出错"));
+                ExcelAsyncUtil.QueueAsMacro(() =>
+                    MessageBox.Show(ex.Message, "验证活动（Git改动）出错")
+                );
             }
         });
     }

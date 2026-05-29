@@ -36,7 +36,7 @@ public static class PubMetToExcelFunc
         {
             rootPath + @"\Excels\Tables\",
             rootPath + @"\Excels\Localizations\",
-            rootPath + @"\Excels\UIs\"
+            rootPath + @"\Excels\UIs\",
         };
         var files = PubMetToExcel.PathExcelFileCollect(fileList, "*.xlsx", ignoreFileNames);
         var findValueList = new List<(string, string, int, int, string, string)>();
@@ -227,7 +227,11 @@ public static class PubMetToExcelFunc
                 );
                 if (tips == MessageBoxResult.Yes)
                 {
-                    PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", "A1");
+                    PubMetToExcel.OpenExcelAndSelectCell(
+                        excelPath + @"\#表格关联.xlsx",
+                        "主副表关联",
+                        "A1"
+                    );
                 }
                 //尝试选择最相似的字段关联表
                 else
@@ -237,7 +241,7 @@ public static class PubMetToExcelFunc
                     string blurResultText = FindClosestMatch(blurData, keyCell.Value.ToString(), 2);
                     List<List<string>> blurResult =
                     [
-                        ["", blurResultText]
+                        ["", blurResultText],
                     ];
                     if (blurResultText == null)
                         return;
@@ -262,7 +266,11 @@ public static class PubMetToExcelFunc
             );
             if (tips == MessageBoxResult.Yes)
             {
-                PubMetToExcel.OpenExcelAndSelectCell(excelPath + @"\#表格关联.xlsx", "主副表关联", "A1");
+                PubMetToExcel.OpenExcelAndSelectCell(
+                    excelPath + @"\#表格关联.xlsx",
+                    "主副表关联",
+                    "A1"
+                );
             }
             //尝试选择最相似的字段关联表
             else
@@ -272,7 +280,7 @@ public static class PubMetToExcelFunc
                 string blurResultText = FindClosestMatch(blurData, keyCell.Value.ToString(), 2);
                 List<List<string>> blurResult =
                 [
-                    ["", blurResultText]
+                    ["", blurResultText],
                 ];
                 if (blurResultText == null)
                     return;
@@ -1449,7 +1457,8 @@ public static class PubMetToExcelFunc
                                     }
                                     catch (Exception ex)
                                     {
-                                        var errorTips = $"数组/表格格式错误：{typeName}#【{ex.Message}】";
+                                        var errorTips =
+                                            $"数组/表格格式错误：{typeName}#【{ex.Message}】";
                                         errorList.Add(
                                             (changedFile, sheetName, errorTips, cellData)
                                         );
@@ -1692,7 +1701,6 @@ public static class PubMetToExcelFunc
 
         // 检查 List 中第 2 列是否有重复值，并返回重复值的行列号
         var duplicates = dataRows
-            .AsParallel()
             .Select((row, index) => new { Row = row, Index = index + 4 }) // 保留行号，+5 是因为跳过了前 4 行
             .Where(x => ((IDictionary<string, object>)x.Row)["B"] != null) // 忽略 null 值
             .GroupBy(x => ((IDictionary<string, object>)x.Row)["B"]) // 按第 2 列的值分组
@@ -1713,50 +1721,30 @@ public static class PubMetToExcelFunc
     }
 
     //数据格式检查-MiniExcel
+    // normalChars/specialChars/coupleRegexes 由调用方从 GlobalVariable 预取并传入，避免每个 sheet 都重新读 JSON
     public static List<(string, int, int, string, string)> CheckValueFormat(
         IEnumerable<dynamic> rows,
-        string sheetName
+        string sheetName,
+        IReadOnlyList<string>? normalChars = null,
+        IReadOnlyList<string>? specialChars = null,
+        IReadOnlyList<(string left, string right, Regex leftRx, Regex rightRx)>? coupleRegexes =
+            null
     )
     {
         var sourceData = new List<(string, int, int, string, string)>();
 
-        //有可能不需要这么复杂的判断，只判断是否包含常见的错误组合
-        //比如【双逗号，中括号+逗号，大括号+逗号】
-        //数组判断就通过头字符是否是{{、{、[[、[来检查末尾是否有对应的符号
-
-        //var charactersToCheck = new[]
-        //{
-        //    ",,",
-        //    "[,",
-        //    ",]",
-        //    "{,",
-        //    ",}",
-        //    "，，",
-        //    "[，",
-        //    "，]",
-        //    "{，",
-        //    "，}",
-        //    "][",
-        //    "}{"
-        //};
-
-        //var stringPairs = new List<(string leftString, string rightString)>
-        //{
-        //    ("[", "]"),
-        //    ("{", "}")
-        //};
-
-        var config = new GlobalVariable();
-        var normalCharactersCheck = config.NormaKeyList;
-        var specialCharactersCheck = config.SpecialKeyList;
-        var coupleCharactersCheck = config.CoupleKeyList;
+        // 未传入时回退到从配置文件读取（兼容旧调用方）
+        if (normalChars == null || specialChars == null || coupleRegexes == null)
+        {
+            var config = new GlobalVariable();
+            normalChars ??= config.NormaKeyList;
+            specialChars ??= config.SpecialKeyList;
+            coupleRegexes ??= BuildCoupleRegexes(config.CoupleKeyList);
+        }
 
         var dataRows = rows.ToList();
-
         if (dataRows.Count == 0)
-        {
             return sourceData;
-        }
 
         // 检查第 1、2 列第 1 行的值是否为特定字符串，如果是则跳过该工作表
         if (
@@ -1780,99 +1768,86 @@ public static class PubMetToExcelFunc
                 var keyCell = keyRow[col]?.ToString() ?? "";
                 var typeCell = keyType[col]?.ToString() ?? "";
                 if (keyCell == "" || keyCell.Contains("#"))
-                {
                     continue;
-                }
 
                 var cellValue = row[col]?.ToString();
-                if (cellValue != null)
+                if (cellValue == null)
+                    continue;
+
+                // 针对特殊表
+                if (sheetName == "RandomAwardModelData")
                 {
-                    // 针对特殊表
-                    if (sheetName == "RandomAwardModelData")
+                    var types = typeCell.Split('=');
+                    if (types[0] == "int" || types[0] == "int[]")
                     {
-                        // int数据判断
-                        var types = typeCell.Split('=');
-                        if (types[0] == "int" || types[0] == "int[]")
-                        {
-                            var cellValueSplit = cellValue
-                                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                .Select(s =>
-                                {
-                                    var match = Regex.Match(s, @"\d+(?:\.\d+)?");
-                                    return match.Success ? match.Value : null;
-                                })
-                                .Where(s => !string.IsNullOrEmpty(s))
-                                .ToList();
-
-                            foreach (var cellSplit in cellValueSplit)
+                        var cellValueSplit = cellValue
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s =>
                             {
-                                // 尝试解析为浮点数，判断是否为整数
-                                if (double.TryParse(cellSplit, out double cellSplitDouble))
-                                {
-                                    // 检查是否为整数（浮点数的小数部分为0）
-                                    if (cellSplitDouble % 1 != 0)
-                                    {
-                                        sourceData.Add(
-                                            (
-                                                cellValue,
-                                                rowIndex + 1,
-                                                colIndex + 1,
-                                                sheetName,
-                                                $"【{typeCell}】格式错误"
-                                            )
-                                        );
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    // 其他非法字符
-                    if (
-                        normalCharactersCheck.Any(c => cellValue.Contains(c))
-                        && !typeCell.Contains("string")
-                    )
-                    {
-                        sourceData.Add(
-                            (cellValue, rowIndex + 1, colIndex + 1, sheetName, "多逗号或中文逗号")
-                        );
-                    }
+                                var match = Regex.Match(s, @"\d+(?:\.\d+)?");
+                                return match.Success ? match.Value : null;
+                            })
+                            .Where(s => !string.IsNullOrEmpty(s))
+                            .ToList();
 
-                    if (
-                        specialCharactersCheck.Any(c => cellValue.Contains(c))
-                        && !typeCell.Contains("string")
-                    )
-                    {
-                        sourceData.Add((cellValue, rowIndex + 1, colIndex + 1, sheetName, "少逗号"));
-                    }
-
-                    foreach (var (leftString, rightString) in coupleCharactersCheck)
-                    {
-                        var leftStringCount = Regex
-                            .Matches(cellValue, Regex.Escape(leftString), RegexOptions.IgnoreCase)
-                            .Count;
-                        var RightStringCount = Regex
-                            .Matches(cellValue, Regex.Escape(rightString), RegexOptions.IgnoreCase)
-                            .Count;
-                        if (leftStringCount != RightStringCount)
+                        foreach (var cellSplit in cellValueSplit)
                         {
-                            sourceData.Add(
-                                (cellValue, rowIndex + 1, colIndex + 1, sheetName, "括号问题")
-                            );
-                            break;
-                        }
-
-                        if (leftString == "\"")
-                        {
-                            int isDouble = leftStringCount % 2;
-                            if (isDouble != 0)
+                            if (
+                                double.TryParse(cellSplit, out double cellSplitDouble)
+                                && cellSplitDouble % 1 != 0
+                            )
                             {
                                 sourceData.Add(
-                                    (cellValue, rowIndex + 1, colIndex + 1, sheetName, "双引号问题")
+                                    (
+                                        cellValue,
+                                        rowIndex + 1,
+                                        colIndex + 1,
+                                        sheetName,
+                                        $"【{typeCell}】格式错误"
+                                    )
                                 );
                                 break;
                             }
                         }
+                    }
+                }
+
+                bool isString = typeCell.Contains("string");
+
+                // 多逗号/中文逗号检查
+                if (!isString && normalChars.Any(c => cellValue.Contains(c)))
+                {
+                    sourceData.Add(
+                        (cellValue, rowIndex + 1, colIndex + 1, sheetName, "多逗号或中文逗号")
+                    );
+                    continue;
+                }
+
+                // 少逗号检查
+                if (!isString && specialChars.Any(c => cellValue.Contains(c)))
+                {
+                    sourceData.Add((cellValue, rowIndex + 1, colIndex + 1, sheetName, "少逗号"));
+                    continue;
+                }
+
+                // 配对符号检查（使用预编译正则）
+                foreach (var (leftStr, _, leftRx, rightRx) in coupleRegexes)
+                {
+                    var leftCount = leftRx.Matches(cellValue).Count;
+                    var rightCount = rightRx.Matches(cellValue).Count;
+                    if (leftCount != rightCount)
+                    {
+                        sourceData.Add(
+                            (cellValue, rowIndex + 1, colIndex + 1, sheetName, "括号问题")
+                        );
+                        break;
+                    }
+                    if (leftStr == "\"" && leftCount % 2 != 0)
+                    {
+                        sourceData.Add(
+                            (cellValue, rowIndex + 1, colIndex + 1, sheetName, "双引号问题")
+                        );
+                        break;
                     }
                 }
             }
@@ -1880,6 +1855,27 @@ public static class PubMetToExcelFunc
 
         return sourceData;
     }
+
+    // 将 CoupleKeyList 预编译为 Regex，供批量检查复用
+    public static List<(string left, string right, Regex leftRx, Regex rightRx)> BuildCoupleRegexes(
+        IEnumerable<Config.GlobalVariable.CoupleKey> coupleKeys
+    ) =>
+        coupleKeys
+            .Select(k =>
+                (
+                    k.Left,
+                    k.Right,
+                    new Regex(
+                        Regex.Escape(k.Left),
+                        RegexOptions.IgnoreCase | RegexOptions.Compiled
+                    ),
+                    new Regex(
+                        Regex.Escape(k.Right),
+                        RegexOptions.IgnoreCase | RegexOptions.Compiled
+                    )
+                )
+            )
+            .ToList();
 
     //数组数据格式检查-MiniExcel
     public static string CheckArrayValueFormat(
@@ -1920,6 +1916,19 @@ public static class PubMetToExcelFunc
         if (rowsTarget.Count == 0)
             return null;
 
+        // 预建哈希索引：id → checkTargetCol 有值，O(M) 建索引，O(1) 查询
+        var targetIndex = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 2; i < rowsTarget.Count; i++)
+        {
+            var rowTarget = rowsTarget[i] as IDictionary<string, object>;
+            var id = rowTarget["id"]?.ToString();
+            if (
+                !string.IsNullOrEmpty(id)
+                && !string.IsNullOrEmpty(rowTarget[checkTargetCol]?.ToString())
+            )
+                targetIndex.Add(id);
+        }
+
         // 遍历指定字段的数组数据
         for (int rowIndex = 2; rowIndex < rows.Count; rowIndex++)
         {
@@ -1929,43 +1938,17 @@ public static class PubMetToExcelFunc
             var cellComment = row["#备注"]?.ToString();
             var cellValue = row[checkCol]?.ToString();
 
-            if (cellValue == null)
+            if (string.IsNullOrEmpty(cellValue))
                 continue;
 
-            cellValue = cellValue.Replace("[", "");
-            cellValue = cellValue.Replace("]", "");
-
+            cellValue = cellValue.Replace("[", "").Replace("]", "");
             if (cellValue == "")
                 continue;
 
-            var cellValueGroup = cellValue.Split(",");
-
-            var resultList = new List<string>();
-
-            foreach (var checkId in cellValueGroup)
-            {
-                // 目标数据中检查是否合法
-                for (int i = 2; i < rowsTarget.Count; i++)
-                {
-                    var rowTarget = rowsTarget[i] as IDictionary<string, object>;
-                    var cellTargetIndex = rowTarget["id"]?.ToString();
-                    if (checkId == cellTargetIndex)
-                    {
-                        var cellTargetValue = rowTarget[checkTargetCol]?.ToString();
-                        if (!string.IsNullOrEmpty(cellTargetValue))
-                        {
-                            resultList.Add(cellTargetIndex);
-                        }
-                        break;
-                    }
-                }
-            }
-
+            var resultList = cellValue.Split(',').Where(id => targetIndex.Contains(id)).ToList();
             if (resultList.Count > 0)
-            {
                 result +=
                     $"id:{cellIndex}#:{cellComment}# {errorTips}:{string.Join(",", resultList)}\n";
-            }
         }
 
         return result;
@@ -2833,7 +2816,7 @@ public static class PubMetToExcelFunc
                             targetList[sheetFullName] = new List<string>
                             {
                                 list.First(),
-                                list.Last()
+                                list.Last(),
                             };
                         }
                         else if (list.Count == 1)
@@ -2860,7 +2843,7 @@ public static class PubMetToExcelFunc
         {
             var options = new ParallelOptions
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
             };
             Parallel.ForEach(files, options, processFile);
         }
@@ -2967,7 +2950,7 @@ public static class PubMetToExcelFunc
         {
             var options = new ParallelOptions
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
             };
             Parallel.ForEach(files, options, processFile);
         }
@@ -3071,7 +3054,7 @@ public static class PubMetToExcelFunc
                         Address = c.Address,
                         Formula = c.Formula,
                         Row = c.Start.Row, // 获取行号（基于1）
-                        Column = c.Start.Column // 获取列号（基于1）
+                        Column = c.Start.Column, // 获取列号（基于1）
                     });
 
                 foreach (var cell in formulaCells)
