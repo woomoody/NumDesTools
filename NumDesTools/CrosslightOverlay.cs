@@ -329,11 +329,22 @@ internal sealed class CrosslightOverlay : IDisposable
         [DllImport("user32.dll")]
         private static extern uint GetWindowThreadProcessId(IntPtr h, IntPtr pidNull);
 
-        [DllImport("user32.dll")]
-        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool attach);
+        [StructLayout(LayoutKind.Sequential)]
+        private struct GUITHREADINFO
+        {
+            public int cbSize;
+            public uint flags;
+            public IntPtr hwndActive;
+            public IntPtr hwndFocus;
+            public IntPtr hwndCapture;
+            public IntPtr hwndMenuOwner;
+            public IntPtr hwndMoveSize;
+            public IntPtr hwndCaret;
+            public RECT rcCaret;
+        }
 
         [DllImport("user32.dll")]
-        private static extern IntPtr GetFocus();
+        private static extern bool GetGUIThreadInfo(uint idThread, ref GUITHREADINFO lpgui);
 
         private readonly BandStrip _rowBand;
         private readonly BandStrip _colBand;
@@ -388,25 +399,17 @@ internal sealed class CrosslightOverlay : IDisposable
                 }
 
                 // 焦点类名检查：CTP / Backstage / 对话框激活时 EXCEL7 失焦
-                uint myTid = GetWindowThreadProcessId(Handle, IntPtr.Zero);
+                // 用 GetGUIThreadInfo 直查 Excel 线程的 focus，避免 AttachThreadInput
+                // 干扰 Excel 输入队列（曾导致双击进入编辑状态偶发失灵）
                 uint excelTid = GetWindowThreadProcessId(_excelHwnd, IntPtr.Zero);
-                AttachThreadInput(myTid, excelTid, true);
-                IntPtr focusHwnd;
-                try
-                {
-                    focusHwnd = GetFocus();
-                }
-                finally
-                {
-                    AttachThreadInput(myTid, excelTid, false);
-                }
-                if (focusHwnd == IntPtr.Zero)
+                var gti = new GUITHREADINFO { cbSize = Marshal.SizeOf<GUITHREADINFO>() };
+                if (!GetGUIThreadInfo(excelTid, ref gti) || gti.hwndFocus == IntPtr.Zero)
                 {
                     _gridFocused = false;
                     return;
                 }
                 var sb = new System.Text.StringBuilder(64);
-                GetClassName(focusHwnd, sb, 64);
+                GetClassName(gti.hwndFocus, sb, 64);
                 _gridFocused = sb.ToString() == "EXCEL7";
                 if (!_gridFocused && (_rowBand.IsVisible || _colBand.IsVisible))
                     HideBands();
