@@ -2,7 +2,6 @@ namespace NumDesTools;
 
 /// <summary>
 /// 视口范围工具：union 当前窗口所有窗格的可见区域，再裁剪到 UsedRange。
-/// 供 CellHighlighter 和 CellSpotlightHighlighter 共用。
 /// </summary>
 internal static class ViewportHelper
 {
@@ -75,9 +74,10 @@ internal static class CellHighlighter
             do
             {
                 var colorIndex = (int)current.Interior.ColorIndex;
-                var originalColor = colorIndex == (int)XlColorIndex.xlColorIndexNone
-                    ? null
-                    : current.Interior.Color;
+                var originalColor =
+                    colorIndex == (int)XlColorIndex.xlColorIndexNone
+                        ? null
+                        : current.Interior.Color;
                 current.Interior.Color = HighlightColor;
                 _lastHighlighted.Add((current, colorIndex, originalColor));
                 current = searchRange.FindNext(current);
@@ -88,103 +88,6 @@ internal static class CellHighlighter
         finally
         {
             App.ScreenUpdating = true;
-        }
-    }
-
-    public static void ClearAll()
-    {
-        App.ScreenUpdating = false;
-        try
-        {
-            ClearPrevious(null);
-        }
-        finally
-        {
-            App.ScreenUpdating = true;
-        }
-    }
-
-    private static void ClearPrevious(Worksheet ws)
-    {
-        if (_lastHighlighted.Count == 0)
-            return;
-
-        if (ws != null && _lastSheet != null && _lastSheet != ws)
-        {
-            _lastHighlighted.Clear();
-            _lastSheet = null;
-            return;
-        }
-
-        foreach (var (cell, colorIndex, originalColor) in _lastHighlighted)
-        {
-            try
-            {
-                if (colorIndex == (int)XlColorIndex.xlColorIndexNone)
-                    cell.Interior.ColorIndex = XlColorIndex.xlColorIndexNone;
-                else
-                    cell.Interior.Color = originalColor;
-            }
-            catch
-            {
-                // 单元格可能已失效，忽略
-            }
-        }
-
-        _lastHighlighted.Clear();
-        _lastSheet = null;
-    }
-
-    private static Application App => AppServices.App;
-}
-
-internal static class CellSpotlightHighlighter
-{
-    private const int RowColor = 0xFFC832;
-    private const int ColColor = 0x32A0FF;
-
-    private static readonly List<(Range Cell, int ColorIndex, object Color)> _lastHighlighted = [];
-    private static Worksheet _lastSheet;
-
-    public static void Highlight(Worksheet ws, Range target)
-    {
-        App.ScreenUpdating = false;
-        try
-        {
-            ClearPrevious(ws);
-
-            var scope = ViewportHelper.GetViewportRange(ws);
-            if (scope is null)
-                return;
-
-            var anchor = target.Cells[1, 1];
-            var rowRange = App.Intersect(anchor.EntireRow, scope);
-            var colRange = App.Intersect(anchor.EntireColumn, scope);
-
-            SaveColors(rowRange);
-            SaveColors(colRange);
-            if (rowRange != null) rowRange.Interior.Color = RowColor;
-            if (colRange != null) colRange.Interior.Color = ColColor;
-
-            _lastSheet = ws;
-        }
-        finally
-        {
-            App.ScreenUpdating = true;
-        }
-    }
-
-    private static void SaveColors(Range range)
-    {
-        if (range is null)
-            return;
-        foreach (Range cell in range)
-        {
-            var colorIndex = (int)cell.Interior.ColorIndex;
-            var originalColor = colorIndex == (int)XlColorIndex.xlColorIndexNone
-                ? null
-                : cell.Interior.Color;
-            _lastHighlighted.Add((cell, colorIndex, originalColor));
         }
     }
 

@@ -170,13 +170,9 @@
                             onAction='OnButtonClick' screentip='将选中单元格修改为标准格式' tag='标准格式' />
                     <button id='Button5' size='large' getLabel='GetLableText' image='nd_放大镜'
                             onAction='OnButtonClick' screentip='放大镜开关，对当前选中单元格进行放大显示' tag='放大镜开关' />
-                    <menu id='FocusLightMenu' size='large' getLabel='GetLableText' image='nd_聚光灯菜单'
-                          screentip='聚光灯开关，高亮显示当前行列'>
-                        <button id='FocusLightButton' label='Overlay模式（行列线）' imageMso='HighlighterMode'
-                                onAction='OnButtonClick' screentip='聚光灯Overlay模式：半透明行列十字线覆盖显示' tag='聚光灯-Overlay' />
-                        <button id='FocusLightFillButton' label='填色模式（行列格）' imageMso='CellFillColorPicker'
-                                onAction='OnButtonClick' screentip='聚光灯填色模式：高亮当前行列所有单元格背景色' tag='聚光灯-填色' />
-                    </menu>
+                    <button id='FocusLightButton' size='large' getLabel='GetLableText' image='nd_聚光灯菜单'
+                            onAction='OnButtonClick'
+                            screentip='聚光灯开关：半透明行列色条覆盖显示，不修改单元格格式' tag='聚光灯-Overlay' />
                     <button id='AutoMergeExcel' size='large' label='合并Excel&#13;(Alice-Cove)' image='nd_合并Excel'
                             onAction='OnButtonClick' screentip='合并Alice和Cove的Excel配置数据' tag='合并Excel(Alice-Cove)' />
                     <button id='AutoSeachExcel' size='large' label='查验模版&#13;写入数据' image='nd_查验模版写入数据'

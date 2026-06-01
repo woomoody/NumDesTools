@@ -168,9 +168,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         CustomRibbon.ActivateTab("MainTab");
 
         if (FocusLabelText == "聚光灯：开启")
-        {
-            CrosslightController.Enable(App, Config.Ui.SpotlightMode == "fill");
-        }
+            CrosslightController.Enable(App);
     }
 
     public override string GetCustomUI(string ribbonId)
@@ -234,7 +232,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             "Button5" => LabelText,
             "Button14" => LabelTextRoleDataPreview,
-            "FocusLightMenu" => FocusLabelText,
+            "FocusLightButton" => FocusLabelText,
             "SheetMenu" => SheetMenuText,
             "CellHiLight" => CellHiLightText,
             "CheckSheetValue" => CheckSheetValueText,
@@ -257,7 +255,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["Button4"] = CleanCellFormat_Click,
             ["Button5"] = ZoomInOut_Click,
             ["FocusLightButton"] = FocusLightOverlay_Click,
-            ["FocusLightFillButton"] = FocusLightFill_Click,
             ["Button8"] = FormularBaseCheck_Click,
             ["SheetMenu"] = SheetMenu_Click,
             ["CellHiLight"] = CellHiLight_Click,
@@ -357,6 +354,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         var sw = new Stopwatch();
         sw.Start();
+
+        // Bug4：点击任意 Ribbon 按钮时先清除 Overlay（Ribbon 是 Excel 进程内子控件，PID 检测无效）
+        if (CrosslightController.IsActive)
+            CrosslightOverlay.Instance.ClearCross();
 
         //路由执行
         if (_handlers.TryGetValue(control.Id, out var handler))
@@ -3173,26 +3174,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         if (control == null)
             throw new ArgumentNullException(nameof(control));
-        ToggleFocusLight("overlay");
+        ToggleFocusLight();
     }
 
-    public void FocusLightFill_Click(IRibbonControl control)
+    private void ToggleFocusLight()
     {
-        if (control == null)
-            throw new ArgumentNullException(nameof(control));
-        ToggleFocusLight("fill");
-    }
-
-    private void ToggleFocusLight(string mode)
-    {
-        bool turningOn = FocusLabelText != "聚光灯：开启" || Config.Ui.SpotlightMode != mode;
-
-        if (turningOn)
+        if (FocusLabelText != "聚光灯：开启")
         {
             FocusLabelText = "聚光灯：开启";
-            Config.Ui.SpotlightMode = mode;
-            Config.Save("SpotlightMode", mode);
-            CrosslightController.Enable(App, mode == "fill");
+            CrosslightController.Enable(App);
         }
         else
         {
@@ -3200,7 +3190,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             CrosslightController.Disable();
         }
 
-        CustomRibbon.InvalidateControl("FocusLightMenu");
+        CustomRibbon.InvalidateControl("FocusLightButton");
         GlobalValue.SaveValue("FocusLabelText", FocusLabelText);
     }
 
@@ -3472,7 +3462,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         CustomRibbon.InvalidateControl("Button5");
         CustomRibbon.InvalidateControl("Button14");
-        CustomRibbon.InvalidateControl("FocusLightMenu");
+        CustomRibbon.InvalidateControl("FocusLightButton");
         CustomRibbon.InvalidateControl("SheetMenu");
         CustomRibbon.InvalidateControl("CellHiLight");
         CustomRibbon.InvalidateControl("CheckSheetValue");

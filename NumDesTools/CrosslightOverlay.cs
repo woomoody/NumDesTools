@@ -1,124 +1,165 @@
+using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Forms;
 using ExcelDna.Integration;
+using Microsoft.Office.Interop.Excel;
+using Rectangle = System.Drawing.Rectangle;
 using Timer = System.Windows.Forms.Timer;
 
 namespace NumDesTools;
 
 /// <summary>
-/// 聚光灯：两条细长透明窗口绘制十字线，坐标机制与 CellSelectChangeTip 完全相同（Cursor.Position）。
+/// 聚光灯 overlay：在独立 STA 线程上绘制整行/整列半透明色条，
+/// 坐标通过 ActivePane.PointsToScreenPixelsX/Y 精确对齐单元格，键盘导航也能跟随。
 /// </summary>
 internal sealed class CrosslightOverlay : IDisposable
 {
-    private readonly LineForm _hLine;
-    private readonly LineForm _vLine;
-    private readonly Timer _scrollTimer;
-    private readonly Timer _focusTimer;
-    private int _lastScrollRow;
-    private int _lastScrollCol;
-
-    private static readonly Color _rowColor = Color.FromArgb(255, 200, 50);
-    private static readonly Color _colColor = Color.FromArgb(50, 160, 255);
-    private const byte LineAlpha = 160;
-    private const int Thickness = 2;
+    private static readonly Color RowColor = Color.FromArgb(255, 200, 50);
+    private static readonly Color ColColor = Color.FromArgb(50, 160, 255);
+    private const byte BandAlpha = 80;
 
     private static CrosslightOverlay? _instance;
     public static CrosslightOverlay Instance => _instance ??= new CrosslightOverlay();
 
+    private Thread? _staThread;
+    private RowColBandForm? _bandForm;
+    private readonly object _staLock = new();
+    private string? _lastAddress;
+
     private CrosslightOverlay()
     {
-        _hLine = new LineForm(_rowColor, LineAlpha);
-        _vLine = new LineForm(_colColor, LineAlpha);
-
-        _scrollTimer = new Timer { Interval = 150 };
-        _scrollTimer.Tick += OnScrollCheck;
-
-        _focusTimer = new Timer { Interval = 300 };
-        _focusTimer.Tick += OnFocusCheck;
-        _focusTimer.Start();
+        EnsureStaThread();
     }
 
-    public void UpdateCross()
+    private void EnsureStaThread()
     {
-        var cursor = Cursor.Position;
-
-        // Excel 主窗口范围（同 CellSelectChangeTip 的 Screen.FromPoint(cursor).WorkingArea 思路）
-        GetWindowRect((IntPtr)AppServices.App.Hwnd, out var rc);
-
-        int left = rc.Left;
-        int top = rc.Top;
-        int right = rc.Right;
-        int bottom = rc.Bottom;
-
-        _hLine.Place(left, cursor.Y, right - left, Thickness);
-        _vLine.Place(cursor.X, top, Thickness, bottom - top);
-
-        ShowWindow(_hLine.Handle, SW_SHOWNOACTIVATE);
-        ShowWindow(_vLine.Handle, SW_SHOWNOACTIVATE);
-
-        try
+        lock (_staLock)
         {
-            var win = AppServices.App.ActiveWindow;
-            if (win != null)
+            if (_staThread is { IsAlive: true })
+                return;
+
+            _staThread = new Thread(() =>
             {
-                _lastScrollRow = win.ScrollRow;
-                _lastScrollCol = win.ScrollColumn;
-            }
+                _bandForm = new RowColBandForm();
+                System.Windows.Forms.Application.Run();
+            })
+            {
+                IsBackground = true,
+                Name = "CrosslightOverlay-STA",
+            };
+            _staThread.SetApartmentState(ApartmentState.STA);
+            _staThread.Start();
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (_bandForm is null && sw.ElapsedMilliseconds < 2000)
+                Thread.Sleep(10);
         }
-        catch
-        { /* ignore */
+    }
+
+    public void UpdateCross(Range target, bool forced = false)
+    {
+        EnsureStaThread();
+
+        // Bug-Scroll：只有选中地址变化（或强制刷新）时才重绘，
+        // 避免滚轮滚动触发 WindowActivate/WM_SIZE 使 overlay 随 cell 坐标漂移。
+        // forced=true 供窗口移动/缩放时调用，确保 overlay 跟随窗口。
+        var address = target.Address[true, true, XlReferenceStyle.xlA1, true];
+        if (!forced && address == _lastAddress)
+            return;
+        _lastAddress = address;
+
+        var cellRect = CellPositionProbe.GetCellScreenRect(target);
+        if (cellRect == Rectangle.Empty)
+            return;
+
+        var excelHwnd = (IntPtr)AppServices.App.Hwnd;
+        var currentScreen = Screen.FromHandle(excelHwnd);
+        var screenBounds = currentScreen.Bounds;
+        if (
+            cellRect.Width > screenBounds.Width * 0.9
+            || cellRect.Height > screenBounds.Height * 0.9
+        )
+            return;
+
+        var win = AppServices.App.ActiveWindow;
+
+        // gridLeft/gridTop 来自 Panes[1]（左上冻结角或唯一窗格）
+        dynamic pane1 = win.Panes[1];
+        Range firstCell = ((Range)pane1.VisibleRange).Cells[1, 1];
+        int gridLeft = (int)pane1.PointsToScreenPixelsX((double)firstCell.Left);
+        int gridTop = (int)pane1.PointsToScreenPixelsY((double)firstCell.Top);
+
+        // Bug-FrozenPane：gridRight/gridBottom 必须来自最后一个窗格（可滚动区域末尾），
+        // 不能用 ActivePane——若选中的是冻结区域，ActivePane 就是 Panes[1]，
+        // 其 VisibleRange 只有冻结行，导致 gridBottom 严重偏小。
+        int paneCount = win.Panes.Count;
+        dynamic lastPane = win.Panes[paneCount];
+        Range lastPaneVisible = lastPane.VisibleRange;
+        int lastRow = lastPaneVisible.Rows.Count;
+        int lastCol = lastPaneVisible.Columns.Count;
+        Range lastCell = lastPaneVisible.Cells[lastRow, lastCol];
+        int gridRight = (int)
+            lastPane.PointsToScreenPixelsX((double)(lastCell.Left + lastCell.Width));
+        int gridBottom = (int)
+            lastPane.PointsToScreenPixelsY((double)(lastCell.Top + lastCell.Height));
+
+        // Bug2：用 EXCEL7 子窗口客户区对四边做 clamp，消除末格半露导致的越界
+        var gridHwnd = FindExcelGridHwnd(excelHwnd);
+        if (gridHwnd != IntPtr.Zero)
+        {
+            GetClientRect(gridHwnd, out var cr);
+            var ptLT = new POINT { X = 0, Y = 0 };
+            // Bug2/3：裁掉右侧垂直滚动条和底部水平滚动条占用的像素
+            var ptRB = new POINT
+            {
+                X = cr.Right - GetSystemMetrics(SmCxvscroll),
+                Y = cr.Bottom - GetSystemMetrics(SmCyhscroll),
+            };
+            ClientToScreen(gridHwnd, ref ptLT);
+            ClientToScreen(gridHwnd, ref ptRB);
+            gridLeft = Math.Max(gridLeft, ptLT.X);
+            gridTop = Math.Max(gridTop, ptLT.Y);
+            gridRight = Math.Min(gridRight, ptRB.X);
+            gridBottom = Math.Min(gridBottom, ptRB.Y);
         }
-        _scrollTimer.Start();
+
+        var gridRect = Rectangle.FromLTRB(gridLeft, gridTop, gridRight, gridBottom);
+
+        // Bug3：gridRect 与当前屏幕求交，防止异常大矩形；换屏后 screenBounds 已是正确屏幕
+        gridRect = Rectangle.Intersect(gridRect, screenBounds);
+        if (gridRect.IsEmpty)
+            return;
+
+        _bandForm?.BeginInvoke(
+            (System.Action)(
+                () =>
+                {
+                    _bandForm.SetExcelHwnd(excelHwnd);
+                    _bandForm.ShowBands(cellRect, gridRect);
+                }
+            )
+        );
     }
 
     public void ClearCross()
     {
-        _scrollTimer.Stop();
-        if (!_hLine.IsDisposed)
-            _hLine.Hide();
-        if (!_vLine.IsDisposed)
-            _vLine.Hide();
-    }
-
-    private void OnScrollCheck(object? sender, EventArgs e)
-    {
-        try
-        {
-            var win = AppServices.App.ActiveWindow;
-            if (win == null)
-                return;
-            if (win.ScrollRow != _lastScrollRow || win.ScrollColumn != _lastScrollCol)
-                ClearCross();
-        }
-        catch
-        {
-            ClearCross();
-        }
-    }
-
-    private void OnFocusCheck(object? sender, EventArgs e)
-    {
-        if (_hLine.IsDisposed || (!_hLine.Visible && !_vLine.Visible))
-            return;
-        try
-        {
-            var fg = GetForegroundWindow();
-            GetWindowThreadProcessId(fg, out uint fgPid);
-            GetWindowThreadProcessId((IntPtr)AppServices.App.Hwnd, out uint excelPid);
-            if (fgPid != excelPid)
-                ClearCross();
-        }
-        catch
-        { /* ignore */
-        }
+        _lastAddress = null;
+        _bandForm?.BeginInvoke((System.Action)(() => _bandForm?.HideBands()));
     }
 
     public void Dispose()
     {
-        _scrollTimer.Dispose();
-        _focusTimer.Dispose();
-        _hLine.Dispose();
-        _vLine.Dispose();
+        _bandForm?.BeginInvoke(
+            (System.Action)(
+                () =>
+                {
+                    _bandForm?.Close();
+                    System.Windows.Forms.Application.ExitThread();
+                }
+            )
+        );
+        _bandForm = null;
     }
 
     public static void DisposeInstance()
@@ -127,19 +168,30 @@ internal sealed class CrosslightOverlay : IDisposable
         _instance = null;
     }
 
-    private const int SW_SHOWNOACTIVATE = 4;
+    // ── Win32 helpers ────────────────────────────────────────────────────────
 
     [DllImport("user32.dll")]
-    static extern bool ShowWindow(IntPtr h, int cmd);
+    private static extern bool GetWindowRect(IntPtr h, out RECT r);
 
     [DllImport("user32.dll")]
-    static extern IntPtr GetForegroundWindow();
+    private static extern bool GetClientRect(IntPtr h, out RECT r);
 
     [DllImport("user32.dll")]
-    static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+    private static extern bool ClientToScreen(IntPtr h, ref POINT pt);
 
     [DllImport("user32.dll")]
-    static extern bool GetWindowRect(IntPtr h, out RECT r);
+    private static extern bool EnumChildWindows(IntPtr h, EnumChildProc cb, IntPtr lp);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetClassName(IntPtr h, System.Text.StringBuilder sb, int max);
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int nIndex);
+
+    private const int SmCxvscroll = 2;
+    private const int SmCyhscroll = 3;
+
+    private delegate bool EnumChildProc(IntPtr h, IntPtr lp);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct RECT
@@ -150,88 +202,269 @@ internal sealed class CrosslightOverlay : IDisposable
             Bottom;
     }
 
-    private sealed class LineForm : Form
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
     {
-        private const int GWL_EXSTYLE = -20;
-        private const int WS_EX_LAYERED = 0x00080000;
-        private const int WS_EX_TRANSPARENT = 0x00000020;
-        private const int WS_EX_TOOLWINDOW = 0x00000080;
-        private const int WS_EX_NOACTIVATE = 0x08000000;
+        public int X,
+            Y;
+    }
+
+    /// <summary>
+    /// 在 Excel 主窗口子树中找 EXCEL7 类窗口（网格区域），用于精确 clamp gridRect。
+    /// </summary>
+    private static IntPtr FindExcelGridHwnd(IntPtr excelHwnd)
+    {
+        IntPtr found = IntPtr.Zero;
+        EnumChildWindows(
+            excelHwnd,
+            (h, _) =>
+            {
+                var sb = new System.Text.StringBuilder(64);
+                GetClassName(h, sb, 64);
+                if (sb.ToString() == "EXCEL7")
+                {
+                    found = h;
+                    return false; // 停止枚举
+                }
+                return true;
+            },
+            IntPtr.Zero
+        );
+        return found;
+    }
+
+    // ── RowColBandForm ────────────────────────────────────────────────────────
+
+    private sealed class RowColBandForm : Form
+    {
+        private const int GwlExstyle = -20;
+        private const int WsExLayered = 0x00080000;
+        private const int WsExTransparent = 0x00000020;
+        private const int WsExToolwindow = 0x00000080;
+        private const int WsExNoactivate = 0x08000000;
+        private const int SwHide = 0;
 
         [DllImport("user32.dll")]
-        static extern int GetWindowLong(IntPtr h, int i);
+        private static extern int GetWindowLong(IntPtr h, int i);
 
         [DllImport("user32.dll")]
-        static extern int SetWindowLong(IntPtr h, int i, int v);
+        private static extern int SetWindowLong(IntPtr h, int i, int v);
 
         [DllImport("user32.dll")]
-        static extern bool SetLayeredWindowAttributes(IntPtr h, uint key, byte alpha, uint flags);
+        private static extern bool SetLayeredWindowAttributes(
+            IntPtr h,
+            uint key,
+            byte alpha,
+            uint flags
+        );
 
-        public LineForm(Color color, byte alpha)
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr h, int cmd);
+
+        [DllImport("user32.dll")]
+        private static extern bool SetWindowPos(
+            IntPtr h,
+            IntPtr insertAfter,
+            int x,
+            int y,
+            int cx,
+            int cy,
+            uint flags
+        );
+
+        private static readonly IntPtr HwndTopmost = new(-1);
+        private const uint SwpNoactivate = 0x0010;
+        private const uint SwpShowwindow = 0x0040;
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern int GetClassName(IntPtr h, System.Text.StringBuilder sb, int max);
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr h, IntPtr pidNull);
+
+        [DllImport("user32.dll")]
+        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool attach);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetFocus();
+
+        private readonly BandStrip _rowBand;
+        private readonly BandStrip _colBand;
+        private readonly Timer _focusTimer;
+        private IntPtr _excelHwnd;
+        private Rectangle _lastCellRect;
+        private Rectangle _lastGridRect;
+
+        public RowColBandForm()
         {
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
-            TopMost = true;
-            BackColor = color;
-            AutoScaleMode = AutoScaleMode.None;
+            Size = new Size(0, 0);
             StartPosition = FormStartPosition.Manual;
+            Location = new Point(-100, -100);
+            Opacity = 0;
+            Show();
 
-            int ex = GetWindowLong(Handle, GWL_EXSTYLE);
-            SetWindowLong(
-                Handle,
-                GWL_EXSTYLE,
-                ex | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE
-            );
-            SetLayeredWindowAttributes(
-                Handle,
-                0,
-                alpha,
-                0x00000002 /* LWA_ALPHA */
-            );
+            _rowBand = new BandStrip(RowColor, BandAlpha);
+            _colBand = new BandStrip(ColColor, BandAlpha);
+
+            _focusTimer = new Timer { Interval = 300 };
+            _focusTimer.Tick += OnFocusCheck;
+            _focusTimer.Start();
         }
 
-        protected override CreateParams CreateParams
+        public void SetExcelHwnd(IntPtr hwnd) => _excelHwnd = hwnd;
+
+        private void OnFocusCheck(object? sender, EventArgs e)
         {
-            get
+            if (!_rowBand.IsVisible && !_colBand.IsVisible)
+                return;
+            if (_excelHwnd == IntPtr.Zero)
+                return;
+            try
             {
-                var cp = base.CreateParams;
-                cp.ExStyle |=
-                    WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
-                return cp;
+                // 切换到其他应用时隐藏
+                var fg = GetForegroundWindow();
+                GetWindowThreadProcessId(fg, out uint fgPid);
+                GetWindowThreadProcessId(_excelHwnd, out uint excelPid);
+                if (fgPid != excelPid)
+                {
+                    HideBands();
+                    return;
+                }
+
+                // Backstage 检测：attach 到 Excel UI 线程，用 GetFocus 拿到真实焦点窗口
+                // Backstage 打开时焦点落在非 EXCEL7 的子窗口上
+                uint myTid = GetWindowThreadProcessId(Handle, IntPtr.Zero);
+                uint excelTid = GetWindowThreadProcessId(_excelHwnd, IntPtr.Zero);
+                AttachThreadInput(myTid, excelTid, true);
+                IntPtr focusHwnd;
+                try
+                {
+                    focusHwnd = GetFocus();
+                }
+                finally
+                {
+                    AttachThreadInput(myTid, excelTid, false);
+                }
+
+                if (focusHwnd != IntPtr.Zero)
+                {
+                    var sb = new System.Text.StringBuilder(64);
+                    GetClassName(focusHwnd, sb, 64);
+                    // EXCEL7 = 网格区域；NUIDialog / NetUIHWND = Backstage / Ribbon 弹出
+                    if (sb.ToString() != "EXCEL7")
+                        HideBands();
+                }
             }
+            catch { }
         }
 
-        public void Place(int x, int y, int w, int h)
+        public void ShowBands(Rectangle cellRect, Rectangle gridRect)
         {
-            Location = new Point(x, y);
-            ClientSize = new Size(w, h);
+            // Bug-Scroll：cellRect 和 gridRect 均未变化时（滚轮未改变选中）跳过重绘，
+            // 避免 overlay 在内容滚动时产生位移感。
+            if (cellRect == _lastCellRect && gridRect == _lastGridRect)
+                return;
+            _lastCellRect = cellRect;
+            _lastGridRect = gridRect;
+
+            _rowBand.PlaceAndShow(gridRect.Left, cellRect.Top, gridRect.Width, cellRect.Height);
+            _colBand.PlaceAndShow(cellRect.Left, gridRect.Top, cellRect.Width, gridRect.Height);
+        }
+
+        public void HideBands()
+        {
+            _lastCellRect = Rectangle.Empty;
+            _lastGridRect = Rectangle.Empty;
+            _rowBand.HideBand();
+            _colBand.HideBand();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _focusTimer.Dispose();
+                _rowBand.Dispose();
+                _colBand.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        private sealed class BandStrip : IDisposable
+        {
+            private readonly Form _form;
+
+            public BandStrip(Color color, byte alpha)
+            {
+                _form = new Form
+                {
+                    FormBorderStyle = FormBorderStyle.None,
+                    ShowInTaskbar = false,
+                    TopMost = true,
+                    BackColor = color,
+                    AutoScaleMode = AutoScaleMode.None,
+                    StartPosition = FormStartPosition.Manual,
+                };
+
+                var ex = GetWindowLong(_form.Handle, GwlExstyle);
+                SetWindowLong(
+                    _form.Handle,
+                    GwlExstyle,
+                    ex | WsExLayered | WsExTransparent | WsExToolwindow | WsExNoactivate
+                );
+                SetLayeredWindowAttributes(
+                    _form.Handle,
+                    0,
+                    alpha,
+                    0x2 /* LWA_ALPHA */
+                );
+            }
+
+            [DllImport("user32.dll")]
+            private static extern bool IsWindowVisible(IntPtr h);
+
+            public bool IsVisible => IsWindowVisible(_form.Handle);
+
+            public void PlaceAndShow(int x, int y, int w, int h)
+            {
+                if (w <= 0 || h <= 0)
+                    return;
+                SetWindowPos(_form.Handle, HwndTopmost, x, y, w, h, SwpNoactivate | SwpShowwindow);
+            }
+
+            public void HideBand() => ShowWindow(_form.Handle, SwHide);
+
+            public void Dispose() => _form.Dispose();
         }
     }
 }
+
+// ── CrosslightController ─────────────────────────────────────────────────────
 
 internal static class CrosslightController
 {
     private static Application? _app;
     private static bool _active;
-    private static bool _fillMode;
+    private static Range? _lastTarget;
+    private static ExcelWindowWatcher? _watcher;
 
     public static bool IsActive => _active;
 
-    public static void Enable(Application app, bool fillMode = false)
+    public static void Enable(Application app)
     {
         if (_active)
         {
-            bool wasFill = _fillMode;
-            _fillMode = fillMode;
-            // clear whichever mode was running before switching
-            if (wasFill)
-                CellSpotlightHighlighter.ClearAll();
-            else
-                CrosslightOverlay.Instance.ClearCross();
             TriggerCurrent();
             return;
         }
-        _fillMode = fillMode;
         _active = true;
         _app = app;
 
@@ -241,6 +474,23 @@ internal static class CrosslightController
         app.WindowActivate += OnWindowActivate;
         app.SheetDeactivate += OnSheetDeactivate;
         app.WorkbookBeforeClose += OnWorkbookBeforeClose;
+
+        // Bug5：监听 Excel 主窗口 WM_MOVE / WM_SIZE，窗口移动时重绘色条
+        var hwnd = (IntPtr)app.Hwnd;
+        _watcher = new ExcelWindowWatcher(
+            hwnd,
+            () =>
+                ExcelAsyncUtil.QueueAsMacro(() =>
+                {
+                    if (_lastTarget is not null)
+                        try
+                        {
+                            // forced=true：窗口移动/缩放时强制刷新坐标，跳过地址缓存
+                            CrosslightOverlay.Instance.UpdateCross(_lastTarget, forced: true);
+                        }
+                        catch { }
+                })
+        );
 
         TriggerCurrent();
     }
@@ -258,68 +508,96 @@ internal static class CrosslightController
         _app.SheetDeactivate -= OnSheetDeactivate;
         _app.WorkbookBeforeClose -= OnWorkbookBeforeClose;
 
+        _watcher?.ReleaseHandle();
+        _watcher = null;
+        _lastTarget = null;
+
         CrosslightOverlay.Instance.ClearCross();
-        CellSpotlightHighlighter.ClearAll();
         _app = null;
     }
 
     private static void TriggerCurrent()
     {
-        if (_fillMode)
+        ExcelAsyncUtil.QueueAsMacro(() =>
         {
-            ExcelAsyncUtil.QueueAsMacro(() =>
+            try
             {
-                try
+                if (AppServices.App.Selection is Range sel)
                 {
-                    var ws = AppServices.App.ActiveSheet as Worksheet;
-                    var sel = AppServices.App.Selection as Range;
-                    if (ws != null && sel != null)
-                        CellSpotlightHighlighter.Highlight(ws, sel);
+                    _lastTarget = sel;
+                    CrosslightOverlay.Instance.UpdateCross(sel);
                 }
-                catch { }
-            });
-        }
-        else
-        {
-            var overlay = CrosslightOverlay.Instance;
-            if (overlay != null)
-                ExcelAsyncUtil.QueueAsMacro(overlay.UpdateCross);
-        }
+            }
+            catch { }
+        });
     }
 
     private static void OnSelectionChange(object sh, Range target)
     {
         if (AppServices.App.CutCopyMode != 0)
             return;
-        if (_fillMode)
-        {
-            if (sh is Worksheet ws)
-                ExcelAsyncUtil.QueueAsMacro(() => CellSpotlightHighlighter.Highlight(ws, target));
-        }
-        else
-        {
-            var overlay = CrosslightOverlay.Instance;
-            if (overlay != null)
-                ExcelAsyncUtil.QueueAsMacro(overlay.UpdateCross);
-        }
+        _lastTarget = target;
+        ExcelAsyncUtil.QueueAsMacro(() => CrosslightOverlay.Instance.UpdateCross(target));
     }
 
-    private static void OnWindowDeactivate(object wb, object wn)
-    {
+    private static void OnWindowDeactivate(object wb, object wn) =>
         CrosslightOverlay.Instance.ClearCross();
-        CellSpotlightHighlighter.ClearAll();
-    }
 
-    private static void OnWorkbookDeactivate(object wb)
-    {
-        CrosslightOverlay.Instance.ClearCross();
-        CellSpotlightHighlighter.ClearAll();
-    }
+    private static void OnWorkbookDeactivate(object wb) => CrosslightOverlay.Instance.ClearCross();
 
-    private static void OnWindowActivate(object wb, object wn) => TriggerCurrent();
+    // Bug3：WindowActivate 经 QueueAsMacro 延迟一个宏周期，等 Excel 完成渲染再触发
+    private static void OnWindowActivate(object wb, object wn) =>
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            try
+            {
+                TriggerCurrent();
+            }
+            catch { }
+        });
 
-    private static void OnSheetDeactivate(object sh) => CellSpotlightHighlighter.ClearAll();
+    private static void OnSheetDeactivate(object sh) => CrosslightOverlay.Instance.ClearCross();
 
     private static void OnWorkbookBeforeClose(Workbook wb, ref bool cancel) =>
-        CellSpotlightHighlighter.ClearAll();
+        CrosslightOverlay.Instance.ClearCross();
+}
+
+// ── ExcelWindowWatcher ────────────────────────────────────────────────────────
+
+/// <summary>
+/// 通过 NativeWindow subclass 监听 Excel 主窗口的 WM_MOVE / WM_SIZE 消息，
+/// 触发时通知调用方重新计算 Overlay 坐标，实现窗口拖动时色条实时跟随。
+/// </summary>
+internal sealed class ExcelWindowWatcher : NativeWindow
+{
+    private const int WmMove = 0x0003;
+    private const int WmSize = 0x0005;
+    private const int WmDestroy = 0x0002;
+
+    private readonly System.Action _onMoved;
+
+    public ExcelWindowWatcher(IntPtr hwnd, System.Action onMoved)
+    {
+        _onMoved = onMoved;
+        AssignHandle(hwnd);
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        base.WndProc(ref m);
+        switch (m.Msg)
+        {
+            case WmMove:
+            case WmSize:
+                try
+                {
+                    _onMoved();
+                }
+                catch { }
+                break;
+            case WmDestroy:
+                ReleaseHandle();
+                break;
+        }
+    }
 }
