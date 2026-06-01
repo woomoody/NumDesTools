@@ -451,6 +451,12 @@ internal sealed class CrosslightOverlay : IDisposable
 
 internal static class CrosslightController
 {
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+
     private static Application? _app;
     private static bool _active;
     private static Range? _lastTarget;
@@ -461,6 +467,14 @@ internal static class CrosslightController
     private static System.Timers.Timer? _refreshTimer;
 
     public static bool IsActive => _active;
+
+    private static bool IsExcelForeground(IntPtr excelHwnd)
+    {
+        var fg = GetForegroundWindow();
+        GetWindowThreadProcessId(fg, out uint fgPid);
+        GetWindowThreadProcessId(excelHwnd, out uint excelPid);
+        return fgPid == excelPid;
+    }
 
     public static void Enable(Application app)
     {
@@ -483,12 +497,15 @@ internal static class CrosslightController
         _refreshTimer.Elapsed += (_, _) =>
             ExcelAsyncUtil.QueueAsMacro(() =>
             {
-                if (_lastTarget is not null)
-                    try
-                    {
-                        CrosslightOverlay.Instance.UpdateCross(_lastTarget, forced: true);
-                    }
-                    catch { }
+                if (_lastTarget is null || _app is null)
+                    return;
+                try
+                {
+                    if (!IsExcelForeground((IntPtr)_app.Hwnd))
+                        return;
+                    CrosslightOverlay.Instance.UpdateCross(_lastTarget, forced: true);
+                }
+                catch { }
             });
         _refreshTimer.Start();
 
