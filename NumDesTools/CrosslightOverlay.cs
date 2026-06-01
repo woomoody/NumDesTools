@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
@@ -21,6 +22,25 @@ internal sealed class CrosslightOverlay : IDisposable
 
     private static CrosslightOverlay? _instance;
     public static CrosslightOverlay Instance => _instance ??= new CrosslightOverlay();
+
+    // ── 诊断日志 ─────────────────────────────────────────────────────────────
+    private static readonly string _diagLog = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        "tmp",
+        "crosslight_diag.log"
+    );
+    private static readonly object _logLock = new();
+
+    private static void DiagLog(string msg)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_diagLog)!);
+            lock (_logLock)
+                File.AppendAllText(_diagLog, $"{DateTime.Now:HH:mm:ss.fff} {msg}\n");
+        }
+        catch { }
+    }
 
     private Thread? _staThread;
     private RowColBandForm? _bandForm;
@@ -60,9 +80,15 @@ internal sealed class CrosslightOverlay : IDisposable
     {
         EnsureStaThread();
 
+        var addr = "";
+        try { addr = target.Address[false, false]; } catch { }
+
         var cellRect = CellPositionProbe.GetCellScreenRect(target);
         if (cellRect == Rectangle.Empty)
+        {
+            DiagLog($"[{addr}] cellRect=Empty → return");
             return;
+        }
 
         var excelHwnd = (IntPtr)AppServices.App.Hwnd;
         var currentScreen = Screen.FromHandle(excelHwnd);
@@ -71,7 +97,10 @@ internal sealed class CrosslightOverlay : IDisposable
             cellRect.Width > screenBounds.Width * 0.9
             || cellRect.Height > screenBounds.Height * 0.9
         )
+        {
+            DiagLog($"[{addr}] cellRect too large ({cellRect.Width}x{cellRect.Height}) → return");
             return;
+        }
 
         var win = AppServices.App.ActiveWindow;
 
@@ -81,9 +110,6 @@ internal sealed class CrosslightOverlay : IDisposable
         int gridLeft = (int)pane1.PointsToScreenPixelsX((double)firstCell.Left);
         int gridTop = (int)pane1.PointsToScreenPixelsY((double)firstCell.Top);
 
-        // Bug-FrozenPane：gridRight/gridBottom 必须来自最后一个窗格（可滚动区域末尾），
-        // 不能用 ActivePane——若选中的是冻结区域，ActivePane 就是 Panes[1]，
-        // 其 VisibleRange 只有冻结行，导致 gridBottom 严重偏小。
         int paneCount = win.Panes.Count;
         dynamic lastPane = win.Panes[paneCount];
         Range lastPaneVisible = lastPane.VisibleRange;
@@ -95,13 +121,16 @@ internal sealed class CrosslightOverlay : IDisposable
         int gridBottom = (int)
             lastPane.PointsToScreenPixelsY((double)(lastCell.Top + lastCell.Height));
 
-        // Bug2：用 EXCEL7 子窗口客户区对四边做 clamp，消除末格半露导致的越界
+        DiagLog(
+            $"[{addr}] panes={paneCount} cellRect=({cellRect.Left},{cellRect.Top},{cellRect.Width},{cellRect.Height})"
+                + $" gridRaw=({gridLeft},{gridTop}→{gridRight},{gridBottom})"
+        );
+
         var gridHwnd = FindExcelGridHwnd(excelHwnd);
         if (gridHwnd != IntPtr.Zero)
         {
             GetClientRect(gridHwnd, out var cr);
             var ptLT = new POINT { X = 0, Y = 0 };
-            // Bug2/3：裁掉右侧垂直滚动条和底部水平滚动条占用的像素
             var ptRB = new POINT
             {
                 X = cr.Right - GetSystemMetrics(SmCxvscroll),
@@ -109,25 +138,39 @@ internal sealed class CrosslightOverlay : IDisposable
             };
             ClientToScreen(gridHwnd, ref ptLT);
             ClientToScreen(gridHwnd, ref ptRB);
-            gridLeft = Math.Max(gridLeft, ptLT.X);
-            gridTop = Math.Max(gridTop, ptLT.Y);
-            gridRight = Math.Min(gridRight, ptRB.X);
-            gridBottom = Math.Min(gridBottom, ptRB.Y);
+            int gl2 = Math.Max(gridLeft, ptLT.X);
+            int gt2 = Math.Max(gridTop, ptLT.Y);
+            int gr2 = Math.Min(gridRight, ptRB.X);
+            int gb2 = Math.Min(gridBottom, ptRB.Y);
+            DiagLog(
+                $"[{addr}] EXCEL7 clamp: ptLT=({ptLT.X},{ptLT.Y}) ptRB=({ptRB.X},{ptRB.Y})"
+                    + $" grid({gridLeft},{gridTop}→{gridRight},{gridBottom})→({gl2},{gt2}→{gr2},{gb2})"
+            );
+            gridLeft = gl2;
+            gridTop = gt2;
+            gridRight = gr2;
+            gridBottom = gb2;
         }
 
         var gridRect = Rectangle.FromLTRB(gridLeft, gridTop, gridRight, gridBottom);
-
-        // Bug3：gridRect 与当前屏幕求交，防止异常大矩形；换屏后 screenBounds 已是正确屏幕
         gridRect = Rectangle.Intersect(gridRect, screenBounds);
         if (gridRect.IsEmpty)
+        {
+            DiagLog($"[{addr}] gridRect empty after intersect → return");
             return;
+        }
 
-        // 单元格已滚出可见区时隐藏，避免 overlay 显示在错误位置
         var cellCenter = new Point(
             cellRect.Left + cellRect.Width / 2,
             cellRect.Top + cellRect.Height / 2
         );
-        if (!gridRect.Contains(cellCenter))
+        bool inGrid = gridRect.Contains(cellCenter);
+        DiagLog(
+            $"[{addr}] gridRect=({gridRect.Left},{gridRect.Top},{gridRect.Width},{gridRect.Height})"
+                + $" cellCenter=({cellCenter.X},{cellCenter.Y}) inGrid={inGrid}"
+        );
+
+        if (!inGrid)
         {
             _bandForm?.BeginInvoke((System.Action)(() => _bandForm?.HideBands()));
             return;
