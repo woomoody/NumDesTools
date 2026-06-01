@@ -104,31 +104,24 @@ internal sealed class CrosslightOverlay : IDisposable
 
         var win = AppServices.App.ActiveWindow;
 
-        // gridLeft/gridTop 来自 Panes[1]（左上冻结角或唯一窗格）
-        dynamic pane1 = win.Panes[1];
-        Range firstCell = ((Range)pane1.VisibleRange).Cells[1, 1];
-        int gridLeft = (int)pane1.PointsToScreenPixelsX((double)firstCell.Left);
-        int gridTop = (int)pane1.PointsToScreenPixelsY((double)firstCell.Top);
-
+        // gridRect 策略：优先用 EXCEL7 子窗口客户区（最准确），
+        // 再用 Panes[1] 首格坐标限定左上边界（排除行列标头区），
+        // 不再从 VisibleRange 末行推算右下——末行可能是整表末行，高度异常大。
         int paneCount = win.Panes.Count;
-        dynamic lastPane = win.Panes[paneCount];
-        Range lastPaneVisible = lastPane.VisibleRange;
-        int lastRow = lastPaneVisible.Rows.Count;
-        int lastCol = lastPaneVisible.Columns.Count;
-        Range lastCell = lastPaneVisible.Cells[lastRow, lastCol];
-        int gridRight = (int)
-            lastPane.PointsToScreenPixelsX((double)(lastCell.Left + lastCell.Width));
-        int gridBottom = (int)
-            lastPane.PointsToScreenPixelsY((double)(lastCell.Top + lastCell.Height));
-
         DiagLog(
             $"[{addr}] panes={paneCount} cellRect=({cellRect.Left},{cellRect.Top},{cellRect.Width},{cellRect.Height})"
-                + $" gridRaw=({gridLeft},{gridTop}→{gridRight},{gridBottom})"
         );
+
+        // 默认退路：用屏幕边界
+        int gridLeft = screenBounds.Left;
+        int gridTop = screenBounds.Top;
+        int gridRight = screenBounds.Right;
+        int gridBottom = screenBounds.Bottom;
 
         var gridHwnd = FindExcelGridHwnd(excelHwnd);
         if (gridHwnd != IntPtr.Zero)
         {
+            // EXCEL7 客户区 → 屏幕坐标，减去滚动条
             GetClientRect(gridHwnd, out var cr);
             var ptLT = new POINT { X = 0, Y = 0 };
             var ptRB = new POINT
@@ -138,19 +131,21 @@ internal sealed class CrosslightOverlay : IDisposable
             };
             ClientToScreen(gridHwnd, ref ptLT);
             ClientToScreen(gridHwnd, ref ptRB);
-            int gl2 = Math.Max(gridLeft, ptLT.X);
-            int gt2 = Math.Max(gridTop, ptLT.Y);
-            int gr2 = Math.Min(gridRight, ptRB.X);
-            int gb2 = Math.Min(gridBottom, ptRB.Y);
-            DiagLog(
-                $"[{addr}] EXCEL7 clamp: ptLT=({ptLT.X},{ptLT.Y}) ptRB=({ptRB.X},{ptRB.Y})"
-                    + $" grid({gridLeft},{gridTop}→{gridRight},{gridBottom})→({gl2},{gt2}→{gr2},{gb2})"
-            );
-            gridLeft = gl2;
-            gridTop = gt2;
-            gridRight = gr2;
-            gridBottom = gb2;
+            gridLeft = ptLT.X;
+            gridTop = ptLT.Y;
+            gridRight = ptRB.X;
+            gridBottom = ptRB.Y;
+            DiagLog($"[{addr}] EXCEL7: ({gridLeft},{gridTop}→{gridRight},{gridBottom})");
         }
+
+        // 用 Panes[1] 第一个可见格的屏幕坐标收紧左/上边界（排除行列标头）
+        dynamic pane1 = win.Panes[1];
+        Range firstCell = ((Range)pane1.VisibleRange).Cells[1, 1];
+        int firstX = (int)pane1.PointsToScreenPixelsX((double)firstCell.Left);
+        int firstY = (int)pane1.PointsToScreenPixelsY((double)firstCell.Top);
+        gridLeft = Math.Max(gridLeft, firstX);
+        gridTop = Math.Max(gridTop, firstY);
+        DiagLog($"[{addr}] pane1 first=({firstX},{firstY}) → gridLT=({gridLeft},{gridTop})");
 
         var gridRect = Rectangle.FromLTRB(gridLeft, gridTop, gridRight, gridBottom);
         gridRect = Rectangle.Intersect(gridRect, screenBounds);
