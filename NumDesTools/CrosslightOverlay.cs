@@ -300,6 +300,9 @@ internal sealed class CrosslightOverlay : IDisposable
         private IntPtr _excelHwnd;
         private Rectangle _lastCellRect;
         private Rectangle _lastGridRect;
+        // _focusTimer 每 300ms 刷新，避免每次 ShowBands 都做 AttachThreadInput。
+        // 初始 false，SetExcelHwnd 设置 hwnd 后由第一次 OnFocusCheck 赋真实值。
+        private bool _gridFocused;
 
         public RowColBandForm()
         {
@@ -319,56 +322,65 @@ internal sealed class CrosslightOverlay : IDisposable
             _focusTimer.Start();
         }
 
-        public void SetExcelHwnd(IntPtr hwnd) => _excelHwnd = hwnd;
+        public void SetExcelHwnd(IntPtr hwnd)
+        {
+            _excelHwnd = hwnd;
+            // hwnd 刚设好时立即刷新一次，不等 _focusTimer 的 300ms
+            OnFocusCheck(null, EventArgs.Empty);
+        }
 
         private void OnFocusCheck(object? sender, EventArgs e)
         {
-            if (!_rowBand.IsVisible && !_colBand.IsVisible)
-                return;
             if (_excelHwnd == IntPtr.Zero)
                 return;
             try
             {
-                // 切换到其他应用时隐藏；CTP/Backstage 场景由 ShowBands 入口的 IsExcelGridFocused 处理
+                // PID 检查：切换到其他应用
                 var fg = GetForegroundWindow();
                 GetWindowThreadProcessId(fg, out uint fgPid);
                 GetWindowThreadProcessId(_excelHwnd, out uint excelPid);
                 if (fgPid != excelPid)
+                {
+                    _gridFocused = false;
+                    if (_rowBand.IsVisible || _colBand.IsVisible)
+                        HideBands();
+                    return;
+                }
+
+                // 焦点类名检查：CTP / Backstage / 对话框激活时 EXCEL7 失焦
+                uint myTid = GetWindowThreadProcessId(Handle, IntPtr.Zero);
+                uint excelTid = GetWindowThreadProcessId(_excelHwnd, IntPtr.Zero);
+                AttachThreadInput(myTid, excelTid, true);
+                IntPtr focusHwnd;
+                try
+                {
+                    focusHwnd = GetFocus();
+                }
+                finally
+                {
+                    AttachThreadInput(myTid, excelTid, false);
+                }
+                if (focusHwnd == IntPtr.Zero)
+                {
+                    _gridFocused = false;
+                    return;
+                }
+                var sb = new System.Text.StringBuilder(64);
+                GetClassName(focusHwnd, sb, 64);
+                _gridFocused = sb.ToString() == "EXCEL7";
+                if (!_gridFocused && (_rowBand.IsVisible || _colBand.IsVisible))
                     HideBands();
             }
             catch { }
         }
 
-        // 网格（EXCEL7）没有焦点时返回 false：CTP / Backstage / 对话框激活时隐藏 overlay
-        private bool IsExcelGridFocused()
-        {
-            if (_excelHwnd == IntPtr.Zero)
-                return false;
-            uint myTid = GetWindowThreadProcessId(Handle, IntPtr.Zero);
-            uint excelTid = GetWindowThreadProcessId(_excelHwnd, IntPtr.Zero);
-            AttachThreadInput(myTid, excelTid, true);
-            IntPtr focusHwnd;
-            try
-            {
-                focusHwnd = GetFocus();
-            }
-            finally
-            {
-                AttachThreadInput(myTid, excelTid, false);
-            }
-            if (focusHwnd == IntPtr.Zero)
-                return false;
-            var sb = new System.Text.StringBuilder(64);
-            GetClassName(focusHwnd, sb, 64);
-            return sb.ToString() == "EXCEL7";
-        }
-
         public void ShowBands(Rectangle cellRect, Rectangle gridRect)
         {
-            // 网格无焦点（CTP / Backstage / 对话框）时直接隐藏，不与 _focusTimer 竞速
-            if (!IsExcelGridFocused())
+            // 读缓存字段（_focusTimer 每 300ms 刷新），避免每次 ShowBands 做 AttachThreadInput
+            if (!_gridFocused)
             {
-                HideBands();
+                if (_rowBand.IsVisible || _colBand.IsVisible)
+                    HideBands();
                 return;
             }
 
