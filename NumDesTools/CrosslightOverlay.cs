@@ -329,45 +329,49 @@ internal sealed class CrosslightOverlay : IDisposable
                 return;
             try
             {
-                // 切换到其他应用时隐藏
+                // 切换到其他应用时隐藏；CTP/Backstage 场景由 ShowBands 入口的 IsExcelGridFocused 处理
                 var fg = GetForegroundWindow();
                 GetWindowThreadProcessId(fg, out uint fgPid);
                 GetWindowThreadProcessId(_excelHwnd, out uint excelPid);
                 if (fgPid != excelPid)
-                {
                     HideBands();
-                    return;
-                }
-
-                // Backstage 检测：attach 到 Excel UI 线程，用 GetFocus 拿到真实焦点窗口
-                // Backstage 打开时焦点落在非 EXCEL7 的子窗口上
-                uint myTid = GetWindowThreadProcessId(Handle, IntPtr.Zero);
-                uint excelTid = GetWindowThreadProcessId(_excelHwnd, IntPtr.Zero);
-                AttachThreadInput(myTid, excelTid, true);
-                IntPtr focusHwnd;
-                try
-                {
-                    focusHwnd = GetFocus();
-                }
-                finally
-                {
-                    AttachThreadInput(myTid, excelTid, false);
-                }
-
-                if (focusHwnd != IntPtr.Zero)
-                {
-                    var sb = new System.Text.StringBuilder(64);
-                    GetClassName(focusHwnd, sb, 64);
-                    // EXCEL7 = 网格区域；NUIDialog / NetUIHWND = Backstage / Ribbon 弹出
-                    if (sb.ToString() != "EXCEL7")
-                        HideBands();
-                }
             }
             catch { }
         }
 
+        // 网格（EXCEL7）没有焦点时返回 false：CTP / Backstage / 对话框激活时隐藏 overlay
+        private bool IsExcelGridFocused()
+        {
+            if (_excelHwnd == IntPtr.Zero)
+                return false;
+            uint myTid = GetWindowThreadProcessId(Handle, IntPtr.Zero);
+            uint excelTid = GetWindowThreadProcessId(_excelHwnd, IntPtr.Zero);
+            AttachThreadInput(myTid, excelTid, true);
+            IntPtr focusHwnd;
+            try
+            {
+                focusHwnd = GetFocus();
+            }
+            finally
+            {
+                AttachThreadInput(myTid, excelTid, false);
+            }
+            if (focusHwnd == IntPtr.Zero)
+                return false;
+            var sb = new System.Text.StringBuilder(64);
+            GetClassName(focusHwnd, sb, 64);
+            return sb.ToString() == "EXCEL7";
+        }
+
         public void ShowBands(Rectangle cellRect, Rectangle gridRect)
         {
+            // 网格无焦点（CTP / Backstage / 对话框）时直接隐藏，不与 _focusTimer 竞速
+            if (!IsExcelGridFocused())
+            {
+                HideBands();
+                return;
+            }
+
             // Bug-Scroll：cellRect 和 gridRect 均未变化时（滚轮未改变选中）跳过重绘，
             // 避免 overlay 在内容滚动时产生位移感。
             if (cellRect == _lastCellRect && gridRect == _lastGridRect)
