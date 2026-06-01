@@ -454,7 +454,11 @@ internal static class CrosslightController
     private static Application? _app;
     private static bool _active;
     private static Range? _lastTarget;
-    private static ExcelWindowWatcher? _watcher;
+
+    // 250 ms 轮询定时器：单元格屏幕坐标因滚动/窗口移动而变化时，
+    // 以 forced=true 重算坐标；ShowBands 内部的矩形缓存在坐标未变时直接跳过，
+    // 避免频繁 SetWindowPos。
+    private static System.Timers.Timer? _refreshTimer;
 
     public static bool IsActive => _active;
 
@@ -475,22 +479,18 @@ internal static class CrosslightController
         app.SheetDeactivate += OnSheetDeactivate;
         app.WorkbookBeforeClose += OnWorkbookBeforeClose;
 
-        // Bug5：监听 Excel 主窗口 WM_MOVE / WM_SIZE，窗口移动时重绘色条
-        var hwnd = (IntPtr)app.Hwnd;
-        _watcher = new ExcelWindowWatcher(
-            hwnd,
-            () =>
-                ExcelAsyncUtil.QueueAsMacro(() =>
-                {
-                    if (_lastTarget is not null)
-                        try
-                        {
-                            // forced=true：窗口移动/缩放时强制刷新坐标，跳过地址缓存
-                            CrosslightOverlay.Instance.UpdateCross(_lastTarget, forced: true);
-                        }
-                        catch { }
-                })
-        );
+        _refreshTimer = new System.Timers.Timer(250) { AutoReset = true };
+        _refreshTimer.Elapsed += (_, _) =>
+            ExcelAsyncUtil.QueueAsMacro(() =>
+            {
+                if (_lastTarget is not null)
+                    try
+                    {
+                        CrosslightOverlay.Instance.UpdateCross(_lastTarget, forced: true);
+                    }
+                    catch { }
+            });
+        _refreshTimer.Start();
 
         TriggerCurrent();
     }
@@ -508,8 +508,9 @@ internal static class CrosslightController
         _app.SheetDeactivate -= OnSheetDeactivate;
         _app.WorkbookBeforeClose -= OnWorkbookBeforeClose;
 
-        _watcher?.ReleaseHandle();
-        _watcher = null;
+        _refreshTimer?.Stop();
+        _refreshTimer?.Dispose();
+        _refreshTimer = null;
         _lastTarget = null;
 
         CrosslightOverlay.Instance.ClearCross();
