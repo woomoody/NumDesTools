@@ -288,8 +288,6 @@ internal sealed class CrosslightOverlay : IDisposable
         private readonly BandStrip _colBand;
         private readonly Timer _focusTimer;
         private IntPtr _excelHwnd;
-        private Rectangle _lastCellRect;
-        private Rectangle _lastGridRect;
 
         // _focusTimer 每 300ms 刷新，避免每次 ShowBands 都做 AttachThreadInput。
         // 初始 false，SetExcelHwnd 设置 hwnd 后由第一次 OnFocusCheck 赋真实值。
@@ -375,21 +373,12 @@ internal sealed class CrosslightOverlay : IDisposable
                 return;
             }
 
-            // Bug-Scroll：cellRect 和 gridRect 均未变化时（滚轮未改变选中）跳过重绘，
-            // 避免 overlay 在内容滚动时产生位移感。
-            if (cellRect == _lastCellRect && gridRect == _lastGridRect)
-                return;
-            _lastCellRect = cellRect;
-            _lastGridRect = gridRect;
-
             _rowBand.PlaceAndShow(gridRect.Left, cellRect.Top, gridRect.Width, cellRect.Height);
             _colBand.PlaceAndShow(cellRect.Left, gridRect.Top, cellRect.Width, gridRect.Height);
         }
 
         public void HideBands()
         {
-            _lastCellRect = Rectangle.Empty;
-            _lastGridRect = Rectangle.Empty;
             _rowBand.HideBand();
             _colBand.HideBand();
         }
