@@ -567,6 +567,7 @@ internal static class CrosslightController
 /// <summary>
 /// 通过 NativeWindow subclass 监听 Excel 主窗口的 WM_MOVE / WM_SIZE 消息，
 /// 触发时通知调用方重新计算 Overlay 坐标，实现窗口拖动时色条实时跟随。
+/// 仅当窗口屏幕 RECT 真正改变时才回调，过滤 Excel 内部滚动触发的虚假 WM_SIZE。
 /// </summary>
 internal sealed class ExcelWindowWatcher : NativeWindow
 {
@@ -574,12 +575,26 @@ internal sealed class ExcelWindowWatcher : NativeWindow
     private const int WmSize = 0x0005;
     private const int WmDestroy = 0x0002;
 
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr h, out RECT r);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left,
+            Top,
+            Right,
+            Bottom;
+    }
+
     private readonly System.Action _onMoved;
+    private RECT _lastRect;
 
     public ExcelWindowWatcher(IntPtr hwnd, System.Action onMoved)
     {
         _onMoved = onMoved;
         AssignHandle(hwnd);
+        GetWindowRect(hwnd, out _lastRect);
     }
 
     protected override void WndProc(ref Message m)
@@ -589,11 +604,23 @@ internal sealed class ExcelWindowWatcher : NativeWindow
         {
             case WmMove:
             case WmSize:
-                try
+                if (
+                    GetWindowRect(Handle, out var rect)
+                    && (
+                        rect.Left != _lastRect.Left
+                        || rect.Top != _lastRect.Top
+                        || rect.Right != _lastRect.Right
+                        || rect.Bottom != _lastRect.Bottom
+                    )
+                )
                 {
-                    _onMoved();
+                    _lastRect = rect;
+                    try
+                    {
+                        _onMoved();
+                    }
+                    catch { }
                 }
-                catch { }
                 break;
             case WmDestroy:
                 ReleaseHandle();
