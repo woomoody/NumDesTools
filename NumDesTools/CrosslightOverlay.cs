@@ -122,6 +122,17 @@ internal sealed class CrosslightOverlay : IDisposable
         if (gridRect.IsEmpty)
             return;
 
+        // 单元格已滚出可见区时隐藏，避免 overlay 显示在错误位置
+        var cellCenter = new Point(
+            cellRect.Left + cellRect.Width / 2,
+            cellRect.Top + cellRect.Height / 2
+        );
+        if (!gridRect.Contains(cellCenter))
+        {
+            _bandForm?.BeginInvoke((System.Action)(() => _bandForm?.HideBands()));
+            return;
+        }
+
         _bandForm?.BeginInvoke(
             (System.Action)(
                 () =>
