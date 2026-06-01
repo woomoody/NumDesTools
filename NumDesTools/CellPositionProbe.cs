@@ -27,10 +27,12 @@ internal static class CellPositionProbe
         try
         {
             var anchor = cell.Areas.Count > 1 ? (Range)cell.Areas[1] : cell;
+            var win = AppServices.App.ActiveWindow;
 
-            // ActivePane 的坐标原点与 Range.Left/Top 对齐（均从 A1 网格起量）
-            // ActiveWindow.PointsToScreenPixelsX 原点含行列标头区，不可用
-            dynamic pane = AppServices.App.ActiveWindow.ActivePane;
+            // 不用 ActivePane：定时器触发时 ActivePane 可能已切回冻结区窗格，
+            // 导致冻结区窗格缺少滚动偏移，坐标算到冻结行范围内。
+            // 改为根据 SplitRow/SplitColumn 显式选择正确窗格。
+            dynamic pane = PickPane(win, anchor);
 
             var x1 = (int)pane.PointsToScreenPixelsX((double)anchor.Left);
             var y1 = (int)pane.PointsToScreenPixelsY((double)anchor.Top);
@@ -43,6 +45,37 @@ internal static class CellPositionProbe
         {
             return Rectangle.Empty;
         }
+    }
+
+    /// <summary>
+    /// 根据单元格行/列与冻结点的关系选择正确窗格，避免 ActivePane 在定时器触发时
+    /// 指向冻结区而导致 PointsToScreenPixels 缺少滚动偏移。
+    /// 窗格编号（左→右、上→下）：1=左上, 2=右上, 3=左下, 4=右下。
+    /// </summary>
+    private static dynamic PickPane(Window win, Range anchor)
+    {
+        int paneCount = win.Panes.Count;
+        if (paneCount == 1)
+            return win.Panes[1];
+
+        int splitRow = (int)win.SplitRow;
+        int splitCol = (int)win.SplitColumn;
+        bool below = splitRow > 0 && anchor.Row > splitRow;
+        bool right = splitCol > 0 && anchor.Column > splitCol;
+
+        if (paneCount == 4)
+        {
+            if (below && right)
+                return win.Panes[4];
+            if (below)
+                return win.Panes[3];
+            if (right)
+                return win.Panes[2];
+            return win.Panes[1];
+        }
+
+        // 2 窗格：水平分割（splitRow>0）或垂直分割（splitCol>0）
+        return below || right ? win.Panes[2] : win.Panes[1];
     }
 
     public static string GetCellScreenRectDebug(Range cell)

@@ -108,8 +108,10 @@ internal sealed class CrosslightOverlay : IDisposable
         // 再用 Panes[1] 首格坐标限定左上边界（排除行列标头区），
         // 不再从 VisibleRange 末行推算右下——末行可能是整表末行，高度异常大。
         int paneCount = win.Panes.Count;
+        var win2 = AppServices.App.ActiveWindow;
         DiagLog(
-            $"[{addr}] panes={paneCount} cellRect=({cellRect.Left},{cellRect.Top},{cellRect.Width},{cellRect.Height})"
+            $"[{addr}] panes={paneCount} splitR={(int)win2.SplitRow} splitC={(int)win2.SplitColumn}"
+                + $" cellRect=({cellRect.Left},{cellRect.Top},{cellRect.Width},{cellRect.Height})"
         );
 
         // 默认退路：用屏幕边界
