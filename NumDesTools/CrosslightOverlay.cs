@@ -25,7 +25,6 @@ internal sealed class CrosslightOverlay : IDisposable
     private Thread? _staThread;
     private RowColBandForm? _bandForm;
     private readonly object _staLock = new();
-    private string? _lastAddress;
 
     private CrosslightOverlay()
     {
@@ -60,14 +59,6 @@ internal sealed class CrosslightOverlay : IDisposable
     public void UpdateCross(Range target, bool forced = false)
     {
         EnsureStaThread();
-
-        // Bug-Scroll：只有选中地址变化（或强制刷新）时才重绘，
-        // 避免滚轮滚动触发 WindowActivate/WM_SIZE 使 overlay 随 cell 坐标漂移。
-        // forced=true 供窗口移动/缩放时调用，确保 overlay 跟随窗口。
-        var address = target.Address[true, true, XlReferenceStyle.xlA1, true];
-        if (!forced && address == _lastAddress)
-            return;
-        _lastAddress = address;
 
         var cellRect = CellPositionProbe.GetCellScreenRect(target);
         if (cellRect == Rectangle.Empty)
@@ -144,7 +135,6 @@ internal sealed class CrosslightOverlay : IDisposable
 
     public void ClearCross()
     {
-        _lastAddress = null;
         _bandForm?.BeginInvoke((System.Action)(() => _bandForm?.HideBands()));
     }
 
@@ -300,6 +290,7 @@ internal sealed class CrosslightOverlay : IDisposable
         private IntPtr _excelHwnd;
         private Rectangle _lastCellRect;
         private Rectangle _lastGridRect;
+
         // _focusTimer 每 300ms 刷新，避免每次 ShowBands 都做 AttachThreadInput。
         // 初始 false，SetExcelHwnd 设置 hwnd 后由第一次 OnFocusCheck 赋真实值。
         private bool _gridFocused;
