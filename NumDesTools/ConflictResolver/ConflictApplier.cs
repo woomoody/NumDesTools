@@ -238,7 +238,7 @@ public static class ConflictApplier
         AppendMergeMsg(repoRoot, Path.GetFileName(filePath));
     }
 
-    // 把解决的文件名追加到 MERGE_MSG，SmartGit 提交对话框会自动读取
+    // 把解决的文件名追加到 MERGE_MSG，作为正文行（不带 # 前缀）以确保进入最终提交日志，SmartGit 提交对话框也会自动读取
     private static void AppendMergeMsg(string repoRoot, string fileName)
     {
         try
@@ -248,7 +248,7 @@ public static class ConflictApplier
                 return;
 
             var existing = File.ReadAllText(mergeMsgPath);
-            var marker = "#解决冲突（NumDesTools）:";
+            var marker = "解决冲突（NumDesTools）:";
             var line = $"{marker} {fileName}";
 
             // 已经记录过这个文件则跳过
