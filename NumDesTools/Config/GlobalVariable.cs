@@ -11,68 +11,89 @@ namespace NumDesTools.Config
         #region 默认值
 
         // 默认键值对配置
-        public readonly Dictionary<string, string> DefaultValue =
-            new()
+        public readonly Dictionary<string, string> DefaultValue = new()
+        {
+            { "LabelText", "放大镜：关闭" },
+            { "FocusLabelText", "聚光灯：关闭" },
+            { "LabelTextRoleDataPreview", "角色数据预览：关闭" },
+            { "SheetMenuText", "表格目录：关闭" },
+            { "TempPath", @"\Client\Assets\Resources\Table" },
+            { "BasePath", @"C:\M1Work\Public\Excels\Tables\" },
+            { "TargetPath", @"C:\M2Work\Public\Excels\Tables\" },
+            { "CellHiLightText", "高亮单元格：关闭" },
+            { "CheckSheetValueText", "数据自检：开启" },
+            { "ShowDnaLogText", "插件日志：关闭" },
+            { "ShowAIText", "AI对话：关闭" },
+            { "LiteLLMApiKey", "" },
+            { "LiteLLMApiUrl", "https://litellm.solotopia.net/v1/chat/completions" },
+            { "LiteLLMModel", "claude-sonnet-4-6" },
+            { "LiteLLMModelList", "" },
             {
-                { "LabelText", "放大镜：关闭" },
-                { "FocusLabelText", "聚光灯：关闭" },
-                { "LabelTextRoleDataPreview", "角色数据预览：关闭" },
-                { "SheetMenuText", "表格目录：关闭" },
-                { "TempPath", @"\Client\Assets\Resources\Table" },
-                { "BasePath", @"C:\M1Work\Public\Excels\Tables\" },
-                { "TargetPath", @"C:\M2Work\Public\Excels\Tables\" },
-                { "CellHiLightText", "高亮单元格：关闭" },
-                { "CheckSheetValueText", "数据自检：开启" },
-                { "ShowDnaLogText", "插件日志：关闭" },
-                { "ShowAIText", "AI对话：关闭" },
-                { "LiteLLMApiKey", "" },
-                { "LiteLLMApiUrl", "https://litellm.solotopia.net/v1/chat/completions" },
-                { "LiteLLMModel", "claude-sonnet-4-6" },
-                { "LiteLLMModelList", "" },
-                {
-                    "ChatSysContentExcelAss",
-                    "你是一个代码和办公助手，特别擅长回答Excel的公式以及代码编写，特别擅长C#，打印输出不要使用控制台，使用：Debug.Print，判断需要记录日志，使用：LogDisplay.RecordLine(\"[{0}] , {1}\", DateTime.Now.ToString(CultureInfo.InvariantCulture),$\"{selectedRange.Count}\");"
-                },
-                {
-                    "ChatSysContentTransferAss",
-                    "你是一个助手，特别擅长多种语言的翻译工作,你的回答中只会输出指定的翻译后的内容，不掺杂其他解释， 根据输入内容中的换行符，作为行的分界线，所需要翻译语言的种类为列的分界线，输出的翻译结果格式为Json的嵌套数组，格式如下：[[\"A语言译文1\",\"A语言译文2\"],[\"B语言译文1\",\"B语言译文2\"]]"
-                },
-                // log retention days configurable
-                { "LogRetentionDays", "30" },
-                { "GitRootPath", "" },
-                { "ConflictSkipHashFiles", "false" },
-                { "SpotlightMode", "overlay" },
-                {
-                    "OutputRootPath",
-                    Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                        "NumDesOutput"
-                    )
-                }
-            };
+                "ChatSysContentExcelAss",
+                "你是一个代码和办公助手，特别擅长回答Excel的公式以及代码编写，特别擅长C#，打印输出不要使用控制台，使用：Debug.Print，判断需要记录日志，使用：LogDisplay.RecordLine(\"[{0}] , {1}\", DateTime.Now.ToString(CultureInfo.InvariantCulture),$\"{selectedRange.Count}\");"
+            },
+            {
+                "ChatSysContentTransferAss",
+                "你是一个助手，特别擅长多种语言的翻译工作,你的回答中只会输出指定的翻译后的内容，不掺杂其他解释， 根据输入内容中的换行符，作为行的分界线，所需要翻译语言的种类为列的分界线，输出的翻译结果格式为Json的嵌套数组，格式如下：[[\"A语言译文1\",\"A语言译文2\"],[\"B语言译文1\",\"B语言译文2\"]]"
+            },
+            // log retention days configurable
+            { "LogRetentionDays", "30" },
+            { "GitRootPath", "" },
+            { "ConflictSkipHashFiles", "false" },
+            { "SpotlightMode", "overlay" },
+            {
+                "OutputRootPath",
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                    "NumDesOutput"
+                )
+            },
+        };
 
         // 默认列表配置
-        public readonly List<string> DefaultNormaKeyList =
-            new() { ",,", "[,", ",]", "{,", ",}", "，，", "[，", "，]", "{，", "，}", "，" };
+        public readonly List<string> DefaultNormaKeyList = new()
+        {
+            ",,",
+            "[,",
+            ",]",
+            "{,",
+            ",}",
+            "，，",
+            "[，",
+            "，]",
+            "{，",
+            "，}",
+            "，",
+        };
 
         public readonly List<string> DefaultSpecialKeyList = new() { "][", "}{" };
 
-        public readonly List<CoupleKey> DefaultCoupleKeyList =
-            new() { new CoupleKey("[", "]"), new CoupleKey("{", "}"), new CoupleKey("\"", "\"") };
+        public readonly List<CoupleKey> DefaultCoupleKeyList = new()
+        {
+            new CoupleKey("[", "]"),
+            new CoupleKey("{", "}"),
+            new CoupleKey("\"", "\""),
+        };
 
         #endregion
 
         // 配置文件路径
-        public readonly string FilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            "NumDesGlobalKey.json"
-        );
+        public readonly string FilePath;
 
         // 配置数据
         private ConfigData _configData;
 
         public GlobalVariable()
+            : this(
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                    "NumDesGlobalKey.json"
+                )
+            ) { }
+
+        public GlobalVariable(string filePath)
         {
+            FilePath = filePath;
             ReadOrCreate();
         }
 
@@ -106,80 +127,81 @@ namespace NumDesTools.Config
         {
             if (File.Exists(FilePath))
             {
-                var json = File.ReadAllText(FilePath);
-                var fileValues = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
-
-                _configData = new ConfigData
+                try
                 {
-                    Value = new Dictionary<string, string>(),
-                    NormaKeyList = new List<string>(),
-                    SpecialKeyList = new List<string>(),
-                    CoupleKeyList = new List<CoupleKey>()
-                };
-
-                // 处理键值对配置
-                foreach (var kvp in fileValues)
-                {
-                    if (kvp.Value is JToken listValue)
-                    {
-                        if (listValue.Type == JTokenType.Array)
-                        {
-                            _configData.Value[kvp.Key] = string.Join(
-                                "",
-                                listValue.ToObject<List<object>>()
-                            );
-                        }
-                    }
-                    else if (kvp.Value is string stringValue)
-                    {
-                        _configData.Value[kvp.Key] = stringValue;
-                    }
+                    ReadFromFile();
+                    return;
                 }
-
-                // 处理列表配置
-                if (
-                    fileValues.ContainsKey("NormaKeyList")
-                    && fileValues["NormaKeyList"] is JToken normaKeyListToken
-                )
+                catch
                 {
-                    if (normaKeyListToken.Type == JTokenType.Array)
-                    {
-                        _configData.NormaKeyList = normaKeyListToken.ToObject<List<string>>();
-                    }
+                    // JSON 损坏或读取失败：降级到默认配置，不影响插件加载
                 }
-
-                if (
-                    fileValues.ContainsKey("SpecialKeyList")
-                    && fileValues["SpecialKeyList"] is JToken specialKeyListToken
-                )
-                {
-                    if (specialKeyListToken.Type == JTokenType.Array)
-                    {
-                        _configData.SpecialKeyList = specialKeyListToken.ToObject<List<string>>();
-                    }
-                }
-
-                if (
-                    fileValues.ContainsKey("CoupleKeyList")
-                    && fileValues["CoupleKeyList"] is JToken coupleKeyListToken
-                )
-                {
-                    if (coupleKeyListToken.Type == JTokenType.Array)
-                    {
-                        _configData.CoupleKeyList = coupleKeyListToken
-                            .ToObject<List<Dictionary<string, string>>>()
-                            .ConvertAll(dict => new CoupleKey(dict["Left"], dict["Right"]));
-                    }
-                }
-
-                // 合并默认值
-                MergeWithDefaults();
             }
-            else
+            _configData = CreateDefaultConfig();
+            SaveConfig();
+        }
+
+        private void ReadFromFile()
+        {
+            var json = File.ReadAllText(FilePath);
+            var fileValues = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+
+            _configData = new ConfigData
             {
-                _configData = CreateDefaultConfig();
-                SaveConfig();
+                Value = new Dictionary<string, string>(),
+                NormaKeyList = new List<string>(),
+                SpecialKeyList = new List<string>(),
+                CoupleKeyList = new List<CoupleKey>(),
+            };
+
+            foreach (var kvp in fileValues)
+            {
+                if (kvp.Value is JToken listValue)
+                {
+                    if (listValue.Type == JTokenType.Array)
+                    {
+                        _configData.Value[kvp.Key] = string.Join(
+                            "",
+                            listValue.ToObject<List<object>>()
+                        );
+                    }
+                }
+                else if (kvp.Value is string stringValue)
+                {
+                    _configData.Value[kvp.Key] = stringValue;
+                }
             }
+
+            if (
+                fileValues.ContainsKey("NormaKeyList")
+                && fileValues["NormaKeyList"] is JToken normaKeyListToken
+            )
+            {
+                if (normaKeyListToken.Type == JTokenType.Array)
+                    _configData.NormaKeyList = normaKeyListToken.ToObject<List<string>>();
+            }
+
+            if (
+                fileValues.ContainsKey("SpecialKeyList")
+                && fileValues["SpecialKeyList"] is JToken specialKeyListToken
+            )
+            {
+                if (specialKeyListToken.Type == JTokenType.Array)
+                    _configData.SpecialKeyList = specialKeyListToken.ToObject<List<string>>();
+            }
+
+            if (
+                fileValues.ContainsKey("CoupleKeyList")
+                && fileValues["CoupleKeyList"] is JToken coupleKeyListToken
+            )
+            {
+                if (coupleKeyListToken.Type == JTokenType.Array)
+                    _configData.CoupleKeyList = coupleKeyListToken
+                        .ToObject<List<Dictionary<string, string>>>()
+                        .ConvertAll(dict => new CoupleKey(dict["Left"], dict["Right"]));
+            }
+
+            MergeWithDefaults();
         }
 
         private List<T> MergeLists<T>(List<T> original, List<T> defaults)
@@ -216,7 +238,7 @@ namespace NumDesTools.Config
                 Value = new Dictionary<string, string>(DefaultValue),
                 NormaKeyList = [.. DefaultNormaKeyList],
                 SpecialKeyList = [.. DefaultSpecialKeyList],
-                CoupleKeyList = [.. DefaultCoupleKeyList]
+                CoupleKeyList = [.. DefaultCoupleKeyList],
             };
         }
 

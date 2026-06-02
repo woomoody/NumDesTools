@@ -215,7 +215,8 @@ public static class ConflictApplier
     private static Dictionary<string, int> BuildKeyRowMap(ExcelWorksheet sheet, int keyCol)
     {
         var map = new Dictionary<string, int>(StringComparer.Ordinal);
-        for (int row = 3; row <= sheet.Dimension.End.Row; row++)
+        // 与 ExcelConflictDiffer.dataStartRow 保持一致：行2=header，行3=type，行4=label，行5起=数据
+        for (int row = 5; row <= sheet.Dimension.End.Row; row++)
         {
             var key = sheet.Cells[row, keyCol].Value?.ToString();
             if (!string.IsNullOrEmpty(key) && !map.ContainsKey(key))

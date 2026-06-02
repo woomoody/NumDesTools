@@ -98,7 +98,7 @@ public static class ExcelConflictDiffer
     {
         var bundle = new SheetBundle
         {
-            Sheets = new Dictionary<string, SheetData>(sheetNames.Count)
+            Sheets = new Dictionary<string, SheetData>(sheetNames.Count),
         };
         using var pkg = new ExcelPackage(new FileInfo(path));
         // 禁止 EPPlus 自动重算公式，避免公式错误单元格触发 RuntimeBinderException
@@ -314,7 +314,7 @@ public static class ExcelConflictDiffer
                         AllColumns = allCols,
                         OursFullRow = MakeRowDict(oursRow, oursColumns),
                         TheirsFullRow = null,
-                        RowChoice = ConflictChoice.Ours,
+                        DefaultRowChoice = ConflictChoice.Ours,
                     }
                 );
             }
@@ -334,7 +334,7 @@ public static class ExcelConflictDiffer
                     AllColumns = allCols,
                     OursFullRow = null,
                     TheirsFullRow = MakeRowDict(theirsRow, theirsColumns),
-                    RowChoice = ConflictChoice.Theirs,
+                    DefaultRowChoice = ConflictChoice.Theirs,
                 }
             );
         }

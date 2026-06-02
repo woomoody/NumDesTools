@@ -159,9 +159,8 @@ public partial class ExcelUdf
                 var cellValue = cell.ToString();
                 if (cellValue == searchValue)
                 {
-                    var outColSource = sheet.GetRow(outCol);
-                    var outCell = outColSource.GetCell(i);
-                    var outCellValue = outCell.ToString();
+                    var outCell = rowSource.GetCell(outCol);
+                    var outCellValue = outCell?.ToString() ?? string.Empty;
                     workbook.Close();
                     fs.Close();
                     return outCellValue;
