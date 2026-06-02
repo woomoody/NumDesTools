@@ -310,7 +310,7 @@
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                          VirtualizingPanel.IsVirtualizing="True"
                          VirtualizingPanel.VirtualizationMode="Standard"
-                         VirtualizingPanel.ScrollUnit="Item"
+                         VirtualizingPanel.ScrollUnit="Pixel"
                          ui:ConflictRowItem.CellSelected="OnCellSelected">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
@@ -379,7 +379,7 @@
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                          VirtualizingPanel.IsVirtualizing="True"
                          VirtualizingPanel.VirtualizationMode="Standard"
-                         VirtualizingPanel.ScrollUnit="Item"
+                         VirtualizingPanel.ScrollUnit="Pixel"
                          ui:ConflictRowItem.CellSelected="OnCellSelected">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
