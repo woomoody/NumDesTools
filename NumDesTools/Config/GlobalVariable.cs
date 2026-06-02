@@ -27,7 +27,7 @@ namespace NumDesTools.Config
                 { "ShowAIText", "AI对话：关闭" },
                 { "LiteLLMApiKey", "" },
                 { "LiteLLMApiUrl", "https://litellm.solotopia.net/v1/chat/completions" },
-                { "LiteLLMModel", "global.anthropic.claude-opus-4-7" },
+                { "LiteLLMModel", "claude-sonnet-4-6" },
                 { "LiteLLMModelList", "" },
                 {
                     "ChatSysContentExcelAss",

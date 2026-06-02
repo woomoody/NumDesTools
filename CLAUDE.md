@@ -107,3 +107,33 @@ Long operations use `ExcelAsyncUtil.QueueAsMacro()`. Never block the Excel UI th
 - **写入 xlsx** → EPPlus（`OfficeOpenXml`）。参考 `NumDesTools.Scanner/ActivityWriter.cs`（追加行）和 `NumDesTools.Scanner/LteMapWriter.cs`（新建带样式/列宽/行高的 sheet）。
 - 每个入口必须先调用 `ExcelPackage.License.SetNonCommercialPersonal("NumDesTools")`。
 - MiniExcel 已在依赖中但**不用于本项目**，不要引入。
+
+## 多模型自动路由
+
+**用户无需指定模型。CC（sonnet/opus）作为调度器，根据任务类型自动选择最优模型执行，不向用户说明切换过程，直接给出结果。**
+
+LiteLLM 网关地址：`https://litellm.solotopia.net/v1/chat/completions`，Key：见 `ANTHROPIC_AUTH_TOKEN` 环境变量。
+
+### 任务→模型映射
+
+| 任务类型 | 执行方式 | 原因 |
+|---------|---------|------|
+| 多语言翻译（游戏文案、UI 字符串） | Workflow → `deepseek-v4-flash` | 满分且最省，本地化最地道 |
+| 批量数据处理、格式化、简单分类 | Workflow → `deepseek-v4-flash` | 便宜快，不需要推理 |
+| 中文游戏配置分析（数值合理性、配置审查） | 当前会话模型（sonnet/opus） | 有项目 Memory 和设计规范加成，实测优于 qwen |
+| 复杂推理、数值系统设计、留存分析 | Workflow → `claude-opus-4-8` | 能识别前提矛盾，系统思维最强 |
+| 竞品分析（多源采集+综合） | Workflow → fan-out `deepseek-v4-flash` 采集，`claude-opus-4-8` 综合 | 脏活便宜做，深度分析用强模型 |
+| 需要读写文件/代码/git 的任务 | 当前会话模型（sonnet/opus）直接处理 | 其他模型没有 CC 工具访问权限 |
+| 跨类型混合任务、多轮对话、无法归类 | 当前会话模型（sonnet/opus）兜底 | 保持上下文连贯 |
+
+### 多 Agent / Workflow 规则
+
+- **至少 1 个 agent 必须是 `claude-sonnet-4-6` 或 `claude-opus-4-8`**，承担协调、验证或综合角色。
+- 其他 agent 可用任意 LiteLLM 模型，按任务类型从映射表选取。
+- 不确定质量的结果必须经过 sonnet/opus 二次核查后再返回用户。
+
+### 触发原则
+
+- 任务**不需要 CC 工具（文件、shell、git）** 且匹配上表中有 Workflow 的行 → 主动调用 Workflow。
+- 任务**需要 CC 工具** → 用当前会话模型，LLM 密集的子步骤（如翻译某段文本、分析某个字段含义）可在 Workflow 子 agent 中委托。
+- **不要等用户说"用 deepseek"或"开 Workflow"**，这是自动行为。
