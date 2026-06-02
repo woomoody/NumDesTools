@@ -300,6 +300,11 @@ public partial class ConflictRowItem : UserControl
 
         if (isOnlyOurs || isOnlyTheirs)
         {
+            // 每行分配唯一 GroupName，防止 WPF RadioButton 跨行互斥
+            var groupName = $"RowChoice_{rc.SheetName}_{rc.RowKey}";
+            RowChoiceOursRb.GroupName = groupName;
+            RowChoiceTheirsRb.GroupName = groupName;
+
             var bindOurs = new System.Windows.Data.Binding(nameof(RowConflict.RowChoiceOurs))
             {
                 Source = rc,
@@ -310,8 +315,8 @@ public partial class ConflictRowItem : UserControl
                 Source = rc,
                 Mode = System.Windows.Data.BindingMode.TwoWay
             };
-            RowChoiceOursRb.SetBinding(CheckBox.IsCheckedProperty, bindOurs);
-            RowChoiceTheirsRb.SetBinding(CheckBox.IsCheckedProperty, bindTheirs);
+            RowChoiceOursRb.SetBinding(RadioButton.IsCheckedProperty, bindOurs);
+            RowChoiceTheirsRb.SetBinding(RadioButton.IsCheckedProperty, bindTheirs);
         }
 
         var allCols = rc.AllColumns.Count > 0 ? rc.AllColumns : DeriveColumns(rc);
@@ -445,6 +450,7 @@ public partial class ConflictRowItem : UserControl
                 if (
                     parent is System.Windows.Controls.Button
                     || parent is System.Windows.Controls.CheckBox
+                    || parent is System.Windows.Controls.RadioButton
                 )
                     return;
                 parent =

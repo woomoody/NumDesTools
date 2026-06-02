@@ -41,15 +41,15 @@
                             Background="#1A5C3A" Foreground="White" BorderThickness="0" Cursor="Hand"/>
                 </StackPanel>
 
-                <!-- OnlyOurs / OnlyTheirs 行：行级选择 -->
+                <!-- OnlyOurs / OnlyTheirs 行：行级选择（RadioButton 强制互斥，避免两者都不选） -->
                 <StackPanel x:Name="RowChoicePanel" Grid.Column="1" Orientation="Horizontal"
                             Margin="0,2,8,2" VerticalAlignment="Center" Visibility="Collapsed">
-                    <CheckBox x:Name="RowChoiceOursRb"   Content="保留我的"
-                              Foreground="#A8C8FF" Margin="0,0,10,0" FontSize="11"
-                              Background="Transparent" BorderBrush="#A8C8FF"/>
-                    <CheckBox x:Name="RowChoiceTheirsRb" Content="用他的"
-                              Foreground="#A8FFCA" FontSize="11"
-                              Background="Transparent" BorderBrush="#A8FFCA"/>
+                    <RadioButton x:Name="RowChoiceOursRb"   Content="保留我的"
+                                 Foreground="#A8C8FF" Margin="0,0,10,0" FontSize="11"
+                                 Background="Transparent" BorderBrush="#A8C8FF"/>
+                    <RadioButton x:Name="RowChoiceTheirsRb" Content="用他的"
+                                 Foreground="#A8FFCA" FontSize="11"
+                                 Background="Transparent" BorderBrush="#A8FFCA"/>
                 </StackPanel>
             </Grid>
 
