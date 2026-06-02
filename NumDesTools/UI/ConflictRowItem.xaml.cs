@@ -167,6 +167,7 @@ public partial class ConflictRowItem : UserControl
     }
 
     private bool _syncGuard;
+    private bool _suppressChoiceHandlers;
 
     private void OnOursScrollChanged(object s, ScrollChangedEventArgs ev)
     {
@@ -228,6 +229,32 @@ public partial class ConflictRowItem : UserControl
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }
+        else if (
+            (
+                e.PropertyName == nameof(RowConflict.RowChoiceOurs)
+                || e.PropertyName == nameof(RowConflict.RowChoiceTheirs)
+            )
+            && _currentRc != null
+            && RowChoicePanel.Visibility == Visibility.Visible
+        )
+        {
+            _suppressChoiceHandlers = true;
+            RowChoiceOursRb.IsChecked = _currentRc.RowChoiceOurs;
+            RowChoiceTheirsRb.IsChecked = _currentRc.RowChoiceTheirs;
+            _suppressChoiceHandlers = false;
+        }
+    }
+
+    private void RowChoiceOursRb_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!_suppressChoiceHandlers && _currentRc != null)
+            _currentRc.RowChoice = ConflictChoice.Ours;
+    }
+
+    private void RowChoiceTheirsRb_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!_suppressChoiceHandlers && _currentRc != null)
+            _currentRc.RowChoice = ConflictChoice.Theirs;
     }
 
     private void Render(RowConflict rc)
@@ -258,7 +285,7 @@ public partial class ConflictRowItem : UserControl
                         Text = " | ",
                         Foreground = Brush("#555555"),
                         FontSize = 11,
-                        VerticalAlignment = VerticalAlignment.Center
+                        VerticalAlignment = VerticalAlignment.Center,
                     }
                 );
             RowHashCols.Children.Add(
@@ -283,16 +310,14 @@ public partial class ConflictRowItem : UserControl
         UpdateSelectionHighlight(rc);
         DeSelectBtn.Visibility = rc.IsSelected ? Visibility.Visible : Visibility.Collapsed;
 
-        BadgeBorder.Background = isModified
-            ? Brush("#5A4A00")
-            : isOnlyOurs
-                ? Brush("#5A1A1A")
-                : Brush("#1A5A2A");
-        DiffTypeBadge.Foreground = isModified
-            ? Brush("#FFD080")
-            : isOnlyOurs
-                ? Brush("#FF8888")
-                : Brush("#88FF88");
+        BadgeBorder.Background =
+            isModified ? Brush("#5A4A00")
+            : isOnlyOurs ? Brush("#5A1A1A")
+            : Brush("#1A5A2A");
+        DiffTypeBadge.Foreground =
+            isModified ? Brush("#FFD080")
+            : isOnlyOurs ? Brush("#FF8888")
+            : Brush("#88FF88");
 
         BatchButtons.Visibility = isModified ? Visibility.Visible : Visibility.Collapsed;
         RowChoicePanel.Visibility =
@@ -305,18 +330,19 @@ public partial class ConflictRowItem : UserControl
             RowChoiceOursRb.GroupName = groupName;
             RowChoiceTheirsRb.GroupName = groupName;
 
-            var bindOurs = new System.Windows.Data.Binding(nameof(RowConflict.RowChoiceOurs))
-            {
-                Source = rc,
-                Mode = System.Windows.Data.BindingMode.TwoWay
-            };
-            var bindTheirs = new System.Windows.Data.Binding(nameof(RowConflict.RowChoiceTheirs))
-            {
-                Source = rc,
-                Mode = System.Windows.Data.BindingMode.TwoWay
-            };
-            RowChoiceOursRb.SetBinding(RadioButton.IsCheckedProperty, bindOurs);
-            RowChoiceTheirsRb.SetBinding(RadioButton.IsCheckedProperty, bindTheirs);
+            // OneWay：模型→UI；UI→模型由 Checked 事件处理，避免 TwoWay 反写抖动
+            System.Windows.Data.BindingOperations.ClearBinding(
+                RowChoiceOursRb,
+                RadioButton.IsCheckedProperty
+            );
+            System.Windows.Data.BindingOperations.ClearBinding(
+                RowChoiceTheirsRb,
+                RadioButton.IsCheckedProperty
+            );
+            _suppressChoiceHandlers = true;
+            RowChoiceOursRb.IsChecked = rc.RowChoiceOurs;
+            RowChoiceTheirsRb.IsChecked = rc.RowChoiceTheirs;
+            _suppressChoiceHandlers = false;
         }
 
         var allCols = rc.AllColumns.Count > 0 ? rc.AllColumns : DeriveColumns(rc);
@@ -554,11 +580,10 @@ public partial class ConflictRowItem : UserControl
                 );
             bool otherWon = chosen && !thisWon;
 
-            var bgBrush = thisWon
-                ? (isOurs ? BgChosenOurs : BgChosenTheirs)
-                : otherWon
-                    ? BgRejected
-                    : BgDiff;
+            var bgBrush =
+                thisWon ? (isOurs ? BgChosenOurs : BgChosenTheirs)
+                : otherWon ? BgRejected
+                : BgDiff;
             var fgBrush = otherWon ? FgRejected : (isOurs ? FgOurs : FgTheirs);
 
             var tb = new TextBlock
@@ -656,8 +681,9 @@ public partial class ConflictRowItem : UserControl
         return set.ToList();
     }
 
-    private static readonly SolidColorBrush BgSelected =
-        new(WpfColor.FromArgb(180, 0x3A, 0x60, 0xA0));
+    private static readonly SolidColorBrush BgSelected = new(
+        WpfColor.FromArgb(180, 0x3A, 0x60, 0xA0)
+    );
 
     private void UpdateSelectionHighlight(RowConflict rc)
     {
@@ -668,11 +694,9 @@ public partial class ConflictRowItem : UserControl
         else
         {
             HeaderGrid.Background =
-                rc.DiffType == RowDiffType.OnlyOurs
-                    ? BgOnlyOurs
-                    : rc.DiffType == RowDiffType.OnlyTheirs
-                        ? BgOnlyTheirs
-                        : Brush("#2A2A2A");
+                rc.DiffType == RowDiffType.OnlyOurs ? BgOnlyOurs
+                : rc.DiffType == RowDiffType.OnlyTheirs ? BgOnlyTheirs
+                : Brush("#2A2A2A");
         }
     }
 

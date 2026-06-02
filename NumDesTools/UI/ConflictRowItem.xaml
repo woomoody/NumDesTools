@@ -46,10 +46,12 @@
                             Margin="0,2,8,2" VerticalAlignment="Center" Visibility="Collapsed">
                     <RadioButton x:Name="RowChoiceOursRb"   Content="保留我的"
                                  Foreground="#A8C8FF" Margin="0,0,10,0" FontSize="11"
-                                 Background="Transparent" BorderBrush="#A8C8FF"/>
+                                 Background="Transparent" BorderBrush="#A8C8FF"
+                                 Checked="RowChoiceOursRb_Checked"/>
                     <RadioButton x:Name="RowChoiceTheirsRb" Content="用他的"
                                  Foreground="#A8FFCA" FontSize="11"
-                                 Background="Transparent" BorderBrush="#A8FFCA"/>
+                                 Background="Transparent" BorderBrush="#A8FFCA"
+                                 Checked="RowChoiceTheirsRb_Checked"/>
                 </StackPanel>
             </Grid>
 
