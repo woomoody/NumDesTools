@@ -70,6 +70,10 @@ public partial class ExcelConflictWindow : MetroWindow
         OnlyOursList.PreviewMouseLeftButtonDown += ListBox_ShowDetail;
         OnlyTheirsList.PreviewMouseLeftButtonDown += ListBox_ShowDetail;
 
+        // ScrollUnit=Pixel 时 VirtualizingStackPanel 不处理 MouseWheel，手动接管
+        WireWheelScroll(OnlyOursList);
+        WireWheelScroll(OnlyTheirsList);
+
         // 把首次列表渲染推到窗口显示后，避免构造函数阻塞 ShowDialog
         Loaded += (_, _) =>
             Dispatcher.BeginInvoke(
@@ -1769,6 +1773,35 @@ public partial class ExcelConflictWindow : MetroWindow
     {
         DialogResult = false;
         Close();
+    }
+
+    private static void WireWheelScroll(System.Windows.Controls.ListBox lb)
+    {
+        lb.PreviewMouseWheel += (_, e) =>
+        {
+            var sv = FindChildScrollViewer(lb);
+            if (sv is null)
+                return;
+            // 每格滚轮 tick 滚约 3 行（≈76px/行，含标题+数据两行）
+            sv.ScrollToVerticalOffset(
+                sv.VerticalOffset - e.Delta / 120.0 * SystemParameters.WheelScrollLines * 76.0
+            );
+            e.Handled = true;
+        };
+    }
+
+    private static ScrollViewer? FindChildScrollViewer(DependencyObject d)
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(d); i++)
+        {
+            var c = VisualTreeHelper.GetChild(d, i);
+            if (c is ScrollViewer sv)
+                return sv;
+            var found = FindChildScrollViewer(c);
+            if (found != null)
+                return found;
+        }
+        return null;
     }
 
     private void UpdateStats()
