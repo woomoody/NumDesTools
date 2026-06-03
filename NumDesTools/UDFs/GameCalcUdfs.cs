@@ -289,7 +289,7 @@ public partial class ExcelUdf
         Description = "针对Alice项目特制的自定义函数-计算最近坐标",
         Name = "AliceLtePoisonNear"
     )]
-    public static string AliceLtePoisonNear(
+    public static object AliceLtePoisonNear(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "基准坐标")]
             object[,] basePos,
         [ExcelArgument(
@@ -308,8 +308,11 @@ public partial class ExcelUdf
             string posType
     )
     {
-        _ = int.TryParse(basePos[0, 0]?.ToString(), out var baseX);
-        _ = int.TryParse(basePos[0, 1]?.ToString(), out var baseY);
+        if (
+            !int.TryParse(basePos[0, 0]?.ToString(), out var baseX)
+            || !int.TryParse(basePos[0, 1]?.ToString(), out var baseY)
+        )
+            return ExcelError.ExcelErrorValue;
         posPattern ??= "";
         posType ??= "1";
         // 提取坐标

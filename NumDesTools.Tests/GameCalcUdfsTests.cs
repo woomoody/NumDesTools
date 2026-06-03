@@ -1,29 +1,29 @@
 namespace NumDesTools.Tests;
 
-/// <summary>
-/// GAME_CALC_001~006: AliceLtePoisonNear / AliceLtePoison 的 int.Parse 裸调用
-/// 应替换为 TryParse，非整数输入时不应抛 FormatException。
-/// </summary>
 public class GameCalcUdfsTests
 {
     // ── AliceLtePoisonNear ───────────────────────────────────────────────────
 
     [Fact]
-    public void AliceLtePoisonNear_NonIntegerBasePos_DoesNotThrow()
+    public void AliceLtePoisonNear_NonIntegerBasePos_ReturnsExcelErrorValue()
     {
-        // basePos 含非整数时不应崩溃
-        object[,] basePos = { { "abc", "xyz" } };
-        var ex = Record.Exception(() =>
-            ExcelUdf.AliceLtePoisonNear(basePos, "5,3|2,7", @"(\d+),(\d+)", "1")
-        );
-        Assert.Null(ex);
+        // basePos 含非整数时应返回 #VALUE!，而非以 (0,0) 静默计算
+        object[,] basePos =
+        {
+            { "abc", "xyz" },
+        };
+        var result = ExcelUdf.AliceLtePoisonNear(basePos, "5,3|2,7", @"(\d+),(\d+)", "1");
+        Assert.Equal(ExcelDna.Integration.ExcelError.ExcelErrorValue, result);
     }
 
     [Fact]
     public void AliceLtePoisonNear_ValidInput_ReturnsNearestCoord()
     {
         // 基准 (0,0)，目标 (5,3) 和 (2,7) → 距离 34 vs 53 → 最近是 (5,3)
-        object[,] basePos = { { 0, 0 } };
+        object[,] basePos =
+        {
+            { 0, 0 },
+        };
         var result = ExcelUdf.AliceLtePoisonNear(basePos, "5,3|2,7", @"(\d+),(\d+)", "1");
         Assert.Equal("5,3", result);
     }
@@ -32,7 +32,10 @@ public class GameCalcUdfsTests
     public void AliceLtePoisonNear_InvalidGroupValues_DoesNotThrow()
     {
         // Regex 匹配到非数字 group，不应 FormatException
-        object[,] basePos = { { 1, 1 } };
+        object[,] basePos =
+        {
+            { 1, 1 },
+        };
         var ex = Record.Exception(() =>
             ExcelUdf.AliceLtePoisonNear(basePos, "ax,by", @"([a-z]+),([a-z]+)", "1")
         );
@@ -44,9 +47,7 @@ public class GameCalcUdfsTests
     [Fact]
     public void AliceLtePoison_InvalidGroupValues_DoesNotThrow()
     {
-        var ex = Record.Exception(() =>
-            ExcelUdf.AliceLtePoison("ax,by", @"([a-z]+),([a-z]+)")
-        );
+        var ex = Record.Exception(() => ExcelUdf.AliceLtePoison("ax,by", @"([a-z]+),([a-z]+)"));
         Assert.Null(ex);
     }
 
