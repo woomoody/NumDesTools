@@ -3575,8 +3575,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private static string WpfInputBox(string prompt, string title)
     {
-        var dlg = new UI.InputBoxDialog(prompt, title);
-        return dlg.ShowDialog() == true ? dlg.Input : string.Empty;
+        CrosslightController.Pause();
+        try
+        {
+            var dlg = new UI.InputBoxDialog(prompt, title);
+            return dlg.ShowDialog() == true ? dlg.Input : string.Empty;
+        }
+        finally
+        {
+            CrosslightController.Resume();
+        }
     }
 
     public void ActivityTestGitChanged_Click(IRibbonControl control)

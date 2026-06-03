@@ -379,6 +379,10 @@ internal sealed class CrosslightOverlay : IDisposable
         // 初始 false，SetExcelHwnd 设置 hwnd 后由第一次 OnFocusCheck 赋真实值。
         private bool _gridFocused;
 
+        // Excel 内部编辑中（批注/单元格/公式栏），冻结 overlay 位置，
+        // 不调 SetWindowPos 也不调 HideBands，避免打断编辑状态。
+        private bool _editFreeze;
+
         public RowColBandForm()
         {
             FormBorderStyle = FormBorderStyle.None;
@@ -434,9 +438,31 @@ internal sealed class CrosslightOverlay : IDisposable
                 }
                 var sb = new System.Text.StringBuilder(64);
                 GetClassName(gti.hwndFocus, sb, 64);
-                _gridFocused = sb.ToString() == "EXCEL7";
-                if (!_gridFocused && (_rowBand.IsVisible || _colBand.IsVisible))
-                    HideBands();
+                var focusClass = sb.ToString();
+                if (focusClass == "EXCEL7")
+                {
+                    // 正常网格焦点，恢复 overlay 正常刷新
+                    _gridFocused = true;
+                    _editFreeze = false;
+                }
+                else if (
+                    focusClass == "EDTBX"
+                    || focusClass.StartsWith("EXCEL", StringComparison.Ordinal)
+                )
+                {
+                    // Excel 内部编辑（批注编辑、单元格编辑、公式栏等）：
+                    // 冻结 overlay，不调 SetWindowPos 也不调 HideBands，
+                    // 防止 SetWindowPos(HWND_TOPMOST) 打断批注编辑状态。
+                    _editFreeze = true;
+                }
+                else
+                {
+                    // CTP、对话框或其他应用获焦，隐藏 overlay
+                    _gridFocused = false;
+                    _editFreeze = false;
+                    if (_rowBand.IsVisible || _colBand.IsVisible)
+                        HideBands();
+                }
             }
             catch { }
         }
@@ -444,6 +470,9 @@ internal sealed class CrosslightOverlay : IDisposable
         public void ShowBands(Rectangle cellRect, Rectangle gridRect)
         {
             // 读缓存字段（_focusTimer 每 300ms 刷新），避免每次 ShowBands 做 AttachThreadInput
+            if (_editFreeze)
+                return; // Excel 内部编辑中，冻结位置，禁止调 SetWindowPos
+
             if (!_gridFocused)
             {
                 if (_rowBand.IsVisible || _colBand.IsVisible)
@@ -531,16 +560,55 @@ internal static class CrosslightController
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
 
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr h, IntPtr pidNull);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetGUIThreadInfo(uint idThread, ref GUITHREADINFO lpgui);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct GUITHREADINFO
+    {
+        public int cbSize;
+        public uint flags;
+        public IntPtr hwndActive;
+        public IntPtr hwndFocus;
+        public IntPtr hwndCapture;
+        public IntPtr hwndMenuOwner;
+        public IntPtr hwndMoveSize;
+        public IntPtr hwndCaret;
+        public int rcCaretLeft,
+            rcCaretTop,
+            rcCaretRight,
+            rcCaretBottom;
+    }
+
+    // GUITHREADINFO.flags bit：线程正在输入文字（单元格编辑 / 公式栏 / 批注文字编辑）
+    private const uint GuiCaretBlinking = 0x00000001;
+
     private static Application? _app;
     private static bool _active;
     private static Range? _lastTarget;
+    private static IntPtr _excelHwnd = IntPtr.Zero;
+    private static volatile bool _paused;
 
-    // 250 ms 轮询定时器：单元格屏幕坐标因滚动/窗口移动而变化时，
-    // 以 forced=true 重算坐标；ShowBands 内部的矩形缓存在坐标未变时直接跳过，
-    // 避免频繁 SetWindowPos。
+    // 250 ms 轮询定时器：单元格屏幕坐标因滚动/窗口移动而变化时重算坐标。
     private static System.Timers.Timer? _refreshTimer;
 
     public static bool IsActive => _active;
+
+    public static void Pause()
+    {
+        _paused = true;
+        CrosslightOverlay.Instance.ClearCross();
+    }
+
+    public static void Resume()
+    {
+        _paused = false;
+        if (_active)
+            TriggerCurrent();
+    }
 
     private static bool IsExcelForeground(IntPtr excelHwnd)
     {
@@ -548,6 +616,16 @@ internal static class CrosslightController
         GetWindowThreadProcessId(fg, out uint fgPid);
         GetWindowThreadProcessId(excelHwnd, out uint excelPid);
         return fgPid == excelPid;
+    }
+
+    // 检查 Excel 线程是否正在输入（caret 闪烁）—— 不调 COM，纯 Win32，可在 ThreadPool 线程调用
+    private static bool IsExcelCaretActive()
+    {
+        if (_excelHwnd == IntPtr.Zero)
+            return false;
+        var excelTid = GetWindowThreadProcessId(_excelHwnd, IntPtr.Zero);
+        var gti = new GUITHREADINFO { cbSize = Marshal.SizeOf<GUITHREADINFO>() };
+        return GetGUIThreadInfo(excelTid, ref gti) && (gti.flags & GuiCaretBlinking) != 0;
     }
 
     public static void Enable(Application app)
@@ -559,6 +637,7 @@ internal static class CrosslightController
         }
         _active = true;
         _app = app;
+        _excelHwnd = (IntPtr)app.Hwnd;
 
         app.SheetSelectionChange += OnSelectionChange;
         app.WindowDeactivate += OnWindowDeactivate;
@@ -569,18 +648,26 @@ internal static class CrosslightController
 
         _refreshTimer = new System.Timers.Timer(250) { AutoReset = true };
         _refreshTimer.Elapsed += (_, _) =>
+        {
+            if (_paused || _lastTarget is null || _app is null)
+                return;
+            // 纯 Win32 检查：Excel 线程有 caret（正在输入/编辑批注），跳过 QueueAsMacro，
+            // 避免 Excel 为处理 queued macro 而强制退出编辑/批注状态导致批注窗口闪退。
+            if (IsExcelCaretActive())
+                return;
             ExcelAsyncUtil.QueueAsMacro(() =>
             {
                 if (_lastTarget is null || _app is null)
                     return;
                 try
                 {
-                    if (!IsExcelForeground((IntPtr)_app.Hwnd))
+                    if (!IsExcelForeground(_excelHwnd))
                         return;
                     CrosslightOverlay.Instance.UpdateCross(_lastTarget, forced: true);
                 }
                 catch { }
             });
+        };
         _refreshTimer.Start();
 
         TriggerCurrent();
@@ -603,6 +690,7 @@ internal static class CrosslightController
         _refreshTimer?.Dispose();
         _refreshTimer = null;
         _lastTarget = null;
+        _excelHwnd = IntPtr.Zero;
 
         CrosslightOverlay.Instance.ClearCross();
         _app = null;
