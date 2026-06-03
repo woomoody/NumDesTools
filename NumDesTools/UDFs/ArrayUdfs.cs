@@ -40,14 +40,12 @@ public partial class ExcelUdf
             string ignoreValue
     )
     {
-        var result = Empty;
-        //设定默认值
         if (delimiter == "")
             delimiter = "[,]";
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
-        string startDelimiter;
-        string midDelimiter;
-        string endDelimiter;
+        string startDelimiter,
+            midDelimiter,
+            endDelimiter;
         if (delimiterList.Length == 3)
         {
             startDelimiter = delimiterList[0];
@@ -61,30 +59,23 @@ public partial class ExcelUdf
             endDelimiter = Empty;
         }
 
+        var sb = new System.Text.StringBuilder();
         var rows = rangeObj.GetLength(0);
         var cols = rangeObj.GetLength(1);
         for (var row = 0; row < rows; row++)
         for (var col = 0; col < cols; col++)
         {
             var item = rangeObj[row, col];
-            if (item is ExcelEmpty || item.ToString() == ignoreValue || item is ExcelError) { }
-            else
-            {
-                if (!(rangeObjDef[0, 0] is ExcelMissing))
-                {
-                    var itemDef = rangeObjDef[row, col];
-                    result += itemDef + midDelimiter;
-                }
-                else
-                {
-                    result += item + midDelimiter;
-                }
-            }
+            if (item is ExcelEmpty || item.ToString() == ignoreValue || item is ExcelError)
+                continue;
+            var val = rangeObjDef[0, 0] is ExcelMissing ? item : rangeObjDef[row, col];
+            sb.Append(val).Append(midDelimiter);
         }
 
-        if (result != "")
-            result = startDelimiter + result.Substring(0, result.Length - 1) + endDelimiter;
-        return result;
+        if (sb.Length == 0)
+            return Empty;
+        sb.Length -= midDelimiter.Length;
+        return startDelimiter + sb + endDelimiter;
     }
 
     [ExcelFunction(
@@ -112,27 +103,27 @@ public partial class ExcelUdf
             string ignoreValue
     )
     {
-        var result = Empty;
+        var sb = new System.Text.StringBuilder();
         var rows = rangeObj.GetLength(0);
         var cols = rangeObj.GetLength(1);
         for (var row = 0; row < rows; row++)
         for (var col = 0; col < cols; col++)
         {
             var item = rangeObj[row, col];
-            if (item is ExcelEmpty || item.ToString() == ignoreValue) { }
-            else
-            {
-                var item2 = rangeObj2[row, col];
+            if (item is ExcelEmpty || item.ToString() == ignoreValue)
+                continue;
+            var item2 = rangeObj2[row, col];
 #pragma warning disable CA1305
-                for (var i = 0; i < Convert.ToInt32(item2); i++)
-                    result += item + delimiter;
+            if (!int.TryParse(item2?.ToString(), out var repeat))
+                repeat = 0;
 #pragma warning restore CA1305
-            }
+            for (var i = 0; i < repeat; i++)
+                sb.Append(item).Append(delimiter);
         }
 
-        if (result != "")
-            result = result.Substring(0, result.Length - 1);
-        return result;
+        if (sb.Length > 0)
+            sb.Length -= delimiter.Length;
+        return sb.ToString();
     }
 
     [ExcelFunction(
@@ -167,47 +158,31 @@ public partial class ExcelUdf
         var values1Objects = rangeObj1.Cast<object>().ToArray();
         var values2Objects = rangeObj2.Cast<object>().ToArray();
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
-        var result = Empty;
 
-        if (values1Objects.Length > 0 && values2Objects.Length > 0 && delimiterList.Length > 0)
+        if (values1Objects.Length == 0 || values2Objects.Length == 0 || delimiterList.Length == 0)
+            return Empty;
+
+        var sb = new System.Text.StringBuilder();
+        var count = 0;
+        foreach (var item in values1Objects)
         {
-            var count = 0;
-            foreach (var item in values1Objects)
+            var skip =
+                ignoreEmpty && (item is ExcelEmpty || string.IsNullOrEmpty(item?.ToString()));
+            if (!skip)
             {
-                if (ignoreEmpty)
-                {
-                    var excelNull = item is ExcelEmpty;
-                    var stringNull = ReferenceEquals(item.ToString(), "");
-                    if (!excelNull && !stringNull && item.ToString() != "")
-                    {
-                        var itemDef =
-                            delimiterList[0]
-                            + item
-                            + delimiterList[1]
-                            + values2Objects[count]
-                            + delimiterList[2];
-                        result += itemDef + delimiter[1];
-                    }
-                }
-                else
-                {
-                    var itemDef =
-                        delimiterList[0]
-                        + item
-                        + delimiterList[1]
-                        + values2Objects[count]
-                        + delimiterList[2];
-                    result += itemDef + delimiter[1];
-                }
-
-                count++;
+                sb.Append(delimiterList[0])
+                    .Append(item)
+                    .Append(delimiterList[1])
+                    .Append(values2Objects[count])
+                    .Append(delimiterList[2])
+                    .Append(delimiter[1]);
             }
-
-            result = result.Substring(0, result.Length - 1);
-            result = delimiterList[0] + result + delimiterList[2];
+            count++;
         }
 
-        return result;
+        if (sb.Length > 0)
+            sb.Length -= 1;
+        return delimiterList[0] + sb + delimiterList[2];
     }
 
     [ExcelFunction(
@@ -353,40 +328,28 @@ public partial class ExcelUdf
         var values1Objects = rangeObj1.Cast<object>().ToArray();
         var values2Objects = rangeObj2.Cast<object>().ToArray();
         var valuesFilterObjects = filterObj.Cast<object>().ToArray();
-
         var delimiterList = delimiter.ToCharArray().Select(c => c.ToString()).ToArray();
-        var result = Empty;
+
+        if (values1Objects.Length == 0 || values2Objects.Length == 0 || delimiterList.Length == 0)
+            return Empty;
+
+        var sb = new System.Text.StringBuilder();
         var count = 0;
-        if (values1Objects.Length > 0 && values2Objects.Length > 0 && delimiterList.Length > 0)
+        foreach (var item in values1Objects)
         {
-            foreach (var item in values1Objects)
-                if (ignoreEmpty)
-                {
-                    var excelNull = item is ExcelEmpty;
-                    var stringNull = item?.ToString();
-                    if (!excelNull && stringNull != "")
-                    {
-                        var filterObjectBase = values2Objects[count];
-                        if (filterObjectBase.ToString() == valuesFilterObjects[0].ToString())
-                            result += item + delimiterList[1];
-                    }
-
-                    count++;
-                }
-                else
-                {
-                    var filterObjectBase = values2Objects[count];
-                    if (filterObjectBase == valuesFilterObjects[0])
-                        result += item + delimiterList[1];
-                    count++;
-                }
-
-            if (!IsNullOrEmpty(result))
-                result = result.Substring(0, result.Length - 1);
-            result = delimiterList[0] + result + delimiterList[2];
+            var filterBase = values2Objects[count];
+            var matchFilter = ignoreEmpty
+                ? filterBase.ToString() == valuesFilterObjects[0].ToString()
+                : filterBase == valuesFilterObjects[0];
+            var skip = ignoreEmpty && (item is ExcelEmpty || item?.ToString() == "");
+            if (!skip && matchFilter)
+                sb.Append(item).Append(delimiterList[1]);
+            count++;
         }
 
-        return result;
+        if (sb.Length > 0)
+            sb.Length -= delimiterList[1].Length;
+        return delimiterList[0] + sb + delimiterList[2];
     }
 
     [ExcelFunction(
