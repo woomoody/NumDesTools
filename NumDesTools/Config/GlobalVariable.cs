@@ -27,7 +27,10 @@ namespace NumDesTools.Config
             { "LiteLLMApiKey", "" },
             { "LiteLLMApiUrl", "https://litellm.solotopia.net/v1/chat/completions" },
             { "LiteLLMModel", "claude-sonnet-4-6" },
-            { "LiteLLMModelList", "" },
+            {
+                "LiteLLMModelList",
+                "claude-sonnet-4-6,claude-opus-4-8,claude-opus-4-7,claude-opus-4-6-v1,claude-haiku-4-5-20251001,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro-preview,gemini-2.5-pro,gemini-3-flash-preview,gemini-2.5-flash,gemini-2.5-flash-lite,gemini-3.1-flash-lite,gemini-3.1-flash-image-preview,gemini-3-pro-image-preview,kimi-k2.6,qwen3.7-max,qwen3.6-plus,glm-5.1,glm-5,deepseek-v4-flash"
+            },
             {
                 "ChatSysContentExcelAss",
                 "你是一个代码和办公助手，特别擅长回答Excel的公式以及代码编写，特别擅长C#，打印输出不要使用控制台，使用：Debug.Print，判断需要记录日志，使用：LogDisplay.RecordLine(\"[{0}] , {1}\", DateTime.Now.ToString(CultureInfo.InvariantCulture),$\"{selectedRange.Count}\");"
@@ -221,6 +224,13 @@ namespace NumDesTools.Config
                     _configData.Value[kvp.Key] = kvp.Value;
                 }
             }
+
+            // 迁移旧格式模型列表（global.anthropic.* → 新短名）
+            if (
+                _configData.Value.TryGetValue("LiteLLMModelList", out var savedList)
+                && savedList.Contains("global.")
+            )
+                _configData.Value["LiteLLMModelList"] = DefaultValue["LiteLLMModelList"];
 
             // 合并列表配置
             _configData.NormaKeyList = MergeLists(_configData.NormaKeyList, DefaultNormaKeyList);
