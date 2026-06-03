@@ -52,11 +52,17 @@ public class GameCalcUdfsTests
     }
 
     [Fact]
-    public void AliceLtePoison_ValidInput_ReturnsFormattedCoords()
+    public void AliceLtePoison_ValidInput_ReturnsFormattedCoordsWithoutTrailingComma()
     {
-        // 匹配 "3,4" 和 "1,2" → 应包含 {21,3,4} 和 {21,1,2}
+        // 精确匹配：末尾不能有多余逗号
         var result = ExcelUdf.AliceLtePoison("3,4|1,2", @"(\d+),(\d+)");
-        Assert.Contains("21,3,4", result);
-        Assert.Contains("21,1,2", result);
+        Assert.Equal("{21,3,4},{21,1,2}", result);
+    }
+
+    [Fact]
+    public void AliceLtePoison_NoMatch_ReturnsEmpty()
+    {
+        var result = ExcelUdf.AliceLtePoison("no-coords-here", @"(\d+),(\d+)");
+        Assert.Equal("", result);
     }
 }
