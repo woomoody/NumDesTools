@@ -439,29 +439,22 @@ internal sealed class CrosslightOverlay : IDisposable
                 var sb = new System.Text.StringBuilder(64);
                 GetClassName(gti.hwndFocus, sb, 64);
                 var focusClass = sb.ToString();
-                if (focusClass == "EXCEL7")
+                switch (CrosslightController.ClassifyFocusWindow(focusClass))
                 {
-                    // 正常网格焦点，恢复 overlay 正常刷新
-                    _gridFocused = true;
-                    _editFreeze = false;
-                }
-                else if (
-                    focusClass == "EDTBX"
-                    || focusClass.StartsWith("EXCEL", StringComparison.Ordinal)
-                )
-                {
-                    // Excel 内部编辑（批注编辑、单元格编辑、公式栏等）：
-                    // 冻结 overlay，不调 SetWindowPos 也不调 HideBands，
-                    // 防止 SetWindowPos(HWND_TOPMOST) 打断批注编辑状态。
-                    _editFreeze = true;
-                }
-                else
-                {
-                    // CTP、对话框或其他应用获焦，隐藏 overlay
-                    _gridFocused = false;
-                    _editFreeze = false;
-                    if (_rowBand.IsVisible || _colBand.IsVisible)
-                        HideBands();
+                    case CrosslightController.FocusState.Grid:
+                        _gridFocused = true;
+                        _editFreeze = false;
+                        break;
+                    case CrosslightController.FocusState.Editing:
+                        _editFreeze = true;
+                        break;
+                    default:
+                        PluginLog.Write($"[crosslight] else-branch focusClass={focusClass}");
+                        _gridFocused = false;
+                        _editFreeze = false;
+                        if (_rowBand.IsVisible || _colBand.IsVisible)
+                            HideBands();
+                        break;
                 }
             }
             catch { }
@@ -609,6 +602,24 @@ internal static class CrosslightController
         if (_active)
             TriggerCurrent();
     }
+
+    internal enum FocusState
+    {
+        Grid,
+        Editing,
+        Other,
+    }
+
+    /// <summary>
+    /// 根据焦点窗口类名判断 overlay 应进入哪种状态，纯函数，可单元测试。
+    /// </summary>
+    internal static FocusState ClassifyFocusWindow(string className) =>
+        className == "EXCEL7" ? FocusState.Grid
+        : className == "EDTBX"
+        || className == "NetUIHWND"
+        || className.StartsWith("EXCEL", StringComparison.Ordinal)
+            ? FocusState.Editing
+        : FocusState.Other;
 
     private static bool IsExcelForeground(IntPtr excelHwnd)
     {
