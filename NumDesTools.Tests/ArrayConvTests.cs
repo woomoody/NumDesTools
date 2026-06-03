@@ -82,20 +82,35 @@ public class ArrayConvTests
         Assert.Equal(new[] { "k1", "v1" }, dict["k1"]);
     }
 
-    // ── TwoDArrayToDicFirstKeyStr (P1 bug regression) ──────────────────────
+    // ── TwoDArrayToDicFirstKeyStr ───────────────────────────────────────────
 
     [Fact]
-    public void TwoDArrayToDicFirstKeyStr_JoinsAllCols_NotLastOnly()
+    public void TwoDArrayToDicFirstKeyStr_ValueExcludesKeyCol()
     {
-        // Bug: string.Join("#", singleString) iterated chars; now fixed to join all cols
+        // 首列是 key，value 只包含剩余列（不含 key 列自身）
+        // 此函数专用于 _通配符 表：key=名称，value=函数描述符（如 "Var#字段名"）
         object[,] arr =
         {
             { "k1", "a", "b", "c" },
             { "k2", "x", "y", "z" },
         };
         var dict = PubMetToExcel.TwoDArrayToDicFirstKeyStr(arr);
-        Assert.Equal("k1#a#b#c", dict["k1"]);
-        Assert.Equal("k2#x#y#z", dict["k2"]);
+        Assert.Equal("a#b#c", dict["k1"]);
+        Assert.Equal("x#y#z", dict["k2"]);
+    }
+
+    [Fact]
+    public void TwoDArrayToDicFirstKeyStr_TwoColTable_ReturnsDescriptorAsIs()
+    {
+        // _通配符 表典型格式：key 列 + 函数描述符列，value 应直接返回描述符不含 key
+        object[,] arr =
+        {
+            { "寻找编号2", "Var#寻找ID2" },
+            { "物品编号", "Left#物品编号#5" },
+        };
+        var dict = PubMetToExcel.TwoDArrayToDicFirstKeyStr(arr);
+        Assert.Equal("Var#寻找ID2", dict["寻找编号2"]);
+        Assert.Equal("Left#物品编号#5", dict["物品编号"]);
     }
 
     // ── IsValidArray ────────────────────────────────────────────────────────

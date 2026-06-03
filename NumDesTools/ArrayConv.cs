@@ -635,7 +635,7 @@ public static partial class PubMetToExcel
                 continue;
 
             var cols = new List<string>();
-            for (int j = 0; j < array.GetLength(1); j++)
+            for (int j = 1; j < array.GetLength(1); j++) // j=0 是 key 列，跳过
                 cols.Add(array[i, j]?.ToString() ?? string.Empty);
             dict[key] = string.Join("#", cols);
         }
@@ -667,7 +667,7 @@ public static partial class PubMetToExcel
         for (int i = 1; i <= array.GetLength(0); i++)
         {
             string key = array[i, 1]?.ToString();
-            if (key == string.Empty)
+            if (string.IsNullOrEmpty(key))
                 continue;
             var row = new List<string>();
             for (int j = 1; j <= array.GetLength(1); j++)
