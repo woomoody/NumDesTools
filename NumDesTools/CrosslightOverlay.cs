@@ -447,6 +447,8 @@ internal sealed class CrosslightOverlay : IDisposable
                         break;
                     case CrosslightController.FocusState.Editing:
                         _editFreeze = true;
+                        if (_rowBand.IsVisible || _colBand.IsVisible)
+                            HideBands();
                         break;
                     default:
                         PluginLog.Write($"[crosslight] else-branch focusClass={focusClass}");
@@ -639,6 +641,20 @@ internal static class CrosslightController
         return GetGUIThreadInfo(excelTid, ref gti) && (gti.flags & GuiCaretBlinking) != 0;
     }
 
+    // 检查 Excel 线程焦点是否在"编辑类"窗口（批注/单元格编辑），可在 ThreadPool 线程调用
+    private static bool IsExcelEditFocused()
+    {
+        if (_excelHwnd == IntPtr.Zero)
+            return false;
+        var excelTid = GetWindowThreadProcessId(_excelHwnd, IntPtr.Zero);
+        var gti = new GUITHREADINFO { cbSize = Marshal.SizeOf<GUITHREADINFO>() };
+        if (!GetGUIThreadInfo(excelTid, ref gti) || gti.hwndFocus == IntPtr.Zero)
+            return false;
+        var sb = new System.Text.StringBuilder(64);
+        GetClassName(gti.hwndFocus, sb, 64);
+        return ClassifyFocusWindow(sb.ToString()) == FocusState.Editing;
+    }
+
     public static void Enable(Application app)
     {
         if (_active)
@@ -662,9 +678,9 @@ internal static class CrosslightController
         {
             if (_paused || _lastTarget is null || _app is null)
                 return;
-            // 纯 Win32 检查：Excel 线程有 caret（正在输入/编辑批注），跳过 QueueAsMacro，
-            // 避免 Excel 为处理 queued macro 而强制退出编辑/批注状态导致批注窗口闪退。
-            if (IsExcelCaretActive())
+            // 批注编辑（NetUIHWND）或单元格编辑（EDTBX/caret）时停止投递宏，
+            // 防止 QueueAsMacro 执行打断 Excel 的编辑状态。
+            if (IsExcelCaretActive() || IsExcelEditFocused())
                 return;
             ExcelAsyncUtil.QueueAsMacro(() =>
             {
