@@ -67,29 +67,31 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     /// <summary>强类型配置入口，双轨并行期间与静态字段同步读写同一份 JSON。</summary>
     public static AppConfig Config = new(GlobalValue);
-    public static string LabelText = GlobalValue.Value["LabelText"];
-    public static string FocusLabelText = GlobalValue.Value["FocusLabelText"];
-    public static string LabelTextRoleDataPreview = GlobalValue.Value["LabelTextRoleDataPreview"];
-    public static string SheetMenuText = GlobalValue.Value["SheetMenuText"];
-    public static string CellHiLightText = GlobalValue.Value["CellHiLightText"];
-    public static string TempPath = GlobalValue.Value["TempPath"];
-    public static string BasePath = GlobalValue.Value["BasePath"];
-    public static string TargetPath = GlobalValue.Value["TargetPath"];
-    public static string CheckSheetValueText = GlobalValue.Value["CheckSheetValueText"];
-    public static string ShowDnaLogText = GlobalValue.Value["ShowDnaLogText"];
-    public static string ShowAiText = GlobalValue.Value["ShowAIText"];
-    public static string LiteLLMApiKey = GlobalValue.Value["LiteLLMApiKey"];
-    public static string LiteLLMApiUrl = GlobalValue.Value["LiteLLMApiUrl"];
-    public static string LiteLLMModel = GlobalValue.Value["LiteLLMModel"];
-    public static List<string> LiteLLMModelList = GlobalValue
-        .Value["LiteLLMModelList"]
+    public static string LabelText = Cfg("LabelText");
+    public static string FocusLabelText = Cfg("FocusLabelText");
+    public static string LabelTextRoleDataPreview = Cfg("LabelTextRoleDataPreview");
+    public static string SheetMenuText = Cfg("SheetMenuText");
+    public static string CellHiLightText = Cfg("CellHiLightText");
+    public static string TempPath = Cfg("TempPath");
+    public static string BasePath = Cfg("BasePath");
+    public static string TargetPath = Cfg("TargetPath");
+    public static string CheckSheetValueText = Cfg("CheckSheetValueText");
+    public static string ShowDnaLogText = Cfg("ShowDnaLogText");
+    public static string ShowAiText = Cfg("ShowAIText");
+    public static string LiteLLMApiKey = Cfg("LiteLLMApiKey");
+    public static string LiteLLMApiUrl = Cfg("LiteLLMApiUrl");
+    public static string LiteLLMModel = Cfg("LiteLLMModel");
+    public static List<string> LiteLLMModelList = Cfg("LiteLLMModelList")
         .Split(',', StringSplitOptions.RemoveEmptyEntries)
         .ToList();
-    public static string GitRootPath = GlobalValue.Value["GitRootPath"];
+    public static string GitRootPath = Cfg("GitRootPath");
 
-    public static string ChatSysContentExcelAss = GlobalValue.Value["ChatSysContentExcelAss"];
+    public static string ChatSysContentExcelAss = Cfg("ChatSysContentExcelAss");
 
-    public static string ChatSysContentTransferAss = GlobalValue.Value["ChatSysContentTransferAss"];
+    public static string ChatSysContentTransferAss = Cfg("ChatSysContentTransferAss");
+
+    private static string Cfg(string key) =>
+        GlobalValue.Value.TryGetValue(key, out var v) ? v : string.Empty;
 
     public static CommandBarButton Btn;
     public static Application App = (Application)ExcelDnaUtil.Application;

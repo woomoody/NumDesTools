@@ -118,6 +118,17 @@ namespace NumDesTools.ExcelToLua
                     if (cell.value.IndexOf('[') < 0)
                         return $"{{{cell.value}}}";
                     return cell.value.Replace('[', '{').Replace(']', '}');
+                case FieldTypeDefine.REWARD:
+                case FieldTypeDefine.REWARD_ARRAY:
+                    if (string.IsNullOrEmpty(cell.value))
+                        return "{}";
+                    if (cell.value.IndexOf('[') < 0)
+                        return $"{{{cell.value}}}";
+                    return cell.value.Replace('[', '{').Replace(']', '}');
+                case FieldTypeDefine.LUA_TABLE:
+                    return string.IsNullOrEmpty(cell.value) ? "{}" : cell.value;
+                case FieldTypeDefine.ANY:
+                    return cell.value;
             }
             return string.Empty;
         }
@@ -193,9 +204,17 @@ namespace NumDesTools.ExcelToLua
                 case FieldTypeDefine.NUMBER_ARRAY:
                 case FieldTypeDefine.OBJECT_ARRAY:
                 case FieldTypeDefine.OBJECT_ARRAY2:
-                    // if (string.IsNullOrEmpty(cell.value)) return "{}";
-                    // if (cell.value.IndexOf('[') < 0)return $"{{{cell.value}}}";
-                    // return cell.value.Replace('[', '{').Replace(']', '}');
+                    return cell.value;
+                case FieldTypeDefine.REWARD:
+                case FieldTypeDefine.REWARD_ARRAY:
+                    if (string.IsNullOrEmpty(cell.value))
+                        return "{}";
+                    if (cell.value.IndexOf('[') < 0)
+                        return $"{{{cell.value}}}";
+                    return cell.value.Replace('[', '{').Replace(']', '}');
+                case FieldTypeDefine.LUA_TABLE:
+                    return string.IsNullOrEmpty(cell.value) ? "{}" : cell.value;
+                case FieldTypeDefine.ANY:
                     return cell.value;
             }
             return string.Empty;

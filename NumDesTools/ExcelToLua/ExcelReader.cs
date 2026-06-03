@@ -230,15 +230,15 @@ namespace NumDesTools.ExcelToLua
             }
             catch (Exception e)
             {
+                var sheetName = row?.Sheet?.SheetName ?? "(null row)";
+                var cellStr = row?.GetCell(i)?.ToString() ?? "";
                 LogDisplay.RecordLine(
                     "[{0}] ,{1}",
                     DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                    $"{e} ~!: {row.Sheet.SheetName} {row.GetCell(i)}"
+                    $"{e} ~!: {sheetName} {cellStr}"
                 );
-
                 LogDisplay.Show();
-
-                PluginLog.Verbose($"{e} ~!: {row.Sheet.SheetName} {row.GetCell(i)}");
+                PluginLog.Verbose($"{e} ~!: {sheetName} {cellStr}");
                 throw;
             }
         }
@@ -324,7 +324,10 @@ namespace NumDesTools.ExcelToLua
         public static void ReadSheetFields(ISheet sheet, ref SheetData data)
         {
             // 记录前两行非数值信息 字段名称 字段类型
-            int colCount = sheet.GetRow(1).LastCellNum;
+            var headerRow = sheet.GetRow(1);
+            if (headerRow == null)
+                return;
+            int colCount = headerRow.LastCellNum;
 
             for (int j = data.startCol; j < colCount; j++)
             {

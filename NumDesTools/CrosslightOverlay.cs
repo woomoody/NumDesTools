@@ -21,7 +21,18 @@ internal sealed class CrosslightOverlay : IDisposable
     private const byte BandAlpha = 80;
 
     private static CrosslightOverlay? _instance;
-    public static CrosslightOverlay Instance => _instance ??= new CrosslightOverlay();
+    private static readonly object _instanceLock = new();
+
+    public static CrosslightOverlay Instance
+    {
+        get
+        {
+            if (_instance != null)
+                return _instance;
+            lock (_instanceLock)
+                return _instance ??= new CrosslightOverlay();
+        }
+    }
 
     // ── 诊断日志 ─────────────────────────────────────────────────────────────
     private static readonly string _diagLog = Path.Combine(
@@ -33,6 +44,7 @@ internal sealed class CrosslightOverlay : IDisposable
 
     private static void DiagLog(string msg)
     {
+#if DEBUG
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_diagLog)!);
@@ -40,10 +52,11 @@ internal sealed class CrosslightOverlay : IDisposable
                 File.AppendAllText(_diagLog, $"{DateTime.Now:HH:mm:ss.fff} {msg}\n");
         }
         catch { }
+#endif
     }
 
     private Thread? _staThread;
-    private RowColBandForm? _bandForm;
+    private volatile RowColBandForm? _bandForm;
     private readonly object _staLock = new();
 
     private CrosslightOverlay()
@@ -81,7 +94,11 @@ internal sealed class CrosslightOverlay : IDisposable
         EnsureStaThread();
 
         var addr = "";
-        try { addr = target.Address[false, false]; } catch { }
+        try
+        {
+            addr = target.Address[false, false];
+        }
+        catch { }
 
         var cellRect = CellPositionProbe.GetCellScreenRect(target);
         if (cellRect == Rectangle.Empty)
@@ -191,22 +208,29 @@ internal sealed class CrosslightOverlay : IDisposable
 
     public void Dispose()
     {
-        _bandForm?.BeginInvoke(
+        // 先取出引用再置 null，lambda 用局部变量，避免与 BeginInvoke 竞态
+        var form = _bandForm;
+        _bandForm = null;
+        form?.BeginInvoke(
             (System.Action)(
                 () =>
                 {
-                    _bandForm?.Close();
+                    form.Close();
                     System.Windows.Forms.Application.ExitThread();
                 }
             )
         );
-        _bandForm = null;
     }
 
     public static void DisposeInstance()
     {
-        _instance?.Dispose();
-        _instance = null;
+        CrosslightOverlay? old;
+        lock (_instanceLock)
+        {
+            old = _instance;
+            _instance = null;
+        }
+        old?.Dispose();
     }
 
     // ── Win32 helpers ────────────────────────────────────────────────────────
