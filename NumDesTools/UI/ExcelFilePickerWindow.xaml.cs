@@ -274,8 +274,6 @@ public partial class ExcelFilePickerWindow : MetroWindow
         ApplyFilter();
     }
 
-    private string? _activeFolderKey;
-
     private void Filter_Changed(object sender, RoutedEventArgs e) => ApplyFilter();
 
     private void FileList_SelectionChanged(object sender, SelectionChangedEventArgs e) =>

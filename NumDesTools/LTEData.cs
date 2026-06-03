@@ -2315,11 +2315,6 @@ public class LteData
             findLinks31 += LinksBuild(findRankLinks2, null, null, null).findLinks31;
         }
 
-        if(findTargetId == "7636010201")
-        {
-            var abc = 1;
-        }
-
         // 寻找界面提示使用最后的id，因为其他id可能没有图片资源
         var finalMatchId = findItemGroup.FirstOrDefault();
         if (findRankLinks1.Count == 0 || finalMatchId is null or "")
@@ -4012,7 +4007,7 @@ public class LteData
             {
                 fixData = $"[[8,{fieldConditonTargetId},{fieldConditonTargetLast}]]";
             }
-            else if (fieldConditonTargetType.StartsWith("兑-材料"))
+            else if (fieldConditonTargetType.StartsWith("兑-篝火"))
             {
                 fixData = $"[[12,{fieldConditonTargetId},-1]]";
             }
