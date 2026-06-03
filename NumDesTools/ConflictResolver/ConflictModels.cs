@@ -7,7 +7,7 @@ namespace NumDesTools.ConflictResolver;
 public enum ConflictChoice
 {
     Ours,
-    Theirs
+    Theirs,
 }
 
 public enum RowDiffType
@@ -15,7 +15,7 @@ public enum RowDiffType
     Modified,
     OnlyOurs,
     OnlyTheirs,
-    Same
+    Same,
 }
 
 /// <summary>单元格级别的冲突</summary>
@@ -132,11 +132,21 @@ public class RowConflict : INotifyPropertyChanged
             RowDiffType.OnlyOurs => "仅我有（对方删除）",
             RowDiffType.OnlyTheirs => "仅对方有（新增行）",
             RowDiffType.Same => "相同",
-            _ => $"冲突 {Cells.Count} 列"
+            _ => $"冲突 {Cells.Count} 列",
         };
 
     /// <summary>整行的选择（仅 OnlyOurs/OnlyTheirs 时有效）</summary>
     private ConflictChoice _rowChoice;
+
+    /// <summary>
+    /// 仅供 Differ 对象初始化器使用：设置默认选择但不标记"用户已明确处理"。
+    /// UI 交互必须使用 <see cref="RowChoice"/>。
+    /// </summary>
+    public ConflictChoice DefaultRowChoice
+    {
+        init => _rowChoice = value;
+    }
+
     public ConflictChoice RowChoice
     {
         get => _rowChoice;
@@ -174,7 +184,7 @@ public class RowConflict : INotifyPropertyChanged
         {
             RowDiffType.Modified => Cells.All(c => c.IsExplicit),
             RowDiffType.OnlyOurs or RowDiffType.OnlyTheirs => _rowChoiceExplicit,
-            _ => true
+            _ => true,
         };
 
     private bool _rowChoiceExplicit;

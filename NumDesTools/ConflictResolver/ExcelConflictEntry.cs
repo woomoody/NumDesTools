@@ -431,6 +431,8 @@ public static class ExcelConflictEntry
 
             if (mergeError != null)
             {
+                // merge --no-commit 失败时仓库已产生 MERGE_HEAD，必须 abort 恢复干净状态
+                AbortOperation(gitRoot, isCherryPick: false);
                 System.Windows.MessageBox.Show($"merge 失败：{mergeError}", "错误");
                 return;
             }
@@ -916,12 +918,24 @@ public static class ExcelConflictEntry
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
             },
         };
         proc.Start();
-        var output = proc.StandardOutput.ReadToEnd();
-        proc.WaitForExit(30_000);
-        return output;
+        // 同时读取 stdout/stderr，避免缓冲区满导致死锁
+        var stdout = proc.StandardOutput.ReadToEnd();
+        var stderr = proc.StandardError.ReadToEnd();
+        var exited = proc.WaitForExit(30_000);
+        if (!exited)
+        {
+            proc.Kill();
+            throw new InvalidOperationException(
+                $"git {arguments[..Math.Min(40, arguments.Length)]}… 超时（30s）"
+            );
+        }
+        if (proc.ExitCode != 0)
+            throw new InvalidOperationException($"git 返回 {proc.ExitCode}：{stderr.Trim()}");
+        return stdout;
     }
 
     /// <summary>
