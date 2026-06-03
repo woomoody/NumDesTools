@@ -11,8 +11,8 @@ namespace NumDesTools;
 
 public partial class ExcelUdf
 {
-    private static readonly dynamic IndexWk = AppServices.App.ActiveWorkbook;
-    private static readonly dynamic ExcelPath = IndexWk.Path;
+    // 调用时读取，避免插件加载时 COM 未就绪
+    private static string ActiveWorkbookPath() => (string)AppServices.App.ActiveWorkbook.Path;
 
     [ExcelFunction(
         Category = "UDF-查找值",
@@ -27,28 +27,19 @@ public partial class ExcelUdf
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1"
     )
     {
-        var path = ExcelPath + @"\" + targetWorkbook;
-        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        var workbook = new XSSFWorkbook(fs);
+        var path = ActiveWorkbookPath() + @"\" + targetWorkbook;
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var workbook = new XSSFWorkbook(fs);
         var sheet = workbook.GetSheet(targetSheet) ?? workbook.GetSheetAt(0);
         var rowSource = sheet.GetRow(row);
+        if (rowSource == null)
+            return -1;
         for (int j = rowSource.FirstCellNum; j <= rowSource.LastCellNum; j++)
         {
             var cell = rowSource.GetCell(j);
-            if (cell != null)
-            {
-                var cellValue = cell.ToString();
-                if (cellValue == searchValue)
-                {
-                    workbook.Close();
-                    fs.Close();
-                    return j;
-                }
-            }
+            if (cell?.ToString() == searchValue)
+                return j;
         }
-
-        workbook.Close();
-        fs.Close();
         return -1;
     }
 
@@ -65,28 +56,16 @@ public partial class ExcelUdf
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1"
     )
     {
-        var path = ExcelPath + @"\" + targetWorkbook;
-        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        var workbook = new XSSFWorkbook(fs);
+        var path = ActiveWorkbookPath() + @"\" + targetWorkbook;
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var workbook = new XSSFWorkbook(fs);
         var sheet = workbook.GetSheet(targetSheet) ?? workbook.GetSheetAt(0);
         for (var i = sheet.FirstRowNum; i <= sheet.LastRowNum; i++)
         {
             var rowSource = sheet.GetRow(i);
-            if (rowSource != null)
-            {
-                var cell = rowSource.GetCell(col);
-                var cellValue = cell.ToString();
-                if (cellValue == searchValue)
-                {
-                    workbook.Close();
-                    fs.Close();
-                    return i;
-                }
-            }
+            if (rowSource?.GetCell(col)?.ToString() == searchValue)
+                return i;
         }
-
-        workbook.Close();
-        fs.Close();
         return -1;
     }
 
@@ -104,31 +83,18 @@ public partial class ExcelUdf
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1"
     )
     {
-        var path = ExcelPath + @"\" + targetWorkbook;
-        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        var workbook = new XSSFWorkbook(fs);
+        var path = ActiveWorkbookPath() + @"\" + targetWorkbook;
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var workbook = new XSSFWorkbook(fs);
         var sheet = workbook.GetSheet(targetSheet) ?? workbook.GetSheetAt(0);
         var rowSource = sheet.GetRow(row);
+        if (rowSource == null)
+            return "Error未找到";
         for (int j = rowSource.FirstCellNum; j <= rowSource.LastCellNum; j++)
         {
-            var cell = rowSource.GetCell(j);
-            if (cell != null)
-            {
-                var cellValue = cell.ToString();
-                if (cellValue == searchValue)
-                {
-                    var outRowSource = sheet.GetRow(rowOut);
-                    var outCell = outRowSource.GetCell(j);
-                    var outCellValue = outCell.ToString();
-                    workbook.Close();
-                    fs.Close();
-                    return outCellValue;
-                }
-            }
+            if (rowSource.GetCell(j)?.ToString() == searchValue)
+                return sheet.GetRow(rowOut)?.GetCell(j)?.ToString() ?? string.Empty;
         }
-
-        workbook.Close();
-        fs.Close();
         return "Error未找到";
     }
 
@@ -146,30 +112,16 @@ public partial class ExcelUdf
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1"
     )
     {
-        var path = ExcelPath + @"\" + targetWorkbook;
-        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        var workbook = new XSSFWorkbook(fs);
+        var path = ActiveWorkbookPath() + @"\" + targetWorkbook;
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var workbook = new XSSFWorkbook(fs);
         var sheet = workbook.GetSheet(targetSheet) ?? workbook.GetSheetAt(0);
         for (var i = sheet.FirstRowNum; i <= sheet.LastRowNum; i++)
         {
             var rowSource = sheet.GetRow(i);
-            if (rowSource != null)
-            {
-                var cell = rowSource.GetCell(col);
-                var cellValue = cell.ToString();
-                if (cellValue == searchValue)
-                {
-                    var outCell = rowSource.GetCell(outCol);
-                    var outCellValue = outCell?.ToString() ?? string.Empty;
-                    workbook.Close();
-                    fs.Close();
-                    return outCellValue;
-                }
-            }
+            if (rowSource?.GetCell(col)?.ToString() == searchValue)
+                return rowSource.GetCell(outCol)?.ToString() ?? string.Empty;
         }
-
-        workbook.Close();
-        fs.Close();
         return "Error未找到";
     }
 
