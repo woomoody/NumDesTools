@@ -19,6 +19,10 @@ public class CrosslightFocusClassifyTests
     public void NetUIHWND_is_Editing() =>
         Assert.Equal(FocusState.Editing, ClassifyFocusWindow("NetUIHWND"));
 
+    [Fact]
+    public void RICHEDIT60W_is_Editing() =>
+        Assert.Equal(FocusState.Editing, ClassifyFocusWindow("RICHEDIT60W"));
+
     [Theory]
     [InlineData("EXCEL")]
     [InlineData("EXCEL.EXE")]

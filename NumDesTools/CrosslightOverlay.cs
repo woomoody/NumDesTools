@@ -622,6 +622,7 @@ internal static class CrosslightController
         className == "EXCEL7" ? FocusState.Grid
         : className == "EDTBX"
         || className == "NetUIHWND"
+        || className == "RICHEDIT60W" // Excel 365 批注富文本编辑框
         || className.StartsWith("EXCEL", StringComparison.Ordinal)
             ? FocusState.Editing
         : FocusState.Other;
