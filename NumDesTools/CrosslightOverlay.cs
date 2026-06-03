@@ -450,12 +450,17 @@ internal sealed class CrosslightOverlay : IDisposable
                 {
                     case CrosslightController.FocusState.Grid:
                         _gridFocused = true;
-                        _editFreeze = false;
-                        CrosslightController.SetEditing(false);
+                        // 焦点飘回 EXCEL7 不代表批注窗口关闭，先确认窗口消失再清零
+                        if (!CrosslightController.IsCommentEditorVisible())
+                        {
+                            _editFreeze = false;
+                            CrosslightController.SetEditing(false);
+                        }
                         break;
                     case CrosslightController.FocusState.Editing:
                         _editFreeze = true;
                         CrosslightController.SetEditing(true);
+                        CrosslightController.SetCommentEditorHwnd(gti.hwndFocus);
                         if (_rowBand.IsVisible || _colBand.IsVisible)
                             HideBands();
                         break;
@@ -573,6 +578,9 @@ internal static class CrosslightController
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern int GetClassName(IntPtr h, System.Text.StringBuilder sb, int max);
 
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+
     [StructLayout(LayoutKind.Sequential)]
     private struct GUITHREADINFO
     {
@@ -600,8 +608,12 @@ internal static class CrosslightController
     private static volatile bool _paused;
 
     // 编辑闸门：批注/单元格编辑期间为 true，禁止任何 QueueAsMacro 入队及执行。
-    // SheetBeforeDoubleClick 立即置位，OnFocusCheck 回到 Grid 时清零。
+    // SheetBeforeDoubleClick 立即置位，OnFocusCheck 回到 Grid 且批注窗口消失时清零。
     private static volatile bool _editing;
+
+    // 最近一次看到的批注编辑器 HWND（RICHEDIT60W）。
+    // 键盘焦点可能短暂飘回 EXCEL7，但只要窗口还 visible 就维持编辑态。
+    private static volatile IntPtr _commentEditorHwnd;
 
     // 250 ms 轮询定时器：单元格屏幕坐标因滚动/窗口移动而变化时重算坐标。
     private static System.Timers.Timer? _refreshTimer;
@@ -672,9 +684,19 @@ internal static class CrosslightController
         return ClassifyFocusWindow(sb.ToString()) == FocusState.Editing;
     }
 
+    // 批注编辑器窗口是否仍然可见（键盘焦点飘走不影响此判断）
+    internal static bool IsCommentEditorVisible() =>
+        _commentEditorHwnd != IntPtr.Zero && IsWindowVisible(_commentEditorHwnd);
+
+    internal static void SetCommentEditorHwnd(IntPtr hwnd) => _commentEditorHwnd = hwnd;
+
     // 统一宏抑制闸门：入队前调一次 + 宏体首行调一次，封死 TOCTOU 时间窗。
     internal static bool ShouldSuppressMacro() =>
-        _paused || _editing || IsExcelEditFocused() || IsExcelCaretActive();
+        _paused
+        || _editing
+        || IsCommentEditorVisible()
+        || IsExcelEditFocused()
+        || IsExcelCaretActive();
 
     internal static void SetEditing(bool editing)
     {
@@ -750,6 +772,7 @@ internal static class CrosslightController
         _refreshTimer = null;
         _lastTarget = null;
         _editing = false;
+        _commentEditorHwnd = IntPtr.Zero;
         _excelHwnd = IntPtr.Zero;
 
         CrosslightOverlay.Instance.ClearCross();
