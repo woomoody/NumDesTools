@@ -47,7 +47,7 @@ namespace NumDesTools.ExcelToLua
         static string LuaOutputFolder => $"{JsonBaseFolder}Code/Assets/LuaScripts/Tables";
 
         static string LocalizationOutputFolder =>
-            $"{JsonBaseFolder}Code/Asests/LuaScripts/Localizations";
+            $"{JsonBaseFolder}Code/Assets/LuaScripts/Localizations";
 
         //json文件夹
         static string JsonOutputFolder => $"{JsonBaseFolder}Code/Assets/Game/Jsons";
@@ -194,7 +194,10 @@ namespace NumDesTools.ExcelToLua
             List<string> files = new List<string>();
             Regex fileRegex = new Regex(@"(\w+/[^~#].+?\.xlsx?)");
 
-            string basePath = Path.Combine(AppServices.Config.Paths.BasePath, "./../../public/Excels");
+            string basePath = Path.Combine(
+                AppServices.Config.Paths.BasePath,
+                "./../../public/Excels"
+            );
 
             // ReSharper disable once UnusedParameter.Local
             process.OutputDataReceived += (sender, e) =>
@@ -324,7 +327,9 @@ namespace NumDesTools.ExcelToLua
 
                         LogDisplay.Show();
 
-                        PluginLog.Write($"配表名称非法 ：<<{fileName}>> 已跳过该表，相关策划需确认");
+                        PluginLog.Write(
+                            $"配表名称非法 ：<<{fileName}>> 已跳过该表，相关策划需确认"
+                        );
                         continue;
                     }
 
@@ -646,7 +651,9 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
 
                     LogDisplay.Show();
 
-                    PluginLog.Write($"配表导出文件无法正确编译，请检查配置。   : {name}\n{e.Message}"); //
+                    PluginLog.Write(
+                        $"配表导出文件无法正确编译，请检查配置。   : {name}\n{e.Message}"
+                    ); //
                 }
                 if (createLua)
                     lua.Dispose();
