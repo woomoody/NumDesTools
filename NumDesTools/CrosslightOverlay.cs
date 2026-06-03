@@ -91,6 +91,10 @@ internal sealed class CrosslightOverlay : IDisposable
 
     public void UpdateCross(Range target, bool forced = false)
     {
+        // 宏体首行闸门：读任何 COM 之前作废，封死入队→执行之间的 TOCTOU 窗口。
+        if (CrosslightController.ShouldSuppressMacro())
+            return;
+
         EnsureStaThread();
 
         var addr = "";
@@ -444,9 +448,11 @@ internal sealed class CrosslightOverlay : IDisposable
                     case CrosslightController.FocusState.Grid:
                         _gridFocused = true;
                         _editFreeze = false;
+                        CrosslightController.SetEditing(false);
                         break;
                     case CrosslightController.FocusState.Editing:
                         _editFreeze = true;
+                        CrosslightController.SetEditing(true);
                         if (_rowBand.IsVisible || _colBand.IsVisible)
                             HideBands();
                         break;
@@ -590,6 +596,10 @@ internal static class CrosslightController
     private static IntPtr _excelHwnd = IntPtr.Zero;
     private static volatile bool _paused;
 
+    // 编辑闸门：批注/单元格编辑期间为 true，禁止任何 QueueAsMacro 入队及执行。
+    // SheetBeforeDoubleClick 立即置位，OnFocusCheck 回到 Grid 时清零。
+    private static volatile bool _editing;
+
     // 250 ms 轮询定时器：单元格屏幕坐标因滚动/窗口移动而变化时重算坐标。
     private static System.Timers.Timer? _refreshTimer;
 
@@ -659,6 +669,12 @@ internal static class CrosslightController
         return ClassifyFocusWindow(sb.ToString()) == FocusState.Editing;
     }
 
+    // 统一宏抑制闸门：入队前调一次 + 宏体首行调一次，封死 TOCTOU 时间窗。
+    internal static bool ShouldSuppressMacro() =>
+        _paused || _editing || IsExcelEditFocused() || IsExcelCaretActive();
+
+    internal static void SetEditing(bool editing) => _editing = editing;
+
     public static void Enable(Application app)
     {
         if (_active)
@@ -671,6 +687,7 @@ internal static class CrosslightController
         _excelHwnd = (IntPtr)app.Hwnd;
 
         app.SheetSelectionChange += OnSelectionChange;
+        app.SheetBeforeDoubleClick += OnSheetBeforeDoubleClick;
         app.WindowDeactivate += OnWindowDeactivate;
         app.WorkbookDeactivate += OnWorkbookDeactivate;
         app.WindowActivate += OnWindowActivate;
@@ -680,11 +697,10 @@ internal static class CrosslightController
         _refreshTimer = new System.Timers.Timer(250) { AutoReset = true };
         _refreshTimer.Elapsed += (_, _) =>
         {
-            if (_paused || _lastTarget is null || _app is null)
+            if (_lastTarget is null || _app is null)
                 return;
-            // 批注编辑（NetUIHWND）或单元格编辑（EDTBX/caret）时停止投递宏，
-            // 防止 QueueAsMacro 执行打断 Excel 的编辑状态。
-            if (IsExcelCaretActive() || IsExcelEditFocused())
+            // 入队前闸门：编辑态下不投递宏
+            if (ShouldSuppressMacro())
                 return;
             ExcelAsyncUtil.QueueAsMacro(() =>
             {
@@ -692,7 +708,9 @@ internal static class CrosslightController
                     return;
                 try
                 {
-                    if (!IsExcelForeground(_excelHwnd))
+                    // 二次校验：封死入队→执行之间用户打开批注的 TOCTOU 窗口，
+                    // 读任何 COM 之前再判断一次，为 true 则作废。
+                    if (ShouldSuppressMacro() || !IsExcelForeground(_excelHwnd))
                         return;
                     CrosslightOverlay.Instance.UpdateCross(_lastTarget, forced: true);
                 }
@@ -711,6 +729,7 @@ internal static class CrosslightController
         _active = false;
 
         _app.SheetSelectionChange -= OnSelectionChange;
+        _app.SheetBeforeDoubleClick -= OnSheetBeforeDoubleClick;
         _app.WindowDeactivate -= OnWindowDeactivate;
         _app.WorkbookDeactivate -= OnWorkbookDeactivate;
         _app.WindowActivate -= OnWindowActivate;
@@ -721,6 +740,7 @@ internal static class CrosslightController
         _refreshTimer?.Dispose();
         _refreshTimer = null;
         _lastTarget = null;
+        _editing = false;
         _excelHwnd = IntPtr.Zero;
 
         CrosslightOverlay.Instance.ClearCross();
@@ -748,8 +768,13 @@ internal static class CrosslightController
         if (AppServices.App.CutCopyMode != 0)
             return;
         _lastTarget = target;
+        if (ShouldSuppressMacro())
+            return;
         ExcelAsyncUtil.QueueAsMacro(() => CrosslightOverlay.Instance.UpdateCross(target));
     }
+
+    private static void OnSheetBeforeDoubleClick(object sh, Range target, ref bool cancel) =>
+        _editing = true;
 
     private static void OnWindowDeactivate(object wb, object wn) =>
         CrosslightOverlay.Instance.ClearCross();
