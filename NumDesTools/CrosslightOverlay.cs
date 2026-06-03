@@ -561,6 +561,9 @@ internal static class CrosslightController
     [DllImport("user32.dll")]
     private static extern bool GetGUIThreadInfo(uint idThread, ref GUITHREADINFO lpgui);
 
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetClassName(IntPtr h, System.Text.StringBuilder sb, int max);
+
     [StructLayout(LayoutKind.Sequential)]
     private struct GUITHREADINFO
     {
