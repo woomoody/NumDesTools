@@ -289,7 +289,7 @@ public partial class ExcelUdf
         Description = "针对Alice项目特制的自定义函数-计算最近坐标",
         Name = "AliceLtePoisonNear"
     )]
-    public static string AliceLtePoisonNear(
+    public static object AliceLtePoisonNear(
         [ExcelArgument(AllowReference = true, Description = "Range&Cell,eg:A1", Name = "基准坐标")]
             object[,] basePos,
         [ExcelArgument(
@@ -308,41 +308,40 @@ public partial class ExcelUdf
             string posType
     )
     {
-        var baseX = int.Parse(basePos[0, 0].ToString() ?? throw new InvalidOperationException());
-        var baseY = int.Parse(basePos[0, 1].ToString() ?? throw new InvalidOperationException());
+        if (
+            !int.TryParse(basePos[0, 0]?.ToString(), out var baseX)
+            || !int.TryParse(basePos[0, 1]?.ToString(), out var baseY)
+        )
+            return ExcelError.ExcelErrorValue;
         posPattern ??= "";
         posType ??= "1";
         // 提取坐标
         var posMatches = Regex.Matches(targetPos, posPattern);
         // 构建结果
         var posResult = new List<(double, string)>();
-        if (posResult == null)
-            throw new ArgumentNullException(nameof(posResult));
         foreach (Match match in posMatches)
         {
-            var x = int.Parse(match.Groups[1].Value);
-            var y = int.Parse(match.Groups[2].Value);
+            if (
+                !int.TryParse(match.Groups[1].Value, out var x)
+                || !int.TryParse(match.Groups[2].Value, out var y)
+            )
+                continue;
             var distance = Math.Pow(x - baseX, 2) + Math.Pow(y - baseY, 2);
             posResult.Add((distance, $"{x},{y}"));
         }
 
+        if (posResult.Count == 0)
+            return string.Empty;
+
         //选择结果
         if (posType == "1")
-        {
-            var minValueTuple = posResult.MinBy(t => t.Item1);
-            return minValueTuple.Item2;
-        }
+            return posResult.MinBy(t => t.Item1).Item2;
 
         if (posType == "0")
-        {
-            var maxValueTuple = posResult.MaxBy(t => t.Item1);
-            return maxValueTuple.Item2;
-        }
+            return posResult.MaxBy(t => t.Item1).Item2;
 
         var sortedList = posResult.OrderBy(t => t.Item1).ToList();
-        var middleIndex = sortedList.Count / 2;
-        var medianValueTuple = sortedList[middleIndex];
-        return medianValueTuple.Item2;
+        return sortedList[sortedList.Count / 2].Item2;
     }
 
     [ExcelFunction(
@@ -365,20 +364,20 @@ public partial class ExcelUdf
     {
         // 提取坐标
         var posMatches = Regex.Matches(targetPos, posPattern);
-        // 构建结果
-        var posResult = Empty;
-        if (posResult == null)
-            throw new ArgumentNullException(nameof(posResult));
+        var sb = new System.Text.StringBuilder();
         foreach (Match match in posMatches)
         {
-            var x = int.Parse(match.Groups[1].Value);
-            var y = int.Parse(match.Groups[2].Value);
-            var pos = "{" + $"21,{x},{y}" + "},";
-            posResult += pos;
+            if (
+                !int.TryParse(match.Groups[1].Value, out var x)
+                || !int.TryParse(match.Groups[2].Value, out var y)
+            )
+                continue;
+            sb.Append('{').Append("21,").Append(x).Append(',').Append(y).Append("},");
         }
 
-        posResult = posResult.Substring(0, posResult.Length - 1);
-        return posResult;
+        if (sb.Length > 0)
+            sb.Length -= 1;
+        return sb.ToString();
     }
 
     [ExcelFunction(

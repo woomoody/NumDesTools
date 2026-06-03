@@ -192,6 +192,7 @@ namespace NumDesTools.ExcelToLua
             process.StartInfo.CreateNoWindow = true;
 
             List<string> files = new List<string>();
+            var filesLock = new object();
             Regex fileRegex = new Regex(@"(\w+/[^~#].+?\.xlsx?)");
 
             string basePath = Path.Combine(
@@ -203,12 +204,14 @@ namespace NumDesTools.ExcelToLua
             process.OutputDataReceived += (sender, e) =>
             {
                 var line = e.Data;
-                // ReSharper disable once AssignNullToNotNullAttribute
+                if (line == null)
+                    return;
                 if (fileRegex.IsMatch(line))
                 {
                     var match = fileRegex.Match(line);
                     string file = Path.Combine(basePath, match.Groups[1].Value);
-                    files.Add(file);
+                    lock (filesLock)
+                        files.Add(file);
                 }
             };
 
