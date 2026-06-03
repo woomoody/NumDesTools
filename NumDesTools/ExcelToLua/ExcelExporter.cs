@@ -203,7 +203,8 @@ namespace NumDesTools.ExcelToLua
             process.OutputDataReceived += (sender, e) =>
             {
                 var line = e.Data;
-                // ReSharper disable once AssignNullToNotNullAttribute
+                if (line == null)
+                    return;
                 if (fileRegex.IsMatch(line))
                 {
                     var match = fileRegex.Match(line);
