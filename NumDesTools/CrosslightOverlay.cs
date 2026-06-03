@@ -93,7 +93,10 @@ internal sealed class CrosslightOverlay : IDisposable
     {
         // 宏体首行闸门：读任何 COM 之前作废，封死入队→执行之间的 TOCTOU 窗口。
         if (CrosslightController.ShouldSuppressMacro())
+        {
+            PluginLog.Write("[crosslight] UpdateCross suppressed");
             return;
+        }
 
         EnsureStaThread();
 
@@ -673,7 +676,13 @@ internal static class CrosslightController
     internal static bool ShouldSuppressMacro() =>
         _paused || _editing || IsExcelEditFocused() || IsExcelCaretActive();
 
-    internal static void SetEditing(bool editing) => _editing = editing;
+    internal static void SetEditing(bool editing)
+    {
+        if (_editing == editing)
+            return;
+        _editing = editing;
+        PluginLog.Write($"[crosslight] SetEditing={editing}");
+    }
 
     public static void Enable(Application app)
     {
@@ -751,6 +760,8 @@ internal static class CrosslightController
     {
         ExcelAsyncUtil.QueueAsMacro(() =>
         {
+            if (ShouldSuppressMacro())
+                return;
             try
             {
                 if (AppServices.App.Selection is Range sel)
