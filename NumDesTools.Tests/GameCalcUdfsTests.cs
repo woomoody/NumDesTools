@@ -42,6 +42,43 @@ public class GameCalcUdfsTests
         Assert.Null(ex);
     }
 
+    [Fact]
+    public void AliceLtePoisonNear_PosType0_ReturnsFarthestCoord()
+    {
+        // 基准 (0,0)，目标 (5,3) dist=34，(2,7) dist=53 → 最远是 (2,7)
+        object[,] basePos =
+        {
+            { 0, 0 },
+        };
+        var result = ExcelUdf.AliceLtePoisonNear(basePos, "5,3|2,7", @"(\d+),(\d+)", "0");
+        Assert.Equal("2,7", result);
+    }
+
+    [Fact]
+    public void AliceLtePoisonNear_PosTypeOther_ReturnsMedianCoord()
+    {
+        // 基准 (0,0)，目标 (1,0) dist=1，(3,0) dist=9，(5,0) dist=25
+        // 升序排序后 index=1 → (3,0)
+        object[,] basePos =
+        {
+            { 0, 0 },
+        };
+        var result = ExcelUdf.AliceLtePoisonNear(basePos, "1,0|3,0|5,0", @"(\d+),(\d+)", "-1");
+        Assert.Equal("3,0", result);
+    }
+
+    [Fact]
+    public void AliceLtePoisonNear_NoValidTargets_ReturnsEmpty()
+    {
+        // 有效 basePos，但目标坐标全部解析失败 → 空串
+        object[,] basePos =
+        {
+            { 0, 0 },
+        };
+        var result = ExcelUdf.AliceLtePoisonNear(basePos, "ax,by", @"([a-z]+),([a-z]+)", "1");
+        Assert.Equal("", result);
+    }
+
     // ── AliceLtePoison ───────────────────────────────────────────────────────
 
     [Fact]
