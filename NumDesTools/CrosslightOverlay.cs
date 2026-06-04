@@ -98,6 +98,21 @@ internal sealed class CrosslightOverlay : IDisposable
             return;
         }
 
+        // 图表激活（in-place 编辑/图表 Sheet）或非 Range 对象选中时清除并跳过，
+        // 避免 PointsToScreenPixelsX/Y 等 COM 调用扰动图表 UI 导致闪烁。
+        try
+        {
+            if (AppServices.App.ActiveChart != null || AppServices.App.Selection is not Range)
+            {
+                ClearCross();
+                return;
+            }
+        }
+        catch
+        {
+            return;
+        }
+
         EnsureStaThread();
 
         var addr = "";
