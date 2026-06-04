@@ -581,6 +581,9 @@ internal static class CrosslightController
     [DllImport("user32.dll")]
     private static extern bool IsWindowVisible(IntPtr hWnd);
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetParent(IntPtr hWnd);
+
     [StructLayout(LayoutKind.Sequential)]
     private struct GUITHREADINFO
     {
@@ -688,7 +691,12 @@ internal static class CrosslightController
     internal static bool IsCommentEditorVisible() =>
         _commentEditorHwnd != IntPtr.Zero && IsWindowVisible(_commentEditorHwnd);
 
-    internal static void SetCommentEditorHwnd(IntPtr hwnd) => _commentEditorHwnd = hwnd;
+    internal static void SetCommentEditorHwnd(IntPtr childHwnd)
+    {
+        // RICHEDIT60W 自身会随焦点显隐，追踪其父窗口（批注浮动框）才稳定
+        var parent = GetParent(childHwnd);
+        _commentEditorHwnd = parent != IntPtr.Zero ? parent : childHwnd;
+    }
 
     // 统一宏抑制闸门：入队前调一次 + 宏体首行调一次，封死 TOCTOU 时间窗。
     internal static bool ShouldSuppressMacro() =>
