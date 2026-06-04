@@ -213,6 +213,11 @@ internal sealed class CrosslightOverlay : IDisposable
         _bandForm?.BeginInvoke((System.Action)(() => _bandForm?.HideBands()));
     }
 
+    /// <summary>
+    /// 把 action 派发到 STA 消息线程执行（供 CrosslightController 安装 WinEventHook 用）。
+    /// </summary>
+    public void BeginInvokeOnSta(System.Action action) => _bandForm?.BeginInvoke(action);
+
     public void Dispose()
     {
         // 先取出引用再置 null，lambda 用局部变量，避免与 BeginInvoke 竞态
@@ -450,17 +455,15 @@ internal sealed class CrosslightOverlay : IDisposable
                 {
                     case CrosslightController.FocusState.Grid:
                         _gridFocused = true;
-                        // 焦点飘回 EXCEL7 不代表批注窗口关闭，先确认窗口消失再清零
-                        if (!CrosslightController.IsCommentEditorVisible())
-                        {
+                        // 编辑态的释放权完全归 WinEvent HIDE（或 OnSelectionChange 兜底）。
+                        // 轮询快照会把击键/IME 间隙的焦点抖动误判成编辑结束，不在此清零。
+                        if (!CrosslightController.IsEditing())
                             _editFreeze = false;
-                            CrosslightController.SetEditing(false);
-                        }
                         break;
                     case CrosslightController.FocusState.Editing:
                         _editFreeze = true;
+                        // WinEvent 是权威来源；此处作为 WinEvent 漏报时的防御兜底
                         CrosslightController.SetEditing(true);
-                        CrosslightController.SetCommentEditorHwnd(gti.hwndFocus);
                         if (_rowBand.IsVisible || _colBand.IsVisible)
                             HideBands();
                         break;
@@ -578,11 +581,21 @@ internal static class CrosslightController
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
     private static extern int GetClassName(IntPtr h, System.Text.StringBuilder sb, int max);
 
-    [DllImport("user32.dll")]
-    private static extern bool IsWindowVisible(IntPtr hWnd);
+    // ── WinEventHook P/Invokes ────────────────────────────────────────────────
 
     [DllImport("user32.dll")]
-    private static extern IntPtr GetParent(IntPtr hWnd);
+    private static extern IntPtr SetWinEventHook(
+        uint eventMin,
+        uint eventMax,
+        IntPtr hmodWinEventProc,
+        WinEventDelegate lpfnWinEventProc,
+        uint idProcess,
+        uint idThread,
+        uint dwFlags
+    );
+
+    [DllImport("user32.dll")]
+    private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct GUITHREADINFO
@@ -604,21 +617,41 @@ internal static class CrosslightController
     // GUITHREADINFO.flags bit：线程正在输入文字（单元格编辑 / 公式栏 / 批注文字编辑）
     private const uint GuiCaretBlinking = 0x00000001;
 
+    private const uint EventObjectShow = 0x8002;
+    private const uint EventObjectHide = 0x8003;
+    private const uint WinEventOutofcontext = 0x0000;
+    private const uint WinEventSkipownprocess = 0x0002;
+
+    private delegate void WinEventDelegate(
+        IntPtr hWinEventHook,
+        uint eventType,
+        IntPtr hwnd,
+        int idObject,
+        int idChild,
+        uint dwEventThread,
+        uint dwmsEventTime
+    );
+
     private static Application? _app;
     private static bool _active;
     private static Range? _lastTarget;
     private static IntPtr _excelHwnd = IntPtr.Zero;
     private static volatile bool _paused;
 
-    // 编辑闸门：批注/单元格编辑期间为 true，禁止任何 QueueAsMacro 入队及执行。
-    // SheetBeforeDoubleClick 立即置位，OnFocusCheck 回到 Grid 且批注窗口消失时清零。
+    // 编辑闸门（权威状态由 WinEventHook 管理）：
+    // - RICHEDIT60W SHOW  → SetEditing(true)  → 停 _refreshTimer
+    // - RICHEDIT60W HIDE  → 400ms 后 SetEditing(false) → 重启 _refreshTimer
+    // - OnFocusCheck Editing 分支可置 true 作为 WinEvent 漏报的兜底
+    // - OnSelectionChange 在 inline 编辑结束后负责清零（WinEvent 不覆盖 inline 编辑）
     private static volatile bool _editing;
 
-    // 最近一次看到的批注编辑器 HWND（RICHEDIT60W）。
-    // 键盘焦点可能短暂飘回 EXCEL7，但只要窗口还 visible 就维持编辑态。
-    private static volatile IntPtr _commentEditorHwnd;
+    // WinEventHook 相关字段
+    private static IntPtr _winEventHook = IntPtr.Zero;
+    private static WinEventDelegate? _winEventProc; // 必须持有强引用，防 GC 回收后回调崩溃
 
-    // 250 ms 轮询定时器：单元格屏幕坐标因滚动/窗口移动而变化时重算坐标。
+    // WinEvent HIDE 后的延迟释放计时器（与 _refreshTimer 是不同的两个对象）
+    private static System.Timers.Timer? _resumeDelayTimer;
+
     private static System.Timers.Timer? _refreshTimer;
 
     public static bool IsActive => _active;
@@ -687,24 +720,12 @@ internal static class CrosslightController
         return ClassifyFocusWindow(sb.ToString()) == FocusState.Editing;
     }
 
-    // 批注编辑器窗口是否仍然可见（键盘焦点飘走不影响此判断）
-    internal static bool IsCommentEditorVisible() =>
-        _commentEditorHwnd != IntPtr.Zero && IsWindowVisible(_commentEditorHwnd);
-
-    internal static void SetCommentEditorHwnd(IntPtr childHwnd)
-    {
-        // RICHEDIT60W 自身会随焦点显隐，追踪其父窗口（批注浮动框）才稳定
-        var parent = GetParent(childHwnd);
-        _commentEditorHwnd = parent != IntPtr.Zero ? parent : childHwnd;
-    }
+    internal static bool IsEditing() => _editing;
 
     // 统一宏抑制闸门：入队前调一次 + 宏体首行调一次，封死 TOCTOU 时间窗。
+    // _editing 由 WinEvent 权威管理，保留两道 Win32 探测作为纯防御兜底。
     internal static bool ShouldSuppressMacro() =>
-        _paused
-        || _editing
-        || IsCommentEditorVisible()
-        || IsExcelEditFocused()
-        || IsExcelCaretActive();
+        _paused || _editing || IsExcelEditFocused() || IsExcelCaretActive();
 
     internal static void SetEditing(bool editing)
     {
@@ -712,7 +733,94 @@ internal static class CrosslightController
             return;
         _editing = editing;
         PluginLog.Write($"[crosslight] SetEditing={editing}");
+        // 编辑期停掉 250ms 主动刷新，消除唯一的主动 COM 打断源；退出编辑再启
+        if (editing)
+            _refreshTimer?.Stop();
+        else if (_active)
+            _refreshTimer?.Start();
     }
+
+    // ── WinEventHook ──────────────────────────────────────────────────────────
+
+    // 必须在有消息泵的线程（STA 线程）调用，才能让 OUTOFCONTEXT 回调正常投递。
+    // 通过 CrosslightOverlay.Instance.BeginInvokeOnSta(InstallCommentHook) 派发。
+    private static void InstallCommentHook()
+    {
+        if (_excelHwnd == IntPtr.Zero || _winEventHook != IntPtr.Zero)
+            return;
+        uint excelTid = GetWindowThreadProcessId(_excelHwnd, IntPtr.Zero);
+        _winEventProc = OnWinEvent;
+        _winEventHook = SetWinEventHook(
+            EventObjectShow,
+            EventObjectHide,
+            IntPtr.Zero,
+            _winEventProc,
+            0,
+            excelTid,
+            WinEventOutofcontext | WinEventSkipownprocess
+        );
+        PluginLog.Write($"[crosslight] WinEventHook installed tid={excelTid} hook={_winEventHook}");
+    }
+
+    private static void UninstallCommentHook()
+    {
+        if (_winEventHook != IntPtr.Zero)
+        {
+            UnhookWinEvent(_winEventHook);
+            _winEventHook = IntPtr.Zero;
+        }
+        _winEventProc = null;
+        _resumeDelayTimer?.Stop();
+        _resumeDelayTimer?.Dispose();
+        _resumeDelayTimer = null;
+    }
+
+    private static void OnWinEvent(
+        IntPtr hWinEventHook,
+        uint eventType,
+        IntPtr hwnd,
+        int idObject,
+        int idChild,
+        uint dwEventThread,
+        uint dwmsEventTime
+    )
+    {
+        if (hwnd == IntPtr.Zero)
+            return;
+        var sb = new System.Text.StringBuilder(64);
+        GetClassName(hwnd, sb, 64);
+        var cls = sb.ToString();
+
+        // 只响应 RICHEDIT60W（Excel 365 批注富文本编辑框）。
+        // NetUIHWND/EDTBX 在 Ribbon/公式栏也会频繁发 SHOW/HIDE，不能作为批注信号。
+        // inline 单元格编辑由 IsExcelCaretActive/IsExcelEditFocused 兜底，无需 WinEvent。
+        if (cls != "RICHEDIT60W")
+            return;
+
+        PluginLog.Write($"[crosslight] WinEvent ev={eventType:X4} cls={cls} idObj={idObject}");
+
+        if (eventType == EventObjectShow)
+        {
+            _resumeDelayTimer?.Stop();
+            SetEditing(true); // SHOW：立即关闸，同时 SetEditing 内部停 _refreshTimer
+            CrosslightOverlay.Instance.ClearCross();
+        }
+        else // EventObjectHide
+        {
+            // 延迟 400ms 释放，留出批注真正销毁的余量（远 < 500ms 约束）
+            _resumeDelayTimer?.Stop();
+            _resumeDelayTimer = new System.Timers.Timer(400) { AutoReset = false };
+            _resumeDelayTimer.Elapsed += (_, _) =>
+            {
+                SetEditing(false); // 同时 SetEditing 内部重启 _refreshTimer
+                if (_active)
+                    Resume();
+            };
+            _resumeDelayTimer.Start();
+        }
+    }
+
+    // ── Enable / Disable ─────────────────────────────────────────────────────
 
     public static void Enable(Application app)
     {
@@ -758,11 +866,16 @@ internal static class CrosslightController
         };
         _refreshTimer.Start();
 
+        // 必须派发到 STA 消息线程，才能让 WINEVENT_OUTOFCONTEXT 回调正常投递
+        CrosslightOverlay.Instance.BeginInvokeOnSta(InstallCommentHook);
+
         TriggerCurrent();
     }
 
     public static void Disable()
     {
+        UninstallCommentHook();
+
         if (!_active || _app == null)
             return;
         _active = false;
@@ -780,7 +893,6 @@ internal static class CrosslightController
         _refreshTimer = null;
         _lastTarget = null;
         _editing = false;
-        _commentEditorHwnd = IntPtr.Zero;
         _excelHwnd = IntPtr.Zero;
 
         CrosslightOverlay.Instance.ClearCross();
@@ -810,13 +922,22 @@ internal static class CrosslightController
         if (AppServices.App.CutCopyMode != 0)
             return;
         _lastTarget = target;
+        // inline 单元格编辑（非批注）结束后，SelectionChange 触发且 caret 已消失。
+        // 此处作为 WinEvent 未覆盖 inline 编辑的安全兜底，防止 _editing 永久为 true。
+        if (_editing && !IsExcelCaretActive() && !IsExcelEditFocused())
+            SetEditing(false);
         if (ShouldSuppressMacro())
             return;
         ExcelAsyncUtil.QueueAsMacro(() => CrosslightOverlay.Instance.UpdateCross(target));
     }
 
-    private static void OnSheetBeforeDoubleClick(object sh, Range target, ref bool cancel) =>
-        _editing = true;
+    // BeforeDoubleClick 不再直接置位 _editing：
+    // WinEvent 会在 RICHEDIT60W SHOW 时精确置位，OnFocusCheck Editing 分支作为兜底。
+    // 直接置位会导致非批注 double-click 时 _editing 永久为 true（WinEvent 不发 HIDE）。
+    private static void OnSheetBeforeDoubleClick(object sh, Range target, ref bool cancel)
+    {
+        PluginLog.Write("[crosslight] BeforeDoubleClick");
+    }
 
     private static void OnWindowDeactivate(object wb, object wn) =>
         CrosslightOverlay.Instance.ClearCross();
