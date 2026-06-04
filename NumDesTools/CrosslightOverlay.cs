@@ -108,8 +108,11 @@ internal sealed class CrosslightOverlay : IDisposable
                 return;
             }
         }
-        catch
+        catch (Exception ex)
         {
+            PluginLog.Write(
+                $"[crosslight] UpdateCross chartCheck EX: {ex.GetType().Name} {ex.Message}"
+            );
             return;
         }
 
@@ -491,7 +494,10 @@ internal sealed class CrosslightOverlay : IDisposable
                         break;
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                PluginLog.Write($"[crosslight] OnFocusCheck EX: {ex.GetType().Name} {ex.Message}");
+            }
         }
 
         public void ShowBands(Rectangle cellRect, Rectangle gridRect)
@@ -653,6 +659,11 @@ internal static class CrosslightController
     private static IntPtr _excelHwnd = IntPtr.Zero;
     private static volatile bool _paused;
 
+    // 诊断计数器（Release 可见）
+    private static int _updateCrossTotal;
+    private static int _suppressedTotal;
+    private static int _setEditingCount;
+
     // 编辑闸门（权威状态由 WinEventHook 管理）：
     // - RICHEDIT60W SHOW  → SetEditing(true)  → 停 _refreshTimer
     // - RICHEDIT60W HIDE  → 400ms 后 SetEditing(false) → 重启 _refreshTimer
@@ -747,12 +758,29 @@ internal static class CrosslightController
         if (_editing == editing)
             return;
         _editing = editing;
-        PluginLog.Write($"[crosslight] SetEditing={editing}");
+        var n = System.Threading.Interlocked.Increment(ref _setEditingCount);
+        PluginLog.Write(
+            $"[crosslight] SetEditing={editing} n={n}"
+                + $" tid={Environment.CurrentManagedThreadId}"
+                + $" updateTotal={_updateCrossTotal} suppressed={_suppressedTotal}"
+        );
         // 编辑期停掉 250ms 主动刷新，消除唯一的主动 COM 打断源；退出编辑再启
+        var timer = _refreshTimer; // 快照，避免与 Disable() 的 Dispose 竞态
         if (editing)
-            _refreshTimer?.Stop();
+            timer?.Stop();
         else if (_active)
-            _refreshTimer?.Start();
+        {
+            try
+            {
+                timer?.Start();
+            }
+            catch (Exception ex)
+            {
+                PluginLog.Write(
+                    $"[crosslight] SetEditing Start EX: {ex.GetType().Name} {ex.Message}"
+                );
+            }
+        }
     }
 
     // ── WinEventHook ──────────────────────────────────────────────────────────
@@ -784,10 +812,27 @@ internal static class CrosslightController
             UnhookWinEvent(_winEventHook);
             _winEventHook = IntPtr.Zero;
         }
-        _winEventProc = null;
+        // 不立即 null _winEventProc：WINEVENT_OUTOFCONTEXT 回调是 PostMessage 到 STA 队列的，
+        // UnhookWinEvent 后队列里仍可能有 pending callback，立即 null 会让 GC 回收 delegate，
+        // 下次回调执行时 function pointer 失效 → STA 线程崩溃。
+        // 将 null 操作 BeginInvoke 到 STA 线程，保证在所有 pending callback 执行完后才释放引用。
+        var keepAlive = _winEventProc;
+        try
+        {
+            CrosslightOverlay.Instance.BeginInvokeOnSta(() =>
+            {
+                _ = keepAlive; // 让 GC 保留到此 lambda 执行完
+                _winEventProc = null;
+            });
+        }
+        catch
+        {
+            _winEventProc = null; // overlay 已销毁时退路
+        }
         _resumeDelayTimer?.Stop();
         _resumeDelayTimer?.Dispose();
         _resumeDelayTimer = null;
+        PluginLog.Write("[crosslight] UninstallCommentHook done");
     }
 
     private static void OnWinEvent(
@@ -800,38 +845,61 @@ internal static class CrosslightController
         uint dwmsEventTime
     )
     {
-        if (hwnd == IntPtr.Zero)
-            return;
-        var sb = new System.Text.StringBuilder(64);
-        GetClassName(hwnd, sb, 64);
-        var cls = sb.ToString();
-
-        // 只响应 RICHEDIT60W（Excel 365 批注富文本编辑框）。
-        // NetUIHWND/EDTBX 在 Ribbon/公式栏也会频繁发 SHOW/HIDE，不能作为批注信号。
-        // inline 单元格编辑由 IsExcelCaretActive/IsExcelEditFocused 兜底，无需 WinEvent。
-        if (cls != "RICHEDIT60W")
-            return;
-
-        PluginLog.Write($"[crosslight] WinEvent ev={eventType:X4} cls={cls} idObj={idObject}");
-
-        if (eventType == EventObjectShow)
+        // OnWinEvent 在 STA 线程上执行，任何未处理异常会杀死 Application.Run() → Excel 卡死。
+        try
         {
-            _resumeDelayTimer?.Stop();
-            SetEditing(true); // SHOW：立即关闸，同时 SetEditing 内部停 _refreshTimer
-            CrosslightOverlay.Instance.ClearCross();
-        }
-        else // EventObjectHide
-        {
-            // 延迟 400ms 释放，留出批注真正销毁的余量（远 < 500ms 约束）
-            _resumeDelayTimer?.Stop();
-            _resumeDelayTimer = new System.Timers.Timer(400) { AutoReset = false };
-            _resumeDelayTimer.Elapsed += (_, _) =>
+            if (hwnd == IntPtr.Zero)
+                return;
+            var sb = new System.Text.StringBuilder(64);
+            GetClassName(hwnd, sb, 64);
+            var cls = sb.ToString();
+
+            // 只响应 RICHEDIT60W（Excel 365 批注富文本编辑框）。
+            // NetUIHWND/EDTBX 在 Ribbon/公式栏也会频繁发 SHOW/HIDE，不能作为批注信号。
+            // inline 单元格编辑由 IsExcelCaretActive/IsExcelEditFocused 兜底，无需 WinEvent。
+            if (cls != "RICHEDIT60W")
+                return;
+
+            PluginLog.Write(
+                $"[crosslight] WinEvent ev={eventType:X4} cls={cls} idObj={idObject}"
+                    + $" tid={Environment.CurrentManagedThreadId}"
+            );
+
+            if (eventType == EventObjectShow)
             {
-                SetEditing(false); // 同时 SetEditing 内部重启 _refreshTimer
-                if (_active)
-                    Resume();
-            };
-            _resumeDelayTimer.Start();
+                _resumeDelayTimer?.Stop();
+                _resumeDelayTimer?.Dispose(); // 防止 handle 泄漏
+                _resumeDelayTimer = null;
+                SetEditing(true); // SHOW：立即关闸，同时 SetEditing 内部停 _refreshTimer
+                CrosslightOverlay.Instance.ClearCross();
+            }
+            else // EventObjectHide
+            {
+                // 延迟 400ms 释放，留出批注真正销毁的余量（远 < 500ms 约束）
+                _resumeDelayTimer?.Stop();
+                _resumeDelayTimer?.Dispose(); // 防止 handle 泄漏
+                _resumeDelayTimer = new System.Timers.Timer(400) { AutoReset = false };
+                _resumeDelayTimer.Elapsed += (_, _) =>
+                {
+                    try
+                    {
+                        SetEditing(false); // 同时 SetEditing 内部重启 _refreshTimer
+                        if (_active)
+                            Resume();
+                    }
+                    catch (Exception ex)
+                    {
+                        PluginLog.Write(
+                            $"[crosslight] resumeDelayTimer EX: {ex.GetType().Name} {ex.Message}"
+                        );
+                    }
+                };
+                _resumeDelayTimer.Start();
+            }
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[crosslight] OnWinEvent EX: {ex.GetType().Name} {ex.Message}");
         }
     }
 
@@ -844,6 +912,7 @@ internal static class CrosslightController
             TriggerCurrent();
             return;
         }
+        PluginLog.Write("[crosslight] Enable start");
         _active = true;
         _app = app;
         _excelHwnd = (IntPtr)app.Hwnd;
@@ -859,25 +928,43 @@ internal static class CrosslightController
         _refreshTimer = new System.Timers.Timer(250) { AutoReset = true };
         _refreshTimer.Elapsed += (_, _) =>
         {
-            if (_lastTarget is null || _app is null)
-                return;
-            // 入队前闸门：编辑态下不投递宏
-            if (ShouldSuppressMacro())
-                return;
-            ExcelAsyncUtil.QueueAsMacro(() =>
+            try
             {
                 if (_lastTarget is null || _app is null)
                     return;
-                try
+                // 入队前闸门：编辑态下不投递宏
+                if (ShouldSuppressMacro())
                 {
-                    // 二次校验：封死入队→执行之间用户打开批注的 TOCTOU 窗口，
-                    // 读任何 COM 之前再判断一次，为 true 则作废。
-                    if (ShouldSuppressMacro() || !IsExcelForeground(_excelHwnd))
-                        return;
-                    CrosslightOverlay.Instance.UpdateCross(_lastTarget, forced: true);
+                    System.Threading.Interlocked.Increment(ref _suppressedTotal);
+                    return;
                 }
-                catch { }
-            });
+                ExcelAsyncUtil.QueueAsMacro(() =>
+                {
+                    if (_lastTarget is null || _app is null)
+                        return;
+                    try
+                    {
+                        System.Threading.Interlocked.Increment(ref _updateCrossTotal);
+                        // 二次校验：封死入队→执行之间用户打开批注的 TOCTOU 窗口，
+                        // 读任何 COM 之前再判断一次，为 true 则作废。
+                        if (ShouldSuppressMacro() || !IsExcelForeground(_excelHwnd))
+                            return;
+                        CrosslightOverlay.Instance.UpdateCross(_lastTarget, forced: true);
+                    }
+                    catch (Exception ex)
+                    {
+                        PluginLog.Write(
+                            $"[crosslight] refreshTimer QueueAsMacro EX: {ex.GetType().Name} {ex.Message}"
+                        );
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                PluginLog.Write(
+                    $"[crosslight] refreshTimer Elapsed EX: {ex.GetType().Name} {ex.Message}"
+                );
+            }
         };
         _refreshTimer.Start();
 
@@ -928,7 +1015,12 @@ internal static class CrosslightController
                     CrosslightOverlay.Instance.UpdateCross(sel);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                PluginLog.Write(
+                    $"[crosslight] TriggerCurrent EX: {ex.GetType().Name} {ex.Message}"
+                );
+            }
         });
     }
 
@@ -967,7 +1059,12 @@ internal static class CrosslightController
             {
                 TriggerCurrent();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                PluginLog.Write(
+                    $"[crosslight] OnWindowActivate EX: {ex.GetType().Name} {ex.Message}"
+                );
+            }
         });
 
     private static void OnSheetDeactivate(object sh) => CrosslightOverlay.Instance.ClearCross();
