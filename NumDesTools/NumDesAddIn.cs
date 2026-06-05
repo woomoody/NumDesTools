@@ -1066,6 +1066,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         App.StatusBar = wb.FullName;
 
+        // WorkbookBeforeClose 在最后一个工作簿关闭时会内部调用 Disable()，
+        // 但不更新 FocusLabelText。新工作簿激活时按用户意图自动恢复。
+        if (FocusLabelText == "聚光灯：开启" && !CrosslightController.IsActive)
+        {
+            PluginLog.Write("[crosslight] WorkbookActivate re-enable after last-workbook-close");
+            CrosslightController.Enable(App);
+        }
+
         var ctpName = "表格目录";
         if (SheetMenuText == "表格目录：开启")
         {
