@@ -473,8 +473,22 @@ internal sealed class CrosslightOverlay : IDisposable
                 {
                     case CrosslightController.FocusState.Grid:
                         _gridFocused = true;
-                        // 编辑态的释放权完全归 WinEvent HIDE（或 OnSelectionChange 兜底）。
-                        // 轮询快照会把击键/IME 间隙的焦点抖动误判成编辑结束，不在此清零。
+                        // 正常路径：编辑态由 WinEvent HIDE 清零，不在轮询中清零（防 IME 抖动误判）。
+                        // 超时兜底：RICHEDIT60W 有时被直接 DestroyWindow 而不发 HIDE 事件，
+                        // 导致 _editing 卡 true。当 Grid 焦点持续 > 1500ms（= 5 次 300ms 轮询）
+                        // 且无 caret/编辑焦点时，认为 HIDE 漏发，强制清零。
+                        if (
+                            CrosslightController.IsEditing()
+                            && !CrosslightController.IsExcelEditFocusedPublic()
+                            && !CrosslightController.IsExcelCaretActivePublic()
+                            && CrosslightController.EditingStaleMs() > 1500
+                        )
+                        {
+                            PluginLog.Write(
+                                "[crosslight] stale _editing cleared (HIDE event missed)"
+                            );
+                            CrosslightController.SetEditing(false);
+                        }
                         if (!CrosslightController.IsEditing())
                             _editFreeze = false;
                         break;
@@ -746,7 +760,19 @@ internal static class CrosslightController
         return ClassifyFocusWindow(sb.ToString()) == FocusState.Editing;
     }
 
+    // _editing 置 true 时的时间戳（TickCount64 ms），用于超时兜底清零
+    private static long _editingSetTick;
+
     internal static bool IsEditing() => _editing;
+
+    // _editing 置 true 至今经过的毫秒数（供 OnFocusCheck 超时兜底用）
+    internal static long EditingStaleMs() =>
+        _editing ? Environment.TickCount64 - _editingSetTick : 0;
+
+    // 暴露给 RowColBandForm（内部嵌套类）调用
+    internal static bool IsExcelCaretActivePublic() => IsExcelCaretActive();
+
+    internal static bool IsExcelEditFocusedPublic() => IsExcelEditFocused();
 
     // 统一宏抑制闸门：入队前调一次 + 宏体首行调一次，封死 TOCTOU 时间窗。
     // _editing 由 WinEvent 权威管理，保留两道 Win32 探测作为纯防御兜底。
@@ -758,6 +784,8 @@ internal static class CrosslightController
         if (_editing == editing)
             return;
         _editing = editing;
+        if (editing)
+            _editingSetTick = Environment.TickCount64;
         var n = System.Threading.Interlocked.Increment(ref _setEditingCount);
         PluginLog.Write(
             $"[crosslight] SetEditing={editing} n={n}"
