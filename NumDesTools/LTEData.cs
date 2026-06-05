@@ -3353,6 +3353,14 @@ public class LteData
                     )
                     .Key ?? string.Empty;
             if (taskTagetId == string.Empty)
+                taskTagetId =
+                    baseDic
+                        .FirstOrDefault(kv =>
+                            kv.Value.Count > BaseDicColOnlyName
+                            && kv.Value[BaseDicColOnlyName] == taskTagetName
+                        )
+                        .Key ?? string.Empty;
+            if (taskTagetId == string.Empty)
             {
                 MessageBox.Show($"目标名\"{taskTagetName}\"在基础数据中不存在");
                 return null;
@@ -3858,11 +3866,19 @@ public class LteData
 
             // 消耗寻找
             var fieldCostTarget = copyFieldArray[i, 10]?.ToString() ?? String.Empty;
-            string fieldFindId2 = baseDic
-                .FirstOrDefault(kv =>
-                    kv.Value.Count > BaseDicColName && kv.Value[BaseDicColName] == fieldCostTarget
-                )
-                .Key;
+            string fieldFindId2 =
+                baseDic
+                    .FirstOrDefault(kv =>
+                        kv.Value.Count > BaseDicColName
+                        && kv.Value[BaseDicColName] == fieldCostTarget
+                    )
+                    .Key
+                ?? baseDic
+                    .FirstOrDefault(kv =>
+                        kv.Value.Count > BaseDicColOnlyName
+                        && kv.Value[BaseDicColOnlyName] == fieldCostTarget
+                    )
+                    .Key;
 
             string findLinks2 = string.Empty;
 
