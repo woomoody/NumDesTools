@@ -7,7 +7,7 @@ namespace NumDesTools.UI;
 
 public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
 {
-    public record CommitEntry(string Sha, string Display);
+    public record CommitEntry(string Sha, string Display, string Author);
 
     public bool IsCherryPick => CherryRadio.IsChecked == true;
 
@@ -23,6 +23,7 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
     private readonly string _gitRoot;
     private string? _currentBranch;
     private bool _loading;
+    private List<CommitEntry> _allCommits = [];
 
     public BranchMergeWindow(string gitRoot)
     {
@@ -98,19 +99,61 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
                 .Take(200)
                 .ToList();
 
-            foreach (var c in commits)
-            {
-                var display =
-                    $"{c.Sha[..8]}  {c.Author.When:MM-dd HH:mm}  {c.Author.Name, -14}  {c.MessageShort}";
-                CommitList.Items.Add(new CommitEntry(c.Sha, display));
-            }
+            _allCommits = commits
+                .Select(c => new CommitEntry(
+                    c.Sha,
+                    $"{c.Sha[..8]}  {c.Author.When:MM-dd HH:mm}  {c.Author.Name,-14}  {c.MessageShort}",
+                    c.Author.Name
+                ))
+                .ToList();
 
-            StatusText.Text = $"共 {commits.Count} 个可摘取的 commit";
+            // 重建作者筛选下拉，保留已选作者（换分支后尽量维持筛选）
+            var prevAuthor = AuthorFilterBox.SelectedItem as string;
+            _loading = true;
+            AuthorFilterBox.Items.Clear();
+            AuthorFilterBox.Items.Add("(全部)");
+            foreach (var name in _allCommits.Select(c => c.Author).Distinct().OrderBy(n => n))
+                AuthorFilterBox.Items.Add(name);
+            AuthorFilterBox.SelectedItem =
+                prevAuthor != null && AuthorFilterBox.Items.Contains(prevAuthor)
+                    ? prevAuthor
+                    : "(全部)";
+            _loading = false;
+
+            ApplyFilter();
         }
         catch (Exception ex)
         {
             StatusText.Text = $"加载 commit 失败：{ex.Message}";
         }
+    }
+
+    private void ApplyFilter()
+    {
+        CommitList.Items.Clear();
+        var author = AuthorFilterBox.SelectedItem as string;
+        var filtered =
+            string.IsNullOrEmpty(author) || author == "(全部)"
+                ? _allCommits
+                : _allCommits.Where(c => c.Author == author).ToList();
+
+        foreach (var entry in filtered)
+            CommitList.Items.Add(entry);
+
+        StatusText.Text =
+            filtered.Count == _allCommits.Count
+                ? $"共 {_allCommits.Count} 个可摘取的 commit"
+                : $"{filtered.Count} / {_allCommits.Count} 个 commit（已按作者筛选）";
+    }
+
+    private void AuthorFilter_Changed(
+        object sender,
+        System.Windows.Controls.SelectionChangedEventArgs e
+    )
+    {
+        if (_loading)
+            return;
+        ApplyFilter();
     }
 
     private void Mode_Changed(object sender, RoutedEventArgs e)

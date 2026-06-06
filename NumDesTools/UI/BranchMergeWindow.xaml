@@ -76,9 +76,23 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            <TextBlock Text="选择要摘取的 Commits（可多选）："
-                       Foreground="{DynamicResource MahApps.Brushes.Gray3}"
-                       FontSize="11" Margin="0,0,0,4"/>
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="150"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="选择要摘取的 Commits（可多选）："
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                           FontSize="11"/>
+                <TextBlock Grid.Column="1" Text="作者：" VerticalAlignment="Center"
+                           Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                           FontSize="11" Margin="0,0,4,0"/>
+                <ComboBox x:Name="AuthorFilterBox" Grid.Column="2"
+                          FontFamily="Consolas" FontSize="11"
+                          SelectionChanged="AuthorFilter_Changed"/>
+            </Grid>
             <ListBox x:Name="CommitList" Grid.Row="1"
                      FontFamily="Consolas" FontSize="11"
                      BorderThickness="1"

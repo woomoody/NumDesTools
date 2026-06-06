@@ -481,7 +481,7 @@ internal sealed class CrosslightOverlay : IDisposable
                             CrosslightController.IsEditing()
                             && !CrosslightController.IsExcelEditFocusedPublic()
                             && !CrosslightController.IsExcelCaretActivePublic()
-                            && CrosslightController.EditingStaleMs() > 1500
+                            && CrosslightController.EditingStaleMs() > 600
                         )
                         {
                             PluginLog.Write(
@@ -692,6 +692,10 @@ internal static class CrosslightController
     // WinEvent HIDE 后的延迟释放计时器（与 _refreshTimer 是不同的两个对象）
     private static System.Timers.Timer? _resumeDelayTimer;
 
+    // generation counter：每次 SHOW/HIDE 事件都递增，用于让 stale 的 HIDE 回调自我失效。
+    // System.Timers.Timer.Stop() 无法取消已入队的 ThreadPool 回调，必须靠此字段区分。
+    private static int _resumeGen;
+
     private static System.Timers.Timer? _refreshTimer;
 
     public static bool IsActive => _active;
@@ -898,6 +902,8 @@ internal static class CrosslightController
                 _resumeDelayTimer?.Stop();
                 _resumeDelayTimer?.Dispose(); // 防止 handle 泄漏
                 _resumeDelayTimer = null;
+                // generation 前进：让已入队的 HIDE 回调检测到 mismatch 后自我失效
+                System.Threading.Interlocked.Increment(ref _resumeGen);
                 SetEditing(true); // SHOW：立即关闸，同时 SetEditing 内部停 _refreshTimer
                 CrosslightOverlay.Instance.ClearCross();
             }
@@ -906,11 +912,15 @@ internal static class CrosslightController
                 // 延迟 400ms 释放，留出批注真正销毁的余量（远 < 500ms 约束）
                 _resumeDelayTimer?.Stop();
                 _resumeDelayTimer?.Dispose(); // 防止 handle 泄漏
+                // 捕获 generation：回调执行时若值已变（SHOW 到来），则为 stale 直接丢弃
+                var expectedGen = System.Threading.Interlocked.Increment(ref _resumeGen);
                 _resumeDelayTimer = new System.Timers.Timer(400) { AutoReset = false };
                 _resumeDelayTimer.Elapsed += (_, _) =>
                 {
                     try
                     {
+                        if (_resumeGen != expectedGen)
+                            return; // SHOW 已到来，此回调已过期
                         SetEditing(false); // 同时 SetEditing 内部重启 _refreshTimer
                         if (_active)
                             Resume();
@@ -944,12 +954,14 @@ internal static class CrosslightController
         _active = true;
         _app = app;
         _excelHwnd = (IntPtr)app.Hwnd;
+        _lastTarget = null; // 清除上一个会话的旧 Range，防止 Timer 在 QueueAsMacro 就绪前调用抛 NRE
 
         app.SheetSelectionChange += OnSelectionChange;
         app.SheetBeforeDoubleClick += OnSheetBeforeDoubleClick;
         app.WindowDeactivate += OnWindowDeactivate;
         app.WorkbookDeactivate += OnWorkbookDeactivate;
         app.WindowActivate += OnWindowActivate;
+        app.SheetActivate += OnSheetActivate;
         app.SheetDeactivate += OnSheetDeactivate;
         app.WorkbookBeforeClose += OnWorkbookBeforeClose;
 
@@ -1015,6 +1027,7 @@ internal static class CrosslightController
         _app.WindowDeactivate -= OnWindowDeactivate;
         _app.WorkbookDeactivate -= OnWorkbookDeactivate;
         _app.WindowActivate -= OnWindowActivate;
+        _app.SheetActivate -= OnSheetActivate;
         _app.SheetDeactivate -= OnSheetDeactivate;
         _app.WorkbookBeforeClose -= OnWorkbookBeforeClose;
 
@@ -1091,6 +1104,21 @@ internal static class CrosslightController
             {
                 PluginLog.Write(
                     $"[crosslight] OnWindowActivate EX: {ex.GetType().Name} {ex.Message}"
+                );
+            }
+        });
+
+    private static void OnSheetActivate(object sh) =>
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            try
+            {
+                TriggerCurrent();
+            }
+            catch (Exception ex)
+            {
+                PluginLog.Write(
+                    $"[crosslight] OnSheetActivate EX: {ex.GetType().Name} {ex.Message}"
                 );
             }
         });

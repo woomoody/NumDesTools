@@ -11,13 +11,15 @@ namespace NumDesTools.UI;
 
 public partial class GitHistoryPickerWindow : MetroWindow
 {
-    public record CommitEntry(string Sha, string Display);
+    public record CommitEntry(string Sha, string Display, string Author = "");
 
     private readonly Func<int, int, List<CommitEntry>> _loadPage;
-    private readonly ObservableCollection<CommitEntry> _items = [];
+    private readonly List<CommitEntry> _allItems = [];
+    private readonly ObservableCollection<CommitEntry> _displayItems = [];
     private int _loadedCount;
     private bool _isLoading;
     private bool _hasMore = true;
+    private bool _filterLoading;
     private const int PageSize = 30;
 
     // 调用方读结果
@@ -47,29 +49,27 @@ public partial class GitHistoryPickerWindow : MetroWindow
         Width = screen.Width * 0.65;
         Height = screen.Height * 0.72;
 
-        CommitList.ItemsSource = _items;
+        CommitList.ItemsSource = _displayItems;
 
         BuildButtons();
 
         if (preloaded is { Count: > 0 })
         {
             foreach (var e in preloaded)
-                _items.Add(e);
+                _allItems.Add(e);
             _loadedCount = preloaded.Count;
             _hasMore = preloaded.Count == PageSize;
-            StatusText.Text = _hasMore
-                ? $"已加载 {_loadedCount} 条，滚动到底加载更多"
-                : $"共 {_loadedCount} 条，已全部加载";
-            if (initialIndex >= 0 && initialIndex < _items.Count)
+            ApplyFilter();
+            if (initialIndex >= 0 && initialIndex < _displayItems.Count)
             {
                 CommitList.SelectedIndex = initialIndex;
-                CommitList.ScrollIntoView(_items[initialIndex]);
+                CommitList.ScrollIntoView(_displayItems[initialIndex]);
             }
         }
 
         Loaded += (_, _) =>
         {
-            if (_items.Count == 0)
+            if (_allItems.Count == 0)
                 LoadNextPage();
             CommitList.Focus();
         };
@@ -149,17 +149,11 @@ public partial class GitHistoryPickerWindow : MetroWindow
                     () =>
                     {
                         foreach (var e in page)
-                            _items.Add(e);
+                            _allItems.Add(e);
                         _loadedCount += page.Count;
                         _hasMore = page.Count == PageSize;
                         _isLoading = false;
-
-                        if (CommitList.SelectedIndex < 0 && _items.Count > 0)
-                            CommitList.SelectedIndex = 0;
-
-                        StatusText.Text = _hasMore
-                            ? $"已加载 {_loadedCount} 条，滚动到底加载更多"
-                            : $"共 {_loadedCount} 条，已全部加载";
+                        ApplyFilter();
                     }
                 )
             );
@@ -193,7 +187,73 @@ public partial class GitHistoryPickerWindow : MetroWindow
             Close();
     }
 
-    public IReadOnlyList<CommitEntry> LoadedEntries => _items;
+    private void ApplyFilter()
+    {
+        var author = AuthorFilterBox.SelectedItem as string;
+        var filtered =
+            string.IsNullOrEmpty(author) || author == "(全部)"
+                ? _allItems
+                : _allItems.Where(c => c.Author == author).ToList();
+
+        _displayItems.Clear();
+        foreach (var e in filtered)
+            _displayItems.Add(e);
+
+        if (CommitList.SelectedIndex < 0 && _displayItems.Count > 0)
+            CommitList.SelectedIndex = 0;
+
+        // 追加新出现的作者到 ComboBox（保留当前选中）
+        var existing = AuthorFilterBox.Items.Cast<string>().ToHashSet();
+        var newAuthors = _allItems
+            .Select(c => c.Author)
+            .Where(a => !string.IsNullOrEmpty(a) && !existing.Contains(a))
+            .Distinct()
+            .OrderBy(a => a)
+            .ToList();
+        if (newAuthors.Count > 0)
+        {
+            var prev = AuthorFilterBox.SelectedItem as string;
+            _filterLoading = true;
+            if (AuthorFilterBox.Items.Count == 0)
+                AuthorFilterBox.Items.Add("(全部)");
+            // 重建排序后的完整列表
+            var allAuthors = existing
+                .Where(a => a != "(全部)")
+                .Concat(newAuthors)
+                .Distinct()
+                .OrderBy(a => a)
+                .ToList();
+            AuthorFilterBox.Items.Clear();
+            AuthorFilterBox.Items.Add("(全部)");
+            foreach (var a in allAuthors)
+                AuthorFilterBox.Items.Add(a);
+            AuthorFilterBox.SelectedItem =
+                prev != null && AuthorFilterBox.Items.Contains(prev) ? prev : "(全部)";
+            _filterLoading = false;
+        }
+        else if (AuthorFilterBox.Items.Count == 0)
+        {
+            _filterLoading = true;
+            AuthorFilterBox.Items.Add("(全部)");
+            AuthorFilterBox.SelectedIndex = 0;
+            _filterLoading = false;
+        }
+
+        var suffix =
+            filtered.Count < _allItems.Count ? $"，筛选后 {filtered.Count} 条" : "";
+        StatusText.Text = _hasMore
+            ? $"已加载 {_loadedCount} 条{suffix}，滚动到底加载更多"
+            : $"共 {_loadedCount} 条{suffix}，已全部加载";
+    }
+
+    private void AuthorFilter_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_filterLoading)
+            return;
+        ApplyFilter();
+    }
+
+    public IReadOnlyList<CommitEntry> LoadedEntries => _allItems;
     public int LoadedCount => _loadedCount;
     public bool HasMore => _hasMore;
 }

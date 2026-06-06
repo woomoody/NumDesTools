@@ -82,6 +82,12 @@
                         <Button Content="加载列表" Padding="8,2"
                                 Style="{DynamicResource MahApps.Styles.Button.Square}"
                                 Click="LoadCommitList_Click"/>
+                        <TextBlock Text="作者：" VerticalAlignment="Center" FontSize="11"
+                                   Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                                   Margin="16,0,4,0"/>
+                        <ComboBox x:Name="CommitAuthorBox" Width="140"
+                                  FontFamily="Consolas" FontSize="11"
+                                  SelectionChanged="CommitAuthorBox_SelectionChanged"/>
                     </StackPanel>
                     <ComboBox x:Name="CommitCombo"
                               MaxWidth="560" HorizontalAlignment="Left"

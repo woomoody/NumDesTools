@@ -166,7 +166,7 @@ public static class ExcelConflictEntry
 
             GitHistoryPickerWindow.CommitEntry ToEntry(
                 (string sha, string shortSha, string date, string author, string message) c
-            ) => new(c.sha, $"{c.shortSha}  {c.date}  {c.author, -16}  {c.message}");
+            ) => new(c.sha, $"{c.shortSha}  {c.date}  {c.author, -16}  {c.message}", c.author);
 
             List<GitHistoryPickerWindow.CommitEntry> LoadPage(int skip, int size) =>
                 ReadGitLogForFile(gitRoot, relativePath, skip, size).Select(ToEntry).ToList();
@@ -369,12 +369,24 @@ public static class ExcelConflictEntry
 
                 if (pickError != null)
                 {
-                    System.Windows.MessageBox.Show(
-                        $"cherry-pick {label} 失败：{pickError}",
-                        "错误"
-                    );
-                    AbortOperation(gitRoot, isCherryPick: true);
-                    return;
+                    // cherry-pick --no-commit 冲突时也返回 exit code 1，且不写 CHERRY_PICK_HEAD。
+                    // 冲突文件留在 index 中，需继续走 ResolveXlsxConflicts 而非 abort。
+                    // 只有当 index 里确实没有冲突条目（真实错误）时才报错退出。
+                    string unmerged;
+                    try { unmerged = RunGit(gitRoot, "ls-files --unmerged"); }
+                    catch { unmerged = string.Empty; }
+
+                    if (unmerged.Trim().Length == 0)
+                    {
+                        // 真实错误（非冲突）：清理 index 并报错
+                        AbortOperation(gitRoot, isCherryPick: true);
+                        System.Windows.MessageBox.Show(
+                            $"cherry-pick {label} 失败：{pickError}",
+                            "错误"
+                        );
+                        return;
+                    }
+                    // 有冲突时：跳过报错，继续走下方的 ResolveXlsxConflicts
                 }
 
                 // 解当前 commit 的 xlsx 冲突
@@ -580,7 +592,22 @@ public static class ExcelConflictEntry
     {
         try
         {
-            RunGit(gitRoot, isCherryPick ? "cherry-pick --abort" : "merge --abort");
+            if (!isCherryPick)
+            {
+                RunGit(gitRoot, "merge --abort");
+                return;
+            }
+            // cherry-pick --no-commit 不写 CHERRY_PICK_HEAD，cherry-pick --abort 会报 exit 128。
+            // 先尝试正常 abort，失败时降级用 restore 清理 index。
+            try
+            {
+                RunGit(gitRoot, "cherry-pick --abort");
+            }
+            catch
+            {
+                try { RunGit(gitRoot, "restore --staged ."); } catch { }
+                RunGit(gitRoot, "restore .");
+            }
         }
         catch (Exception ex)
         {

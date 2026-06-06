@@ -15,12 +15,14 @@ public partial class GitExportSelectWindow : MetroWindow
     private record FileEntry(string Path, string Source);
 
     // ComboBox 显示用包装
-    private record CommitItem(string Display, string Sha);
+    private record CommitItem(string Display, string Sha, string Author);
 
     private readonly string _repoBasePath;
     private readonly string _gitAuthor;
     private int _commitCount = 3;
     private List<FileEntry> _entries = [];
+    private List<CommitItem> _allCommitItems = [];
+    private bool _commitFilterLoading;
 
     // 调用方读取导出结果
     public List<string>? SelectedPaths { get; private set; }
@@ -259,18 +261,51 @@ public partial class GitExportSelectWindow : MetroWindow
         try
         {
             var commits = SvnGitTools.GetCommitList(_repoBasePath, 50);
-            CommitCombo.ItemsSource = commits
+            _allCommitItems = commits
                 .Select(c => new CommitItem(
-                    $"{c.ShortSha}  {c.When:MM-dd HH:mm}  {c.Author, -16}  {c.Message}",
-                    c.Sha
+                    $"{c.ShortSha}  {c.When:MM-dd HH:mm}  {c.Author,-16}  {c.Message}",
+                    c.Sha,
+                    c.Author
                 ))
                 .ToList();
-            CommitCombo.SelectedIndex = 0;
+
+            // 构建作者筛选下拉
+            _commitFilterLoading = true;
+            CommitAuthorBox.Items.Clear();
+            CommitAuthorBox.Items.Add("(全部)");
+            foreach (var a in _allCommitItems.Select(c => c.Author).Distinct().OrderBy(a => a))
+                CommitAuthorBox.Items.Add(a);
+            CommitAuthorBox.SelectedIndex = 0;
+            _commitFilterLoading = false;
+
+            ApplyCommitFilter();
         }
         catch (Exception ex)
         {
             StatusText.Text = $"加载提交列表失败：{ex.Message}";
         }
+    }
+
+    private void ApplyCommitFilter()
+    {
+        var author = CommitAuthorBox.SelectedItem as string;
+        var filtered =
+            string.IsNullOrEmpty(author) || author == "(全部)"
+                ? _allCommitItems
+                : _allCommitItems.Where(c => c.Author == author).ToList();
+        CommitCombo.ItemsSource = filtered;
+        if (filtered.Count > 0)
+            CommitCombo.SelectedIndex = 0;
+    }
+
+    private void CommitAuthorBox_SelectionChanged(
+        object sender,
+        System.Windows.Controls.SelectionChangedEventArgs e
+    )
+    {
+        if (_commitFilterLoading)
+            return;
+        ApplyCommitFilter();
     }
 
     private void CommitCombo_SelectionChanged(

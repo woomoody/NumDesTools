@@ -10,14 +10,30 @@
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- 作者筛选 -->
+        <Grid Grid.Row="0" Margin="10,6,10,2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="160"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="作者：" VerticalAlignment="Center" FontSize="11"
+                       Margin="0,0,6,0"
+                       Foreground="{DynamicResource MahApps.Brushes.Gray3}"/>
+            <ComboBox x:Name="AuthorFilterBox" Grid.Column="1"
+                      FontFamily="Consolas" FontSize="11"
+                      SelectionChanged="AuthorFilter_Changed"/>
+        </Grid>
+
         <!-- 提交列表 -->
         <ListBox x:Name="CommitList"
-                 Grid.Row="0"
+                 Grid.Row="1"
                  FontFamily="Consolas" FontSize="11"
                  BorderThickness="0"
                  DisplayMemberPath="Display"
@@ -42,7 +58,7 @@
 
         <!-- 状态栏 -->
         <TextBlock x:Name="StatusText"
-                   Grid.Row="1"
+                   Grid.Row="2"
                    Padding="10,4"
                    FontSize="11"
                    Foreground="{DynamicResource MahApps.Brushes.Gray5}"
@@ -50,7 +66,7 @@
                    Text="加载中…"/>
 
         <!-- 底部按钮区 -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="3"
                 BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
                 BorderThickness="0,1,0,0"
                 Padding="10,8">
