@@ -28,7 +28,7 @@ namespace NumDesTools.ExcelToLua
         public const int OBJECT_ARRAY2 = 401; //List<List<object>>
         public const int REWARD = 501; //奖励: List<int>
         public const int REWARD_ARRAY = 502; //奖励: List<List<int>>
-        public const int ANY = 600; //任意类型，常量表专用
+        public const int ANY = 600;    //任意类型，常量表专用
     }
 
     public class FieldData
@@ -166,9 +166,18 @@ namespace NumDesTools.ExcelToLua
             }
 
             List<ISheet> list = new List<ISheet>();
-            using var xssfWorkbook = new XSSFWorkbook(
-                new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
-            );
+            XSSFWorkbook xssfWorkbook;
+            using (
+                FileStream file = new FileStream(
+                    filepath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.ReadWrite
+                )
+            )
+            {
+                xssfWorkbook = new XSSFWorkbook(file);
+            }
 
             for (int i = 0; i < xssfWorkbook.NumberOfSheets; ++i)
             {
@@ -221,15 +230,15 @@ namespace NumDesTools.ExcelToLua
             }
             catch (Exception e)
             {
-                var sheetName = row?.Sheet?.SheetName ?? "(null row)";
-                var cellStr = row?.GetCell(i)?.ToString() ?? "";
                 LogDisplay.RecordLine(
                     "[{0}] ,{1}",
                     DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                    $"{e} ~!: {sheetName} {cellStr}"
+                    $"{e} ~!: {row.Sheet.SheetName} {row.GetCell(i)}"
                 );
+
                 LogDisplay.Show();
-                PluginLog.Verbose($"{e} ~!: {sheetName} {cellStr}");
+
+                PluginLog.Verbose($"{e} ~!: {row.Sheet.SheetName} {row.GetCell(i)}");
                 throw;
             }
         }
@@ -239,7 +248,16 @@ namespace NumDesTools.ExcelToLua
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
-        public static bool CheckStringChinese(string text) => text.Any(c => c >= '一' && c <= '鿿');
+        public static bool CheckStringChinese(string text)
+        {
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (text[i] > 127)
+                    return true;
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// 配置表中的类型转int
@@ -306,10 +324,7 @@ namespace NumDesTools.ExcelToLua
         public static void ReadSheetFields(ISheet sheet, ref SheetData data)
         {
             // 记录前两行非数值信息 字段名称 字段类型
-            var headerRow = sheet.GetRow(1);
-            if (headerRow == null)
-                return;
-            int colCount = headerRow.LastCellNum;
+            int colCount = sheet.GetRow(1).LastCellNum;
 
             for (int j = data.startCol; j < colCount; j++)
             {
@@ -368,6 +383,7 @@ namespace NumDesTools.ExcelToLua
                         string id = value.Trim();
                         if (string.IsNullOrEmpty(id))
                         {
+
                             LogDisplay.RecordLine(
                                 "[{0}] , {1}",
                                 DateTime.Now.ToString(CultureInfo.InvariantCulture),
@@ -377,15 +393,16 @@ namespace NumDesTools.ExcelToLua
                             LogDisplay.Show();
 
                             throw new Exception($"{sheet.SheetName} 第{i + 1}行, ID为空!");
+                            
                         }
 
                         if (!idset.Add(id))
                         {
                             LogDisplay.RecordLine(
-                                "[{0}] , {1}",
-                                DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                                $"{sheet.SheetName} 第{i + 1}行, ID重复:{id}!"
-                            );
+                              "[{0}] , {1}",
+                              DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                              $"{sheet.SheetName} 第{i + 1}行, ID重复:{id}!"
+                          );
 
                             LogDisplay.Show();
 
