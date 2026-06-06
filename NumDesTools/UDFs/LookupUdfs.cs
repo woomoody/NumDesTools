@@ -375,9 +375,10 @@ public partial class ExcelUdf
         for (var row = 0; row < rows; row++)
         for (var col = 0; col < cols; col++)
         {
-            double conditionCell = (double)conditionRange[row, col];
-
-            double sumCell = (double)sumRange[row, col];
+            if (!double.TryParse(conditionRange[row, col]?.ToString(), out double conditionCell))
+                continue;
+            if (!double.TryParse(sumRange[row, col]?.ToString(), out double sumCell))
+                continue;
 
             if (conditionCell == 0)
             {

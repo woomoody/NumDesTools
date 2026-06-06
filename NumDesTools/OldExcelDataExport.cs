@@ -112,7 +112,7 @@ public static class ErrorLogCtp
                         BorderStyle = BorderStyle.None,
                         Font = font,
                         BackColor = back,
-                        ForeColor = fore
+                        ForeColor = fore,
                     };
                     LabelControl.Controls.Add(errorTextBox);
                 }
@@ -146,7 +146,7 @@ public static class ErrorLogCtp
                 Font = font,
                 Dock = DockStyle.Fill,
                 BackColor = back,
-                ForeColor = fore
+                ForeColor = fore,
             };
 
             LabelControl.Controls.Add(errorLinkLable);
@@ -259,7 +259,15 @@ public static class ExcelSheetDataIsError
                     fileStr = ExcelIndexDataIsWrong.FileToStr(filePath1);
                 else
                     isError =
-                        sheetName + "/" + colEng + 6 + "→" + indexTxt + ":不存在" + "\r\n" + isError;
+                        sheetName
+                        + "/"
+                        + colEng
+                        + 6
+                        + "→"
+                        + indexTxt
+                        + ":不存在"
+                        + "\r\n"
+                        + isError;
             }
 
             if (isCol == "*" || isCol2 == "cn")
@@ -357,7 +365,6 @@ public static class ExcelSheetDataIsError
             errorLog = "";
         }
 
-        app.Dispose();
         return errorLog;
     }
 
@@ -416,7 +423,15 @@ public static class ExcelSheetDataIsError2
                     fileStr = ExcelIndexDataIsWrong.FileToStr(filePath);
                 else
                     isError =
-                        sheetName + "/" + colEng + 6 + "→" + indexTxt + ":不存在" + "\r\n" + isError;
+                        sheetName
+                        + "/"
+                        + colEng
+                        + 6
+                        + "→"
+                        + indexTxt
+                        + ":不存在"
+                        + "\r\n"
+                        + isError;
             }
 
             if (isCol == "*" || isCol2 == "cn")
@@ -546,7 +561,6 @@ public static class ExcelSheetDataIsError2
             isError = "";
         }
 
-        app.Dispose();
         return isErrors;
     }
 
@@ -677,7 +691,6 @@ public static class FormularCheck
         }
 
         rng.Value[Missing.Value] = arrNew;
-        app.Dispose();
     }
 }
 
@@ -701,10 +714,10 @@ public static class PreviewTableCtp
                 BackColor = back,
                 ForeColor = fore,
                 SelectionBackColor = Color.FromArgb(70, 130, 180),
-                SelectionForeColor = Color.White
+                SelectionForeColor = Color.White,
             },
             ColumnHeadersDefaultCellStyle = { BackColor = panelBack, ForeColor = fore },
-            EnableHeadersVisualStyles = false
+            EnableHeadersVisualStyles = false,
         };
         dgv.DataSource = ExcelToDataGridView.SheetDataToDataGridView(filePath, sheetName);
         dgv.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);

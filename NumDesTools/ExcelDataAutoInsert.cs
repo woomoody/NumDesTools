@@ -104,7 +104,7 @@ public static class ExcelDataAutoInsert
                 "Localizations.xlsx" => newPath + @"\Excels\Localizations\Localizations.xlsx",
                 "UIConfigs.xlsx" => newPath + @"\Excels\UIs\UIConfigs.xlsx",
                 "UIItemConfigs.xlsx" => newPath + @"\Excels\UIs\UIItemConfigs.xlsx",
-                _ => excelPath + @"\" + cell.value
+                _ => excelPath + @"\" + cell.value,
             };
 
             var excel = new ExcelPackage(new FileInfo(path));
@@ -139,7 +139,7 @@ public static class ExcelDataAutoInsert
                 "Localizations.xlsx" => newPath + @"\Excels\Localizations\Localizations.xlsx",
                 "UIConfigs.xlsx" => newPath + @"\Excels\UIs\UIConfigs.xlsx",
                 "UIItemConfigs.xlsx" => newPath + @"\Excels\UIs\UIItemConfigs.xlsx",
-                _ => excelPath + @"\" + cell.value
+                _ => excelPath + @"\" + cell.value,
             };
 
             var links = path + "#" + "Sheet1!A1";
@@ -165,7 +165,7 @@ public static class ExcelDataAutoInsert
                     if (!int.TryParse(parts[0], out var key))
                     {
                         MessageBox.Show($@"{str}#前必须有数值");
-                        Environment.Exit(0);
+                        return monkeyList;
                     }
 
                     if (!int.TryParse(parts[1], out var value))

@@ -429,12 +429,12 @@ public partial class ExcelUdf
                     }
                 }
                 var disrole = 0;
-                if (Convert.ToInt32(rangeObj4[i, j]) != -1)
+                if (SafeRangeToInt(rangeObj4[i, j]) != -1)
                     disrole = 1;
                 layers[index++] = new
                 {
                     Index = index - 1,
-                    ConfigId = Convert.ToInt32(rangeObj[i, j]),
+                    ConfigId = SafeRangeToInt(rangeObj[i, j]),
                     LinkedIndexes = (object[])null,
                     DisplayRule = 0,
                     LinkedParentIndex = -1,
@@ -619,24 +619,24 @@ public partial class ExcelUdf
                     }
                 }
                 var is0layer = 1;
-                if (Convert.ToInt32(rangeObj[i, j]) == -1)
+                if (SafeRangeToInt(rangeObj[i, j]) == -1)
                 {
                     is0layer = 0;
                 }
                 var is0layer2 = 1;
-                if (Convert.ToInt32(rangeObj2[i, j]) == -1)
+                if (SafeRangeToInt(rangeObj2[i, j]) == -1)
                 {
                     is0layer2 = 0;
                 }
                 var is0layer3 = 1;
-                if (Convert.ToInt32(rangeObj3[i, j]) == -1)
+                if (SafeRangeToInt(rangeObj3[i, j]) == -1)
                 {
                     is0layer3 = 0;
                 }
                 layers[index++] = new
                 {
                     Index = index - 1,
-                    ConfigId = Convert.ToInt32(rangeObj[i, j]),
+                    ConfigId = SafeRangeToInt(rangeObj[i, j]),
                     LinkedIndexes = (object[])null,
                     DisplayRule = is0layer,
                     LinkedParentIndex = -1,
@@ -646,7 +646,7 @@ public partial class ExcelUdf
                 layers2[index - 1] = new
                 {
                     Index = index - 1,
-                    ConfigId = Convert.ToInt32(rangeObj2[i, j]),
+                    ConfigId = SafeRangeToInt(rangeObj2[i, j]),
                     LinkedIndexes = (object[])null,
                     DisplayRule = is0layer2,
                     LinkedParentIndex = -1,
@@ -1013,4 +1013,13 @@ public partial class ExcelUdf
 
         return uniqueValues.ToArray();
     }
+
+    // ExcelEmpty/ExcelError/null 安全转 int，无效值返回 defaultValue
+    private static int SafeRangeToInt(object? cell, int defaultValue = 0) =>
+        cell is ExcelDna.Integration.ExcelEmpty
+        || cell is ExcelDna.Integration.ExcelError
+        || cell is null
+            ? defaultValue
+        : int.TryParse(cell.ToString(), out var v) ? v
+        : defaultValue;
 }
