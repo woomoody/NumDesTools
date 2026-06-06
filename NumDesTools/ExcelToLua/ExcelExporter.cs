@@ -46,6 +46,9 @@ namespace NumDesTools.ExcelToLua
         //lua文件夹
         static string LuaOutputFolder => $"{JsonBaseFolder}Code/Assets/LuaScripts/Tables";
 
+        //luatemp文件夹
+        static string LuaOutputTempFolder => $"{JsonBaseFolder}Code/Assets/LuaScripts/TablesTemp~";
+
         static string LocalizationOutputFolder =>
             $"{JsonBaseFolder}Code/Asests/LuaScripts/Localizations";
 
@@ -79,7 +82,7 @@ namespace NumDesTools.ExcelToLua
         private static string RechargeThirdPayV2_ios => "RechargeIOS";
 
         //Config配置表
-        static string ConfigExcelFile => "Configs";
+        static string ConfigExcelFile => "AliceConfigs";
 
         private static string[] _localizations =
         {
@@ -119,9 +122,28 @@ namespace NumDesTools.ExcelToLua
             //}
         }
 
-        public static void ExportAll(string[] files)
+        public static void ExportAll(string[] files, int exportType = 0)
         {
             List<FieldData> luaTableFields = new List<FieldData>();
+            var luaCheck = new Lua();
+
+            PluginLog.Write($"=== excel export type:{exportType}");
+            if (exportType == 0)
+            {
+                if (!Directory.Exists(LuaOutputFolder))
+                    Directory.CreateDirectory(LuaOutputFolder);
+            }
+            else
+            {
+                if (!Directory.Exists(LuaOutputTempFolder))
+                {
+                    Directory.CreateDirectory(LuaOutputTempFolder);
+                    var nonOutputSrc = Path.Combine(LuaOutputFolder, "NonOutputTable");
+                    var nonOutputDst = Path.Combine(LuaOutputTempFolder, "NonOutputTable");
+                    if (Directory.Exists(nonOutputSrc) && !Directory.Exists(nonOutputDst))
+                        CopyDirectory(nonOutputSrc, nonOutputDst);
+                }
+            }
 
             for (int i = 0; i < files.Length; i++)
             {
@@ -131,13 +153,15 @@ namespace NumDesTools.ExcelToLua
                     continue;
 
                 var isAll = fileName.Contains("$");
-                Export(file, fileName, luaTableFields, isAll, fileName.Contains("$$"));
+                Export(file, fileName, luaTableFields, isAll, fileName.Contains("$$"), luaCheck, exportType);
             }
 
             if (NeedMergeLocalization)
             {
                 MergeLocalizationLuaFile();
             }
+
+            luaCheck.Dispose();
 
             LogDisplay.RecordLine(
                 "[{0}] ,{1}",
@@ -147,12 +171,22 @@ namespace NumDesTools.ExcelToLua
             PluginLog.Write("导表完成!");
         }
 
+        private static void CopyDirectory(string src, string dst)
+        {
+            Directory.CreateDirectory(dst);
+            foreach (var file in Directory.GetFiles(src))
+                File.Copy(file, Path.Combine(dst, Path.GetFileName(file)), true);
+            foreach (var dir in Directory.GetDirectories(src))
+                CopyDirectory(dir, Path.Combine(dst, Path.GetFileName(dir)));
+        }
+
         //[MenuItem("Tools/导出Excel(只导出Git变更)", false, 2001)]
         // ReSharper disable once UnusedMember.Local
         static void ExportGitChangedExcelFiles()
         {
             var files = GetGitChangedExcelFiles();
             List<FieldData> luaTableFields = new List<FieldData>();
+            var luaCheck = new Lua();
             for (int i = 0; i < files.Count; i++)
             {
                 string file = files[i].Replace('\\', '/');
@@ -161,8 +195,9 @@ namespace NumDesTools.ExcelToLua
                     continue;
 
                 var isAll = fileName.Contains("$");
-                Export(file, fileName, luaTableFields, isAll, fileName.Contains("$$"));
+                Export(file, fileName, luaTableFields, isAll, fileName.Contains("$$"), luaCheck);
             }
+            luaCheck.Dispose();
 
             if (NeedMergeLocalization)
             {
@@ -230,10 +265,12 @@ namespace NumDesTools.ExcelToLua
             string fileName,
             List<FieldData> luaTableFields,
             bool isAll,
-            bool isIgnoreCheckNullValue
+            bool isIgnoreCheckNullValue,
+            Lua luaCheck = null,
+            int exportType = 0
         )
         {
-            List<SheetData> list = ExcelReader.Read(file, 1, 1, !isAll);
+            List<SheetData> list = ExcelReader.Read(file, 1, 1, !isAll, exportType == 2);
             if (list.Count == 0 || list[0].fields.Count == 0)
                 return;
             int count = 1;
@@ -242,6 +279,7 @@ namespace NumDesTools.ExcelToLua
                 count = list.Count;
             }
 
+            var excelName = fileName;
             for (int i = 0; i < count; i++)
             {
                 var data = list[i];
@@ -270,7 +308,7 @@ namespace NumDesTools.ExcelToLua
                 {
                     //ui config to lua table
                     string output = $"{LuaOutputFolder}/UIs.lua.txt";
-                    if (!ExportLuaTable(output, data, "UIs", data.fields[1], false))
+                    if (!ExportLuaTable(output, data, "UIs", data.fields[1], false, excelName, luaCheck, exportType))
                     {
                         continue;
                     }
@@ -279,7 +317,7 @@ namespace NumDesTools.ExcelToLua
                 {
                     //ui config to lua table
                     string output = $"{LuaOutputFolder}/UIAppendItems.lua.txt";
-                    if (!ExportLuaTable(output, data, "UIAppendItems", data.fields[1], false))
+                    if (!ExportLuaTable(output, data, "UIAppendItems", data.fields[1], false, excelName, luaCheck, exportType))
                     {
                         continue;
                     }
@@ -350,7 +388,10 @@ namespace NumDesTools.ExcelToLua
                                 data,
                                 $"Tables.{fileName}",
                                 null,
-                                isIgnoreCheckNullValue
+                                isIgnoreCheckNullValue,
+                                excelName,
+                                luaCheck,
+                                exportType
                             )
                         )
                         {
@@ -420,13 +461,30 @@ namespace NumDesTools.ExcelToLua
             SheetData data,
             string tableName,
             FieldData commentField,
-            bool isIgnoreCheckNullValue
+            bool isIgnoreCheckNullValue,
+            string excelName = null,
+            Lua luaCheck = null,
+            int exportType = 0
         )
         {
             FileInfo file = new FileInfo(outputFile);
 
             if (file.Directory is not null && !file.Directory.Exists)
                 file.Directory.Create();
+
+            // exportType != 0：同时写一份空表到 TempFolder
+            if (exportType != 0)
+            {
+                string tempOutput = outputFile.Replace(LuaOutputFolder, LuaOutputTempFolder);
+                string emptyValue = LuaCodeGenerator.ToEmptyLuaTable(
+                    data, tableName, excelName ?? tableName, commentField, isIgnoreCheckNullValue
+                );
+                FileWriteLuaText(tableName, tempOutput, emptyValue, luaCheck);
+            }
+
+            // exportType == 2：只要空表，不写正式数据
+            if (exportType == 2)
+                return true;
 
             bool isSplitMode = false;
             //判断是否拆表,有无对应字段
@@ -439,7 +497,9 @@ namespace NumDesTools.ExcelToLua
                 }
             }
 
-            var luaCheck = new Lua();
+            var ownLua = luaCheck == null;
+            if (ownLua)
+                luaCheck = new Lua();
 
             if (isSplitMode) // 需要拆分表
             {
@@ -468,7 +528,9 @@ namespace NumDesTools.ExcelToLua
                 );
                 FileWriteLuaText(tableName, outputFile, luaTableValue, luaCheck);
             }
-            luaCheck.Dispose();
+
+            if (ownLua)
+                luaCheck.Dispose();
 
             return true;
         }

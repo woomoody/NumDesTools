@@ -131,6 +131,48 @@ namespace NumDesTools.ExcelToLua
             return text.ToString();
         }
 
+        public static string ToEmptyLuaTable(
+            SheetData data,
+            string tableName,
+            string excelName,
+            FieldData commentField = null,
+            bool isIgnoreCheckNullValue = false
+        )
+        {
+            StringBuilder text = new StringBuilder();
+
+            #region 文件描述
+
+            if (!string.IsNullOrEmpty(data.desc))
+                text.AppendLine($"-- {data.desc}  excelName:{excelName}");
+
+            #endregion 文件描述
+
+            #region 参数定义，添加lua注释
+
+            AddLuaAnnotation(text, data, tableName);
+
+            #endregion 参数定义，添加lua注释
+
+            #region 数据内容
+
+            if (data.hadDefaultValue) // 存在默认值的生成模式
+                CreateDataSegmentMode2Empty(
+                    data,
+                    tableName,
+                    null,
+                    null,
+                    ref text,
+                    isIgnoreCheckNullValue
+                );
+            else // 无默认值的传统生成模式
+                CreateDataSegmentMode1Empty(data, tableName, commentField, ref text);
+
+            #endregion 数据内容
+
+            return text.ToString();
+        }
+
         public static string ToLuaTableByKeyValue(
             SheetData data,
             string tableName,
@@ -691,6 +733,60 @@ namespace NumDesTools.ExcelToLua
                     ? $"Tables.SetDataTableMetatable({tableName},data,dataCellMetaTable,\"{data.name}\",{(!IsNotAddCheckNullValue(tableName) && !isIgnoreCheckNullValue).ToString().ToLower()})"
                     : $"Tables.SetDataTableMetatable({tableName},data,{mainTableName}._dataCellMetaTable,\"{data.name}\",{(!IsNotAddCheckNullValue(tableName) && !isIgnoreCheckNullValue).ToString().ToLower()})"
             );
+        }
+
+        /// <summary>
+        /// 创建数据段 - 模式1 Empty - 传统模式，只输出空表定义
+        /// </summary>
+        private static void CreateDataSegmentMode1Empty(
+            SheetData data,
+            string tableName,
+            FieldData commentField,
+            ref StringBuilder text
+        )
+        {
+            string className = "Excel." + tableName.Replace("Tables.", "");
+            if (data.fields[0].type != FieldTypeDefine.STRING)
+            {
+                text.AppendLine(
+                    $"---@type table<{GetLuaAnnotationType(data.fields[0])},{className}>"
+                );
+            }
+
+            text.AppendLine($"{tableName} = {{}}");
+        }
+
+        /// <summary>
+        /// 创建数据段 - 模式2 Empty - 生成空表，携带默认值相关字段注释
+        /// </summary>
+        private static void CreateDataSegmentMode2Empty(
+            SheetData data,
+            string tableName,
+            List<FieldData> ignoreFields,
+            string mainTableName,
+            ref StringBuilder text,
+            bool isIgnoreCheckNullValue
+        )
+        {
+            text.AppendLine("\n---配置访问表");
+            if (string.IsNullOrEmpty(mainTableName)) // 子表不生成代码提示，用主表
+            {
+                string className = "Excel." + tableName.Replace("Tables.", "");
+                if (data.fields[0].type != FieldTypeDefine.STRING)
+                {
+                    text.AppendLine(
+                        $"---@type table<{GetLuaAnnotationType(data.fields[0])},{className}>"
+                    );
+                }
+                else
+                {
+                    text.AppendLine(
+                        $"---@type table<{GetLuaAnnotationType(data.fields[0])},{className}>"
+                    );
+                }
+            }
+
+            text.AppendLine($"{tableName} = {{}}");
         }
 
         #region 子表模式相关处理
