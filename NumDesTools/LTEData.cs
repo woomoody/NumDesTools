@@ -2083,14 +2083,11 @@ public class LteData
                                         CultureInfo.InvariantCulture
                                     );
 
-                                findDic[findIdStr]
-                                    .Add(
-                                        findLinks
-                                            + findLinks31
-                                            + FindLinkMapEntrance
-                                            + mapId
-                                            + FindLinkEndPortal
-                                    );
+                                var mapEntrance =
+                                    mapId != "0"
+                                        ? FindLinkMapEntrance + mapId + FindLinkEndPortal
+                                        : string.Empty;
+                                findDic[findIdStr].Add(findLinks + findLinks31 + mapEntrance);
                             }
                         }
                     }
@@ -2892,6 +2889,12 @@ public class LteData
                 {
                     fieldIndex = fileMapDouble * 100 + fieldPrefixDouble;
                 }
+                else
+                {
+                    PluginLog.Write(
+                        $"[LteData][FieldGroupLinks] 活动地组 \"{fieldPrefix}\" 解析失败，fieldIndex=0，field链接将全部跳过"
+                    );
+                }
             }
 
             fieldList = fieldList
@@ -3250,12 +3253,11 @@ public class LteData
                     );
                 }
 
-                findLinks =
-                    findLinks
-                    + findLinks31
-                    + FindLinkMapEntrance
-                    + taskTargetMapId
-                    + FindLinkEndNormal;
+                var taskMapEntrance =
+                    taskTargetMapId != "0"
+                        ? FindLinkMapEntrance + taskTargetMapId + FindLinkEndNormal
+                        : string.Empty;
+                findLinks = findLinks + findLinks31 + taskMapEntrance;
                 taskColDataList.Add(findLinks);
 
                 // 限时任务数据

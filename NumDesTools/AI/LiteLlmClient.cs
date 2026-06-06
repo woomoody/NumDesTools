@@ -13,7 +13,12 @@ namespace NumDesTools.AI;
 /// </summary>
 public class LiteLlmClient : ILlmClient
 {
-    private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromMinutes(3) };
+    private static readonly HttpClient Client = new(
+        new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(1) }
+    )
+    {
+        Timeout = TimeSpan.FromMinutes(3),
+    };
 
     private static object BuildRequestBody(
         string model,

@@ -15,15 +15,19 @@ internal static class PluginLog
     );
 
     private const long MaxBytes = 2 * 1024 * 1024; // 2 MB
+    private static readonly object _lock = new();
 
     public static void Write(string message)
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
             var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}{Environment.NewLine}";
-            File.AppendAllText(LogPath, line, Encoding.UTF8);
-            TrimIfNeeded();
+            lock (_lock)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
+                File.AppendAllText(LogPath, line, Encoding.UTF8);
+                TrimIfNeeded();
+            }
             Debug.Print(line.TrimEnd());
         }
         catch { }

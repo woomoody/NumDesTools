@@ -461,6 +461,8 @@ public static partial class PubMetToExcel
 
     public static string[,] ConvertListArrayToTwoArray(List<string[]> listArray)
     {
+        if (listArray.Count == 0)
+            return new string[0, 0];
         var rowmax = listArray.Count;
         var colmax = listArray[0].GetLength(0);
 
@@ -732,7 +734,7 @@ public static partial class PubMetToExcel
                 if (rowIndex == null || colIndex == null)
                 {
                     MessageBox.Show(@"模版表中表头有空值，请检查模版数据是否正确！");
-                    return null;
+                    return new Dictionary<(object, object), string>();
                 }
 
                 string value = modelRangeValue[row, col]?.ToString() ?? "";

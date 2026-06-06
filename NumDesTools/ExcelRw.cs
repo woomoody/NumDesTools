@@ -18,7 +18,8 @@ namespace NumDesTools;
 
 public static partial class PubMetToExcel
 {
-    private static readonly Workbook Wk = AppServices.App.ActiveWorkbook;
+    // 延迟访问：禁止类加载期访问 COM，避免 Excel 未就绪时 NRE/COMException
+    private static Workbook Wk => AppServices.App.ActiveWorkbook;
 
     #region EPPlus与Excel
 
@@ -167,7 +168,13 @@ public static partial class PubMetToExcel
     {
         sheet = null;
         excel = null;
-        excel = new ExcelPackage(new FileInfo(excelPath + @"\" + excelName));
+        var fullPath = excelPath + @"\" + excelName;
+        if (!File.Exists(fullPath))
+        {
+            PluginLog.Write($"[ExcelRw] 文件不存在: {fullPath}");
+            return;
+        }
+        excel = new ExcelPackage(new FileInfo(fullPath));
         ExcelWorkbook workBook;
         try
         {
@@ -389,6 +396,7 @@ public static partial class PubMetToExcel
                 listObjectDataDic[tableName] = tableData;
             }
         }
+        excel?.Dispose();
         return listObjectDataDic;
     }
 
@@ -697,6 +705,8 @@ public static partial class PubMetToExcel
         {
             var dataTable = new DataTable();
             var worksheet = package.Workbook.Worksheets["Sheet1"] ?? package.Workbook.Worksheets[0];
+            if (worksheet?.Dimension is null)
+                return dataTable;
             dataTable.TableName = worksheet.Name;
             for (var col = 1; col <= worksheet.Dimension.End.Column; col++)
                 dataTable.Columns.Add();

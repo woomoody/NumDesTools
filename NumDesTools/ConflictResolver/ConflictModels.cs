@@ -144,7 +144,11 @@ public class RowConflict : INotifyPropertyChanged
     /// </summary>
     public ConflictChoice DefaultRowChoice
     {
-        init => _rowChoice = value;
+        init
+        {
+            _rowChoice = value;
+            _rowChoiceExplicit = true; // OnlyOurs/OnlyTheirs 行默认即已解决，不须用户再点
+        }
     }
 
     public ConflictChoice RowChoice

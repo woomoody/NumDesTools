@@ -149,15 +149,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private void ReleaseComObjects()
     {
-        if (App != null)
-        {
-            Marshal.ReleaseComObject(App);
-            App = null;
-        }
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
+        // App 生命周期由 ExcelDNA 管理，不应手动 ReleaseComObject，否则其他持有方引用变悬垂
+        App = null;
     }
 
     #endregion 释放COM
@@ -361,34 +354,39 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (CrosslightController.IsActive)
             CrosslightOverlay.Instance.ClearCross();
 
-        //路由执行
-        if (_handlers.TryGetValue(control.Id, out var handler))
+        try
         {
-            try
+            //路由执行
+            if (_handlers.TryGetValue(control.Id, out var handler))
             {
-                handler(control);
+                try
+                {
+                    handler(control);
+                }
+                catch (Exception ex)
+                {
+                    HandleError(control.Id, ex, control);
+                }
             }
-            catch (Exception ex)
+            else
             {
-                HandleError(control.Id, ex, control);
+                PluginLog.Verbose($"未知按钮ID: {control.Id}");
             }
         }
-        else
+        finally
         {
-            PluginLog.Verbose($"未知按钮ID: {control.Id}");
+            sw.Stop();
+            var ts2 = sw.ElapsedMilliseconds;
+            App.Calculation = XlCalculation.xlCalculationAutomatic;
+            App.EnableEvents = true;
+            // 克隆活动自己管理 ScreenUpdating 和 StatusBar，外层不再覆盖
+            if (control.Id != "ActivityClone")
+            {
+                App.ScreenUpdating = true;
+                App.StatusBar = $"[执行完成] {control.Tag} 耗时： {(double)ts2 / 1000}s";
+            }
+            PluginLog.Write($"[执行完成] {control.Tag} 耗时： {ts2}ms");
         }
-
-        sw.Stop();
-        var ts2 = sw.ElapsedMilliseconds;
-        App.Calculation = XlCalculation.xlCalculationAutomatic;
-        App.EnableEvents = true;
-        // 克隆活动自己管理 ScreenUpdating 和 StatusBar，外层不再覆盖
-        if (control.Id != "ActivityClone")
-        {
-            App.ScreenUpdating = true;
-            App.StatusBar = $"[执行完成] {control.Tag} 耗时： {(double)ts2 / 1000}s";
-        }
-        PluginLog.Write($"[执行完成] {control.Tag} 耗时： {ts2}ms");
     }
 
     private void HandleError(string buttonId, Exception ex, IRibbonControl control)
@@ -1175,7 +1173,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DisposeAll();
         }
 
-        var workBook = App.ActiveWorkbook;
+        var workBook = wb; // 用事件参数而非 ActiveWorkbook，避免多工作簿时操作错对象
         var wkFullPath = workBook.FullName;
         var wkFileName = workBook.Name;
 

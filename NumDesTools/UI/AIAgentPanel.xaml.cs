@@ -1071,6 +1071,14 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         try
         {
             dynamic wb = AppServices.App.ActiveWorkbook;
+            // VBProject 仅在宏工作簿(.xlsm/.xls/.xlam)中存在；xlsx 访问会抛 COMException
+            string wbName = wb.Name?.ToString() ?? "";
+            if (
+                !wbName.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase)
+                && !wbName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase)
+                && !wbName.EndsWith(".xlam", StringComparison.OrdinalIgnoreCase)
+            )
+                return "VBA 执行失败: 当前工作簿不支持宏（需要 .xlsm/.xls/.xlam 格式）";
             var wasSaved = (bool)wb.Saved;
             var vbProj = wb.VBProject;
             var module = vbProj.VBComponents.Add(1); // vbext_ct_StdModule = 1

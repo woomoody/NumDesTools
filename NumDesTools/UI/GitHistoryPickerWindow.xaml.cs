@@ -87,9 +87,9 @@ public partial class GitHistoryPickerWindow : MetroWindow
                 Padding = new Thickness(14, 6, 14, 6),
             };
             if (m == _modes[0])
-                btn.Style = FindResource("MahApps.Styles.Button.Square.Accent") as Style;
+                btn.Style = TryFindResource("MahApps.Styles.Button.Square.Accent") as Style;
             else
-                btn.Style = FindResource("MahApps.Styles.Button.Square") as Style;
+                btn.Style = TryFindResource("MahApps.Styles.Button.Square") as Style;
             btn.Click += (_, _) => Confirm(m);
             ButtonPanel.Children.Add(btn);
         }
@@ -98,7 +98,7 @@ public partial class GitHistoryPickerWindow : MetroWindow
         {
             Content = "取消",
             Padding = new Thickness(14, 6, 14, 6),
-            Style = FindResource("MahApps.Styles.Button.Square") as Style,
+            Style = TryFindResource("MahApps.Styles.Button.Square") as Style,
         };
         cancelBtn.Click += (_, _) => Close();
         ButtonPanel.Children.Add(cancelBtn);
@@ -239,8 +239,7 @@ public partial class GitHistoryPickerWindow : MetroWindow
             _filterLoading = false;
         }
 
-        var suffix =
-            filtered.Count < _allItems.Count ? $"，筛选后 {filtered.Count} 条" : "";
+        var suffix = filtered.Count < _allItems.Count ? $"，筛选后 {filtered.Count} 条" : "";
         StatusText.Text = _hasMore
             ? $"已加载 {_loadedCount} 条{suffix}，滚动到底加载更多"
             : $"共 {_loadedCount} 条{suffix}，已全部加载";

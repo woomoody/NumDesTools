@@ -202,7 +202,10 @@ public static class ExcelIndexDataIsWrong
         using var sr = new StreamReader(filepath);
         while (sr.ReadLine() is { } lineStr)
         {
-            lineStr = lineStr.Substring(0, lineStr.IndexOf('\t'));
+            var tabIdx = lineStr.IndexOf('\t');
+            if (tabIdx < 0)
+                continue;
+            lineStr = lineStr.Substring(0, tabIdx);
             fileStr += lineStr + ",";
         }
 

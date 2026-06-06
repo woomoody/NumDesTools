@@ -9,7 +9,7 @@ namespace NumDesTools;
 public static class OutputPaths
 {
     public static string Root =>
-        AppServices.GlobalValue.Value.TryGetValue("OutputRootPath", out var p)
+        AppServices.GlobalValue?.Value.TryGetValue("OutputRootPath", out var p) == true
         && !string.IsNullOrWhiteSpace(p)
             ? p
             : Path.Combine(

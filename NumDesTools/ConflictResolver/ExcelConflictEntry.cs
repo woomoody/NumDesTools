@@ -311,7 +311,7 @@ public static class ExcelConflictEntry
                 }
                 finally
                 {
-                    switchWin.Dispatcher.BeginInvoke((System.Action)(() => switchWin.Close()));
+                    SafeClose(switchWin);
                 }
             })
             {
@@ -355,9 +355,7 @@ public static class ExcelConflictEntry
                         }
                         finally
                         {
-                            progressWin.Dispatcher.BeginInvoke(
-                                (System.Action)(() => progressWin.Close())
-                            );
+                            SafeClose(progressWin);
                         }
                     })
                     {
@@ -373,8 +371,14 @@ public static class ExcelConflictEntry
                     // 冲突文件留在 index 中，需继续走 ResolveXlsxConflicts 而非 abort。
                     // 只有当 index 里确实没有冲突条目（真实错误）时才报错退出。
                     string unmerged;
-                    try { unmerged = RunGit(gitRoot, "ls-files --unmerged"); }
-                    catch { unmerged = string.Empty; }
+                    try
+                    {
+                        unmerged = RunGit(gitRoot, "ls-files --unmerged");
+                    }
+                    catch
+                    {
+                        unmerged = string.Empty;
+                    }
 
                     if (unmerged.Trim().Length == 0)
                     {
@@ -429,9 +433,7 @@ public static class ExcelConflictEntry
                     }
                     finally
                     {
-                        progressWin.Dispatcher.BeginInvoke(
-                            (System.Action)(() => progressWin.Close())
-                        );
+                        SafeClose(progressWin);
                     }
                 })
                 {
@@ -605,7 +607,11 @@ public static class ExcelConflictEntry
             }
             catch
             {
-                try { RunGit(gitRoot, "restore --staged ."); } catch { }
+                try
+                {
+                    RunGit(gitRoot, "restore --staged .");
+                }
+                catch { }
                 RunGit(gitRoot, "restore .");
             }
         }
@@ -1030,7 +1036,7 @@ public static class ExcelConflictEntry
             }
             finally
             {
-                waitWin.Dispatcher.BeginInvoke((System.Action)(() => waitWin.Close()));
+                SafeClose(waitWin);
             }
         })
         {
@@ -1060,5 +1066,27 @@ public static class ExcelConflictEntry
             headBranch
         );
         return win.ShowDialog() == true;
+    }
+
+    // 安全派发：Dispatcher 已关闭时静默忽略，catch 内异常不逃逸到后台线程
+    private static void SafeClose(System.Windows.Window win)
+    {
+        try
+        {
+            if (!win.Dispatcher.HasShutdownStarted)
+                win.Dispatcher.BeginInvoke(
+                    (System.Action)(
+                        () =>
+                        {
+                            try
+                            {
+                                win.Close();
+                            }
+                            catch { }
+                        }
+                    )
+                );
+        }
+        catch { }
     }
 }

@@ -241,15 +241,23 @@ internal sealed class CrosslightOverlay : IDisposable
         // 先取出引用再置 null，lambda 用局部变量，避免与 BeginInvoke 竞态
         var form = _bandForm;
         _bandForm = null;
-        form?.BeginInvoke(
-            (System.Action)(
-                () =>
-                {
-                    form.Close();
-                    System.Windows.Forms.Application.ExitThread();
-                }
-            )
-        );
+        try
+        {
+            form?.BeginInvoke(
+                (System.Action)(
+                    () =>
+                    {
+                        try
+                        {
+                            form.Close();
+                            System.Windows.Forms.Application.ExitThread();
+                        }
+                        catch { }
+                    }
+                )
+            );
+        }
+        catch { }
     }
 
     public static void DisposeInstance()

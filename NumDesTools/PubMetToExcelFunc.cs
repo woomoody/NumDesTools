@@ -24,9 +24,10 @@ namespace NumDesTools;
 /// </summary>
 public static class PubMetToExcelFunc
 {
-    private static readonly dynamic Wk = AppServices.App.ActiveWorkbook;
+    // 延迟属性：禁止类加载期访问 COM，避免 Excel 未就绪时 NRE/COMException
+    private static dynamic Wk => AppServices.App.ActiveWorkbook;
 
-    private static readonly string WkPath = Wk.Path;
+    private static string WkPath => AppServices.App.ActiveWorkbook.Path;
 
     public static void ExcelDataSearchAndMerge(string searchValue)
     {
@@ -39,17 +40,25 @@ public static class PubMetToExcelFunc
             rootPath + @"\Excels\UIs\",
         };
         var files = PubMetToExcel.PathExcelFileCollect(fileList, "*.xlsx", ignoreFileNames);
-        var findValueList = new List<(string, string, int, int, string, string)>();
+        var findValueBag = new System.Collections.Concurrent.ConcurrentBag<(
+            string,
+            string,
+            int,
+            int,
+            string,
+            string
+        )>();
         Parallel.ForEach(
             files,
             file =>
             {
                 var dataTable = PubMetToExcel.ExcelDataToDataTableOleDb(file);
                 var findValue = PubMetToExcel.FindDataInDataTable(file, dataTable, searchValue);
-                if (findValue.Count > 0)
-                    findValueList = findValueList.Concat(findValue).ToList();
+                foreach (var item in findValue)
+                    findValueBag.Add(item);
             }
         );
+        var findValueList = findValueBag.ToList();
         dynamic tempWorkbook;
         try
         {
@@ -204,7 +213,7 @@ public static class PubMetToExcelFunc
             //查找所有满足条件的值，然后按顺序遍历文件，找到第一个存在查找ID的表
             var result = valueList
                 .Cast<List<string>>()
-                .Where(list => list[0] == keyCell.Value.ToString())
+                .Where(list => list[0] == keyCell.Value?.ToString())
                 .ToList();
             if (result.Count != 0)
             {
@@ -321,7 +330,7 @@ public static class PubMetToExcelFunc
                 var selectCellRow = selectCell.Row;
                 var sheet = AppServices.App.ActiveSheet;
                 var typeCell = sheet.Cells[selectCellRow, selectCellCol - 1];
-                string typeValue = typeCell.Value.ToString();
+                string typeValue = typeCell.Value?.ToString() ?? string.Empty;
                 if (data.TryGetValue(typeValue, out var valueList))
                 {
                     var result = valueList
@@ -937,13 +946,16 @@ public static class PubMetToExcelFunc
     //向上获取最接近的key
     private static double GetNearKeyValue(Dictionary<int, double> dic, int getNum)
     {
-        double getNumValue = 0;
+        if (dic.Count == 0)
+            return 0;
+        var minKey = dic.Keys.Min();
         while (!dic.ContainsKey(getNum))
         {
+            if (getNum <= minKey)
+                return dic[minKey];
             getNum--;
         }
-        getNumValue = dic[getNum];
-        return getNumValue;
+        return dic[getNum];
     }
 
     //遍历目录文件
@@ -2311,13 +2323,13 @@ public static class PubMetToExcelFunc
         if (isWrite)
         {
             MessageBox.Show($"已全量匹配所有目标Id的图片，提交时注意分辨是否为自己主观更改！！！");
-
             targetExcel.Save();
         }
         else
         {
             MessageBox.Show($"没找到匹配的图片Id");
         }
+        targetExcel?.Dispose();
     }
 
     #region Excel数据查找

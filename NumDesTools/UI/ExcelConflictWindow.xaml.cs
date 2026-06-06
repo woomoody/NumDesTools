@@ -63,6 +63,8 @@ public partial class ExcelConflictWindow : MetroWindow
         ConflictList.PreviewMouseLeftButtonDown += ConflictList_DragStart;
         ConflictList.PreviewMouseMove += ConflictList_DragMove;
         ConflictList.PreviewMouseLeftButtonUp += ConflictList_DragEnd;
+        // 拖出 ListBox 时 LeftButtonUp 不触发，MouseLeave 兜底释放拖拽状态
+        ConflictList.MouseLeave += (_, _) => _isDragging = false;
         ConflictList.PreviewMouseDown += ConflictList_MiddleClick;
 
         // 三个列表点击任意位置都触发详情（兜底：路由事件冒泡失效时仍有效）

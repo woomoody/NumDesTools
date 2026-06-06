@@ -166,18 +166,9 @@ namespace NumDesTools.ExcelToLua
             }
 
             List<ISheet> list = new List<ISheet>();
-            XSSFWorkbook xssfWorkbook;
-            using (
-                FileStream file = new FileStream(
-                    filepath,
-                    FileMode.Open,
-                    FileAccess.Read,
-                    FileShare.ReadWrite
-                )
-            )
-            {
-                xssfWorkbook = new XSSFWorkbook(file);
-            }
+            using var xssfWorkbook = new XSSFWorkbook(
+                new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+            );
 
             for (int i = 0; i < xssfWorkbook.NumberOfSheets; ++i)
             {

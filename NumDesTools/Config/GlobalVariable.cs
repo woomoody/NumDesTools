@@ -252,7 +252,17 @@ namespace NumDesTools.Config
             };
         }
 
+        private readonly object _saveLock = new();
+
         public void SaveValue(string key, string value)
+        {
+            lock (_saveLock)
+            {
+                SaveValueCore(key, value);
+            }
+        }
+
+        private void SaveValueCore(string key, string value)
         {
             // 如果文件存在，先读取现有的配置内容
             OrderedDictionary existingConfig = new OrderedDictionary();
