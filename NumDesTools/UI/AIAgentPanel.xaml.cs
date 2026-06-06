@@ -17,6 +17,7 @@ public partial class AIAgentPanel
 {
     private CancellationTokenSource _cts;
     private readonly List<object> _history = [];
+    private const int MaxHistoryMessages = 60; // 约 ~30轮对话，超出后保留 system + 最近消息防 token 超限
 
     private static readonly string HtmlTemplate =
         @"<html><head><meta charset='utf-8'><style>
@@ -674,6 +675,18 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             _history.Add(new { role = "system", content = systemContent });
         }
         _history.Add(new { role = "user", content = userTask });
+
+        // 防止历史消息无限增长导致 token 超限：保留 system 消息 + 最近 MaxHistoryMessages 条
+        if (_history.Count > MaxHistoryMessages + 1)
+        {
+            var systemMsg = _history.FirstOrDefault();
+            var recent = _history.Skip(_history.Count - MaxHistoryMessages).ToList();
+            _history.Clear();
+            if (systemMsg != null)
+                _history.Add(systemMsg);
+            _history.AddRange(recent);
+        }
+
         var messages = _history;
 
         AddStep($"📋 {userTask[..Math.Min(40, userTask.Length)]}…");

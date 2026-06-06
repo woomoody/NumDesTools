@@ -3851,60 +3851,57 @@ public class LteData
                 fieldFindId = fieldFix.findData;
                 var fieldConditonTargetId = fieldFix.fieldConditonTargetId;
                 if (
-                    string.IsNullOrEmpty(fieldConditonTargetId)
-                    || !baseDic.ContainsKey(fieldConditonTargetId)
+                    !string.IsNullOrEmpty(fieldConditonTargetId)
+                    && baseDic.ContainsKey(fieldConditonTargetId)
                 )
-                    goto SkipFieldTarget;
-
-                //目标寻找关系
-                var findTargetType = SafeGet(
-                    baseDic,
-                    fieldConditonTargetId,
-                    titleList.IndexOf("寻找类型")
-                );
-                var findTargetDetailType = SafeGet(
-                    baseDic,
-                    fieldConditonTargetId,
-                    titleList.IndexOf("寻找细类")
-                );
-
-                var findLinksGroup = FindLinks(
-                    findTargetDetailType,
-                    findTargetType,
-                    fieldConditonTargetId,
-                    baseDic,
-                    out _,
-                    fieldGroupDic,
-                    titleList,
-                    findRankDataDic,
-                    dataTypeDic
-                );
-                findLinks = findLinksGroup.findLinks;
-                var findLinks31 = findLinksGroup.findLinks31;
-
-                var taskTargetMapName = SafeGet(
-                    baseDic,
-                    fieldConditonTargetId,
-                    titleList.IndexOf("首次出现")
-                );
-                taskTargetMapName = MapPrefix(taskTargetMapName);
-                var match = _digitsRegex.Match(taskTargetMapName);
-                var taskTargetMapId = match.Success ? match.Value : "0";
-
-                if (double.TryParse(taskTargetMapId, out double taskTargetMapIdDouble))
                 {
-                    taskTargetMapId = (taskTargetMapIdDouble + activtiyId).ToString(
-                        CultureInfo.InvariantCulture
+                    //目标寻找关系
+                    var findTargetType = SafeGet(
+                        baseDic,
+                        fieldConditonTargetId,
+                        titleList.IndexOf("寻找类型")
                     );
+                    var findTargetDetailType = SafeGet(
+                        baseDic,
+                        fieldConditonTargetId,
+                        titleList.IndexOf("寻找细类")
+                    );
+
+                    var findLinksGroup = FindLinks(
+                        findTargetDetailType,
+                        findTargetType,
+                        fieldConditonTargetId,
+                        baseDic,
+                        out _,
+                        fieldGroupDic,
+                        titleList,
+                        findRankDataDic,
+                        dataTypeDic
+                    );
+                    findLinks = findLinksGroup.findLinks;
+                    var findLinks31 = findLinksGroup.findLinks31;
+
+                    var taskTargetMapName = SafeGet(
+                        baseDic,
+                        fieldConditonTargetId,
+                        titleList.IndexOf("首次出现")
+                    );
+                    taskTargetMapName = MapPrefix(taskTargetMapName);
+                    var match = _digitsRegex.Match(taskTargetMapName);
+                    var taskTargetMapId = match.Success ? match.Value : "0";
+
+                    if (double.TryParse(taskTargetMapId, out double taskTargetMapIdDouble))
+                    {
+                        taskTargetMapId = (taskTargetMapIdDouble + activtiyId).ToString(
+                            CultureInfo.InvariantCulture
+                        );
+                    }
+                    var fieldMapEntrance =
+                        taskTargetMapId != "0"
+                            ? FindLinkMapEntrance + taskTargetMapId + FindLinkEndNormal
+                            : string.Empty;
+                    findLinks = findLinks + findLinks31 + fieldMapEntrance;
                 }
-                findLinks =
-                    findLinks
-                    + findLinks31
-                    + FindLinkMapEntrance
-                    + taskTargetMapId
-                    + FindLinkEndNormal;
-                SkipFieldTarget:
-                ;
             }
 
             // 消耗寻找

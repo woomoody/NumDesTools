@@ -566,7 +566,10 @@ public static class ExcelConflictDiffer
         {
             File.Delete(path);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[ExcelConflictDiffer] 删除临时文件失败（非致命）: {ex.Message}");
+        }
     }
 }
 

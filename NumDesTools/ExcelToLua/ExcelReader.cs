@@ -239,16 +239,7 @@ namespace NumDesTools.ExcelToLua
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
-        public static bool CheckStringChinese(string text)
-        {
-            for (int i = 0; i < text.Length; i++)
-            {
-                if (text[i] > 127)
-                    return true;
-            }
-
-            return false;
-        }
+        public static bool CheckStringChinese(string text) => text.Any(c => c >= '一' && c <= '鿿');
 
         /// <summary>
         /// 配置表中的类型转int

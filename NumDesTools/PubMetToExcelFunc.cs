@@ -2948,7 +2948,12 @@ public static class PubMetToExcelFunc
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                PluginLog.Write(
+                    $"[PubMetToExcelFunc] SearchKey 文件处理失败（非致命）: {ex.Message}"
+                );
+            }
 
             var n = Interlocked.Increment(ref currentCount);
             if (n % 10 == 0 || n == count)

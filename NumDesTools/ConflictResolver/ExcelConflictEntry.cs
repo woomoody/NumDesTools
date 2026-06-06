@@ -860,20 +860,6 @@ public static class ExcelConflictEntry
         }
     }
 
-    private static void GitShow(string gitRoot, string rev, string relativePath, string outFile)
-    {
-        using var repo = new Repository(gitRoot);
-        var commit =
-            repo.Lookup<Commit>(rev) ?? throw new InvalidOperationException($"找不到 {rev} 提交");
-        var entry =
-            commit[relativePath.Replace('\\', '/')]
-            ?? throw new InvalidOperationException($"{rev} 中找不到文件：{relativePath}");
-        var blob = (Blob)entry.Target;
-        using var src = blob.GetContentStream();
-        using var dst = new FileStream(outFile, FileMode.Create, FileAccess.Write);
-        src.CopyTo(dst);
-    }
-
     private static void GitShowBySha(
         string gitRoot,
         string sha,

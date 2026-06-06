@@ -259,6 +259,9 @@ public static class ConflictApplier
             // 追加到末尾（保留原 merge commit message 不变）
             File.AppendAllText(mergeMsgPath, $"\n{line}");
         }
-        catch { }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[ConflictApplier] AppendMergeMsg 失败（非致命）: {ex.Message}");
+        }
     }
 }

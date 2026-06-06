@@ -90,38 +90,20 @@ public static class ExcelDataAutoInsert
     public static void ExcelHyperLinks(dynamic excelPath, dynamic sheet)
     {
         var lastRow = sheet.UsedRange.Rows.Count;
+        var modeCol = FindTitle(sheet, 1, "实际模板(上一期)");
+        var excelNameCol = FindTitle(sheet, 1, "表名");
         for (var i = 2; i <= lastRow; i++)
         {
-            var modeCol = FindTitle(sheet, 1, "实际模板(上一期)");
-            var excelName = FindTitle(sheet, 1, "表名");
             string findValue = sheet.Cells[i, modeCol].Value?.ToString();
-            var cell = sheet.Cells[i, excelName];
+            var cell = sheet.Cells[i, excelNameCol];
             if (cell.value == null || !cell.value.ToString().Contains(".xlsx"))
                 continue;
-            var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
-            string path = cell.value switch
-            {
-                "Localizations.xlsx" => newPath + @"\Excels\Localizations\Localizations.xlsx",
-                "UIConfigs.xlsx" => newPath + @"\Excels\UIs\UIConfigs.xlsx",
-                "UIItemConfigs.xlsx" => newPath + @"\Excels\UIs\UIItemConfigs.xlsx",
-                _ => excelPath + @"\" + cell.value,
-            };
-
-            var excel = new ExcelPackage(new FileInfo(path));
-            var workbook = excel.Workbook;
-            var sheetTemp = workbook.Worksheets["Sheet1"] ?? workbook.Worksheets[0];
+            var path = ResolveExcelHyperlinkPath(excelPath, cell.value.ToString());
+            using var excel = new ExcelPackage(new FileInfo(path));
+            var sheetTemp = excel.Workbook.Worksheets["Sheet1"] ?? excel.Workbook.Worksheets[0];
             var row = PubMetToExcel.FindSourceRow(sheetTemp, 2, findValue);
             if (row != 0)
-            {
-                var newRow = "A" + row;
-
-                var sheetName = sheetTemp.Name;
-                var links = path + "#" + sheetName + "!" + newRow;
-                excel.Dispose();
-                cell.Hyperlinks.Add(cell, links);
-                cell.Font.Size = 9;
-                cell.Font.Name = "微软雅黑";
-            }
+                SetHyperlink(cell, path + "#" + sheetTemp.Name + "!A" + row);
         }
     }
 
@@ -133,20 +115,28 @@ public static class ExcelDataAutoInsert
             var cell = sheet.Cells[i, 5];
             if (cell.value == null || !cell.value.ToString().Contains(".xlsx"))
                 continue;
-            var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
-            string path = cell.value switch
-            {
-                "Localizations.xlsx" => newPath + @"\Excels\Localizations\Localizations.xlsx",
-                "UIConfigs.xlsx" => newPath + @"\Excels\UIs\UIConfigs.xlsx",
-                "UIItemConfigs.xlsx" => newPath + @"\Excels\UIs\UIItemConfigs.xlsx",
-                _ => excelPath + @"\" + cell.value,
-            };
-
-            var links = path + "#" + "Sheet1!A1";
-            cell.Hyperlinks.Add(cell, links);
-            cell.Font.Size = 9;
-            cell.Font.Name = "微软雅黑";
+            var path = ResolveExcelHyperlinkPath(excelPath, cell.value.ToString());
+            SetHyperlink(cell, path + "#Sheet1!A1");
         }
+    }
+
+    private static string ResolveExcelHyperlinkPath(string excelPath, string fileName)
+    {
+        var newPath = Path.GetDirectoryName(Path.GetDirectoryName(excelPath));
+        return fileName switch
+        {
+            "Localizations.xlsx" => newPath + @"\Excels\Localizations\Localizations.xlsx",
+            "UIConfigs.xlsx" => newPath + @"\Excels\UIs\UIConfigs.xlsx",
+            "UIItemConfigs.xlsx" => newPath + @"\Excels\UIs\UIItemConfigs.xlsx",
+            _ => excelPath + @"\" + fileName,
+        };
+    }
+
+    private static void SetHyperlink(dynamic cell, string link)
+    {
+        cell.Hyperlinks.Add(cell, link);
+        cell.Font.Size = 9;
+        cell.Font.Name = "微软雅黑";
     }
 
     public static List<(int, int)> CellFixValueKeyList(string str)

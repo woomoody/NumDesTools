@@ -56,6 +56,7 @@ public static class OutputPaths
             CreateNoWindow = true,
         };
         using var p = System.Diagnostics.Process.Start(psi);
-        p?.WaitForExit(10_000);
+        if (p != null && !p.WaitForExit(10_000))
+            p.Kill();
     }
 }
