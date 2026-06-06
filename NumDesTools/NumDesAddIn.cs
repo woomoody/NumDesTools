@@ -1380,8 +1380,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             }
         }
 
-        Marshal.ReleaseComObject(workBook);
-
         //if (cancel == false)
         //{
         //    // 使用Epplus读取保存的形式压缩Excel文件？
@@ -3070,7 +3068,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     for (var col = 1; col <= worksheet.Dimension.End.Column + 100; col++)
                         if (worksheet.Column(col).Hidden)
                         {
-                            worksheet.Column(col).Hidden = true;
+                            worksheet.Column(col).Hidden = false;
                             count++;
                         }
                 }

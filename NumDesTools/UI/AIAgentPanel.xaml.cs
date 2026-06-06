@@ -1694,7 +1694,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     {
         Dispatcher.Invoke(() =>
         {
-            var html = InjectCellLinks(HttpUtility.HtmlDecode(Markdown.ToHtml(markdown)));
+            var html = InjectCellLinks(Markdown.ToHtml(markdown));
             var cls = role == "user" ? "user" : "assistant";
             var label =
                 role == "user"

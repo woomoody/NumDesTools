@@ -444,7 +444,7 @@ public partial class ExcelUdf
                 layers2[index - 1] = new
                 {
                     Index = index - 1,
-                    ConfigId = Convert.ToInt32(rangeObj2[i, j]),
+                    ConfigId = SafeRangeToInt(rangeObj2[i, j]),
                     LinkedIndexes = (object[])null,
                     DisplayRule = 0,
                     LinkedParentIndex = -1,
@@ -454,7 +454,7 @@ public partial class ExcelUdf
                 layers3[index - 1] = new
                 {
                     Index = index - 1,
-                    ConfigId = Convert.ToInt32(rangeObj3[i, j]),
+                    ConfigId = SafeRangeToInt(rangeObj3[i, j]),
                     LinkedIndexes = indexLink,
                     DisplayRule = 0,
                     LinkedParentIndex = linkIndex,
@@ -464,7 +464,7 @@ public partial class ExcelUdf
                 layers4[index - 1] = new
                 {
                     Index = index - 1,
-                    ConfigId = Convert.ToInt32(rangeObj4[i, j]),
+                    ConfigId = SafeRangeToInt(rangeObj4[i, j]),
                     LinkedIndexes = indexLink,
                     DisplayRule = disrole,
                     LinkedParentIndex = linkIndex,
@@ -656,7 +656,7 @@ public partial class ExcelUdf
                 layers3[index - 1] = new
                 {
                     Index = index - 1,
-                    ConfigId = Convert.ToInt32(rangeObj3[i, j]),
+                    ConfigId = SafeRangeToInt(rangeObj3[i, j]),
                     LinkedIndexes = (object[])null,
                     DisplayRule = is0layer3,
                     LinkedParentIndex = -1,
@@ -666,7 +666,7 @@ public partial class ExcelUdf
                 layers4[index - 1] = new
                 {
                     Index = index - 1,
-                    ConfigId = Convert.ToInt32(rangeObj4[i, j]),
+                    ConfigId = SafeRangeToInt(rangeObj4[i, j]),
                     LinkedIndexes = indexLink,
                     DisplayRule = 0,
                     LinkedParentIndex = linkIndex,

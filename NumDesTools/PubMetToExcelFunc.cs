@@ -2416,7 +2416,12 @@ public static class PubMetToExcelFunc
         var filesCollection = new SelfExcelFileCollector(rootPath);
         var files = filesCollection.GetAllExcelFilesPath();
 
-        var targetList = new List<(string, string, int, int)>();
+        var targetBag = new System.Collections.Concurrent.ConcurrentBag<(
+            string,
+            string,
+            int,
+            int
+        )>();
         var isAll = findValue.Contains("*");
         findValue = findValue.Replace("*", "");
         var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
@@ -2460,24 +2465,26 @@ public static class PubMetToExcelFunc
                                         )
                                     )
                                     {
-                                        targetList.Add((file, sheet.Name, cellRow, cellCol));
+                                        targetBag.Add((file, sheet.Name, cellRow, cellCol));
                                     }
                                 }
                             }
                         }
-                        catch
+                        catch (Exception ex)
                         {
-                            // 记录异常信息，继续处理下一个文件
+                            PluginLog.Write(
+                                $"[SearchKeyFromExcelMulti] 内层处理失败: {ex.Message}"
+                            );
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // 记录异常信息，继续处理下一个文件
+                    PluginLog.Write($"[SearchKeyFromExcelMulti] 文件处理失败: {ex.Message}");
                 }
             }
         );
-        return targetList;
+        return targetBag.ToList();
     }
 
     //Epplus检查是否包含多余列
