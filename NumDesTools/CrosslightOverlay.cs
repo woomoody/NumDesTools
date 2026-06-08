@@ -559,6 +559,11 @@ internal sealed class CrosslightOverlay : IDisposable
         private sealed class BandStrip : IDisposable
         {
             private readonly Form _form;
+            private int _lastX = int.MinValue,
+                _lastY = int.MinValue,
+                _lastW,
+                _lastH;
+            private bool _lastVisible;
 
             public BandStrip(Color color, byte alpha)
             {
@@ -595,10 +600,22 @@ internal sealed class CrosslightOverlay : IDisposable
             {
                 if (w <= 0 || h <= 0)
                     return;
+                // 位置和大小未变且已可见：跳过 SetWindowPos，避免 SWP_SHOWWINDOW 触发不必要的重绘闪烁
+                if (_lastVisible && x == _lastX && y == _lastY && w == _lastW && h == _lastH)
+                    return;
+                _lastX = x;
+                _lastY = y;
+                _lastW = w;
+                _lastH = h;
+                _lastVisible = true;
                 SetWindowPos(_form.Handle, HwndTopmost, x, y, w, h, SwpNoactivate | SwpShowwindow);
             }
 
-            public void HideBand() => ShowWindow(_form.Handle, SwHide);
+            public void HideBand()
+            {
+                _lastVisible = false;
+                ShowWindow(_form.Handle, SwHide);
+            }
 
             public void Dispose() => _form.Dispose();
         }
