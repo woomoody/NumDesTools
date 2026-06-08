@@ -68,7 +68,7 @@ public static class ExcelConflictEntry
             }
 
             // 每次都 new，避免 ShowDialog 在已关闭窗口上重复调用；始终显示 picker 确保用户可返回上层
-            var picker = new GitConflictPickerWindow(conflictedFiles, skipHash);
+            var picker = new GitConflictPickerWindow(conflictedFiles, skipHash, gitRoot);
             picker.RefreshList(conflictedFiles, lastSelected);
             skipHash = picker.SkipHash;
             if (picker.ShowDialog() != true)
@@ -76,12 +76,19 @@ public static class ExcelConflictEntry
             var chosen = picker.SelectedFile!;
             lastSelected = chosen;
             skipHash = picker.SkipHash;
+            var oursBranch = picker.SelectedBranch;
 
             var workingFilePath = Path.Combine(
                 gitRoot,
                 chosen.Replace('/', Path.DirectorySeparatorChar)
             );
-            var applied = ExtractAndOpen(gitRoot, chosen, workingFilePath, autoGitAdd: true);
+            var applied = ExtractAndOpen(
+                gitRoot,
+                chosen,
+                workingFilePath,
+                autoGitAdd: true,
+                oursBranchHint: oursBranch
+            );
             if (!applied)
                 continue;
         }

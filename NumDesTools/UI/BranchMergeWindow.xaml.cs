@@ -11,9 +11,9 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
 
     public bool IsCherryPick => CherryRadio.IsChecked == true;
 
-    // Cherry 模式：目标固定为当前分支
+    // Cherry 模式：目标从 CurrentBranchBox 读（默认当前分支，可手动选）
     public string? TargetBranch =>
-        IsCherryPick ? _currentBranch : TargetBranchBox.SelectedItem as string;
+        IsCherryPick ? CurrentBranchBox.SelectedItem as string : TargetBranchBox.SelectedItem as string;
 
     public string? SourceBranch => SourceBranchBox.SelectedItem as string;
 
@@ -54,9 +54,10 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
             _loading = true;
             TargetBranchBox.ItemsSource = branches;
             SourceBranchBox.ItemsSource = branches;
+            CurrentBranchBox.ItemsSource = branches;
 
             TargetBranchBox.SelectedItem = _currentBranch;
-            CurrentBranchLabel.Text = _currentBranch;
+            CurrentBranchBox.SelectedItem = _currentBranch;
             SourceBranchBox.SelectedItem =
                 branches.FirstOrDefault(b => b != _currentBranch) ?? branches.FirstOrDefault();
             _loading = false;
@@ -74,7 +75,7 @@ public partial class BranchMergeWindow : MahApps.Metro.Controls.MetroWindow
     {
         CommitList.Items.Clear();
         var source = SourceBranchBox.SelectedItem as string;
-        var target = IsCherryPick ? _currentBranch : TargetBranchBox.SelectedItem as string;
+        var target = TargetBranch;
         if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(target) || source == target)
             return;
 

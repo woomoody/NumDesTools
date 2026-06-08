@@ -43,18 +43,17 @@
                       SelectionChanged="TargetBranch_Changed"/>
         </Grid>
 
-        <!-- 当前分支只读提示（Cherry 模式专用） -->
+        <!-- 当前分支（Cherry 模式专用，可手动选择） -->
         <Grid x:Name="CurrentBranchRow" Grid.Row="2" Visibility="Collapsed" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="110"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Text="当前分支" VerticalAlignment="Center"
+            <TextBlock Text="目标分支 (OURS)" VerticalAlignment="Center"
                        Foreground="{DynamicResource MahApps.Brushes.Gray3}" FontSize="11"/>
-            <TextBlock x:Name="CurrentBranchLabel" Grid.Column="1"
-                       VerticalAlignment="Center"
-                       FontFamily="Consolas" FontSize="11"
-                       Foreground="{DynamicResource MahApps.Brushes.Text}"/>
+            <ComboBox x:Name="CurrentBranchBox" Grid.Column="1"
+                      FontFamily="Consolas" FontSize="11"
+                      SelectionChanged="SourceBranch_Changed"/>
         </Grid>
 
         <!-- 来源分支 -->

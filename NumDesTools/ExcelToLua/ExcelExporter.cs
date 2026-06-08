@@ -108,6 +108,9 @@ namespace NumDesTools.ExcelToLua
         // ReSharper disable once RedundantDefaultMemberInitializer
         public static bool NeedMergeLocalization = false;
 
+        // 本次导出新增的文件（之前不存在），导出完成后通知 Unity 生成 meta
+        private static readonly List<string> _newFiles = [];
+
         public static void ExportAllExcel()
         {
             //bool confirm = EditorUtility.DisplayDialog("导出全部Excel","是否导出全部，耗时长","确定","取消");
@@ -124,6 +127,7 @@ namespace NumDesTools.ExcelToLua
 
         public static void ExportAll(string[] files, int exportType = 0)
         {
+            _newFiles.Clear();
             List<FieldData> luaTableFields = new List<FieldData>();
             var luaCheck = new Lua();
 
@@ -169,6 +173,42 @@ namespace NumDesTools.ExcelToLua
                 "导表完成"
             );
             PluginLog.Write("导表完成!");
+            NotifyUnityForNewFiles();
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        public static void ClearNewFiles() => _newFiles.Clear();
+
+        public static void NotifyUnityForNewFiles()
+        {
+            if (_newFiles.Count == 0)
+                return;
+
+            var unityProcs = System.Diagnostics.Process
+                .GetProcessesByName("Unity")
+                .Where(p => p.MainWindowHandle != IntPtr.Zero)
+                .ToList();
+
+            if (unityProcs.Count > 0)
+            {
+                SetForegroundWindow(unityProcs[0].MainWindowHandle);
+                PluginLog.Write($"[ExcelToLua] 激活 Unity 生成 {_newFiles.Count} 个 .meta");
+            }
+            else
+            {
+                var fileList = string.Join("\n", _newFiles.Select(Path.GetFileName).Take(10));
+                var more = _newFiles.Count > 10 ? $"\n…共 {_newFiles.Count} 个" : "";
+                System.Windows.MessageBox.Show(
+                    $"导出完成，但有 {_newFiles.Count} 个新文件尚未生成 .meta：\n\n{fileList}{more}\n\n请打开 Unity 项目以自动生成。",
+                    "需要打开 Unity",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information
+                );
+            }
+
+            _newFiles.Clear();
         }
 
         private static void CopyDirectory(string src, string dst)
@@ -717,6 +757,8 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
             #endregion 尝试模拟编译检测
 
             File.WriteAllText(path, contents);
+            if (!File.Exists(path + ".meta"))
+                _newFiles.Add(path);
         }
 
         public static void MergeLocalizationLuaFile()

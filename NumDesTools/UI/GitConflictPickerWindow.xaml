@@ -43,6 +43,18 @@
                 BorderThickness="0,1,0,0"
                 Padding="10,8">
             <StackPanel>
+                <!-- 当前分支（OURS）选择 -->
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="当前分支（OURS）：" VerticalAlignment="Center"
+                               Foreground="{DynamicResource MahApps.Brushes.Gray3}"
+                               FontSize="11" Margin="0,0,6,0"/>
+                    <ComboBox x:Name="BranchBox" Grid.Column="1"
+                              FontFamily="Consolas" FontSize="11"/>
+                </Grid>
                 <CheckBox x:Name="SkipHashBox"
                           Content="跳过 # 文件（以对方为准自动解决）"
                           Foreground="{DynamicResource MahApps.Brushes.Gray3}"

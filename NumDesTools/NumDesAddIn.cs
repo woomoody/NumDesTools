@@ -2653,6 +2653,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         List<FieldData> luaTableFields = new List<FieldData>();
 
+        ExcelExporter.ClearNewFiles();
         ExcelExporter.Export(
             path,
             Path.GetFileNameWithoutExtension(path),
@@ -2665,6 +2666,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             ExcelExporter.MergeLocalizationLuaFile();
         }
+        ExcelExporter.NotifyUnityForNewFiles();
     }
 
     public void OutPutExcelDataToLuaAll_Click(IRibbonControl control)
@@ -2678,6 +2680,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         var fileList = win.SelectedPaths;
         var countFile = 0;
+        ExcelExporter.ClearNewFiles();
         foreach (var path in fileList)
         {
             LogDisplay.RecordLine($"[{DateTime.Now}] , {$"{Path.GetFileName(path)}开始导表： "}");
@@ -2699,6 +2702,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         LogDisplay.RecordLine($"[{DateTime.Now}] , 导出结束，共 {countFile} 个文件");
         App.StatusBar = $"导出完成，共 {countFile} 个文件";
+        ExcelExporter.NotifyUnityForNewFiles();
     }
 
     public void CheckColFromExcelMulti_Click(IRibbonControl control)

@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -10,16 +11,46 @@ public partial class GitConflictPickerWindow : MetroWindow
 {
     public string? SelectedFile { get; private set; }
     public bool SkipHash => SkipHashBox.IsChecked == true;
+    public string? SelectedBranch => BranchBox.SelectedItem as string;
 
-    public GitConflictPickerWindow(IReadOnlyList<string> files, bool skipHash)
+    public GitConflictPickerWindow(IReadOnlyList<string> files, bool skipHash, string? gitRoot = null)
     {
         MahAppsHelper.EnsureInitialized();
         MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
 
         SkipHashBox.IsChecked = skipHash;
+        LoadBranches(gitRoot);
         RefreshList(files, null);
         Loaded += (_, _) => FileList.Focus();
+    }
+
+    private void LoadBranches(string? gitRoot)
+    {
+        if (string.IsNullOrEmpty(gitRoot) || !Directory.Exists(gitRoot))
+        {
+            BranchBox.IsEnabled = false;
+            return;
+        }
+        try
+        {
+            using var repo = new LibGit2Sharp.Repository(gitRoot);
+            var current = repo.Head.FriendlyName;
+            var branches = repo.Branches
+                .Where(b => !b.IsRemote)
+                .Select(b => b.FriendlyName)
+                .OrderBy(n => n)
+                .ToList();
+
+            foreach (var b in branches)
+                BranchBox.Items.Add(b);
+
+            BranchBox.SelectedItem = current;
+        }
+        catch
+        {
+            BranchBox.IsEnabled = false;
+        }
     }
 
     public void RefreshList(IReadOnlyList<string> files, string? keepSelected)
