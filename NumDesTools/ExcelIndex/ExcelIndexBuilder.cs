@@ -53,10 +53,15 @@ internal class ExcelIndexBuilder
             });
 
         // 单线程合并 bag → newIndex（避免 Dictionary 并发写）
+        var knownPairs = new HashSet<(int, int)>();
         foreach (var (relPath, sheet, val, row, col, md5) in bag)
         {
             AddHit(newIndex, relPath, sheet, val, row, col);
             newIndex.FileMd5[relPath] = md5;
+            if (newIndex.FileIds.TryGetValue(relPath, out var fid) &&
+                newIndex.SheetIds.TryGetValue(sheet, out var sid) &&
+                knownPairs.Add((fid, sid)))
+                newIndex.AllSheets.Add((fid, sid));
         }
 
         return newIndex;

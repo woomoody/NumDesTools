@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -22,6 +23,9 @@ public class ExcelSearchIndex
     /// <summary>Sheet 名字符串池</summary>
     public List<string> Sheets { get; set; } = new();
 
+    /// <summary>所有 (fileId, sheetId) 组合，用于 sheet 名搜索</summary>
+    public List<(int FileId, int SheetId)> AllSheets { get; set; } = new();
+
     /// <summary>文件相对路径 → MD5，用于增量判断</summary>
     public Dictionary<string, string> FileMd5 { get; set; } = new();
 
@@ -32,6 +36,15 @@ public class ExcelSearchIndex
 
     [JsonIgnore] public Dictionary<string, int> FileIds { get; } = new(StringComparer.OrdinalIgnoreCase);
     [JsonIgnore] public Dictionary<string, int> SheetIds { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>前缀查询用有序 key 数组（RebuildLookups 或 BuildSortedKeys 后可用）</summary>
+    [JsonIgnore] public string[]? SortedKeys { get; private set; }
+
+    /// <summary>构建前缀查询用的有序数组（索引 ready 后调用一次即可）</summary>
+    public void BuildSortedKeys()
+    {
+        SortedKeys = Exact.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray();
+    }
 
     /// <summary>构建完成后同步反向池（从磁盘加载时调用）</summary>
     public void RebuildLookups()

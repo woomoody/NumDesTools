@@ -2408,85 +2408,6 @@ public static class PubMetToExcelFunc
         return targetList;
     }
 
-    public static List<(string, string, int, int)> SearchKeyFromExcelMulti(
-        string rootPath,
-        string findValue
-    )
-    {
-        var filesCollection = new SelfExcelFileCollector(rootPath);
-        var files = filesCollection.GetAllExcelFilesPath();
-
-        var targetBag = new System.Collections.Concurrent.ConcurrentBag<(
-            string,
-            string,
-            int,
-            int
-        )>();
-        var isAll = findValue.Contains("*");
-        findValue = findValue.Replace("*", "");
-        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
-
-        Parallel.ForEach(
-            files,
-            options,
-            file =>
-            {
-                try
-                {
-                    using (var package = new ExcelPackage(new FileInfo(file)))
-                    {
-                        try
-                        {
-                            var wk = package.Workbook;
-                            for (var sheetIndex = 0; sheetIndex < wk.Worksheets.Count; sheetIndex++)
-                            {
-                                var sheet = wk.Worksheets[sheetIndex];
-                                if (
-                                    sheet.Name.Contains("#")
-                                    || sheet.Name.Contains("Sheet") && sheet.Name != "Sheet1"
-                                )
-                                    continue;
-                                int rowMax = Math.Max(sheet.Dimension.End.Row, 4);
-                                int colMax = Math.Max(sheet.Dimension.End.Column, 2);
-                                for (var col = 2; col <= colMax; col++)
-                                for (var row = 4; row <= rowMax; row++)
-                                {
-                                    var cellValue = sheet.Cells[row, col].Value?.ToString();
-                                    var cellAddress = new ExcelCellAddress(row, col);
-                                    var cellCol = cellAddress.Column;
-                                    var cellRow = cellAddress.Row;
-
-                                    if (
-                                        cellValue != null
-                                        && (
-                                            isAll
-                                                ? cellValue.Contains(findValue)
-                                                : cellValue == findValue
-                                        )
-                                    )
-                                    {
-                                        targetBag.Add((file, sheet.Name, cellRow, cellCol));
-                                    }
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            PluginLog.Write(
-                                $"[SearchKeyFromExcelMulti] 内层处理失败: {ex.Message}"
-                            );
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    PluginLog.Write($"[SearchKeyFromExcelMulti] 文件处理失败: {ex.Message}");
-                }
-            }
-        );
-        return targetBag.ToList();
-    }
-
     //Epplus检查是否包含多余列
     public static List<(string, string, int, int)> CheckColFromExcelMulti(
         string rootPath,
@@ -2638,17 +2559,33 @@ public static class PubMetToExcelFunc
     )
     {
         // ── 索引快速路径：精确匹配 + 非特定列模式 + 索引就绪 ──────────────
-        if (!findValue.Contains('*'))
+        var excelsRoot = ExcelIndex.ExcelIndexManager.Instance.ExcelsRoot;
+        var idx = ExcelIndex.ExcelIndexManager.Instance.Index;
+        if (idx != null && excelsRoot != null)
         {
-            var colFilter = searchSpecificColumn ? specificColumnIndex : 0;
-            var indexResult = ExcelIndex.ExcelIndexManager.Instance.TrySearch(findValue, colFilter);
-            if (indexResult != null)
+            if (!findValue.Contains('*'))
             {
-                PluginLog.Write($"[ExcelIndex] search hit: \"{findValue}\" col={colFilter} → {indexResult.Count} results");
-                return indexResult;
+                var colFilter = searchSpecificColumn ? specificColumnIndex : 0;
+                var indexResult = ExcelIndex.ExcelIndexManager.Instance.TrySearch(findValue, colFilter);
+                if (indexResult != null)
+                {
+                    PluginLog.Write($"[ExcelIndex] search hit: \"{findValue}\" col={colFilter} → {indexResult.Count} results");
+                    return indexResult;
+                }
             }
-            PluginLog.Write($"[ExcelIndex] index not ready, fallback full scan");
+            else if (idx.SortedKeys != null)
+            {
+                // 前缀匹配走有序数组二分查找
+                var prefix = findValue.Replace("*", "");
+                var prefixHits = ExcelIndex.ExcelIndexManager.SearchByPrefix(prefix, idx, excelsRoot);
+                if (searchSpecificColumn)
+                    prefixHits = prefixHits.Where(h => h.col == specificColumnIndex).ToList();
+                PluginLog.Write($"[ExcelIndex] prefix hit: \"{prefix}\" → {prefixHits.Count} results");
+                return prefixHits;
+            }
         }
+        else
+            PluginLog.Write($"[ExcelIndex] index not ready, fallback full scan");
 
         var filesCollection = new SelfExcelFileCollector(rootPath);
         var files = filesCollection.GetAllExcelFilesPath();
@@ -2897,6 +2834,19 @@ public static class PubMetToExcelFunc
         bool isMulti
     )
     {
+        // 索引快速路径：所有 ID 均为精确匹配 + 索引就绪 → 无需打开文件
+        var hasPrefix = findValues.Any(v => v.Contains('*'));
+        if (!hasPrefix && files.Length > 0)
+        {
+            var excelsRoot = ExcelIndex.ExcelIndexManager.Instance.ExcelsRoot;
+            var idx = ExcelIndex.ExcelIndexManager.Instance.Index;
+            if (excelsRoot != null && idx != null)
+            {
+                PluginLog.Write($"[ExcelIndex] ModelSearch index hit: {findValues.Count} ids");
+                return BuildModelResultFromIndex(findValues, idx, excelsRoot);
+            }
+        }
+
         // value 用 ConcurrentBag 保证并发 Add 安全
         var targetList = new ConcurrentDictionary<string, ConcurrentBag<string>>(
             StringComparer.Ordinal
@@ -3004,6 +2954,45 @@ public static class PubMetToExcelFunc
         );
     }
 
+    /// <summary>
+    /// 从倒排索引聚合多 ID 搜索结果（仅精确匹配，col=2）。
+    /// 含 * 的 ID 不经此方法（调用方负责 fallback）。
+    /// </summary>
+    public static Dictionary<string, List<string>> BuildModelResultFromIndex(
+        IEnumerable<string> ids,
+        ExcelIndex.ExcelSearchIndex index,
+        string excelsRoot)
+    {
+        var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var root = excelsRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+        foreach (var id in ids)
+        {
+            if (!index.Exact.TryGetValue(id, out var hits)) continue;
+
+            foreach (var hit in hits)
+            {
+                if (hit.Col != 2) continue;
+
+                var relPath = hit.FileId < index.Files.Count ? index.Files[hit.FileId] : "";
+                var absPath = relPath.Length > 0
+                    ? root + relPath.Replace('/', Path.DirectorySeparatorChar)
+                    : relPath;
+                var fileName = Path.GetFileName(absPath);
+                var sheetName = hit.SheetId < index.Sheets.Count ? index.Sheets[hit.SheetId] : "";
+                var key = fileName.Contains('$') ? $"{fileName}#{sheetName}" : fileName;
+
+                if (!result.TryGetValue(key, out var list))
+                {
+                    list = new List<string>();
+                    result[key] = list;
+                }
+                if (!list.Contains(id)) list.Add(id);
+            }
+        }
+        return result;
+    }
+
     //MiniExcel查询：全局查询Sheet名
     public static List<(string, string, int, int)> SearchSheetNameFromExcel(
         string rootPath,
@@ -3011,6 +3000,17 @@ public static class PubMetToExcelFunc
         bool isMulti = false
     )
     {
+        // 索引快速路径
+        var excelsRoot = ExcelIndex.ExcelIndexManager.Instance.ExcelsRoot;
+        var idx = ExcelIndex.ExcelIndexManager.Instance.Index;
+        if (excelsRoot != null && idx != null)
+        {
+            bool isContains = findValue.Contains('*');
+            var searchVal = findValue.Replace("*", "");
+            PluginLog.Write($"[ExcelIndex] SheetName index hit: \"{searchVal}\" contains={isContains}");
+            return ExcelIndex.ExcelIndexManager.SearchSheetNameFromIndex(searchVal, isContains, idx, excelsRoot);
+        }
+
         var filesCollection = new SelfExcelFileCollector(rootPath);
         var files = filesCollection.GetAllExcelFilesPath();
 

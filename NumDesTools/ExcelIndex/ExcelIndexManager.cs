@@ -24,6 +24,32 @@ internal sealed class ExcelIndexManager
     private CancellationTokenSource _cts = new();
 
     public bool IsReady => _index != null;
+    public ExcelSearchIndex? Index => _index;
+    public string? ExcelsRoot => _excelsRoot;
+
+    /// <summary>按 sheet 名搜索，返回 (absPath, sheetName, row=1, col=1) 列表。</summary>
+    public static List<(string file, string sheet, int row, int col)> SearchSheetNameFromIndex(
+        string findValue, bool isContains,
+        ExcelSearchIndex index, string excelsRoot)
+    {
+        var root = excelsRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var result = new List<(string, string, int, int)>();
+
+        foreach (var (fid, sid) in index.AllSheets)
+        {
+            var relPath = fid < index.Files.Count ? index.Files[fid] : "";
+            var sheet   = sid < index.Sheets.Count ? index.Sheets[sid] : "";
+            var absPath = root + relPath.Replace('/', Path.DirectorySeparatorChar);
+            var fileName = Path.GetFileNameWithoutExtension(absPath);
+
+            bool fileMatch  = isContains ? fileName.Contains(findValue) : fileName == findValue;
+            bool sheetMatch = isContains ? sheet.Contains(findValue)    : sheet == findValue;
+
+            if (fileMatch || sheetMatch)
+                result.Add((absPath, sheet, 1, 1));
+        }
+        return result;
+    }
 
     // ── 启动 ────────────────────────────────────────────────────────────────
 
@@ -95,6 +121,7 @@ internal sealed class ExcelIndexManager
             var built = new ExcelIndexBuilder(root).Build(existing, ct: ct);
             if (ct.IsCancellationRequested) return;
 
+            built.BuildSortedKeys();
             built.SaveToDisk(jsonPath);
             _index = built;
             PluginLog.Write($"[ExcelIndex] ready  keys={built.Exact.Count}  files={built.Files.Count}");
@@ -157,6 +184,43 @@ internal sealed class ExcelIndexManager
                 PluginLog.Write($"[ExcelIndex] incremental error: {ex.Message}");
             }
         });
+    }
+
+    /// <summary>前缀搜索：返回所有以 prefix 开头的 cell value 的命中位置。</summary>
+    public static List<(string file, string sheet, int row, int col)> SearchByPrefix(
+        string prefix, ExcelSearchIndex index, string excelsRoot)
+    {
+        var sorted = index.SortedKeys;
+        if (sorted == null || sorted.Length == 0)
+            return new List<(string, string, int, int)>();
+
+        var root = excelsRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var result = new List<(string, string, int, int)>();
+
+        // 二分查找第一个 >= prefix 的位置
+        int lo = 0, hi = sorted.Length;
+        while (lo < hi)
+        {
+            int mid = (lo + hi) / 2;
+            result.Clear(); // just reuse variable for comparison
+            if (string.Compare(sorted[mid], prefix, StringComparison.Ordinal) < 0) lo = mid + 1;
+            else hi = mid;
+        }
+        result.Clear();
+
+        for (int i = lo; i < sorted.Length; i++)
+        {
+            if (!sorted[i].StartsWith(prefix, StringComparison.Ordinal)) break;
+            if (!index.Exact.TryGetValue(sorted[i], out var hits)) continue;
+            foreach (var hit in hits)
+            {
+                var relPath = hit.FileId < index.Files.Count ? index.Files[hit.FileId] : "";
+                var absPath = root + relPath.Replace('/', Path.DirectorySeparatorChar);
+                var sheet   = hit.SheetId < index.Sheets.Count ? index.Sheets[hit.SheetId] : "";
+                result.Add((absPath, sheet, hit.Row, hit.Col));
+            }
+        }
+        return result;
     }
 
     // ── 工具 ────────────────────────────────────────────────────────────────
