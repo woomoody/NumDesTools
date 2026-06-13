@@ -2637,6 +2637,19 @@ public static class PubMetToExcelFunc
         int specificColumnIndex = 2
     )
     {
+        // ── 索引快速路径：精确匹配 + 非特定列模式 + 索引就绪 ──────────────
+        if (!findValue.Contains('*'))
+        {
+            var colFilter = searchSpecificColumn ? specificColumnIndex : 0;
+            var indexResult = ExcelIndex.ExcelIndexManager.Instance.TrySearch(findValue, colFilter);
+            if (indexResult != null)
+            {
+                PluginLog.Write($"[ExcelIndex] search hit: \"{findValue}\" col={colFilter} → {indexResult.Count} results");
+                return indexResult;
+            }
+            PluginLog.Write($"[ExcelIndex] index not ready, fallback full scan");
+        }
+
         var filesCollection = new SelfExcelFileCollector(rootPath);
         var files = filesCollection.GetAllExcelFilesPath();
 

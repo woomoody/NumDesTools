@@ -194,18 +194,11 @@ public class SelfExcelFileCollector(string currentPath)
     public string[] GetAllExcelFilesPath()
     {
         var rootPath = FindRootDirectory(currentPath, "Excels");
-        var paths = new List<string>
-        {
-            Path.Combine(GetParentDirectory(rootPath, 0), "Tables"),
-            Path.Combine(GetParentDirectory(rootPath, 0), "Localizations"),
-            Path.Combine(GetParentDirectory(rootPath, 0), "UIs"),
-            Path.Combine(GetParentDirectory(rootPath, 0), "Tables", "克朗代克"),
-            Path.Combine(GetParentDirectory(rootPath, 0), "Tables", "二合"),
-        };
+        if (rootPath == null)
+            return [];
 
-        var files = paths
-            .SelectMany(path => Directory.Exists(path) ? GetExcelFiles(path) : [])
-            .Where(file => !Path.GetFileName(file).Contains("~")) // 过滤掉包含 ~ 的文件
+        var files = GetExcelFiles(rootPath)
+            .Where(file => !Path.GetFileName(file).Contains("~"))
             .ToArray();
 
         return files;
@@ -274,11 +267,21 @@ public class SelfExcelFileCollector(string currentPath)
         return path;
     }
 
+    // 不扫描这些目录（工具/基础设施，非游戏配置表）
+    private static readonly HashSet<string> _excludeDirs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "TablesTools",
+        "Networks",
+    };
+
     private static IEnumerable<string> GetExcelFiles(string path)
     {
         return Directory
-            .EnumerateFiles(path, "*.xlsx")
-            .Where(file => !Path.GetFileName(file).Contains("#"));
+            .EnumerateFiles(path, "*.xlsx", SearchOption.AllDirectories)
+            .Where(file =>
+                !Path.GetFileName(file).Contains("#") &&
+                !_excludeDirs.Contains(new DirectoryInfo(Path.GetDirectoryName(file)!).Name) &&
+                !file.Split(Path.DirectorySeparatorChar).Any(seg => _excludeDirs.Contains(seg)));
     }
 
     private static string CalculateMd5(string filePath)

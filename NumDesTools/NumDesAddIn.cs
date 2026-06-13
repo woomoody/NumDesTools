@@ -343,9 +343,21 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         _lastClickTimes[control.Id] = DateTime.Now;
 
         App.StatusBar = false;
-        App.Calculation = XlCalculation.xlCalculationManual;
-        App.ScreenUpdating = false;
-        App.EnableEvents = false;
+        try
+        {
+            App.Calculation = XlCalculation.xlCalculationManual;
+            App.ScreenUpdating = false;
+            App.EnableEvents = false;
+        }
+        catch (System.Runtime.InteropServices.COMException ex)
+            when (unchecked((uint)ex.HResult) == 0x800A03EC)
+        {
+            // 单元格处于编辑模式，不能执行插件操作
+            PluginLog.Write($"[ribbon] blocked by cell edit mode");
+            MessageBox.Show("请先按 Esc 退出单元格编辑模式，再使用此功能。", "操作被阻止",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
 
         var sw = new Stopwatch();
         sw.Start();
@@ -1063,6 +1075,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private void ExcelApp_WorkbookActivate(Workbook wb)
     {
         App.StatusBar = wb.FullName;
+
+        // 工作簿激活时按需启动索引构建（同项目则复用，跨项目则切换）
+        if (!string.IsNullOrEmpty(wb.Path))
+            Task.Run(() => ExcelIndex.ExcelIndexManager.Instance.StartForPath(wb.Path));
 
         // WorkbookBeforeClose 在最后一个工作簿关闭时会内部调用 Disable()，
         // 但不更新 FocusLabelText。新工作簿激活时按用户意图自动恢复。

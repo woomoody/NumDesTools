@@ -245,19 +245,22 @@ public static class ConflictApplier
         try
         {
             var mergeMsgPath = Path.Combine(repoRoot, ".git", "MERGE_MSG");
-            if (!File.Exists(mergeMsgPath))
-                return;
-
-            var existing = File.ReadAllText(mergeMsgPath);
             var marker = "解决冲突（NumDesTools）:";
             var line = $"{marker} {fileName}";
 
-            // 已经记录过这个文件则跳过
-            if (existing.Contains(line))
-                return;
-
-            // 追加到末尾（保留原 merge commit message 不变）
-            File.AppendAllText(mergeMsgPath, $"\n{line}");
+            if (File.Exists(mergeMsgPath))
+            {
+                var existing = File.ReadAllText(mergeMsgPath);
+                if (existing.Contains(line))
+                    return;
+                File.AppendAllText(mergeMsgPath, $"\n{line}");
+            }
+            else
+            {
+                // MERGE_MSG 不存在时创建，确保解决记录能写入
+                File.WriteAllText(mergeMsgPath, line);
+            }
+            PluginLog.Write($"[ConflictApplier] MERGE_MSG 已写入: {line}");
         }
         catch (Exception ex)
         {

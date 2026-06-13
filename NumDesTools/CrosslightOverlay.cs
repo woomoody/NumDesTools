@@ -477,30 +477,35 @@ internal sealed class CrosslightOverlay : IDisposable
                 var sb = new System.Text.StringBuilder(64);
                 GetClassName(gti.hwndFocus, sb, 64);
                 var focusClass = sb.ToString();
-                switch (CrosslightController.ClassifyFocusWindow(focusClass))
+                var focusState = CrosslightController.ClassifyFocusWindow(focusClass);
+
+                // 超时兜底：任何非 Editing 焦点状态下，若 _editing 卡 true 超过 600ms
+                // 且无实际编辑迹象，认为 RICHEDIT60W HIDE 漏发，强制清零。
+                // 原仅在 Grid 分支检查，XLDESK/Button 等 default 分支会让 _editing 永久卡死。
+                if (
+                    focusState != CrosslightController.FocusState.Editing
+                    && CrosslightController.IsEditing()
+                    && !CrosslightController.IsExcelEditFocusedPublic()
+                    && !CrosslightController.IsExcelCaretActivePublic()
+                    && CrosslightController.EditingStaleMs() > 600
+                )
+                {
+                    PluginLog.Write(
+                        "[crosslight] stale _editing cleared (HIDE event missed)"
+                    );
+                    CrosslightController.SetEditing(false);
+                }
+
+                switch (focusState)
                 {
                     case CrosslightController.FocusState.Grid:
+                        CrosslightController.SetNativeDialogActive(false);
                         _gridFocused = true;
-                        // 正常路径：编辑态由 WinEvent HIDE 清零，不在轮询中清零（防 IME 抖动误判）。
-                        // 超时兜底：RICHEDIT60W 有时被直接 DestroyWindow 而不发 HIDE 事件，
-                        // 导致 _editing 卡 true。当 Grid 焦点持续 > 1500ms（= 5 次 300ms 轮询）
-                        // 且无 caret/编辑焦点时，认为 HIDE 漏发，强制清零。
-                        if (
-                            CrosslightController.IsEditing()
-                            && !CrosslightController.IsExcelEditFocusedPublic()
-                            && !CrosslightController.IsExcelCaretActivePublic()
-                            && CrosslightController.EditingStaleMs() > 600
-                        )
-                        {
-                            PluginLog.Write(
-                                "[crosslight] stale _editing cleared (HIDE event missed)"
-                            );
-                            CrosslightController.SetEditing(false);
-                        }
                         if (!CrosslightController.IsEditing())
                             _editFreeze = false;
                         break;
                     case CrosslightController.FocusState.Editing:
+                        CrosslightController.SetNativeDialogActive(false);
                         _editFreeze = true;
                         // WinEvent 是权威来源；此处作为 WinEvent 漏报时的防御兜底
                         CrosslightController.SetEditing(true);
@@ -508,6 +513,9 @@ internal sealed class CrosslightOverlay : IDisposable
                             HideBands();
                         break;
                     default:
+                        // 原生对话框（Find/Replace/格式等）激活：屏蔽 refreshTimer 的 COM 调用，
+                        // 防止与 Excel 内部操作并发导致堆损坏（0xc0000374）
+                        CrosslightController.SetNativeDialogActive(true);
                         PluginLog.Write($"[crosslight] else-branch focusClass={focusClass}");
                         _gridFocused = false;
                         _editFreeze = false;
@@ -710,6 +718,9 @@ internal static class CrosslightController
     // - OnSelectionChange 在 inline 编辑结束后负责清零（WinEvent 不覆盖 inline 编辑）
     private static volatile bool _editing;
 
+    // Excel 原生对话框（Find/Replace、格式等）激活时置 true，防止 refreshTimer COM 调用并发
+    private static volatile bool _nativeDialogActive;
+
     // WinEventHook 相关字段
     private static IntPtr _winEventHook = IntPtr.Zero;
     private static WinEventDelegate? _winEventProc; // 必须持有强引用，防 GC 回收后回调崩溃
@@ -806,7 +817,9 @@ internal static class CrosslightController
     // 统一宏抑制闸门：入队前调一次 + 宏体首行调一次，封死 TOCTOU 时间窗。
     // _editing 由 WinEvent 权威管理，保留两道 Win32 探测作为纯防御兜底。
     internal static bool ShouldSuppressMacro() =>
-        _paused || _editing || IsExcelEditFocused() || IsExcelCaretActive();
+        _paused || _editing || _nativeDialogActive || IsExcelEditFocused() || IsExcelCaretActive();
+
+    internal static void SetNativeDialogActive(bool active) => _nativeDialogActive = active;
 
     internal static void SetEditing(bool editing)
     {
