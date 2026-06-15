@@ -150,6 +150,12 @@ namespace NumDesTools.ExcelToLua
     
     private static string Cell2JsonValue2(CellData cell, FieldData field)
     {
+        string v;
+        if (field.activeDefaultValue)
+            v = string.IsNullOrEmpty(cell.value) ? field.defaultValue : cell.value;
+        else
+            v = cell.value;
+
         switch (field.type)
         {
             case FieldTypeDefine.INT:
@@ -157,20 +163,13 @@ namespace NumDesTools.ExcelToLua
             case FieldTypeDefine.FLOAT:
             case FieldTypeDefine.DOUBLE:
             case FieldTypeDefine.NUMBER:
-                if (field.activeDefaultValue)
-                {
-                    return field.defaultValue;
-                }
-                else
-                {
-                    //json number
-                    return cell.value;
-                }
+                return v;
             case FieldTypeDefine.BOOLEAN:
-                return cell.value == "true" ? "true" : "false";
+                return v == "true" ? "true" : "false";
             case FieldTypeDefine.STRING:
-                if (cell.value.Contains("\"")) return cell.value.Replace("\"", "\\\"");
-                return $"\"{cell.value}\"";
+                if (v.Contains("\""))
+                    return v.Replace("\"", "\\\"");
+                return $"\"{v}\"";
             case FieldTypeDefine.INT_ARRAY:
             case FieldTypeDefine.LONG_ARRAY:
             case FieldTypeDefine.FLOAT_ARRAY:
@@ -181,10 +180,7 @@ namespace NumDesTools.ExcelToLua
             case FieldTypeDefine.NUMBER_ARRAY:
             case FieldTypeDefine.OBJECT_ARRAY:
             case FieldTypeDefine.OBJECT_ARRAY2:
-                // if (string.IsNullOrEmpty(cell.value)) return "{}";
-                // if (cell.value.IndexOf('[') < 0)return $"{{{cell.value}}}";
-                // return cell.value.Replace('[', '{').Replace(']', '}');
-                return cell.value;
+                return v;
         }
         return string.Empty;
     }
