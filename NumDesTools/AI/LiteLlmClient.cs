@@ -61,10 +61,21 @@ public class LiteLlmClient : ILlmClient
         );
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-        var response = await Client.SendAsync(request, ct);
-        var responseContent = await response.Content.ReadAsStringAsync();
-        if (!response.IsSuccessStatusCode)
-            throw new Exception($"API 调用失败 {response.StatusCode}：{responseContent}");
+        HttpResponseMessage response;
+        string responseContent;
+        try
+        {
+            response = await Client.SendAsync(request, ct);
+            responseContent = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+                throw new Exception($"API 调用失败 {response.StatusCode}：{responseContent}");
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested && IsContentFilterError(ex)
+                                   && model != FallbackModel)
+        {
+            PluginLog.Write($"[LLM] 内容过滤，fallback → {FallbackModel}");
+            return await CallAsync(FallbackModel, systemContent, userContent, apiKey, apiUrl, ct);
+        }
 
         var json = JObject.Parse(responseContent);
         return json["choices"]?[0]?["message"]?["content"]?.ToString() ?? "";
@@ -89,12 +100,20 @@ public class LiteLlmClient : ILlmClient
         );
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-        using var response = await Client.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            ct
-        );
-        response.EnsureSuccessStatusCode();
+        HttpResponseMessage response;
+        try
+        {
+            response = await Client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+            response.EnsureSuccessStatusCode();
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested && IsContentFilterError(ex)
+                                   && model != FallbackModel)
+        {
+            PluginLog.Write($"[LLM] 流式内容过滤，fallback → {FallbackModel}");
+            await CallStreamAsync(FallbackModel, messages, apiKey, apiUrl,
+                onChunkReceived, onCompleted, ct);
+            return;
+        }
 
         using var stream = await response.Content.ReadAsStreamAsync();
         using var reader = new StreamReader(stream);
@@ -130,6 +149,18 @@ public class LiteLlmClient : ILlmClient
             PluginLog.Write($"FetchModels 失败: {ex.Message}");
             return [];
         }
+    }
+
+    private const string FallbackModel = "claude-sonnet-4-6";
+    private static readonly string[] ContentFilterKeywords =
+        ["inappropriate content", "content policy", "content_filter", "DashscopeException"];
+
+    /// <summary>判断异常是否为内容过滤拦截（deepseek/qwen 等模型）</summary>
+    public static bool IsContentFilterError(Exception ex)
+    {
+        var msg = ex.Message ?? ex.InnerException?.Message ?? "";
+        return ContentFilterKeywords.Any(k =>
+            msg.Contains(k, StringComparison.OrdinalIgnoreCase));
     }
 
     private static void ProcessLine(string json, Action<string> handler)

@@ -130,18 +130,19 @@
                 BorderThickness="1">
                 <avalonEdit:TextEditor
                     x:Name="PromptInput"
-                    Height="80"
+                    MinHeight="36"
+                    MaxHeight="200"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
                     Background="#1c1c1c"
-                    FontSize="13"
+                    FontSize="10pt"
                     Foreground="Gray"
                     GotFocus="PromptInput_GotFocus"
-                    HorizontalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled"
                     LostFocus="PromptInput_LostFocus"
                     PreviewKeyDown="PromptInput_PreviewKeyDown"
                     ShowLineNumbers="False"
-                    VerticalScrollBarVisibility="Auto" />
+                    VerticalScrollBarVisibility="Hidden" />
             </Border>
             <Button
                 x:Name="SendButton"

@@ -17,21 +17,32 @@ public partial class AIAgentPanel
 {
     private CancellationTokenSource _cts;
     private readonly List<object> _history = [];
-    private const int MaxHistoryMessages = 60; // 约 ~30轮对话，超出后保留 system + 最近消息防 token 超限
+    private const int MaxHistoryMessages = 60;
+    private bool _isRunning;
+    // 执行中的插话队列：Enter 发送时入队，每步循环开头注入对话
+    private readonly System.Collections.Concurrent.ConcurrentQueue<string> _interjectQueue = new();
 
     private static readonly string HtmlTemplate =
         @"<html><head><meta charset='utf-8'><style>
-body{background:#1c1c1c;color:#e0e0e0;font-family:微软雅黑,monospace;line-height:1.6;margin:0;padding:8px;overflow-y:auto}
-.msg{margin:6px 0;max-width:96%}
+body{background:#1c1c1c;color:#d4d4d4;font-family:'微软雅黑',sans-serif;font-size:10pt;line-height:1.5;margin:0;padding:8px 10px;overflow-y:auto}
+.msg{margin:5px 0;max-width:98%}
 .msg.user{margin-left:auto;text-align:right}
 .msg.assistant{margin-left:0}
-.role{font-size:.78em;color:#666;margin-bottom:2px}
-.role .ts{color:#444}
-.content{display:inline-block;padding:7px 10px;border-radius:8px;word-wrap:break-word;text-align:left;max-width:100%}
-.user .content{background:#1e3a5f;color:#e0e0e0}
-.assistant .content{background:#3e3e42;color:#e0e0e0}
-pre{background:#2d2d30;color:#dcdcdc;padding:8px;border-radius:6px;overflow-x:auto;font-size:.85em}
-code{font-family:Consolas,monospace;background:#2d2d30;padding:1px 3px;border-radius:3px;font-size:.85em}
+.role{font-size:.72em;color:#555;margin-bottom:2px}
+.role .ts{color:#3d3d3d}
+.content{display:inline-block;padding:6px 10px;border-radius:7px;word-wrap:break-word;text-align:left;max-width:100%}
+.user .content{background:#1e3a5f;color:#e8e8e8}
+.assistant .content{background:#2a2a30;color:#e8e8e8}
+.content p{margin:3px 0}
+.content h1,.content h2,.content h3{font-size:1em;font-weight:bold;margin:4px 0 2px}
+pre{background:#252526;color:#dcdcdc;padding:7px;border-radius:5px;overflow-x:auto;font-size:10pt;margin:4px 0}
+code{font-family:Consolas,monospace;background:#252526;padding:1px 3px;border-radius:3px;font-size:10pt}
+table{border-collapse:collapse;font-size:.88em;margin:4px 0;width:auto}
+th,td{border:1px solid #555;padding:3px 8px;text-align:left;white-space:nowrap}
+th{background:#2a2d2e;color:#c6c6c6;font-weight:bold}
+tr:nth-child(even) td{background:#2a2a2a}
+ul,ol{margin:3px 0;padding-left:18px}
+li{margin:1px 0}
 a[href^='excel://']{color:#4ec9b0;text-decoration:none;border-bottom:1px dashed #4ec9b0}
 a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 </style></head><body></body></html>";
@@ -510,6 +521,96 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 },
             },
         },
+
+        // ── P0 新工具定义 ─────────────────────────────────────────────────────
+        new { type="function", function=new { name="get_active_cell",
+            description="获取当前活动单元格的地址、值及所在 Sheet 名",
+            parameters=new { type="object", properties=new { }, required=Array.Empty<string>() } } },
+
+        new { type="function", function=new { name="navigate_to",
+            description="跳转到指定 Sheet 的指定单元格并激活",
+            parameters=new { type="object", properties=new {
+                sheet_name=new{type="string",description="Sheet 名"},
+                address=new{type="string",description="单元格地址如 A1"} },
+                required=new[]{"address"} } } },
+
+        new { type="function", function=new { name="manage_sheet",
+            description="新建/删除/重命名/复制/移动 Sheet",
+            parameters=new { type="object", properties=new {
+                action=new{type="string",description="create|delete|rename|copy|move"},
+                sheet_name=new{type="string",description="操作的 Sheet 名"},
+                new_name=new{type="string",description="新名称（rename 时用）"},
+                target_position=new{type="integer",description="目标位置 1-based（move/copy 时）"},
+                copy_before=new{type="string",description="复制到哪个 Sheet 前面"} },
+                required=new[]{"action","sheet_name"} } } },
+
+        new { type="function", function=new { name="save_workbook",
+            description="保存当前工作簿，或另存为指定路径",
+            parameters=new { type="object", properties=new {
+                save_as_path=new{type="string",description="另存路径，不传则原路径保存"},
+                file_format=new{type="string",description="xlsx|xlsm|csv"} },
+                required=Array.Empty<string>() } } },
+
+        new { type="function", function=new { name="find_replace",
+            description="在指定区域执行查找替换，返回完成提示",
+            parameters=new { type="object", properties=new {
+                find=new{type="string",description="查找内容"},
+                replace=new{type="string",description="替换内容"},
+                sheet_name=new{type="string",description="Sheet 名，不传用当前"},
+                address=new{type="string",description="范围，不传用整 Sheet"},
+                match_case=new{type="boolean",description="是否区分大小写"},
+                match_entire_cell=new{type="boolean",description="是否整单元格匹配"} },
+                required=new[]{"find","replace"} } } },
+
+        new { type="function", function=new { name="insert_delete_rows_cols",
+            description="插入或删除整行/整列",
+            parameters=new { type="object", properties=new {
+                action=new{type="string",description="insert_rows|delete_rows|insert_cols|delete_cols"},
+                sheet_name=new{type="string",description="Sheet 名"},
+                start=new{type="integer",description="起始行/列号（1-based）"},
+                count=new{type="integer",description="数量，默认 1"} },
+                required=new[]{"action","sheet_name","start"} } } },
+
+        new { type="function", function=new { name="sort_range",
+            description="对指定区域按列排序",
+            parameters=new { type="object", properties=new {
+                sheet_name=new{type="string",description="Sheet 名"},
+                address=new{type="string",description="排序区域如 A1:D100"},
+                key_column=new{type="integer",description="排序键相对列号（1-based）"},
+                ascending=new{type="boolean",description="true 升序 false 降序"},
+                has_header=new{type="boolean",description="是否有标题行"} },
+                required=new[]{"sheet_name","address","key_column"} } } },
+
+        new { type="function", function=new { name="set_number_format",
+            description="设置单元格数字格式，如日期、百分比、货币、小数位数",
+            parameters=new { type="object", properties=new {
+                sheet_name=new{type="string",description="Sheet 名"},
+                address=new{type="string",description="单元格/区域地址"},
+                format_string=new{type="string",description="格式字符串如 0.00% / yyyy-mm-dd / #,##0.00"} },
+                required=new[]{"sheet_name","address","format_string"} } } },
+
+        new { type="function", function=new { name="download_image",
+            description="从 URL 下载图片到本地临时文件，返回本地路径供 insert_image 使用",
+            parameters=new { type="object", properties=new {
+                url=new{type="string",description="图片 URL"} },
+                required=new[]{"url"} } } },
+
+        new { type="function", function=new { name="generate_image",
+            description="根据文字描述用 AI 生成一张图片，保存到本地临时文件，返回文件路径。调用后必须立即用 insert_image 将该路径插入 Excel 单元格。",
+            parameters=new { type="object", properties=new {
+                prompt=new{type="string",description="图片内容描述，支持中英文，越详细越好，例如：一只在草地上奔跑的橙色猫咪，卡通风格"},
+                model=new{type="string",description="生图模型，可选：gemini-3.1-flash-image-preview（快速，默认）、gemini-3-pro-image-preview（高质量）"} },
+                required=new[]{"prompt"} } } },
+
+        new { type="function", function=new { name="insert_image",
+            description="将本地图片文件插入 Excel 指定单元格位置，图片左上角对齐单元格左上角。通常与 generate_image 或 download_image 配合使用。",
+            parameters=new { type="object", properties=new {
+                sheet_name=new{type="string",description="工作表名称，留空则用当前活动表"},
+                file_path=new{type="string",description="本地图片完整路径，通常来自 generate_image 返回值，如 C:\\Users\\cent\\AppData\\Local\\Temp\\ndtools_gen_xxx.png"},
+                anchor_address=new{type="string",description="插入位置的单元格地址，例如 B3"},
+                width_pt=new{type="number",description="图片宽度（磅），不填则保持原始尺寸"},
+                height_pt=new{type="number",description="图片高度（磅），不填则保持原始尺寸"} },
+                required=new[]{"file_path","anchor_address"} } } },
     ];
 
     // 匹配 Sheet1!A1:B5 / A1:B5 / A1 形式的单元格地址
@@ -524,24 +625,41 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         PopulateModelList();
         ChatOutput.NavigateToString(HtmlTemplate);
         ChatOutput.Navigating += ChatOutput_Navigating;
-        // CTP 内 WebBrowser 的键盘事件会被 Excel 截走，LoadCompleted 后注入 keydown 拦截
+        // CTP 内 WebBrowser 的键盘事件会被 Excel 截走：
+        // cancelBubble 阻止事件冒泡到 Excel，并主动调用 execCommand 保证 Ctrl+C/A/X 可用
         ChatOutput.LoadCompleted += (_, _) =>
         {
             try
             {
                 dynamic doc = ChatOutput.Document;
+                // 点击时确保文档获得焦点，Ctrl+C 才能稳定工作
+                doc.attachEvent("onmousedown", new Action<dynamic>(_ => doc.body.focus()));
                 doc.attachEvent(
                     "onkeydown",
                     new Action<dynamic>(e =>
                     {
-                        // Ctrl+C / Ctrl+A 不阻止，让 IE 内核自己处理
-                        if ((int)e.ctrlKey == 1)
-                            e.cancelBubble = true;
+                        if ((int)e.ctrlKey != 1) return;
+                        e.cancelBubble = true;
+                        e.returnValue = false;
+                        int keyCode = (int)e.keyCode;
+                        if (keyCode == 67) doc.execCommand("Copy",     false, null); // Ctrl+C
+                        if (keyCode == 65) doc.execCommand("SelectAll", false, null); // Ctrl+A
+                        if (keyCode == 88) doc.execCommand("Cut",      false, null); // Ctrl+X
                     })
                 );
             }
             catch { }
         };
+        // TextBox 也需要拦截，防止 Excel 截走 Ctrl+C/A/X/Z/Y
+        AttachClipboardKeys(TaskInput);
+        AttachClipboardKeys(CustomInstructionInput);
+        // 深色主题：输入框默认背景
+        var darkBg = new System.Windows.Media.SolidColorBrush(
+            System.Windows.Media.Color.FromRgb(0x1e, 0x1e, 0x1e));
+        TaskInput.Background = darkBg;
+        CustomInstructionInput.Background = darkBg;
+        TaskInput.CaretBrush = new System.Windows.Media.SolidColorBrush(
+            System.Windows.Media.Colors.White);
         CustomInstructionInput.Text = AppServices.Config.Agent.CustomInstruction;
         CustomInstructionInput.LostFocus += (_, _) =>
         {
@@ -595,15 +713,45 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             : ModelComboBox.Items[0];
     }
 
+    /// <summary>给 TextBox 注入 Ctrl+C/X/A/Z/Y 拦截，防止 CTP 内 Excel 截走快捷键</summary>
+    private static void AttachClipboardKeys(System.Windows.Controls.TextBox tb)
+    {
+        tb.PreviewKeyDown += (_, e) =>
+        {
+            if (Keyboard.Modifiers != ModifierKeys.Control) return;
+            switch (e.Key)
+            {
+                case Key.C: tb.Copy();  e.Handled = true; break;
+                case Key.X: tb.Cut();   e.Handled = true; break;
+                case Key.A: tb.SelectAll(); e.Handled = true; break;
+                case Key.Z: tb.Undo(); e.Handled = true; break;
+            }
+        };
+    }
+
     private void TaskInput_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter)
             return;
         e.Handled = true;
         if ((e.KeyboardDevice.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+        {
             TaskInput.AppendText(Environment.NewLine);
+            return;
+        }
+        var text = TaskInput.Text.Trim();
+        if (string.IsNullOrEmpty(text)) return;
+        if (_isRunning)
+        {
+            // 执行中：插话，不启动新任务
+            _interjectQueue.Enqueue(text);
+            AppendChat("user", $"💬 {text}");
+            TaskInput.Clear();
+        }
         else
+        {
             RunButton_Click(RunButton, new RoutedEventArgs());
+        }
     }
 
     private void StopButton_Click(object sender, RoutedEventArgs e)
@@ -619,12 +767,16 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             return;
 
         _cts = new CancellationTokenSource();
+        _isRunning = true;
         RunButton.IsEnabled = false;
         StopButton.IsEnabled = true;
         StepsList.Items.Clear();
         AppendChat("user", task);
         TaskInput.Clear();
-        SetStatus("执行中…");
+        TaskInput.IsEnabled = true; // 执行中保持可输入（用于插话）
+        TaskInput.Background = new System.Windows.Media.SolidColorBrush(
+            System.Windows.Media.Color.FromRgb(0x1a, 0x1a, 0x28)); // 微调颜色提示"插话模式"
+        SetStatus("执行中… (输入可插话)");
 
         try
         {
@@ -641,8 +793,11 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         }
         finally
         {
+            _isRunning = false;
             RunButton.IsEnabled = true;
             StopButton.IsEnabled = false;
+            TaskInput.Background = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(0x1e, 0x1e, 0x1e));
         }
     }
 
@@ -669,6 +824,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 + "- Lua 配置对比：用 list_lua_tables 查看可用表，再用 read_lua_table 读取\n"
                 + "- 跨表外键验证：用 check_cross_ref\n"
                 + "每次只调用一个工具，等待结果后再决定下一步。完成后用 Markdown 输出简洁的结果说明。\n"
+                + "图片操作规则：当用户要求生成图片并插入 Excel 时，必须先调用 generate_image 得到文件路径，再将路径传给 insert_image，两步必须连续执行，不能只做其中一步。\n"
                 + "重要：如果你在上一条消息中给出了编号选项（如 1. 2. 3.），用户回复单个数字时，请将其理解为选择对应选项，直接执行该选项对应的操作，不要再次询问。";
             if (!string.IsNullOrEmpty(customInstruction))
                 systemContent += $"\n\n用户自定义指令（始终遵守）：{customInstruction}";
@@ -694,6 +850,14 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         for (var step = 1; step <= maxSteps; step++)
         {
             ct.ThrowIfCancellationRequested();
+
+            // 插话注入：每步开头检查用户是否在执行中发送了新消息
+            while (_interjectQueue.TryDequeue(out var injection))
+            {
+                messages.Add(new { role = "user", content = injection });
+                AddStep($"💬 插话：{injection[..Math.Min(40, injection.Length)]}");
+            }
+
             SetStatus($"步骤 {step}/{maxSteps}…");
 
             var (content, toolCalls) = await CallWithToolsAsync(
@@ -869,6 +1033,64 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 "cost_curve_fit" => ToolCostCurveFit(
                     args["sheet_name"]?.ToString() ?? "",
                     args["col_range"]?.ToString() ?? ""
+                ),
+                // ── P0 新工具 ────────────────────────────────────────────────────
+                "get_active_cell"   => ToolGetActiveCell(),
+                "navigate_to"       => ToolNavigateTo(
+                    args["sheet_name"]?.ToString() ?? "",
+                    args["address"]?.ToString() ?? "A1"
+                ),
+                "manage_sheet"      => ToolManageSheet(
+                    args["action"]?.ToString() ?? "",
+                    args["sheet_name"]?.ToString() ?? "",
+                    args["new_name"]?.ToString(),
+                    (int?)(args["target_position"]),
+                    args["copy_before"]?.ToString()
+                ),
+                "save_workbook"     => ToolSaveWorkbook(
+                    args["save_as_path"]?.ToString(),
+                    args["file_format"]?.ToString()
+                ),
+                "find_replace"      => ToolFindReplace(
+                    args["find"]?.ToString() ?? "",
+                    args["replace"]?.ToString() ?? "",
+                    args["sheet_name"]?.ToString(),
+                    args["address"]?.ToString(),
+                    (bool)(args["match_case"] ?? false),
+                    (bool)(args["match_entire_cell"] ?? false)
+                ),
+                "insert_delete_rows_cols" => ToolInsertDeleteRowsCols(
+                    args["action"]?.ToString() ?? "",
+                    args["sheet_name"]?.ToString() ?? "",
+                    (int)(args["start"] ?? 1),
+                    (int)(args["count"] ?? 1)
+                ),
+                "sort_range"        => ToolSortRange(
+                    args["sheet_name"]?.ToString() ?? "",
+                    args["address"]?.ToString() ?? "",
+                    (int)(args["key_column"] ?? 1),
+                    (bool)(args["ascending"] ?? true),
+                    (bool)(args["has_header"] ?? true)
+                ),
+                "set_number_format" => ToolSetNumberFormat(
+                    args["sheet_name"]?.ToString() ?? "",
+                    args["address"]?.ToString() ?? "",
+                    args["format_string"]?.ToString() ?? "General"
+                ),
+                // ── 图片插入 ─────────────────────────────────────────────────────
+                "insert_image"      => ToolInsertImage(
+                    args["sheet_name"]?.ToString() ?? "",
+                    args["file_path"]?.ToString() ?? "",
+                    args["anchor_address"]?.ToString() ?? "A1",
+                    (double?)(args["width_pt"]),
+                    (double?)(args["height_pt"])
+                ),
+                "download_image"    => ToolDownloadImage(args["url"]?.ToString() ?? ""),
+                "generate_image"    => ToolGenerateImage(
+                    args["prompt"]?.ToString() ?? "",
+                    args["model"]?.ToString() ?? "gemini-3.1-flash-image-preview",
+                    AppServices.Config.Llm.ApiKey,
+                    AppServices.Config.Llm.ChatCompletionsUrl
                 ),
                 _ => $"未知工具: {toolName}",
             };
@@ -1708,5 +1930,279 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 $"document.body.insertAdjacentHTML('beforeend','{HttpUtility.JavaScriptStringEncode(block)}');window.scrollTo(0,document.body.scrollHeight);"
             );
         });
+    }
+
+    // ── P0 新工具实现 ─────────────────────────────────────────────────────────
+
+    private static string ToolGetActiveCell()
+    {
+        var cell = AppServices.App.ActiveCell;
+        var sheet = (string)AppServices.App.ActiveSheet.Name;
+        return $"Sheet: {sheet}, Address: {cell.Address}, Value: {cell.Value2}";
+    }
+
+    private static string ToolNavigateTo(string sheetName, string address)
+    {
+        var ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
+        ws.Activate();
+        ws.Range[address].Select();
+        return $"已跳转到 {ws.Name}!{address}";
+    }
+
+    private static string ToolManageSheet(string action, string sheetName, string? newName,
+        int? targetPosition, string? copyBefore)
+    {
+        var wb = AppServices.App.ActiveWorkbook;
+        switch (action)
+        {
+            case "create":
+                var ns = wb.Sheets.Add();
+                ns.Name = string.IsNullOrEmpty(newName) ? sheetName : newName;
+                return $"已创建 Sheet: {ns.Name}";
+            case "delete":
+                var ds = FindSheet(sheetName);
+                if (ds == null) return $"Sheet 不存在: {sheetName}";
+                AppServices.App.DisplayAlerts = false;
+                ds.Delete();
+                AppServices.App.DisplayAlerts = true;
+                return $"已删除 Sheet: {sheetName}";
+            case "rename":
+                var rs = FindSheet(sheetName);
+                if (rs == null) return $"Sheet 不存在: {sheetName}";
+                rs.Name = newName ?? sheetName;
+                return $"已重命名为: {rs.Name}";
+            case "copy":
+                var cs = FindSheet(sheetName);
+                if (cs == null) return $"Sheet 不存在: {sheetName}";
+                var before = string.IsNullOrEmpty(copyBefore) ? null : FindSheet(copyBefore);
+                if (before != null) cs.Copy(before); else cs.Copy();
+                return $"已复制 Sheet: {sheetName}";
+            case "move":
+                var ms = FindSheet(sheetName);
+                if (ms == null) return $"Sheet 不存在: {sheetName}";
+                if (targetPosition.HasValue)
+                    ms.Move(wb.Sheets[targetPosition.Value]);
+                return $"已移动 Sheet: {sheetName}";
+            default:
+                return $"未知 action: {action}";
+        }
+    }
+
+    private static string ToolSaveWorkbook(string? saveAsPath, string? fileFormat)
+    {
+        var wb = AppServices.App.ActiveWorkbook;
+        if (string.IsNullOrEmpty(saveAsPath))
+        {
+            wb.Save();
+            return "工作簿已保存";
+        }
+        var fmt = fileFormat?.ToLower() switch
+        {
+            "csv"  => Microsoft.Office.Interop.Excel.XlFileFormat.xlCSV,
+            "xlsm" => Microsoft.Office.Interop.Excel.XlFileFormat.xlOpenXMLWorkbookMacroEnabled,
+            _      => Microsoft.Office.Interop.Excel.XlFileFormat.xlOpenXMLWorkbook,
+        };
+        wb.SaveAs(saveAsPath, fmt);
+        return $"已另存为: {saveAsPath}";
+    }
+
+    private static string ToolFindReplace(string find, string replace, string? sheetName,
+        string? address, bool matchCase, bool matchEntireCell)
+    {
+        dynamic rng;
+        if (!string.IsNullOrEmpty(sheetName))
+        {
+            var ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
+            rng = string.IsNullOrEmpty(address) ? ws.UsedRange : ws.Range[address];
+        }
+        else
+        {
+            rng = AppServices.App.ActiveSheet.UsedRange;
+        }
+        rng.Replace(find, replace,
+            matchCase ? Microsoft.Office.Interop.Excel.XlLookAt.xlWhole : Microsoft.Office.Interop.Excel.XlLookAt.xlPart,
+            Microsoft.Office.Interop.Excel.XlSearchOrder.xlByRows,
+            matchCase, Type.Missing, Type.Missing, Type.Missing);
+        return $"查找替换完成：\"{find}\" → \"{replace}\"";
+    }
+
+    private static string ToolInsertDeleteRowsCols(string action, string sheetName, int start, int count)
+    {
+        var ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
+        switch (action)
+        {
+            case "insert_rows":
+                ((dynamic)ws.Rows[start]).Resize[count].Insert();
+                return $"已在第 {start} 行插入 {count} 行";
+            case "delete_rows":
+                ((dynamic)ws.Rows[start]).Resize[count].Delete();
+                return $"已删除第 {start} 行起 {count} 行";
+            case "insert_cols":
+                ((dynamic)ws.Columns[start]).Resize[1, count].Insert();
+                return $"已在第 {start} 列插入 {count} 列";
+            case "delete_cols":
+                ((dynamic)ws.Columns[start]).Resize[1, count].Delete();
+                return $"已删除第 {start} 列起 {count} 列";
+            default:
+                return $"未知 action: {action}";
+        }
+    }
+
+    private static string ToolSortRange(string sheetName, string address, int keyColumn,
+        bool ascending, bool hasHeader)
+    {
+        var ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
+        dynamic rng = ws.Range[address];
+        var key = rng.Columns[keyColumn];
+        var order = ascending
+            ? Microsoft.Office.Interop.Excel.XlSortOrder.xlAscending
+            : Microsoft.Office.Interop.Excel.XlSortOrder.xlDescending;
+        var header = hasHeader
+            ? Microsoft.Office.Interop.Excel.XlYesNoGuess.xlYes
+            : Microsoft.Office.Interop.Excel.XlYesNoGuess.xlNo;
+        rng.Sort(key, order, Type.Missing, Type.Missing, Type.Missing,
+            Type.Missing, Type.Missing, header);
+        return $"已排序 {address}，键列 {keyColumn}，{(ascending ? "升序" : "降序")}";
+    }
+
+    private static string ToolSetNumberFormat(string sheetName, string address, string formatString)
+    {
+        var ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
+        ws.Range[address].NumberFormat = formatString;
+        return $"已设置 {address} 数字格式为: {formatString}";
+    }
+
+    private static string ToolInsertImage(string sheetName, string filePath, string anchorAddress,
+        double? widthPt, double? heightPt)
+    {
+        if (!File.Exists(filePath))
+            return $"文件不存在: {filePath}";
+        var ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
+        dynamic anchor = ws.Range[anchorAddress];
+        float left = (float)(double)anchor.Left;
+        float top  = (float)(double)anchor.Top;
+        float w    = widthPt.HasValue  ? (float)widthPt.Value  : -1;
+        float h    = heightPt.HasValue ? (float)heightPt.Value : -1;
+        ws.Shapes.AddPicture(filePath,
+            Microsoft.Office.Core.MsoTriState.msoFalse,
+            Microsoft.Office.Core.MsoTriState.msoTrue,
+            left, top, w, h);
+        return $"已插入图片 {Path.GetFileName(filePath)} 到 {anchorAddress}";
+    }
+
+    /// <summary>从 URL 下载图片到本地临时文件，返回本地路径</summary>
+    private static string ToolDownloadImage(string url)
+    {
+        try
+        {
+            using var client = new System.Net.Http.HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(30);
+            var bytes = client.GetByteArrayAsync(url).GetAwaiter().GetResult();
+            var ext   = Path.GetExtension(new Uri(url).AbsolutePath);
+            if (string.IsNullOrEmpty(ext)) ext = ".png";
+            var path = Path.Combine(Path.GetTempPath(), $"ndtools_img_{DateTime.Now.Ticks}{ext}");
+            File.WriteAllBytes(path, bytes);
+            return $"下载成功: {path}";
+        }
+        catch (Exception ex)
+        {
+            return $"下载失败: {ex.Message}";
+        }
+    }
+
+    private static string SaveBase64ToPng(string b64)
+    {
+        var bytes = Convert.FromBase64String(b64);
+        var path = Path.Combine(Path.GetTempPath(), $"ndtools_gen_{DateTime.Now.Ticks}.png");
+        File.WriteAllBytes(path, bytes);
+        return $"图片已生成: {path}";
+    }
+
+    /// <summary>
+    /// 生成图片三阶段：
+    /// 1. /images/generations（LiteLLM 图片端点，gemini-3.1-flash-image-preview 已验证可用）
+    /// 2. chat/completions multimodal 回退（解析 message.images[0].image_url.url）
+    /// 3. Pollinations.ai 免费公网兜底
+    /// </summary>
+    private static string ToolGenerateImage(string prompt, string model, string apiKey, string apiUrl)
+    {
+        try
+        {
+            // 先尝试 OpenAI images/generations 端点
+            var imgUrl = apiUrl.Replace("/chat/completions", "/images/generations");
+            using var client = new System.Net.Http.HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(60);
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+
+            var body = Newtonsoft.Json.JsonConvert.SerializeObject(new
+            {
+                model,
+                prompt,
+                n = 1,
+                size = "1024x1024",
+                response_format = "b64_json",
+            });
+            var resp = client.PostAsync(imgUrl,
+                new System.Net.Http.StringContent(body, System.Text.Encoding.UTF8, "application/json"))
+                .GetAwaiter().GetResult();
+            var json = Newtonsoft.Json.Linq.JObject.Parse(resp.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+
+            // 阶段1: /images/generations（已验证 gemini-3.1-flash-image-preview 可用）
+            if (resp.IsSuccessStatusCode)
+            {
+                var b64 = json["data"]?[0]?["b64_json"]?.ToString();
+                if (!string.IsNullOrEmpty(b64)) return SaveBase64ToPng(b64);
+                var imgSrc = json["data"]?[0]?["url"]?.ToString();
+                if (!string.IsNullOrEmpty(imgSrc)) return ToolDownloadImage(imgSrc);
+            }
+
+            // 阶段2: chat/completions multimodal 回退（LiteLLM OpenAI 兼容层格式）
+            var chatBody = Newtonsoft.Json.JsonConvert.SerializeObject(new
+            {
+                model,
+                messages = new[] { new { role = "user", content = prompt } },
+                max_tokens = 4096,
+            });
+            var chatResp = client.PostAsync(apiUrl,
+                new System.Net.Http.StringContent(chatBody, System.Text.Encoding.UTF8, "application/json"))
+                .GetAwaiter().GetResult();
+            var chatJson = Newtonsoft.Json.Linq.JObject.Parse(
+                chatResp.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+
+            // LiteLLM 封装后路径: message.images[0].image_url.url = "data:image/png;base64,..."
+            var images = chatJson["choices"]?[0]?["message"]?["images"] as Newtonsoft.Json.Linq.JArray;
+            if (images is { Count: > 0 })
+            {
+                var dataUrl = images[0]?["image_url"]?["url"]?.ToString();
+                if (!string.IsNullOrEmpty(dataUrl))
+                {
+                    var idx = dataUrl.IndexOf("base64,", StringComparison.Ordinal);
+                    if (idx >= 0) return SaveBase64ToPng(dataUrl[(idx + 7)..]);
+                }
+            }
+            // 兜底：content 里内联的 data URL
+            var content = chatJson["choices"]?[0]?["message"]?["content"]?.ToString() ?? "";
+            if (content.Contains("data:image"))
+            {
+                var start = content.IndexOf("base64,", StringComparison.Ordinal);
+                if (start >= 0)
+                {
+                    var end = content.IndexOfAny(new[] { '"', ' ', '\n' }, start);
+                    var slice = end > 0 ? content[(start + 7)..end] : content[(start + 7)..];
+                    if (!string.IsNullOrEmpty(slice)) return SaveBase64ToPng(slice);
+                }
+            }
+
+            // 阶段3: Pollinations.ai 免费兜底（无需密钥）
+            PluginLog.Write("[generate_image] LiteLLM 不支持，fallback → Pollinations.ai");
+            var pollinationsUrl =
+                $"https://image.pollinations.ai/prompt/{Uri.EscapeDataString(prompt)}?width=1024&height=1024&nologo=true";
+            return ToolDownloadImage(pollinationsUrl);
+        }
+        catch (Exception ex)
+        {
+            return $"生成失败: {ex.Message}";
+        }
     }
 }

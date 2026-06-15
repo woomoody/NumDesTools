@@ -14,6 +14,9 @@ public partial class AiChatTaskPanel
 {
     private readonly string _userName = Environment.UserName;
     private string _currentResponseId;
+    private string _streamBuffer = "";         // 流式累积文本
+    private int _chunkCount;                   // 已收到 chunk 数
+    private const int ReRenderEvery = 8;       // 每 N 个 chunk 重渲染一次 MD
 
     // 多轮上下文，最近 20 条
     private readonly List<object> _history = [];
@@ -36,6 +39,15 @@ public partial class AiChatTaskPanel
 
         PromptInput.Text = DefaultPromptText;
         PromptInput.Foreground = Brushes.Gray;
+
+        // 动态高度：根据内容行数自动扩展（无滚动条）
+        PromptInput.Document.Changed += (_, _) =>
+        {
+            var lineCount = PromptInput.Document.LineCount;
+            var lineHeight = PromptInput.FontSize * 1.5 + 2;
+            var newHeight = Math.Max(36, Math.Min(200, lineCount * lineHeight + 12));
+            PromptInput.Height = newHeight;
+        };
 
         InitializeHtmlTemplate();
         PopulateModelList();
@@ -65,16 +77,24 @@ public partial class AiChatTaskPanel
 <head>
 <meta charset='utf-8'>
 <style>
-body{background:#1c1c1c;color:#e0e0e0;font-family:微软雅黑,monospace;line-height:1.6;margin:0;padding:10px;overflow-y:auto}
-.message-container{display:flex;flex-direction:column;align-items:flex-start;margin:10px 0}
-.message{padding:10px;border-radius:8px;max-width:90%;word-wrap:break-word}
-.user{background:#2d2d30;border:1px solid #3e3e42;margin-left:auto;margin-right:10px}
-.system{background:#3e3e42;border:1px solid #5a5a5e;margin-left:10px}
-.role{font-weight:bold;margin-bottom:5px;font-size:.85em;color:#aaa}
-.timestamp{font-size:.75em;color:gray;margin-top:5px;margin-left:10px;margin-right:10px}
-.user+.timestamp{text-align:right;margin-left:auto;margin-right:10px}
-pre{background:#2d2d30;color:#dcdcdc;padding:10px;border-radius:8px;overflow-x:auto}
-code{font-family:Consolas,monospace;background:#2d2d30;color:#dcdcdc;padding:2px 4px;border-radius:4px}
+body{background:#1c1c1c;color:#d4d4d4;font-family:'微软雅黑',sans-serif;font-size:10pt;line-height:1.5;margin:0;padding:8px 10px;overflow-y:auto}
+.message-container{display:flex;flex-direction:column;align-items:flex-start;margin:5px 0}
+.message{padding:6px 10px;border-radius:7px;max-width:92%;word-wrap:break-word}
+.message p{margin:3px 0}
+.user{background:#1e3a5f;border:1px solid #2a4a6f;margin-left:auto;margin-right:6px;color:#d4d4d4}
+.system{background:#333337;border:1px solid #444;margin-left:6px;color:#d4d4d4}
+.role{font-weight:bold;margin-bottom:3px;font-size:.72em;color:#888}
+.timestamp{font-size:.72em;color:#555;margin-top:3px;margin-left:8px;margin-right:8px}
+.user+.timestamp{text-align:right;margin-left:auto;margin-right:8px}
+pre{background:#252526;color:#dcdcdc;padding:7px;border-radius:5px;overflow-x:auto;font-size:10pt;margin:4px 0}
+code{font-family:Consolas,monospace;background:#252526;color:#dcdcdc;padding:1px 3px;border-radius:3px;font-size:10pt}
+table{border-collapse:collapse;font-size:.88em;margin:4px 0;width:auto}
+th,td{border:1px solid #555;padding:3px 8px;text-align:left;white-space:nowrap}
+th{background:#2a2d2e;color:#c6c6c6;font-weight:bold}
+tr:nth-child(even) td{background:#2a2a2a}
+ul,ol{margin:3px 0;padding-left:18px}
+li{margin:1px 0}
+h1,h2,h3{font-size:1em;font-weight:bold;margin:4px 0 2px}
 </style>
 <script>
 function scrollToBottom(){window.scrollTo(0,document.body.scrollHeight)}
@@ -231,6 +251,8 @@ function clearAll(){document.body.innerHTML=''}
                 }
             );
 
+            _streamBuffer = "";
+            _chunkCount = 0;
             var htmlMessage = HttpUtility.HtmlDecode(Markdown.ToHtml(streamMessage.Message));
             streamMessage.Message = htmlMessage;
 
@@ -254,27 +276,47 @@ function clearAll(){document.body.innerHTML=''}
 
     private void AppendStreamingChunk(string chunk)
     {
+        _streamBuffer += chunk;
+        _chunkCount++;
         Dispatcher.Invoke(() =>
         {
             if (string.IsNullOrEmpty(_currentResponseId))
             {
                 _currentResponseId = $"msg-{DateTime.Now.Ticks}";
+                _streamBuffer = "";
+                _chunkCount = 0;
                 var model = AppServices.Config.Llm.Model;
                 AppendRawHtml(
                     $"<div id='{_currentResponseId}' class='message-container'>"
                         + $"<div class='message system'>"
                         + $"<div class='role'>{model}</div>"
-                        + $"<div class='content'>思考中……</div></div>"
+                        + $"<div class='content'></div></div>"
                         + $"<div class='timestamp'></div></div>"
                 );
             }
 
-            var script =
-                $"var c=document.getElementById('{_currentResponseId}');"
-                + $"var d=c.querySelector('.content');"
-                + $"d.innerHTML+='{HttpUtility.JavaScriptStringEncode(chunk)}';"
-                + "scrollToBottom();";
-            ResponseOutput.InvokeScript("eval", script);
+            // 每 ReRenderEvery 个 chunk 重渲染一次完整 MD，实现流式 MD 效果
+            if (_chunkCount % ReRenderEvery == 0 || chunk.Contains('\n'))
+            {
+                var rendered = HttpUtility.JavaScriptStringEncode(
+                    HttpUtility.HtmlDecode(Markdown.ToHtml(_streamBuffer)));
+                var script =
+                    $"var c=document.getElementById('{_currentResponseId}');"
+                    + $"var d=c.querySelector('.content');"
+                    + $"d.innerHTML='{rendered}';"
+                    + "scrollToBottom();";
+                ResponseOutput.InvokeScript("eval", script);
+            }
+            else
+            {
+                // 非渲染帧：追加纯文本（速度快，不影响最终 MD）
+                var script =
+                    $"var c=document.getElementById('{_currentResponseId}');"
+                    + $"var d=c.querySelector('.content');"
+                    + $"d.innerHTML+='{HttpUtility.JavaScriptStringEncode(chunk)}';"
+                    + "scrollToBottom();";
+                ResponseOutput.InvokeScript("eval", script);
+            }
         });
     }
 
