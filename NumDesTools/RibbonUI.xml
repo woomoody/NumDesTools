@@ -207,12 +207,6 @@
                             onAction='OnButtonClick' tag='AI对话开关' />
                     <button id='ShowAIAgent' size='large' getLabel='GetLableText' image='nd_AI对话'
                             onAction='OnButtonClick' tag='AI Agent开关' />
-                    <dropDown id="AIModelSelect" label="模型"
-                              getItemCount="AIModelSelect_ItemCount"
-                              getItemID="AIModelSelect_ItemId"
-                              getItemLabel="AIModelSelect_ItemLabel"
-                              onAction="AIModelSelect"
-                              getSelectedItemID="AIModelSelect_Default" />
                 </group>
                 <group id='Group9999' label='测试功能区'>
                     <button id='Button99991' size='large' label='不要点击红色按钮' image='sofa' onAction='OnButtonClick' tag='不要点击红色按钮' />

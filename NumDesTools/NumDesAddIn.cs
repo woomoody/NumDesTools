@@ -3442,30 +3442,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         ShowAi();
     }
 
-    public void AIModelSelect(IRibbonControl control, string selectedId, int selectedIndex)
-    {
-        if (control == null)
-            throw new ArgumentNullException(nameof(control));
-
-        LiteLLMModel = selectedId;
-        GlobalValue.SaveValue("LiteLLMModel", LiteLLMModel);
-    }
-
-    public string AIModelSelect_Default(IRibbonControl control)
-    {
-        if (control == null)
-            throw new ArgumentNullException(nameof(control));
-        return LiteLLMModel;
-    }
-
-    public int AIModelSelect_ItemCount(IRibbonControl control) => LiteLLMModelList.Count;
-
-    public string AIModelSelect_ItemId(IRibbonControl control, int index) =>
-        LiteLLMModelList.Count > index ? LiteLLMModelList[index] : "";
-
-    public string AIModelSelect_ItemLabel(IRibbonControl control, int index) =>
-        LiteLLMModelList.Count > index ? LiteLLMModelList[index] : "";
-
     public static async Task RefreshModelListAsync()
     {
         var models = await ChatApiClient.FetchModelsAsync(LiteLLMApiKey, LiteLLMApiUrl);
@@ -3473,7 +3449,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             return;
         LiteLLMModelList = models;
         GlobalValue.SaveValue("LiteLLMModelList", string.Join(",", models));
-        CustomRibbon?.InvalidateControl("AIModelSelect");
     }
 
     //全局变量恢复为默认值
