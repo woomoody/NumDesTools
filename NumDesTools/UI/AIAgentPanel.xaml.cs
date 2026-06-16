@@ -829,6 +829,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 + "- 跨表外键验证：用 check_cross_ref\n"
                 + "每次只调用一个工具，等待结果后再决定下一步。完成后用 Markdown 输出简洁的结果说明。\n"
                 + "图片操作规则：当用户要求生成图片并插入 Excel 时，必须先调用 generate_image 得到文件路径，再将路径传给 insert_image，两步必须连续执行，不能只做其中一步。\n"
+                + "回复规则：每次任务结束时，把工具返回的关键数据（表头、关键值、操作的 Sheet 名、行列号、单元格地址等）写进最终回复，不要只说"完成"或"成功"——这些细节是后续修正任务的上下文依据。\n"
                 + "重要：如果你在上一条消息中给出了编号选项（如 1. 2. 3.），用户回复单个数字时，请将其理解为选择对应选项，直接执行该选项对应的操作，不要再次询问。";
             if (!string.IsNullOrEmpty(customInstruction))
                 systemContent += $"\n\n用户自定义指令（始终遵守）：{customInstruction}";
