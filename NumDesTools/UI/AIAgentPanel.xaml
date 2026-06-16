@@ -27,6 +27,7 @@
             <ComboBox
                 x:Name="ModelComboBox"
                 Grid.Column="0"
+                SelectionChanged="ModelComboBox_SelectionChanged"
                 Height="26"
                 Margin="0,0,6,0"
                 Background="#2d2d30"

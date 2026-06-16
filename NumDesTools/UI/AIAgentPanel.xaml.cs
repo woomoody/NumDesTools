@@ -629,6 +629,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         PopulateModelList();
         ChatOutput.NavigateToString(HtmlTemplate);
         ChatOutput.Navigating += ChatOutput_Navigating;
+        LoadAgentHistory();
         // CTP 内 WebBrowser 的键盘事件会被 Excel 截走：
         // cancelBubble 阻止事件冒泡到 Excel，并主动调用 execCommand 保证 Ctrl+C/A/X 可用
         ChatOutput.LoadCompleted += (_, _) =>
@@ -703,6 +704,9 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         catch { }
     }
 
+    private const string AgentModelKey = "AgentModel";
+    private const int AgentHistoryPageSize = 40;
+
     private void PopulateModelList()
     {
         ModelComboBox.Items.Clear();
@@ -711,10 +715,68 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             models = [AppServices.Config.Llm.Model];
         foreach (var m in models)
             ModelComboBox.Items.Add(m);
-        var current = AppServices.Config.Llm.Model;
-        ModelComboBox.SelectedItem = ModelComboBox.Items.Contains(current)
-            ? current
-            : ModelComboBox.Items[0];
+
+        // 优先恢复上次 Agent 选用的模型，fallback 到全局模型
+        AppServices.GlobalValue.Value.TryGetValue(AgentModelKey, out var savedAgentModel);
+        var target = !string.IsNullOrEmpty(savedAgentModel) && ModelComboBox.Items.Contains(savedAgentModel)
+            ? savedAgentModel
+            : AppServices.Config.Llm.Model;
+        ModelComboBox.SelectedItem = ModelComboBox.Items.Contains(target) ? target : ModelComboBox.Items[0];
+    }
+
+    private void ModelComboBox_SelectionChanged(
+        object sender,
+        System.Windows.Controls.SelectionChangedEventArgs e
+    )
+    {
+        if (ModelComboBox.SelectedItem is string model)
+            AppServices.GlobalValue.SaveValue(AgentModelKey, model);
+    }
+
+    private void LoadAgentHistory()
+    {
+        var db = new ChatHistoryManager();
+        var history = db.LoadChatHistory(AgentHistoryPageSize, isAgent: true);
+        if (history.Count == 0)
+            return;
+
+        // 重建 _history（最近 MaxHistoryMessages 条 user/assistant 对）
+        foreach (var m in history.TakeLast(MaxHistoryMessages))
+            _history.Add(new { role = m.IsUser ? "user" : "assistant", content = m.Message });
+
+        // 渲染到 WebBrowser（等 LoadCompleted 后执行）
+        var sb = new System.Text.StringBuilder();
+        foreach (var m in history)
+            sb.Append(BuildAgentMessageHtml(m.IsUser ? "user" : "assistant", m.Message, m.IsUser, m.Role, m.Timestamp));
+        var escaped = System.Web.HttpUtility.JavaScriptStringEncode(sb.ToString());
+        ChatOutput.LoadCompleted += OnFirstLoadInsertHistory;
+        _pendingHistoryHtml = escaped;
+    }
+
+    private string _pendingHistoryHtml;
+
+    private void OnFirstLoadInsertHistory(object sender, System.Windows.Navigation.NavigationEventArgs e)
+    {
+        ChatOutput.LoadCompleted -= OnFirstLoadInsertHistory;
+        if (string.IsNullOrEmpty(_pendingHistoryHtml))
+            return;
+        try
+        {
+            ChatOutput.InvokeScript(
+                "eval",
+                $"document.body.insertAdjacentHTML('afterbegin','{_pendingHistoryHtml}');window.scrollTo(0,document.body.scrollHeight);"
+            );
+        }
+        catch { }
+        _pendingHistoryHtml = null;
+    }
+
+    private static string BuildAgentMessageHtml(string role, string markdown, bool isUser, string label, DateTime? timestamp)
+    {
+        var html = InjectCellLinks(Markdown.ToHtml(markdown, MdPipeline));
+        var cls = isUser ? "user" : "assistant";
+        var ts = (timestamp ?? DateTime.Now).ToString("HH:mm:ss");
+        return $"<div class='msg {cls}'><div class='role'>{label} <span class='ts'>{ts}</span></div><div class='content'>{html}</div></div>";
     }
 
     /// <summary>给 TextBox 注入 Ctrl+C/X/A/Z/Y 拦截，防止 CTP 内 Excel 截走快捷键</summary>
@@ -922,11 +984,25 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             {
                 AddStep($"✅ 完成（{step} 步）");
                 SetStatus("完成");
-                AppendChat("assistant", content ?? "（无输出）");
+                var finalContent = content ?? "（无输出）";
+                AppendChat("assistant", finalContent);
                 // 只把最终文本消息写回持久历史（中间 tool_calls/tool 消息丢弃）
                 while (_history.Count > historyCountBefore)
                     _history.RemoveAt(_history.Count - 1);
-                _history.Add(new { role = "assistant", content = content ?? "" });
+                _history.Add(new { role = "assistant", content = finalContent });
+                // 持久化用户消息 + 最终 assistant 消息
+                var db = new ChatHistoryManager();
+                var model2 = Dispatcher.Invoke(() => ModelComboBox.SelectedItem as string ?? "Agent");
+                _ = db.SaveChatMessageAsync(new ChatMessage
+                {
+                    Role = Environment.UserName, Message = userTask,
+                    IsUser = true, Timestamp = DateTime.Now, IsAgent = true,
+                });
+                _ = db.SaveChatMessageAsync(new ChatMessage
+                {
+                    Role = model2, Message = finalContent,
+                    IsUser = false, Timestamp = DateTime.Now, IsAgent = true,
+                });
                 return;
             }
         }

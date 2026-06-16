@@ -11,6 +11,7 @@ public class ChatMessage
     public DateTime Timestamp { get; set; }
     public bool IsStreaming { get; set; }
     public string SessionId { get; set; }
+    public bool IsAgent { get; set; }
 }
 
 public class ChatHistoryManager
@@ -31,19 +32,26 @@ public class ChatHistoryManager
                 Message TEXT NOT NULL,
                 IsUser INTEGER NOT NULL,
                 Timestamp DATETIME NOT NULL,
-                SessionId TEXT NOT NULL DEFAULT ''
+                SessionId TEXT NOT NULL DEFAULT '',
+                IsAgent INTEGER NOT NULL DEFAULT 0
             )";
         create.ExecuteNonQuery();
 
         // 为旧库补列，列已存在时 ALTER TABLE 会抛异常，直接吞掉
-        try
+        foreach (var ddl in new[]
         {
-            var alter = connection.CreateCommand();
-            alter.CommandText =
-                "ALTER TABLE ChatHistory ADD COLUMN SessionId TEXT NOT NULL DEFAULT ''";
-            alter.ExecuteNonQuery();
+            "ALTER TABLE ChatHistory ADD COLUMN SessionId TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE ChatHistory ADD COLUMN IsAgent INTEGER NOT NULL DEFAULT 0",
+        })
+        {
+            try
+            {
+                var alter = connection.CreateCommand();
+                alter.CommandText = ddl;
+                alter.ExecuteNonQuery();
+            }
+            catch { }
         }
-        catch { }
     }
 
     public async Task SaveChatMessageAsync(ChatMessage message)
@@ -52,39 +60,38 @@ public class ChatHistoryManager
         await connection.OpenAsync();
         var cmd = connection.CreateCommand();
         cmd.CommandText =
-            @"
-                INSERT INTO ChatHistory (Role, Message, IsUser, Timestamp, SessionId)
-                VALUES (@Role, @Message, @IsUser, @Timestamp, @SessionId)";
+            @"INSERT INTO ChatHistory (Role, Message, IsUser, Timestamp, SessionId, IsAgent)
+              VALUES (@Role, @Message, @IsUser, @Timestamp, @SessionId, @IsAgent)";
         cmd.Parameters.AddWithValue("@Role", message.Role);
         cmd.Parameters.AddWithValue("@Message", message.Message);
         cmd.Parameters.AddWithValue("@IsUser", message.IsUser ? 1 : 0);
         cmd.Parameters.AddWithValue("@Timestamp", message.Timestamp);
         cmd.Parameters.AddWithValue("@SessionId", message.SessionId ?? "");
+        cmd.Parameters.AddWithValue("@IsAgent", message.IsAgent ? 1 : 0);
         await cmd.ExecuteNonQueryAsync();
     }
 
-    /// <summary>加载历史消息，sessionId 为空时跨会话加载最近 N 条。</summary>
-    public List<ChatMessage> LoadChatHistory(int limit = 50, string sessionId = "")
+    /// <summary>加载历史消息。isAgent=true 只返回 Agent 记录，false 只返回 Chat 记录。</summary>
+    public List<ChatMessage> LoadChatHistory(int limit = 50, string sessionId = "", bool isAgent = false)
     {
         var chatHistory = new List<ChatMessage>();
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
         var cmd = connection.CreateCommand();
 
+        var agentFilter = isAgent ? "IsAgent = 1" : "IsAgent = 0";
         if (!string.IsNullOrEmpty(sessionId))
         {
             cmd.CommandText =
-                limit > 0
-                    ? $"SELECT Role, Message, IsUser, Timestamp, SessionId FROM ChatHistory WHERE SessionId = @sid ORDER BY Timestamp DESC LIMIT {limit}"
-                    : "SELECT Role, Message, IsUser, Timestamp, SessionId FROM ChatHistory WHERE SessionId = @sid ORDER BY Timestamp DESC";
+                $"SELECT Role, Message, IsUser, Timestamp, SessionId, IsAgent FROM ChatHistory WHERE SessionId = @sid AND {agentFilter} ORDER BY Timestamp DESC"
+                + (limit > 0 ? $" LIMIT {limit}" : "");
             cmd.Parameters.AddWithValue("@sid", sessionId);
         }
         else
         {
             cmd.CommandText =
-                limit > 0
-                    ? $"SELECT Role, Message, IsUser, Timestamp, SessionId FROM ChatHistory WHERE Timestamp > '0002-01-01' ORDER BY Timestamp DESC LIMIT {limit}"
-                    : "SELECT Role, Message, IsUser, Timestamp, SessionId FROM ChatHistory WHERE Timestamp > '0002-01-01' ORDER BY Timestamp DESC";
+                $"SELECT Role, Message, IsUser, Timestamp, SessionId, IsAgent FROM ChatHistory WHERE Timestamp > '0002-01-01' AND {agentFilter} ORDER BY Timestamp DESC"
+                + (limit > 0 ? $" LIMIT {limit}" : "");
         }
 
         using var reader = cmd.ExecuteReader();
@@ -98,6 +105,7 @@ public class ChatHistoryManager
                     IsUser = reader.GetInt32(2) == 1,
                     Timestamp = reader.GetDateTime(3),
                     SessionId = reader.IsDBNull(4) ? "" : reader.GetString(4),
+                    IsAgent = reader.GetInt32(5) == 1,
                 }
             );
         }
@@ -105,12 +113,13 @@ public class ChatHistoryManager
         return chatHistory;
     }
 
-    public int GetHistoryCount()
+    public int GetHistoryCount(bool isAgent = false)
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
         var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT COUNT(*) FROM ChatHistory WHERE Timestamp > '0002-01-01'";
+        cmd.CommandText =
+            $"SELECT COUNT(*) FROM ChatHistory WHERE Timestamp > '0002-01-01' AND IsAgent = {(isAgent ? 1 : 0)}";
         return Convert.ToInt32(cmd.ExecuteScalar());
     }
 
