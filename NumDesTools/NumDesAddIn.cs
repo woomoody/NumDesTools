@@ -1072,7 +1072,23 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     //    }
     //}
 
+    // 工作簿切换期间设为 true，防止 DeleteCTP 触发的 VisibleStateChange 修改开关状态
+    private static bool _workbookSwitching;
+
     private void ExcelApp_WorkbookActivate(Workbook wb)
+    {
+        _workbookSwitching = true;
+        try
+        {
+        ExcelApp_WorkbookActivateCore(wb);
+        }
+        finally
+        {
+            _workbookSwitching = false;
+        }
+    }
+
+    private void ExcelApp_WorkbookActivateCore(Workbook wb)
     {
         App.StatusBar = wb.FullName;
 
@@ -1125,7 +1141,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             if (NumDesCTP.TryGetCTP(aiCtpName, out var chatPane2))
                 chatPane2.VisibleStateChange += _ =>
                 {
-                    if (chatPane2.Visible) return;
+                    if (chatPane2.Visible || _workbookSwitching) return;
                     ShowAiText = "AI对话：关闭";
                     CustomRibbon?.InvalidateControl("ShowAI");
                     GlobalValue.SaveValue("ShowAIText", ShowAiText);
@@ -1152,7 +1168,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             if (NumDesCTP.TryGetCTP(agentCtpName, out var agentPane2))
                 agentPane2.VisibleStateChange += _ =>
                 {
-                    if (agentPane2.Visible) return;
+                    if (agentPane2.Visible || _workbookSwitching) return;
                     _showAgentText = "Agent模式：关闭";
                     CustomRibbon?.InvalidateControl("ShowAIAgent");
                 };
@@ -3368,7 +3384,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             if (NumDesCTP.TryGetCTP(ctpName, out var agentPane))
                 agentPane.VisibleStateChange += _ =>
                 {
-                    if (agentPane.Visible) return;
+                    if (agentPane.Visible || _workbookSwitching) return;
                     _showAgentText = "Agent模式：关闭";
                     CustomRibbon?.InvalidateControl("ShowAIAgent");
                 };
@@ -3410,7 +3426,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 if (NumDesCTP.TryGetCTP(ctpName, out var chatPane))
                     chatPane.VisibleStateChange += _ =>
                     {
-                        if (chatPane.Visible) return;
+                        if (chatPane.Visible || _workbookSwitching) return;
                         ShowAiText = "AI对话：关闭";
                         CustomRibbon?.InvalidateControl("ShowAI");
                         GlobalValue.SaveValue("ShowAIText", ShowAiText);
