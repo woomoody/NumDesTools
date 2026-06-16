@@ -149,6 +149,20 @@ internal class ExcelIndexBuilder
         foreach (var rel in unchangedRels)
             if (existing.FileMd5.TryGetValue(rel, out var md5))
                 target.FileMd5[rel] = md5;
+
+        // 迁移 AllSheets（搜索 Sheet 名依赖此字段，缺失导致未变化文件的 Sheet 搜不到）
+        var knownPairs = new HashSet<(int, int)>(target.AllSheets);
+        foreach (var (fid, sid) in existing.AllSheets)
+        {
+            if (fid >= existing.Files.Count || sid >= existing.Sheets.Count) continue;
+            var rel   = existing.Files[fid];
+            var sheet = existing.Sheets[sid];
+            if (!unchangedRels.Contains(rel)) continue;
+            if (!target.FileIds.TryGetValue(rel, out var newFid)) continue;
+            if (!target.SheetIds.TryGetValue(sheet, out var newSid)) continue;
+            if (knownPairs.Add((newFid, newSid)))
+                target.AllSheets.Add((newFid, newSid));
+        }
     }
 
     private static void AddHit(
