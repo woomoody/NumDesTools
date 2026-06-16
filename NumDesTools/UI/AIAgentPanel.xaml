@@ -105,9 +105,9 @@
                 x:Name="MaxStepsInput"
                 Grid.Column="2"
                 Height="26"
-                Maximum="20"
+                Maximum="50"
                 Minimum="1"
-                Value="10"
+                Value="15"
                 Background="#2d2d30"
                 Foreground="#e0e0e0"
                 BorderBrush="#555">
