@@ -2032,21 +2032,26 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
     private static string ToolInsertDeleteRowsCols(string action, string sheetName, int start, int count)
     {
-        var ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
+        dynamic ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
+        var end = start + count - 1;
         switch (action)
         {
             case "insert_rows":
-                ((dynamic)ws.Rows[start]).Resize[count].Insert();
-                return $"已在第 {start} 行插入 {count} 行";
+                ws.Range[ws.Cells[start, 1], ws.Cells[end, 1]].EntireRow.Insert(
+                    Microsoft.Office.Interop.Excel.XlInsertShiftDirection.xlShiftDown);
+                return $"已在第 {start} 行上方插入 {count} 行";
             case "delete_rows":
-                ((dynamic)ws.Rows[start]).Resize[count].Delete();
-                return $"已删除第 {start} 行起 {count} 行";
+                ws.Range[ws.Cells[start, 1], ws.Cells[end, 1]].EntireRow.Delete(
+                    Microsoft.Office.Interop.Excel.XlDeleteShiftDirection.xlShiftUp);
+                return $"已删除第 {start}–{end} 行";
             case "insert_cols":
-                ((dynamic)ws.Columns[start]).Resize[1, count].Insert();
-                return $"已在第 {start} 列插入 {count} 列";
+                ws.Range[ws.Cells[1, start], ws.Cells[1, end]].EntireColumn.Insert(
+                    Microsoft.Office.Interop.Excel.XlInsertShiftDirection.xlShiftToRight);
+                return $"已在第 {start} 列左侧插入 {count} 列";
             case "delete_cols":
-                ((dynamic)ws.Columns[start]).Resize[1, count].Delete();
-                return $"已删除第 {start} 列起 {count} 列";
+                ws.Range[ws.Cells[1, start], ws.Cells[1, end]].EntireColumn.Delete(
+                    Microsoft.Office.Interop.Excel.XlDeleteShiftDirection.xlShiftToLeft);
+                return $"已删除第 {start}–{end} 列";
             default:
                 return $"未知 action: {action}";
         }
