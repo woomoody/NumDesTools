@@ -12,6 +12,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -130,9 +131,43 @@
             </mah:NumericUpDown>
         </Grid>
 
+        <!--  会话管理：历史选择 + 新对话  -->
+        <Grid Grid.Row="1" Margin="0,0,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ComboBox
+                x:Name="SessionComboBox"
+                Grid.Column="0"
+                Height="26"
+                Margin="0,0,6,0"
+                Background="#2d2d30"
+                Foreground="#e0e0e0"
+                BorderBrush="#555"
+                SelectionChanged="SessionComboBox_SelectionChanged">
+                <ComboBox.ItemContainerStyle>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Background" Value="#2d2d30" />
+                        <Setter Property="Foreground" Value="#e0e0e0" />
+                        <Setter Property="Padding" Value="6,3" />
+                    </Style>
+                </ComboBox.ItemContainerStyle>
+            </ComboBox>
+            <Button
+                x:Name="NewChatButton"
+                Grid.Column="1"
+                Width="70"
+                Height="26"
+                Background="#2d5a27"
+                Foreground="White"
+                Content="＋ 新对话"
+                Click="NewChatButton_Click" />
+        </Grid>
+
         <!--  自定义指令  -->
         <Expander
-            Grid.Row="1"
+            Grid.Row="2"
             Margin="0,0,0,6"
             Header="自定义指令（每次对话自动带入）"
             Foreground="#888"
@@ -154,7 +189,7 @@
         </Expander>
 
         <!--  对话区（上）+ 步骤面板（下，可折叠）  -->
-        <Grid Grid.Row="2" Margin="0,0,0,6">
+        <Grid Grid.Row="3" Margin="0,0,0,6">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
@@ -218,7 +253,7 @@
         </Grid>
 
         <!--  任务输入  -->
-        <Grid Grid.Row="3" Margin="0,0,0,4">
+        <Grid Grid.Row="4" Margin="0,0,0,4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -282,7 +317,7 @@
         <!--  状态栏  -->
         <TextBlock
             x:Name="StatusText"
-            Grid.Row="4"
+            Grid.Row="5"
             FontSize="10"
             Foreground="#555"
             Text="就绪" />

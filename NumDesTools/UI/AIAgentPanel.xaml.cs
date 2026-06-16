@@ -21,6 +21,12 @@ public partial class AIAgentPanel
     private bool _isRunning;
     // 执行中的插话队列：Enter 发送时入队，每步循环开头注入对话
     private readonly System.Collections.Concurrent.ConcurrentQueue<string> _interjectQueue = new();
+    private string _sessionId = Guid.NewGuid().ToString("N")[..12];
+
+    private record SessionItem(string SessionId, string Display)
+    {
+        public override string ToString() => Display;
+    }
 
     private static readonly MarkdownPipeline MdPipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
@@ -737,9 +743,17 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     private void LoadAgentHistory()
     {
         var db = new ChatHistoryManager();
-        var history = db.LoadChatHistory(AgentHistoryPageSize, isAgent: true);
+        // 取最新会话 ID
+        var sessions = db.ListSessionsWithPreview(isAgent: true);
+        if (sessions.Count > 0)
+            _sessionId = sessions[0].SessionId;
+
+        var history = db.LoadChatHistory(AgentHistoryPageSize, sessionId: _sessionId, isAgent: true);
         if (history.Count == 0)
+        {
+            ChatOutput.LoadCompleted += (_, _) => RefreshSessionList();
             return;
+        }
 
         // 重建 _history（最近 MaxHistoryMessages 条 user/assistant 对）
         foreach (var m in history.TakeLast(MaxHistoryMessages))
@@ -760,7 +774,10 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     {
         ChatOutput.LoadCompleted -= OnFirstLoadInsertHistory;
         if (string.IsNullOrEmpty(_pendingHistoryHtml))
+        {
+            RefreshSessionList();
             return;
+        }
         try
         {
             ChatOutput.InvokeScript(
@@ -770,6 +787,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         }
         catch { }
         _pendingHistoryHtml = null;
+        RefreshSessionList();
     }
 
     private static string BuildAgentMessageHtml(string role, string markdown, bool isUser, string label, DateTime? timestamp)
@@ -994,16 +1012,20 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 // 持久化用户消息 + 最终 assistant 消息
                 var db = new ChatHistoryManager();
                 var model2 = Dispatcher.Invoke(() => ModelComboBox.SelectedItem as string ?? "Agent");
+                var sid = _sessionId;
                 _ = db.SaveChatMessageAsync(new ChatMessage
                 {
                     Role = Environment.UserName, Message = userTask,
                     IsUser = true, Timestamp = DateTime.Now, IsAgent = true,
+                    SessionId = sid,
                 });
                 _ = db.SaveChatMessageAsync(new ChatMessage
                 {
                     Role = model2, Message = finalContent,
                     IsUser = false, Timestamp = DateTime.Now, IsAgent = true,
+                    SessionId = sid,
                 });
+                Dispatcher.Invoke(RefreshSessionList);
                 return;
             }
         }
@@ -1990,6 +2012,69 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     }
 
     private void SetStatus(string text) => Dispatcher.Invoke(() => StatusText.Text = text);
+
+    private void RefreshSessionList()
+    {
+        SessionComboBox.SelectionChanged -= SessionComboBox_SelectionChanged;
+        SessionComboBox.Items.Clear();
+        var sessions = new ChatHistoryManager().ListSessionsWithPreview(isAgent: true);
+        foreach (var s in sessions)
+        {
+            var label = $"{s.LastTime:MM-dd HH:mm}  {s.Preview}";
+            SessionComboBox.Items.Add(new SessionItem(s.SessionId, label));
+        }
+        var current = SessionComboBox.Items.OfType<SessionItem>()
+            .FirstOrDefault(x => x.SessionId == _sessionId);
+        SessionComboBox.SelectedItem = current;
+        SessionComboBox.SelectionChanged += SessionComboBox_SelectionChanged;
+    }
+
+    private void NewChatButton_Click(object sender, RoutedEventArgs e)
+    {
+        _sessionId = Guid.NewGuid().ToString("N")[..12];
+        _history.Clear();
+        ChatOutput.InvokeScript("eval", "document.body.innerHTML='';");
+        RefreshSessionList();
+        SetStatus("新对话已创建");
+    }
+
+    private void SessionComboBox_SelectionChanged(
+        object sender,
+        System.Windows.Controls.SelectionChangedEventArgs e
+    )
+    {
+        if (SessionComboBox.SelectedItem is not SessionItem item) return;
+        if (item.SessionId == _sessionId) return;
+        SwitchToSession(item.SessionId);
+    }
+
+    private void SwitchToSession(string sessionId)
+    {
+        _sessionId = sessionId;
+        var messages = new ChatHistoryManager().LoadChatHistory(
+            AgentHistoryPageSize,
+            sessionId: sessionId,
+            isAgent: true
+        );
+        _history.Clear();
+        foreach (var m in messages.TakeLast(MaxHistoryMessages))
+            _history.Add(new { role = m.IsUser ? "user" : "assistant", content = m.Message });
+        ChatOutput.InvokeScript("eval", "document.body.innerHTML='';");
+        var sb = new System.Text.StringBuilder();
+        foreach (var m in messages)
+            sb.Append(
+                BuildAgentMessageHtml(m.IsUser ? "user" : "assistant", m.Message, m.IsUser, m.Role, m.Timestamp)
+            );
+        if (sb.Length > 0)
+        {
+            var escaped = System.Web.HttpUtility.JavaScriptStringEncode(sb.ToString());
+            ChatOutput.InvokeScript(
+                "eval",
+                $"document.body.insertAdjacentHTML('beforeend','{escaped}');window.scrollTo(0,document.body.scrollHeight);"
+            );
+        }
+        SetStatus("已切换历史对话");
+    }
 
     private static string InjectCellLinks(string html) =>
         CellAddressRegex.Replace(

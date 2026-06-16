@@ -18,15 +18,22 @@ public partial class AiChatTaskPanel
 
     private readonly string _userName = Environment.UserName;
     private string _currentResponseId;
-    private string _streamBuffer = "";         // 流式累积文本
-    private int _chunkCount;                   // 已收到 chunk 数
-    private const int ReRenderEvery = 8;       // 每 N 个 chunk 重渲染一次 MD
+    private string _streamBuffer = ""; // 流式累积文本
+    private int _chunkCount; // 已收到 chunk 数
+    private const int ReRenderEvery = 8; // 每 N 个 chunk 重渲染一次 MD
 
     // 多轮上下文，最近 20 条
     private readonly List<object> _history = [];
     private const int MaxHistoryRounds = 20;
     private const int HistoryPageSize = 50;
     private int _historyOffset; // 已加载条数（从最新往旧算）
+
+    private string _sessionId = Guid.NewGuid().ToString("N")[..12];
+
+    private record SessionItem(string SessionId, string Display)
+    {
+        public override string ToString() => Display;
+    }
 
     private const string DefaultPromptText =
         "Enter 发送，Shift+Enter 换行，聊天框内容右键复制\n首字 ### 会把当前选中单元格值一并输入";
@@ -211,7 +218,7 @@ function clearAll(){document.body.innerHTML=''}
 
         // 构建带上下文的消息列表
         var sysContent = AppServices.Config.AiPrompts.ExcelAssistant;
-        var messages = new List<object> { new { role = "system", content = sysContent }, };
+        var messages = new List<object> { new { role = "system", content = sysContent } };
         messages.AddRange(_history.TakeLast(MaxHistoryRounds * 2));
         messages.Add(new { role = "user", content = userInput });
 
@@ -225,7 +232,7 @@ function clearAll(){document.body.innerHTML=''}
         {
             Role = model,
             Message = "",
-            IsUser = false
+            IsUser = false,
         };
 
         try
@@ -257,12 +264,15 @@ function clearAll(){document.body.innerHTML=''}
 
             _streamBuffer = "";
             _chunkCount = 0;
-            var htmlMessage = HttpUtility.HtmlDecode(Markdown.ToHtml(streamMessage.Message, MdPipeline));
+            var htmlMessage = HttpUtility.HtmlDecode(
+                Markdown.ToHtml(streamMessage.Message, MdPipeline)
+            );
             streamMessage.Message = htmlMessage;
 
             // 追加 AI 回复到历史
             _history.Add(new { role = "assistant", content = streamMessage.Message });
 
+            streamMessage.SessionId = _sessionId;
             await new ChatHistoryManager().SaveChatMessageAsync(streamMessage);
             ResponseOutput.InvokeScript("replaceContent", _currentResponseId, htmlMessage);
             ResponseOutput.InvokeScript("eval", "scrollToBottom()");
@@ -274,6 +284,7 @@ function clearAll(){document.body.innerHTML=''}
 
         PromptInput.Document.Text = string.Empty;
         PromptInput.Focus();
+        Dispatcher.BeginInvoke(() => RefreshSessionList());
     }
 
     // ── 流式内容追加 ──────────────────────────────────────────────────────────
@@ -303,7 +314,8 @@ function clearAll(){document.body.innerHTML=''}
             if (_chunkCount % ReRenderEvery == 0 || chunk.Contains('\n'))
             {
                 var rendered = HttpUtility.JavaScriptStringEncode(
-                    HttpUtility.HtmlDecode(Markdown.ToHtml(_streamBuffer, MdPipeline)));
+                    HttpUtility.HtmlDecode(Markdown.ToHtml(_streamBuffer, MdPipeline))
+                );
                 var script =
                     $"var c=document.getElementById('{_currentResponseId}');"
                     + $"var d=c.querySelector('.content');"
@@ -349,6 +361,7 @@ function clearAll(){document.body.innerHTML=''}
                         Message = htmlMessage,
                         IsUser = true,
                         Timestamp = ts,
+                        SessionId = _sessionId,
                     }
                 );
         });
@@ -359,10 +372,21 @@ function clearAll(){document.body.innerHTML=''}
     private void LoadChatHistory()
     {
         var db = new ChatHistoryManager();
+        var sessions = db.ListSessionsWithPreview(isAgent: false);
+        if (sessions.Count > 0)
+            _sessionId = sessions[0].SessionId;
+
         _historyOffset = HistoryPageSize;
-        var history = db.LoadChatHistory(HistoryPageSize);
+        var history = db.LoadChatHistory(HistoryPageSize, sessionId: _sessionId, isAgent: false);
         if (history.Count == 0)
+        {
+            Dispatcher.BeginInvoke(() => RefreshSessionList());
             return;
+        }
+
+        // 追加历史到多轮上下文
+        foreach (var m in history.TakeLast(MaxHistoryRounds * 2))
+            _history.Add(new { role = m.IsUser ? "user" : "assistant", content = m.Message });
 
         // 批量拼接后一次注入，避免逐条 InvokeScript
         var sb = new System.Text.StringBuilder();
@@ -376,7 +400,67 @@ function clearAll(){document.body.innerHTML=''}
                 "eval",
                 $"document.body.insertAdjacentHTML('beforeend','{escaped}');scrollToBottom();"
             );
+            RefreshSessionList();
         });
+    }
+
+    private void RefreshSessionList()
+    {
+        SessionComboBox.SelectionChanged -= SessionComboBox_SelectionChanged;
+        SessionComboBox.Items.Clear();
+        var sessions = new ChatHistoryManager().ListSessionsWithPreview(isAgent: false);
+        foreach (var s in sessions)
+        {
+            var label = $"{s.LastTime:MM-dd HH:mm}  {s.Preview}";
+            SessionComboBox.Items.Add(new SessionItem(s.SessionId, label));
+        }
+        var current = SessionComboBox
+            .Items.OfType<SessionItem>()
+            .FirstOrDefault(x => x.SessionId == _sessionId);
+        SessionComboBox.SelectedItem = current;
+        SessionComboBox.SelectionChanged += SessionComboBox_SelectionChanged;
+    }
+
+    private void NewChatButton_Click(object sender, RoutedEventArgs e)
+    {
+        _sessionId = Guid.NewGuid().ToString("N")[..12];
+        _history.Clear();
+        _historyOffset = 0;
+        ResponseOutput.InvokeScript("eval", "clearAll()");
+        RefreshSessionList();
+    }
+
+    private void SessionComboBox_SelectionChanged(
+        object sender,
+        System.Windows.Controls.SelectionChangedEventArgs e
+    )
+    {
+        if (SessionComboBox.SelectedItem is not SessionItem item)
+            return;
+        if (item.SessionId == _sessionId)
+            return;
+        SwitchToSession(item.SessionId);
+    }
+
+    private void SwitchToSession(string sessionId)
+    {
+        _sessionId = sessionId;
+        _history.Clear();
+        _historyOffset = 0;
+        ResponseOutput.InvokeScript("eval", "clearAll()");
+        var db = new ChatHistoryManager();
+        var messages = db.LoadChatHistory(HistoryPageSize, sessionId: sessionId, isAgent: false);
+        _historyOffset = messages.Count;
+        foreach (var m in messages.TakeLast(MaxHistoryRounds * 2))
+            _history.Add(new { role = m.IsUser ? "user" : "assistant", content = m.Message });
+        var sb = new System.Text.StringBuilder();
+        foreach (var m in messages)
+            sb.Append(BuildMessageHtml(m.Role, m.Message, m.IsUser, m.Timestamp));
+        var escaped = System.Web.HttpUtility.JavaScriptStringEncode(sb.ToString());
+        ResponseOutput.InvokeScript(
+            "eval",
+            $"document.body.insertAdjacentHTML('beforeend','{escaped}');scrollToBottom();"
+        );
     }
 
     private static string BuildMessageHtml(
