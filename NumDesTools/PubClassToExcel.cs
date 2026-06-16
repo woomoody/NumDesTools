@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using GraphX.Common.Models;
@@ -324,8 +325,9 @@ public static class ChatApiClient
         string apiKey,
         string apiUrl,
         Action<string> onChunkReceived,
-        Action onCompleted = null
-    ) => _impl.CallStreamAsync(model, messages, apiKey, apiUrl, onChunkReceived, onCompleted);
+        Action onCompleted = null,
+        CancellationToken ct = default
+    ) => _impl.CallStreamAsync(model, messages, apiKey, apiUrl, onChunkReceived, onCompleted, ct);
 
     public static Task<List<string>> FetchModelsAsync(string apiKey, string apiUrl) =>
         _impl.FetchModelsAsync(apiKey, apiUrl);

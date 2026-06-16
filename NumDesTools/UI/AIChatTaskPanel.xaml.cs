@@ -1,4 +1,5 @@
 using System.Runtime.Versioning;
+using System.Threading;
 using System.Web;
 using System.Windows;
 using System.Windows.Documents;
@@ -27,6 +28,9 @@ public partial class AiChatTaskPanel
     private const int MaxHistoryRounds = 20;
     private const int HistoryPageSize = 50;
     private int _historyOffset; // 已加载条数（从最新往旧算）
+
+    private CancellationTokenSource _cts;
+    private bool _isStreaming;
 
     private string _sessionId = Guid.NewGuid().ToString("N")[..12];
 
@@ -254,9 +258,15 @@ function clearAll(){document.body.innerHTML=''}
             return;
         e.Handled = true;
         if ((e.KeyboardDevice.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+        {
             PromptInput.Document.Insert(PromptInput.CaretOffset, Environment.NewLine);
+        }
         else
+        {
+            if (_isStreaming)
+                _cts?.Cancel();
             ProcessInput();
+        }
     }
 
     private void PromptInput_GotFocus(object sender, RoutedEventArgs e)
@@ -295,6 +305,15 @@ function clearAll(){document.body.innerHTML=''}
         if (string.IsNullOrEmpty(userInput))
             return;
 
+        // 立即清空输入框，不等 API 完成
+        PromptInput.Document.Text = string.Empty;
+        PromptInput.Focus();
+
+        // 取消旧流（插话支持）
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        var ct = _cts.Token;
+
         // 构建带上下文的消息列表
         var sysContent = AppServices.Config.AiPrompts.ExcelAssistant;
         var messages = new List<object> { new { role = "system", content = sysContent } };
@@ -314,6 +333,7 @@ function clearAll(){document.body.innerHTML=''}
             IsUser = false,
         };
 
+        _isStreaming = true;
         try
         {
             await ChatApiClient.CallApiStreamAsync(
@@ -338,7 +358,8 @@ function clearAll(){document.body.innerHTML=''}
                             + $"t.innerHTML='{now:yyyy-MM-dd HH:mm:ss}';";
                         ResponseOutput.InvokeScript("eval", script);
                     });
-                }
+                },
+                ct
             );
 
             _streamBuffer = "";
@@ -356,13 +377,19 @@ function clearAll(){document.body.innerHTML=''}
             ResponseOutput.InvokeScript("replaceContent", _currentResponseId, htmlMessage);
             ResponseOutput.InvokeScript("eval", "scrollToBottom()");
         }
+        catch (OperationCanceledException)
+        {
+            // 用户主动插话/取消，正常中断，不报错
+        }
         catch (Exception ex)
         {
             AppendMessage(model, $"调用 AI 时出错：{ex.Message}", isUser: false, DateTime.Now);
         }
+        finally
+        {
+            _isStreaming = false;
+        }
 
-        PromptInput.Document.Text = string.Empty;
-        PromptInput.Focus();
         Dispatcher.BeginInvoke(() => RefreshSessionList());
     }
 

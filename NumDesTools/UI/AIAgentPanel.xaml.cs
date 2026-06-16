@@ -19,6 +19,9 @@ public partial class AIAgentPanel
     private readonly List<object> _history = [];
     private const int MaxHistoryMessages = 60;
     private bool _isRunning;
+    private string? _agentStreamId;
+    private string? _agentStreamBuffer;
+
     // 执行中的插话队列：Enter 发送时入队，每步循环开头注入对话
     private readonly System.Collections.Concurrent.ConcurrentQueue<string> _interjectQueue = new();
     private string _sessionId = Guid.NewGuid().ToString("N")[..12];
@@ -531,105 +534,491 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 },
             },
         },
-
         // ── P0 新工具定义 ─────────────────────────────────────────────────────
-        new { type="function", function=new { name="get_active_cell",
-            description="获取当前活动单元格的地址、值及所在 Sheet 名",
-            parameters=new { type="object", properties=new { }, required=Array.Empty<string>() } } },
-
-        new { type="function", function=new { name="navigate_to",
-            description="跳转到指定 Sheet 的指定单元格并激活",
-            parameters=new { type="object", properties=new {
-                sheet_name=new{type="string",description="Sheet 名"},
-                address=new{type="string",description="单元格地址如 A1"} },
-                required=new[]{"address"} } } },
-
-        new { type="function", function=new { name="manage_sheet",
-            description="新建/删除/重命名/复制/移动 Sheet",
-            parameters=new { type="object", properties=new {
-                action=new{type="string",description="create|delete|rename|copy|move"},
-                sheet_name=new{type="string",description="操作的 Sheet 名"},
-                new_name=new{type="string",description="新名称（rename 时用）"},
-                target_position=new{type="integer",description="目标位置 1-based（move/copy 时）"},
-                copy_before=new{type="string",description="复制到哪个 Sheet 前面"} },
-                required=new[]{"action","sheet_name"} } } },
-
-        new { type="function", function=new { name="save_workbook",
-            description="保存当前工作簿，或另存为指定路径",
-            parameters=new { type="object", properties=new {
-                save_as_path=new{type="string",description="另存路径，不传则原路径保存"},
-                file_format=new{type="string",description="xlsx|xlsm|csv"} },
-                required=Array.Empty<string>() } } },
-
-        new { type="function", function=new { name="find_replace",
-            description="在指定区域执行查找替换，返回完成提示",
-            parameters=new { type="object", properties=new {
-                find=new{type="string",description="查找内容"},
-                replace=new{type="string",description="替换内容"},
-                sheet_name=new{type="string",description="Sheet 名，不传用当前"},
-                address=new{type="string",description="范围，不传用整 Sheet"},
-                match_case=new{type="boolean",description="是否区分大小写"},
-                match_entire_cell=new{type="boolean",description="是否整单元格匹配"} },
-                required=new[]{"find","replace"} } } },
-
-        new { type="function", function=new { name="insert_delete_rows_cols",
-            description="插入或删除整行/整列",
-            parameters=new { type="object", properties=new {
-                action=new{type="string",description="insert_rows|delete_rows|insert_cols|delete_cols"},
-                sheet_name=new{type="string",description="Sheet 名"},
-                start=new{type="integer",description="起始行/列号（1-based）"},
-                count=new{type="integer",description="数量，默认 1"} },
-                required=new[]{"action","sheet_name","start"} } } },
-
-        new { type="function", function=new { name="sort_range",
-            description="对指定区域按列排序",
-            parameters=new { type="object", properties=new {
-                sheet_name=new{type="string",description="Sheet 名"},
-                address=new{type="string",description="排序区域如 A1:D100"},
-                key_column=new{type="integer",description="排序键相对列号（1-based）"},
-                ascending=new{type="boolean",description="true 升序 false 降序"},
-                has_header=new{type="boolean",description="是否有标题行"} },
-                required=new[]{"sheet_name","address","key_column"} } } },
-
-        new { type="function", function=new { name="set_number_format",
-            description="设置单元格数字格式，如日期、百分比、货币、小数位数",
-            parameters=new { type="object", properties=new {
-                sheet_name=new{type="string",description="Sheet 名"},
-                address=new{type="string",description="单元格/区域地址"},
-                format_string=new{type="string",description="格式字符串如 0.00% / yyyy-mm-dd / #,##0.00"} },
-                required=new[]{"sheet_name","address","format_string"} } } },
-
-        new { type="function", function=new { name="download_image",
-            description="从 URL 下载图片到本地临时文件，返回本地路径供 insert_image 使用",
-            parameters=new { type="object", properties=new {
-                url=new{type="string",description="图片 URL"} },
-                required=new[]{"url"} } } },
-
-        new { type="function", function=new { name="generate_image",
-            description="根据文字描述用 AI 生成一张图片，保存到本地临时文件，返回文件路径。调用后必须立即用 insert_image 将该路径插入 Excel 单元格。",
-            parameters=new { type="object", properties=new {
-                prompt=new{type="string",description="图片内容描述，支持中英文，越详细越好，例如：一只在草地上奔跑的橙色猫咪，卡通风格"},
-                model=new{type="string",description="生图模型，可选：gemini-3.1-flash-image-preview（快速，默认）、gemini-3-pro-image-preview（高质量）"} },
-                required=new[]{"prompt"} } } },
-
-        new { type="function", function=new { name="insert_image",
-            description="将本地图片文件插入 Excel 指定单元格位置，图片左上角对齐单元格左上角。通常与 generate_image 或 download_image 配合使用。用户说'自适应单元格'或'不变形填满'时，传 fit_to_cell=true。",
-            parameters=new { type="object", properties=new {
-                sheet_name=new{type="string",description="工作表名称，留空则用当前活动表"},
-                file_path=new{type="string",description="本地图片完整路径，通常来自 generate_image 返回值"},
-                anchor_address=new{type="string",description="插入位置的单元格地址，例如 B3"},
-                width_pt=new{type="number",description="图片宽度（磅），fit_to_cell=true 时忽略"},
-                height_pt=new{type="number",description="图片高度（磅），fit_to_cell=true 时忽略"},
-                fit_to_cell=new{type="boolean",description="true=等比缩放自适应单元格（contain fit，不拉伸不裁剪）；false=用原始尺寸或指定尺寸"} },
-                required=new[]{"file_path","anchor_address"} } } },
-
-        new { type="function", function=new { name="run_shell",
-            description="执行 PowerShell 命令，返回标准输出和错误输出。可用于文件操作、运行脚本、数据处理、调用外部工具等 Excel 之外的任务。输出超过 3000 字符时自动截断。",
-            parameters=new { type="object", properties=new {
-                command=new{type="string",description="要执行的 PowerShell 命令或脚本，支持多行"},
-                working_dir=new{type="string",description="工作目录，不填则用 我的文档 目录"},
-                timeout_seconds=new{type="integer",description="超时秒数，默认 30，最大 120"} },
-                required=new[]{"command"} } } },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "get_active_cell",
+                description = "获取当前活动单元格的地址、值及所在 Sheet 名",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new { },
+                    required = Array.Empty<string>(),
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "navigate_to",
+                description = "跳转到指定 Sheet 的指定单元格并激活",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        sheet_name = new { type = "string", description = "Sheet 名" },
+                        address = new { type = "string", description = "单元格地址如 A1" },
+                    },
+                    required = new[] { "address" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "manage_sheet",
+                description = "新建/删除/重命名/复制/移动 Sheet",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        action = new
+                        {
+                            type = "string",
+                            description = "create|delete|rename|copy|move",
+                        },
+                        sheet_name = new { type = "string", description = "操作的 Sheet 名" },
+                        new_name = new { type = "string", description = "新名称（rename 时用）" },
+                        target_position = new
+                        {
+                            type = "integer",
+                            description = "目标位置 1-based（move/copy 时）",
+                        },
+                        copy_before = new
+                        {
+                            type = "string",
+                            description = "复制到哪个 Sheet 前面",
+                        },
+                    },
+                    required = new[] { "action", "sheet_name" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "save_workbook",
+                description = "保存当前工作簿，或另存为指定路径",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        save_as_path = new
+                        {
+                            type = "string",
+                            description = "另存路径，不传则原路径保存",
+                        },
+                        file_format = new { type = "string", description = "xlsx|xlsm|csv" },
+                    },
+                    required = Array.Empty<string>(),
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "find_replace",
+                description = "在指定区域执行查找替换，返回完成提示",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        find = new { type = "string", description = "查找内容" },
+                        replace = new { type = "string", description = "替换内容" },
+                        sheet_name = new { type = "string", description = "Sheet 名，不传用当前" },
+                        address = new { type = "string", description = "范围，不传用整 Sheet" },
+                        match_case = new { type = "boolean", description = "是否区分大小写" },
+                        match_entire_cell = new
+                        {
+                            type = "boolean",
+                            description = "是否整单元格匹配",
+                        },
+                    },
+                    required = new[] { "find", "replace" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "insert_delete_rows_cols",
+                description = "插入或删除整行/整列",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        action = new
+                        {
+                            type = "string",
+                            description = "insert_rows|delete_rows|insert_cols|delete_cols",
+                        },
+                        sheet_name = new { type = "string", description = "Sheet 名" },
+                        start = new { type = "integer", description = "起始行/列号（1-based）" },
+                        count = new { type = "integer", description = "数量，默认 1" },
+                    },
+                    required = new[] { "action", "sheet_name", "start" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "sort_range",
+                description = "对指定区域按列排序",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        sheet_name = new { type = "string", description = "Sheet 名" },
+                        address = new { type = "string", description = "排序区域如 A1:D100" },
+                        key_column = new
+                        {
+                            type = "integer",
+                            description = "排序键相对列号（1-based）",
+                        },
+                        ascending = new { type = "boolean", description = "true 升序 false 降序" },
+                        has_header = new { type = "boolean", description = "是否有标题行" },
+                    },
+                    required = new[] { "sheet_name", "address", "key_column" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "set_number_format",
+                description = "设置单元格数字格式，如日期、百分比、货币、小数位数",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        sheet_name = new { type = "string", description = "Sheet 名" },
+                        address = new { type = "string", description = "单元格/区域地址" },
+                        format_string = new
+                        {
+                            type = "string",
+                            description = "格式字符串如 0.00% / yyyy-mm-dd / #,##0.00",
+                        },
+                    },
+                    required = new[] { "sheet_name", "address", "format_string" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "download_image",
+                description = "从 URL 下载图片到本地临时文件，返回本地路径供 insert_image 使用",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new { url = new { type = "string", description = "图片 URL" } },
+                    required = new[] { "url" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "generate_image",
+                description = "根据文字描述用 AI 生成一张图片，保存到本地临时文件，返回文件路径。调用后必须立即用 insert_image 将该路径插入 Excel 单元格。",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        prompt = new
+                        {
+                            type = "string",
+                            description = "图片内容描述，支持中英文，越详细越好，例如：一只在草地上奔跑的橙色猫咪，卡通风格",
+                        },
+                        model = new
+                        {
+                            type = "string",
+                            description = "生图模型，可选：gemini-3.1-flash-image-preview（快速，默认）、gemini-3-pro-image-preview（高质量）",
+                        },
+                    },
+                    required = new[] { "prompt" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "insert_image",
+                description = "将本地图片文件插入 Excel 指定单元格位置，图片左上角对齐单元格左上角。通常与 generate_image 或 download_image 配合使用。用户说'自适应单元格'或'不变形填满'时，传 fit_to_cell=true。",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        sheet_name = new
+                        {
+                            type = "string",
+                            description = "工作表名称，留空则用当前活动表",
+                        },
+                        file_path = new
+                        {
+                            type = "string",
+                            description = "本地图片完整路径，通常来自 generate_image 返回值",
+                        },
+                        anchor_address = new
+                        {
+                            type = "string",
+                            description = "插入位置的单元格地址，例如 B3",
+                        },
+                        width_pt = new
+                        {
+                            type = "number",
+                            description = "图片宽度（磅），fit_to_cell=true 时忽略",
+                        },
+                        height_pt = new
+                        {
+                            type = "number",
+                            description = "图片高度（磅），fit_to_cell=true 时忽略",
+                        },
+                        fit_to_cell = new
+                        {
+                            type = "boolean",
+                            description = "true=等比缩放自适应单元格（contain fit，不拉伸不裁剪）；false=用原始尺寸或指定尺寸",
+                        },
+                    },
+                    required = new[] { "file_path", "anchor_address" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "run_shell",
+                description = "执行 PowerShell 命令，返回标准输出和错误输出。可用于文件操作、运行脚本、数据处理、调用外部工具等 Excel 之外的任务。输出超过 3000 字符时自动截断。",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        command = new
+                        {
+                            type = "string",
+                            description = "要执行的 PowerShell 命令或脚本，支持多行",
+                        },
+                        working_dir = new
+                        {
+                            type = "string",
+                            description = "工作目录，不填则用 我的文档 目录",
+                        },
+                        timeout_seconds = new
+                        {
+                            type = "integer",
+                            description = "超时秒数，默认 30，最大 120",
+                        },
+                    },
+                    required = new[] { "command" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "read_file",
+                description = "读取本地文件内容（文本/json/csv 等），返回文件内容，最多 500 行（超出时截断）",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        path = new { type = "string", description = "文件绝对路径" },
+                        max_lines = new
+                        {
+                            type = "integer",
+                            description = "最多读取行数，默认 500",
+                        },
+                        encoding = new
+                        {
+                            type = "string",
+                            description = "编码，默认 utf-8，可选 gbk",
+                        },
+                    },
+                    required = new[] { "path" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "write_file",
+                description = "将内容写入本地文件，默认覆盖写入，append=true 时追加",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        path = new
+                        {
+                            type = "string",
+                            description = "文件绝对路径，不存在时自动创建目录",
+                        },
+                        content = new { type = "string", description = "要写入的文本内容" },
+                        append = new
+                        {
+                            type = "boolean",
+                            description = "true=追加到末尾，false=覆盖（默认）",
+                        },
+                    },
+                    required = new[] { "path", "content" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "list_directory",
+                description = "列出目录下的文件和子目录，支持通配符 pattern",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        path = new { type = "string", description = "目录绝对路径" },
+                        pattern = new { type = "string", description = "文件名通配符，默认 *" },
+                        recursive = new
+                        {
+                            type = "boolean",
+                            description = "是否递归子目录，默认 false",
+                        },
+                    },
+                    required = new[] { "path" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "search_in_files",
+                description = "在目录下所有文件中搜索包含指定文本的行，返回 文件名:行号:内容",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        root_path = new { type = "string", description = "搜索根目录" },
+                        pattern = new { type = "string", description = "要搜索的文本（不是正则）" },
+                        file_glob = new
+                        {
+                            type = "string",
+                            description = "文件名过滤，如 *.cs，默认 *.*",
+                        },
+                        max_results = new
+                        {
+                            type = "integer",
+                            description = "最多返回条数，默认 50",
+                        },
+                    },
+                    required = new[] { "root_path", "pattern" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "web_fetch",
+                description = "获取 URL 内容，自动去除 HTML 标签返回纯文本，超过 3000 字自动截断",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        url = new { type = "string", description = "要获取的 URL" },
+                        max_chars = new { type = "integer", description = "最大字符数，默认 3000" },
+                    },
+                    required = new[] { "url" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "move_file",
+                description = "移动或重命名文件/目录",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        source = new { type = "string", description = "源路径" },
+                        destination = new { type = "string", description = "目标路径" },
+                    },
+                    required = new[] { "source", "destination" },
+                },
+            },
+        },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "delete_file",
+                description = "删除文件，目录需要 recursive=true 才能删除非空目录",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        path = new { type = "string", description = "要删除的文件或目录路径" },
+                        recursive = new
+                        {
+                            type = "boolean",
+                            description = "删除目录时是否递归，默认 false",
+                        },
+                    },
+                    required = new[] { "path" },
+                },
+            },
+        },
     ];
 
     // 匹配 Sheet1!A1:B5 / A1:B5 / A1 形式的单元格地址
@@ -658,13 +1047,17 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     "onkeydown",
                     new Action<dynamic>(e =>
                     {
-                        if ((int)e.ctrlKey != 1) return;
+                        if ((int)e.ctrlKey != 1)
+                            return;
                         e.cancelBubble = true;
                         e.returnValue = false;
                         int keyCode = (int)e.keyCode;
-                        if (keyCode == 67) doc.execCommand("Copy",     false, null); // Ctrl+C
-                        if (keyCode == 65) doc.execCommand("SelectAll", false, null); // Ctrl+A
-                        if (keyCode == 88) doc.execCommand("Cut",      false, null); // Ctrl+X
+                        if (keyCode == 67)
+                            doc.execCommand("Copy", false, null); // Ctrl+C
+                        if (keyCode == 65)
+                            doc.execCommand("SelectAll", false, null); // Ctrl+A
+                        if (keyCode == 88)
+                            doc.execCommand("Cut", false, null); // Ctrl+X
                     })
                 );
             }
@@ -675,11 +1068,13 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         AttachClipboardKeys(CustomInstructionInput);
         // 深色主题：输入框默认背景
         var darkBg = new System.Windows.Media.SolidColorBrush(
-            System.Windows.Media.Color.FromRgb(0x1e, 0x1e, 0x1e));
+            System.Windows.Media.Color.FromRgb(0x1e, 0x1e, 0x1e)
+        );
         TaskInput.Background = darkBg;
         CustomInstructionInput.Background = darkBg;
         TaskInput.CaretBrush = new System.Windows.Media.SolidColorBrush(
-            System.Windows.Media.Colors.White);
+            System.Windows.Media.Colors.White
+        );
         CustomInstructionInput.Text = AppServices.Config.Agent.CustomInstruction;
         CustomInstructionInput.LostFocus += (_, _) =>
         {
@@ -733,10 +1128,13 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
         // 优先恢复上次 Agent 选用的模型，fallback 到全局模型
         AppServices.GlobalValue.Value.TryGetValue(AgentModelKey, out var savedAgentModel);
-        var target = !string.IsNullOrEmpty(savedAgentModel) && ModelComboBox.Items.Contains(savedAgentModel)
-            ? savedAgentModel
-            : AppServices.Config.Llm.Model;
-        ModelComboBox.SelectedItem = ModelComboBox.Items.Contains(target) ? target : ModelComboBox.Items[0];
+        var target =
+            !string.IsNullOrEmpty(savedAgentModel) && ModelComboBox.Items.Contains(savedAgentModel)
+                ? savedAgentModel
+                : AppServices.Config.Llm.Model;
+        ModelComboBox.SelectedItem = ModelComboBox.Items.Contains(target)
+            ? target
+            : ModelComboBox.Items[0];
     }
 
     private void ModelComboBox_SelectionChanged(
@@ -756,7 +1154,11 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         if (sessions.Count > 0)
             _sessionId = sessions[0].SessionId;
 
-        var history = db.LoadChatHistory(AgentHistoryPageSize, sessionId: _sessionId, isAgent: true);
+        var history = db.LoadChatHistory(
+            AgentHistoryPageSize,
+            sessionId: _sessionId,
+            isAgent: true
+        );
         if (history.Count == 0)
         {
             ChatOutput.LoadCompleted += (_, _) => RefreshSessionList();
@@ -770,7 +1172,15 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         // 渲染到 WebBrowser（等 LoadCompleted 后执行）
         var sb = new System.Text.StringBuilder();
         foreach (var m in history)
-            sb.Append(BuildAgentMessageHtml(m.IsUser ? "user" : "assistant", m.Message, m.IsUser, m.Role, m.Timestamp));
+            sb.Append(
+                BuildAgentMessageHtml(
+                    m.IsUser ? "user" : "assistant",
+                    m.Message,
+                    m.IsUser,
+                    m.Role,
+                    m.Timestamp
+                )
+            );
         var escaped = System.Web.HttpUtility.JavaScriptStringEncode(sb.ToString());
         ChatOutput.LoadCompleted += OnFirstLoadInsertHistory;
         _pendingHistoryHtml = escaped;
@@ -778,7 +1188,10 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
     private string _pendingHistoryHtml;
 
-    private void OnFirstLoadInsertHistory(object sender, System.Windows.Navigation.NavigationEventArgs e)
+    private void OnFirstLoadInsertHistory(
+        object sender,
+        System.Windows.Navigation.NavigationEventArgs e
+    )
     {
         ChatOutput.LoadCompleted -= OnFirstLoadInsertHistory;
         if (string.IsNullOrEmpty(_pendingHistoryHtml))
@@ -798,7 +1211,13 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         RefreshSessionList();
     }
 
-    private static string BuildAgentMessageHtml(string role, string markdown, bool isUser, string label, DateTime? timestamp)
+    private static string BuildAgentMessageHtml(
+        string role,
+        string markdown,
+        bool isUser,
+        string label,
+        DateTime? timestamp
+    )
     {
         var html = InjectCellLinks(Markdown.ToHtml(markdown, MdPipeline));
         var cls = isUser ? "user" : "assistant";
@@ -811,13 +1230,26 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     {
         tb.PreviewKeyDown += (_, e) =>
         {
-            if (Keyboard.Modifiers != ModifierKeys.Control) return;
+            if (Keyboard.Modifiers != ModifierKeys.Control)
+                return;
             switch (e.Key)
             {
-                case Key.C: tb.Copy();  e.Handled = true; break;
-                case Key.X: tb.Cut();   e.Handled = true; break;
-                case Key.A: tb.SelectAll(); e.Handled = true; break;
-                case Key.Z: tb.Undo(); e.Handled = true; break;
+                case Key.C:
+                    tb.Copy();
+                    e.Handled = true;
+                    break;
+                case Key.X:
+                    tb.Cut();
+                    e.Handled = true;
+                    break;
+                case Key.A:
+                    tb.SelectAll();
+                    e.Handled = true;
+                    break;
+                case Key.Z:
+                    tb.Undo();
+                    e.Handled = true;
+                    break;
             }
         };
     }
@@ -833,7 +1265,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             return;
         }
         var text = TaskInput.Text.Trim();
-        if (string.IsNullOrEmpty(text)) return;
+        if (string.IsNullOrEmpty(text))
+            return;
         if (_isRunning)
         {
             // 执行中：插话，不启动新任务
@@ -868,7 +1301,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         TaskInput.Clear();
         TaskInput.IsEnabled = true; // 执行中保持可输入（用于插话）
         TaskInput.Background = new System.Windows.Media.SolidColorBrush(
-            System.Windows.Media.Color.FromRgb(0x1a, 0x1a, 0x28)); // 微调颜色提示"插话模式"
+            System.Windows.Media.Color.FromRgb(0x1a, 0x1a, 0x28)
+        ); // 微调颜色提示"插话模式"
         SetStatus("执行中… (输入可插话)");
 
         try
@@ -890,7 +1324,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             RunButton.IsEnabled = true;
             StopButton.IsEnabled = false;
             TaskInput.Background = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromRgb(0x1e, 0x1e, 0x1e));
+                System.Windows.Media.Color.FromRgb(0x1e, 0x1e, 0x1e)
+            );
         }
     }
 
@@ -956,13 +1391,20 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
             SetStatus($"步骤 {step}/{maxSteps}…");
 
+            StartAgentStreamBubble(model);
             var (content, toolCalls) = await CallWithToolsAsync(
                 model,
                 messages,
                 apiKey,
                 apiUrl,
-                ct
+                ct,
+                chunk =>
+                {
+                    _agentStreamBuffer = (_agentStreamBuffer ?? "") + chunk;
+                    AppendAgentStreamChunk(HttpUtility.HtmlEncode(chunk).Replace("\n", "<br/>"));
+                }
             );
+            FinalizeAgentStreamBubble();
 
             if (toolCalls is { Count: > 0 })
             {
@@ -1012,27 +1454,41 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 AddStep($"✅ 完成（{step} 步）");
                 SetStatus("完成");
                 var finalContent = content ?? "（无输出）";
-                AppendChat("assistant", finalContent);
+                // 若流式已输出内容，bubble 已渲染，不重复 AppendChat
+                if (string.IsNullOrEmpty(_agentStreamBuffer))
+                    AppendChat("assistant", finalContent);
                 // 只把最终文本消息写回持久历史（中间 tool_calls/tool 消息丢弃）
                 while (_history.Count > historyCountBefore)
                     _history.RemoveAt(_history.Count - 1);
                 _history.Add(new { role = "assistant", content = finalContent });
                 // 持久化用户消息 + 最终 assistant 消息
                 var db = new ChatHistoryManager();
-                var model2 = Dispatcher.Invoke(() => ModelComboBox.SelectedItem as string ?? "Agent");
+                var model2 = Dispatcher.Invoke(() =>
+                    ModelComboBox.SelectedItem as string ?? "Agent"
+                );
                 var sid = _sessionId;
-                _ = db.SaveChatMessageAsync(new ChatMessage
-                {
-                    Role = Environment.UserName, Message = userTask,
-                    IsUser = true, Timestamp = DateTime.Now, IsAgent = true,
-                    SessionId = sid,
-                });
-                _ = db.SaveChatMessageAsync(new ChatMessage
-                {
-                    Role = model2, Message = finalContent,
-                    IsUser = false, Timestamp = DateTime.Now, IsAgent = true,
-                    SessionId = sid,
-                });
+                _ = db.SaveChatMessageAsync(
+                    new ChatMessage
+                    {
+                        Role = Environment.UserName,
+                        Message = userTask,
+                        IsUser = true,
+                        Timestamp = DateTime.Now,
+                        IsAgent = true,
+                        SessionId = sid,
+                    }
+                );
+                _ = db.SaveChatMessageAsync(
+                    new ChatMessage
+                    {
+                        Role = model2,
+                        Message = finalContent,
+                        IsUser = false,
+                        Timestamp = DateTime.Now,
+                        IsAgent = true,
+                        SessionId = sid,
+                    }
+                );
                 Dispatcher.Invoke(RefreshSessionList);
                 return;
             }
@@ -1050,16 +1506,19 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         List<object> messages,
         string apiKey,
         string apiUrl,
-        CancellationToken ct
+        CancellationToken ct,
+        Action<string>? onChunk = null
     )
     {
-        var body = new
+        var useStream = onChunk is not null;
+        var bodyObj = new
         {
             model,
             messages,
             tools = ToolDefinitions,
             tool_choice = "auto",
             max_tokens = 4000,
+            stream = useStream,
         };
         using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(3) };
         using var req = new System.Net.Http.HttpRequestMessage(
@@ -1067,7 +1526,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             apiUrl
         );
         req.Content = new System.Net.Http.StringContent(
-            JsonConvert.SerializeObject(body),
+            JsonConvert.SerializeObject(bodyObj),
             System.Text.Encoding.UTF8,
             "application/json"
         );
@@ -1075,12 +1534,124 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             "Bearer",
             apiKey
         );
-        using var resp = await http.SendAsync(req, ct);
-        var json = JObject.Parse(await resp.Content.ReadAsStringAsync(ct));
-        if (!resp.IsSuccessStatusCode)
-            throw new Exception(json.ToString());
-        var msg = json["choices"]?[0]?["message"];
-        return (msg?["content"]?.ToString(), msg?["tool_calls"]?.ToObject<List<JObject>>());
+
+        if (!useStream)
+        {
+            using var resp = await http.SendAsync(req, ct);
+            var json = JObject.Parse(await resp.Content.ReadAsStringAsync(ct));
+            if (!resp.IsSuccessStatusCode)
+                throw new Exception(json.ToString());
+            var msg = json["choices"]?[0]?["message"];
+            return (msg?["content"]?.ToString(), msg?["tool_calls"]?.ToObject<List<JObject>>());
+        }
+
+        // 流式：SSE 解析
+        using var respStream = await http.SendAsync(
+            req,
+            System.Net.Http.HttpCompletionOption.ResponseHeadersRead,
+            ct
+        );
+        if (!respStream.IsSuccessStatusCode)
+        {
+            var errBody = await respStream.Content.ReadAsStringAsync(ct);
+            throw new Exception(errBody);
+        }
+        using var stream = await respStream.Content.ReadAsStreamAsync(ct);
+        using var reader = new System.IO.StreamReader(stream, System.Text.Encoding.UTF8);
+
+        var contentSb = new System.Text.StringBuilder();
+        // toolCallsMap: index → (id, name, argsSb)
+        var toolCallsMap =
+            new Dictionary<int, (string Id, string Name, System.Text.StringBuilder Args)>();
+        bool chunkStarted = false;
+
+        while (!reader.EndOfStream)
+        {
+            ct.ThrowIfCancellationRequested();
+            var line = await reader.ReadLineAsync();
+            if (line is null)
+                continue;
+            if (!line.StartsWith("data: "))
+                continue;
+            var data = line["data: ".Length..];
+            if (data == "[DONE]")
+                break;
+            JObject chunk;
+            try
+            {
+                chunk = JObject.Parse(data);
+            }
+            catch
+            {
+                continue;
+            }
+
+            var delta = chunk["choices"]?[0]?["delta"];
+            if (delta is null)
+                continue;
+
+            // 文本 delta
+            var textPart = delta["content"]?.ToString();
+            if (!string.IsNullOrEmpty(textPart))
+            {
+                contentSb.Append(textPart);
+                if (!chunkStarted)
+                {
+                    chunkStarted = true;
+                }
+                onChunk!(textPart);
+            }
+
+            // tool_calls delta
+            if (delta["tool_calls"] is JArray tcArr)
+            {
+                foreach (var tc in tcArr)
+                {
+                    var idx = tc["index"]?.Value<int>() ?? 0;
+                    if (!toolCallsMap.ContainsKey(idx))
+                        toolCallsMap[idx] = (
+                            tc["id"]?.ToString() ?? $"tc_{idx}",
+                            tc["function"]?["name"]?.ToString() ?? "",
+                            new System.Text.StringBuilder()
+                        );
+                    else if (!string.IsNullOrEmpty(tc["id"]?.ToString()))
+                    {
+                        // id/name may arrive in first delta
+                        var old = toolCallsMap[idx];
+                        var newId = tc["id"]?.ToString() ?? old.Id;
+                        var newName = tc["function"]?["name"]?.ToString() ?? old.Name;
+                        toolCallsMap[idx] = (newId, newName, old.Args);
+                    }
+                    var argsDelta = tc["function"]?["arguments"]?.ToString();
+                    if (!string.IsNullOrEmpty(argsDelta))
+                        toolCallsMap[idx].Args.Append(argsDelta);
+                }
+            }
+        }
+
+        List<JObject>? toolCallsList = null;
+        if (toolCallsMap.Count > 0)
+        {
+            toolCallsList = toolCallsMap
+                .OrderBy(kv => kv.Key)
+                .Select(kv =>
+                    JObject.FromObject(
+                        new
+                        {
+                            id = kv.Value.Id,
+                            type = "function",
+                            function = new
+                            {
+                                name = kv.Value.Name,
+                                arguments = kv.Value.Args.ToString(),
+                            },
+                        }
+                    )
+                )
+                .ToList();
+        }
+
+        return (contentSb.ToString(), toolCallsList);
     }
 
     private static string ExecuteTool(string toolName, string argsJson)
@@ -1156,23 +1727,23 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     args["col_range"]?.ToString() ?? ""
                 ),
                 // ── P0 新工具 ────────────────────────────────────────────────────
-                "get_active_cell"   => ToolGetActiveCell(),
-                "navigate_to"       => ToolNavigateTo(
+                "get_active_cell" => ToolGetActiveCell(),
+                "navigate_to" => ToolNavigateTo(
                     args["sheet_name"]?.ToString() ?? "",
                     args["address"]?.ToString() ?? "A1"
                 ),
-                "manage_sheet"      => ToolManageSheet(
+                "manage_sheet" => ToolManageSheet(
                     args["action"]?.ToString() ?? "",
                     args["sheet_name"]?.ToString() ?? "",
                     args["new_name"]?.ToString(),
                     (int?)(args["target_position"]),
                     args["copy_before"]?.ToString()
                 ),
-                "save_workbook"     => ToolSaveWorkbook(
+                "save_workbook" => ToolSaveWorkbook(
                     args["save_as_path"]?.ToString(),
                     args["file_format"]?.ToString()
                 ),
-                "find_replace"      => ToolFindReplace(
+                "find_replace" => ToolFindReplace(
                     args["find"]?.ToString() ?? "",
                     args["replace"]?.ToString() ?? "",
                     args["sheet_name"]?.ToString(),
@@ -1186,7 +1757,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     (int)(args["start"] ?? 1),
                     (int)(args["count"] ?? 1)
                 ),
-                "sort_range"        => ToolSortRange(
+                "sort_range" => ToolSortRange(
                     args["sheet_name"]?.ToString() ?? "",
                     args["address"]?.ToString() ?? "",
                     (int)(args["key_column"] ?? 1),
@@ -1199,7 +1770,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     args["format_string"]?.ToString() ?? "General"
                 ),
                 // ── 图片插入 ─────────────────────────────────────────────────────
-                "insert_image"      => ToolInsertImage(
+                "insert_image" => ToolInsertImage(
                     args["sheet_name"]?.ToString() ?? "",
                     args["file_path"]?.ToString() ?? "",
                     args["anchor_address"]?.ToString() ?? "A1",
@@ -1207,8 +1778,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     (double?)(args["height_pt"]),
                     (bool)(args["fit_to_cell"] ?? false)
                 ),
-                "download_image"    => ToolDownloadImage(args["url"]?.ToString() ?? ""),
-                "generate_image"    => ToolGenerateImage(
+                "download_image" => ToolDownloadImage(args["url"]?.ToString() ?? ""),
+                "generate_image" => ToolGenerateImage(
                     args["prompt"]?.ToString() ?? "",
                     args["model"]?.ToString() ?? "gemini-3.1-flash-image-preview",
                     AppServices.Config.Llm.ApiKey,
@@ -1218,6 +1789,39 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     args["command"]?.ToString() ?? "",
                     args["working_dir"]?.ToString(),
                     (int)(args["timeout_seconds"] ?? 30)
+                ),
+                "read_file" => ToolReadFile(
+                    args["path"]?.ToString() ?? "",
+                    (int)(args["max_lines"] ?? 500),
+                    args["encoding"]?.ToString() ?? "utf-8"
+                ),
+                "write_file" => ToolWriteFile(
+                    args["path"]?.ToString() ?? "",
+                    args["content"]?.ToString() ?? "",
+                    (bool)(args["append"] ?? false)
+                ),
+                "list_directory" => ToolListDirectory(
+                    args["path"]?.ToString() ?? "",
+                    args["pattern"]?.ToString() ?? "*",
+                    (bool)(args["recursive"] ?? false)
+                ),
+                "search_in_files" => ToolSearchInFiles(
+                    args["root_path"]?.ToString() ?? "",
+                    args["pattern"]?.ToString() ?? "",
+                    args["file_glob"]?.ToString() ?? "*.*",
+                    (int)(args["max_results"] ?? 50)
+                ),
+                "web_fetch" => ToolWebFetch(
+                    args["url"]?.ToString() ?? "",
+                    (int)(args["max_chars"] ?? 3000)
+                ),
+                "move_file" => ToolMoveFile(
+                    args["source"]?.ToString() ?? "",
+                    args["destination"]?.ToString() ?? ""
+                ),
+                "delete_file" => ToolDeleteFile(
+                    args["path"]?.ToString() ?? "",
+                    (bool)(args["recursive"] ?? false)
                 ),
                 _ => $"未知工具: {toolName}",
             };
@@ -2038,7 +2642,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 : $"{s.LastTime:MM-dd HH:mm}  {s.Preview}";
             SessionComboBox.Items.Add(new SessionItem(s.SessionId, label));
         }
-        var current = SessionComboBox.Items.OfType<SessionItem>()
+        var current = SessionComboBox
+            .Items.OfType<SessionItem>()
             .FirstOrDefault(x => x.SessionId == _sessionId);
         SessionComboBox.SelectedItem = current;
         SessionComboBox.SelectionChanged += SessionComboBox_SelectionChanged;
@@ -2052,19 +2657,28 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         CompressButton.Content = "压缩中…";
         try
         {
-            var model = Dispatcher.Invoke(() => ModelComboBox.SelectedItem as string ?? AppServices.Config.Llm.Model);
+            var model = Dispatcher.Invoke(() =>
+                ModelComboBox.SelectedItem as string ?? AppServices.Config.Llm.Model
+            );
             var apiKey = AppServices.Config.Llm.ApiKey;
             var apiUrl = AppServices.Config.Llm.ChatCompletionsUrl;
             var msgs = new List<object>();
             msgs.AddRange(_history);
-            msgs.Add(new
-            {
-                role = "user",
-                content = "请将上面的完整对话内容压缩为一段结构化摘要，保留所有关键数据、结论和操作记录，供后续对话参考。直接输出摘要，不加解释。",
-            });
+            msgs.Add(
+                new
+                {
+                    role = "user",
+                    content = "请将上面的完整对话内容压缩为一段结构化摘要，保留所有关键数据、结论和操作记录，供后续对话参考。直接输出摘要，不加解释。",
+                }
+            );
             var sb = new System.Text.StringBuilder();
-            await ChatApiClient.CallApiStreamAsync(model, msgs, apiKey, apiUrl,
-                chunk => sb.Append(chunk));
+            await ChatApiClient.CallApiStreamAsync(
+                model,
+                msgs,
+                apiKey,
+                apiUrl,
+                chunk => sb.Append(chunk)
+            );
             var summary = sb.ToString();
             _history.Clear();
             _history.Add(new { role = "assistant", content = $"[对话摘要]\n{summary}" });
@@ -2160,8 +2774,10 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         System.Windows.Controls.SelectionChangedEventArgs e
     )
     {
-        if (SessionComboBox.SelectedItem is not SessionItem item) return;
-        if (item.SessionId == _sessionId) return;
+        if (SessionComboBox.SelectedItem is not SessionItem item)
+            return;
+        if (item.SessionId == _sessionId)
+            return;
         SwitchToSession(item.SessionId);
     }
 
@@ -2180,7 +2796,13 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         var sb = new System.Text.StringBuilder();
         foreach (var m in messages)
             sb.Append(
-                BuildAgentMessageHtml(m.IsUser ? "user" : "assistant", m.Message, m.IsUser, m.Role, m.Timestamp)
+                BuildAgentMessageHtml(
+                    m.IsUser ? "user" : "assistant",
+                    m.Message,
+                    m.IsUser,
+                    m.Role,
+                    m.Timestamp
+                )
             );
         if (sb.Length > 0)
         {
@@ -2205,6 +2827,68 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 return $"<a href='excel://cell/{encoded}' style='color:#4ec9b0;text-decoration:none' title='定位到 {address}'>{m.Value}</a>";
             }
         );
+
+    private void StartAgentStreamBubble(string label)
+    {
+        _agentStreamId = "stream_" + Guid.NewGuid().ToString("N")[..8];
+        _agentStreamBuffer = null;
+        var ts = DateTime.Now.ToString("HH:mm:ss");
+        var block =
+            $"<div id='{_agentStreamId}' class='msg assistant'>"
+            + $"<div class='role'>{HttpUtility.HtmlEncode(label)} <span class='ts'>{ts}</span></div>"
+            + "<div class='content'></div></div>";
+        Dispatcher.Invoke(() =>
+        {
+            try
+            {
+                ChatOutput.InvokeScript(
+                    "eval",
+                    $"document.body.insertAdjacentHTML('beforeend','{HttpUtility.JavaScriptStringEncode(block)}');window.scrollTo(0,document.body.scrollHeight);"
+                );
+            }
+            catch { }
+        });
+    }
+
+    private void AppendAgentStreamChunk(string htmlChunk)
+    {
+        if (_agentStreamId is null)
+            return;
+        Dispatcher.Invoke(() =>
+        {
+            try
+            {
+                var js =
+                    $"(function(){{var el=document.getElementById('{_agentStreamId}');if(el){{el.querySelector('.content').innerHTML+='{HttpUtility.JavaScriptStringEncode(htmlChunk)}';window.scrollTo(0,document.body.scrollHeight);}}}})();";
+                ChatOutput.InvokeScript("eval", js);
+            }
+            catch { }
+        });
+    }
+
+    private void FinalizeAgentStreamBubble()
+    {
+        if (_agentStreamId is null)
+            return;
+        var buf = _agentStreamBuffer ?? "";
+        var id = _agentStreamId;
+        Dispatcher.Invoke(() =>
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(buf))
+                {
+                    var finalHtml = InjectCellLinks(Markdown.ToHtml(buf, MdPipeline));
+                    var js =
+                        $"(function(){{var el=document.getElementById('{id}');if(el){{el.querySelector('.content').innerHTML='{HttpUtility.JavaScriptStringEncode(finalHtml)}';window.scrollTo(0,document.body.scrollHeight);}}}})();";
+                    ChatOutput.InvokeScript("eval", js);
+                }
+            }
+            catch { }
+        });
+        _agentStreamId = null;
+        _agentStreamBuffer = null;
+    }
 
     private void AppendChat(string role, string markdown)
     {
@@ -2243,8 +2927,13 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         return $"已跳转到 {ws.Name}!{address}";
     }
 
-    private static string ToolManageSheet(string action, string sheetName, string? newName,
-        int? targetPosition, string? copyBefore)
+    private static string ToolManageSheet(
+        string action,
+        string sheetName,
+        string? newName,
+        int? targetPosition,
+        string? copyBefore
+    )
     {
         var wb = AppServices.App.ActiveWorkbook;
         switch (action)
@@ -2255,25 +2944,32 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 return $"已创建 Sheet: {ns.Name}";
             case "delete":
                 var ds = FindSheet(sheetName);
-                if (ds == null) return $"Sheet 不存在: {sheetName}";
+                if (ds == null)
+                    return $"Sheet 不存在: {sheetName}";
                 AppServices.App.DisplayAlerts = false;
                 ds.Delete();
                 AppServices.App.DisplayAlerts = true;
                 return $"已删除 Sheet: {sheetName}";
             case "rename":
                 var rs = FindSheet(sheetName);
-                if (rs == null) return $"Sheet 不存在: {sheetName}";
+                if (rs == null)
+                    return $"Sheet 不存在: {sheetName}";
                 rs.Name = newName ?? sheetName;
                 return $"已重命名为: {rs.Name}";
             case "copy":
                 var cs = FindSheet(sheetName);
-                if (cs == null) return $"Sheet 不存在: {sheetName}";
+                if (cs == null)
+                    return $"Sheet 不存在: {sheetName}";
                 var before = string.IsNullOrEmpty(copyBefore) ? null : FindSheet(copyBefore);
-                if (before != null) cs.Copy(before); else cs.Copy();
+                if (before != null)
+                    cs.Copy(before);
+                else
+                    cs.Copy();
                 return $"已复制 Sheet: {sheetName}";
             case "move":
                 var ms = FindSheet(sheetName);
-                if (ms == null) return $"Sheet 不存在: {sheetName}";
+                if (ms == null)
+                    return $"Sheet 不存在: {sheetName}";
                 if (targetPosition.HasValue)
                     ms.Move(wb.Sheets[targetPosition.Value]);
                 return $"已移动 Sheet: {sheetName}";
@@ -2292,16 +2988,22 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         }
         var fmt = fileFormat?.ToLower() switch
         {
-            "csv"  => Microsoft.Office.Interop.Excel.XlFileFormat.xlCSV,
+            "csv" => Microsoft.Office.Interop.Excel.XlFileFormat.xlCSV,
             "xlsm" => Microsoft.Office.Interop.Excel.XlFileFormat.xlOpenXMLWorkbookMacroEnabled,
-            _      => Microsoft.Office.Interop.Excel.XlFileFormat.xlOpenXMLWorkbook,
+            _ => Microsoft.Office.Interop.Excel.XlFileFormat.xlOpenXMLWorkbook,
         };
         wb.SaveAs(saveAsPath, fmt);
         return $"已另存为: {saveAsPath}";
     }
 
-    private static string ToolFindReplace(string find, string replace, string? sheetName,
-        string? address, bool matchCase, bool matchEntireCell)
+    private static string ToolFindReplace(
+        string find,
+        string replace,
+        string? sheetName,
+        string? address,
+        bool matchCase,
+        bool matchEntireCell
+    )
     {
         dynamic rng;
         if (!string.IsNullOrEmpty(sheetName))
@@ -2313,42 +3015,68 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         {
             rng = AppServices.App.ActiveSheet.UsedRange;
         }
-        rng.Replace(find, replace,
-            matchCase ? Microsoft.Office.Interop.Excel.XlLookAt.xlWhole : Microsoft.Office.Interop.Excel.XlLookAt.xlPart,
+        rng.Replace(
+            find,
+            replace,
+            matchCase
+                ? Microsoft.Office.Interop.Excel.XlLookAt.xlWhole
+                : Microsoft.Office.Interop.Excel.XlLookAt.xlPart,
             Microsoft.Office.Interop.Excel.XlSearchOrder.xlByRows,
-            matchCase, Type.Missing, Type.Missing, Type.Missing);
+            matchCase,
+            Type.Missing,
+            Type.Missing,
+            Type.Missing
+        );
         return $"查找替换完成：\"{find}\" → \"{replace}\"";
     }
 
-    private static string ToolInsertDeleteRowsCols(string action, string sheetName, int start, int count)
+    private static string ToolInsertDeleteRowsCols(
+        string action,
+        string sheetName,
+        int start,
+        int count
+    )
     {
         dynamic ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
         var end = start + count - 1;
         switch (action)
         {
             case "insert_rows":
-                ws.Range[ws.Cells[start, 1], ws.Cells[end, 1]].EntireRow.Insert(
-                    Microsoft.Office.Interop.Excel.XlInsertShiftDirection.xlShiftDown);
+                ws.Range[ws.Cells[start, 1], ws.Cells[end, 1]]
+                    .EntireRow.Insert(
+                        Microsoft.Office.Interop.Excel.XlInsertShiftDirection.xlShiftDown
+                    );
                 return $"已在第 {start} 行上方插入 {count} 行";
             case "delete_rows":
-                ws.Range[ws.Cells[start, 1], ws.Cells[end, 1]].EntireRow.Delete(
-                    Microsoft.Office.Interop.Excel.XlDeleteShiftDirection.xlShiftUp);
+                ws.Range[ws.Cells[start, 1], ws.Cells[end, 1]]
+                    .EntireRow.Delete(
+                        Microsoft.Office.Interop.Excel.XlDeleteShiftDirection.xlShiftUp
+                    );
                 return $"已删除第 {start}–{end} 行";
             case "insert_cols":
-                ws.Range[ws.Cells[1, start], ws.Cells[1, end]].EntireColumn.Insert(
-                    Microsoft.Office.Interop.Excel.XlInsertShiftDirection.xlShiftToRight);
+                ws.Range[ws.Cells[1, start], ws.Cells[1, end]]
+                    .EntireColumn.Insert(
+                        Microsoft.Office.Interop.Excel.XlInsertShiftDirection.xlShiftToRight
+                    );
                 return $"已在第 {start} 列左侧插入 {count} 列";
             case "delete_cols":
-                ws.Range[ws.Cells[1, start], ws.Cells[1, end]].EntireColumn.Delete(
-                    Microsoft.Office.Interop.Excel.XlDeleteShiftDirection.xlShiftToLeft);
+                ws.Range[ws.Cells[1, start], ws.Cells[1, end]]
+                    .EntireColumn.Delete(
+                        Microsoft.Office.Interop.Excel.XlDeleteShiftDirection.xlShiftToLeft
+                    );
                 return $"已删除第 {start}–{end} 列";
             default:
                 return $"未知 action: {action}";
         }
     }
 
-    private static string ToolSortRange(string sheetName, string address, int keyColumn,
-        bool ascending, bool hasHeader)
+    private static string ToolSortRange(
+        string sheetName,
+        string address,
+        int keyColumn,
+        bool ascending,
+        bool hasHeader
+    )
     {
         var ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
         dynamic rng = ws.Range[address];
@@ -2359,8 +3087,16 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         var header = hasHeader
             ? Microsoft.Office.Interop.Excel.XlYesNoGuess.xlYes
             : Microsoft.Office.Interop.Excel.XlYesNoGuess.xlNo;
-        rng.Sort(key, order, Type.Missing, Type.Missing, Type.Missing,
-            Type.Missing, Type.Missing, header);
+        rng.Sort(
+            key,
+            order,
+            Type.Missing,
+            Type.Missing,
+            Type.Missing,
+            Type.Missing,
+            Type.Missing,
+            header
+        );
         return $"已排序 {address}，键列 {keyColumn}，{(ascending ? "升序" : "降序")}";
     }
 
@@ -2371,17 +3107,24 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         return $"已设置 {address} 数字格式为: {formatString}";
     }
 
-    private static string ToolInsertImage(string sheetName, string filePath, string anchorAddress,
-        double? widthPt, double? heightPt, bool fitToCell = false)
+    private static string ToolInsertImage(
+        string sheetName,
+        string filePath,
+        string anchorAddress,
+        double? widthPt,
+        double? heightPt,
+        bool fitToCell = false
+    )
     {
         if (!File.Exists(filePath))
             return $"文件不存在: {filePath}";
         var ws = FindSheet(sheetName) ?? AppServices.App.ActiveSheet;
         dynamic anchor = ws.Range[anchorAddress];
         float left = (float)(double)anchor.Left;
-        float top  = (float)(double)anchor.Top;
+        float top = (float)(double)anchor.Top;
 
-        float w, h;
+        float w,
+            h;
         if (fitToCell)
         {
             // contain fit：等比缩放塞进单元格，不变形
@@ -2389,21 +3132,26 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             double cellH = (double)anchor.Height;
             using var img = System.Drawing.Image.FromFile(filePath);
             var scale = Math.Min(cellW / img.Width, cellH / img.Height);
-            w = (float)(img.Width  * scale);
+            w = (float)(img.Width * scale);
             h = (float)(img.Height * scale);
         }
         else
         {
-            w = widthPt.HasValue  ? (float)widthPt.Value  : -1;
+            w = widthPt.HasValue ? (float)widthPt.Value : -1;
             h = heightPt.HasValue ? (float)heightPt.Value : -1;
         }
 
-        ws.Shapes.AddPicture(filePath,
+        ws.Shapes.AddPicture(
+            filePath,
             Microsoft.Office.Core.MsoTriState.msoFalse,
             Microsoft.Office.Core.MsoTriState.msoTrue,
-            left, top, w, h);
+            left,
+            top,
+            w,
+            h
+        );
         return $"已插入图片 {Path.GetFileName(filePath)} 到 {anchorAddress}"
-             + (fitToCell ? $"（自适应单元格 {w:F1}×{h:F1}pt）" : "");
+            + (fitToCell ? $"（自适应单元格 {w:F1}×{h:F1}pt）" : "");
     }
 
     /// <summary>从 URL 下载图片到本地临时文件，返回本地路径</summary>
@@ -2414,8 +3162,9 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             using var client = new System.Net.Http.HttpClient();
             client.Timeout = TimeSpan.FromSeconds(30);
             var bytes = client.GetByteArrayAsync(url).GetAwaiter().GetResult();
-            var ext   = Path.GetExtension(new Uri(url).AbsolutePath);
-            if (string.IsNullOrEmpty(ext)) ext = ".png";
+            var ext = Path.GetExtension(new Uri(url).AbsolutePath);
+            if (string.IsNullOrEmpty(ext))
+                ext = ".png";
             var path = Path.Combine(Path.GetTempPath(), $"ndtools_img_{DateTime.Now.Ticks}{ext}");
             File.WriteAllBytes(path, bytes);
             return $"下载成功: {path}";
@@ -2423,6 +3172,180 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         catch (Exception ex)
         {
             return $"下载失败: {ex.Message}";
+        }
+    }
+
+    private static string ToolReadFile(string path, int maxLines, string encoding)
+    {
+        if (!File.Exists(path))
+            return $"文件不存在: {path}";
+        try
+        {
+            var enc = encoding.ToLower() switch
+            {
+                "gbk" or "gb2312" => System.Text.Encoding.GetEncoding("GBK"),
+                _ => System.Text.Encoding.UTF8,
+            };
+            var lines = File.ReadAllLines(path, enc);
+            var result =
+                lines.Length <= maxLines
+                    ? string.Join("\n", lines)
+                    : string.Join("\n", lines.Take(maxLines))
+                        + $"\n…[已截断，共 {lines.Length} 行，显示前 {maxLines} 行]";
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return $"读取失败: {ex.Message}";
+        }
+    }
+
+    private static string ToolWriteFile(string path, string content, bool append)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            if (append)
+                File.AppendAllText(path, content, System.Text.Encoding.UTF8);
+            else
+                File.WriteAllText(path, content, System.Text.Encoding.UTF8);
+            return $"{(append ? "追加" : "写入")}成功: {path}";
+        }
+        catch (Exception ex)
+        {
+            return $"写入失败: {ex.Message}";
+        }
+    }
+
+    private static string ToolListDirectory(string path, string pattern, bool recursive)
+    {
+        if (!Directory.Exists(path))
+            return $"目录不存在: {path}";
+        try
+        {
+            var opt = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+            var files = Directory.GetFiles(path, pattern, opt);
+            var dirs = recursive ? Array.Empty<string>() : Directory.GetDirectories(path);
+            var lines = dirs.Select(d => $"[DIR]  {Path.GetFileName(d)}")
+                .Concat(
+                    files.Select(f =>
+                    {
+                        var info = new FileInfo(f);
+                        return $"[FILE] {(recursive ? f[path.Length..].TrimStart('\\', '/') : info.Name)}  {info.Length / 1024.0:F1}KB  {info.LastWriteTime:yyyy-MM-dd HH:mm}";
+                    })
+                )
+                .ToList();
+            return lines.Count == 0 ? "(空目录)" : string.Join("\n", lines);
+        }
+        catch (Exception ex)
+        {
+            return $"列目录失败: {ex.Message}";
+        }
+    }
+
+    private static string ToolSearchInFiles(
+        string rootPath,
+        string pattern,
+        string fileGlob,
+        int maxResults
+    )
+    {
+        if (!Directory.Exists(rootPath))
+            return $"目录不存在: {rootPath}";
+        try
+        {
+            var results = new List<string>();
+            foreach (
+                var file in Directory.GetFiles(rootPath, fileGlob, SearchOption.AllDirectories)
+            )
+            {
+                if (results.Count >= maxResults)
+                    break;
+                try
+                {
+                    var lines = File.ReadAllLines(file, System.Text.Encoding.UTF8);
+                    for (var i = 0; i < lines.Length && results.Count < maxResults; i++)
+                        if (lines[i].Contains(pattern, StringComparison.OrdinalIgnoreCase))
+                            results.Add($"{file}:{i + 1}: {lines[i].Trim()}");
+                }
+                catch { }
+            }
+            return results.Count == 0
+                ? $"未找到包含 \"{pattern}\" 的内容"
+                : string.Join("\n", results)
+                    + (results.Count >= maxResults ? $"\n…[已达上限 {maxResults} 条]" : "");
+        }
+        catch (Exception ex)
+        {
+            return $"搜索失败: {ex.Message}";
+        }
+    }
+
+    private static string ToolWebFetch(string url, int maxChars)
+    {
+        try
+        {
+            using var client = new System.Net.Http.HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(15),
+            };
+            client.DefaultRequestHeaders.Add(
+                "User-Agent",
+                "Mozilla/5.0 (compatible; NumDesTools/1.0)"
+            );
+            var html = client.GetStringAsync(url).GetAwaiter().GetResult();
+            var text = System.Text.RegularExpressions.Regex.Replace(html, "<[^>]+>", " ");
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"\s{2,}", " ").Trim();
+            return text.Length > maxChars
+                ? text[..maxChars] + $"…[截断，共 {text.Length} 字符]"
+                : text;
+        }
+        catch (Exception ex)
+        {
+            return $"获取失败: {ex.Message}";
+        }
+    }
+
+    private static string ToolMoveFile(string source, string destination)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            if (File.Exists(source))
+                File.Move(source, destination, overwrite: true);
+            else if (Directory.Exists(source))
+                Directory.Move(source, destination);
+            else
+                return $"源路径不存在: {source}";
+            return $"已移动: {source} → {destination}";
+        }
+        catch (Exception ex)
+        {
+            return $"移动失败: {ex.Message}";
+        }
+    }
+
+    private static string ToolDeleteFile(string path, bool recursive)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+                return $"已删除文件: {path}";
+            }
+            if (Directory.Exists(path))
+            {
+                if (!recursive && Directory.GetFileSystemEntries(path).Length > 0)
+                    return $"目录非空，请传 recursive=true 确认删除: {path}";
+                Directory.Delete(path, recursive);
+                return $"已删除目录: {path}";
+            }
+            return $"路径不存在: {path}";
+        }
+        catch (Exception ex)
+        {
+            return $"删除失败: {ex.Message}";
         }
     }
 
@@ -2456,12 +3379,18 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             var stderr = stderrTask.GetAwaiter().GetResult();
             if (!exited)
             {
-                try { proc.Kill(entireProcessTree: true); } catch { }
+                try
+                {
+                    proc.Kill(entireProcessTree: true);
+                }
+                catch { }
                 return $"[超时 {timeoutSeconds}s 已终止]\n{Truncate(stdout + stderr)}";
             }
             var sb = new System.Text.StringBuilder();
-            if (!string.IsNullOrEmpty(stdout)) sb.Append(stdout);
-            if (!string.IsNullOrEmpty(stderr)) sb.Append($"\n[stderr]\n{stderr}");
+            if (!string.IsNullOrEmpty(stdout))
+                sb.Append(stdout);
+            if (!string.IsNullOrEmpty(stderr))
+                sb.Append($"\n[stderr]\n{stderr}");
             sb.Append($"\n[ExitCode: {proc.ExitCode}]");
             return Truncate(sb.ToString());
         }
@@ -2492,7 +3421,12 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     /// 2. chat/completions multimodal 回退（解析 message.images[0].image_url.url）
     /// 3. Pollinations.ai 免费公网兜底
     /// </summary>
-    private static string ToolGenerateImage(string prompt, string model, string apiKey, string apiUrl)
+    private static string ToolGenerateImage(
+        string prompt,
+        string model,
+        string apiKey,
+        string apiUrl
+    )
     {
         try
         {
@@ -2503,50 +3437,77 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             client.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
 
-            var body = Newtonsoft.Json.JsonConvert.SerializeObject(new
-            {
-                model,
-                prompt,
-                n = 1,
-                size = "1024x1024",
-                response_format = "b64_json",
-            });
-            var resp = client.PostAsync(imgUrl,
-                new System.Net.Http.StringContent(body, System.Text.Encoding.UTF8, "application/json"))
-                .GetAwaiter().GetResult();
-            var json = Newtonsoft.Json.Linq.JObject.Parse(resp.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+            var body = Newtonsoft.Json.JsonConvert.SerializeObject(
+                new
+                {
+                    model,
+                    prompt,
+                    n = 1,
+                    size = "1024x1024",
+                    response_format = "b64_json",
+                }
+            );
+            var resp = client
+                .PostAsync(
+                    imgUrl,
+                    new System.Net.Http.StringContent(
+                        body,
+                        System.Text.Encoding.UTF8,
+                        "application/json"
+                    )
+                )
+                .GetAwaiter()
+                .GetResult();
+            var json = Newtonsoft.Json.Linq.JObject.Parse(
+                resp.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+            );
 
             // 阶段1: /images/generations（已验证 gemini-3.1-flash-image-preview 可用）
             if (resp.IsSuccessStatusCode)
             {
                 var b64 = json["data"]?[0]?["b64_json"]?.ToString();
-                if (!string.IsNullOrEmpty(b64)) return SaveBase64ToPng(b64);
+                if (!string.IsNullOrEmpty(b64))
+                    return SaveBase64ToPng(b64);
                 var imgSrc = json["data"]?[0]?["url"]?.ToString();
-                if (!string.IsNullOrEmpty(imgSrc)) return ToolDownloadImage(imgSrc);
+                if (!string.IsNullOrEmpty(imgSrc))
+                    return ToolDownloadImage(imgSrc);
             }
 
             // 阶段2: chat/completions multimodal 回退（LiteLLM OpenAI 兼容层格式）
-            var chatBody = Newtonsoft.Json.JsonConvert.SerializeObject(new
-            {
-                model,
-                messages = new[] { new { role = "user", content = prompt } },
-                max_tokens = 4096,
-            });
-            var chatResp = client.PostAsync(apiUrl,
-                new System.Net.Http.StringContent(chatBody, System.Text.Encoding.UTF8, "application/json"))
-                .GetAwaiter().GetResult();
+            var chatBody = Newtonsoft.Json.JsonConvert.SerializeObject(
+                new
+                {
+                    model,
+                    messages = new[] { new { role = "user", content = prompt } },
+                    max_tokens = 4096,
+                }
+            );
+            var chatResp = client
+                .PostAsync(
+                    apiUrl,
+                    new System.Net.Http.StringContent(
+                        chatBody,
+                        System.Text.Encoding.UTF8,
+                        "application/json"
+                    )
+                )
+                .GetAwaiter()
+                .GetResult();
             var chatJson = Newtonsoft.Json.Linq.JObject.Parse(
-                chatResp.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+                chatResp.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+            );
 
             // LiteLLM 封装后路径: message.images[0].image_url.url = "data:image/png;base64,..."
-            var images = chatJson["choices"]?[0]?["message"]?["images"] as Newtonsoft.Json.Linq.JArray;
+            var images =
+                chatJson["choices"]?[0]?["message"]?["images"] as Newtonsoft.Json.Linq.JArray;
             if (images is { Count: > 0 })
             {
                 var dataUrl = images[0]?["image_url"]?["url"]?.ToString();
                 if (!string.IsNullOrEmpty(dataUrl))
                 {
                     var idx = dataUrl.IndexOf("base64,", StringComparison.Ordinal);
-                    if (idx >= 0) return SaveBase64ToPng(dataUrl[(idx + 7)..]);
+                    if (idx >= 0)
+                        return SaveBase64ToPng(dataUrl[(idx + 7)..]);
                 }
             }
             // 兜底：content 里内联的 data URL
@@ -2558,7 +3519,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 {
                     var end = content.IndexOfAny(new[] { '"', ' ', '\n' }, start);
                     var slice = end > 0 ? content[(start + 7)..end] : content[(start + 7)..];
-                    if (!string.IsNullOrEmpty(slice)) return SaveBase64ToPng(slice);
+                    if (!string.IsNullOrEmpty(slice))
+                        return SaveBase64ToPng(slice);
                 }
             }
 
