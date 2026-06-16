@@ -22,6 +22,10 @@ public partial class AIAgentPanel
     // 执行中的插话队列：Enter 发送时入队，每步循环开头注入对话
     private readonly System.Collections.Concurrent.ConcurrentQueue<string> _interjectQueue = new();
 
+    private static readonly MarkdownPipeline MdPipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+
     private static readonly string HtmlTemplate =
         @"<html><head><meta charset='utf-8'><style>
 body{background:#1c1c1c;color:#d4d4d4;font-family:'微软雅黑',sans-serif;font-size:10pt;line-height:1.5;margin:0;padding:8px 10px;overflow-y:auto}
@@ -1916,7 +1920,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     {
         Dispatcher.Invoke(() =>
         {
-            var html = InjectCellLinks(Markdown.ToHtml(markdown));
+            var html = InjectCellLinks(Markdown.ToHtml(markdown, MdPipeline));
             var cls = role == "user" ? "user" : "assistant";
             var label =
                 role == "user"

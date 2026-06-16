@@ -12,6 +12,10 @@ namespace NumDesTools.UI;
 [SupportedOSPlatform("windows")]
 public partial class AiChatTaskPanel
 {
+    private static readonly MarkdownPipeline MdPipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .Build();
+
     private readonly string _userName = Environment.UserName;
     private string _currentResponseId;
     private string _streamBuffer = "";         // 流式累积文本
@@ -253,7 +257,7 @@ function clearAll(){document.body.innerHTML=''}
 
             _streamBuffer = "";
             _chunkCount = 0;
-            var htmlMessage = HttpUtility.HtmlDecode(Markdown.ToHtml(streamMessage.Message));
+            var htmlMessage = HttpUtility.HtmlDecode(Markdown.ToHtml(streamMessage.Message, MdPipeline));
             streamMessage.Message = htmlMessage;
 
             // 追加 AI 回复到历史
@@ -299,7 +303,7 @@ function clearAll(){document.body.innerHTML=''}
             if (_chunkCount % ReRenderEvery == 0 || chunk.Contains('\n'))
             {
                 var rendered = HttpUtility.JavaScriptStringEncode(
-                    HttpUtility.HtmlDecode(Markdown.ToHtml(_streamBuffer)));
+                    HttpUtility.HtmlDecode(Markdown.ToHtml(_streamBuffer, MdPipeline)));
                 var script =
                     $"var c=document.getElementById('{_currentResponseId}');"
                     + $"var d=c.querySelector('.content');"
@@ -333,7 +337,7 @@ function clearAll(){document.body.innerHTML=''}
     {
         Dispatcher.BeginInvoke(() =>
         {
-            var htmlMessage = HttpUtility.HtmlDecode(Markdown.ToHtml(message));
+            var htmlMessage = HttpUtility.HtmlDecode(Markdown.ToHtml(message, MdPipeline));
             var ts = timestamp ?? DateTime.Now;
             AppendRawHtml(BuildMessageHtml(role, htmlMessage, isUser, ts));
 
