@@ -137,6 +137,12 @@ public class NumDesCTP
             if (!ctpsWPF.TryGetValue(name, out ctpWPF))
             {
                 PluginLog.Write($"[ShowCTP] new SelfControl, name={name}");
+                // 在新建 SelfControl 前，先断开旧 ElementHost 的 Child 引用，
+                // 否则 WPF 控件仍挂在旧 ElementHost 上，新 set_Child 会抛 InvalidOperationException
+                if (LableControlWPF is { IsDisposed: false })
+                    foreach (Control c in LableControlWPF.Controls)
+                        if (c is ElementHost eh)
+                            try { eh.Child = null; } catch { }
                 LableControlWPF = new SelfControl();
                 PluginLog.Write($"[ShowCTP] new ElementHost, Child={controlWPF.GetType().Name}");
                 var elementHost = new ElementHost
