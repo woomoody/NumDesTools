@@ -607,13 +607,14 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 required=new[]{"prompt"} } } },
 
         new { type="function", function=new { name="insert_image",
-            description="将本地图片文件插入 Excel 指定单元格位置，图片左上角对齐单元格左上角。通常与 generate_image 或 download_image 配合使用。",
+            description="将本地图片文件插入 Excel 指定单元格位置，图片左上角对齐单元格左上角。通常与 generate_image 或 download_image 配合使用。用户说'自适应单元格'或'不变形填满'时，传 fit_to_cell=true。",
             parameters=new { type="object", properties=new {
                 sheet_name=new{type="string",description="工作表名称，留空则用当前活动表"},
-                file_path=new{type="string",description="本地图片完整路径，通常来自 generate_image 返回值，如 C:\\Users\\cent\\AppData\\Local\\Temp\\ndtools_gen_xxx.png"},
+                file_path=new{type="string",description="本地图片完整路径，通常来自 generate_image 返回值"},
                 anchor_address=new{type="string",description="插入位置的单元格地址，例如 B3"},
-                width_pt=new{type="number",description="图片宽度（磅），不填则保持原始尺寸"},
-                height_pt=new{type="number",description="图片高度（磅），不填则保持原始尺寸"} },
+                width_pt=new{type="number",description="图片宽度（磅），fit_to_cell=true 时忽略"},
+                height_pt=new{type="number",description="图片高度（磅），fit_to_cell=true 时忽略"},
+                fit_to_cell=new{type="boolean",description="true=等比缩放自适应单元格（contain fit，不拉伸不裁剪）；false=用原始尺寸或指定尺寸"} },
                 required=new[]{"file_path","anchor_address"} } } },
     ];
 
@@ -1173,7 +1174,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     args["file_path"]?.ToString() ?? "",
                     args["anchor_address"]?.ToString() ?? "A1",
                     (double?)(args["width_pt"]),
-                    (double?)(args["height_pt"])
+                    (double?)(args["height_pt"]),
+                    (bool)(args["fit_to_cell"] ?? false)
                 ),
                 "download_image"    => ToolDownloadImage(args["url"]?.ToString() ?? ""),
                 "generate_image"    => ToolGenerateImage(
@@ -2168,7 +2170,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     }
 
     private static string ToolInsertImage(string sheetName, string filePath, string anchorAddress,
-        double? widthPt, double? heightPt)
+        double? widthPt, double? heightPt, bool fitToCell = false)
     {
         if (!File.Exists(filePath))
             return $"文件不存在: {filePath}";
@@ -2176,13 +2178,30 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         dynamic anchor = ws.Range[anchorAddress];
         float left = (float)(double)anchor.Left;
         float top  = (float)(double)anchor.Top;
-        float w    = widthPt.HasValue  ? (float)widthPt.Value  : -1;
-        float h    = heightPt.HasValue ? (float)heightPt.Value : -1;
+
+        float w, h;
+        if (fitToCell)
+        {
+            // contain fit：等比缩放塞进单元格，不变形
+            double cellW = (double)anchor.Width;
+            double cellH = (double)anchor.Height;
+            using var img = System.Drawing.Image.FromFile(filePath);
+            var scale = Math.Min(cellW / img.Width, cellH / img.Height);
+            w = (float)(img.Width  * scale);
+            h = (float)(img.Height * scale);
+        }
+        else
+        {
+            w = widthPt.HasValue  ? (float)widthPt.Value  : -1;
+            h = heightPt.HasValue ? (float)heightPt.Value : -1;
+        }
+
         ws.Shapes.AddPicture(filePath,
             Microsoft.Office.Core.MsoTriState.msoFalse,
             Microsoft.Office.Core.MsoTriState.msoTrue,
             left, top, w, h);
-        return $"已插入图片 {Path.GetFileName(filePath)} 到 {anchorAddress}";
+        return $"已插入图片 {Path.GetFileName(filePath)} 到 {anchorAddress}"
+             + (fitToCell ? $"（自适应单元格 {w:F1}×{h:F1}pt）" : "");
     }
 
     /// <summary>从 URL 下载图片到本地临时文件，返回本地路径</summary>
