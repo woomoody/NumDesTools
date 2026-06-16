@@ -1107,45 +1107,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, ctpName);
         }
 
-        var aiCtpName = "AI对话-Excel";
-        if (ShowAiText == "AI对话：开启")
-        {
-            NumDesCTP.DeleteCTP(true, aiCtpName);
-            _chatAiChatMenuCtp ??= new AiChatTaskPanel();
-            _chatAiChatMenuCtp = (AiChatTaskPanel)
-                NumDesCTP.ShowCTP(
-                    1000,
-                    aiCtpName,
-                    true,
-                    aiCtpName,
-                    _chatAiChatMenuCtp,
-                    MsoCTPDockPosition.msoCTPDockPositionRight
-                );
-        }
-        else
-        {
-            NumDesCTP.DeleteCTP(true, aiCtpName);
-        }
-
-        var agentCtpName = "AI Agent-Excel";
-        if (_showAgentText == "Agent模式：开启")
-        {
-            NumDesCTP.DeleteCTP(true, agentCtpName);
-            _agentCtp ??= new AIAgentPanel();
-            _agentCtp = (AIAgentPanel)
-                NumDesCTP.ShowCTP(
-                    1000,
-                    agentCtpName,
-                    true,
-                    agentCtpName,
-                    _agentCtp,
-                    MsoCTPDockPosition.msoCTPDockPositionRight
-                );
-        }
-        else
-        {
-            NumDesCTP.DeleteCTP(true, agentCtpName);
-        }
+        // AI Chat / AI Agent 是通用工具，不随工作簿切换重建；
+        // 它们保留在被创建时的那个 Excel 窗口里，切换工作簿不影响其状态。
+        // 需要在新工作簿里使用时，用户从 Ribbon 重新打开即可。
 
         // 获取当前工作簿是否有Git路径
         GlobalValue.ReadOrCreate();
