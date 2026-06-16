@@ -3240,6 +3240,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     new SheetListControl(),
                     MsoCTPDockPosition.msoCTPDockPositionLeft
                 );
+            // 用户点 X 关掉 CTP 时同步 Ribbon 按钮状态
+            if (NumDesCTP.TryGetCTP(ctpName, out var sheetMenuPane))
+                sheetMenuPane.VisibleStateChange += _ =>
+                {
+                    if (sheetMenuPane.Visible) return;
+                    SheetMenuText = "表格目录：关闭";
+                    CustomRibbon?.InvalidateControl("SheetMenu");
+                    GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
+                };
         }
         else
         {
