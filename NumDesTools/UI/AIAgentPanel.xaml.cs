@@ -2038,6 +2038,58 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         SetStatus("新对话已创建");
     }
 
+    private void DeleteSessionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_sessionId))
+            return;
+        var preview = (SessionComboBox.SelectedItem as SessionItem)?.Display ?? _sessionId;
+        var confirm = System.Windows.MessageBox.Show(
+            $"确认删除会话？\n{preview}",
+            "删除会话",
+            System.Windows.MessageBoxButton.OKCancel,
+            System.Windows.MessageBoxImage.Warning
+        );
+        if (confirm != System.Windows.MessageBoxResult.OK)
+            return;
+        new ChatHistoryManager().DeleteSession(_sessionId);
+        _sessionId = Guid.NewGuid().ToString("N")[..12];
+        _history.Clear();
+        ChatOutput.InvokeScript("eval", "document.body.innerHTML='';");
+        RefreshSessionList();
+        SetStatus("会话已删除");
+    }
+
+    private void ImportButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = "SQLite 数据库|*.db|所有文件|*.*",
+            Title = "选择要导入的会话数据库",
+        };
+        if (dialog.ShowDialog() != true)
+            return;
+        try
+        {
+            var count = new ChatHistoryManager().ImportSessionsFromDb(dialog.FileName);
+            RefreshSessionList();
+            System.Windows.MessageBox.Show(
+                $"已导入 {count} 条会话",
+                "导入成功",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information
+            );
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"导入失败: {ex.Message}",
+                "错误",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error
+            );
+        }
+    }
+
     private void SessionComboBox_SelectionChanged(
         object sender,
         System.Windows.Controls.SelectionChangedEventArgs e

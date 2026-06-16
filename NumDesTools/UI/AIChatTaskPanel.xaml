@@ -104,18 +104,20 @@
                 Click="LoadMoreButton_Click"
                 Content="加载更多" />
             <Button
-                x:Name="ClearButton"
+                x:Name="CompressButton"
                 Grid.Column="2"
-                Width="52"
+                Width="72"
                 Height="26"
-                Click="ClearButton_Click"
-                Content="清空" />
+                Click="CompressButton_Click"
+                Content="压缩上下文" />
         </Grid>
 
         <!--  会话选择栏  -->
         <Grid Grid.Row="1" Margin="4,0,4,2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ComboBox
@@ -190,8 +192,28 @@
                 </ComboBox.Template>
             </ComboBox>
             <Button
-                x:Name="NewChatButton"
+                x:Name="DeleteSessionButton"
                 Grid.Column="1"
+                Width="46"
+                Height="26"
+                Margin="0,0,4,0"
+                Background="#5a2727"
+                Foreground="White"
+                Content="删除"
+                Click="DeleteSessionButton_Click" />
+            <Button
+                x:Name="ImportButton"
+                Grid.Column="2"
+                Width="46"
+                Height="26"
+                Margin="0,0,4,0"
+                Background="#3e3e42"
+                Foreground="#ccc"
+                Content="导入"
+                Click="ImportButton_Click" />
+            <Button
+                x:Name="NewChatButton"
+                Grid.Column="3"
                 Width="70"
                 Height="26"
                 Background="#2d5a27"

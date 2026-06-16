@@ -156,6 +156,54 @@ public class ChatHistoryManager
         return sessions;
     }
 
+    public void DeleteSession(string sessionId)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM ChatHistory WHERE SessionId = @sid";
+        cmd.Parameters.AddWithValue("@sid", sessionId);
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>从另一个 ChatHistory.db 导入会话，每条会话分配新 SessionId 避免冲突。返回导入的会话数。</summary>
+    public int ImportSessionsFromDb(string sourcePath)
+    {
+        var srcConn = $"Data Source={sourcePath}";
+        using var src = new SqliteConnection(srcConn);
+        src.Open();
+
+        // 确保源库有必要的列（旧版本可能没有 IsAgent）
+        var sessionMap = new Dictionary<string, string>();
+        var srcCmd = src.CreateCommand();
+        srcCmd.CommandText =
+            "SELECT Role, Message, IsUser, Timestamp, SessionId, COALESCE(IsAgent,0) FROM ChatHistory WHERE SessionId != ''";
+        using var reader = srcCmd.ExecuteReader();
+
+        using var dest = new SqliteConnection(_connectionString);
+        dest.Open();
+
+        while (reader.Read())
+        {
+            var oldSid = reader.GetString(4);
+            if (!sessionMap.ContainsKey(oldSid))
+                sessionMap[oldSid] = Guid.NewGuid().ToString("N")[..12];
+
+            var ins = dest.CreateCommand();
+            ins.CommandText =
+                @"INSERT INTO ChatHistory (Role, Message, IsUser, Timestamp, SessionId, IsAgent)
+                  VALUES (@Role, @Message, @IsUser, @Timestamp, @SessionId, @IsAgent)";
+            ins.Parameters.AddWithValue("@Role", reader.GetString(0));
+            ins.Parameters.AddWithValue("@Message", reader.GetString(1));
+            ins.Parameters.AddWithValue("@IsUser", reader.GetInt32(2));
+            ins.Parameters.AddWithValue("@Timestamp", reader.GetString(3));
+            ins.Parameters.AddWithValue("@SessionId", sessionMap[oldSid]);
+            ins.Parameters.AddWithValue("@IsAgent", reader.GetInt32(5));
+            ins.ExecuteNonQuery();
+        }
+        return sessionMap.Count;
+    }
+
     public List<ChatSession> ListSessionsWithPreview(bool isAgent = false)
     {
         var result = new List<ChatSession>();

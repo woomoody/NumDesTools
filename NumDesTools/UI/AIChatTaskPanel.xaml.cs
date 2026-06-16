@@ -136,11 +136,84 @@ function clearAll(){document.body.innerHTML=''}
         }
     }
 
-    private void ClearButton_Click(object sender, RoutedEventArgs e)
+    private async void CompressButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_history.Count < 2)
+            return;
+        CompressButton.IsEnabled = false;
+        CompressButton.Content = "压缩中…";
+        try
+        {
+            var model = AppServices.Config.Llm.Model;
+            var apiKey = AppServices.Config.Llm.ApiKey;
+            var apiUrl = AppServices.Config.Llm.ChatCompletionsUrl;
+            var msgs = new List<object>();
+            msgs.AddRange(_history);
+            msgs.Add(new
+            {
+                role = "user",
+                content = "请将上面的完整对话内容压缩为一段结构化摘要，保留所有关键数据、结论和操作记录，供后续对话参考。直接输出摘要，不加解释。",
+            });
+            var sb = new System.Text.StringBuilder();
+            await ChatApiClient.CallApiStreamAsync(model, msgs, apiKey, apiUrl,
+                chunk => sb.Append(chunk));
+            var summary = sb.ToString();
+            _history.Clear();
+            _history.Add(new { role = "assistant", content = $"[对话摘要]\n{summary}" });
+            ResponseOutput.InvokeScript("eval", "clearAll()");
+            AppendMessage("系统(摘要)", $"**上下文已压缩**\n\n{summary}", isUser: false, DateTime.Now);
+        }
+        catch (Exception ex)
+        {
+            AppendMessage("系统", $"压缩失败: {ex.Message}", isUser: false, DateTime.Now);
+        }
+        finally
+        {
+            CompressButton.IsEnabled = true;
+            CompressButton.Content = "压缩上下文";
+        }
+    }
+
+    private void DeleteSessionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_sessionId))
+            return;
+        var preview = (SessionComboBox.SelectedItem as SessionItem)?.Display ?? _sessionId;
+        var confirm = System.Windows.MessageBox.Show(
+            $"确认删除会话？\n{preview}",
+            "删除会话",
+            System.Windows.MessageBoxButton.OKCancel,
+            System.Windows.MessageBoxImage.Warning
+        );
+        if (confirm != System.Windows.MessageBoxResult.OK)
+            return;
+        new ChatHistoryManager().DeleteSession(_sessionId);
+        _sessionId = Guid.NewGuid().ToString("N")[..12];
         _history.Clear();
         _historyOffset = 0;
         ResponseOutput.InvokeScript("eval", "clearAll()");
+        RefreshSessionList();
+    }
+
+    private void ImportButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = "SQLite 数据库|*.db|所有文件|*.*",
+            Title = "选择要导入的会话数据库",
+        };
+        if (dialog.ShowDialog() != true)
+            return;
+        try
+        {
+            var count = new ChatHistoryManager().ImportSessionsFromDb(dialog.FileName);
+            RefreshSessionList();
+            System.Windows.MessageBox.Show($"已导入 {count} 条会话", "导入成功", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"导入失败: {ex.Message}", "错误", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
     }
 
     private void LoadMoreButton_Click(object sender, RoutedEventArgs e)
