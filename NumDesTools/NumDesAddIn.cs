@@ -3340,6 +3340,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     new AIAgentPanel(),
                     MsoCTPDockPosition.msoCTPDockPositionRight
                 );
+            // 用户点 X 关掉 CTP 时同步 Ribbon 按钮状态
+            if (NumDesCTP.TryGetCTP(ctpName, out var agentPane))
+                agentPane.VisibleStateChange += _ =>
+                {
+                    if (agentPane.Visible) return;
+                    _showAgentText = "Agent模式：关闭";
+                    CustomRibbon?.InvalidateControl("ShowAIAgent");
+                };
         }
         else
         {
@@ -3374,6 +3382,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         MsoCTPDockPosition.msoCTPDockPositionRight
                     );
                 PluginLog.Write($"[ShowAi] ShowCTP 完成, result={_chatAiChatMenuCtp is not null}");
+                // 用户点 X 关掉 CTP 时同步 Ribbon 按钮状态
+                if (NumDesCTP.TryGetCTP(ctpName, out var chatPane))
+                    chatPane.VisibleStateChange += _ =>
+                    {
+                        if (chatPane.Visible) return;
+                        ShowAiText = "AI对话：关闭";
+                        CustomRibbon?.InvalidateControl("ShowAI");
+                        GlobalValue.SaveValue("ShowAIText", ShowAiText);
+                    };
             }
             else
             {
