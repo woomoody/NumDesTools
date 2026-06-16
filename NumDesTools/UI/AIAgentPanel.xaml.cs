@@ -622,6 +622,14 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 height_pt=new{type="number",description="图片高度（磅），fit_to_cell=true 时忽略"},
                 fit_to_cell=new{type="boolean",description="true=等比缩放自适应单元格（contain fit，不拉伸不裁剪）；false=用原始尺寸或指定尺寸"} },
                 required=new[]{"file_path","anchor_address"} } } },
+
+        new { type="function", function=new { name="run_shell",
+            description="执行 PowerShell 命令，返回标准输出和错误输出。可用于文件操作、运行脚本、数据处理、调用外部工具等 Excel 之外的任务。输出超过 3000 字符时自动截断。",
+            parameters=new { type="object", properties=new {
+                command=new{type="string",description="要执行的 PowerShell 命令或脚本，支持多行"},
+                working_dir=new{type="string",description="工作目录，不填则用 我的文档 目录"},
+                timeout_seconds=new{type="integer",description="超时秒数，默认 30，最大 120"} },
+                required=new[]{"command"} } } },
     ];
 
     // 匹配 Sheet1!A1:B5 / A1:B5 / A1 形式的单元格地址
@@ -1205,6 +1213,11 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     args["model"]?.ToString() ?? "gemini-3.1-flash-image-preview",
                     AppServices.Config.Llm.ApiKey,
                     AppServices.Config.Llm.ChatCompletionsUrl
+                ),
+                "run_shell" => ToolRunShell(
+                    args["command"]?.ToString() ?? "",
+                    args["working_dir"]?.ToString(),
+                    (int)(args["timeout_seconds"] ?? 30)
                 ),
                 _ => $"未知工具: {toolName}",
             };
@@ -2410,6 +2423,58 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         catch (Exception ex)
         {
             return $"下载失败: {ex.Message}";
+        }
+    }
+
+    private static string ToolRunShell(string command, string? workingDir, int timeoutSeconds)
+    {
+        if (string.IsNullOrWhiteSpace(command))
+            return "命令为空";
+        timeoutSeconds = Math.Clamp(timeoutSeconds, 1, 120);
+        workingDir ??= Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        if (!Directory.Exists(workingDir))
+            workingDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        try
+        {
+            // -EncodedCommand 避免引号/特殊字符转义问题
+            var encoded = Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(command));
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoProfile -NonInteractive -EncodedCommand {encoded}",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WorkingDirectory = workingDir,
+            };
+            using var proc = System.Diagnostics.Process.Start(psi)!;
+            var stdoutTask = proc.StandardOutput.ReadToEndAsync();
+            var stderrTask = proc.StandardError.ReadToEndAsync();
+            var exited = proc.WaitForExit(timeoutSeconds * 1000);
+            var stdout = stdoutTask.GetAwaiter().GetResult();
+            var stderr = stderrTask.GetAwaiter().GetResult();
+            if (!exited)
+            {
+                try { proc.Kill(entireProcessTree: true); } catch { }
+                return $"[超时 {timeoutSeconds}s 已终止]\n{Truncate(stdout + stderr)}";
+            }
+            var sb = new System.Text.StringBuilder();
+            if (!string.IsNullOrEmpty(stdout)) sb.Append(stdout);
+            if (!string.IsNullOrEmpty(stderr)) sb.Append($"\n[stderr]\n{stderr}");
+            sb.Append($"\n[ExitCode: {proc.ExitCode}]");
+            return Truncate(sb.ToString());
+        }
+        catch (Exception ex)
+        {
+            return $"执行失败: {ex.Message}";
+        }
+
+        static string Truncate(string s)
+        {
+            const int max = 3000;
+            s = s.Trim();
+            return s.Length > max ? s[..max] + $"\n…[输出截断，共 {s.Length} 字符]" : s;
         }
     }
 
