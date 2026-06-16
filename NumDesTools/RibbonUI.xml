@@ -72,6 +72,8 @@
                                 onAction='OnButtonClick' imageMso="FindDialogExcel" tag='编号搜索(多线程)' />
                         <button id="ExcelSearchBoxButton4" label="合并数据-关键词" screentip='合并Excel(Alice-Cove)当前关键词'
                                 onAction='OnButtonClick' imageMso="AdpNewTable" tag='合并数据-关键词' />
+                        <button id="ExcelSearchBoxButton7" label="搜索Sheet名" screentip='遍历public下所有xlsx，找出包含该Sheet名的工作簿'
+                                onAction='OnButtonClick' imageMso="SheetInsert" tag='搜索Sheet名' />
                     </menu>
                     <menu id='AutoInsertExcelDataMenu2' label='创建数据' image='nd_创建数据菜单' size='large'>
                         <button id="ModelDataCreat" label="常规模版" screentip='全局搜索关键词，输出表格数据，常规模版数据，例如：各类LTE、主岛活动常规【模版】&#13;支持多ID：输入框用逗号/换行分隔，如 763601,763651，每张表取最小行和最大行'
@@ -86,8 +88,6 @@
                                 onAction='OnButtonClick' imageMso="ReplaceDialog" tag='替换文本(当前表格)' />
                         <button id="ExcelSearchBoxButton6" label="搜索文本" screentip='搜索当前激活表格中包含特别的字符串'
                                 onAction='OnButtonClick' imageMso="FindDialogExcel" tag='替换文本(当前表格)' />
-                        <button id="ExcelSearchBoxButton7" label="搜索Sheet名" screentip='搜索txt导出文件所在工作簿，特别指$开头'
-                                onAction='OnButtonClick' imageMso="SheetInsert" tag='搜索Sheet名' />
                         <button id="ExcelSearchBoxButton8" label="搜索公式名" screentip='搜索当前Excel中使用的公式'
                                 onAction='OnButtonClick' imageMso="FormulaEvaluate" tag='搜索公式名' />
                     </menu>
