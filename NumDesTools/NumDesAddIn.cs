@@ -1111,14 +1111,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (ShowAiText == "AI对话：开启")
         {
             NumDesCTP.DeleteCTP(true, aiCtpName);
-            _chatAiChatMenuCtp ??= new AiChatTaskPanel();
+            // 每次切换工作簿都创建新实例，避免 WPF 控件"已有逻辑父元素"异常
+            // 状态（会话/历史）通过 DB 自动恢复
             _chatAiChatMenuCtp = (AiChatTaskPanel)
                 NumDesCTP.ShowCTP(
                     1000,
                     aiCtpName,
                     true,
                     aiCtpName,
-                    _chatAiChatMenuCtp,
+                    new AiChatTaskPanel(),
                     MsoCTPDockPosition.msoCTPDockPositionRight
                 );
             if (NumDesCTP.TryGetCTP(aiCtpName, out var chatPane2))
@@ -1139,14 +1140,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (_showAgentText == "Agent模式：开启")
         {
             NumDesCTP.DeleteCTP(true, agentCtpName);
-            _agentCtp ??= new AIAgentPanel();
             _agentCtp = (AIAgentPanel)
                 NumDesCTP.ShowCTP(
                     1000,
                     agentCtpName,
                     true,
                     agentCtpName,
-                    _agentCtp,
+                    new AIAgentPanel(),
                     MsoCTPDockPosition.msoCTPDockPositionRight
                 );
             if (NumDesCTP.TryGetCTP(agentCtpName, out var agentPane2))
