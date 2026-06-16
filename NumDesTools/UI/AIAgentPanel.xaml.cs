@@ -637,6 +637,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         ChatOutput.NavigateToString(HtmlTemplate);
         ChatOutput.Navigating += ChatOutput_Navigating;
         LoadAgentHistory();
+        // 首次 Loaded 之后订阅后续 Loaded 事件（WorkbookActivate 重建 CTP 时触发 re-parent）
+        Loaded += OnFirstLoaded;
         // CTP 内 WebBrowser 的键盘事件会被 Excel 截走：
         // cancelBubble 阻止事件冒泡到 Excel，并主动调用 execCommand 保证 Ctrl+C/A/X 可用
         ChatOutput.LoadCompleted += (_, _) =>
@@ -713,6 +715,29 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
     private const string AgentModelKey = "AgentModel";
     private const int AgentHistoryPageSize = 40;
+
+    private void OnFirstLoaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= OnFirstLoaded;
+        Loaded += OnReparented;
+    }
+
+    // 工作簿切换时 CTP 重建 → WPF 控件 re-parent → Loaded 再次触发
+    // 重新导航 WebBrowser 并恢复当前会话内容
+    private void OnReparented(object sender, RoutedEventArgs e)
+    {
+        ChatOutput.NavigateToString(HtmlTemplate);
+        var sid = _sessionId;
+        ChatOutput.LoadCompleted += OnReparentLoadCompleted;
+
+        void OnReparentLoadCompleted(object s, System.Windows.Navigation.NavigationEventArgs ev)
+        {
+            ChatOutput.LoadCompleted -= OnReparentLoadCompleted;
+            if (!string.IsNullOrEmpty(sid))
+                SwitchToSession(sid);
+            RefreshSessionList();
+        }
+    }
 
     private void PopulateModelList()
     {

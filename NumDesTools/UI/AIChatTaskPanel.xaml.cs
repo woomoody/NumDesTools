@@ -62,6 +62,54 @@ public partial class AiChatTaskPanel
 
         InitializeHtmlTemplate();
         PopulateModelList();
+        Loaded += OnFirstLoaded;
+    }
+
+    private void OnFirstLoaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= OnFirstLoaded;
+        Loaded += OnReparented;
+    }
+
+    private void OnReparented(object sender, RoutedEventArgs e)
+    {
+        ResponseOutput.NavigateToString(
+            @"<html><head><meta charset='utf-8'><style>
+body{background:#1c1c1c;color:#d4d4d4;font-family:'微软雅黑',sans-serif;font-size:10pt;line-height:1.5;margin:0;padding:8px 10px;overflow-y:auto}
+.message-container{display:flex;flex-direction:column;align-items:flex-start;margin:5px 0}
+.message{padding:6px 10px;border-radius:7px;max-width:92%;word-wrap:break-word}
+.message p{margin:3px 0}
+.user{background:#1e3a5f;border:1px solid #2a4a6f;margin-left:auto;margin-right:6px;color:#d4d4d4}
+.system{background:#333337;border:1px solid #444;margin-left:6px;color:#d4d4d4}
+.role{font-weight:bold;margin-bottom:3px;font-size:.72em;color:#888}
+.timestamp{font-size:.72em;color:#555;margin-top:3px;margin-left:8px;margin-right:8px}
+pre{background:#252526;color:#dcdcdc;padding:7px;border-radius:5px;overflow-x:auto;font-size:10pt;margin:4px 0}
+code{font-family:Consolas,monospace;background:#252526;color:#dcdcdc;padding:1px 3px;border-radius:3px;font-size:10pt}
+table{border-collapse:collapse;font-size:.88em;margin:4px 0;width:auto}
+th,td{border:1px solid #555;padding:3px 8px;text-align:left;white-space:nowrap}
+th{background:#2a2d2e;color:#c6c6c6;font-weight:bold}
+tr:nth-child(even) td{background:#2a2a2a}
+ul,ol{margin:3px 0;padding-left:18px}
+li{margin:1px 0}
+h1,h2,h3{font-size:1em;font-weight:bold;margin:4px 0 2px}
+</style>
+<script>
+function scrollToBottom(){window.scrollTo(0,document.body.scrollHeight)}
+function replaceContent(id,html){var c=document.getElementById(id);if(c){var d=c.querySelector('.content');if(d)d.innerHTML=html}}
+function clearAll(){document.body.innerHTML=''}
+</script>
+</head><body></body></html>"
+        );
+        var sid = _sessionId;
+        ResponseOutput.LoadCompleted += OnReparentLoadCompleted;
+
+        void OnReparentLoadCompleted(object s, System.Windows.Navigation.NavigationEventArgs ev)
+        {
+            ResponseOutput.LoadCompleted -= OnReparentLoadCompleted;
+            if (!string.IsNullOrEmpty(sid))
+                SwitchToSession(sid);
+            Dispatcher.BeginInvoke(() => RefreshSessionList());
+        }
     }
 
     // ── 初始化 ────────────────────────────────────────────────────────────────
