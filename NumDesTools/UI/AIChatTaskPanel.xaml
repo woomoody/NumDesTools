@@ -96,13 +96,15 @@
                 </ComboBox.Template>
             </ComboBox>
             <Button
-                x:Name="LoadMoreButton"
+                x:Name="ClearAllButton"
                 Grid.Column="1"
                 Width="68"
                 Height="26"
                 Margin="0,0,6,0"
-                Click="LoadMoreButton_Click"
-                Content="加载更多" />
+                Background="#5a2727"
+                Foreground="White"
+                Click="ClearAllButton_Click"
+                Content="清空全部" />
             <Button
                 x:Name="CompressButton"
                 Grid.Column="2"

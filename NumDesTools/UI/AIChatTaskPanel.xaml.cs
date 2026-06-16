@@ -216,28 +216,22 @@ function clearAll(){document.body.innerHTML=''}
         }
     }
 
-    private void LoadMoreButton_Click(object sender, RoutedEventArgs e)
+    private void ClearAllButton_Click(object sender, RoutedEventArgs e)
     {
-        var db = new ChatHistoryManager();
-        var total = db.GetHistoryCount();
-        var nextOffset = _historyOffset + HistoryPageSize;
-        if (nextOffset > total)
-            nextOffset = total;
-        var olderCount = nextOffset - _historyOffset;
-        if (olderCount <= 0)
-            return;
-        // 取更老的一批：跳过最新 _historyOffset 条，再取 olderCount 条
-        var older = db.LoadChatHistory(limit: nextOffset).Take(olderCount).ToList();
-        _historyOffset = nextOffset;
-        // 批量注入到顶部
-        var sb = new System.Text.StringBuilder();
-        foreach (var m in older)
-            sb.Append(BuildMessageHtml(m.Role, m.Message, m.IsUser, m.Timestamp));
-        var escaped = System.Web.HttpUtility.JavaScriptStringEncode(sb.ToString());
-        ResponseOutput.InvokeScript(
-            "eval",
-            $"document.body.insertAdjacentHTML('afterbegin','{escaped}');"
+        var confirm = System.Windows.MessageBox.Show(
+            "确认清空全部 Chat 历史记录？此操作不可恢复。",
+            "清空全部",
+            System.Windows.MessageBoxButton.OKCancel,
+            System.Windows.MessageBoxImage.Warning
         );
+        if (confirm != System.Windows.MessageBoxResult.OK)
+            return;
+        new ChatHistoryManager().DeleteAllHistory(isAgent: false);
+        _sessionId = Guid.NewGuid().ToString("N")[..12];
+        _history.Clear();
+        _historyOffset = 0;
+        ResponseOutput.InvokeScript("eval", "clearAll()");
+        RefreshSessionList();
     }
 
     private void SendButton_Click(object sender, RoutedEventArgs e) => ProcessInput();

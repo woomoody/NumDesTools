@@ -156,6 +156,16 @@ public class ChatHistoryManager
         return sessions;
     }
 
+    public void DeleteAllHistory(bool isAgent = false)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM ChatHistory WHERE IsAgent = @isAgent";
+        cmd.Parameters.AddWithValue("@isAgent", isAgent ? 1 : 0);
+        cmd.ExecuteNonQuery();
+    }
+
     public void DeleteSession(string sessionId)
     {
         using var conn = new SqliteConnection(_connectionString);
