@@ -174,6 +174,18 @@ function clearAll(){document.body.innerHTML=''}
         }
     }
 
+    private void RenameSessionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_sessionId))
+            return;
+        var current = (SessionComboBox.SelectedItem as SessionItem)?.Display ?? "";
+        var newTitle = ShowRenameDialog(current);
+        if (string.IsNullOrEmpty(newTitle))
+            return;
+        new ChatHistoryManager().SaveSessionTitle(_sessionId, newTitle, isAgent: false);
+        RefreshSessionList();
+    }
+
     private void DeleteSessionButton_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrEmpty(_sessionId))
@@ -478,7 +490,9 @@ function clearAll(){document.body.innerHTML=''}
         var sessions = new ChatHistoryManager().ListSessionsWithPreview(isAgent: false);
         foreach (var s in sessions)
         {
-            var label = $"{s.LastTime:MM-dd HH:mm}  {s.Preview}";
+            var label = !string.IsNullOrEmpty(s.Title)
+                ? s.Title
+                : $"{s.LastTime:MM-dd HH:mm}  {s.Preview}";
             SessionComboBox.Items.Add(new SessionItem(s.SessionId, label));
         }
         var current = SessionComboBox
@@ -528,6 +542,38 @@ function clearAll(){document.body.innerHTML=''}
             "eval",
             $"document.body.insertAdjacentHTML('beforeend','{escaped}');scrollToBottom();"
         );
+    }
+
+    internal static string? ShowRenameDialog(string current)
+    {
+        using var form = new System.Windows.Forms.Form
+        {
+            Text = "重命名会话", Width = 420, Height = 120,
+            StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen,
+            FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog,
+            MaximizeBox = false, MinimizeBox = false,
+        };
+        var tb = new System.Windows.Forms.TextBox
+        {
+            Location = new System.Drawing.Point(10, 15), Width = 384, Text = current,
+        };
+        var ok = new System.Windows.Forms.Button
+        {
+            Text = "确定", DialogResult = System.Windows.Forms.DialogResult.OK,
+            Location = new System.Drawing.Point(230, 50), Width = 80,
+        };
+        var cancel = new System.Windows.Forms.Button
+        {
+            Text = "取消", DialogResult = System.Windows.Forms.DialogResult.Cancel,
+            Location = new System.Drawing.Point(314, 50), Width = 80,
+        };
+        form.Controls.AddRange([tb, ok, cancel]);
+        form.AcceptButton = ok;
+        form.CancelButton = cancel;
+        tb.SelectAll();
+        return form.ShowDialog() == System.Windows.Forms.DialogResult.OK && !string.IsNullOrWhiteSpace(tb.Text)
+            ? tb.Text.Trim()
+            : null;
     }
 
     private static string BuildMessageHtml(

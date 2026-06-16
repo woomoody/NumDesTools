@@ -3,7 +3,7 @@ using Microsoft.Data.Sqlite;
 
 namespace NumDesTools.AI;
 
-public record ChatSession(string SessionId, DateTime LastTime, string Preview);
+public record ChatSession(string SessionId, DateTime LastTime, string Preview, string? Title = null);
 
 public class ChatMessage
 {
@@ -35,6 +35,16 @@ public class ChatHistoryManager
         _connectionString = connectionString;
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
+
+        var createTitles = connection.CreateCommand();
+        createTitles.CommandText =
+            @"CREATE TABLE IF NOT EXISTS SessionTitles (
+                SessionId TEXT NOT NULL,
+                IsAgent INTEGER NOT NULL DEFAULT 0,
+                Title TEXT NOT NULL,
+                PRIMARY KEY (SessionId, IsAgent)
+            )";
+        createTitles.ExecuteNonQuery();
 
         var create = connection.CreateCommand();
         create.CommandText =
@@ -156,6 +166,21 @@ public class ChatHistoryManager
         return sessions;
     }
 
+    public void SaveSessionTitle(string sessionId, string title, bool isAgent = false)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText =
+            @"INSERT INTO SessionTitles (SessionId, IsAgent, Title)
+              VALUES (@sid, @isAgent, @title)
+              ON CONFLICT(SessionId, IsAgent) DO UPDATE SET Title = excluded.Title";
+        cmd.Parameters.AddWithValue("@sid", sessionId);
+        cmd.Parameters.AddWithValue("@isAgent", isAgent ? 1 : 0);
+        cmd.Parameters.AddWithValue("@title", title);
+        cmd.ExecuteNonQuery();
+    }
+
     public void DeleteAllHistory(bool isAgent = false)
     {
         using var conn = new SqliteConnection(_connectionString);
@@ -230,7 +255,10 @@ public class ChatHistoryManager
                   AND sub.IsUser = 1
                   AND sub.IsAgent = @isAgent
                 ORDER BY sub.Timestamp
-                LIMIT 1) as Preview
+                LIMIT 1) as Preview,
+               (SELECT st.Title FROM SessionTitles st
+                WHERE st.SessionId = ch.SessionId AND st.IsAgent = @isAgent
+                LIMIT 1) as Title
         FROM ChatHistory ch
         WHERE ch.SessionId != '' AND ch.IsAgent = @isAgent
         GROUP BY ch.SessionId
@@ -243,7 +271,8 @@ public class ChatHistoryManager
             var sid = reader.GetString(0);
             var lastTime = reader.GetDateTime(1);
             var preview = reader.IsDBNull(2) ? "(空对话)" : reader.GetString(2);
-            result.Add(new ChatSession(sid, lastTime, preview));
+            var title = reader.IsDBNull(3) ? null : reader.GetString(3);
+            result.Add(new ChatSession(sid, lastTime, preview, title));
         }
         return result;
     }

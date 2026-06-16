@@ -2020,7 +2020,9 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         var sessions = new ChatHistoryManager().ListSessionsWithPreview(isAgent: true);
         foreach (var s in sessions)
         {
-            var label = $"{s.LastTime:MM-dd HH:mm}  {s.Preview}";
+            var label = !string.IsNullOrEmpty(s.Title)
+                ? s.Title
+                : $"{s.LastTime:MM-dd HH:mm}  {s.Preview}";
             SessionComboBox.Items.Add(new SessionItem(s.SessionId, label));
         }
         var current = SessionComboBox.Items.OfType<SessionItem>()
@@ -2074,6 +2076,18 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         ChatOutput.InvokeScript("eval", "document.body.innerHTML='';");
         RefreshSessionList();
         SetStatus("新对话已创建");
+    }
+
+    private void RenameSessionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_sessionId))
+            return;
+        var current = (SessionComboBox.SelectedItem as SessionItem)?.Display ?? "";
+        var newTitle = AiChatTaskPanel.ShowRenameDialog(current);
+        if (string.IsNullOrEmpty(newTitle))
+            return;
+        new ChatHistoryManager().SaveSessionTitle(_sessionId, newTitle, isAgent: true);
+        RefreshSessionList();
     }
 
     private void DeleteSessionButton_Click(object sender, RoutedEventArgs e)

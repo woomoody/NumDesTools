@@ -121,6 +121,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ComboBox
                 x:Name="SessionComboBox"
@@ -194,8 +195,19 @@
                 </ComboBox.Template>
             </ComboBox>
             <Button
-                x:Name="DeleteSessionButton"
+                x:Name="RenameSessionButton"
                 Grid.Column="1"
+                Width="28"
+                Height="26"
+                Margin="0,0,4,0"
+                Background="#3e3e42"
+                Foreground="#ccc"
+                Content="✏"
+                ToolTip="重命名会话"
+                Click="RenameSessionButton_Click" />
+            <Button
+                x:Name="DeleteSessionButton"
+                Grid.Column="2"
                 Width="46"
                 Height="26"
                 Margin="0,0,4,0"
@@ -205,7 +217,7 @@
                 Click="DeleteSessionButton_Click" />
             <Button
                 x:Name="ImportButton"
-                Grid.Column="2"
+                Grid.Column="3"
                 Width="46"
                 Height="26"
                 Margin="0,0,4,0"
@@ -215,7 +227,7 @@
                 Click="ImportButton_Click" />
             <Button
                 x:Name="NewChatButton"
-                Grid.Column="3"
+                Grid.Column="4"
                 Width="70"
                 Height="26"
                 Background="#2d5a27"
