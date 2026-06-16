@@ -847,7 +847,9 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             _history.AddRange(recent);
         }
 
-        var messages = _history;
+        // 工作列表：历史 + 本次任务中间步骤，任务结束后只把最终 assistant 消息写回 _history
+        var messages = _history.ToList();
+        var historyCountBefore = _history.Count;
 
         AddStep($"📋 {userTask[..Math.Min(40, userTask.Length)]}…");
 
@@ -920,12 +922,19 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 AddStep($"✅ 完成（{step} 步）");
                 SetStatus("完成");
                 AppendChat("assistant", content ?? "（无输出）");
+                // 只把最终文本消息写回持久历史（中间 tool_calls/tool 消息丢弃）
+                while (_history.Count > historyCountBefore)
+                    _history.RemoveAt(_history.Count - 1);
+                _history.Add(new { role = "assistant", content = content ?? "" });
                 return;
             }
         }
 
         AddStep("⚠️ 已达步骤上限");
         SetStatus("超出步骤上限");
+        // 超限：丢弃中间步骤，历史不新增（避免污染下一轮）
+        while (_history.Count > historyCountBefore)
+            _history.RemoveAt(_history.Count - 1);
     }
 
     private static async Task<(string content, List<JObject> toolCalls)> CallWithToolsAsync(
