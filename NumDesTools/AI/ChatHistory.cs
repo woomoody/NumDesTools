@@ -3,6 +3,8 @@ using Microsoft.Data.Sqlite;
 
 namespace NumDesTools.AI;
 
+public record ChatSession(string SessionId, DateTime LastTime, string Preview);
+
 public class ChatMessage
 {
     public string Role { get; set; }
@@ -16,11 +18,21 @@ public class ChatMessage
 
 public class ChatHistoryManager
 {
-    private readonly string _connectionString =
-        $"Data Source={Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ChatHistory.db")}";
+    private readonly string _connectionString;
+
+    // 单元测试可通过设置此环境变量覆盖默认数据库路径
+    internal const string TestDbEnvVar = "NUMDES_CHATHISTORY_TEST_DB";
 
     public ChatHistoryManager()
+        : this(
+            Environment.GetEnvironmentVariable(TestDbEnvVar) is { Length: > 0 } testDb
+                ? testDb
+                : $"Data Source={Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ChatHistory.db")}"
+        ) { }
+
+    public ChatHistoryManager(string connectionString)
     {
+        _connectionString = connectionString;
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
@@ -38,11 +50,13 @@ public class ChatHistoryManager
         create.ExecuteNonQuery();
 
         // 为旧库补列，列已存在时 ALTER TABLE 会抛异常，直接吞掉
-        foreach (var ddl in new[]
-        {
-            "ALTER TABLE ChatHistory ADD COLUMN SessionId TEXT NOT NULL DEFAULT ''",
-            "ALTER TABLE ChatHistory ADD COLUMN IsAgent INTEGER NOT NULL DEFAULT 0",
-        })
+        foreach (
+            var ddl in new[]
+            {
+                "ALTER TABLE ChatHistory ADD COLUMN SessionId TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE ChatHistory ADD COLUMN IsAgent INTEGER NOT NULL DEFAULT 0",
+            }
+        )
         {
             try
             {
@@ -72,7 +86,11 @@ public class ChatHistoryManager
     }
 
     /// <summary>加载历史消息。isAgent=true 只返回 Agent 记录，false 只返回 Chat 记录。</summary>
-    public List<ChatMessage> LoadChatHistory(int limit = 50, string sessionId = "", bool isAgent = false)
+    public List<ChatMessage> LoadChatHistory(
+        int limit = 50,
+        string sessionId = "",
+        bool isAgent = false
+    )
     {
         var chatHistory = new List<ChatMessage>();
         using var connection = new SqliteConnection(_connectionString);
@@ -136,5 +154,39 @@ public class ChatHistoryManager
         while (reader.Read())
             sessions.Add(reader.GetString(0));
         return sessions;
+    }
+
+    public List<ChatSession> ListSessionsWithPreview(bool isAgent = false)
+    {
+        var result = new List<ChatSession>();
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText =
+            @"
+        SELECT ch.SessionId,
+               MAX(ch.Timestamp) as LastTime,
+               (SELECT SUBSTR(sub.Message, 1, 40)
+                FROM ChatHistory sub
+                WHERE sub.SessionId = ch.SessionId
+                  AND sub.IsUser = 1
+                  AND sub.IsAgent = @isAgent
+                ORDER BY sub.Timestamp
+                LIMIT 1) as Preview
+        FROM ChatHistory ch
+        WHERE ch.SessionId != '' AND ch.IsAgent = @isAgent
+        GROUP BY ch.SessionId
+        ORDER BY MAX(ch.Timestamp) DESC
+        LIMIT 50";
+        cmd.Parameters.AddWithValue("@isAgent", isAgent ? 1 : 0);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            var sid = reader.GetString(0);
+            var lastTime = reader.GetDateTime(1);
+            var preview = reader.IsDBNull(2) ? "(空对话)" : reader.GetString(2);
+            result.Add(new ChatSession(sid, lastTime, preview));
+        }
+        return result;
     }
 }
