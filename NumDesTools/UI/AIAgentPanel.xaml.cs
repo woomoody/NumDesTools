@@ -2029,6 +2029,44 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         SessionComboBox.SelectionChanged += SessionComboBox_SelectionChanged;
     }
 
+    private async void CompressButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_history.Count < 2)
+            return;
+        CompressButton.IsEnabled = false;
+        CompressButton.Content = "压缩中…";
+        try
+        {
+            var model = Dispatcher.Invoke(() => ModelComboBox.SelectedItem as string ?? AppServices.Config.Llm.Model);
+            var apiKey = AppServices.Config.Llm.ApiKey;
+            var apiUrl = AppServices.Config.Llm.ChatCompletionsUrl;
+            var msgs = new List<object>();
+            msgs.AddRange(_history);
+            msgs.Add(new
+            {
+                role = "user",
+                content = "请将上面的完整对话内容压缩为一段结构化摘要，保留所有关键数据、结论和操作记录，供后续对话参考。直接输出摘要，不加解释。",
+            });
+            var sb = new System.Text.StringBuilder();
+            await ChatApiClient.CallApiStreamAsync(model, msgs, apiKey, apiUrl,
+                chunk => sb.Append(chunk));
+            var summary = sb.ToString();
+            _history.Clear();
+            _history.Add(new { role = "assistant", content = $"[对话摘要]\n{summary}" });
+            ChatOutput.InvokeScript("eval", "document.body.innerHTML='';");
+            AppendChat("assistant", $"**上下文已压缩**\n\n{summary}");
+        }
+        catch (Exception ex)
+        {
+            AppendChat("assistant", $"压缩失败: {ex.Message}");
+        }
+        finally
+        {
+            CompressButton.IsEnabled = true;
+            CompressButton.Content = "压缩上下文";
+        }
+    }
+
     private void NewChatButton_Click(object sender, RoutedEventArgs e)
     {
         _sessionId = Guid.NewGuid().ToString("N")[..12];

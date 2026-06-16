@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Windows.Forms.Integration;
 using Font = System.Drawing.Font;
 using ListBox = System.Windows.Forms.ListBox;
@@ -9,7 +9,7 @@ using UserControl = System.Windows.Forms.UserControl;
 namespace NumDesTools;
 
 [ComVisible(true)]
-#region 升级net6后带来的问题，UserControl需要一个显示的“默认接口”
+#region 升级net6后带来的问题，UserControl需要一个显示的"默认接口"
 
 public interface ISelfControl { }
 
@@ -24,8 +24,10 @@ public class NumDesCTP
 {
     private static Dictionary<string, CustomTaskPane> ctpsWF = new();
     private static Dictionary<string, CustomTaskPane> ctpsWPF = new();
+
+    // 每个 WPF CTP 独立持有自己的 SelfControl 宿主，不再共享静态单字段
+    private static readonly Dictionary<string, SelfControl> _wpfHosts = new();
     private static SelfControl LableControlWF;
-    private static SelfControl LableControlWPF;
 
     public static object ShowCTP(
         int width,
@@ -136,14 +138,16 @@ public class NumDesCTP
         {
             if (!ctpsWPF.TryGetValue(name, out ctpWPF))
             {
-                PluginLog.Write($"[ShowCTP] new SelfControl, name={name}");
-                // 在新建 SelfControl 前，先断开旧 ElementHost 的 Child 引用，
-                // 否则 WPF 控件仍挂在旧 ElementHost 上，新 set_Child 会抛 InvalidOperationException
-                if (LableControlWPF is { IsDisposed: false })
-                    foreach (Control c in LableControlWPF.Controls)
+                PluginLog.Write($"[ShowCTP] new host, name={name}");
+                // 先断开该 name 旧宿主里的 ElementHost，防止 WPF 逻辑父元素残留
+                if (_wpfHosts.TryGetValue(name, out var oldHost) && oldHost is { IsDisposed: false })
+                    foreach (Control c in oldHost.Controls)
                         if (c is ElementHost eh)
                             try { eh.Child = null; } catch { }
-                LableControlWPF = new SelfControl();
+
+                var host = new SelfControl();
+                _wpfHosts[name] = host;
+
                 PluginLog.Write($"[ShowCTP] new ElementHost, Child={controlWPF.GetType().Name}");
                 var elementHost = new ElementHost
                 {
@@ -151,9 +155,9 @@ public class NumDesCTP
                     Child = controlWPF,
                     Tag = eleTag,
                 };
-                LableControlWPF.Controls.Add(elementHost);
+                host.Controls.Add(elementHost);
                 PluginLog.Write($"[ShowCTP] CreateCustomTaskPane");
-                ctpWPF = CustomTaskPaneFactory.CreateCustomTaskPane(LableControlWPF, name);
+                ctpWPF = CustomTaskPaneFactory.CreateCustomTaskPane(host, name);
                 PluginLog.Write($"[ShowCTP] CTP created, setting DockPosition");
                 ctpWPF.DockPosition = dockPosition;
                 ctpWPF.Width = width;
@@ -164,19 +168,21 @@ public class NumDesCTP
             else
             {
                 PluginLog.Write($"[ShowCTP] reuse existing CTP, eleTag={eleTag}");
-                ElementHost elementHost = null;
-                foreach (Control control in LableControlWPF.Controls)
+                // 用该 name 自己的宿主查找 ElementHost，不影响其他 CTP
+                if (_wpfHosts.TryGetValue(name, out var host))
                 {
-                    if (control is ElementHost host && (string)host.Tag == eleTag)
+                    ElementHost elementHost = null;
+                    foreach (Control control in host.Controls)
                     {
-                        elementHost = host;
-                        break;
+                        if (control is ElementHost h && (string)h.Tag == eleTag)
+                        {
+                            elementHost = h;
+                            break;
+                        }
                     }
+                    if (elementHost is not null)
+                        elementHost.Child = controlWPF;
                 }
-
-                if (elementHost is not null)
-                    elementHost.Child = controlWPF;
-
                 ctpWPF.Visible = true;
                 PluginLog.Write($"[ShowCTP] reuse done, visible={ctpWPF.Visible}");
             }
@@ -192,28 +198,23 @@ public class NumDesCTP
     public static void DisposeAll()
     {
         foreach (var ctp in ctpsWPF.Values)
-            try
-            {
-                ctp.Delete();
-            }
-            catch { }
+            try { ctp.Delete(); } catch { }
         ctpsWPF.Clear();
 
         foreach (var ctp in ctpsWF.Values)
-            try
-            {
-                ctp.Delete();
-            }
-            catch { }
+            try { ctp.Delete(); } catch { }
         ctpsWF.Clear();
 
-        if (LableControlWPF is { IsDisposed: false })
-        {
-            foreach (Control c in LableControlWPF.Controls)
-                if (c is ElementHost eh)
-                    eh.Child = null;
-            LableControlWPF.Dispose();
-        }
+        foreach (var host in _wpfHosts.Values)
+            if (host is { IsDisposed: false })
+            {
+                foreach (Control c in host.Controls)
+                    if (c is ElementHost eh)
+                        try { eh.Child = null; } catch { }
+                host.Dispose();
+            }
+        _wpfHosts.Clear();
+
         if (LableControlWF is { IsDisposed: false })
             LableControlWF.Dispose();
     }
@@ -223,11 +224,9 @@ public class NumDesCTP
 
     public static void DeleteCTP(bool isWPF, string name)
     {
-        CustomTaskPane ctpWF;
-        CustomTaskPane ctpWPF;
         if (!isWPF)
         {
-            if (ctpsWF.TryGetValue(name, out ctpWF))
+            if (ctpsWF.TryGetValue(name, out var ctpWF))
             {
                 ctpWF.Delete();
                 ctpsWF.Remove(name);
@@ -235,10 +234,15 @@ public class NumDesCTP
         }
         else
         {
-            if (ctpsWPF.TryGetValue(name, out ctpWPF))
+            if (ctpsWPF.TryGetValue(name, out var ctpWPF))
             {
                 ctpWPF.Delete();
                 ctpsWPF.Remove(name);
+                // 同时清理对应宿主里的 ElementHost Child，避免残留逻辑父元素
+                if (_wpfHosts.TryGetValue(name, out var host) && host is { IsDisposed: false })
+                    foreach (Control c in host.Controls)
+                        if (c is ElementHost eh)
+                            try { eh.Child = null; } catch { }
             }
         }
     }
