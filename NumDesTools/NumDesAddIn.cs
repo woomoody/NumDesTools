@@ -1211,6 +1211,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
     {
+        // 还有其他工作簿存在时，关闭当前工作簿会触发 CTP VisibleStateChange，
+        // 提前设 flag 防止状态被错误置为"关闭"；WorkbookActivate 的 finally 会重置它。
+        // 若关闭被取消（cancel=true），用延时保底重置。
+        if (App.Workbooks.Count > 1)
+        {
+            _workbookSwitching = true;
+            Task.Delay(3000).ContinueWith(_ => _workbookSwitching = false);
+        }
+
         if (App.Workbooks.Count == 1)
         {
             CellSelectChangeTip.Disable();
