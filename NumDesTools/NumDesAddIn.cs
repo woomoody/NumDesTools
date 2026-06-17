@@ -1117,7 +1117,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     var _smP = smPane2;
                     System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
                     {
-                        if (_smP.Visible) return;
+                        try { if (_smP.Visible) return; } catch { return; }
                         ExcelAsyncUtil.QueueAsMacro(() =>
                         {
                             PluginLog.Write("[CTP][X] SheetMenu X-close confirmed");
@@ -1155,7 +1155,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     var _chatP = chatPane2;
                     System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
                     {
-                        if (_chatP.Visible) return;
+                        try { if (_chatP.Visible) return; } catch { return; }
                         ExcelAsyncUtil.QueueAsMacro(() =>
                         {
                             PluginLog.Write("[CTP][X] Chat X-close confirmed");
@@ -1193,7 +1193,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     var _agentP = agentPane2;
                     System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
                     {
-                        if (_agentP.Visible) return;
+                        try { if (_agentP.Visible) return; } catch { return; }
                         ExcelAsyncUtil.QueueAsMacro(() =>
                         {
                             PluginLog.Write("[CTP][X] Agent X-close confirmed");
@@ -3316,7 +3316,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     var _sp2 = sheetPane;
                     System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
                     {
-                        if (_sp2.Visible) return;
+                        try { if (_sp2.Visible) return; } catch { return; }
                         ExcelAsyncUtil.QueueAsMacro(() =>
                         {
                             PluginLog.Write("[CTP][X] SheetMenu(ShowSheetMenu) X-close confirmed");
@@ -3440,7 +3440,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     var _ap2 = agentPane;
                     System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
                     {
-                        if (_ap2.Visible) return;
+                        try { if (_ap2.Visible) return; } catch { return; }
                         ExcelAsyncUtil.QueueAsMacro(() =>
                         {
                             PluginLog.Write("[CTP][X] Agent(ShowAIAgent) X-close confirmed");
@@ -3497,7 +3497,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         var _cp2 = chatPane;
                         System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
                         {
-                            if (_cp2.Visible) return;
+                            try { if (_cp2.Visible) return; } catch { return; }
                             ExcelAsyncUtil.QueueAsMacro(() =>
                             {
                                 PluginLog.Write("[CTP][X] Chat(ShowAi) X-close confirmed");
