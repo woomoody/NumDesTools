@@ -1490,7 +1490,11 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     AppendAgentStreamChunk(HttpUtility.HtmlEncode(chunk).Replace("\n", "<br/>"));
                 }
             );
-            FinalizeAgentStreamBubble();
+            // 没有文字输出（纯工具调用步骤）则删除空气泡，避免界面出现多个空白框
+            if (!hadStreamContent)
+                RemoveAgentStreamBubble();
+            else
+                FinalizeAgentStreamBubble();
 
             if (toolCalls is { Count: > 0 })
             {
@@ -2952,6 +2956,23 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 var js =
                     $"(function(){{var el=document.getElementById('{_agentStreamId}');if(el){{el.querySelector('.content').innerHTML+='{HttpUtility.JavaScriptStringEncode(htmlChunk)}';window.scrollTo(0,document.body.scrollHeight);}}}})();";
                 ChatOutput.InvokeScript("eval", js);
+            }
+            catch { }
+        });
+    }
+
+    private void RemoveAgentStreamBubble()
+    {
+        if (_agentStreamId is null) return;
+        var id = _agentStreamId;
+        _agentStreamId = null;
+        _agentStreamBuffer = null;
+        Dispatcher.Invoke(() =>
+        {
+            try
+            {
+                ChatOutput.InvokeScript("eval",
+                    $"(function(){{var el=document.getElementById('{id}');if(el)el.parentNode.removeChild(el);}})();");
             }
             catch { }
         });
