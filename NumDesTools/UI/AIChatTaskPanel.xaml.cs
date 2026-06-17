@@ -2,8 +2,11 @@ using System.Runtime.Versioning;
 using System.Threading;
 using System.Web;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Markdig;
 using Brushes = System.Windows.Media.Brushes;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -39,6 +42,10 @@ public partial class AiChatTaskPanel
         public override string ToString() => Display;
     }
 
+    private record AttachmentItem(string DisplayName, string FilePath, bool IsImage);
+
+    private readonly List<AttachmentItem> _attachments = [];
+
     private const string DefaultPromptText =
         "Enter 发送，Shift+Enter 换行，聊天框内容右键复制\n首字 ### 会把当前选中单元格值一并输入";
 
@@ -63,6 +70,10 @@ public partial class AiChatTaskPanel
             var newHeight = Math.Max(36, Math.Min(200, lineCount * lineHeight + 12));
             PromptInput.Height = newHeight;
         };
+
+        // AvalonEdit 的 Drop 事件需注册在 TextArea 上
+        PromptInput.TextArea.AllowDrop = true;
+        PromptInput.TextArea.Drop += OnInputDrop;
 
         InitializeHtmlTemplate();
         PopulateModelList();
@@ -153,19 +164,31 @@ function clearAll(){document.body.innerHTML=''}
             var apiUrl = AppServices.Config.Llm.ChatCompletionsUrl;
             var msgs = new List<object>();
             msgs.AddRange(_history);
-            msgs.Add(new
-            {
-                role = "user",
-                content = "请将上面的完整对话内容压缩为一段结构化摘要，保留所有关键数据、结论和操作记录，供后续对话参考。直接输出摘要，不加解释。",
-            });
+            msgs.Add(
+                new
+                {
+                    role = "user",
+                    content = "请将上面的完整对话内容压缩为一段结构化摘要，保留所有关键数据、结论和操作记录，供后续对话参考。直接输出摘要，不加解释。",
+                }
+            );
             var sb = new System.Text.StringBuilder();
-            await ChatApiClient.CallApiStreamAsync(model, msgs, apiKey, apiUrl,
-                chunk => sb.Append(chunk));
+            await ChatApiClient.CallApiStreamAsync(
+                model,
+                msgs,
+                apiKey,
+                apiUrl,
+                chunk => sb.Append(chunk)
+            );
             var summary = sb.ToString();
             _history.Clear();
             _history.Add(new { role = "assistant", content = $"[对话摘要]\n{summary}" });
             ResponseOutput.InvokeScript("eval", "clearAll()");
-            AppendMessage("系统(摘要)", $"**上下文已压缩**\n\n{summary}", isUser: false, DateTime.Now);
+            AppendMessage(
+                "系统(摘要)",
+                $"**上下文已压缩**\n\n{summary}",
+                isUser: false,
+                DateTime.Now
+            );
         }
         catch (Exception ex)
         {
@@ -224,11 +247,21 @@ function clearAll(){document.body.innerHTML=''}
         {
             var count = new ChatHistoryManager().ImportSessionsFromDb(dialog.FileName);
             RefreshSessionList();
-            System.Windows.MessageBox.Show($"已导入 {count} 条会话", "导入成功", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            System.Windows.MessageBox.Show(
+                $"已导入 {count} 条会话",
+                "导入成功",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information
+            );
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"导入失败: {ex.Message}", "错误", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            System.Windows.MessageBox.Show(
+                $"导入失败: {ex.Message}",
+                "错误",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error
+            );
         }
     }
 
@@ -254,6 +287,15 @@ function clearAll(){document.body.innerHTML=''}
 
     private void PromptInput_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            HandlePasteFromClipboard();
+            e.Handled =
+                System.Windows.Clipboard.ContainsImage()
+                || System.Windows.Clipboard.ContainsFileDropList();
+            return;
+        }
+
         if (e.Key != Key.Enter)
             return;
         e.Handled = true;
@@ -318,10 +360,15 @@ function clearAll(){document.body.innerHTML=''}
         var sysContent = AppServices.Config.AiPrompts.ExcelAssistant;
         var messages = new List<object> { new { role = "system", content = sysContent } };
         messages.AddRange(_history.TakeLast(MaxHistoryRounds * 2));
-        messages.Add(new { role = "user", content = userInput });
+        var msgContent = BuildMessageContent(userInput);
+        messages.Add(new { role = "user", content = msgContent });
 
         // 追加用户消息到历史
-        _history.Add(new { role = "user", content = userInput });
+        _history.Add(new { role = "user", content = msgContent });
+
+        // 清空附件（发送后）
+        _attachments.Clear();
+        RefreshAttachmentStrip();
 
         AppendMessage(_userName, userInput, isUser: true, DateTime.Now);
 
@@ -575,30 +622,41 @@ function clearAll(){document.body.innerHTML=''}
     {
         using var form = new System.Windows.Forms.Form
         {
-            Text = "重命名会话", Width = 420, Height = 120,
+            Text = "重命名会话",
+            Width = 420,
+            Height = 120,
             StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen,
             FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog,
-            MaximizeBox = false, MinimizeBox = false,
+            MaximizeBox = false,
+            MinimizeBox = false,
         };
         var tb = new System.Windows.Forms.TextBox
         {
-            Location = new System.Drawing.Point(10, 15), Width = 384, Text = current,
+            Location = new System.Drawing.Point(10, 15),
+            Width = 384,
+            Text = current,
         };
         var ok = new System.Windows.Forms.Button
         {
-            Text = "确定", DialogResult = System.Windows.Forms.DialogResult.OK,
-            Location = new System.Drawing.Point(230, 50), Width = 80,
+            Text = "确定",
+            DialogResult = System.Windows.Forms.DialogResult.OK,
+            Location = new System.Drawing.Point(230, 50),
+            Width = 80,
         };
         var cancel = new System.Windows.Forms.Button
         {
-            Text = "取消", DialogResult = System.Windows.Forms.DialogResult.Cancel,
-            Location = new System.Drawing.Point(314, 50), Width = 80,
+            Text = "取消",
+            DialogResult = System.Windows.Forms.DialogResult.Cancel,
+            Location = new System.Drawing.Point(314, 50),
+            Width = 80,
         };
         form.Controls.AddRange([tb, ok, cancel]);
         form.AcceptButton = ok;
         form.CancelButton = cancel;
         tb.SelectAll();
-        return form.ShowDialog() == System.Windows.Forms.DialogResult.OK && !string.IsNullOrWhiteSpace(tb.Text)
+        return
+            form.ShowDialog() == System.Windows.Forms.DialogResult.OK
+            && !string.IsNullOrWhiteSpace(tb.Text)
             ? tb.Text.Trim()
             : null;
     }
@@ -617,5 +675,153 @@ function clearAll(){document.body.innerHTML=''}
             + $"<div class='role'>{role}</div>"
             + $"<div>{message}</div></div>"
             + $"<div class='timestamp'>{ts}</div></div>";
+    }
+
+    // ── 附件支持 ──────────────────────────────────────────────────────────────
+
+    private void AddAttachment(AttachmentItem item)
+    {
+        if (_attachments.Any(a => a.FilePath == item.FilePath))
+            return;
+        _attachments.Add(item);
+        RefreshAttachmentStrip();
+    }
+
+    private void RefreshAttachmentStrip()
+    {
+        AttachmentStrip.Children.Clear();
+        foreach (var att in _attachments)
+        {
+            var bgHex = att.IsImage ? "#2d4a2d" : "#2d3a4a";
+            var chip = new System.Windows.Controls.Border
+            {
+                CornerRadius = new CornerRadius(3),
+                Background = new System.Windows.Media.SolidColorBrush(
+                    (System.Windows.Media.Color)
+                        System.Windows.Media.ColorConverter.ConvertFromString(bgHex)
+                ),
+                Margin = new Thickness(2),
+                Padding = new Thickness(4, 2, 4, 2),
+            };
+            var icon = att.IsImage ? "🖼 " : "📄 ";
+            var inner = new System.Windows.Controls.StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+            };
+            var label = new TextBlock
+            {
+                Text = icon + att.DisplayName,
+                Foreground = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Colors.LightGray
+                ),
+                FontSize = 9,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            var captured = att;
+            var removeBtn = new System.Windows.Controls.Button
+            {
+                Content = "×",
+                Background = System.Windows.Media.Brushes.Transparent,
+                Foreground = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Colors.Gray
+                ),
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(3, 0, 0, 0),
+                FontSize = 9,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            removeBtn.Click += (_, _) =>
+            {
+                _attachments.Remove(captured);
+                RefreshAttachmentStrip();
+            };
+            inner.Children.Add(label);
+            inner.Children.Add(removeBtn);
+            chip.Child = inner;
+            AttachmentStrip.Children.Add(chip);
+        }
+        AttachmentStrip.Visibility =
+            _attachments.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void HandlePasteFromClipboard()
+    {
+        if (System.Windows.Clipboard.ContainsImage())
+        {
+            var bs = System.Windows.Clipboard.GetImage();
+            var path = Path.Combine(Path.GetTempPath(), $"paste_{DateTime.Now.Ticks}.png");
+            var enc = new PngBitmapEncoder();
+            enc.Frames.Add(BitmapFrame.Create(bs));
+            using (var fs = new FileStream(path, FileMode.Create))
+                enc.Save(fs);
+            AddAttachment(new AttachmentItem("截图.png", path, true));
+        }
+        else if (System.Windows.Clipboard.ContainsFileDropList())
+        {
+            foreach (string f in System.Windows.Clipboard.GetFileDropList())
+                AddAttachment(new AttachmentItem(Path.GetFileName(f), f, IsImageFile(f)));
+        }
+    }
+
+    private static bool IsImageFile(string path) =>
+        new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp" }.Contains(
+            Path.GetExtension(path).ToLower()
+        );
+
+    private object BuildMessageContent(string text)
+    {
+        var textFiles = _attachments.Where(a => !a.IsImage).ToList();
+        var prefix = string.Join(
+            "\n\n",
+            textFiles.Select(f =>
+            {
+                var raw = File.ReadAllText(f.FilePath);
+                var snippet = raw[..Math.Min(5000, raw.Length)];
+                return $"[附件: {f.DisplayName}]\n```\n{snippet}\n```";
+            })
+        );
+        var fullText = string.IsNullOrEmpty(prefix) ? text : prefix + "\n\n" + text;
+        var imgAttachments = _attachments.Where(a => a.IsImage).ToList();
+        if (imgAttachments.Count == 0)
+            return fullText;
+        var parts = new List<object> { new { type = "text", text = fullText } };
+        foreach (var img in imgAttachments)
+            parts.Add(
+                new
+                {
+                    type = "image_url",
+                    image_url = new
+                    {
+                        url = "data:image/png;base64,"
+                            + Convert.ToBase64String(File.ReadAllBytes(img.FilePath)),
+                    },
+                }
+            );
+        return parts.ToArray();
+    }
+
+    private void AttachButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Multiselect = true,
+            Filter =
+                "所有文件|*.*|图片|*.png;*.jpg;*.jpeg;*.bmp|文本|*.txt;*.csv;*.json;*.md;*.cs;*.lua",
+        };
+        if (dlg.ShowDialog() != true)
+            return;
+        foreach (var f in dlg.FileNames)
+            AddAttachment(new AttachmentItem(Path.GetFileName(f), f, IsImageFile(f)));
+    }
+
+    private void OnInputDrop(object sender, System.Windows.DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop))
+            return;
+        if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is not string[] files)
+            return;
+        foreach (var f in files)
+            AddAttachment(new AttachmentItem(Path.GetFileName(f), f, IsImageFile(f)));
+        e.Handled = true;
     }
 }

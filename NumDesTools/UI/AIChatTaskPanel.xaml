@@ -14,6 +14,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!--  顶部工具栏：模型选择 + 加载更多 + 清空  -->
@@ -242,10 +243,18 @@
             Grid.Row="2"
             Margin="0,0,0,0" />
 
+        <!--  附件 Strip  -->
+        <WrapPanel
+            x:Name="AttachmentStrip"
+            Grid.Row="3"
+            Margin="4,0,4,2"
+            Visibility="Collapsed" />
+
         <!--  输入框和发送按钮  -->
-        <Grid Grid.Row="3" Margin="4,2,4,4">
+        <Grid Grid.Row="4" Margin="4,2,4,4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Border
@@ -259,7 +268,9 @@
                     MaxHeight="200"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
+                    AllowDrop="True"
                     Background="#1c1c1c"
+                    Drop="OnInputDrop"
                     FontSize="10pt"
                     Foreground="Gray"
                     GotFocus="PromptInput_GotFocus"
@@ -270,8 +281,17 @@
                     VerticalScrollBarVisibility="Hidden" />
             </Border>
             <Button
-                x:Name="SendButton"
+                x:Name="AttachButton"
                 Grid.Column="1"
+                Width="30"
+                Margin="0,0,4,0"
+                Background="#3e3e42"
+                Click="AttachButton_Click"
+                Content="📎"
+                Foreground="#aaa" />
+            <Button
+                x:Name="SendButton"
+                Grid.Column="2"
                 Width="64"
                 Background="#0078d4"
                 Click="SendButton_Click"
