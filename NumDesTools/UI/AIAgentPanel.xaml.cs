@@ -1462,6 +1462,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
         AddStep($"📋 {userTask[..Math.Min(40, userTask.Length)]}…");
 
+        int totalPrompt = 0, totalCompletion = 0;
+
         for (var step = 1; step <= maxSteps; step++)
         {
             ct.ThrowIfCancellationRequested();
@@ -1477,7 +1479,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
             StartAgentStreamBubble(model);
             var hadStreamContent = false;
-            var (content, toolCalls) = await CallWithToolsAsync(
+            var (content, toolCalls, promptTokens, completionTokens) = await CallWithToolsAsync(
                 model,
                 messages,
                 apiKey,
@@ -1490,6 +1492,11 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                     AppendAgentStreamChunk(HttpUtility.HtmlEncode(chunk).Replace("\n", "<br/>"));
                 }
             );
+            if (promptTokens > 0 || completionTokens > 0)
+                AddStep($"   📊 {model.Split('/').Last()}: ↑{promptTokens:N0} ↓{completionTokens:N0} tokens");
+            PluginLog.Write($"[Agent step {step}] model={model} prompt={promptTokens} completion={completionTokens}");
+            totalPrompt += promptTokens;
+            totalCompletion += completionTokens;
             // 没有文字输出（纯工具调用步骤）则删除空气泡，避免界面出现多个空白框
             if (!hadStreamContent)
                 RemoveAgentStreamBubble();
@@ -1542,6 +1549,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             else
             {
                 AddStep($"✅ 完成（{step} 步）");
+                AddStep($"   📈 累计 ↑{totalPrompt:N0} ↓{totalCompletion:N0} tokens");
                 SetStatus("完成");
                 var finalContent = content ?? "（无输出）";
                 // 流式已渲染则不重复 AppendChat
@@ -1590,7 +1598,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             _history.RemoveAt(_history.Count - 1);
     }
 
-    private static async Task<(string content, List<JObject> toolCalls)> CallWithToolsAsync(
+    private static async Task<(string content, List<JObject> toolCalls, int promptTokens, int completionTokens)> CallWithToolsAsync(
         string model,
         List<object> messages,
         string apiKey,
@@ -1631,7 +1639,10 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             if (!resp.IsSuccessStatusCode)
                 throw new Exception(json.ToString());
             var msg = json["choices"]?[0]?["message"];
-            return (msg?["content"]?.ToString(), msg?["tool_calls"]?.ToObject<List<JObject>>());
+            var usage = json["usage"];
+            int pt = (int)(usage?["prompt_tokens"] ?? 0);
+            int ct2 = (int)(usage?["completion_tokens"] ?? 0);
+            return (msg?["content"]?.ToString(), msg?["tool_calls"]?.ToObject<List<JObject>>(), pt, ct2);
         }
 
         // 流式：SSE 解析
@@ -1653,6 +1664,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         var toolCallsMap =
             new Dictionary<int, (string Id, string Name, System.Text.StringBuilder Args)>();
         bool chunkStarted = false;
+        int streamPromptTokens = 0;
+        int streamCompletionTokens = 0;
 
         while (!reader.EndOfStream)
         {
@@ -1673,6 +1686,13 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             catch
             {
                 continue;
+            }
+
+            // 流式最后一包可能携带 usage
+            if (chunk["usage"] is JToken usageToken)
+            {
+                streamPromptTokens = (int)(usageToken["prompt_tokens"] ?? 0);
+                streamCompletionTokens = (int)(usageToken["completion_tokens"] ?? 0);
             }
 
             var delta = chunk["choices"]?[0]?["delta"];
@@ -1740,7 +1760,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 .ToList();
         }
 
-        return (contentSb.ToString(), toolCallsList);
+        return (contentSb.ToString(), toolCallsList, streamPromptTokens, streamCompletionTokens);
     }
 
     private static string ExecuteTool(string toolName, string argsJson)
@@ -2752,9 +2772,13 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         CompressButton.Content = "压缩中…";
         try
         {
-            var model = Dispatcher.Invoke(() =>
+            var rawModel = Dispatcher.Invoke(() =>
                 ModelComboBox.SelectedItem as string ?? AppServices.Config.Llm.Model
             );
+            // 压缩只需文字能力，图片模型/自动路由下 fallback
+            var model = rawModel == NumDesTools.AI.AutoModelRouter.AutoModelName || rawModel.Contains("image")
+                ? "deepseek-v4-flash"
+                : rawModel;
             var apiKey = AppServices.Config.Llm.ApiKey;
             var apiUrl = AppServices.Config.Llm.ChatCompletionsUrl;
             var msgs = new List<object>();

@@ -162,7 +162,11 @@ function clearAll(){document.body.innerHTML=''}
         CompressButton.Content = "压缩中…";
         try
         {
-            var model = AppServices.Config.Llm.Model;
+            // 压缩只需文字能力，图片模型/自动路由模式下 fallback 到文字模型
+            var rawModel = AppServices.Config.Llm.Model;
+            var model = rawModel == NumDesTools.AI.AutoModelRouter.AutoModelName || rawModel.Contains("image")
+                ? "deepseek-v4-flash"
+                : rawModel;
             var apiKey = AppServices.Config.Llm.ApiKey;
             var apiUrl = AppServices.Config.Llm.ChatCompletionsUrl;
             var msgs = new List<object>();
@@ -433,6 +437,7 @@ function clearAll(){document.body.innerHTML=''}
 
             _streamBuffer = "";
             _chunkCount = 0;
+            PluginLog.Write($"[Chat] model={model} response_length={streamMessage.Message.Length}chars");
             var htmlMessage = HttpUtility.HtmlDecode(
                 Markdown.ToHtml(streamMessage.Message, MdPipeline)
             );
