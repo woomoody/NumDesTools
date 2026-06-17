@@ -16,6 +16,7 @@
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!--  顶部：模型 + 最大步骤  -->
@@ -351,10 +352,18 @@
             </Border>
         </Grid>
 
+        <!--  附件 Strip  -->
+        <WrapPanel
+            x:Name="AttachmentStrip"
+            Grid.Row="4"
+            Margin="0,0,0,2"
+            Visibility="Collapsed" />
+
         <!--  任务输入  -->
-        <Grid Grid.Row="4" Margin="0,0,0,4">
+        <Grid Grid.Row="5" Margin="0,0,0,4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
@@ -370,8 +379,10 @@
                     MaxHeight="200"
                     Padding="6,5"
                     AcceptsReturn="True"
+                    AllowDrop="True"
                     Background="#1c1c1c"
                     BorderThickness="0"
+                    Drop="OnInputDrop"
                     FontSize="10pt"
                     Foreground="#e0e0e0"
                     PreviewKeyDown="TaskInput_PreviewKeyDown"
@@ -381,8 +392,18 @@
                     mah:TextBoxHelper.Watermark="描述任务，Enter 发送，Shift+Enter 换行…" />
             </Border>
             <Button
-                x:Name="StopButton"
+                x:Name="AttachButton"
                 Grid.Column="1"
+                Width="30"
+                Height="32"
+                Margin="0,0,4,0"
+                Background="#3e3e42"
+                Click="AttachButton_Click"
+                Content="📎"
+                Foreground="#aaa" />
+            <Button
+                x:Name="StopButton"
+                Grid.Column="2"
                 Width="52"
                 Height="32"
                 Margin="0,0,4,0"
@@ -393,7 +414,7 @@
                 IsEnabled="False" />
             <Button
                 x:Name="RunButton"
-                Grid.Column="2"
+                Grid.Column="3"
                 Width="64"
                 Height="32"
                 Background="#0078d4"
@@ -416,7 +437,7 @@
         <!--  状态栏  -->
         <TextBlock
             x:Name="StatusText"
-            Grid.Row="5"
+            Grid.Row="6"
             FontSize="10"
             Foreground="#555"
             Text="就绪" />

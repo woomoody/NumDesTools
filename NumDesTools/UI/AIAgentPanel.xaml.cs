@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 using Markdig;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -25,6 +26,10 @@ public partial class AIAgentPanel
     // 执行中的插话队列：Enter 发送时入队，每步循环开头注入对话
     private readonly System.Collections.Concurrent.ConcurrentQueue<string> _interjectQueue = new();
     private string _sessionId = Guid.NewGuid().ToString("N")[..12];
+
+    private record AttachmentItem(string DisplayName, string FilePath, bool IsImage);
+
+    private readonly List<AttachmentItem> _attachments = [];
 
     private record SessionItem(string SessionId, string Display)
     {
@@ -1256,6 +1261,19 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
     private void TaskInput_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            if (
+                System.Windows.Clipboard.ContainsImage()
+                || System.Windows.Clipboard.ContainsFileDropList()
+            )
+            {
+                HandlePasteFromClipboard();
+                e.Handled = true;
+                return;
+            }
+        }
+
         if (e.Key != Key.Enter)
             return;
         e.Handled = true;
@@ -1359,7 +1377,13 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 systemContent += $"\n\n用户自定义指令（始终遵守）：{customInstruction}";
             _history.Add(new { role = "system", content = systemContent });
         }
-        _history.Add(new { role = "user", content = userTask });
+        var userMsgContent = Dispatcher.Invoke(() => BuildMessageContent(userTask));
+        _history.Add(new { role = "user", content = userMsgContent });
+        Dispatcher.Invoke(() =>
+        {
+            _attachments.Clear();
+            RefreshAttachmentStrip();
+        });
 
         // 防止历史消息无限增长导致 token 超限：保留 system 消息 + 最近 MaxHistoryMessages 条
         if (_history.Count > MaxHistoryMessages + 1)
@@ -3347,6 +3371,151 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         {
             return $"删除失败: {ex.Message}";
         }
+    }
+
+    // ── 附件支持 ─────────────────────────────────────────────────────────────
+
+    private void AddAttachment(AttachmentItem item)
+    {
+        _attachments.Add(item);
+        RefreshAttachmentStrip();
+    }
+
+    private void RefreshAttachmentStrip()
+    {
+        AttachmentStrip.Children.Clear();
+        foreach (var att in _attachments)
+        {
+            var bg = att.IsImage ? "#2d4a2d" : "#2d3a4a";
+            var chip = new System.Windows.Controls.Border
+            {
+                CornerRadius = new CornerRadius(3),
+                Background = new System.Windows.Media.SolidColorBrush(
+                    (System.Windows.Media.Color)
+                        System.Windows.Media.ColorConverter.ConvertFromString(bg)
+                ),
+                Margin = new Thickness(2),
+                Padding = new Thickness(4),
+            };
+            var icon = att.IsImage ? "🖼 " : "📄 ";
+            var inner = new System.Windows.Controls.StackPanel
+            {
+                Orientation = System.Windows.Controls.Orientation.Horizontal,
+            };
+            var label = new System.Windows.Controls.TextBlock
+            {
+                Text = icon + att.DisplayName,
+                Foreground = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Colors.LightGray
+                ),
+                FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            var captured = att;
+            var removeBtn = new System.Windows.Controls.Button
+            {
+                Content = "×",
+                Background = System.Windows.Media.Brushes.Transparent,
+                Foreground = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Colors.Gray
+                ),
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(3, 0, 0, 0),
+                FontSize = 12,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            removeBtn.Click += (_, _) =>
+            {
+                _attachments.Remove(captured);
+                RefreshAttachmentStrip();
+            };
+            inner.Children.Add(label);
+            inner.Children.Add(removeBtn);
+            chip.Child = inner;
+            AttachmentStrip.Children.Add(chip);
+        }
+        AttachmentStrip.Visibility =
+            _attachments.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void HandlePasteFromClipboard()
+    {
+        if (System.Windows.Clipboard.ContainsImage())
+        {
+            var bs = System.Windows.Clipboard.GetImage();
+            var path = Path.Combine(Path.GetTempPath(), $"paste_{DateTime.Now.Ticks}.png");
+            var enc = new PngBitmapEncoder();
+            enc.Frames.Add(BitmapFrame.Create(bs));
+            using (var fs = new FileStream(path, FileMode.Create))
+                enc.Save(fs);
+            AddAttachment(new AttachmentItem("截图.png", path, true));
+        }
+        else if (System.Windows.Clipboard.ContainsFileDropList())
+        {
+            foreach (string f in System.Windows.Clipboard.GetFileDropList())
+                AddAttachment(new AttachmentItem(Path.GetFileName(f), f, IsImageFile(f)));
+        }
+    }
+
+    private object BuildMessageContent(string text)
+    {
+        var textFiles = _attachments.Where(a => !a.IsImage).ToList();
+        var prefix = string.Join(
+            "\n\n",
+            textFiles.Select(f =>
+            {
+                var raw = File.ReadAllText(f.FilePath);
+                var snippet = raw[..Math.Min(5000, raw.Length)];
+                return $"[附件: {f.DisplayName}]\n```\n{snippet}\n```";
+            })
+        );
+        var fullText = string.IsNullOrEmpty(prefix) ? text : prefix + "\n\n" + text;
+        var imgAttachments = _attachments.Where(a => a.IsImage).ToList();
+        if (imgAttachments.Count == 0)
+            return fullText;
+        var parts = new List<object> { new { type = "text", text = fullText } };
+        foreach (var img in imgAttachments)
+            parts.Add(
+                new
+                {
+                    type = "image_url",
+                    image_url = new
+                    {
+                        url = "data:image/png;base64,"
+                            + Convert.ToBase64String(File.ReadAllBytes(img.FilePath)),
+                    },
+                }
+            );
+        return parts.ToArray();
+    }
+
+    private static bool IsImageFile(string p) =>
+        new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp" }.Contains(
+            Path.GetExtension(p).ToLower()
+        );
+
+    private void AttachButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.OpenFileDialog
+        {
+            Multiselect = true,
+            Filter = "所有文件|*.*|图片|*.png;*.jpg;*.jpeg;*.bmp|文本|*.txt;*.csv;*.json;*.md;*.cs;*.lua",
+        };
+        if (dlg.ShowDialog() != true)
+            return;
+        foreach (var f in dlg.FileNames)
+            AddAttachment(new AttachmentItem(Path.GetFileName(f), f, IsImageFile(f)));
+    }
+
+    private void OnInputDrop(object sender, System.Windows.DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop))
+            return;
+        if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is not string[] files)
+            return;
+        foreach (var f in files)
+            AddAttachment(new AttachmentItem(Path.GetFileName(f), f, IsImageFile(f)));
     }
 
     private static string ToolRunShell(string command, string? workingDir, int timeoutSeconds)
