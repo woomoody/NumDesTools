@@ -1128,6 +1128,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var aiCtpName = "AI对话-Excel";
         if (ShowAiText == "AI对话：开启")
         {
+            _lastWorkbookActivateTime = DateTime.Now; // 每段 CTP 前刷新，防止 COM 事件延迟超窗口
             NumDesCTP.DeleteCTP(true, aiCtpName);
             _chatAiChatMenuCtp ??= new AiChatTaskPanel();
             _chatAiChatMenuCtp = (AiChatTaskPanel)
@@ -1161,6 +1162,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var agentCtpName = "AI Agent-Excel";
         if (_showAgentText == "Agent模式：开启")
         {
+            _lastWorkbookActivateTime = DateTime.Now;
             NumDesCTP.DeleteCTP(true, agentCtpName);
             _agentCtp ??= new AIAgentPanel();
             _agentCtp = (AIAgentPanel)
@@ -3285,6 +3287,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     new SheetListControl(),
                     MsoCTPDockPosition.msoCTPDockPositionLeft
                 );
+            // 用户手动点 X 关闭时更新 Ribbon 状态
+            if (NumDesCTP.TryGetCTP(ctpName, out var sheetPane))
+                sheetPane.VisibleStateChange += _ =>
+                {
+                    if (sheetPane.Visible || (DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds < SwitchCooldownMs) return;
+                    SheetMenuText = "表格目录：关闭";
+                    CustomRibbon?.InvalidateControl("SheetMenu");
+                    GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
+                };
         }
         else
         {
