@@ -1187,10 +1187,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         System.Windows.Controls.SelectionChangedEventArgs e
     )
     {
-        if (
-            ModelComboBox.SelectedItem is string model
-            && model != NumDesTools.AI.AutoModelRouter.AutoModelName
-        )
+        // 所有选择（含「🤖 自动」）都保存，下次打开恢复
+        if (ModelComboBox.SelectedItem is string model)
             AppServices.GlobalValue.SaveValue(AgentModelKey, model);
     }
 
