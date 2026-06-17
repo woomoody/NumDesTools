@@ -36,6 +36,8 @@ public partial class AiChatTaskPanel
     private bool _isStreaming;
 
     private string _sessionId = Guid.NewGuid().ToString("N")[..12];
+    private string _currentAutoReason;
+    private string _currentActualModel;
 
     private record SessionItem(string SessionId, string Display)
     {
@@ -84,6 +86,7 @@ public partial class AiChatTaskPanel
     private void PopulateModelList()
     {
         ModelComboBox.Items.Clear();
+        ModelComboBox.Items.Add(NumDesTools.AI.AutoModelRouter.AutoModelName);
         var models = AppServices.Config.Llm.ModelList;
         if (models.Count == 0)
             models = [AppServices.Config.Llm.Model];
@@ -144,7 +147,7 @@ function clearAll(){document.body.innerHTML=''}
         System.Windows.Controls.SelectionChangedEventArgs e
     )
     {
-        if (ModelComboBox.SelectedItem is string model)
+        if (ModelComboBox.SelectedItem is string model && model != NumDesTools.AI.AutoModelRouter.AutoModelName)
         {
             AppServices.Config.Llm.Model = model;
             AppServices.GlobalValue.SaveValue("LiteLLMModel", model);
@@ -333,7 +336,6 @@ function clearAll(){document.body.innerHTML=''}
     {
         var apiKey = AppServices.Config.Llm.ApiKey;
         var apiUrl = AppServices.Config.Llm.ChatCompletionsUrl;
-        var model = AppServices.Config.Llm.Model;
 
         var userInput = PromptInput.Document.Text.Trim();
 
@@ -346,6 +348,24 @@ function clearAll(){document.body.innerHTML=''}
 
         if (string.IsNullOrEmpty(userInput))
             return;
+
+        var selectedModel =
+            ModelComboBox.SelectedItem as string ?? AppServices.Config.Llm.Model;
+        string actualModel;
+        string autoReason = null;
+        if (selectedModel == NumDesTools.AI.AutoModelRouter.AutoModelName)
+        {
+            var (am, ar) = NumDesTools.AI.AutoModelRouter.Route(userInput);
+            actualModel = am;
+            autoReason = ar;
+        }
+        else
+        {
+            actualModel = selectedModel;
+        }
+        var model = actualModel;
+        _currentAutoReason = autoReason;
+        _currentActualModel = model;
 
         // 立即清空输入框，不等 API 完成
         PromptInput.Document.Text = string.Empty;
@@ -455,11 +475,17 @@ function clearAll(){document.body.innerHTML=''}
                 _currentResponseId = $"msg-{DateTime.Now.Ticks}";
                 _streamBuffer = "";
                 _chunkCount = 0;
-                var model = AppServices.Config.Llm.Model;
+                var displayModel =
+                    (_currentActualModel ?? "")
+                    + (
+                        _currentAutoReason != null
+                            ? $" <span style='color:#888;font-size:.75em'>← 自动·{_currentAutoReason}</span>"
+                            : ""
+                    );
                 AppendRawHtml(
                     $"<div id='{_currentResponseId}' class='message-container'>"
                         + $"<div class='message system'>"
-                        + $"<div class='role'>{model}</div>"
+                        + $"<div class='role'>{displayModel}</div>"
                         + $"<div class='content'></div></div>"
                         + $"<div class='timestamp'></div></div>"
                 );

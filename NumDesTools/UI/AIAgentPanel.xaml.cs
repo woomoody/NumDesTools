@@ -26,6 +26,7 @@ public partial class AIAgentPanel
     // 执行中的插话队列：Enter 发送时入队，每步循环开头注入对话
     private readonly System.Collections.Concurrent.ConcurrentQueue<string> _interjectQueue = new();
     private string _sessionId = Guid.NewGuid().ToString("N")[..12];
+    private string? _lastUsedModel;
 
     private record AttachmentItem(string DisplayName, string FilePath, bool IsImage);
 
@@ -1024,6 +1025,45 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 },
             },
         },
+        new
+        {
+            type = "function",
+            function = new
+            {
+                name = "parallel_tasks",
+                description =
+                    "并行执行多个独立子任务，每个子任务独立调用 LLM，最后合并结果返回。"
+                    + "适用于需要同时分析多个 Sheet/文件/维度的场景，大幅减少总耗时。"
+                    + "每个 task 描述一个独立问题，model 可指定或留空（自动路由）。",
+                parameters = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        tasks = new
+                        {
+                            type = "array",
+                            description = "子任务列表，每项含 description(string) 和可选 model(string)",
+                            items = new
+                            {
+                                type = "object",
+                                properties = new
+                                {
+                                    description = new { type = "string" },
+                                    model = new { type = "string" },
+                                },
+                            },
+                        },
+                        context = new
+                        {
+                            type = "string",
+                            description = "所有子任务共享的上下文信息（如当前 Sheet 数据摘要）",
+                        },
+                    },
+                    required = new[] { "tasks" },
+                },
+            },
+        },
     ];
 
     // 匹配 Sheet1!A1:B5 / A1:B5 / A1 形式的单元格地址
@@ -1125,6 +1165,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     private void PopulateModelList()
     {
         ModelComboBox.Items.Clear();
+        ModelComboBox.Items.Add(NumDesTools.AI.AutoModelRouter.AutoModelName);
         var models = AppServices.Config.Llm.ModelList;
         if (models.Count == 0)
             models = [AppServices.Config.Llm.Model];
@@ -1147,7 +1188,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         System.Windows.Controls.SelectionChangedEventArgs e
     )
     {
-        if (ModelComboBox.SelectedItem is string model)
+        if (ModelComboBox.SelectedItem is string model && model != NumDesTools.AI.AutoModelRouter.AutoModelName)
             AppServices.GlobalValue.SaveValue(AgentModelKey, model);
     }
 
@@ -1351,7 +1392,24 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
     private async Task RunAgentLoopAsync(string userTask, CancellationToken ct)
     {
-        var model = ModelComboBox.SelectedItem as string ?? AppServices.Config.Llm.Model;
+        var selectedModel =
+            Dispatcher.Invoke(() => ModelComboBox.SelectedItem as string)
+            ?? AppServices.Config.Llm.Model;
+        string model;
+        string? autoReason = null;
+        if (selectedModel == NumDesTools.AI.AutoModelRouter.AutoModelName)
+        {
+            var (am, ar) = NumDesTools.AI.AutoModelRouter.Route(userTask);
+            model = am;
+            autoReason = ar;
+            Dispatcher.Invoke(() => AddStep($"🤖 自动选模型: {model}（{ar}）"));
+        }
+        else
+        {
+            model = selectedModel;
+        }
+        _lastUsedModel =
+            model + (autoReason != null ? $"(自动·{autoReason})" : "");
         var apiKey = AppServices.Config.Llm.ApiKey;
         var apiUrl = AppServices.Config.Llm.ChatCompletionsUrl;
         var maxSteps = (int)(MaxStepsInput.Value ?? 10);
@@ -1491,9 +1549,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 _history.Add(new { role = "assistant", content = finalContent });
                 // 持久化用户消息 + 最终 assistant 消息
                 var db = new ChatHistoryManager();
-                var model2 = Dispatcher.Invoke(() =>
-                    ModelComboBox.SelectedItem as string ?? "Agent"
-                );
+                var model2 = _lastUsedModel ?? (Dispatcher.Invoke(() =>
+                    ModelComboBox.SelectedItem as string) ?? "Agent");
                 var sid = _sessionId;
                 _ = db.SaveChatMessageAsync(
                     new ChatMessage
@@ -1850,6 +1907,12 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 "delete_file" => ToolDeleteFile(
                     args["path"]?.ToString() ?? "",
                     (bool)(args["recursive"] ?? false)
+                ),
+                "parallel_tasks" => ToolParallelTasks(
+                    args["tasks"] as JArray ?? new JArray(),
+                    args["context"]?.ToString() ?? "",
+                    AppServices.Config.Llm.ApiKey,
+                    AppServices.Config.Llm.ChatCompletionsUrl
                 ),
                 _ => $"未知工具: {toolName}",
             };
@@ -2944,11 +3007,17 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         {
             var html = InjectCellLinks(Markdown.ToHtml(markdown, MdPipeline));
             var cls = role == "user" ? "user" : "assistant";
-            var label = role == "user" ? Environment.UserName : (ModelComboBox.SelectedItem as string ?? "Agent");
+            var label =
+                role == "user"
+                    ? Environment.UserName
+                    : (_lastUsedModel ?? ModelComboBox.SelectedItem as string ?? "Agent");
             var ts = DateTime.Now.ToString("HH:mm:ss");
-            var block = $"<div class='msg {cls}'><div class='role'>{label} <span class='ts'>{ts}</span></div><div class='content'>{extraHtml}{html}</div></div>";
-            ChatOutput.InvokeScript("eval",
-                $"document.body.insertAdjacentHTML('beforeend','{HttpUtility.JavaScriptStringEncode(block)}');window.scrollTo(0,document.body.scrollHeight);");
+            var block =
+                $"<div class='msg {cls}'><div class='role'>{label} <span class='ts'>{ts}</span></div><div class='content'>{extraHtml}{html}</div></div>";
+            ChatOutput.InvokeScript(
+                "eval",
+                $"document.body.insertAdjacentHTML('beforeend','{HttpUtility.JavaScriptStringEncode(block)}');window.scrollTo(0,document.body.scrollHeight);"
+            );
         });
     }
 
@@ -2961,7 +3030,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             var label =
                 role == "user"
                     ? Environment.UserName
-                    : (ModelComboBox.SelectedItem as string ?? "Agent");
+                    : (_lastUsedModel ?? ModelComboBox.SelectedItem as string ?? "Agent");
             var ts = DateTime.Now.ToString("HH:mm:ss");
             var block =
                 $"<div class='msg {cls}'><div class='role'>{label} <span class='ts'>{ts}</span></div><div class='content'>{html}</div></div>";
@@ -3554,6 +3623,54 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             return;
         foreach (var f in files)
             AddAttachment(new AttachmentItem(Path.GetFileName(f), f, IsImageFile(f)));
+    }
+
+    private static string ToolParallelTasks(
+        JArray tasks,
+        string context,
+        string apiKey,
+        string apiUrl
+    )
+    {
+        if (tasks.Count == 0)
+            return "tasks 为空";
+        var taskList = tasks
+            .Select(t => new
+            {
+                Description = t["description"]?.ToString() ?? "",
+                Model = t["model"]?.ToString() ?? "",
+            })
+            .Where(t => !string.IsNullOrEmpty(t.Description))
+            .ToList();
+        if (taskList.Count == 0)
+            return "tasks 中无有效 description";
+
+        var parallelTasks = taskList.Select(async (t, idx) =>
+        {
+            var model = string.IsNullOrEmpty(t.Model)
+                ? NumDesTools.AI.AutoModelRouter.Route(t.Description).Model
+                : t.Model;
+            var sysMsg =
+                "你是 Excel 数据分析助手，简洁回答以下问题。"
+                + (string.IsNullOrEmpty(context) ? "" : $"\n\n背景信息：{context}");
+            try
+            {
+                var result = await new NumDesTools.AI.LiteLlmClient().CallAsync(
+                    model,
+                    sysMsg,
+                    t.Description,
+                    apiKey,
+                    apiUrl
+                );
+                return $"[子任务{idx + 1}·{model}] {t.Description}\n{result}";
+            }
+            catch (Exception ex)
+            {
+                return $"[子任务{idx + 1}] 失败: {ex.Message}";
+            }
+        });
+        var results = Task.WhenAll(parallelTasks).GetAwaiter().GetResult();
+        return string.Join("\n\n" + new string('─', 40) + "\n\n", results);
     }
 
     private static string ToolRunShell(string command, string? workingDir, int timeoutSeconds)
