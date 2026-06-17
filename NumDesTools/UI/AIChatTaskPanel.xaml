@@ -5,7 +5,7 @@
     xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Width="580"
+    Width="870"
     Height="500"
     mc:Ignorable="d">
     <Grid Margin="0" Background="#1c1c1c">
@@ -74,7 +74,7 @@
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         Foreground="#aaa"
-                                        Text="▾" />
+                                        Text="�? />
                                 </Grid>
                             </ToggleButton>
                             <Popup
@@ -112,10 +112,10 @@
                 Width="72"
                 Height="26"
                 Click="CompressButton_Click"
-                Content="压缩上下文" />
+                Content="压缩上下�? />
         </Grid>
 
-        <!--  会话选择栏  -->
+        <!--  会话选择�? -->
         <Grid Grid.Row="1" Margin="4,0,4,2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -173,7 +173,7 @@
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
                                         Foreground="#aaa"
-                                        Text="▾" />
+                                        Text="�? />
                                 </Grid>
                             </ToggleButton>
                             <Popup
@@ -203,8 +203,8 @@
                 Margin="0,0,4,0"
                 Background="#3e3e42"
                 Foreground="#ccc"
-                Content="✏"
-                ToolTip="重命名会话"
+                Content="�?
+                ToolTip="重命名会�?
                 Click="RenameSessionButton_Click" />
             <Button
                 x:Name="DeleteSessionButton"
@@ -233,11 +233,11 @@
                 Height="26"
                 Background="#2d5a27"
                 Foreground="White"
-                Content="＋ 新对话"
+                Content="�?新对�?
                 Click="NewChatButton_Click" />
         </Grid>
 
-        <!--  输出框  -->
+        <!--  输出�? -->
         <WebBrowser
             x:Name="ResponseOutput"
             Grid.Row="2"
@@ -250,7 +250,7 @@
             Margin="4,0,4,2"
             Visibility="Collapsed" />
 
-        <!--  输入框和发送按钮  -->
+        <!--  输入框和发送按�? -->
         <Grid Grid.Row="4" Margin="4,2,4,4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -295,7 +295,7 @@
                 Width="64"
                 Background="#0078d4"
                 Click="SendButton_Click"
-                Content="发送"
+                Content="发�?
                 Foreground="White" />
         </Grid>
     </Grid>
