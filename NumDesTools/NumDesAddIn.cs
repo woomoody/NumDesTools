@@ -1113,8 +1113,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             if (NumDesCTP.TryGetCTP(ctpName, out var smPane2))
                 smPane2.VisibleStateChange += _ =>
                 {
-                    PluginLog.Write($"[CTP][WA] SheetMenu VisibleState: Visible={smPane2.Visible} Workbooks={App.Workbooks.Count} dt={(DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds:F0}ms");
-                    if (smPane2.Visible || (DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds < SwitchCooldownMs || App.Workbooks.Count == 0) return;
+                    PluginLog.Write($"[CTP][WA] SheetMenu VisibleState: Visible={smPane2.Visible} Workbooks={App.Workbooks.Count} SamePane={NumDesCTP.TryGetCTP(ctpName, out var smCur) && ReferenceEquals(smCur, smPane2)}");
+                    if (smPane2.Visible || App.Workbooks.Count == 0) return;
+                    if (!NumDesCTP.TryGetCTP(ctpName, out var smCurrent) || !ReferenceEquals(smCurrent, smPane2)) return;
                     SheetMenuText = "表格目录：关闭";
                     CustomRibbon?.InvalidateControl("SheetMenu");
                     GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
@@ -1139,8 +1140,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             if (NumDesCTP.TryGetCTP(aiCtpName, out var chatPane2))
                 chatPane2.VisibleStateChange += _ =>
                 {
-                    PluginLog.Write($"[CTP][WA] Chat VisibleState: Visible={chatPane2.Visible} Workbooks={App.Workbooks.Count} dt={(DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds:F0}ms");
-                    if (chatPane2.Visible || (DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds < SwitchCooldownMs || App.Workbooks.Count == 0) return;
+                    PluginLog.Write($"[CTP][WA] Chat VisibleState: Visible={chatPane2.Visible} Workbooks={App.Workbooks.Count} SamePane={NumDesCTP.TryGetCTP(aiCtpName, out var chatCur) && ReferenceEquals(chatCur, chatPane2)}");
+                    if (chatPane2.Visible || App.Workbooks.Count == 0) return;
+                    if (!NumDesCTP.TryGetCTP(aiCtpName, out var chatCurrent) || !ReferenceEquals(chatCurrent, chatPane2)) return;
                     ShowAiText = "AI对话：关闭";
                     CustomRibbon?.InvalidateControl("ShowAI");
                     GlobalValue.SaveValue("ShowAIText", ShowAiText);
@@ -1165,8 +1167,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             if (NumDesCTP.TryGetCTP(agentCtpName, out var agentPane2))
                 agentPane2.VisibleStateChange += _ =>
                 {
-                    PluginLog.Write($"[CTP][WA] Agent VisibleState: Visible={agentPane2.Visible} Workbooks={App.Workbooks.Count} dt={(DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds:F0}ms");
-                    if (agentPane2.Visible || (DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds < SwitchCooldownMs || App.Workbooks.Count == 0) return;
+                    PluginLog.Write($"[CTP][WA] Agent VisibleState: Visible={agentPane2.Visible} Workbooks={App.Workbooks.Count} SamePane={NumDesCTP.TryGetCTP(agentCtpName, out var agCur) && ReferenceEquals(agCur, agentPane2)}");
+                    if (agentPane2.Visible || App.Workbooks.Count == 0) return;
+                    if (!NumDesCTP.TryGetCTP(agentCtpName, out var agentCurrent) || !ReferenceEquals(agentCurrent, agentPane2)) return;
                     _showAgentText = "Agent模式：关闭";
                     CustomRibbon?.InvalidateControl("ShowAIAgent");
                 };
@@ -3280,7 +3283,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     PluginLog.Write($"[CTP] VisibleStateChange: Visible={sheetPane.Visible} Workbooks={App.Workbooks.Count} TimeSinceSwitch={(DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds:F0}ms");
                     if (
                         sheetPane.Visible
-                        || (DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds < SwitchCooldownMs
                         || App.Workbooks.Count == 0
                     )
                         return;
@@ -3395,7 +3397,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     PluginLog.Write($"[CTP] VisibleStateChange: Visible={agentPane.Visible} Workbooks={App.Workbooks.Count} TimeSinceSwitch={(DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds:F0}ms");
                     if (
                         agentPane.Visible
-                        || (DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds < SwitchCooldownMs
                         || App.Workbooks.Count == 0
                     )
                         return;
