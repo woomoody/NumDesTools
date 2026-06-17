@@ -1112,11 +1112,20 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     var smActiveWin = App.ActiveWindow?.Caption ?? "";
                     PluginLog.Write($"[CTP][WA] SheetMenu VisibleState: Visible={smPane2.Visible} SamePane={NumDesCTP.TryGetCTP(ctpName, out var smCur) && ReferenceEquals(smCur, smPane2)} CreatedWin={smWin} ActiveWin={smActiveWin}");
                     if (smPane2.Visible || App.Workbooks.Count == 0) return;
-                    if (!NumDesCTP.TryGetCTP(ctpName, out var smCurrent) || !ReferenceEquals(smCurrent, smPane2)) return;
                     if (!string.IsNullOrEmpty(smWin) && smActiveWin != smWin) return;
-                    SheetMenuText = "表格目录：关闭";
-                    CustomRibbon?.InvalidateControl("SheetMenu");
-                    GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
+                    // 2秒防抖：切换过渡中CTP会短暂False再变True，X关闭则永久False
+                    var _smP = smPane2;
+                    System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
+                    {
+                        if (_smP.Visible) return;
+                        ExcelAsyncUtil.QueueAsMacro(() =>
+                        {
+                            PluginLog.Write("[CTP][X] SheetMenu X-close confirmed");
+                            SheetMenuText = "表格目录：关闭";
+                            CustomRibbon?.InvalidateControl("SheetMenu");
+                            GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
+                        });
+                    });
                 };
             }
         }
@@ -1142,11 +1151,19 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     var chatActiveWin = App.ActiveWindow?.Caption ?? "";
                     PluginLog.Write($"[CTP][WA] Chat VisibleState: Visible={chatPane2.Visible} SamePane={NumDesCTP.TryGetCTP(aiCtpName, out var chatCur) && ReferenceEquals(chatCur, chatPane2)} CreatedWin={chatWin} ActiveWin={chatActiveWin}");
                     if (chatPane2.Visible || App.Workbooks.Count == 0) return;
-                    if (!NumDesCTP.TryGetCTP(aiCtpName, out var chatCurrent) || !ReferenceEquals(chatCurrent, chatPane2)) return;
                     if (!string.IsNullOrEmpty(chatWin) && chatActiveWin != chatWin) return;
-                    ShowAiText = "AI对话：关闭";
-                    CustomRibbon?.InvalidateControl("ShowAI");
-                    GlobalValue.SaveValue("ShowAIText", ShowAiText);
+                    var _chatP = chatPane2;
+                    System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
+                    {
+                        if (_chatP.Visible) return;
+                        ExcelAsyncUtil.QueueAsMacro(() =>
+                        {
+                            PluginLog.Write("[CTP][X] Chat X-close confirmed");
+                            ShowAiText = "AI对话：关闭";
+                            CustomRibbon?.InvalidateControl("ShowAI");
+                            GlobalValue.SaveValue("ShowAIText", ShowAiText);
+                        });
+                    });
                 };
             }
         }
@@ -1172,10 +1189,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     var agentActiveWin = App.ActiveWindow?.Caption ?? "";
                     PluginLog.Write($"[CTP][WA] Agent VisibleState: Visible={agentPane2.Visible} SamePane={NumDesCTP.TryGetCTP(agentCtpName, out var agCur) && ReferenceEquals(agCur, agentPane2)} CreatedWin={agentWin} ActiveWin={agentActiveWin}");
                     if (agentPane2.Visible || App.Workbooks.Count == 0) return;
-                    if (!NumDesCTP.TryGetCTP(agentCtpName, out var agentCurrent) || !ReferenceEquals(agentCurrent, agentPane2)) return;
                     if (!string.IsNullOrEmpty(agentWin) && agentActiveWin != agentWin) return;
-                    _showAgentText = "Agent模式：关闭";
-                    CustomRibbon?.InvalidateControl("ShowAIAgent");
+                    var _agentP = agentPane2;
+                    System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
+                    {
+                        if (_agentP.Visible) return;
+                        ExcelAsyncUtil.QueueAsMacro(() =>
+                        {
+                            PluginLog.Write("[CTP][X] Agent X-close confirmed");
+                            _showAgentText = "Agent模式：关闭";
+                            CustomRibbon?.InvalidateControl("ShowAIAgent");
+                        });
+                    });
                 };
             }
         }
@@ -3287,11 +3312,19 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     var activeWin = App.ActiveWindow?.Caption ?? "";
                     PluginLog.Write($"[CTP] SheetMenu VisibleStateChange: Visible={sheetPane.Visible} Workbooks={App.Workbooks.Count} CreatedWin={createdWin} ActiveWin={activeWin}");
                     if (sheetPane.Visible || App.Workbooks.Count == 0) return;
-                    // 工作簿切换时活动窗口已变 → 抑制
                     if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin) return;
-                    SheetMenuText = "表格目录：关闭";
-                    CustomRibbon?.InvalidateControl("SheetMenu");
-                    GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
+                    var _sp2 = sheetPane;
+                    System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
+                    {
+                        if (_sp2.Visible) return;
+                        ExcelAsyncUtil.QueueAsMacro(() =>
+                        {
+                            PluginLog.Write("[CTP][X] SheetMenu(ShowSheetMenu) X-close confirmed");
+                            SheetMenuText = "表格目录：关闭";
+                            CustomRibbon?.InvalidateControl("SheetMenu");
+                            GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
+                        });
+                    });
                 };
             }
         }
@@ -3403,11 +3436,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     var activeWin = App.ActiveWindow?.Caption ?? "";
                     PluginLog.Write($"[CTP] Agent VisibleStateChange: Visible={agentPane.Visible} Workbooks={App.Workbooks.Count} CreatedWin={createdWin} ActiveWin={activeWin}");
                     if (agentPane.Visible || App.Workbooks.Count == 0) return;
-                    // 工作簿切换时活动窗口已变 → 抑制
                     if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin) return;
-                    _showAgentText = "Agent模式：关闭";
-                    CustomRibbon?.InvalidateControl("ShowAIAgent");
-                    GlobalValue.SaveValue("ShowAIAgentText", _showAgentText);
+                    var _ap2 = agentPane;
+                    System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
+                    {
+                        if (_ap2.Visible) return;
+                        ExcelAsyncUtil.QueueAsMacro(() =>
+                        {
+                            PluginLog.Write("[CTP][X] Agent(ShowAIAgent) X-close confirmed");
+                            _showAgentText = "Agent模式：关闭";
+                            CustomRibbon?.InvalidateControl("ShowAIAgent");
+                        });
+                    });
                 };
             }
         }
@@ -3453,11 +3493,19 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         var activeWin = App.ActiveWindow?.Caption ?? "";
                         PluginLog.Write($"[CTP] Chat VisibleStateChange: Visible={chatPane.Visible} Workbooks={App.Workbooks.Count} CreatedWin={createdWin} ActiveWin={activeWin}");
                         if (chatPane.Visible || App.Workbooks.Count == 0) return;
-                        // 工作簿切换时活动窗口已变 → 抑制
                         if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin) return;
-                        ShowAiText = "AI对话：关闭";
-                        CustomRibbon?.InvalidateControl("ShowAI");
-                        GlobalValue.SaveValue("ShowAIText", ShowAiText);
+                        var _cp2 = chatPane;
+                        System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
+                        {
+                            if (_cp2.Visible) return;
+                            ExcelAsyncUtil.QueueAsMacro(() =>
+                            {
+                                PluginLog.Write("[CTP][X] Chat(ShowAi) X-close confirmed");
+                                ShowAiText = "AI对话：关闭";
+                                CustomRibbon?.InvalidateControl("ShowAI");
+                                GlobalValue.SaveValue("ShowAIText", ShowAiText);
+                            });
+                        });
                     };
                 }
             }
