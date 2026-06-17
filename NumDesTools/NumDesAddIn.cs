@@ -1111,6 +1111,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 );
             PluginLog.Write($"[CTP] ShowCTP done: {ctpName}");
             if (NumDesCTP.TryGetCTP(ctpName, out var smPane2))
+            {
                 var smWin = App.ActiveWindow?.Caption ?? "";
                 smPane2.VisibleStateChange += _ =>
                 {
@@ -1123,6 +1124,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     CustomRibbon?.InvalidateControl("SheetMenu");
                     GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
                 };
+            }
         }
         else
         {
@@ -1141,6 +1143,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 NumDesCTP.ShowCTP(1500, aiCtpName, true, aiCtpName, new AiChatTaskPanel(), MsoCTPDockPosition.msoCTPDockPositionRight);
             PluginLog.Write($"[CTP] ShowCTP done: {aiCtpName}");
             if (NumDesCTP.TryGetCTP(aiCtpName, out var chatPane2))
+            {
                 var chatWin = App.ActiveWindow?.Caption ?? "";
                 chatPane2.VisibleStateChange += _ =>
                 {
@@ -1153,6 +1156,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     CustomRibbon?.InvalidateControl("ShowAI");
                     GlobalValue.SaveValue("ShowAIText", ShowAiText);
                 };
+            }
         }
         else
         {
@@ -1171,6 +1175,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 NumDesCTP.ShowCTP(1500, agentCtpName, true, agentCtpName, new AIAgentPanel(), MsoCTPDockPosition.msoCTPDockPositionRight);
             PluginLog.Write($"[CTP] ShowCTP done: {agentCtpName}");
             if (NumDesCTP.TryGetCTP(agentCtpName, out var agentPane2))
+            {
                 var agentWin = App.ActiveWindow?.Caption ?? "";
                 agentPane2.VisibleStateChange += _ =>
                 {
@@ -1182,6 +1187,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     _showAgentText = "Agent模式：关闭";
                     CustomRibbon?.InvalidateControl("ShowAIAgent");
                 };
+            }
         }
         else
         {
