@@ -1073,19 +1073,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     //}
 
     // �������л��ڼ���Ϊ true����ֹ DeleteCTP ������ VisibleStateChange �޸Ŀ���״̬
-    private static bool _workbookSwitching;
+    // 时间戳冷却：WorkbookActivate 后 3 秒内的 VisibleStateChange 视为系统行为，不更新状态
+    private static DateTime _lastWorkbookActivateTime = DateTime.MinValue;
+    private const double SwitchCooldownMs = 3000;
 
     private void ExcelApp_WorkbookActivate(Workbook wb)
     {
-        _workbookSwitching = true;
-        try
-        {
+        _lastWorkbookActivateTime = DateTime.Now;
         ExcelApp_WorkbookActivateCore(wb);
-        }
-        finally
-        {
-            _workbookSwitching = false;
-        }
     }
 
     private void ExcelApp_WorkbookActivateCore(Workbook wb)
@@ -1140,14 +1135,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 );
             if (NumDesCTP.TryGetCTP(aiCtpName, out var chatPane2))
             {
-                _currentChatCtp = chatPane2;
                 chatPane2.VisibleStateChange += _ =>
                 {
-                    if (chatPane2.Visible || _workbookSwitching || chatPane2 != _currentChatCtp) return;
+                    if (chatPane2.Visible || (DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds < SwitchCooldownMs) return;
                     ShowAiText = "AI�Ի����ر�";
                     CustomRibbon?.InvalidateControl("ShowAI");
                     GlobalValue.SaveValue("ShowAIText", ShowAiText);
                 };
+            }
         }
         else
         {
@@ -1169,13 +1164,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 );
             if (NumDesCTP.TryGetCTP(agentCtpName, out var agentPane2))
             {
-                _currentAgentCtp = agentPane2;
                 agentPane2.VisibleStateChange += _ =>
                 {
-                    if (agentPane2.Visible || _workbookSwitching || agentPane2 != _currentAgentCtp) return;
-                    _showAgentText = "Agentģʽ���ر�";
+                    if (agentPane2.Visible || (DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds < SwitchCooldownMs) return;
+                    _showAgentText = "Agent模式：关闭";
                     CustomRibbon?.InvalidateControl("ShowAIAgent");
                 };
+            }
         }
         else
         {
@@ -1220,8 +1215,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         // ���رձ�ȡ����cancel=true��������ʱ�������á�
         if (App.Workbooks.Count > 1)
         {
-            _workbookSwitching = true;
-            Task.Delay(3000).ContinueWith(_ => _workbookSwitching = false);
+            // 关闭时也更新时间戳，3秒冷却覆盖关闭过程中的 VisibleStateChange
+            _lastWorkbookActivateTime = DateTime.Now;
         }
 
         if (App.Workbooks.Count == 1)
@@ -3371,9 +3366,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private static string _showAgentText = "Agent模式：关闭";
     private static AIAgentPanel _agentCtp;
-    // 追踪当前有效 CTP，handler 里检查自身是否仍是当前 CTP，避免旧 handler 污染状态
-    private static CustomTaskPane _currentChatCtp;
-    private static CustomTaskPane _currentAgentCtp;
 
     [ExcelCommand]
     public static void ShowAIAgent()
@@ -3400,7 +3392,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             if (NumDesCTP.TryGetCTP(ctpName, out var agentPane))
                 agentPane.VisibleStateChange += _ =>
                 {
-                    if (agentPane.Visible || _workbookSwitching) return;
+                    if (agentPane.Visible || (DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds < SwitchCooldownMs) return;
                     _showAgentText = "Agentģʽ���ر�";
                     CustomRibbon?.InvalidateControl("ShowAIAgent");
                 };
@@ -3442,7 +3434,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 if (NumDesCTP.TryGetCTP(ctpName, out var chatPane))
                     chatPane.VisibleStateChange += _ =>
                     {
-                        if (chatPane.Visible || _workbookSwitching) return;
+                        if (chatPane.Visible || (DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds < SwitchCooldownMs) return;
                         ShowAiText = "AI�Ի����ر�";
                         CustomRibbon?.InvalidateControl("ShowAI");
                         GlobalValue.SaveValue("ShowAIText", ShowAiText);
