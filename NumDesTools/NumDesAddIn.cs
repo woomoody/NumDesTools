@@ -1111,11 +1111,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 );
             PluginLog.Write($"[CTP] ShowCTP done: {ctpName}");
             if (NumDesCTP.TryGetCTP(ctpName, out var smPane2))
+                var smWin = App.ActiveWindow?.Caption ?? "";
                 smPane2.VisibleStateChange += _ =>
                 {
-                    PluginLog.Write($"[CTP][WA] SheetMenu VisibleState: Visible={smPane2.Visible} Workbooks={App.Workbooks.Count} SamePane={NumDesCTP.TryGetCTP(ctpName, out var smCur) && ReferenceEquals(smCur, smPane2)}");
+                    var smActiveWin = App.ActiveWindow?.Caption ?? "";
+                    PluginLog.Write($"[CTP][WA] SheetMenu VisibleState: Visible={smPane2.Visible} SamePane={NumDesCTP.TryGetCTP(ctpName, out var smCur) && ReferenceEquals(smCur, smPane2)} CreatedWin={smWin} ActiveWin={smActiveWin}");
                     if (smPane2.Visible || App.Workbooks.Count == 0) return;
                     if (!NumDesCTP.TryGetCTP(ctpName, out var smCurrent) || !ReferenceEquals(smCurrent, smPane2)) return;
+                    if (!string.IsNullOrEmpty(smWin) && smActiveWin != smWin) return;
                     SheetMenuText = "表格目录：关闭";
                     CustomRibbon?.InvalidateControl("SheetMenu");
                     GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
@@ -1138,11 +1141,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 NumDesCTP.ShowCTP(1500, aiCtpName, true, aiCtpName, new AiChatTaskPanel(), MsoCTPDockPosition.msoCTPDockPositionRight);
             PluginLog.Write($"[CTP] ShowCTP done: {aiCtpName}");
             if (NumDesCTP.TryGetCTP(aiCtpName, out var chatPane2))
+                var chatWin = App.ActiveWindow?.Caption ?? "";
                 chatPane2.VisibleStateChange += _ =>
                 {
-                    PluginLog.Write($"[CTP][WA] Chat VisibleState: Visible={chatPane2.Visible} Workbooks={App.Workbooks.Count} SamePane={NumDesCTP.TryGetCTP(aiCtpName, out var chatCur) && ReferenceEquals(chatCur, chatPane2)}");
+                    var chatActiveWin = App.ActiveWindow?.Caption ?? "";
+                    PluginLog.Write($"[CTP][WA] Chat VisibleState: Visible={chatPane2.Visible} SamePane={NumDesCTP.TryGetCTP(aiCtpName, out var chatCur) && ReferenceEquals(chatCur, chatPane2)} CreatedWin={chatWin} ActiveWin={chatActiveWin}");
                     if (chatPane2.Visible || App.Workbooks.Count == 0) return;
                     if (!NumDesCTP.TryGetCTP(aiCtpName, out var chatCurrent) || !ReferenceEquals(chatCurrent, chatPane2)) return;
+                    if (!string.IsNullOrEmpty(chatWin) && chatActiveWin != chatWin) return;
                     ShowAiText = "AI对话：关闭";
                     CustomRibbon?.InvalidateControl("ShowAI");
                     GlobalValue.SaveValue("ShowAIText", ShowAiText);
@@ -1165,11 +1171,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 NumDesCTP.ShowCTP(1500, agentCtpName, true, agentCtpName, new AIAgentPanel(), MsoCTPDockPosition.msoCTPDockPositionRight);
             PluginLog.Write($"[CTP] ShowCTP done: {agentCtpName}");
             if (NumDesCTP.TryGetCTP(agentCtpName, out var agentPane2))
+                var agentWin = App.ActiveWindow?.Caption ?? "";
                 agentPane2.VisibleStateChange += _ =>
                 {
-                    PluginLog.Write($"[CTP][WA] Agent VisibleState: Visible={agentPane2.Visible} Workbooks={App.Workbooks.Count} SamePane={NumDesCTP.TryGetCTP(agentCtpName, out var agCur) && ReferenceEquals(agCur, agentPane2)}");
+                    var agentActiveWin = App.ActiveWindow?.Caption ?? "";
+                    PluginLog.Write($"[CTP][WA] Agent VisibleState: Visible={agentPane2.Visible} SamePane={NumDesCTP.TryGetCTP(agentCtpName, out var agCur) && ReferenceEquals(agCur, agentPane2)} CreatedWin={agentWin} ActiveWin={agentActiveWin}");
                     if (agentPane2.Visible || App.Workbooks.Count == 0) return;
                     if (!NumDesCTP.TryGetCTP(agentCtpName, out var agentCurrent) || !ReferenceEquals(agentCurrent, agentPane2)) return;
+                    if (!string.IsNullOrEmpty(agentWin) && agentActiveWin != agentWin) return;
                     _showAgentText = "Agent模式：关闭";
                     CustomRibbon?.InvalidateControl("ShowAIAgent");
                 };
