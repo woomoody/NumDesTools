@@ -147,7 +147,10 @@ function clearAll(){document.body.innerHTML=''}
         System.Windows.Controls.SelectionChangedEventArgs e
     )
     {
-        if (ModelComboBox.SelectedItem is string model && model != NumDesTools.AI.AutoModelRouter.AutoModelName)
+        if (
+            ModelComboBox.SelectedItem is string model
+            && model != NumDesTools.AI.AutoModelRouter.AutoModelName
+        )
         {
             AppServices.Config.Llm.Model = model;
             AppServices.GlobalValue.SaveValue("LiteLLMModel", model);
@@ -164,9 +167,11 @@ function clearAll(){document.body.innerHTML=''}
         {
             // 压缩只需文字能力，图片模型/自动路由模式下 fallback 到文字模型
             var rawModel = AppServices.Config.Llm.Model;
-            var model = rawModel == NumDesTools.AI.AutoModelRouter.AutoModelName || rawModel.Contains("image")
-                ? "deepseek-v4-flash"
-                : rawModel;
+            var model =
+                rawModel == NumDesTools.AI.AutoModelRouter.AutoModelName
+                || rawModel.Contains("image")
+                    ? "deepseek-v4-flash"
+                    : rawModel;
             var apiKey = AppServices.Config.Llm.ApiKey;
             var apiUrl = AppServices.Config.Llm.ChatCompletionsUrl;
             var msgs = new List<object>();
@@ -353,8 +358,7 @@ function clearAll(){document.body.innerHTML=''}
         if (string.IsNullOrEmpty(userInput))
             return;
 
-        var selectedModel =
-            ModelComboBox.SelectedItem as string ?? AppServices.Config.Llm.Model;
+        var selectedModel = ModelComboBox.SelectedItem as string ?? AppServices.Config.Llm.Model;
         string actualModel;
         string autoReason = null;
         if (selectedModel == NumDesTools.AI.AutoModelRouter.AutoModelName)
@@ -437,7 +441,9 @@ function clearAll(){document.body.innerHTML=''}
 
             _streamBuffer = "";
             _chunkCount = 0;
-            PluginLog.Write($"[Chat] model={model} response_length={streamMessage.Message.Length}chars");
+            PluginLog.Write(
+                $"[Chat] model={model} response_length={streamMessage.Message.Length}chars"
+            );
             var htmlMessage = HttpUtility.HtmlDecode(
                 Markdown.ToHtml(streamMessage.Message, MdPipeline)
             );
@@ -541,28 +547,42 @@ function clearAll(){document.body.innerHTML=''}
                 var b64 = Convert.ToBase64String(File.ReadAllBytes(att.FilePath));
                 var ext = Path.GetExtension(att.FilePath).TrimStart('.').ToLower();
                 var mime = ext is "jpg" or "jpeg" ? "image/jpeg" : "image/png";
-                sb.Append($"<img src='data:{mime};base64,{b64}' style='max-width:280px;max-height:180px;border-radius:4px;display:block;margin:4px 0' alt='{att.DisplayName}'/>");
+                sb.Append(
+                    $"<img src='data:{mime};base64,{b64}' style='max-width:280px;max-height:180px;border-radius:4px;display:block;margin:4px 0' alt='{att.DisplayName}'/>"
+                );
             }
             else
             {
-                sb.Append($"<div style='background:#1a2a3a;padding:3px 8px;border-radius:3px;margin:2px 0;font-size:.85em'>📄 {System.Web.HttpUtility.HtmlEncode(att.DisplayName)}</div>");
+                sb.Append(
+                    $"<div style='background:#1a2a3a;padding:3px 8px;border-radius:3px;margin:2px 0;font-size:.85em'>📄 {System.Web.HttpUtility.HtmlEncode(att.DisplayName)}</div>"
+                );
             }
         }
         return sb.ToString();
     }
 
-    private void AppendMessageWithAttachments(string role, string message, string attachHtml, DateTime? timestamp)
+    private void AppendMessageWithAttachments(
+        string role,
+        string message,
+        string attachHtml,
+        DateTime? timestamp
+    )
     {
         Dispatcher.BeginInvoke(() =>
         {
             var htmlMessage = HttpUtility.HtmlDecode(Markdown.ToHtml(message, MdPipeline));
             var ts = timestamp ?? DateTime.Now;
             AppendRawHtml(BuildMessageHtml(role, attachHtml + htmlMessage, true, ts));
-            _ = new ChatHistoryManager().SaveChatMessageAsync(new ChatMessage
-            {
-                Role = role, Message = htmlMessage, IsUser = true,
-                Timestamp = ts, SessionId = _sessionId,
-            });
+            _ = new ChatHistoryManager().SaveChatMessageAsync(
+                new ChatMessage
+                {
+                    Role = role,
+                    Message = htmlMessage,
+                    IsUser = true,
+                    Timestamp = ts,
+                    SessionId = _sessionId,
+                }
+            );
         });
     }
 

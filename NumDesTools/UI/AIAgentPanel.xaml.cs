@@ -1031,8 +1031,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             function = new
             {
                 name = "parallel_tasks",
-                description =
-                    "并行执行多个独立子任务，每个子任务独立调用 LLM，最后合并结果返回。"
+                description = "并行执行多个独立子任务，每个子任务独立调用 LLM，最后合并结果返回。"
                     + "适用于需要同时分析多个 Sheet/文件/维度的场景，大幅减少总耗时。"
                     + "每个 task 描述一个独立问题，model 可指定或留空（自动路由）。",
                 parameters = new
@@ -1188,7 +1187,10 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         System.Windows.Controls.SelectionChangedEventArgs e
     )
     {
-        if (ModelComboBox.SelectedItem is string model && model != NumDesTools.AI.AutoModelRouter.AutoModelName)
+        if (
+            ModelComboBox.SelectedItem is string model
+            && model != NumDesTools.AI.AutoModelRouter.AutoModelName
+        )
             AppServices.GlobalValue.SaveValue(AgentModelKey, model);
     }
 
@@ -1408,8 +1410,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         {
             model = selectedModel;
         }
-        _lastUsedModel =
-            model + (autoReason != null ? $"(自动·{autoReason})" : "");
+        _lastUsedModel = model + (autoReason != null ? $"(自动·{autoReason})" : "");
         var apiKey = AppServices.Config.Llm.ApiKey;
         var apiUrl = AppServices.Config.Llm.ChatCompletionsUrl;
         var maxSteps = (int)(MaxStepsInput.Value ?? 10);
@@ -1462,7 +1463,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
         AddStep($"📋 {userTask[..Math.Min(40, userTask.Length)]}…");
 
-        int totalPrompt = 0, totalCompletion = 0;
+        int totalPrompt = 0,
+            totalCompletion = 0;
 
         for (var step = 1; step <= maxSteps; step++)
         {
@@ -1493,8 +1495,12 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 }
             );
             if (promptTokens > 0 || completionTokens > 0)
-                AddStep($"   📊 {model.Split('/').Last()}: ↑{promptTokens:N0} ↓{completionTokens:N0} tokens");
-            PluginLog.Write($"[Agent step {step}] model={model} prompt={promptTokens} completion={completionTokens}");
+                AddStep(
+                    $"   📊 {model.Split('/').Last()}: ↑{promptTokens:N0} ↓{completionTokens:N0} tokens"
+                );
+            PluginLog.Write(
+                $"[Agent step {step}] model={model} prompt={promptTokens} completion={completionTokens}"
+            );
             totalPrompt += promptTokens;
             totalCompletion += completionTokens;
             // 没有文字输出（纯工具调用步骤）则删除空气泡，避免界面出现多个空白框
@@ -1561,8 +1567,9 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 _history.Add(new { role = "assistant", content = finalContent });
                 // 持久化用户消息 + 最终 assistant 消息
                 var db = new ChatHistoryManager();
-                var model2 = _lastUsedModel ?? (Dispatcher.Invoke(() =>
-                    ModelComboBox.SelectedItem as string) ?? "Agent");
+                var model2 =
+                    _lastUsedModel
+                    ?? (Dispatcher.Invoke(() => ModelComboBox.SelectedItem as string) ?? "Agent");
                 var sid = _sessionId;
                 _ = db.SaveChatMessageAsync(
                     new ChatMessage
@@ -1598,7 +1605,12 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             _history.RemoveAt(_history.Count - 1);
     }
 
-    private static async Task<(string content, List<JObject> toolCalls, int promptTokens, int completionTokens)> CallWithToolsAsync(
+    private static async Task<(
+        string content,
+        List<JObject> toolCalls,
+        int promptTokens,
+        int completionTokens
+    )> CallWithToolsAsync(
         string model,
         List<object> messages,
         string apiKey,
@@ -1642,7 +1654,12 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             var usage = json["usage"];
             int pt = (int)(usage?["prompt_tokens"] ?? 0);
             int ct2 = (int)(usage?["completion_tokens"] ?? 0);
-            return (msg?["content"]?.ToString(), msg?["tool_calls"]?.ToObject<List<JObject>>(), pt, ct2);
+            return (
+                msg?["content"]?.ToString(),
+                msg?["tool_calls"]?.ToObject<List<JObject>>(),
+                pt,
+                ct2
+            );
         }
 
         // 流式：SSE 解析
@@ -2776,9 +2793,11 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 ModelComboBox.SelectedItem as string ?? AppServices.Config.Llm.Model
             );
             // 压缩只需文字能力，图片模型/自动路由下 fallback
-            var model = rawModel == NumDesTools.AI.AutoModelRouter.AutoModelName || rawModel.Contains("image")
-                ? "deepseek-v4-flash"
-                : rawModel;
+            var model =
+                rawModel == NumDesTools.AI.AutoModelRouter.AutoModelName
+                || rawModel.Contains("image")
+                    ? "deepseek-v4-flash"
+                    : rawModel;
             var apiKey = AppServices.Config.Llm.ApiKey;
             var apiUrl = AppServices.Config.Llm.ChatCompletionsUrl;
             var msgs = new List<object>();
@@ -2987,7 +3006,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
 
     private void RemoveAgentStreamBubble()
     {
-        if (_agentStreamId is null) return;
+        if (_agentStreamId is null)
+            return;
         var id = _agentStreamId;
         _agentStreamId = null;
         _agentStreamBuffer = null;
@@ -2995,8 +3015,10 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         {
             try
             {
-                ChatOutput.InvokeScript("eval",
-                    $"(function(){{var el=document.getElementById('{id}');if(el)el.parentNode.removeChild(el);}})();");
+                ChatOutput.InvokeScript(
+                    "eval",
+                    $"(function(){{var el=document.getElementById('{id}');if(el)el.parentNode.removeChild(el);}})();"
+                );
             }
             catch { }
         });
@@ -3036,11 +3058,15 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 var b64 = Convert.ToBase64String(File.ReadAllBytes(att.FilePath));
                 var ext = Path.GetExtension(att.FilePath).TrimStart('.').ToLower();
                 var mime = ext is "jpg" or "jpeg" ? "image/jpeg" : "image/png";
-                sb.Append($"<img src='data:{mime};base64,{b64}' style='max-width:280px;max-height:180px;border-radius:4px;display:block;margin:4px 0' alt='{att.DisplayName}'/>");
+                sb.Append(
+                    $"<img src='data:{mime};base64,{b64}' style='max-width:280px;max-height:180px;border-radius:4px;display:block;margin:4px 0' alt='{att.DisplayName}'/>"
+                );
             }
             else
             {
-                sb.Append($"<div style='background:#1a2a3a;padding:3px 8px;border-radius:3px;margin:2px 0;font-size:.85em'>📄 {System.Web.HttpUtility.HtmlEncode(att.DisplayName)}</div>");
+                sb.Append(
+                    $"<div style='background:#1a2a3a;padding:3px 8px;border-radius:3px;margin:2px 0;font-size:.85em'>📄 {System.Web.HttpUtility.HtmlEncode(att.DisplayName)}</div>"
+                );
             }
         }
         return sb.ToString();
@@ -3652,7 +3678,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
             Multiselect = true,
-            Filter = "所有文件|*.*|图片|*.png;*.jpg;*.jpeg;*.bmp|文本|*.txt;*.csv;*.json;*.md;*.cs;*.lua",
+            Filter =
+                "所有文件|*.*|图片|*.png;*.jpg;*.jpeg;*.bmp|文本|*.txt;*.csv;*.json;*.md;*.cs;*.lua",
         };
         if (dlg.ShowDialog() != true)
             return;
@@ -3690,30 +3717,32 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         if (taskList.Count == 0)
             return "tasks 中无有效 description";
 
-        var parallelTasks = taskList.Select(async (t, idx) =>
-        {
-            var model = string.IsNullOrEmpty(t.Model)
-                ? NumDesTools.AI.AutoModelRouter.Route(t.Description).Model
-                : t.Model;
-            var sysMsg =
-                "你是 Excel 数据分析助手，简洁回答以下问题。"
-                + (string.IsNullOrEmpty(context) ? "" : $"\n\n背景信息：{context}");
-            try
+        var parallelTasks = taskList.Select(
+            async (t, idx) =>
             {
-                var result = await new NumDesTools.AI.LiteLlmClient().CallAsync(
-                    model,
-                    sysMsg,
-                    t.Description,
-                    apiKey,
-                    apiUrl
-                );
-                return $"[子任务{idx + 1}·{model}] {t.Description}\n{result}";
+                var model = string.IsNullOrEmpty(t.Model)
+                    ? NumDesTools.AI.AutoModelRouter.Route(t.Description).Model
+                    : t.Model;
+                var sysMsg =
+                    "你是 Excel 数据分析助手，简洁回答以下问题。"
+                    + (string.IsNullOrEmpty(context) ? "" : $"\n\n背景信息：{context}");
+                try
+                {
+                    var result = await new NumDesTools.AI.LiteLlmClient().CallAsync(
+                        model,
+                        sysMsg,
+                        t.Description,
+                        apiKey,
+                        apiUrl
+                    );
+                    return $"[子任务{idx + 1}·{model}] {t.Description}\n{result}";
+                }
+                catch (Exception ex)
+                {
+                    return $"[子任务{idx + 1}] 失败: {ex.Message}";
+                }
             }
-            catch (Exception ex)
-            {
-                return $"[子任务{idx + 1}] 失败: {ex.Message}";
-            }
-        });
+        );
         var results = Task.WhenAll(parallelTasks).GetAwaiter().GetResult();
         return string.Join("\n\n" + new string('─', 40) + "\n\n", results);
     }
