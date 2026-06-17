@@ -1620,15 +1620,18 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     )
     {
         var useStream = onChunk is not null;
-        var bodyObj = new
-        {
-            model,
-            messages,
-            tools = ToolDefinitions,
-            tool_choice = "auto",
-            max_tokens = 4000,
-            stream = useStream,
-        };
+        var bodyObj = useStream
+            ? (object)new
+            {
+                model, messages, tools = ToolDefinitions, tool_choice = "auto",
+                max_tokens = 4000, stream = true,
+                stream_options = new { include_usage = true },  // 让最后一帧带 usage 字段
+            }
+            : new
+            {
+                model, messages, tools = ToolDefinitions, tool_choice = "auto",
+                max_tokens = 4000, stream = false,
+            };
         using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(3) };
         using var req = new System.Net.Http.HttpRequestMessage(
             System.Net.Http.HttpMethod.Post,

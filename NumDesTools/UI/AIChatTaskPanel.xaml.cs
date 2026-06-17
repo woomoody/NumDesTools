@@ -93,10 +93,12 @@ public partial class AiChatTaskPanel
         foreach (var m in models)
             ModelComboBox.Items.Add(m);
 
-        var current = AppServices.Config.Llm.Model;
-        ModelComboBox.SelectedItem = ModelComboBox.Items.Contains(current)
-            ? current
-            : ModelComboBox.Items[0];
+        // 优先恢复上次 Chat 选的模型（含「🤖 自动」）
+        AppServices.GlobalValue.Value.TryGetValue("ChatSelectedModel", out var savedChat);
+        var target = !string.IsNullOrEmpty(savedChat) && ModelComboBox.Items.Contains(savedChat)
+            ? savedChat
+            : AppServices.Config.Llm.Model;
+        ModelComboBox.SelectedItem = ModelComboBox.Items.Contains(target) ? target : ModelComboBox.Items[0];
     }
 
     private void InitializeHtmlTemplate()
@@ -147,13 +149,15 @@ function clearAll(){document.body.innerHTML=''}
         System.Windows.Controls.SelectionChangedEventArgs e
     )
     {
-        if (
-            ModelComboBox.SelectedItem is string model
-            && model != NumDesTools.AI.AutoModelRouter.AutoModelName
-        )
+        if (ModelComboBox.SelectedItem is string model)
         {
-            AppServices.Config.Llm.Model = model;
-            AppServices.GlobalValue.SaveValue("LiteLLMModel", model);
+            // 所有选择（含「🤖 自动」）都用独立 key 记住，避免污染全局 LiteLLMModel
+            AppServices.GlobalValue.SaveValue("ChatSelectedModel", model);
+            if (model != NumDesTools.AI.AutoModelRouter.AutoModelName)
+            {
+                AppServices.Config.Llm.Model = model;
+                AppServices.GlobalValue.SaveValue("LiteLLMModel", model);
+            }
         }
     }
 
