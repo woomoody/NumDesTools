@@ -248,18 +248,14 @@ public static class ConflictApplier
             var marker = "解决冲突（NumDesTools）:";
             var line = $"{marker} {fileName}";
 
-            if (File.Exists(mergeMsgPath))
-            {
-                var existing = File.ReadAllText(mergeMsgPath);
-                if (existing.Contains(line))
-                    return;
-                File.AppendAllText(mergeMsgPath, $"\n{line}");
-            }
-            else
-            {
-                // MERGE_MSG 不存在时创建，确保解决记录能写入
-                File.WriteAllText(mergeMsgPath, line);
-            }
+            // 只在 git 自己生成了 MERGE_MSG 时才追加（merge 场景）
+            // 不主动创建——直接推送/rebase/cherry-pick 时 git 不生成此文件，不需要日志
+            if (!File.Exists(mergeMsgPath))
+                return;
+            var existing = File.ReadAllText(mergeMsgPath);
+            if (existing.Contains(line))
+                return;
+            File.AppendAllText(mergeMsgPath, $"\n{line}");
             PluginLog.Write($"[ConflictApplier] MERGE_MSG 已写入: {line}");
         }
         catch (Exception ex)
