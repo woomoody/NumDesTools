@@ -239,24 +239,37 @@ public static class ConflictApplier
         AppendMergeMsg(repoRoot, Path.GetFileName(filePath));
     }
 
-    // 把解决的文件名追加到 MERGE_MSG，作为正文行（不带 # 前缀）以确保进入最终提交日志，SmartGit 提交对话框也会自动读取
+    // 把解决的文件名写入当前 git 操作对应的消息文件，确保所有冲突解决场景都有日志
     private static void AppendMergeMsg(string repoRoot, string fileName)
     {
         try
         {
-            var mergeMsgPath = Path.Combine(repoRoot, ".git", "MERGE_MSG");
-            var marker = "解决冲突（NumDesTools）:";
-            var line = $"{marker} {fileName}";
+            var line = $"解决冲突（NumDesTools）: {fileName}";
+            var git = Path.Combine(repoRoot, ".git");
 
-            // 只在 git 自己生成了 MERGE_MSG 时才追加（merge 场景）
-            // 不主动创建——直接推送/rebase/cherry-pick 时 git 不生成此文件，不需要日志
-            if (!File.Exists(mergeMsgPath))
-                return;
-            var existing = File.ReadAllText(mergeMsgPath);
+            // 按 git 操作类型找对应的消息文件：
+            //   merge / cherry-pick → MERGE_MSG
+            //   rebase (merge mode) → rebase-merge/message
+            //   rebase (apply mode) → rebase-apply/msg
+            //   其他（兜底）        → 创建 MERGE_MSG
+            var candidates = new[]
+            {
+                Path.Combine(git, "MERGE_MSG"),
+                Path.Combine(git, "rebase-merge", "message"),
+                Path.Combine(git, "rebase-apply", "msg"),
+            };
+            var target = candidates.FirstOrDefault(File.Exists)
+                         ?? candidates[0]; // 兜底：建 MERGE_MSG
+
+            var existing = File.Exists(target) ? File.ReadAllText(target) : "";
             if (existing.Contains(line))
                 return;
-            File.AppendAllText(mergeMsgPath, $"\n{line}");
-            PluginLog.Write($"[ConflictApplier] MERGE_MSG 已写入: {line}");
+            if (File.Exists(target))
+                File.AppendAllText(target, $"\n{line}");
+            else
+                File.WriteAllText(target, line);
+
+            PluginLog.Write($"[ConflictApplier] 冲突日志 → {Path.GetFileName(target)}: {line}");
         }
         catch (Exception ex)
         {
