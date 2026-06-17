@@ -367,10 +367,12 @@ function clearAll(){document.body.innerHTML=''}
         _history.Add(new { role = "user", content = msgContent });
 
         // 清空附件（发送后）
+        // 捕获附件用于预览，清空前先拿到
+        var attachPreview = BuildAttachmentPreviewHtml(_attachments);
         _attachments.Clear();
         RefreshAttachmentStrip();
 
-        AppendMessage(_userName, userInput, isUser: true, DateTime.Now);
+        AppendMessageWithAttachments(_userName, userInput, attachPreview, DateTime.Now);
 
         _currentResponseId = null;
         var streamMessage = new ChatMessage
@@ -497,6 +499,41 @@ function clearAll(){document.body.innerHTML=''}
     }
 
     // ── 消息渲染（历史加载 + 普通追加共用） ──────────────────────────────────
+
+    private static string BuildAttachmentPreviewHtml(IEnumerable<AttachmentItem> attachments)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var att in attachments)
+        {
+            if (att.IsImage && File.Exists(att.FilePath))
+            {
+                var b64 = Convert.ToBase64String(File.ReadAllBytes(att.FilePath));
+                var ext = Path.GetExtension(att.FilePath).TrimStart('.').ToLower();
+                var mime = ext is "jpg" or "jpeg" ? "image/jpeg" : "image/png";
+                sb.Append($"<img src='data:{mime};base64,{b64}' style='max-width:280px;max-height:180px;border-radius:4px;display:block;margin:4px 0' alt='{att.DisplayName}'/>");
+            }
+            else
+            {
+                sb.Append($"<div style='background:#1a2a3a;padding:3px 8px;border-radius:3px;margin:2px 0;font-size:.85em'>📄 {System.Web.HttpUtility.HtmlEncode(att.DisplayName)}</div>");
+            }
+        }
+        return sb.ToString();
+    }
+
+    private void AppendMessageWithAttachments(string role, string message, string attachHtml, DateTime? timestamp)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            var htmlMessage = HttpUtility.HtmlDecode(Markdown.ToHtml(message, MdPipeline));
+            var ts = timestamp ?? DateTime.Now;
+            AppendRawHtml(BuildMessageHtml(role, attachHtml + htmlMessage, true, ts));
+            _ = new ChatHistoryManager().SaveChatMessageAsync(new ChatMessage
+            {
+                Role = role, Message = htmlMessage, IsUser = true,
+                Timestamp = ts, SessionId = _sessionId,
+            });
+        });
+    }
 
     private void AppendMessage(string role, string message, bool isUser, DateTime? timestamp)
     {

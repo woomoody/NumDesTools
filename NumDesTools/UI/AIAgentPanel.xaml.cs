@@ -1315,7 +1315,9 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         RunButton.IsEnabled = false;
         StopButton.IsEnabled = true;
         StepsList.Items.Clear();
-        AppendChat("user", task);
+        // 在气泡里显示附件预览（清空前捕获）
+        var attachHtml = BuildAttachmentPreviewHtml(_attachments);
+        AppendChatRaw("user", task, attachHtml);
         TaskInput.Clear();
         TaskInput.IsEnabled = true; // 执行中保持可输入（用于插话）
         TaskInput.Background = new System.Windows.Media.SolidColorBrush(
@@ -1416,6 +1418,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             SetStatus($"步骤 {step}/{maxSteps}…");
 
             StartAgentStreamBubble(model);
+            var hadStreamContent = false;
             var (content, toolCalls) = await CallWithToolsAsync(
                 model,
                 messages,
@@ -1424,6 +1427,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 ct,
                 chunk =>
                 {
+                    hadStreamContent = true;
                     _agentStreamBuffer = (_agentStreamBuffer ?? "") + chunk;
                     AppendAgentStreamChunk(HttpUtility.HtmlEncode(chunk).Replace("\n", "<br/>"));
                 }
@@ -1478,8 +1482,8 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 AddStep($"✅ 完成（{step} 步）");
                 SetStatus("完成");
                 var finalContent = content ?? "（无输出）";
-                // 若流式已输出内容，bubble 已渲染，不重复 AppendChat
-                if (string.IsNullOrEmpty(_agentStreamBuffer))
+                // 流式已渲染则不重复 AppendChat
+                if (!hadStreamContent)
                     AppendChat("assistant", finalContent);
                 // 只把最终文本消息写回持久历史（中间 tool_calls/tool 消息丢弃）
                 while (_history.Count > historyCountBefore)
@@ -2912,6 +2916,40 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         });
         _agentStreamId = null;
         _agentStreamBuffer = null;
+    }
+
+    private static string BuildAttachmentPreviewHtml(IEnumerable<AttachmentItem> attachments)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var att in attachments)
+        {
+            if (att.IsImage && File.Exists(att.FilePath))
+            {
+                var b64 = Convert.ToBase64String(File.ReadAllBytes(att.FilePath));
+                var ext = Path.GetExtension(att.FilePath).TrimStart('.').ToLower();
+                var mime = ext is "jpg" or "jpeg" ? "image/jpeg" : "image/png";
+                sb.Append($"<img src='data:{mime};base64,{b64}' style='max-width:280px;max-height:180px;border-radius:4px;display:block;margin:4px 0' alt='{att.DisplayName}'/>");
+            }
+            else
+            {
+                sb.Append($"<div style='background:#1a2a3a;padding:3px 8px;border-radius:3px;margin:2px 0;font-size:.85em'>📄 {System.Web.HttpUtility.HtmlEncode(att.DisplayName)}</div>");
+            }
+        }
+        return sb.ToString();
+    }
+
+    private void AppendChatRaw(string role, string markdown, string extraHtml = "")
+    {
+        Dispatcher.Invoke(() =>
+        {
+            var html = InjectCellLinks(Markdown.ToHtml(markdown, MdPipeline));
+            var cls = role == "user" ? "user" : "assistant";
+            var label = role == "user" ? Environment.UserName : (ModelComboBox.SelectedItem as string ?? "Agent");
+            var ts = DateTime.Now.ToString("HH:mm:ss");
+            var block = $"<div class='msg {cls}'><div class='role'>{label} <span class='ts'>{ts}</span></div><div class='content'>{extraHtml}{html}</div></div>";
+            ChatOutput.InvokeScript("eval",
+                $"document.body.insertAdjacentHTML('beforeend','{HttpUtility.JavaScriptStringEncode(block)}');window.scrollTo(0,document.body.scrollHeight);");
+        });
     }
 
     private void AppendChat(string role, string markdown)
