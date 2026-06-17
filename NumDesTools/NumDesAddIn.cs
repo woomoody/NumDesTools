@@ -1072,13 +1072,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     //    }
     //}
 
-    // 时间戳冷却：WorkbookActivate 后 3 秒内的 VisibleStateChange 视为系统行为，不更新状态
-    private static DateTime _lastWorkbookActivateTime = DateTime.MinValue;
-    private const double SwitchCooldownMs = 500; // COM 事件延迟通常 <100ms，500ms 足够抑制切换误触
-
     private void ExcelApp_WorkbookActivate(Workbook wb)
     {
-        _lastWorkbookActivateTime = DateTime.Now;
         PluginLog.Write($"[CTP] WorkbookActivate: {wb.Name}, ShowAiText={ShowAiText}");
         App.StatusBar = wb.FullName;
 
@@ -1097,7 +1092,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var ctpName = "表格目录";
         if (SheetMenuText == "表格目录：开启")
         {
-            _lastWorkbookActivateTime = DateTime.Now;
             PluginLog.Write($"[CTP] DeleteCTP before rebuild: {ctpName}");
             NumDesCTP.DeleteCTP(true, ctpName);
             _sheetMenuCtp = (SheetListControl)
@@ -1128,7 +1122,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
         else
         {
-            _lastWorkbookActivateTime = DateTime.Now;
             PluginLog.Write($"[CTP] DeleteCTP before rebuild: {ctpName}");
             NumDesCTP.DeleteCTP(true, ctpName);
         }
@@ -1136,7 +1129,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var aiCtpName = "AI对话-Excel";
         if (ShowAiText == "AI对话：开启")
         {
-            _lastWorkbookActivateTime = DateTime.Now;
             PluginLog.Write($"[CTP] DeleteCTP before rebuild: {aiCtpName}");
             NumDesCTP.DeleteCTP(true, aiCtpName);
             _chatAiChatMenuCtp = (AiChatTaskPanel)
@@ -1160,7 +1152,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
         else
         {
-            _lastWorkbookActivateTime = DateTime.Now;
             PluginLog.Write($"[CTP] DeleteCTP before rebuild: {aiCtpName}");
             NumDesCTP.DeleteCTP(true, aiCtpName);
         }
@@ -1168,7 +1159,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var agentCtpName = "AI Agent-Excel";
         if (_showAgentText == "Agent模式：开启")
         {
-            _lastWorkbookActivateTime = DateTime.Now;
             PluginLog.Write($"[CTP] DeleteCTP before rebuild: {agentCtpName}");
             NumDesCTP.DeleteCTP(true, agentCtpName);
             _agentCtp = (AIAgentPanel)
@@ -1191,7 +1181,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
         else
         {
-            _lastWorkbookActivateTime = DateTime.Now;
             PluginLog.Write($"[CTP] DeleteCTP before rebuild: {agentCtpName}");
             NumDesCTP.DeleteCTP(true, agentCtpName);
         }
@@ -1229,8 +1218,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     private void ExcelApp_WorkbookBeforeClose(Workbook wb, ref bool cancel)
     {
-        if (App.Workbooks.Count > 1)
-            _lastWorkbookActivateTime = DateTime.Now;
         if (App.Workbooks.Count == 1)
         {
             CellSelectChangeTip.Disable();
@@ -3293,18 +3280,20 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 );
             // 用户手动点 X 关闭时更新 Ribbon 状态
             if (NumDesCTP.TryGetCTP(ctpName, out var sheetPane))
+            {
+                var createdWin = App.ActiveWindow?.Caption ?? "";
                 sheetPane.VisibleStateChange += _ =>
                 {
-                    PluginLog.Write($"[CTP] VisibleStateChange: Visible={sheetPane.Visible} Workbooks={App.Workbooks.Count} TimeSinceSwitch={(DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds:F0}ms");
-                    if (
-                        sheetPane.Visible
-                        || App.Workbooks.Count == 0
-                    )
-                        return;
+                    var activeWin = App.ActiveWindow?.Caption ?? "";
+                    PluginLog.Write($"[CTP] SheetMenu VisibleStateChange: Visible={sheetPane.Visible} Workbooks={App.Workbooks.Count} CreatedWin={createdWin} ActiveWin={activeWin}");
+                    if (sheetPane.Visible || App.Workbooks.Count == 0) return;
+                    // 工作簿切换时活动窗口已变 → 抑制
+                    if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin) return;
                     SheetMenuText = "表格目录：关闭";
                     CustomRibbon?.InvalidateControl("SheetMenu");
                     GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
                 };
+            }
         }
         else
         {
@@ -3407,18 +3396,20 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 );
             // 用户点 X 关掉 CTP 时同步 Ribbon 按钮状态
             if (NumDesCTP.TryGetCTP(ctpName, out var agentPane))
+            {
+                var createdWin = App.ActiveWindow?.Caption ?? "";
                 agentPane.VisibleStateChange += _ =>
                 {
-                    PluginLog.Write($"[CTP] VisibleStateChange: Visible={agentPane.Visible} Workbooks={App.Workbooks.Count} TimeSinceSwitch={(DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds:F0}ms");
-                    if (
-                        agentPane.Visible
-                        || App.Workbooks.Count == 0
-                    )
-                        return;
+                    var activeWin = App.ActiveWindow?.Caption ?? "";
+                    PluginLog.Write($"[CTP] Agent VisibleStateChange: Visible={agentPane.Visible} Workbooks={App.Workbooks.Count} CreatedWin={createdWin} ActiveWin={activeWin}");
+                    if (agentPane.Visible || App.Workbooks.Count == 0) return;
+                    // 工作簿切换时活动窗口已变 → 抑制
+                    if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin) return;
                     _showAgentText = "Agent模式：关闭";
                     CustomRibbon?.InvalidateControl("ShowAIAgent");
                     GlobalValue.SaveValue("ShowAIAgentText", _showAgentText);
                 };
+            }
         }
         else
         {
@@ -3455,19 +3446,20 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 PluginLog.Write($"[ShowAi] ShowCTP 完成, result={_chatAiChatMenuCtp is not null}");
                 // 用户点 X 关掉 CTP 时同步 Ribbon 按钮状态
                 if (NumDesCTP.TryGetCTP(ctpName, out var chatPane))
+                {
+                    var createdWin = App.ActiveWindow?.Caption ?? "";
                     chatPane.VisibleStateChange += _ =>
                     {
-                        PluginLog.Write($"[CTP] VisibleStateChange: Visible={chatPane.Visible} Workbooks={App.Workbooks.Count} TimeSinceSwitch={(DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds:F0}ms");
-                        if (
-                            chatPane.Visible
-                            || (DateTime.Now - _lastWorkbookActivateTime).TotalMilliseconds < SwitchCooldownMs
-                            || App.Workbooks.Count == 0
-                        )
-                            return;
+                        var activeWin = App.ActiveWindow?.Caption ?? "";
+                        PluginLog.Write($"[CTP] Chat VisibleStateChange: Visible={chatPane.Visible} Workbooks={App.Workbooks.Count} CreatedWin={createdWin} ActiveWin={activeWin}");
+                        if (chatPane.Visible || App.Workbooks.Count == 0) return;
+                        // 工作簿切换时活动窗口已变 → 抑制
+                        if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin) return;
                         ShowAiText = "AI对话：关闭";
                         CustomRibbon?.InvalidateControl("ShowAI");
                         GlobalValue.SaveValue("ShowAIText", ShowAiText);
                     };
+                }
             }
             else
             {
