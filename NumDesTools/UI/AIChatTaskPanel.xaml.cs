@@ -474,7 +474,7 @@ function clearAll(){document.body.innerHTML=''}
             _isStreaming = false;
         }
 
-        Dispatcher.BeginInvoke(() => RefreshSessionList());
+        _ = Dispatcher.BeginInvoke(() => RefreshSessionList());
     }
 
     // ── 流式内容追加 ──────────────────────────────────────────────────────────
