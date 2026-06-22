@@ -2101,7 +2101,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var wk = App.ActiveWorkbook;
         var path = wk.Path;
 
-        var targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr, false);
+        List<(string, string, int, int)> targetList;
+        try { targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr, false); }
+        catch (InvalidOperationException ex) { MessageBox.Show(ex.Message, "搜索提示"); return; }
         if (targetList.Count == 0)
         {
             MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");

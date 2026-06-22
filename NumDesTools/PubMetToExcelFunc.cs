@@ -2561,6 +2561,19 @@ public static class PubMetToExcelFunc
         // ── 索引快速路径：精确匹配 + 非特定列模式 + 索引就绪 ──────────────
         var excelsRoot = ExcelIndex.ExcelIndexManager.Instance.ExcelsRoot;
         var idx = ExcelIndex.ExcelIndexManager.Instance.Index;
+
+        // 内存索引重建中但磁盘有旧索引时，* 搜索用磁盘缓存，避免回落全文件扫描
+        if (idx == null && excelsRoot != null && findValue.Contains('*'))
+        {
+            var jsonPath = ExcelIndex.ExcelSearchIndex.GetIndexPath(excelsRoot);
+            var diskIdx = ExcelIndex.ExcelSearchIndex.LoadFromDisk(jsonPath);
+            if (diskIdx != null)
+            {
+                PluginLog.Write($"[ExcelIndex] * search using disk cache (memory index rebuilding)");
+                idx = diskIdx;
+            }
+        }
+
         if (idx != null && excelsRoot != null)
         {
             if (!findValue.Contains('*'))
