@@ -2573,22 +2573,31 @@ public static class PubMetToExcelFunc
                     return indexResult;
                 }
             }
-            else if (idx.SortedKeys != null)
+            else
             {
-                // 前缀匹配走有序数组二分查找
-                var prefix = findValue.Replace("*", "");
-                // prefix 太短（空或1字符）会匹配海量 key 导致卡死，至少需要2字符
-                if (prefix.Length >= 2)
+                // * = contains 搜索：遍历所有索引 key 做内存 Contains，比读文件快得多
+                var keyword = findValue.Replace("*", "");
+                if (keyword.Length < 2)
                 {
-                    var prefixHits = ExcelIndex.ExcelIndexManager.SearchByPrefix(prefix, idx, excelsRoot);
-                    if (searchSpecificColumn)
-                        prefixHits = prefixHits.Where(h => h.col == specificColumnIndex).ToList();
-                    PluginLog.Write($"[ExcelIndex] prefix hit: \"{prefix}\" → {prefixHits.Count} results");
-                    return prefixHits;
+                    PluginLog.Write($"[ExcelIndex] contains keyword too short, skip");
+                    return new List<(string, string, int, int)>();
                 }
-                PluginLog.Write($"[ExcelIndex] prefix too short (\"{prefix}\"), skip index search");
-                // prefix 太短时直接返回空，不做全量扫描（避免卡死）
-                return new List<(string, string, int, int)>();
+                var root = excelsRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                var containsResult = new List<(string, string, int, int)>();
+                foreach (var (key, hits) in idx.Exact)
+                {
+                    if (!key.Contains(keyword, StringComparison.OrdinalIgnoreCase)) continue;
+                    foreach (var hit in hits)
+                    {
+                        if (searchSpecificColumn && hit.Col != specificColumnIndex) continue;
+                        var relPath = hit.FileId < idx.Files.Count ? idx.Files[hit.FileId] : "";
+                        var absPath = root + relPath.Replace('/', Path.DirectorySeparatorChar);
+                        var sheet   = hit.SheetId < idx.Sheets.Count ? idx.Sheets[hit.SheetId] : "";
+                        containsResult.Add((absPath, sheet, hit.Row, hit.Col));
+                    }
+                }
+                PluginLog.Write($"[ExcelIndex] contains hit: \"{keyword}\" → {containsResult.Count} results");
+                return containsResult;
             }
         }
         else
