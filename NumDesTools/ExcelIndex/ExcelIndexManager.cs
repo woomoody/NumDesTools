@@ -26,6 +26,8 @@ internal sealed class ExcelIndexManager
     public bool IsReady => _index != null;
     public ExcelSearchIndex? Index => _index;
     public string? ExcelsRoot => _excelsRoot;
+    /// <summary>FileSystemWatcher 检测到变化但新索引尚未建完，搜索结果可能来自旧索引。</summary>
+    public bool IsOutdated => _pendingRebuild.Count > 0;
 
     /// <summary>按 sheet 名搜索，返回 (absPath, sheetName, row=1, col=1) 列表。</summary>
     public static List<(string file, string sheet, int row, int col)> SearchSheetNameFromIndex(

@@ -2106,7 +2106,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         catch (InvalidOperationException ex) { MessageBox.Show(ex.Message, "搜索提示"); return; }
         if (targetList.Count == 0)
         {
-            MessageBox.Show(@"没有检查到匹配的字符串，字符串可能有误");
+            var hint = ExcelIndex.ExcelIndexManager.Instance.IsOutdated
+                ? "没有匹配结果。\n\n注意：索引正在后台更新（检测到文件变化），本次搜索使用的是旧索引。\n请等待更新完成后重试。"
+                : "没有检查到匹配的字符串，字符串可能有误";
+            MessageBox.Show(hint);
         }
         else
         {
