@@ -2577,11 +2577,18 @@ public static class PubMetToExcelFunc
             {
                 // 前缀匹配走有序数组二分查找
                 var prefix = findValue.Replace("*", "");
-                var prefixHits = ExcelIndex.ExcelIndexManager.SearchByPrefix(prefix, idx, excelsRoot);
-                if (searchSpecificColumn)
-                    prefixHits = prefixHits.Where(h => h.col == specificColumnIndex).ToList();
-                PluginLog.Write($"[ExcelIndex] prefix hit: \"{prefix}\" → {prefixHits.Count} results");
-                return prefixHits;
+                // prefix 太短（空或1字符）会匹配海量 key 导致卡死，至少需要2字符
+                if (prefix.Length >= 2)
+                {
+                    var prefixHits = ExcelIndex.ExcelIndexManager.SearchByPrefix(prefix, idx, excelsRoot);
+                    if (searchSpecificColumn)
+                        prefixHits = prefixHits.Where(h => h.col == specificColumnIndex).ToList();
+                    PluginLog.Write($"[ExcelIndex] prefix hit: \"{prefix}\" → {prefixHits.Count} results");
+                    return prefixHits;
+                }
+                PluginLog.Write($"[ExcelIndex] prefix too short (\"{prefix}\"), skip index search");
+                // prefix 太短时直接返回空，不做全量扫描（避免卡死）
+                return new List<(string, string, int, int)>();
             }
         }
         else
