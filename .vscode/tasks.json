@@ -12,11 +12,32 @@
             "problemMatcher": "$msCompile"
         },
         {
+            "label": "_build-release-compile",
+            "type": "shell",
+            "command": "dotnet build '${workspaceFolder}\\NumDesTools\\NumDesTools.csproj' -c Release --no-incremental",
+            "problemMatcher": "$msCompile",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            }
+        },
+        {
             "label": "build-release",
             "type": "shell",
-            "command": "dotnet build '${workspaceFolder}\\NumDesTools\\NumDesTools.csproj' -c Release",
-            "group": "build",
-            "problemMatcher": "$msCompile"
+            "command": "& '${workspaceFolder}\\packFromBin\\ReNamePack.bat'",
+            "dependsOn": ["_build-release-compile"],
+            "dependsOrder": "sequence",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": false
+            }
         },
         {
             "label": "copy-xll-debug",
@@ -29,7 +50,8 @@
             "label": "copy-xll-release",
             "type": "shell",
             "command": "& '${workspaceFolder}\\packFromBin\\ReNamePack.bat'",
-            "dependsOn": ["build-release"],
+            "dependsOn": ["_build-release-compile"],
+            "dependsOrder": "sequence",
             "problemMatcher": []
         }
     ]
