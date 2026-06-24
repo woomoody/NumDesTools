@@ -347,6 +347,9 @@ public static class ConflictApplier
     }
 
     // 把解决的文件名写入当前 git 操作对应的消息文件，确保所有冲突解决场景都有日志
+    public static void AppendMergeMsgPublic(string repoRoot, string fileName) =>
+        AppendMergeMsg(repoRoot, fileName);
+
     private static void AppendMergeMsg(string repoRoot, string fileName)
     {
         try

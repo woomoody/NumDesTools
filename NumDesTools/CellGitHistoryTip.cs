@@ -258,10 +258,11 @@ internal static class CellGitHistoryService
         var cacheKey = $"{absFilePath}|{sheetName}|{rowKey}|{colName}";
         if (_cache.TryGetValue(cacheKey, out var cached))
         {
-            onResult(cached);
+            onResult(cached); // 缓存命中：直接返回，不触发 ribbon 状态变化
             return;
         }
 
+        CellGitHistoryController.OnQueryStart?.Invoke(); // 只有真正发起后台查询时才触发
         _ = Task.Run(
             async () =>
             {
@@ -277,17 +278,24 @@ internal static class CellGitHistoryService
                         sheetName,
                         rowKey,
                         colName,
-                        0, // colIdx 不再使用
+                        0,
                         ct
                     );
-                    if (ct.IsCancellationRequested || text == null)
+                    if (ct.IsCancellationRequested)
                         return;
 
-                    PutCache(cacheKey, text);
-                    onResult(text);
+                    CellGitHistoryController.OnQueryEnd?.Invoke(); // 无论有无结果都恢复状态
+                    if (text != null)
+                    {
+                        PutCache(cacheKey, text);
+                        onResult(text);
+                    }
                 }
                 catch (OperationCanceledException) { }
-                catch { }
+                catch
+                {
+                    CellGitHistoryController.OnQueryEnd?.Invoke();
+                }
             },
             ct
         );
@@ -327,6 +335,7 @@ internal static class CellGitHistoryService
         Directory.CreateDirectory(tmpDir);
 
         var results = new List<(string date, string author, string msg, string val)>();
+        string? lastVal = null;
         foreach (var (sha, date, author, msg) in commits)
         {
             if (ct.IsCancellationRequested)
@@ -334,7 +343,6 @@ internal static class CellGitHistoryService
             if (results.Count >= 2)
                 break;
 
-            // 用 colName（列名）查历史值，不依赖列号（历史版本列顺序可能变化）
             var val = GetCellValueAtCommit(
                 gitRoot,
                 sha,
@@ -344,8 +352,15 @@ internal static class CellGitHistoryService
                 colName,
                 tmpDir
             );
-            if (val != null)
+            if (val == null)
+                continue; // 该行在这个 commit 里不存在，跳过
+
+            // 只记录值发生变化的 commit（剔除连续相同值）
+            if (val != lastVal)
+            {
                 results.Add((date, author, msg, val));
+                lastVal = val;
+            }
         }
 
         if (results.Count == 0)
@@ -484,9 +499,9 @@ internal static class CellGitHistoryService
         if (data == null)
             return null;
         if (!data.TryGetValue(rowKey, out var row))
-            return null;
+            return null; // 这个 commit 里该行不存在（后来新增的行）
         if (!row.TryGetValue(colName, out var val))
-            return null;
+            return "(列当时不存在)"; // 该列在此 commit 之后才加入，视为"有值变化"
         return val.Length > 0 ? val : "(空)";
     }
 
@@ -570,6 +585,9 @@ internal static class CellGitHistoryController
             return;
         IsActive = false;
         CellGitHistoryService.CancelPending();
+        OnQueryEnd?.Invoke(); // 确保 ribbon 状态复原
+        OnQueryStart = null;
+        OnQueryEnd = null;
         _app.SheetSelectionChange -= OnSelectionChange;
         _app.WindowDeactivate -= OnWindowDeactivate;
         _app.WorkbookDeactivate -= OnWorkbookDeactivate;
@@ -577,6 +595,10 @@ internal static class CellGitHistoryController
         _app = null;
         CellGitHistoryTip.Instance.ClearBubble();
     }
+
+    // ribbon 状态通知回调（由 NumDesAddIn 在 Enable 时设置）
+    public static System.Action? OnQueryStart { get; set; }
+    public static System.Action? OnQueryEnd { get; set; }
 
     private static void OnSelectionChange(object sh, Microsoft.Office.Interop.Excel.Range target)
     {

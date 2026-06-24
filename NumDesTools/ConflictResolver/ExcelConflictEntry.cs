@@ -689,7 +689,7 @@ public static class ExcelConflictEntry
         Directory.CreateDirectory(tmpDir);
 
         var manual = new List<string>();
-        var errors = new List<string>(); // 收集报错文件信息
+        var errors = new List<string>();
         int done = 0;
 
         foreach (var relPath in conflictFiles)
@@ -708,45 +708,48 @@ public static class ExcelConflictEntry
                 var theirsPath = Path.Combine(tmpDir, "batch_theirs_" + fileName);
                 var basePath = Path.Combine(tmpDir, "batch_base_" + fileName);
 
-                using var repo = new Repository(gitRoot);
-                var conflict = repo.Index.Conflicts[normPath];
-                if (conflict == null)
-                {
-                    done++;
-                    continue;
-                }
-
-                void WriteBlob(IndexEntry? entry, string outFile)
-                {
-                    if (entry == null)
-                        return;
-                    var blob = repo.Lookup<Blob>(entry.Id);
-                    using var src = blob.GetContentStream();
-                    using var dst = new FileStream(outFile, FileMode.Create, FileAccess.Write);
-                    src.CopyTo(dst);
-                }
-
-                WriteBlob(conflict.Ours, oursPath);
-                WriteBlob(conflict.Theirs, theirsPath);
-
+                // 每次循环独立打开 Repository，提取完 blob 立即释放，
+                // 避免长时间持有 libgit2 native 句柄压迫 SmartGit 等工具
                 string? resolvedBase = null;
-                if (conflict.Ancestor != null)
+                using (var repo = new Repository(gitRoot))
                 {
-                    try
+                    var conflict = repo.Index.Conflicts[normPath];
+                    if (conflict == null)
                     {
-                        WriteBlob(conflict.Ancestor, basePath);
-                        resolvedBase = basePath;
+                        done++;
+                        continue;
                     }
-                    catch { }
-                }
+                    void WriteBlob(IndexEntry? entry, string outFile)
+                    {
+                        if (entry == null)
+                            return;
+                        var blob = repo.Lookup<Blob>(entry.Id);
+                        using var src = blob.GetContentStream();
+                        using var dst = new FileStream(
+                            outFile,
+                            FileMode.Create,
+                            FileAccess.Write
+                        );
+                        src.CopyTo(dst);
+                    }
+
+                    WriteBlob(conflict.Ours, oursPath);
+                    WriteBlob(conflict.Theirs, theirsPath);
+                    if (conflict.Ancestor != null)
+                    {
+                        try
+                        {
+                            WriteBlob(conflict.Ancestor, basePath);
+                            resolvedBase = basePath;
+                        }
+                        catch { }
+                    }
+                } // repo 在 blob 提取后立即释放，EPPlus 处理期间不占用 libgit2 内存
 
                 var diff = ExcelConflictDiffer.Diff(oursPath, theirsPath, resolvedBase);
 
-                // 判断是否完全可自动解决
                 bool allResolved = diff.Sheets.All(s =>
-                    s.Rows
-                        .Where(r => r.DiffType == RowDiffType.Modified)
-                        .All(r => r.IsResolved)
+                    s.Rows.Where(r => r.DiffType == RowDiffType.Modified).All(r => r.IsResolved)
                 );
 
                 if (!allResolved)
@@ -756,13 +759,13 @@ public static class ExcelConflictEntry
                     continue;
                 }
 
-                // 自动 apply + git add（包含写 merge 日志）
                 ConflictApplier.Apply(diff, workingPath, gitAdd: true);
             }
             catch (Exception ex)
             {
                 manual.Add(relPath);
                 errors.Add($"{Path.GetFileName(relPath)}: {ex.Message}");
+                PluginLog.Write($"[BatchAutoResolve] {Path.GetFileName(relPath)} 失败: {ex}");
             }
             done++;
         }
@@ -810,9 +813,26 @@ public static class ExcelConflictEntry
 
             repo.Index.Add(relativePath.Replace('\\', '/'));
             repo.Index.Write();
+
+            var sha8 = theirsSha.Length >= 8 ? theirsSha[..8] : theirsSha;
+            PluginLog.Write(
+                $"[SkipHash] 跳过 # 文件，以对方版本为准: {Path.GetFileName(relativePath)}  (theirs={sha8})"
+            );
+            // 同步追加到 merge 消息文件，与手动解决冲突保持一致
+            try
+            {
+                ConflictApplier.AppendMergeMsgPublic(
+                    gitRoot,
+                    Path.GetFileName(relativePath)
+                );
+            }
+            catch { }
         }
-        catch
-        { /* 单个文件失败不中断整体流程 */
+        catch (Exception ex)
+        {
+            PluginLog.Write(
+                $"[SkipHash] {Path.GetFileName(relativePath)} 自动接受对方版本失败: {ex.Message}"
+            );
         }
     }
 

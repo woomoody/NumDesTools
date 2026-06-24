@@ -4,29 +4,28 @@ namespace NumDesTools.Tests;
 
 public class ConflictModelsTests
 {
-    // H4: Differ 在对象初始化器里设 RowChoice 默认值，不应触发"用户已选"标志
-    // 构造方式与 ExcelConflictDiffer.DiffSheets 完全一致
+    // DefaultRowChoice（Differ 构造时调用）把 OnlyOurs/OnlyTheirs 行标记为"系统已自动选好"
+    // = IsResolved=true，让 BatchAutoResolve 可以直接 apply，无需用户点击。
     [Fact]
-    public void OnlyOursRow_IsResolved_FalseWhenBuiltByDiffer()
+    public void OnlyOursRow_IsResolved_TrueWhenBuiltByDiffer()
     {
-        // 复现 Differ 的构造：用 DefaultRowChoice 设默认值，不触发"用户已明确处理"
         var row = new RowConflict
         {
             DiffType = RowDiffType.OnlyOurs,
             DefaultRowChoice = ConflictChoice.Ours,
         };
-        Assert.False(row.IsResolved);
+        Assert.True(row.IsResolved); // Differ 设置的默认即视为"已解决"
     }
 
     [Fact]
-    public void OnlyTheirsRow_IsResolved_FalseWhenBuiltByDiffer()
+    public void OnlyTheirsRow_IsResolved_TrueWhenBuiltByDiffer()
     {
         var row = new RowConflict
         {
             DiffType = RowDiffType.OnlyTheirs,
             DefaultRowChoice = ConflictChoice.Theirs,
         };
-        Assert.False(row.IsResolved);
+        Assert.True(row.IsResolved);
     }
 
     [Fact]

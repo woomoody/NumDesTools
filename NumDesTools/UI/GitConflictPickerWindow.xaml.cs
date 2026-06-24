@@ -123,6 +123,7 @@ public partial class GitConflictPickerWindow : MetroWindow
 
         BatchAutoBtn.IsEnabled = false;
         ResolveBtn.IsEnabled = false;
+        FileList.IsEnabled = false;
         BatchAutoBtn.Content = "⏳ 扫描中…";
 
         var files = _currentFiles.ToList();
@@ -149,6 +150,7 @@ public partial class GitConflictPickerWindow : MetroWindow
         {
             BatchAutoBtn.IsEnabled = true;
             ResolveBtn.IsEnabled = true;
+            FileList.IsEnabled = true;
             BatchAutoBtn.Content = "⚡ 一键自动解决（扫描可预选文件）";
         }
 

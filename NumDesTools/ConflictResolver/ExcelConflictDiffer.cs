@@ -309,6 +309,17 @@ public static class ExcelConflictDiffer
             }
             else
             {
+                // 三方推断：base 里有这行 → B 删除；没有 → A 新增
+                var oursOnlyOrigin =
+                    baseDict != null && baseDict.ContainsKey(key)
+                        ? RowOrigin.DeletedByTheirs
+                        : RowOrigin.AddedByOurs;
+                // B 删除 → 默认接受删除（THEIRS）；A 新增 → 默认保留（OURS）
+                var oursOnlyDefault =
+                    oursOnlyOrigin == RowOrigin.DeletedByTheirs
+                        ? ConflictChoice.Theirs
+                        : ConflictChoice.Ours;
+
                 rows.Add(
                     new RowConflict
                     {
@@ -318,9 +329,10 @@ public static class ExcelConflictDiffer
                         AllColumns = allCols,
                         OursFullRow = MakeRowDict(oursRow, oursColumns),
                         TheirsFullRow = null,
-                        DefaultRowChoice = ConflictChoice.Ours,
+                        DefaultRowChoice = oursOnlyDefault,
                         OursRowIndex = oursRowIdx,
                         TheirsRowIndex = -1,
+                        Origin = oursOnlyOrigin,
                     }
                 );
             }
@@ -331,6 +343,17 @@ public static class ExcelConflictDiffer
             if (oursDict.ContainsKey(key))
                 continue;
             var theirsRow = theirs.Rows[theirsRowIdx];
+            // 三方推断：base 里有这行 → A 删除；没有 → B 新增
+            var theirsOnlyOrigin =
+                baseDict != null && baseDict.ContainsKey(key)
+                    ? RowOrigin.DeletedByOurs
+                    : RowOrigin.AddedByTheirs;
+            // A 删除 → 默认接受删除（OURS，不包含此行）；B 新增 → 默认保留（THEIRS）
+            var theirsOnlyDefault =
+                theirsOnlyOrigin == RowOrigin.DeletedByOurs
+                    ? ConflictChoice.Ours
+                    : ConflictChoice.Theirs;
+
             rows.Add(
                 new RowConflict
                 {
@@ -340,9 +363,10 @@ public static class ExcelConflictDiffer
                     AllColumns = allCols,
                     OursFullRow = null,
                     TheirsFullRow = MakeRowDict(theirsRow, theirsColumns),
-                    DefaultRowChoice = ConflictChoice.Theirs,
+                    DefaultRowChoice = theirsOnlyDefault,
                     OursRowIndex = -1,
                     TheirsRowIndex = theirsRowIdx,
+                    Origin = theirsOnlyOrigin,
                 }
             );
         }

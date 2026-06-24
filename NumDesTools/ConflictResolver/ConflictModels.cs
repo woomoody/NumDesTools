@@ -18,6 +18,18 @@ public enum RowDiffType
     Same,
 }
 
+/// <summary>
+/// 三方推断的行来源（需要 merge-base 才能区分，无 base 时为 Unknown）。
+/// </summary>
+public enum RowOrigin
+{
+    Unknown,
+    AddedByOurs,     // 不在 base、只在 OURS：A 新增
+    DeletedByTheirs, // 在 base、只在 OURS：B 删除
+    AddedByTheirs,   // 不在 base、只在 THEIRS：B 新增
+    DeletedByOurs,   // 在 base、只在 THEIRS：A 删除
+}
+
 /// <summary>单元格级别的冲突</summary>
 public class CellConflict : INotifyPropertyChanged
 {
@@ -132,11 +144,24 @@ public class RowConflict : INotifyPropertyChanged
     /// <summary>该行在 OURS 文件中的原始行索引（0-based data row）；-1 表示 OURS 无此行。</summary>
     public int OursRowIndex { get; init; } = -1;
 
+    /// <summary>三方推断的行来源（无 merge-base 时为 Unknown）。</summary>
+    public RowOrigin Origin { get; init; } = RowOrigin.Unknown;
+
     public string DiffTypeBadge =>
         DiffType switch
         {
-            RowDiffType.OnlyOurs => "仅我有（对方删除）",
-            RowDiffType.OnlyTheirs => "仅对方有（新增行）",
+            RowDiffType.OnlyOurs => Origin switch
+            {
+                RowOrigin.AddedByOurs => "我方新增 ✓（已选保留）",
+                RowOrigin.DeletedByTheirs => "对方删除 ✓（已选接受）",
+                _ => "仅我有",
+            },
+            RowDiffType.OnlyTheirs => Origin switch
+            {
+                RowOrigin.AddedByTheirs => "对方新增 ✓（已选保留）",
+                RowOrigin.DeletedByOurs => "我方删除 ✓（已选接受）",
+                _ => "仅对方有",
+            },
             RowDiffType.Same => "相同",
             _ => $"冲突 {Cells.Count} 列",
         };

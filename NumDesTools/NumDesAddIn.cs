@@ -165,6 +165,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         if (FocusLabelText == "聚光灯：开启")
             CrosslightController.Enable(App);
+
+        if (CellHistoryTipText == "单元格历史：开启")
+        {
+            SetupCellHistoryCallbacks();
+            CellGitHistoryController.Enable(App);
+        }
     }
 
     public override string GetCustomUI(string ribbonId)
@@ -2767,28 +2773,39 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         var fileList = win.SelectedPaths;
         var countFile = 0;
+        var failCount = 0;
         ExcelExporter.ClearNewFiles();
         foreach (var path in fileList)
         {
-            LogDisplay.RecordLine($"[{DateTime.Now}] , {$"{Path.GetFileName(path)}开始导表： "}");
-            App.StatusBar = $"{countFile}/{fileList.Count},正在导出{Path.GetFileName(path)}";
-
-            var isAll = path.Contains("$");
-            ExcelExporter.Export(
-                path,
-                Path.GetFileNameWithoutExtension(path),
-                new List<FieldData>(),
-                isAll,
-                path.Contains("$$")
-            );
+            var name = Path.GetFileName(path);
+            LogDisplay.RecordLine($"[{DateTime.Now}] , {name} 开始导表");
+            App.StatusBar = $"{countFile}/{fileList.Count} 正在导出 {name}";
+            try
+            {
+                var isAll = path.Contains("$");
+                ExcelExporter.Export(
+                    path,
+                    Path.GetFileNameWithoutExtension(path),
+                    new List<FieldData>(),
+                    isAll,
+                    path.Contains("$$")
+                );
+            }
+            catch (Exception ex)
+            {
+                failCount++;
+                LogDisplay.RecordLine($"[{DateTime.Now}] , {name} 导出失败: {ex.Message}");
+                PluginLog.Write($"[ExcelToLua] {name} 失败: {ex}");
+            }
             countFile++;
         }
 
         if (ExcelExporter.NeedMergeLocalization)
             ExcelExporter.MergeLocalizationLuaFile();
 
-        LogDisplay.RecordLine($"[{DateTime.Now}] , 导出结束，共 {countFile} 个文件");
-        App.StatusBar = $"导出完成，共 {countFile} 个文件";
+        var summary = failCount > 0 ? $"成功 {countFile - failCount}，失败 {failCount}" : $"共 {countFile} 个";
+        LogDisplay.RecordLine($"[{DateTime.Now}] , 导出结束，{summary}");
+        App.StatusBar = $"导出完成，{summary}";
         ExcelExporter.NotifyUnityForNewFiles();
     }
 
@@ -3291,11 +3308,36 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         GlobalValue.SaveValue("FocusLabelText", FocusLabelText);
     }
 
+    private void SetupCellHistoryCallbacks()
+    {
+        CellGitHistoryController.OnQueryStart = () =>
+        {
+            if (CellHistoryTipText == "单元格历史：开启")
+            {
+                CellHistoryTipText = "单元格历史：查询中…";
+                ExcelAsyncUtil.QueueAsMacro(() =>
+                    CustomRibbon?.InvalidateControl("CellHistoryTipButton")
+                );
+            }
+        };
+        CellGitHistoryController.OnQueryEnd = () =>
+        {
+            if (CellHistoryTipText == "单元格历史：查询中…")
+            {
+                CellHistoryTipText = "单元格历史：开启";
+                ExcelAsyncUtil.QueueAsMacro(() =>
+                    CustomRibbon?.InvalidateControl("CellHistoryTipButton")
+                );
+            }
+        };
+    }
+
     private void CellHistoryTip_Toggle()
     {
         if (CellHistoryTipText != "单元格历史：开启")
         {
             CellHistoryTipText = "单元格历史：开启";
+            SetupCellHistoryCallbacks();
             CellGitHistoryController.Enable(App);
         }
         else

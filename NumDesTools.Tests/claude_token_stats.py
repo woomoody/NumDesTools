@@ -1,7 +1,6 @@
 """
 Claude Code Token 使用统计 — 生成 HTML 报告并自动用浏览器打开
-计价基准 (claude-opus-4-x, 美元/MTok):
-  input $5.00 / output $25.00 / cache_read $0.50 / cache_write $6.25
+按实际使用的模型分别计价（$/MTok）
 """
 import os, json, sys, subprocess, webbrowser
 from collections import defaultdict
@@ -14,11 +13,26 @@ REMOTES = [
     ("muxi@100.70.90.51",  r"C:\Users\muxi\.claude\projects",  "[remote-90]"),
 ]
 
-PRICE = {'input': 5.00, 'output': 25.00, 'cache_read': 0.50, 'cache_write': 6.25}
+# 按模型前缀匹配的价格表（input, output, cache_read, cache_write）单位 $/MTok
+MODEL_PRICES = [
+    ('claude-fable',   (10.00, 50.00, 1.00,  12.50)),
+    ('claude-mythos',  (10.00, 50.00, 1.00,  12.50)),
+    ('claude-opus-4',  ( 5.00, 25.00, 0.50,   6.25)),
+    ('claude-sonnet-4',( 3.00, 15.00, 0.30,   3.75)),
+    ('claude-haiku-4', ( 1.00,  5.00, 0.10,   1.25)),
+]
+_DEFAULT_PRICE = (5.00, 25.00, 0.50, 6.25)  # fallback: opus 价格
 
-def calc_cost(inp, out, cr, cw):
-    return (inp * PRICE['input'] + out * PRICE['output']
-            + cr * PRICE['cache_read'] + cw * PRICE['cache_write']) / 1_000_000
+def _model_price(model: str):
+    m = (model or '').lower()
+    for prefix, p in MODEL_PRICES:
+        if m.startswith(prefix):
+            return p
+    return _DEFAULT_PRICE
+
+def calc_cost(inp, out, cr, cw, model=''):
+    pi, po, pcr, pcw = _model_price(model)
+    return (inp * pi + out * po + cr * pcr + cw * pcw) / 1_000_000
 
 def cn_num(n):
     if n >= 1_0000_0000: return f'{n/1_0000_0000:.2f}亿'
@@ -66,9 +80,10 @@ def _pull_remote_jsonl(ssh_host, remote_path, label):
             yield proj_key, date_str, inp, out, cr, cw
 
 # ── 数据采集 ──────────────────────────────────────────────────────────────────
-daily    = defaultdict(lambda: {'input':0,'output':0,'cache_read':0,'cache_write':0})
-monthly  = defaultdict(lambda: {'input':0,'output':0,'cache_read':0,'cache_write':0})
-proj_daily = defaultdict(lambda: defaultdict(lambda: {'input':0,'output':0,'cache_read':0,'cache_write':0}))
+_zero = lambda: {'input':0,'output':0,'cache_read':0,'cache_write':0,'cost':0.0}
+daily      = defaultdict(_zero)
+monthly    = defaultdict(_zero)
+proj_daily = defaultdict(lambda: defaultdict(_zero))
 total_msgs = skipped = 0
 
 for BASE, prefix in BASES:
@@ -103,20 +118,17 @@ for BASE, prefix in BASES:
                             cr  = usage.get('cache_read_input_tokens',0) or 0
                             cw  = usage.get('cache_creation_input_tokens',0) or 0
                             if inp+out+cr+cw == 0: continue
+                            model = (obj.get('model') or
+                                     (obj.get('message') or {}).get('model') or '')
+                            cost  = calc_cost(inp, out, cr, cw, model)
                             total_msgs += 1
-                            daily[date_str]['input']      += inp
-                            daily[date_str]['output']     += out
-                            daily[date_str]['cache_read'] += cr
-                            daily[date_str]['cache_write']+= cw
-                            month_str = date_str[:7]
-                            monthly[month_str]['input']      += inp
-                            monthly[month_str]['output']     += out
-                            monthly[month_str]['cache_read'] += cr
-                            monthly[month_str]['cache_write']+= cw
-                            proj_daily[proj_key][date_str]['input']      += inp
-                            proj_daily[proj_key][date_str]['output']     += out
-                            proj_daily[proj_key][date_str]['cache_read'] += cr
-                            proj_daily[proj_key][date_str]['cache_write']+= cw
+                            for d in (daily[date_str], monthly[date_str[:7]],
+                                      proj_daily[proj_key][date_str]):
+                                d['input']      += inp
+                                d['output']     += out
+                                d['cache_read'] += cr
+                                d['cache_write']+= cw
+                                d['cost']       += cost
                 except Exception as e:
                     print(f'  [warn] {fpath}: {e}')
 
@@ -124,32 +136,30 @@ for ssh_host, remote_path, label in REMOTES:
     print(f"  正在读取远程 {label} ({ssh_host})...", flush=True)
     for proj_key, date_str, inp, out, cr, cw in _pull_remote_jsonl(ssh_host, remote_path, label):
         total_msgs += 1
-        daily[date_str]['input']      += inp;  daily[date_str]['output']     += out
-        daily[date_str]['cache_read'] += cr;   daily[date_str]['cache_write']+= cw
-        month_str = date_str[:7]
-        monthly[month_str]['input']      += inp;  monthly[month_str]['output']     += out
-        monthly[month_str]['cache_read'] += cr;   monthly[month_str]['cache_write']+= cw
-        proj_daily[proj_key][date_str]['input']      += inp
-        proj_daily[proj_key][date_str]['output']     += out
-        proj_daily[proj_key][date_str]['cache_read'] += cr
-        proj_daily[proj_key][date_str]['cache_write']+= cw
+        cost = calc_cost(inp, out, cr, cw, proj_key)  # 远端暂用 proj_key 近似
+        for d in (daily[date_str], monthly[date_str[:7]],
+                  proj_daily[proj_key][date_str]):
+            d['input']      += inp;  d['output']     += out
+            d['cache_read'] += cr;   d['cache_write']+= cw
+            d['cost']       += cost
 
 # ── 汇总计算 ──────────────────────────────────────────────────────────────────
-grand_in = grand_out = grand_cr = grand_cw = 0
+grand_in = grand_out = grand_cr = grand_cw = grand_cost = 0
 for v in daily.values():
     grand_in += v['input']; grand_out += v['output']
     grand_cr += v['cache_read']; grand_cw += v['cache_write']
-grand_cost = calc_cost(grand_in, grand_out, grand_cr, grand_cw)
+    grand_cost += v['cost']
 
 today = date.today()
 
 def period_stats(days):
     start = (today - timedelta(days=days-1)).isoformat() if days else '0000-00-00'
-    si=so=scr=scw=dc=0
+    si=so=scr=scw=dc=0; sc=0.0
     for d,v in daily.items():
         if d >= start:
-            si+=v['input']; so+=v['output']; scr+=v['cache_read']; scw+=v['cache_write']; dc+=1
-    return dc, si, so, scr, scw
+            si+=v['input']; so+=v['output']; scr+=v['cache_read']; scw+=v['cache_write']
+            sc+=v['cost']; dc+=1
+    return dc, si, so, scr, scw, sc
 
 # 填充完整日期轴
 if daily:
@@ -164,37 +174,32 @@ chart_dates   = all_dates
 chart_output  = [daily.get(d,empty)['output']/1000 for d in chart_dates]
 chart_input   = [daily.get(d,empty)['input']/1000  for d in chart_dates]
 chart_cr      = [daily.get(d,empty)['cache_read']/1000 for d in chart_dates]
-chart_cost    = [round(calc_cost(daily.get(d,empty)['input'], daily.get(d,empty)['output'],
-                                 daily.get(d,empty)['cache_read'], daily.get(d,empty)['cache_write']),2)
-                 for d in chart_dates]
+chart_cost    = [round(daily.get(d, {'cost':0.0})['cost'], 2) for d in chart_dates]
 
 # 每日明细行
 detail_rows = ''
 for d in sorted(daily.keys()):
     v = daily[d]
-    i,o,cr,cw = v['input'],v['output'],v['cache_read'],v['cache_write']
-    c = calc_cost(i,o,cr,cw)
+    i,o,cr,cw,c = v['input'],v['output'],v['cache_read'],v['cache_write'],v['cost']
     detail_rows += f'<tr><td>{d}</td><td>{cn_num(i)}</td><td>{cn_num(o)}</td><td>{cn_num(cr)}</td><td>{cn_num(cw)}</td><td>{cn_num(i+o)}</td><td>{cn_num(i+o+cr+cw)}</td><td>${c:.2f}</td></tr>\n'
 
 # 项目汇总行
 proj_rows = ''
 proj_list = []
 for proj, pd in proj_daily.items():
-    pi=po=pcr=pcw=0
+    pi=po=pcr=pcw=0; pc=0.0
     for v in pd.values():
-        pi+=v['input']; po+=v['output']; pcr+=v['cache_read']; pcw+=v['cache_write']
+        pi+=v['input']; po+=v['output']; pcr+=v['cache_read']; pcw+=v['cache_write']; pc+=v['cost']
     if pi+po+pcr+pcw == 0: continue
-    proj_list.append((proj, pi, po, pcr, pcw, calc_cost(pi,po,pcr,pcw)))
+    proj_list.append((proj, pi, po, pcr, pcw, pc))
 proj_list.sort(key=lambda x: -x[5])
 for proj,pi,po,pcr,pcw,pc in proj_list:
     short = proj[-60:] if len(proj)>60 else proj
     proj_rows += f'<tr><td title="{proj}">{short}</td><td>{cn_num(pi)}</td><td>{cn_num(po)}</td><td>{cn_num(pcr)}</td><td>{cn_num(pcw)}</td><td>${pc:.2f}</td></tr>\n'
 
 # 汇总卡数据
-dc7,si7,so7,scr7,scw7   = period_stats(7)
-dc30,si30,so30,scr30,scw30 = period_stats(30)
-cost7  = calc_cost(si7,so7,scr7,scw7)
-cost30 = calc_cost(si30,so30,scr30,scw30)
+dc7,si7,so7,scr7,scw7,cost7   = period_stats(7)
+dc30,si30,so30,scr30,scw30,cost30 = period_stats(30)
 
 def card(title, days, dc, si, so, scr, scw, cost):
     quota = si+so+scr+scw
@@ -215,10 +220,10 @@ def card(title, days, dc, si, so, scr, scw, cost):
 
 # 自然月卡：本月 + 上月
 def month_card(label, ym):
-    v = monthly.get(ym, {'input':0,'output':0,'cache_read':0,'cache_write':0})
-    mi,mo,mcr,mcw = v['input'],v['output'],v['cache_read'],v['cache_write']
+    v = monthly.get(ym, {'input':0,'output':0,'cache_read':0,'cache_write':0,'cost':0.0})
+    mi,mo,mcr,mcw,mc = v['input'],v['output'],v['cache_read'],v['cache_write'],v['cost']
     days_in = sum(1 for d in daily if d.startswith(ym))
-    return card(f'{label}（{ym}）', None, days_in, mi, mo, mcr, mcw, calc_cost(mi,mo,mcr,mcw))
+    return card(f'{label}（{ym}）', None, days_in, mi, mo, mcr, mcw, mc)
 
 this_month = today.strftime('%Y-%m')
 last_month = (today.replace(day=1) - timedelta(days=1)).strftime('%Y-%m')
@@ -227,8 +232,7 @@ last_month = (today.replace(day=1) - timedelta(days=1)).strftime('%Y-%m')
 month_rows = ''
 for ym in sorted(monthly.keys(), reverse=True):
     v = monthly[ym]
-    mi,mo,mcr,mcw = v['input'],v['output'],v['cache_read'],v['cache_write']
-    mc = calc_cost(mi,mo,mcr,mcw)
+    mi,mo,mcr,mcw,mc = v['input'],v['output'],v['cache_read'],v['cache_write'],v['cost']
     days_in = sum(1 for d in daily if d.startswith(ym))
     month_rows += (f'<tr><td>{ym}</td><td>{days_in}</td>'
                    f'<td>{cn_num(mi)}</td><td>{cn_num(mo)}</td>'
