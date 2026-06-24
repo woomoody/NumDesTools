@@ -18,6 +18,16 @@ public static class ConflictApplier
 
         using var pkg = new ExcelPackage(new FileInfo(outPath));
 
+        // 同时打开 THEIRS 文件（用于 OnlyTheirs 行样式复制）
+        ExcelPackage? theirsPkg = null;
+        if (File.Exists(diff.TheirsPath))
+        {
+            try { theirsPkg = new ExcelPackage(new FileInfo(diff.TheirsPath)); }
+            catch { }
+        }
+
+        try
+        {
         foreach (var sheetDiff in diff.Sheets)
         {
             if (!sheetDiff.HasConflict)
@@ -27,30 +37,28 @@ public static class ConflictApplier
             if (sheet?.Dimension == null)
                 continue;
 
+            var theirsSheet = theirsPkg?.Workbook.Worksheets[sheetDiff.SheetName];
+
             // 建立 key → 行号 映射（表头在第2行，数据从第3行起）
             var keyColIdx = FindKeyColIndex(sheet);
             var keyToRow = BuildKeyRowMap(sheet, keyColIdx);
 
             var allCols = sheetDiff.AllColumns;
 
-            // 先处理 Modified（只改单元格值，不移动行，不影响行号）
+            // 1. 先处理 Modified（只改单元格值，不影响行号）
             foreach (var rc in sheetDiff.Rows)
             {
                 if (rc.DiffType == RowDiffType.Modified)
                     ApplyModifiedRow(sheet, rc, keyToRow, allCols);
             }
 
-            // 再追加 OnlyTheirs+Theirs（不影响已有行的行号）
-            foreach (var rc in sheetDiff.Rows)
-            {
-                if (rc.DiffType == RowDiffType.OnlyTheirs && rc.RowChoice == ConflictChoice.Theirs)
-                    AppendTheirsRow(sheet, rc, allCols);
-            }
+            // 2. 按 THEIRS 顺序插入 OnlyTheirs 行（保留行间相对位置，沿用 THEIRS 样式）
+            InsertTheirsRowsInOrder(sheet, sheetDiff, keyToRow, allCols, theirsSheet);
 
-            // 确保新增列的 row3(type) / row4(label) 从 THEIRS 文件元数据补全
+            // 3. 确保新增列的 row3(type) / row4(label) 从 THEIRS 文件元数据补全
             EnsureNewColsMeta(sheet, sheetDiff);
 
-            // 最后处理删除行（从大行号到小行号，避免移位影响前面的行号）
+            // 4. 最后处理删除行（从大行号到小行号，避免移位影响前面的行号）
             var deleteRows = sheetDiff
                 .Rows.Where(rc =>
                     rc.DiffType == RowDiffType.OnlyOurs && rc.RowChoice == ConflictChoice.Theirs
@@ -64,6 +72,11 @@ public static class ConflictApplier
         }
 
         pkg.Save();
+        }
+        finally
+        {
+            theirsPkg?.Dispose();
+        }
 
         if (gitAdd)
             GitAdd(outPath);
@@ -91,9 +104,104 @@ public static class ConflictApplier
         }
     }
 
-    // ── 追加 OnlyTheirs 行 ───────────────────────────────────────────────────
+    // ── 按 THEIRS 顺序在正确位置插入 OnlyTheirs 行 ───────────────────────────
 
-    private static void AppendTheirsRow(
+    /// <summary>
+    /// 按 THEIRS 原始顺序将 OnlyTheirs 行插入到正确位置，而不是追加到末尾。
+    /// 使用 EPPlus InsertRow：物理插入新行，下方行整体下移，现有格式完整保留。
+    /// 算法：沿 THEIRS 顺序维护"前驱 OURS 行号"游标；每次 InsertRow 后更新 keyToRow。
+    /// </summary>
+    private static void InsertTheirsRowsInOrder(
+        ExcelWorksheet sheet,
+        SheetDiff sheetDiff,
+        Dictionary<string, int> keyToRow,
+        List<string> allCols,
+        ExcelWorksheet? theirsSheet = null
+    )
+    {
+        // 按 THEIRS 原始行索引排序（TheirsRowIndex >= 0 的行）
+        var theirsOrdered = sheetDiff
+            .Rows.Where(r => r.TheirsRowIndex >= 0)
+            .OrderBy(r => r.TheirsRowIndex)
+            .ToList();
+
+        if (theirsOrdered.Count == 0)
+            return;
+
+        // 如果所有 OnlyTheirs 行都没有 TheirsRowIndex（旧数据兼容）则退回追加末尾
+        if (theirsOrdered.All(r => r.DiffType == RowDiffType.OnlyTheirs && r.TheirsRowIndex < 0))
+        {
+            foreach (var rc in sheetDiff.Rows.Where(r =>
+                r.DiffType == RowDiffType.OnlyTheirs && r.RowChoice == ConflictChoice.Theirs
+            ))
+                LegacyAppendTheirsRow(sheet, rc, allCols);
+            return;
+        }
+
+        // lastSharedOursRow：最近一个"共有行（Same/Modified）"在当前 sheet 中的行号
+        // 初始值 4 = 最后一个表头行（数据从第 5 行开始），表示"所有共有行之前"
+        int lastSharedOursRow = 4;
+
+        foreach (var row in theirsOrdered)
+        {
+            if (row.DiffType != RowDiffType.OnlyTheirs)
+            {
+                // 共有行：更新前驱游标（keyToRow 已反映之前所有 InsertRow 的偏移）
+                if (keyToRow.TryGetValue(row.RowKey, out var currentOursRow))
+                    lastSharedOursRow = currentOursRow;
+            }
+            else if (row.RowChoice == ConflictChoice.Theirs && row.TheirsFullRow != null)
+            {
+                // OnlyTheirs 要保留：在前驱行紧后方插入
+                var insertAt = lastSharedOursRow + 1;
+
+                sheet.InsertRow(insertAt, 1);
+
+                // 样式：优先复制 THEIRS 文件中对应行的样式，fallback 到上一行
+                var colCount = sheet.Dimension?.End.Column ?? 1;
+                var theirsXlsxRow =
+                    theirsSheet != null && row.TheirsRowIndex >= 0
+                        ? row.TheirsRowIndex + 5 // 数据从第5行起
+                        : -1;
+                if (
+                    theirsXlsxRow > 0
+                    && theirsSheet != null
+                    && theirsXlsxRow <= (theirsSheet.Dimension?.End.Row ?? 0)
+                )
+                {
+                    for (int col = 1; col <= colCount; col++)
+                        sheet.Cells[insertAt, col].StyleID =
+                            theirsSheet.Cells[theirsXlsxRow, col].StyleID;
+                }
+                else if (insertAt > 1)
+                {
+                    for (int col = 1; col <= colCount; col++)
+                        sheet.Cells[insertAt, col].StyleID =
+                            sheet.Cells[insertAt - 1, col].StyleID;
+                }
+
+                // 写入 THEIRS 行数据
+                foreach (var (header, val) in row.TheirsFullRow)
+                {
+                    if (string.IsNullOrEmpty(header))
+                        continue;
+                    var colIdx = FindOrCreateHeaderCol(sheet, header, allCols);
+                    sheet.Cells[insertAt, colIdx].Value = val;
+                }
+
+                // InsertRow 使 insertAt 及之后的所有行号 +1，同步更新 keyToRow
+                foreach (var key in keyToRow.Keys.ToList())
+                    if (keyToRow[key] >= insertAt)
+                        keyToRow[key]++;
+
+                // 下一个连续 OnlyTheirs 行插在刚插入行的正下方
+                lastSharedOursRow = insertAt;
+            }
+        }
+    }
+
+    // 旧版追加到末尾（仅用于无 TheirsRowIndex 数据的旧 diff 兼容）
+    private static void LegacyAppendTheirsRow(
         ExcelWorksheet sheet,
         RowConflict rc,
         List<string> allColumns
@@ -112,7 +220,6 @@ public static class ConflictApplier
             sheet.Cells[lastRow, colIdx].Value = val;
         }
 
-        // 复制上一行的样式
         var srcRow = lastRow - 1;
         var colCount = sheet.Dimension.End.Column;
         if (srcRow >= 3)

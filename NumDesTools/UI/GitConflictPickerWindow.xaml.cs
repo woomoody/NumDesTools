@@ -1,9 +1,12 @@
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using MahApps.Metro.Controls;
+using NumDesTools.ConflictResolver;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using MessageBox = System.Windows.MessageBox;
 
 namespace NumDesTools.UI;
 
@@ -13,11 +16,17 @@ public partial class GitConflictPickerWindow : MetroWindow
     public bool SkipHash => SkipHashBox.IsChecked == true;
     public string? SelectedBranch => BranchBox.SelectedItem as string;
 
+    private string? _gitRoot;
+    private List<string> _currentFiles = [];
+
     public GitConflictPickerWindow(IReadOnlyList<string> files, bool skipHash, string? gitRoot = null)
     {
         MahAppsHelper.EnsureInitialized();
         MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
+
+        _gitRoot = gitRoot;
+        BatchAutoBtn.IsEnabled = !string.IsNullOrEmpty(gitRoot);
 
         SkipHashBox.IsChecked = skipHash;
         LoadBranches(gitRoot);
@@ -55,6 +64,7 @@ public partial class GitConflictPickerWindow : MetroWindow
 
     public void RefreshList(IReadOnlyList<string> files, string? keepSelected)
     {
+        _currentFiles = files.ToList();
         Title = $"Git 冲突解决（剩余 {files.Count} 个）";
 
         var prevSel = keepSelected ?? (FileList.SelectedItem as string);
@@ -104,6 +114,58 @@ public partial class GitConflictPickerWindow : MetroWindow
             "ConflictSkipHashFiles",
             SkipHashBox.IsChecked == true ? "true" : "false"
         );
+    }
+
+    private async void BatchAuto_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_gitRoot) || _currentFiles.Count == 0)
+            return;
+
+        BatchAutoBtn.IsEnabled = false;
+        ResolveBtn.IsEnabled = false;
+        BatchAutoBtn.Content = "⏳ 扫描中…";
+
+        var files = _currentFiles.ToList();
+        List<string> manual = [];
+        List<string> errors = [];
+
+        var progress = new Progress<(int done, int total, string file)>(p =>
+        {
+            if (p.total > 0)
+                BatchAutoBtn.Content = $"⏳ {p.done}/{p.total}";
+        });
+
+        try
+        {
+            (manual, errors) = await Task.Run(() =>
+                ExcelConflictEntry.BatchAutoResolve(_gitRoot!, files, progress)
+            );
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"批量自动解决失败：{ex.Message}", "错误");
+        }
+        finally
+        {
+            BatchAutoBtn.IsEnabled = true;
+            ResolveBtn.IsEnabled = true;
+            BatchAutoBtn.Content = "⚡ 一键自动解决（扫描可预选文件）";
+        }
+
+        var autoCount = files.Count - manual.Count;
+        RefreshList(manual, null);
+
+        var sb = new System.Text.StringBuilder();
+        if (autoCount > 0)
+            sb.AppendLine($"已自动解决 {autoCount} 个文件。");
+        if (manual.Count > 0)
+            sb.AppendLine($"剩余 {manual.Count} 个文件需手动处理（双方均有改动）。");
+        if (errors.Count > 0)
+            sb.AppendLine($"\n⚠ {errors.Count} 个文件处理出错（已保留在列表）：\n{string.Join("\n", errors)}");
+        if (autoCount == 0 && errors.Count == 0)
+            sb.AppendLine("所有文件均有需人工判断的冲突格，无法自动解决。");
+
+        MessageBox.Show(sb.ToString().Trim(), autoCount > 0 ? "批量自动解决完成" : "提示");
     }
 
     private void Window_KeyDown(object sender, KeyEventArgs e)

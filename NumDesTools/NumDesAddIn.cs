@@ -69,6 +69,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public static AppConfig Config = new(GlobalValue);
     public static string LabelText = Cfg("LabelText");
     public static string FocusLabelText = Cfg("FocusLabelText");
+    public static string CellHistoryTipText = Cfg("CellHistoryTipText");
     public static string LabelTextRoleDataPreview = Cfg("LabelTextRoleDataPreview");
     public static string SheetMenuText = Cfg("SheetMenuText");
     public static string CellHiLightText = Cfg("CellHiLightText");
@@ -228,6 +229,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "Button5" => LabelText,
             "Button14" => LabelTextRoleDataPreview,
             "FocusLightButton" => FocusLabelText,
+            "CellHistoryTipButton" => CellHistoryTipText,
             "SheetMenu" => SheetMenuText,
             "CellHiLight" => CellHiLightText,
             "CheckSheetValue" => CheckSheetValueText,
@@ -312,6 +314,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ExcelConflictHistory"] = _ => ExcelConflictEntry.OpenGitHistory(),
             ["ExcelBranchMerge"] = _ => ExcelConflictEntry.OpenBranchMerge(),
             ["HelpButton"] = _ => new NumDesTools.UI.HelpWindow().Show(),
+            ["CellHistoryTipButton"] = _ => CellHistoryTip_Toggle(),
         };
     }
 
@@ -3288,6 +3291,23 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         GlobalValue.SaveValue("FocusLabelText", FocusLabelText);
     }
 
+    private void CellHistoryTip_Toggle()
+    {
+        if (CellHistoryTipText != "单元格历史：开启")
+        {
+            CellHistoryTipText = "单元格历史：开启";
+            CellGitHistoryController.Enable(App);
+        }
+        else
+        {
+            CellHistoryTipText = "单元格历史：关闭";
+            CellGitHistoryController.Disable();
+        }
+
+        CustomRibbon.InvalidateControl("CellHistoryTipButton");
+        GlobalValue.SaveValue("CellHistoryTipText", CellHistoryTipText);
+    }
+
     public void SheetMenu_Click(IRibbonControl control)
     {
         if (control == null)
@@ -3579,6 +3599,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         LabelText = GlobalValue.DefaultValue["LabelText"];
         FocusLabelText = GlobalValue.DefaultValue["FocusLabelText"];
+        CellHistoryTipText = GlobalValue.DefaultValue["CellHistoryTipText"];
+        CellGitHistoryController.Disable();
         LabelTextRoleDataPreview = GlobalValue.DefaultValue["LabelTextRoleDataPreview"];
         SheetMenuText = GlobalValue.DefaultValue["SheetMenuText"];
         CellHiLightText = GlobalValue.DefaultValue["CellHiLightText"];

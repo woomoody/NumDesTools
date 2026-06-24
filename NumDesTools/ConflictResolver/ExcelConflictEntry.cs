@@ -32,15 +32,28 @@ public static class ExcelConflictEntry
         {
             // 每次循环重新读取最新冲突列表（上一次 git add 后列表会缩短）
             List<string> allXlsx;
+            List<string> allHashFiles = [];
             try
             {
                 using var repo = new Repository(gitRoot);
-                allXlsx = repo
-                    .Index.Conflicts.Select(c => c.Ours?.Path ?? c.Theirs?.Path ?? string.Empty)
-                    .Where(p => p.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+                var allConflicted = repo
+                    .Index.Conflicts.Select(c =>
+                        c.Ours?.Path ?? c.Theirs?.Path ?? string.Empty
+                    )
+                    .Where(p => !string.IsNullOrEmpty(p))
                     .Distinct()
                     .OrderBy(p => p)
                     .ToList();
+
+                allXlsx = allConflicted
+                    .Where(p => p.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                // 收集所有带 # 的冲突文件（不限扩展名：xlsm/txt 都要）
+                if (skipHash)
+                    allHashFiles = allConflicted
+                        .Where(p => Path.GetFileName(p).Contains('#'))
+                        .ToList();
             }
             catch (Exception ex)
             {
@@ -51,8 +64,9 @@ public static class ExcelConflictEntry
             List<string> conflictedFiles;
             if (skipHash)
             {
+                // 所有带 # 的文件（任意扩展名）都以对方版本为准
                 using var repo = new Repository(gitRoot);
-                foreach (var p in allXlsx.Where(p => Path.GetFileName(p).Contains('#')))
+                foreach (var p in allHashFiles)
                     AutoAcceptTheirs(repo, gitRoot, p);
                 conflictedFiles = allXlsx.Where(p => !Path.GetFileName(p).Contains('#')).ToList();
             }
@@ -652,6 +666,116 @@ public static class ExcelConflictEntry
             return;
 
         OpenWindow(dlgA.FileName, dlgB.FileName, outPath: null, autoGitAdd: false);
+    }
+
+    // ── 批量自动解决 ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// 对列表中所有 xlsx 冲突文件尝试自动解决：
+    /// 三方预选后所有 Modified 格均有默认选项 → 直接 apply + git add；
+    /// 有任意格双方都改了（需人工选择）→ 保留在返回列表。
+    /// </summary>
+    /// <param name="gitRoot">Git 仓库根目录</param>
+    /// <param name="conflictFiles">相对路径列表</param>
+    /// <param name="progress">进度回调（每处理一个文件调用一次）</param>
+    /// <returns>(手动处理文件列表, 报错文件+原因列表)</returns>
+    public static (List<string> manual, List<string> errors) BatchAutoResolve(
+        string gitRoot,
+        IReadOnlyList<string> conflictFiles,
+        IProgress<(int done, int total, string file)>? progress = null
+    )
+    {
+        var tmpDir = Path.Combine(Path.GetTempPath(), "NumDesExcelDiff");
+        Directory.CreateDirectory(tmpDir);
+
+        var manual = new List<string>();
+        var errors = new List<string>(); // 收集报错文件信息
+        int done = 0;
+
+        foreach (var relPath in conflictFiles)
+        {
+            progress?.Report((done, conflictFiles.Count, relPath));
+
+            try
+            {
+                var normPath = relPath.Replace('\\', '/');
+                var workingPath = Path.Combine(
+                    gitRoot,
+                    relPath.Replace('/', Path.DirectorySeparatorChar)
+                );
+                var fileName = Path.GetFileName(relPath);
+                var oursPath = Path.Combine(tmpDir, "batch_ours_" + fileName);
+                var theirsPath = Path.Combine(tmpDir, "batch_theirs_" + fileName);
+                var basePath = Path.Combine(tmpDir, "batch_base_" + fileName);
+
+                using var repo = new Repository(gitRoot);
+                var conflict = repo.Index.Conflicts[normPath];
+                if (conflict == null)
+                {
+                    done++;
+                    continue;
+                }
+
+                void WriteBlob(IndexEntry? entry, string outFile)
+                {
+                    if (entry == null)
+                        return;
+                    var blob = repo.Lookup<Blob>(entry.Id);
+                    using var src = blob.GetContentStream();
+                    using var dst = new FileStream(outFile, FileMode.Create, FileAccess.Write);
+                    src.CopyTo(dst);
+                }
+
+                WriteBlob(conflict.Ours, oursPath);
+                WriteBlob(conflict.Theirs, theirsPath);
+
+                string? resolvedBase = null;
+                if (conflict.Ancestor != null)
+                {
+                    try
+                    {
+                        WriteBlob(conflict.Ancestor, basePath);
+                        resolvedBase = basePath;
+                    }
+                    catch { }
+                }
+
+                var diff = ExcelConflictDiffer.Diff(oursPath, theirsPath, resolvedBase);
+
+                // 判断是否完全可自动解决
+                bool allResolved = diff.Sheets.All(s =>
+                    s.Rows
+                        .Where(r => r.DiffType == RowDiffType.Modified)
+                        .All(r => r.IsResolved)
+                );
+
+                if (!allResolved)
+                {
+                    manual.Add(relPath);
+                    done++;
+                    continue;
+                }
+
+                // 自动 apply + git add（包含写 merge 日志）
+                ConflictApplier.Apply(diff, workingPath, gitAdd: true);
+            }
+            catch (Exception ex)
+            {
+                manual.Add(relPath);
+                errors.Add($"{Path.GetFileName(relPath)}: {ex.Message}");
+            }
+            done++;
+        }
+
+        progress?.Report((done, conflictFiles.Count, string.Empty));
+
+        if (errors.Count > 0)
+            PluginLog.Write(
+                $"[BatchAutoResolve] {errors.Count} 个文件处理报错:\n"
+                    + string.Join("\n", errors)
+            );
+
+        return (manual, errors);
     }
 
     // ── 内部 ─────────────────────────────────────────────────────────────────

@@ -80,7 +80,13 @@ public partial class ExcelConflictWindow : MetroWindow
         Loaded += (_, _) =>
             Dispatcher.BeginInvoke(
                 System.Windows.Threading.DispatcherPriority.Background,
-                (System.Action)RefreshConflictList
+                (System.Action)(
+                    () =>
+                    {
+                        RefreshConflictList();
+                        ScrollToFirstUnresolved();
+                    }
+                )
             );
 
         // 窗口/控件尺寸变化时重新计算滚动条范围（解决首次布局 ActualWidth=0 问题）
@@ -1733,6 +1739,21 @@ public partial class ExcelConflictWindow : MetroWindow
                 MessageBoxButton.OK,
                 MessageBoxImage.Error
             );
+        }
+    }
+
+    private void ScrollToFirstUnresolved()
+    {
+        foreach (var sheet in _diff.Sheets)
+        {
+            var first = sheet.Rows.FirstOrDefault(r =>
+                r.DiffType == RowDiffType.Modified && !r.IsResolved
+            );
+            if (first != null)
+            {
+                ScrollToRow(first);
+                return;
+            }
         }
     }
 

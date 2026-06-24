@@ -42,7 +42,8 @@ namespace NumDesTools.Config
             // log retention days configurable
             { "LogRetentionDays", "30" },
             { "GitRootPath", "" },
-            { "ConflictSkipHashFiles", "false" },
+            { "ConflictSkipHashFiles", "true" },
+            { "CellHistoryTipText", "单元格历史：关闭" },
             { "SpotlightMode", "overlay" },
             {
                 "OutputRootPath",

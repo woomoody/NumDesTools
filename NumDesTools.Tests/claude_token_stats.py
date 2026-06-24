@@ -67,6 +67,7 @@ def _pull_remote_jsonl(ssh_host, remote_path, label):
 
 # ── 数据采集 ──────────────────────────────────────────────────────────────────
 daily    = defaultdict(lambda: {'input':0,'output':0,'cache_read':0,'cache_write':0})
+monthly  = defaultdict(lambda: {'input':0,'output':0,'cache_read':0,'cache_write':0})
 proj_daily = defaultdict(lambda: defaultdict(lambda: {'input':0,'output':0,'cache_read':0,'cache_write':0}))
 total_msgs = skipped = 0
 
@@ -107,6 +108,11 @@ for BASE, prefix in BASES:
                             daily[date_str]['output']     += out
                             daily[date_str]['cache_read'] += cr
                             daily[date_str]['cache_write']+= cw
+                            month_str = date_str[:7]
+                            monthly[month_str]['input']      += inp
+                            monthly[month_str]['output']     += out
+                            monthly[month_str]['cache_read'] += cr
+                            monthly[month_str]['cache_write']+= cw
                             proj_daily[proj_key][date_str]['input']      += inp
                             proj_daily[proj_key][date_str]['output']     += out
                             proj_daily[proj_key][date_str]['cache_read'] += cr
@@ -120,6 +126,9 @@ for ssh_host, remote_path, label in REMOTES:
         total_msgs += 1
         daily[date_str]['input']      += inp;  daily[date_str]['output']     += out
         daily[date_str]['cache_read'] += cr;   daily[date_str]['cache_write']+= cw
+        month_str = date_str[:7]
+        monthly[month_str]['input']      += inp;  monthly[month_str]['output']     += out
+        monthly[month_str]['cache_read'] += cr;   monthly[month_str]['cache_write']+= cw
         proj_daily[proj_key][date_str]['input']      += inp
         proj_daily[proj_key][date_str]['output']     += out
         proj_daily[proj_key][date_str]['cache_read'] += cr
@@ -204,8 +213,33 @@ def card(title, days, dc, si, so, scr, scw, cost):
       </table>
     </div>'''
 
+# 自然月卡：本月 + 上月
+def month_card(label, ym):
+    v = monthly.get(ym, {'input':0,'output':0,'cache_read':0,'cache_write':0})
+    mi,mo,mcr,mcw = v['input'],v['output'],v['cache_read'],v['cache_write']
+    days_in = sum(1 for d in daily if d.startswith(ym))
+    return card(f'{label}（{ym}）', None, days_in, mi, mo, mcr, mcw, calc_cost(mi,mo,mcr,mcw))
+
+this_month = today.strftime('%Y-%m')
+last_month = (today.replace(day=1) - timedelta(days=1)).strftime('%Y-%m')
+
+# 月度明细行
+month_rows = ''
+for ym in sorted(monthly.keys(), reverse=True):
+    v = monthly[ym]
+    mi,mo,mcr,mcw = v['input'],v['output'],v['cache_read'],v['cache_write']
+    mc = calc_cost(mi,mo,mcr,mcw)
+    days_in = sum(1 for d in daily if d.startswith(ym))
+    month_rows += (f'<tr><td>{ym}</td><td>{days_in}</td>'
+                   f'<td>{cn_num(mi)}</td><td>{cn_num(mo)}</td>'
+                   f'<td>{cn_num(mcr)}</td><td>{cn_num(mcw)}</td>'
+                   f'<td>{cn_num(mi+mo)}</td><td>{cn_num(mi+mo+mcr+mcw)}</td>'
+                   f'<td>${mc:.2f}</td></tr>\n')
+
 cards = (card('最近 7 天', 7, dc7, si7, so7, scr7, scw7, cost7)
        + card('最近 30 天', 30, dc30, si30, so30, scr30, scw30, cost30)
+       + month_card('本月', this_month)
+       + month_card('上月', last_month)
        + card('历史累计', None, len(daily), grand_in, grand_out, grand_cr, grand_cw, grand_cost))
 
 import json as _json
@@ -265,6 +299,17 @@ html = f'''<!DOCTYPE html>
 <div class="chart-box">
   <h2>每日费用（USD）</h2>
   <canvas id="costChart" height="60"></canvas>
+</div>
+
+<div class="section">
+  <h2>按自然月汇总</h2>
+  <table class="data">
+    <thead><tr>
+      <th>月份</th><th>有效天</th><th>input</th><th>output</th><th>缓存读</th><th>缓存写</th>
+      <th>实计(in+out)</th><th>配额消耗(全)</th><th>费用USD</th>
+    </tr></thead>
+    <tbody>{month_rows}</tbody>
+  </table>
 </div>
 
 <div class="section">

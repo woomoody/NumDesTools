@@ -269,6 +269,8 @@ public static class ExcelConflictDiffer
                             AllColumns = allCols,
                             OursFullRow = rowDict,
                             TheirsFullRow = rowDict,
+                            OursRowIndex = oursRowIdx,
+                            TheirsRowIndex = theirsRowIdx,
                         }
                     );
                 }
@@ -299,6 +301,8 @@ public static class ExcelConflictDiffer
                             AllColumns = allCols,
                             OursFullRow = MakeRowDict(oursRow, oursColumns),
                             TheirsFullRow = MakeRowDict(theirsRow, theirsColumns),
+                            OursRowIndex = oursRowIdx,
+                            TheirsRowIndex = theirsRowIdx,
                         }.WithCells(cells)
                     );
                 }
@@ -315,6 +319,8 @@ public static class ExcelConflictDiffer
                         OursFullRow = MakeRowDict(oursRow, oursColumns),
                         TheirsFullRow = null,
                         DefaultRowChoice = ConflictChoice.Ours,
+                        OursRowIndex = oursRowIdx,
+                        TheirsRowIndex = -1,
                     }
                 );
             }
@@ -335,6 +341,8 @@ public static class ExcelConflictDiffer
                     OursFullRow = null,
                     TheirsFullRow = MakeRowDict(theirsRow, theirsColumns),
                     DefaultRowChoice = ConflictChoice.Theirs,
+                    OursRowIndex = -1,
+                    TheirsRowIndex = theirsRowIdx,
                 }
             );
         }

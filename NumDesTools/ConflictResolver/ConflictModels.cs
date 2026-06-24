@@ -126,6 +126,12 @@ public class RowConflict : INotifyPropertyChanged
     /// <summary>所有 # 列值拼成单行，供 ToolTip 等场景</summary>
     public string DisplayName => string.Join("  ", HashColValues.Select(x => x.Val));
 
+    /// <summary>该行在 THEIRS 文件中的原始行索引（0-based data row）；-1 表示不来自 THEIRS。</summary>
+    public int TheirsRowIndex { get; init; } = -1;
+
+    /// <summary>该行在 OURS 文件中的原始行索引（0-based data row）；-1 表示 OURS 无此行。</summary>
+    public int OursRowIndex { get; init; } = -1;
+
     public string DiffTypeBadge =>
         DiffType switch
         {

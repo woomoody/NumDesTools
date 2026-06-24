@@ -102,6 +102,7 @@
                                         <button id='Button4' size='large' label='标准格式' image='nd_标准格式' onAction='OnButtonClick' screentip='将选中单元格修改为标准格式' tag='标准格式' />
                                         <button id='Button5' size='large' getLabel='GetLableText' image='nd_放大镜' onAction='OnButtonClick' screentip='放大镜开关，对当前选中单元格进行放大显示' tag='放大镜开关' />
                                         <button id='FocusLightButton' size='large' getLabel='GetLableText' image='nd_聚光灯菜单' onAction='OnButtonClick' screentip='聚光灯开关：半透明行列色条覆盖显示，不修改单元格格式' tag='聚光灯-Overlay' />
+                                        <button id='CellHistoryTipButton' size='large' getLabel='GetLableText' image='nd_单元格历史' onAction='OnButtonClick' screentip='单元格历史开关：选中单元格时弹出气泡显示该格最近2次 git 提交的值' tag='单元格历史' />
                                         <button id='AutoMergeExcel' size='large' label='合并Excel&#13;(Alice-Cove)' image='nd_合并Excel' onAction='OnButtonClick' screentip='合并Alice和Cove的Excel配置数据' tag='合并Excel(Alice-Cove)' />
                                         <button id='AutoSeachExcel' size='large' label='查验模版&#13;写入数据' image='nd_查验模版写入数据' onAction='OnButtonClick' screentip='查验模版写入数据是否正确' tag='查验模版写入数据' />
                                         <button id='AutoInsertNumChanges' size='large' label='活动奖励&#13;写入' image='nd_活动奖励写入' onAction='OnButtonClick' screentip='活动奖励数据写入' tag='活动奖励写入' />
