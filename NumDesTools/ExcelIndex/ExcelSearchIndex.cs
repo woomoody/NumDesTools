@@ -124,18 +124,36 @@ public class ExcelSearchIndex
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>
+    /// 先写临时文件再替换正式文件，防止写入中断导致 JSON 损坏。
+    /// </summary>
     public void SaveToDisk(string jsonPath)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(jsonPath)!);
-        using var fs = new FileStream(
-            jsonPath,
-            FileMode.Create,
-            FileAccess.Write,
-            FileShare.None,
-            65536
-        );
-        using var gz = new GZipStream(fs, CompressionLevel.Fastest);
-        JsonSerializer.Serialize(gz, this, _opts);
+        var tmpPath = jsonPath + ".tmp";
+        try
+        {
+            using var fs = new FileStream(
+                tmpPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                65536
+            );
+            using var gz = new GZipStream(fs, CompressionLevel.Fastest);
+            JsonSerializer.Serialize(gz, this, _opts);
+            // GZipStream 必须在 fs 关闭前 Flush，否则尾部不完整
+            gz.Flush();
+            fs.Flush();
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[ExcelIndex] SaveToDisk write failed: {ex.Message}");
+            try { File.Delete(tmpPath); } catch { }
+            throw;
+        }
+        // 写成功后原子替换
+        File.Move(tmpPath, jsonPath, overwrite: true);
     }
 
     public static ExcelSearchIndex? LoadFromDisk(string jsonPath)
@@ -159,6 +177,8 @@ public class ExcelSearchIndex
         catch (Exception ex)
         {
             PluginLog.Write($"[ExcelIndex] LoadFromDisk failed: {ex.GetType().Name}: {ex.Message}");
+            // 损坏文件直接删除，下次构建会重建
+            try { File.Delete(jsonPath); } catch { }
             return null;
         }
     }
