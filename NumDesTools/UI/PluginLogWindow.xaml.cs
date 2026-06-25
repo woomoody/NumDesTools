@@ -1,7 +1,9 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using ExcelDna.Integration;
 using MahApps.Metro.Controls;
@@ -15,6 +17,8 @@ public partial class PluginLogWindow : MetroWindow
     private static PluginLogWindow? _instance;
     private bool _autoScroll = true;
     private readonly DispatcherTimer _drainTimer;
+    private IntPtr _hwnd;
+    private HwndSource? _hwndSource;
 
     // ── 静态入口 ──────────────────────────────────────────────────────────
 
@@ -23,6 +27,7 @@ public partial class PluginLogWindow : MetroWindow
         if (_instance is { IsLoaded: true })
         {
             _instance.Activate();
+            ForceForegroundAndFocus(_instance._hwnd);
             return;
         }
         _instance = new PluginLogWindow(); // EnsureInitialized/SetExcelOwner 在构造函数内
@@ -61,33 +66,71 @@ public partial class PluginLogWindow : MetroWindow
             }
         };
         _drainTimer.Start();
-        Loaded += (_, _) =>
-            // DispatcherPriority.Input 确保在所有输入处理完成后再抢焦点
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input,
-                new System.Action(() => { Activate(); Keyboard.Focus(FilterBox); }));
+        Loaded += OnLoaded;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        _hwnd = new WindowInteropHelper(this).Handle;
+        _hwndSource = HwndSource.FromHwnd(_hwnd);
+        _hwndSource?.AddHook(WndProcHook);
+
+        // DispatcherPriority.Input 确保在所有输入处理完成后再抢焦点
+        ForceForegroundAndFocus(_hwnd);
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new System.Action(() => Keyboard.Focus(FilterBox))
+        );
+    }
+
+    // ── Win32 焦点强制 ────────────────────────────────────────────────────
+
+    private static void ForceForegroundAndFocus(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero)
+            return;
+        MahAppsHelper.SetForegroundWindow(hwnd);
+        MahAppsHelper.SetFocus(hwnd);
+    }
+
+    private IntPtr WndProcHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        // WM_ACTIVATE = 0x0006; wParam 低字节非零 = 正在激活
+        const int WmActivate = 0x0006;
+        if (msg == WmActivate && (wParam.ToInt32() & 0xFFFF) != 0)
+        {
+            // 窗口被激活时再次强制 SetFocus，防止 Excel 吞键盘消息
+            MahAppsHelper.SetFocus(hwnd);
+        }
+        return IntPtr.Zero;
     }
 
     private void UpdateStatus()
     {
         var view = CollectionViewSource.GetDefaultView(PluginLog.Lines);
         var visible = view?.Cast<string>().Count() ?? PluginLog.Lines.Count;
-        StatusText.Text = visible == PluginLog.Lines.Count
-            ? $"{PluginLog.Lines.Count} 行"
-            : $"{visible}/{PluginLog.Lines.Count} 行（已过滤）";
+        StatusText.Text =
+            visible == PluginLog.Lines.Count
+                ? $"{PluginLog.Lines.Count} 行"
+                : $"{visible}/{PluginLog.Lines.Count} 行（已过滤）";
     }
 
-    private void FilterBox_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void FilterBox_PreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
-        // 点击输入框时先激活窗口，再设焦点，防止 Excel 拦截键盘输入
+        // 点击输入框时先激活窗口 + Win32 强制焦点，防止 Excel 拦截键盘输入
         Activate();
-        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input,
-            new System.Action(() => Keyboard.Focus(FilterBox)));
+        ForceForegroundAndFocus(_hwnd);
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            new System.Action(() => Keyboard.Focus(FilterBox))
+        );
     }
 
     private void FilterBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         var view = CollectionViewSource.GetDefaultView(PluginLog.Lines);
-        if (view == null) return;
+        if (view == null)
+            return;
 
         var text = FilterBox.Text.Trim();
         if (string.IsNullOrEmpty(text))
@@ -149,9 +192,10 @@ public partial class PluginLogWindow : MetroWindow
     private void CopySelected()
     {
         var selected = LogList.SelectedItems.Cast<string>().ToList();
-        var text = selected.Count > 0
-            ? string.Join(Environment.NewLine, selected)
-            : string.Join(Environment.NewLine, PluginLog.Lines);
+        var text =
+            selected.Count > 0
+                ? string.Join(Environment.NewLine, selected)
+                : string.Join(Environment.NewLine, PluginLog.Lines);
         if (!string.IsNullOrEmpty(text))
             Clipboard.SetText(text);
     }

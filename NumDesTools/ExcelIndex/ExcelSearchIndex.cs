@@ -34,16 +34,75 @@ public class ExcelSearchIndex
 
     // ── 仅运行时使用，不序列化 ────────────────────────────────────────────────
 
-    [JsonIgnore] public Dictionary<string, int> FileIds { get; } = new(StringComparer.OrdinalIgnoreCase);
-    [JsonIgnore] public Dictionary<string, int> SheetIds { get; } = new(StringComparer.Ordinal);
+    [JsonIgnore]
+    public Dictionary<string, int> FileIds { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public Dictionary<string, int> SheetIds { get; } = new(StringComparer.Ordinal);
 
     /// <summary>前缀查询用有序 key 数组（RebuildLookups 或 BuildSortedKeys 后可用）</summary>
-    [JsonIgnore] public string[]? SortedKeys { get; private set; }
+    [JsonIgnore]
+    public string[]? SortedKeys { get; private set; }
 
     /// <summary>构建前缀查询用的有序数组（索引 ready 后调用一次即可）</summary>
     public void BuildSortedKeys()
     {
         SortedKeys = Exact.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray();
+    }
+
+    /// <summary>
+    /// 前缀搜索：二分定位第一个 ≥ prefix 的 key，线性扫描直到不再以 prefix 开头。
+    /// 必须先调用 BuildSortedKeys()，否则返回空。
+    /// </summary>
+    public List<CellHit> SearchByPrefix(string prefix)
+    {
+        var sorted = SortedKeys;
+        if (sorted == null || sorted.Length == 0)
+            return new List<CellHit>();
+
+        // 二分查找第一个 >= prefix 的位置
+        int lo = 0,
+            hi = sorted.Length;
+        while (lo < hi)
+        {
+            int mid = (lo + hi) / 2;
+            if (string.Compare(sorted[mid], prefix, StringComparison.Ordinal) < 0)
+                lo = mid + 1;
+            else
+                hi = mid;
+        }
+
+        var result = new List<CellHit>();
+        for (int i = lo; i < sorted.Length; i++)
+        {
+            if (!sorted[i].StartsWith(prefix, StringComparison.Ordinal))
+                break;
+            if (Exact.TryGetValue(sorted[i], out var hits))
+                result.AddRange(hits);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// 包含搜索：遍历所有 key 做 Contains，最多返回 maxCap 条命中。
+    /// 比全文件扫描快，但有线性扫描开销，用 cap 防止海量结果。
+    /// </summary>
+    public List<CellHit> SearchByContains(
+        string keyword,
+        StringComparison comparison,
+        int maxCap = 500
+    )
+    {
+        var result = new List<CellHit>();
+        foreach (var (key, hits) in Exact)
+        {
+            if (!key.Contains(keyword, comparison))
+                continue;
+            result.AddRange(hits);
+            if (result.Count >= maxCap)
+                break;
+        }
+        return result;
     }
 
     /// <summary>构建完成后同步反向池（从磁盘加载时调用）</summary>
@@ -68,23 +127,40 @@ public class ExcelSearchIndex
     public void SaveToDisk(string jsonPath)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(jsonPath)!);
-        using var fs = new FileStream(jsonPath, FileMode.Create, FileAccess.Write, FileShare.None, 65536);
+        using var fs = new FileStream(
+            jsonPath,
+            FileMode.Create,
+            FileAccess.Write,
+            FileShare.None,
+            65536
+        );
         using var gz = new GZipStream(fs, CompressionLevel.Fastest);
         JsonSerializer.Serialize(gz, this, _opts);
     }
 
     public static ExcelSearchIndex? LoadFromDisk(string jsonPath)
     {
-        if (!File.Exists(jsonPath)) return null;
+        if (!File.Exists(jsonPath))
+            return null;
         try
         {
-            using var fs = new FileStream(jsonPath, FileMode.Open, FileAccess.Read, FileShare.Read, 65536);
+            using var fs = new FileStream(
+                jsonPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                65536
+            );
             using var gz = new GZipStream(fs, CompressionMode.Decompress);
             var idx = JsonSerializer.Deserialize<ExcelSearchIndex>(gz, _opts);
             idx?.RebuildLookups();
             return idx;
         }
-        catch (Exception ex) { PluginLog.Write($"[ExcelIndex] LoadFromDisk failed: {ex.GetType().Name}: {ex.Message}"); return null; }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[ExcelIndex] LoadFromDisk failed: {ex.GetType().Name}: {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>根据 Excels 根目录路径生成 JSON 文件名（可读且唯一）</summary>

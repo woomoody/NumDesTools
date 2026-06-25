@@ -2569,7 +2569,9 @@ public static class PubMetToExcelFunc
             var diskIdx = ExcelIndex.ExcelSearchIndex.LoadFromDisk(jsonPath);
             if (diskIdx != null)
             {
-                PluginLog.Write($"[ExcelIndex] * search using disk cache (memory index rebuilding)");
+                PluginLog.Write(
+                    $"[ExcelIndex] * search using disk cache (memory index rebuilding)"
+                );
                 idx = diskIdx;
             }
         }
@@ -2579,38 +2581,56 @@ public static class PubMetToExcelFunc
             if (!findValue.Contains('*'))
             {
                 var colFilter = searchSpecificColumn ? specificColumnIndex : 0;
-                var indexResult = ExcelIndex.ExcelIndexManager.Instance.TrySearch(findValue, colFilter);
+                var indexResult = ExcelIndex.ExcelIndexManager.Instance.TrySearch(
+                    findValue,
+                    colFilter
+                );
                 if (indexResult != null)
                 {
-                    PluginLog.Write($"[ExcelIndex] search hit: \"{findValue}\" col={colFilter} → {indexResult.Count} results");
+                    PluginLog.Write(
+                        $"[ExcelIndex] search hit: \"{findValue}\" col={colFilter} → {indexResult.Count} results"
+                    );
                     return indexResult;
                 }
             }
             else
             {
-                // * = contains 搜索：遍历所有索引 key 做内存 Contains，比读文件快得多
+                // * 模式：区分前缀匹配（abc*）和包含匹配（*abc* 或 *abc）
                 var keyword = findValue.Replace("*", "");
                 if (keyword.Length < 2)
                 {
                     PluginLog.Write($"[ExcelIndex] contains keyword too short, skip");
                     return new List<(string, string, int, int)>();
                 }
-                var root = excelsRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-                var containsResult = new List<(string, string, int, int)>();
-                foreach (var (key, hits) in idx.Exact)
+
+                var colFilter = searchSpecificColumn ? specificColumnIndex : 0;
+                var isPrefix = !findValue.StartsWith("*") && findValue.EndsWith("*");
+
+                List<(string, string, int, int)>? fuzzyResult;
+                if (isPrefix)
                 {
-                    if (!key.Contains(keyword, StringComparison.OrdinalIgnoreCase)) continue;
-                    foreach (var hit in hits)
-                    {
-                        if (searchSpecificColumn && hit.Col != specificColumnIndex) continue;
-                        var relPath = hit.FileId < idx.Files.Count ? idx.Files[hit.FileId] : "";
-                        var absPath = root + relPath.Replace('/', Path.DirectorySeparatorChar);
-                        var sheet   = hit.SheetId < idx.Sheets.Count ? idx.Sheets[hit.SheetId] : "";
-                        containsResult.Add((absPath, sheet, hit.Row, hit.Col));
-                    }
+                    // 前缀匹配（abc*）：二分搜索，O(log N + k)
+                    fuzzyResult = ExcelIndex.ExcelIndexManager.Instance.TrySearchPrefix(
+                        keyword,
+                        colFilter
+                    );
                 }
-                PluginLog.Write($"[ExcelIndex] contains hit: \"{keyword}\" → {containsResult.Count} results");
-                return containsResult;
+                else
+                {
+                    // 包含匹配（*abc* 或 *abc）：遍历 Contains，cap 500
+                    fuzzyResult = ExcelIndex.ExcelIndexManager.Instance.TrySearchContains(
+                        keyword,
+                        colFilter
+                    );
+                }
+
+                if (fuzzyResult != null)
+                {
+                    PluginLog.Write(
+                        $"[ExcelIndex] fuzzy hit: \"{keyword}\" prefix={isPrefix} → {fuzzyResult.Count} results"
+                    );
+                    return fuzzyResult;
+                }
             }
         }
         else
@@ -2990,23 +3010,27 @@ public static class PubMetToExcelFunc
     public static Dictionary<string, List<string>> BuildModelResultFromIndex(
         IEnumerable<string> ids,
         ExcelIndex.ExcelSearchIndex index,
-        string excelsRoot)
+        string excelsRoot
+    )
     {
         var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
         var root = excelsRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
         foreach (var id in ids)
         {
-            if (!index.Exact.TryGetValue(id, out var hits)) continue;
+            if (!index.Exact.TryGetValue(id, out var hits))
+                continue;
 
             foreach (var hit in hits)
             {
-                if (hit.Col != 2) continue;
+                if (hit.Col != 2)
+                    continue;
 
                 var relPath = hit.FileId < index.Files.Count ? index.Files[hit.FileId] : "";
-                var absPath = relPath.Length > 0
-                    ? root + relPath.Replace('/', Path.DirectorySeparatorChar)
-                    : relPath;
+                var absPath =
+                    relPath.Length > 0
+                        ? root + relPath.Replace('/', Path.DirectorySeparatorChar)
+                        : relPath;
                 var fileName = Path.GetFileName(absPath);
                 var sheetName = hit.SheetId < index.Sheets.Count ? index.Sheets[hit.SheetId] : "";
                 var key = fileName.Contains('$') ? $"{fileName}#{sheetName}" : fileName;
@@ -3016,7 +3040,8 @@ public static class PubMetToExcelFunc
                     list = new List<string>();
                     result[key] = list;
                 }
-                if (!list.Contains(id)) list.Add(id);
+                if (!list.Contains(id))
+                    list.Add(id);
             }
         }
         return result;
@@ -3036,8 +3061,15 @@ public static class PubMetToExcelFunc
         {
             bool isContains = findValue.Contains('*');
             var searchVal = findValue.Replace("*", "");
-            PluginLog.Write($"[ExcelIndex] SheetName index hit: \"{searchVal}\" contains={isContains}");
-            return ExcelIndex.ExcelIndexManager.SearchSheetNameFromIndex(searchVal, isContains, idx, excelsRoot);
+            PluginLog.Write(
+                $"[ExcelIndex] SheetName index hit: \"{searchVal}\" contains={isContains}"
+            );
+            return ExcelIndex.ExcelIndexManager.SearchSheetNameFromIndex(
+                searchVal,
+                isContains,
+                idx,
+                excelsRoot
+            );
         }
 
         var filesCollection = new SelfExcelFileCollector(rootPath);
