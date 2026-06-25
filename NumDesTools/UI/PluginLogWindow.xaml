@@ -34,7 +34,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- 日志列表 -->
@@ -71,34 +70,6 @@
                 </Style>
             </ListBox.ItemContainerStyle>
         </ListBox>
-
-        <!-- 过滤栏 -->
-        <Border
-            Grid.Row="1"
-            Padding="8,5,8,0"
-            Background="#252525"
-            BorderBrush="#444"
-            BorderThickness="0,1,0,0">
-            <DockPanel>
-                <TextBlock
-                    VerticalAlignment="Center"
-                    Margin="0,0,6,0"
-                    Foreground="#888"
-                    FontSize="11"
-                    Text="过滤：" />
-                <TextBox
-                    x:Name="FilterBox"
-                    FontFamily="Consolas"
-                    FontSize="12"
-                    Background="#1A1A1A"
-                    Foreground="#E8E8E8"
-                    BorderBrush="#555"
-                    Padding="6,3"
-                    TextChanged="FilterBox_TextChanged"
-                    PreviewMouseDown="FilterBox_PreviewMouseDown"
-                    mah:TextBoxHelper.Watermark="输入关键词过滤（支持多词空格分隔）" />
-            </DockPanel>
-        </Border>
 
         <!-- 操作栏 -->
         <Border
