@@ -398,7 +398,7 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
             stopwatch.Stop();
             _excelApp.StatusBar =
                 $"[执行完成] {button.Tag} 耗时： {(double)stopwatch.ElapsedMilliseconds / 1000}s";
-            PluginLog.Write($"[执行完成] {button.Tag} 耗时： {stopwatch.ElapsedMilliseconds}ms");
+            PluginLog.Verbose($"[执行完成] {button.Tag} 耗时： {stopwatch.ElapsedMilliseconds}ms");
         }
     }
 

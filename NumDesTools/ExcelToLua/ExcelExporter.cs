@@ -50,7 +50,7 @@ namespace NumDesTools.ExcelToLua
         static string LuaOutputTempFolder => $"{JsonBaseFolder}Code/Assets/LuaScripts/TablesTemp~";
 
         static string LocalizationOutputFolder =>
-            $"{JsonBaseFolder}Code/Asests/LuaScripts/Localizations";
+            $"{JsonBaseFolder}Code/Assets/LuaScripts/Localizations";
 
         //json文件夹
         static string JsonOutputFolder => $"{JsonBaseFolder}Code/Assets/Game/Jsons";

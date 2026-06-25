@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -179,7 +179,7 @@ internal sealed class ExcelIndexManager
                 var built = new ExcelIndexBuilder(root).Build(existing);
                 built.SaveToDisk(jsonPath);
                 _index = built;
-                PluginLog.Write($"[ExcelIndex] incremental done");
+                PluginLog.Verbose($"[ExcelIndex] incremental done");
             }
             catch (Exception ex)
             {

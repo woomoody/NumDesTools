@@ -62,22 +62,22 @@ public class ExcelDataAutoInsertNumChanges
             excelObj.GetExcelObj(_excelPath, workBookName);
             if (excelObj.ErrorList.Count > 0)
             {
-                MessageBox.Show($"{workBookName}不存在，少个#?");
-                return;
+                LogDisplay.RecordLine($"[{DateTime.Now}] , {workBookName} 不存在，已跳过（少个#?）");
+                continue; // 跳过不存在的工作簿，继续处理后续条目
             }
 
             var changeValueCount = 0;
 
             var sheetTarget = excelObj.Sheet;
             var excelTarget = excelObj.Excel;
-            var keyIndex = eachExcelData.Value.Item1[0].ToString();
+            var keyIndex = eachExcelData.Value.Item1[0]?.ToString();
             var keyIndexRowCount = eachExcelData.Value.Item2.Count;
             var keyIndexCol = excelObj.FindFromCol(sheetTarget, 2, keyIndex);
 
             for (int j = 1; j < eachExcelData.Value.Item1.Count; j++)
             {
-                var keyTarget = eachExcelData.Value.Item1[j].ToString();
-                if (keyTarget != null && keyTarget.Contains("$"))
+                var keyTarget = eachExcelData.Value.Item1[j]?.ToString();
+                if (string.IsNullOrEmpty(keyTarget) || keyTarget.Contains('$'))
                 {
                     continue;
                 }

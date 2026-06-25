@@ -18,16 +18,6 @@ public static class ConflictApplier
 
         using var pkg = new ExcelPackage(new FileInfo(outPath));
 
-        // 同时打开 THEIRS 文件（用于 OnlyTheirs 行样式复制）
-        ExcelPackage? theirsPkg = null;
-        if (File.Exists(diff.TheirsPath))
-        {
-            try { theirsPkg = new ExcelPackage(new FileInfo(diff.TheirsPath)); }
-            catch { }
-        }
-
-        try
-        {
         foreach (var sheetDiff in diff.Sheets)
         {
             if (!sheetDiff.HasConflict)
@@ -36,8 +26,6 @@ public static class ConflictApplier
             var sheet = pkg.Workbook.Worksheets[sheetDiff.SheetName];
             if (sheet?.Dimension == null)
                 continue;
-
-            var theirsSheet = theirsPkg?.Workbook.Worksheets[sheetDiff.SheetName];
 
             // 建立 key → 行号 映射（表头在第2行，数据从第3行起）
             var keyColIdx = FindKeyColIndex(sheet);
@@ -52,8 +40,8 @@ public static class ConflictApplier
                     ApplyModifiedRow(sheet, rc, keyToRow, allCols);
             }
 
-            // 2. 按 THEIRS 顺序插入 OnlyTheirs 行（保留行间相对位置，沿用 THEIRS 样式）
-            InsertTheirsRowsInOrder(sheet, sheetDiff, keyToRow, allCols, theirsSheet);
+            // 2. 按 THEIRS 顺序插入 OnlyTheirs 行（保留行间相对位置）
+            InsertTheirsRowsInOrder(sheet, sheetDiff, keyToRow, allCols);
 
             // 3. 确保新增列的 row3(type) / row4(label) 从 THEIRS 文件元数据补全
             EnsureNewColsMeta(sheet, sheetDiff);
@@ -72,11 +60,6 @@ public static class ConflictApplier
         }
 
         pkg.Save();
-        }
-        finally
-        {
-            theirsPkg?.Dispose();
-        }
 
         if (gitAdd)
             GitAdd(outPath);
@@ -115,8 +98,7 @@ public static class ConflictApplier
         ExcelWorksheet sheet,
         SheetDiff sheetDiff,
         Dictionary<string, int> keyToRow,
-        List<string> allCols,
-        ExcelWorksheet? theirsSheet = null
+        List<string> allCols
     )
     {
         // 按 THEIRS 原始行索引排序（TheirsRowIndex >= 0 的行）
@@ -157,24 +139,11 @@ public static class ConflictApplier
 
                 sheet.InsertRow(insertAt, 1);
 
-                // 样式：优先复制 THEIRS 文件中对应行的样式，fallback 到上一行
-                var colCount = sheet.Dimension?.End.Column ?? 1;
-                var theirsXlsxRow =
-                    theirsSheet != null && row.TheirsRowIndex >= 0
-                        ? row.TheirsRowIndex + 5 // 数据从第5行起
-                        : -1;
-                if (
-                    theirsXlsxRow > 0
-                    && theirsSheet != null
-                    && theirsXlsxRow <= (theirsSheet.Dimension?.End.Row ?? 0)
-                )
+                // 样式从上一行复制（同包内 StyleID 安全）
+                // 不跨 Package 复制 THEIRS 样式：EPPlus StyleID 是包内索引，跨包赋值无效
+                if (insertAt > 1)
                 {
-                    for (int col = 1; col <= colCount; col++)
-                        sheet.Cells[insertAt, col].StyleID =
-                            theirsSheet.Cells[theirsXlsxRow, col].StyleID;
-                }
-                else if (insertAt > 1)
-                {
+                    var colCount = sheet.Dimension?.End.Column ?? 1;
                     for (int col = 1; col <= colCount; col++)
                         sheet.Cells[insertAt, col].StyleID =
                             sheet.Cells[insertAt - 1, col].StyleID;

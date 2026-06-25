@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.Tasks;
 using LibGit2Sharp;
 using NumDesTools.UI;
 
@@ -49,11 +50,20 @@ public static class ExcelConflictEntry
                     .Where(p => p.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
+                // .xll 是插件构建产物，始终自动以对方版本为准，不进 picker
+                var xllFiles = allConflicted
+                    .Where(p => p.EndsWith(".xll", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                allHashFiles.AddRange(xllFiles.Where(p => !allHashFiles.Contains(p)));
+
                 // 收集所有带 # 的冲突文件（不限扩展名：xlsm/txt 都要）
                 if (skipHash)
-                    allHashFiles = allConflicted
-                        .Where(p => Path.GetFileName(p).Contains('#'))
-                        .ToList();
+                    allHashFiles.AddRange(
+                        allConflicted
+                            .Where(p =>
+                                Path.GetFileName(p).Contains('#') && !allHashFiles.Contains(p)
+                            )
+                    );
             }
             catch (Exception ex)
             {
@@ -62,17 +72,15 @@ public static class ExcelConflictEntry
             }
 
             List<string> conflictedFiles;
-            if (skipHash)
             {
-                // 所有带 # 的文件（任意扩展名）都以对方版本为准
+                // allHashFiles（# 文件 + .xll）全部以对方版本为准，不进 picker
                 using var repo = new Repository(gitRoot);
                 foreach (var p in allHashFiles)
                     AutoAcceptTheirs(repo, gitRoot, p);
-                conflictedFiles = allXlsx.Where(p => !Path.GetFileName(p).Contains('#')).ToList();
-            }
-            else
-            {
-                conflictedFiles = allXlsx;
+
+                conflictedFiles = skipHash
+                    ? allXlsx.Where(p => !Path.GetFileName(p).Contains('#')).ToList()
+                    : allXlsx;
             }
 
             if (conflictedFiles.Count == 0)
@@ -688,84 +696,143 @@ public static class ExcelConflictEntry
         var tmpDir = Path.Combine(Path.GetTempPath(), "NumDesExcelDiff");
         Directory.CreateDirectory(tmpDir);
 
+        // ── 阶段一：并行 Diff（纯读，MiniExcel + libgit2 读取，无写操作）──────────
+        // 每线程独立 Repository 实例（libgit2 非线程安全），临时文件名含 index 防碰撞
+        // ours 临时文件留到 Phase 2 Apply 之后再删（ConflictApplier.Apply 内部用 diff.OursPath）
+        var diffResults = new System.Collections.Concurrent.ConcurrentDictionary<
+            string,
+            FileDiff
+        >(StringComparer.Ordinal);
+        var diffErrors = new System.Collections.Concurrent.ConcurrentBag<(
+            string relPath,
+            string msg
+        )>();
+        int parallelDone = 0;
+
+        Parallel.ForEach(
+            conflictFiles.Select((p, i) => (p, i)),
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1),
+            },
+            item =>
+            {
+                var (relPath, idx) = item;
+                var normPath = relPath.Replace('\\', '/');
+                var fileName = Path.GetFileName(relPath);
+                // index 后缀防止不同路径同名文件碰撞
+                var oursPath = Path.Combine(tmpDir, $"batch_{idx}_ours_{fileName}");
+                var theirsPath = Path.Combine(tmpDir, $"batch_{idx}_theirs_{fileName}");
+                var basePath = Path.Combine(tmpDir, $"batch_{idx}_base_{fileName}");
+
+                try
+                {
+                    string? resolvedBase = null;
+                    // 每线程独立 Repository 实例，blob 提取后立即释放
+                    using (var repo = new Repository(gitRoot))
+                    {
+                        var conflict = repo.Index.Conflicts[normPath];
+                        if (conflict == null)
+                            return; // 冲突已被其他操作解决，跳过
+
+                        void WriteBlob(IndexEntry? entry, string outFile)
+                        {
+                            if (entry == null)
+                                return;
+                            var blob = repo.Lookup<Blob>(entry.Id);
+                            using var src = blob.GetContentStream();
+                            using var dst = new FileStream(
+                                outFile,
+                                FileMode.Create,
+                                FileAccess.Write
+                            );
+                            src.CopyTo(dst);
+                        }
+
+                        WriteBlob(conflict.Ours, oursPath);
+                        WriteBlob(conflict.Theirs, theirsPath);
+                        if (conflict.Ancestor != null)
+                        {
+                            try
+                            {
+                                WriteBlob(conflict.Ancestor, basePath);
+                                resolvedBase = basePath;
+                            }
+                            catch { }
+                        }
+                    }
+
+                    // Diff 阶段（MiniExcel 读取，CPU 密集，可安全并行）
+                    var diff = ExcelConflictDiffer.Diff(oursPath, theirsPath, resolvedBase);
+                    diffResults[relPath] = diff;
+                }
+                catch (Exception ex)
+                {
+                    diffErrors.Add((relPath, ex.Message));
+                    PluginLog.Write($"[BatchAutoResolve] Diff 失败 {fileName}: {ex}");
+                }
+                finally
+                {
+                    // theirs/base 读完即可删；ours 留到 Phase 2 Apply 之后再删
+                    TryDelete(theirsPath);
+                    TryDelete(basePath);
+                    System.Threading.Interlocked.Increment(ref parallelDone);
+                    progress?.Report((parallelDone, conflictFiles.Count, relPath));
+                }
+            }
+        );
+
+        // ── 阶段二：串行 Apply + git-add（Index.Write 文件级互斥，必须串行）──────
         var manual = new List<string>();
-        var errors = new List<string>();
+        var errors = diffErrors.Select(e => $"{Path.GetFileName(e.relPath)}: {e.msg}").ToList();
         int done = 0;
 
         foreach (var relPath in conflictFiles)
         {
-            progress?.Report((done, conflictFiles.Count, relPath));
+            // Diff 阶段已报错的文件，直接列入手动处理
+            if (diffErrors.Any(e => e.relPath == relPath))
+            {
+                manual.Add(relPath);
+                done++;
+                continue;
+            }
+
+            if (!diffResults.TryGetValue(relPath, out var diff))
+            {
+                // 未在 diffResults 中 = 冲突已解决或无需处理，跳过
+                done++;
+                continue;
+            }
+
+            bool allResolved = diff.Sheets.All(s =>
+                s.Rows.Where(r => r.DiffType == RowDiffType.Modified).All(r => r.IsResolved)
+            );
+
+            if (!allResolved)
+            {
+                manual.Add(relPath);
+                done++;
+                continue;
+            }
 
             try
             {
-                var normPath = relPath.Replace('\\', '/');
                 var workingPath = Path.Combine(
                     gitRoot,
                     relPath.Replace('/', Path.DirectorySeparatorChar)
                 );
-                var fileName = Path.GetFileName(relPath);
-                var oursPath = Path.Combine(tmpDir, "batch_ours_" + fileName);
-                var theirsPath = Path.Combine(tmpDir, "batch_theirs_" + fileName);
-                var basePath = Path.Combine(tmpDir, "batch_base_" + fileName);
-
-                // 每次循环独立打开 Repository，提取完 blob 立即释放，
-                // 避免长时间持有 libgit2 native 句柄压迫 SmartGit 等工具
-                string? resolvedBase = null;
-                using (var repo = new Repository(gitRoot))
-                {
-                    var conflict = repo.Index.Conflicts[normPath];
-                    if (conflict == null)
-                    {
-                        done++;
-                        continue;
-                    }
-                    void WriteBlob(IndexEntry? entry, string outFile)
-                    {
-                        if (entry == null)
-                            return;
-                        var blob = repo.Lookup<Blob>(entry.Id);
-                        using var src = blob.GetContentStream();
-                        using var dst = new FileStream(
-                            outFile,
-                            FileMode.Create,
-                            FileAccess.Write
-                        );
-                        src.CopyTo(dst);
-                    }
-
-                    WriteBlob(conflict.Ours, oursPath);
-                    WriteBlob(conflict.Theirs, theirsPath);
-                    if (conflict.Ancestor != null)
-                    {
-                        try
-                        {
-                            WriteBlob(conflict.Ancestor, basePath);
-                            resolvedBase = basePath;
-                        }
-                        catch { }
-                    }
-                } // repo 在 blob 提取后立即释放，EPPlus 处理期间不占用 libgit2 内存
-
-                var diff = ExcelConflictDiffer.Diff(oursPath, theirsPath, resolvedBase);
-
-                bool allResolved = diff.Sheets.All(s =>
-                    s.Rows.Where(r => r.DiffType == RowDiffType.Modified).All(r => r.IsResolved)
-                );
-
-                if (!allResolved)
-                {
-                    manual.Add(relPath);
-                    done++;
-                    continue;
-                }
-
                 ConflictApplier.Apply(diff, workingPath, gitAdd: true);
             }
             catch (Exception ex)
             {
                 manual.Add(relPath);
                 errors.Add($"{Path.GetFileName(relPath)}: {ex.Message}");
-                PluginLog.Write($"[BatchAutoResolve] {Path.GetFileName(relPath)} 失败: {ex}");
+                PluginLog.Write($"[BatchAutoResolve] Apply 失败 {Path.GetFileName(relPath)}: {ex}");
+            }
+            finally
+            {
+                // Apply 用完 ours 临时文件后才删
+                TryDelete(diff.OursPath);
             }
             done++;
         }
@@ -1072,6 +1139,16 @@ public static class ExcelConflictEntry
         if (File.Exists(stGit))
             return stGit;
         return "git"; // 最后回退，让 OS 去找
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch { }
     }
 
     private static string RunGit(string gitRoot, string arguments)

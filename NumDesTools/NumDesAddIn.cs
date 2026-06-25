@@ -163,14 +163,28 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         CustomRibbon = ribbon;
         CustomRibbon.ActivateTab("MainTab");
 
+        // 迁移旧 label
+        if (CellHistoryTipText == "单元格历史：开启")
+        {
+            CellHistoryTipText = "谁的锅：开启";
+            GlobalValue.SaveValue("CellHistoryTipText", CellHistoryTipText);
+        }
+        else if (
+            CellHistoryTipText == "单元格历史：关闭"
+            || CellHistoryTipText == "单元格历史：查询中…"
+            || CellHistoryTipText == "谁的锅：查询中…"
+        )
+        {
+            CellHistoryTipText = "谁的锅：关闭";
+            GlobalValue.SaveValue("CellHistoryTipText", CellHistoryTipText);
+        }
+
         if (FocusLabelText == "聚光灯：开启")
             CrosslightController.Enable(App);
 
-        if (CellHistoryTipText == "单元格历史：开启")
-        {
-            SetupCellHistoryCallbacks();
+        // 谁的锅：根据保存的配置恢复状态（首次默认关闭，GlobalVariable 默认值已设）
+        if (CellHistoryTipText == "谁的锅：开启")
             CellGitHistoryController.Enable(App);
-        }
     }
 
     public override string GetCustomUI(string ribbonId)
@@ -363,8 +377,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             // 单元格处于编辑模式，不能执行插件操作
             PluginLog.Write($"[ribbon] blocked by cell edit mode");
-            MessageBox.Show("请先按 Esc 退出单元格编辑模式，再使用此功能。", "操作被阻止",
-                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(
+                "请先按 Esc 退出单元格编辑模式，再使用此功能。",
+                "操作被阻止",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
             return;
         }
 
@@ -1119,22 +1137,36 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 smPane2.VisibleStateChange += _ =>
                 {
                     var smActiveWin = App.ActiveWindow?.Caption ?? "";
-                    PluginLog.Write($"[CTP][WA] SheetMenu VisibleState: Visible={smPane2.Visible} SamePane={NumDesCTP.TryGetCTP(ctpName, out var smCur) && ReferenceEquals(smCur, smPane2)} CreatedWin={smWin} ActiveWin={smActiveWin}");
-                    if (smPane2.Visible || App.Workbooks.Count == 0) return;
-                    if (!string.IsNullOrEmpty(smWin) && smActiveWin != smWin) return;
+                    PluginLog.Write(
+                        $"[CTP][WA] SheetMenu VisibleState: Visible={smPane2.Visible} SamePane={NumDesCTP.TryGetCTP(ctpName, out var smCur) && ReferenceEquals(smCur, smPane2)} CreatedWin={smWin} ActiveWin={smActiveWin}"
+                    );
+                    if (smPane2.Visible || App.Workbooks.Count == 0)
+                        return;
+                    if (!string.IsNullOrEmpty(smWin) && smActiveWin != smWin)
+                        return;
                     // 2秒防抖：切换过渡中CTP会短暂False再变True，X关闭则永久False
                     var _smP = smPane2;
-                    System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
-                    {
-                        try { if (_smP.Visible) return; } catch { return; }
-                        ExcelAsyncUtil.QueueAsMacro(() =>
+                    System
+                        .Threading.Tasks.Task.Delay(2000)
+                        .ContinueWith(__ =>
                         {
-                            PluginLog.Write("[CTP][X] SheetMenu X-close confirmed");
-                            SheetMenuText = "表格目录：关闭";
-                            CustomRibbon?.InvalidateControl("SheetMenu");
-                            GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
+                            try
+                            {
+                                if (_smP.Visible)
+                                    return;
+                            }
+                            catch
+                            {
+                                return;
+                            }
+                            ExcelAsyncUtil.QueueAsMacro(() =>
+                            {
+                                PluginLog.Write("[CTP][X] SheetMenu X-close confirmed");
+                                SheetMenuText = "表格目录：关闭";
+                                CustomRibbon?.InvalidateControl("SheetMenu");
+                                GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
+                            });
                         });
-                    });
                 };
             }
         }
@@ -1150,7 +1182,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             PluginLog.Write($"[CTP] DeleteCTP before rebuild: {aiCtpName}");
             NumDesCTP.DeleteCTP(true, aiCtpName);
             _chatAiChatMenuCtp = (AiChatTaskPanel)
-                NumDesCTP.ShowCTP(1500, aiCtpName, true, aiCtpName, new AiChatTaskPanel(), MsoCTPDockPosition.msoCTPDockPositionRight);
+                NumDesCTP.ShowCTP(
+                    1500,
+                    aiCtpName,
+                    true,
+                    aiCtpName,
+                    new AiChatTaskPanel(),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
             PluginLog.Write($"[CTP] ShowCTP done: {aiCtpName}");
             if (NumDesCTP.TryGetCTP(aiCtpName, out var chatPane2))
             {
@@ -1158,21 +1197,35 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 chatPane2.VisibleStateChange += _ =>
                 {
                     var chatActiveWin = App.ActiveWindow?.Caption ?? "";
-                    PluginLog.Write($"[CTP][WA] Chat VisibleState: Visible={chatPane2.Visible} SamePane={NumDesCTP.TryGetCTP(aiCtpName, out var chatCur) && ReferenceEquals(chatCur, chatPane2)} CreatedWin={chatWin} ActiveWin={chatActiveWin}");
-                    if (chatPane2.Visible || App.Workbooks.Count == 0) return;
-                    if (!string.IsNullOrEmpty(chatWin) && chatActiveWin != chatWin) return;
+                    PluginLog.Write(
+                        $"[CTP][WA] Chat VisibleState: Visible={chatPane2.Visible} SamePane={NumDesCTP.TryGetCTP(aiCtpName, out var chatCur) && ReferenceEquals(chatCur, chatPane2)} CreatedWin={chatWin} ActiveWin={chatActiveWin}"
+                    );
+                    if (chatPane2.Visible || App.Workbooks.Count == 0)
+                        return;
+                    if (!string.IsNullOrEmpty(chatWin) && chatActiveWin != chatWin)
+                        return;
                     var _chatP = chatPane2;
-                    System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
-                    {
-                        try { if (_chatP.Visible) return; } catch { return; }
-                        ExcelAsyncUtil.QueueAsMacro(() =>
+                    System
+                        .Threading.Tasks.Task.Delay(2000)
+                        .ContinueWith(__ =>
                         {
-                            PluginLog.Write("[CTP][X] Chat X-close confirmed");
-                            ShowAiText = "AI对话：关闭";
-                            CustomRibbon?.InvalidateControl("ShowAI");
-                            GlobalValue.SaveValue("ShowAIText", ShowAiText);
+                            try
+                            {
+                                if (_chatP.Visible)
+                                    return;
+                            }
+                            catch
+                            {
+                                return;
+                            }
+                            ExcelAsyncUtil.QueueAsMacro(() =>
+                            {
+                                PluginLog.Write("[CTP][X] Chat X-close confirmed");
+                                ShowAiText = "AI对话：关闭";
+                                CustomRibbon?.InvalidateControl("ShowAI");
+                                GlobalValue.SaveValue("ShowAIText", ShowAiText);
+                            });
                         });
-                    });
                 };
             }
         }
@@ -1188,7 +1241,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             PluginLog.Write($"[CTP] DeleteCTP before rebuild: {agentCtpName}");
             NumDesCTP.DeleteCTP(true, agentCtpName);
             _agentCtp = (AIAgentPanel)
-                NumDesCTP.ShowCTP(1500, agentCtpName, true, agentCtpName, new AIAgentPanel(), MsoCTPDockPosition.msoCTPDockPositionRight);
+                NumDesCTP.ShowCTP(
+                    1500,
+                    agentCtpName,
+                    true,
+                    agentCtpName,
+                    new AIAgentPanel(),
+                    MsoCTPDockPosition.msoCTPDockPositionRight
+                );
             PluginLog.Write($"[CTP] ShowCTP done: {agentCtpName}");
             if (NumDesCTP.TryGetCTP(agentCtpName, out var agentPane2))
             {
@@ -1196,20 +1256,34 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 agentPane2.VisibleStateChange += _ =>
                 {
                     var agentActiveWin = App.ActiveWindow?.Caption ?? "";
-                    PluginLog.Write($"[CTP][WA] Agent VisibleState: Visible={agentPane2.Visible} SamePane={NumDesCTP.TryGetCTP(agentCtpName, out var agCur) && ReferenceEquals(agCur, agentPane2)} CreatedWin={agentWin} ActiveWin={agentActiveWin}");
-                    if (agentPane2.Visible || App.Workbooks.Count == 0) return;
-                    if (!string.IsNullOrEmpty(agentWin) && agentActiveWin != agentWin) return;
+                    PluginLog.Write(
+                        $"[CTP][WA] Agent VisibleState: Visible={agentPane2.Visible} SamePane={NumDesCTP.TryGetCTP(agentCtpName, out var agCur) && ReferenceEquals(agCur, agentPane2)} CreatedWin={agentWin} ActiveWin={agentActiveWin}"
+                    );
+                    if (agentPane2.Visible || App.Workbooks.Count == 0)
+                        return;
+                    if (!string.IsNullOrEmpty(agentWin) && agentActiveWin != agentWin)
+                        return;
                     var _agentP = agentPane2;
-                    System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
-                    {
-                        try { if (_agentP.Visible) return; } catch { return; }
-                        ExcelAsyncUtil.QueueAsMacro(() =>
+                    System
+                        .Threading.Tasks.Task.Delay(2000)
+                        .ContinueWith(__ =>
                         {
-                            PluginLog.Write("[CTP][X] Agent X-close confirmed");
-                            _showAgentText = "Agent模式：关闭";
-                            CustomRibbon?.InvalidateControl("ShowAIAgent");
+                            try
+                            {
+                                if (_agentP.Visible)
+                                    return;
+                            }
+                            catch
+                            {
+                                return;
+                            }
+                            ExcelAsyncUtil.QueueAsMacro(() =>
+                            {
+                                PluginLog.Write("[CTP][X] Agent X-close confirmed");
+                                _showAgentText = "Agent模式：关闭";
+                                CustomRibbon?.InvalidateControl("ShowAIAgent");
+                            });
                         });
-                    });
                 };
             }
         }
@@ -2111,8 +2185,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         var path = wk.Path;
 
         List<(string, string, int, int)> targetList;
-        try { targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr, false); }
-        catch (InvalidOperationException ex) { MessageBox.Show(ex.Message, "搜索提示"); return; }
+        try
+        {
+            targetList = PubMetToExcelFunc.SearchKeyFromExcel(path, _excelSeachStr, false);
+        }
+        catch (InvalidOperationException ex)
+        {
+            MessageBox.Show(ex.Message, "搜索提示");
+            return;
+        }
         if (targetList.Count == 0)
         {
             var hint = ExcelIndex.ExcelIndexManager.Instance.IsOutdated
@@ -2772,14 +2853,57 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             return;
 
         var fileList = win.SelectedPaths;
-        var countFile = 0;
-        var failCount = 0;
         ExcelExporter.ClearNewFiles();
-        foreach (var path in fileList)
+
+        // Localizations 文件（需要 MergeLocalization）必须串行，其余并行处理
+        var locFiles = fileList
+            .Where(p => p.Contains("Localizations", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var normalFiles = fileList.Except(locFiles).ToList();
+
+        int successCount = 0,
+            failCount = 0;
+        var errors = new System.Collections.Concurrent.ConcurrentBag<string>();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        App.StatusBar =
+            $"开始并行导表（共 {fileList.Count} 个，{normalFiles.Count} 并行 + {locFiles.Count} 串行）…";
+
+        // ── 并行阶段（非 Localizations 文件）────────────────────────────────
+        // NLua 和 _newFiles（static List）存在潜在线程竞争：并行失败的文件自动降级串行重试。
+        var parallelFailed = new System.Collections.Concurrent.ConcurrentBag<string>();
+        Parallel.ForEach(
+            normalFiles,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1),
+            },
+            path =>
+            {
+                try
+                {
+                    var isAll = path.Contains("$");
+                    ExcelExporter.Export(
+                        path,
+                        Path.GetFileNameWithoutExtension(path),
+                        new List<FieldData>(),
+                        isAll,
+                        path.Contains("$$")
+                    );
+                    System.Threading.Interlocked.Increment(ref successCount);
+                }
+                catch
+                {
+                    parallelFailed.Add(path); // 并行失败 → 降级串行重试
+                }
+            }
+        );
+
+        // ── 串行重试（并行阶段失败的文件）──────────────────────────────────
+        foreach (var path in parallelFailed)
         {
             var name = Path.GetFileName(path);
-            LogDisplay.RecordLine($"[{DateTime.Now}] , {name} 开始导表");
-            App.StatusBar = $"{countFile}/{fileList.Count} 正在导出 {name}";
+            App.StatusBar = $"串行重试: {name}";
             try
             {
                 var isAll = path.Contains("$");
@@ -2790,6 +2914,33 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     isAll,
                     path.Contains("$$")
                 );
+                successCount++;
+                LogDisplay.RecordLine($"[{DateTime.Now}] , {name} 并行失败→串行重试成功");
+            }
+            catch (Exception ex)
+            {
+                errors.Add(name);
+                LogDisplay.RecordLine($"[{DateTime.Now}] , {name} 导出失败: {ex.Message}");
+                PluginLog.Write($"[ExcelToLua] {name} 失败: {ex}");
+            }
+        }
+
+        // ── 串行阶段（Localizations 文件）───────────────────────────────────
+        foreach (var path in locFiles)
+        {
+            var name = Path.GetFileName(path);
+            App.StatusBar = $"导出 Localizations: {name}";
+            try
+            {
+                var isAll = path.Contains("$");
+                ExcelExporter.Export(
+                    path,
+                    Path.GetFileNameWithoutExtension(path),
+                    new List<FieldData>(),
+                    isAll,
+                    path.Contains("$$")
+                );
+                successCount++;
             }
             catch (Exception ex)
             {
@@ -2797,16 +2948,30 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 LogDisplay.RecordLine($"[{DateTime.Now}] , {name} 导出失败: {ex.Message}");
                 PluginLog.Write($"[ExcelToLua] {name} 失败: {ex}");
             }
-            countFile++;
         }
+
+        failCount += errors.Count;
 
         if (ExcelExporter.NeedMergeLocalization)
             ExcelExporter.MergeLocalizationLuaFile();
 
-        var summary = failCount > 0 ? $"成功 {countFile - failCount}，失败 {failCount}" : $"共 {countFile} 个";
-        LogDisplay.RecordLine($"[{DateTime.Now}] , 导出结束，{summary}");
-        App.StatusBar = $"导出完成，{summary}";
-        ExcelExporter.NotifyUnityForNewFiles();
+        sw.Stop();
+        var summary =
+            failCount > 0 ? $"成功 {successCount}，失败 {failCount}" : $"共 {successCount} 个";
+        LogDisplay.RecordLine(
+            $"[{DateTime.Now}] , 导出结束，{summary}，耗时 {sw.Elapsed.TotalSeconds:F1}s"
+        );
+        App.StatusBar = $"导出完成，{summary}，耗时 {sw.Elapsed.TotalSeconds:F1}s";
+
+        // 并行后 _newFiles 内部状态可能损坏，先清空再通知，避免遍历时崩溃
+        ExcelExporter.ClearNewFiles();
+        try
+        {
+            ExcelExporter.NotifyUnityForNewFiles();
+        }
+        catch
+        { /* ignore */
+        }
     }
 
     public void CheckColFromExcelMulti_Click(IRibbonControl control)
@@ -3308,41 +3473,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         GlobalValue.SaveValue("FocusLabelText", FocusLabelText);
     }
 
-    private void SetupCellHistoryCallbacks()
-    {
-        CellGitHistoryController.OnQueryStart = () =>
-        {
-            if (CellHistoryTipText == "单元格历史：开启")
-            {
-                CellHistoryTipText = "单元格历史：查询中…";
-                ExcelAsyncUtil.QueueAsMacro(() =>
-                    CustomRibbon?.InvalidateControl("CellHistoryTipButton")
-                );
-            }
-        };
-        CellGitHistoryController.OnQueryEnd = () =>
-        {
-            if (CellHistoryTipText == "单元格历史：查询中…")
-            {
-                CellHistoryTipText = "单元格历史：开启";
-                ExcelAsyncUtil.QueueAsMacro(() =>
-                    CustomRibbon?.InvalidateControl("CellHistoryTipButton")
-                );
-            }
-        };
-    }
-
     private void CellHistoryTip_Toggle()
     {
-        if (CellHistoryTipText != "单元格历史：开启")
+        if (CellHistoryTipText != "谁的锅：开启")
         {
-            CellHistoryTipText = "单元格历史：开启";
-            SetupCellHistoryCallbacks();
+            CellHistoryTipText = "谁的锅：开启";
             CellGitHistoryController.Enable(App);
         }
         else
         {
-            CellHistoryTipText = "单元格历史：关闭";
+            CellHistoryTipText = "谁的锅：关闭";
             CellGitHistoryController.Disable();
         }
 
@@ -3377,21 +3517,37 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 sheetPane.VisibleStateChange += _ =>
                 {
                     var activeWin = App.ActiveWindow?.Caption ?? "";
-                    PluginLog.Write($"[CTP] SheetMenu VisibleStateChange: Visible={sheetPane.Visible} Workbooks={App.Workbooks.Count} CreatedWin={createdWin} ActiveWin={activeWin}");
-                    if (sheetPane.Visible || App.Workbooks.Count == 0) return;
-                    if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin) return;
+                    PluginLog.Write(
+                        $"[CTP] SheetMenu VisibleStateChange: Visible={sheetPane.Visible} Workbooks={App.Workbooks.Count} CreatedWin={createdWin} ActiveWin={activeWin}"
+                    );
+                    if (sheetPane.Visible || App.Workbooks.Count == 0)
+                        return;
+                    if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin)
+                        return;
                     var _sp2 = sheetPane;
-                    System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
-                    {
-                        try { if (_sp2.Visible) return; } catch { return; }
-                        ExcelAsyncUtil.QueueAsMacro(() =>
+                    System
+                        .Threading.Tasks.Task.Delay(2000)
+                        .ContinueWith(__ =>
                         {
-                            PluginLog.Write("[CTP][X] SheetMenu(ShowSheetMenu) X-close confirmed");
-                            SheetMenuText = "表格目录：关闭";
-                            CustomRibbon?.InvalidateControl("SheetMenu");
-                            GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
+                            try
+                            {
+                                if (_sp2.Visible)
+                                    return;
+                            }
+                            catch
+                            {
+                                return;
+                            }
+                            ExcelAsyncUtil.QueueAsMacro(() =>
+                            {
+                                PluginLog.Write(
+                                    "[CTP][X] SheetMenu(ShowSheetMenu) X-close confirmed"
+                                );
+                                SheetMenuText = "表格目录：关闭";
+                                CustomRibbon?.InvalidateControl("SheetMenu");
+                                GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
+                            });
                         });
-                    });
                 };
             }
         }
@@ -3470,6 +3626,16 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         ShowDnaLog();
     }
 
+    /// <summary>
+    /// 用户直接点击 PluginLogWindow 右上角 X 关闭时，同步 Ribbon 按钮状态。
+    /// </summary>
+    public static void OnLogWindowClosed()
+    {
+        ShowDnaLogText = "插件日志：关闭";
+        CustomRibbon?.InvalidateControl("ShowDnaLog");
+        GlobalValue.SaveValue("ShowDnaLogText", ShowDnaLogText);
+    }
+
     private static string _showAgentText = "Agent模式：关闭";
     private static AIAgentPanel _agentCtp;
 
@@ -3501,20 +3667,34 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 agentPane.VisibleStateChange += _ =>
                 {
                     var activeWin = App.ActiveWindow?.Caption ?? "";
-                    PluginLog.Write($"[CTP] Agent VisibleStateChange: Visible={agentPane.Visible} Workbooks={App.Workbooks.Count} CreatedWin={createdWin} ActiveWin={activeWin}");
-                    if (agentPane.Visible || App.Workbooks.Count == 0) return;
-                    if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin) return;
+                    PluginLog.Write(
+                        $"[CTP] Agent VisibleStateChange: Visible={agentPane.Visible} Workbooks={App.Workbooks.Count} CreatedWin={createdWin} ActiveWin={activeWin}"
+                    );
+                    if (agentPane.Visible || App.Workbooks.Count == 0)
+                        return;
+                    if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin)
+                        return;
                     var _ap2 = agentPane;
-                    System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
-                    {
-                        try { if (_ap2.Visible) return; } catch { return; }
-                        ExcelAsyncUtil.QueueAsMacro(() =>
+                    System
+                        .Threading.Tasks.Task.Delay(2000)
+                        .ContinueWith(__ =>
                         {
-                            PluginLog.Write("[CTP][X] Agent(ShowAIAgent) X-close confirmed");
-                            _showAgentText = "Agent模式：关闭";
-                            CustomRibbon?.InvalidateControl("ShowAIAgent");
+                            try
+                            {
+                                if (_ap2.Visible)
+                                    return;
+                            }
+                            catch
+                            {
+                                return;
+                            }
+                            ExcelAsyncUtil.QueueAsMacro(() =>
+                            {
+                                PluginLog.Write("[CTP][X] Agent(ShowAIAgent) X-close confirmed");
+                                _showAgentText = "Agent模式：关闭";
+                                CustomRibbon?.InvalidateControl("ShowAIAgent");
+                            });
                         });
-                    });
                 };
             }
         }
@@ -3558,21 +3738,35 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     chatPane.VisibleStateChange += _ =>
                     {
                         var activeWin = App.ActiveWindow?.Caption ?? "";
-                        PluginLog.Write($"[CTP] Chat VisibleStateChange: Visible={chatPane.Visible} Workbooks={App.Workbooks.Count} CreatedWin={createdWin} ActiveWin={activeWin}");
-                        if (chatPane.Visible || App.Workbooks.Count == 0) return;
-                        if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin) return;
+                        PluginLog.Write(
+                            $"[CTP] Chat VisibleStateChange: Visible={chatPane.Visible} Workbooks={App.Workbooks.Count} CreatedWin={createdWin} ActiveWin={activeWin}"
+                        );
+                        if (chatPane.Visible || App.Workbooks.Count == 0)
+                            return;
+                        if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin)
+                            return;
                         var _cp2 = chatPane;
-                        System.Threading.Tasks.Task.Delay(2000).ContinueWith(__ =>
-                        {
-                            try { if (_cp2.Visible) return; } catch { return; }
-                            ExcelAsyncUtil.QueueAsMacro(() =>
+                        System
+                            .Threading.Tasks.Task.Delay(2000)
+                            .ContinueWith(__ =>
                             {
-                                PluginLog.Write("[CTP][X] Chat(ShowAi) X-close confirmed");
-                                ShowAiText = "AI对话：关闭";
-                                CustomRibbon?.InvalidateControl("ShowAI");
-                                GlobalValue.SaveValue("ShowAIText", ShowAiText);
+                                try
+                                {
+                                    if (_cp2.Visible)
+                                        return;
+                                }
+                                catch
+                                {
+                                    return;
+                                }
+                                ExcelAsyncUtil.QueueAsMacro(() =>
+                                {
+                                    PluginLog.Write("[CTP][X] Chat(ShowAi) X-close confirmed");
+                                    ShowAiText = "AI对话：关闭";
+                                    CustomRibbon?.InvalidateControl("ShowAI");
+                                    GlobalValue.SaveValue("ShowAIText", ShowAiText);
+                                });
                             });
-                        });
                     };
                 }
             }

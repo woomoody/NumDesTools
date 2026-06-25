@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -94,7 +94,7 @@ internal sealed class CrosslightOverlay : IDisposable
         // 宏体首行闸门：读任何 COM 之前作废，封死入队→执行之间的 TOCTOU 窗口。
         if (CrosslightController.ShouldSuppressMacro())
         {
-            PluginLog.Write("[crosslight] UpdateCross suppressed");
+            PluginLog.Verbose("[crosslight] UpdateCross suppressed");
             return;
         }
 
@@ -490,8 +490,7 @@ internal sealed class CrosslightOverlay : IDisposable
                     && CrosslightController.EditingStaleMs() > 600
                 )
                 {
-                    PluginLog.Write(
-                        "[crosslight] stale _editing cleared (HIDE event missed)"
+                    PluginLog.Verbose("[crosslight] stale _editing cleared (HIDE event missed)"
                     );
                     CrosslightController.SetEditing(false);
                 }
@@ -516,7 +515,7 @@ internal sealed class CrosslightOverlay : IDisposable
                         // 原生对话框（Find/Replace/格式等）激活：屏蔽 refreshTimer 的 COM 调用，
                         // 防止与 Excel 内部操作并发导致堆损坏（0xc0000374）
                         CrosslightController.SetNativeDialogActive(true);
-                        PluginLog.Write($"[crosslight] else-branch focusClass={focusClass}");
+                        PluginLog.Verbose($"[crosslight] else-branch focusClass={focusClass}");
                         _gridFocused = false;
                         _editFreeze = false;
                         if (_rowBand.IsVisible || _colBand.IsVisible)
@@ -1122,7 +1121,7 @@ internal static class CrosslightController
     // 直接置位会导致非批注 double-click 时 _editing 永久为 true（WinEvent 不发 HIDE）。
     private static void OnSheetBeforeDoubleClick(object sh, Range target, ref bool cancel)
     {
-        PluginLog.Write("[crosslight] BeforeDoubleClick");
+        PluginLog.Verbose("[crosslight] BeforeDoubleClick");
     }
 
     private static void OnWindowDeactivate(object wb, object wn) =>

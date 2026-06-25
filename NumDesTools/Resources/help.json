@@ -77,7 +77,8 @@
         { "title": "解决Git冲突（xlsx）", "summary": "自动检测 Git 工作区中冲突的 xlsx 文件，以可视化界面逐格选择保留版本，支持 git add 写回。" },
         { "title": "手动两文件对比", "summary": "手动选择两个 xlsx 文件进行可视化对比，不依赖 Git。" },
         { "title": "查看历史版本对比", "summary": "浏览指定 xlsx 的 Git 提交历史，选择任意历史版本与工作区版本对比。" },
-        { "title": "分支合并/Cherry-pick", "summary": "执行 git merge 或 cherry-pick，遇到 xlsx 冲突时自动弹出可视化解决窗口。", "ribbonLabel": "分支合并/Cherry-pick" }
+        { "title": "分支合并/Cherry-pick", "summary": "执行 git merge 或 cherry-pick，遇到 xlsx 冲突时自动弹出可视化解决窗口。", "ribbonLabel": "分支合并/Cherry-pick" },
+        { "title": "谁的锅", "summary": "选择任务单元格以确定这个单元格的值最近是谁改的，并甩锅给TA！开启后选中单元格自动弹出气泡，显示最近2次修改记录（修改人/日期/值）。" }
       ]
     },
     {

@@ -84,7 +84,7 @@ public class ExcelSearchIndex
             idx?.RebuildLookups();
             return idx;
         }
-        catch { return null; }
+        catch (Exception ex) { PluginLog.Write($"[ExcelIndex] LoadFromDisk failed: {ex.GetType().Name}: {ex.Message}"); return null; }
     }
 
     /// <summary>根据 Excels 根目录路径生成 JSON 文件名（可读且唯一）</summary>

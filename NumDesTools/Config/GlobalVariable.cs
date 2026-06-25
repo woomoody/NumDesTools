@@ -43,7 +43,7 @@ namespace NumDesTools.Config
             { "LogRetentionDays", "30" },
             { "GitRootPath", "" },
             { "ConflictSkipHashFiles", "true" },
-            { "CellHistoryTipText", "单元格历史：关闭" },
+            { "CellHistoryTipText", "谁的锅：关闭" },
             { "SpotlightMode", "overlay" },
             {
                 "OutputRootPath",

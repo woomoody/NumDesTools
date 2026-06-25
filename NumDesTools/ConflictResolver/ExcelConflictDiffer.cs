@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using MiniExcelLibs;
 using OfficeOpenXml;
 using CompressionLevel = System.IO.Compression.CompressionLevel;
 
@@ -43,7 +44,7 @@ public static class ExcelConflictDiffer
         {
             Parallel.Invoke(
                 () => oursBundle = ReadAllSheets(safeOurs, sheetNames, readMeta: true),
-                () => theirsBundle = ReadAllSheets(safeTheirs, sheetNames, readMeta: false),
+                () => theirsBundle = ReadAllSheets(safeTheirs, sheetNames, readMeta: true),
                 () => baseBundle = ReadAllSheets(safeBase, sheetNames, readMeta: false)
             );
         }
@@ -51,7 +52,7 @@ public static class ExcelConflictDiffer
         {
             Parallel.Invoke(
                 () => oursBundle = ReadAllSheets(safeOurs, sheetNames, readMeta: true),
-                () => theirsBundle = ReadAllSheets(safeTheirs, sheetNames, readMeta: false)
+                () => theirsBundle = ReadAllSheets(safeTheirs, sheetNames, readMeta: true)
             );
         }
 
@@ -100,14 +101,20 @@ public static class ExcelConflictDiffer
         {
             Sheets = new Dictionary<string, SheetData>(sheetNames.Count),
         };
-        using var pkg = new ExcelPackage(new FileInfo(path));
-        // 禁止 EPPlus 自动重算公式，避免公式错误单元格触发 RuntimeBinderException
-        pkg.Workbook.CalcMode = ExcelCalcMode.Manual;
 
         foreach (var sheetName in sheetNames)
         {
-            var ws = pkg.Workbook.Worksheets[sheetName] ?? pkg.Workbook.Worksheets.FirstOrDefault();
-            if (ws?.Dimension == null)
+            // MiniExcel 流式读取（内存约为 EPPlus 的 1/10）
+            // useHeaderRow:false → 每行是 IDictionary<string,object>，key 为列字母 "A","B",...
+            List<IDictionary<string, object>> allRows;
+            try
+            {
+                allRows = MiniExcel
+                    .Query(path, sheetName: sheetName, useHeaderRow: false)
+                    .Cast<IDictionary<string, object>>()
+                    .ToList();
+            }
+            catch
             {
                 bundle.Sheets[sheetName] = new SheetData
                 {
@@ -119,75 +126,69 @@ public static class ExcelConflictDiffer
                 continue;
             }
 
-            var dim = ws.Dimension;
-            int colCount = dim.End.Column;
-            int rowCount = dim.End.Row;
+            if (allRows.Count < 2)
+            {
+                bundle.Sheets[sheetName] = new SheetData
+                {
+                    Columns = [],
+                    Rows = [],
+                    TypeRow = new(),
+                    LabelRow = new(),
+                };
+                continue;
+            }
 
-            // 第2行为列名（header），第3行 type，第4行 label，第5行起为数据
-            var columns = new List<string>(colCount);
-            var colEpplusIdx = new List<int>(colCount); // columns[i] 对应的 EPPlus 1-based 列号
+            // 行2（index 1）= 列名；行3（index 2）= type；行4（index 3）= label；行5+（index 4+）= 数据
+            var row2 = allRows[1];
+            var row3 = allRows.Count > 2 ? allRows[2] : null;
+            var row4 = allRows.Count > 3 ? allRows[3] : null;
+
+            // 按列字母排序构建有序列表（A,B,...,Z,AA,AB,...）
+            var colEntries = row2
+                .Where(kv => !string.IsNullOrEmpty(kv.Value?.ToString()))
+                .Select(kv => (letter: kv.Key, name: kv.Value!.ToString()!))
+                .OrderBy(x => x.letter.Length)
+                .ThenBy(x => x.letter)
+                .ToList();
+
+            var columns = colEntries.Select(x => x.name).ToList();
             var typeRow = new Dictionary<string, string>(
-                readMeta ? colCount : 0,
+                readMeta ? columns.Count : 0,
                 StringComparer.Ordinal
             );
             var labelRow = new Dictionary<string, string>(
-                readMeta ? colCount : 0,
+                readMeta ? columns.Count : 0,
                 StringComparer.Ordinal
             );
 
-            for (int c = 1; c <= colCount; c++)
+            if (readMeta)
             {
-                string h;
-                try
+                foreach (var (letter, name) in colEntries)
                 {
-                    h = ws.Cells[2, c].Value?.ToString() ?? string.Empty;
-                }
-                catch
-                {
-                    h = string.Empty;
-                }
-                if (string.IsNullOrEmpty(h))
-                    continue;
-                columns.Add(h);
-                colEpplusIdx.Add(c);
-                if (readMeta)
-                {
-                    try
-                    {
-                        typeRow[h] = ws.Cells[3, c].Value?.ToString() ?? string.Empty;
-                    }
-                    catch
-                    {
-                        typeRow[h] = string.Empty;
-                    }
-                    try
-                    {
-                        labelRow[h] = ws.Cells[4, c].Value?.ToString() ?? string.Empty;
-                    }
-                    catch
-                    {
-                        labelRow[h] = string.Empty;
-                    }
+                    typeRow[name] =
+                        row3 != null && row3.TryGetValue(letter, out var t)
+                            ? t?.ToString() ?? string.Empty
+                            : string.Empty;
+                    labelRow[name] =
+                        row4 != null && row4.TryGetValue(letter, out var l)
+                            ? l?.ToString() ?? string.Empty
+                            : string.Empty;
                 }
             }
 
-            // 数据从第5行起（第2行header，第3行type，第4行label）
-            const int dataStartRow = 5;
-            var rows = new List<string[]>(Math.Max(0, rowCount - dataStartRow + 1));
-
-            for (int r = dataStartRow; r <= rowCount; r++)
+            // 数据从第5行起（allRows index 4+）
+            var rows = new List<string[]>(Math.Max(0, allRows.Count - 4));
+            for (int i = 4; i < allRows.Count; i++)
             {
-                var row = new string[columns.Count];
-                for (int i = 0; i < columns.Count; i++)
+                var raw = allRows[i];
+                var row = new string[colEntries.Count];
+                for (int j = 0; j < colEntries.Count; j++)
                 {
-                    try
-                    {
-                        row[i] = ws.Cells[r, colEpplusIdx[i]].Value?.ToString() ?? string.Empty;
-                    }
-                    catch
-                    {
-                        row[i] = string.Empty;
-                    }
+                    var letter = colEntries[j].letter;
+                    row[j] =
+                        raw.TryGetValue(letter, out var v)
+                            ? v?.ToString() ?? string.Empty
+                            : string.Empty;
                 }
                 rows.Add(row);
             }
@@ -371,10 +372,24 @@ public static class ExcelConflictDiffer
             );
         }
 
+        // TypeRow / LabelRow：THEIRS 优先填充（新列），OURS 覆盖（已有列）
+        // 这样 Apply 阶段 EnsureNewColsMeta 能正确填入 THEIRS 新增列的 type/label
+        var mergedType = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var kv in theirs.TypeRow ?? new())
+            mergedType[kv.Key] = kv.Value;
+        foreach (var kv in ours.TypeRow ?? new())
+            mergedType[kv.Key] = kv.Value;
+
+        var mergedLabel = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var kv in theirs.LabelRow ?? new())
+            mergedLabel[kv.Key] = kv.Value;
+        foreach (var kv in ours.LabelRow ?? new())
+            mergedLabel[kv.Key] = kv.Value;
+
         return new SheetDiff(sheetName, rows)
         {
-            TypeRow = ours.TypeRow ?? new(),
-            LabelRow = ours.LabelRow ?? new(),
+            TypeRow = mergedType,
+            LabelRow = mergedLabel,
             AllColumns = allCols,
         };
     }
