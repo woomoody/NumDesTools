@@ -2634,7 +2634,20 @@ public static class PubMetToExcelFunc
             }
         }
         else
-            PluginLog.Write($"[ExcelIndex] index not ready, fallback full scan");
+        {
+            PluginLog.Write($"[ExcelIndex] index not ready");
+            var msg = "搜索索引未准备好（正在后台构建或缓存文件不存在）。\n\n"
+                + "• 点击「是」→ 使用慢速全文件遍历（可能需要几十秒）\n"
+                + "• 点击「否」→ 等待索引构建完成后重试（通常 30 秒内就绪）";
+            var choice = System.Windows.MessageBox.Show(
+                msg,
+                "搜索索引未就绪",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Warning
+            );
+            if (choice != System.Windows.MessageBoxResult.Yes)
+                return new List<(string, string, int, int)>();
+        }
 
         var filesCollection = new SelfExcelFileCollector(rootPath);
         var files = filesCollection.GetAllExcelFilesPath();
