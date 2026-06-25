@@ -88,15 +88,39 @@ internal sealed class ExcelIndexManager
     // ── 搜索 ────────────────────────────────────────────────────────────────
 
     /// <summary>
+    /// 确保 _index 不为 null：如果内存索引为空且磁盘有缓存，从磁盘加载。
+    /// 避免搜索时因索引未加载而 fallback 到全文件扫描。
+    /// </summary>
+    private ExcelSearchIndex? EnsureIndexLoaded()
+    {
+        var idx = _index;
+        if (idx != null)
+            return idx;
+        if (_excelsRoot == null)
+            return null;
+
+        var jsonPath = ExcelSearchIndex.GetIndexPath(_excelsRoot);
+        var disk = ExcelSearchIndex.LoadFromDisk(jsonPath);
+        if (disk == null)
+            return null;
+
+        PluginLog.Write("[ExcelIndex] loaded from disk cache on search request");
+        disk.BuildSortedKeys();
+        _index = disk;
+        return disk;
+    }
+
+    /// <summary>
     /// 精确搜索。返回 null 表示索引未就绪（调用方 fallback 全扫）。
     /// 返回空列表表示确实没有命中。
+    /// 内存索引为空时先从磁盘加载缓存，避免全扫。
     /// </summary>
     public List<(string file, string sheet, int row, int col)>? TrySearch(
         string value,
         int colFilter = 0
     )
     {
-        var idx = _index;
+        var idx = EnsureIndexLoaded();
         if (idx == null)
             return null;
         if (!idx.Exact.TryGetValue(value, out var hits))
@@ -134,7 +158,7 @@ internal sealed class ExcelIndexManager
         int colFilter = 0
     )
     {
-        var idx = _index;
+        var idx = EnsureIndexLoaded();
         if (idx == null || idx.SortedKeys == null)
             return null;
 
@@ -171,7 +195,7 @@ internal sealed class ExcelIndexManager
         int colFilter = 0
     )
     {
-        var idx = _index;
+        var idx = EnsureIndexLoaded();
         if (idx == null)
             return null;
 
