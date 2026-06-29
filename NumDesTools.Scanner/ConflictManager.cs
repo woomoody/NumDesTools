@@ -51,12 +51,12 @@ internal static class ConflictManager
 
                 var sig = repo.Config.BuildSignature(DateTimeOffset.Now);
                 repo.Commit(msg, sig, sig, new LibGit2Sharp.CommitOptions());
-                Console.WriteLine("[Scanner] 冲突已全部解决，已自动提交。");
+                Console.WriteLine("[conflict_manager] 冲突已全部解决，已自动提交。");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Scanner] 自动提交失败（可手动提交）: {ex.Message}");
+            Console.WriteLine($"[conflict_manager] 自动提交失败（可手动提交）: {ex.Message}");
         }
 
         return 0;
