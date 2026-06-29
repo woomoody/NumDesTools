@@ -218,7 +218,8 @@
       "WebFetch(domain:awesomeopensource.com)",
       "WebFetch(domain:www.nuget.org)",
       "WebFetch(domain:excel-dna.net)",
-      "WebFetch(domain:docs.avaloniaui.net)"
+      "WebFetch(domain:docs.avaloniaui.net)",
+      "WebFetch(*)"
     ],
     "defaultMode": "bypassPermissions",
     "additionalDirectories": [

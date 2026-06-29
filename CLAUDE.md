@@ -121,14 +121,14 @@ LiteLLM 网关地址：`https://litellm.solotopia.net/v1/chat/completions`，Key
 | 多语言翻译（游戏文案、UI 字符串） | Workflow → `deepseek-v4-flash` | 满分且最省，本地化最地道 |
 | 批量数据处理、格式化、简单分类 | Workflow → `deepseek-v4-flash` | 便宜快，不需要推理 |
 | 中文游戏配置分析（数值合理性、配置审查） | 当前会话模型（sonnet/opus） | 有项目 Memory 和设计规范加成，实测优于 qwen |
-| 复杂推理、数值系统设计、留存分析 | Workflow → `claude-opus-4-8` | 能识别前提矛盾，系统思维最强 |
-| 竞品分析（多源采集+综合） | Workflow → fan-out `deepseek-v4-flash` 采集，`claude-opus-4-8` 综合 | 脏活便宜做，深度分析用强模型 |
+| 复杂推理、数值系统设计、留存分析 | Workflow → `claude-opus-4-8-v1` | 能识别前提矛盾，系统思维最强 |
+| 竞品分析（多源采集+综合） | Workflow → fan-out `deepseek-v4-flash` 采集，`claude-opus-4-8-v1` 综合 | 脏活便宜做，深度分析用强模型 |
 | 需要读写文件/代码/git 的任务 | 当前会话模型（sonnet/opus）直接处理 | 其他模型没有 CC 工具访问权限 |
 | 跨类型混合任务、多轮对话、无法归类 | 当前会话模型（sonnet/opus）兜底 | 保持上下文连贯 |
 
 ### 多 Agent / Workflow 规则
 
-- **至少 1 个 agent 必须是 `claude-sonnet-4-6` 或 `claude-opus-4-8`**，承担协调、验证或综合角色。
+- **至少 1 个 agent 必须是 `claude-sonnet-4-6-v1` 或 `claude-opus-4-8-v1`**，承担协调、验证或综合角色。（⚠️ 必须带 `-v1`，不带会被网关改路成 GLM）
 - 其他 agent 可用任意 LiteLLM 模型，按任务类型从映射表选取。
 - 不确定质量的结果必须经过 sonnet/opus 二次核查后再返回用户。
 

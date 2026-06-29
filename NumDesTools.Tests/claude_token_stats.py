@@ -77,13 +77,16 @@ def _pull_remote_jsonl(ssh_host, remote_path, label):
             cr  = usage.get('cache_read_input_tokens', 0) or 0
             cw  = usage.get('cache_creation_input_tokens', 0) or 0
             if inp + out + cr + cw == 0: continue
-            yield proj_key, date_str, inp, out, cr, cw
+            if out < 200 and cr == 0 and cw == 0: continue
+            model = (obj.get('model') or (obj.get('message') or {}).get('model') or '<empty>')
+            yield proj_key, date_str, inp, out, cr, cw, model
 
 # ── 数据采集 ──────────────────────────────────────────────────────────────────
 _zero = lambda: {'input':0,'output':0,'cache_read':0,'cache_write':0,'cost':0.0}
-daily      = defaultdict(_zero)
-monthly    = defaultdict(_zero)
-proj_daily = defaultdict(lambda: defaultdict(_zero))
+daily       = defaultdict(_zero)
+monthly     = defaultdict(_zero)
+proj_daily  = defaultdict(lambda: defaultdict(_zero))
+model_daily = defaultdict(_zero)
 total_msgs = skipped = 0
 
 for BASE, prefix in BASES:
@@ -93,6 +96,9 @@ for BASE, prefix in BASES:
         if not os.path.isdir(proj_path): continue
         proj_key = f"{prefix}{proj}"
         for dirpath, _, files in os.walk(proj_path):
+            # 跳过 subagents/workflows 子目录（子 agent 日志会重复计入主会话已统计的 token）
+            if os.sep + 'subagents' in dirpath or os.sep + 'workflows' in dirpath:
+                continue
             for f in sorted(files):
                 if not f.endswith('.jsonl'): continue
                 fpath = os.path.join(dirpath, f)
@@ -118,12 +124,17 @@ for BASE, prefix in BASES:
                             cr  = usage.get('cache_read_input_tokens',0) or 0
                             cw  = usage.get('cache_creation_input_tokens',0) or 0
                             if inp+out+cr+cw == 0: continue
+                            # 过滤异常记录：output 极小且无 cache 的疑似工具/重试噪音
+                            # 正常对话 output 几千+，cache_read 巨大；这类 out<200&cache=0 是噪音
+                            if out < 200 and cr == 0 and cw == 0:
+                                skipped += 1; continue
                             model = (obj.get('model') or
-                                     (obj.get('message') or {}).get('model') or '')
+                                     (obj.get('message') or {}).get('model') or '<empty>')
                             cost  = calc_cost(inp, out, cr, cw, model)
                             total_msgs += 1
                             for d in (daily[date_str], monthly[date_str[:7]],
-                                      proj_daily[proj_key][date_str]):
+                                      proj_daily[proj_key][date_str],
+                                      model_daily[model]):
                                 d['input']      += inp
                                 d['output']     += out
                                 d['cache_read'] += cr
@@ -134,11 +145,11 @@ for BASE, prefix in BASES:
 
 for ssh_host, remote_path, label in REMOTES:
     print(f"  正在读取远程 {label} ({ssh_host})...", flush=True)
-    for proj_key, date_str, inp, out, cr, cw in _pull_remote_jsonl(ssh_host, remote_path, label):
+    for proj_key, date_str, inp, out, cr, cw, model in _pull_remote_jsonl(ssh_host, remote_path, label):
         total_msgs += 1
-        cost = calc_cost(inp, out, cr, cw, proj_key)  # 远端暂用 proj_key 近似
+        cost = calc_cost(inp, out, cr, cw, model)
         for d in (daily[date_str], monthly[date_str[:7]],
-                  proj_daily[proj_key][date_str]):
+                  proj_daily[proj_key][date_str], model_daily[model]):
             d['input']      += inp;  d['output']     += out
             d['cache_read'] += cr;   d['cache_write']+= cw
             d['cost']       += cost
@@ -161,10 +172,11 @@ def period_stats(days):
             sc+=v['cost']; dc+=1
     return dc, si, so, scr, scw, sc
 
-# 填充完整日期轴
+# 填充完整日期轴：从最早记录到今天（含 0 用量的天，避免图表跳过空白天造成数据丢失错觉）
 if daily:
     raw = sorted(daily.keys())
-    d0, d1 = date.fromisoformat(raw[0]), date.fromisoformat(raw[-1])
+    d0 = date.fromisoformat(raw[0])
+    d1 = today
     all_dates = [(d0+timedelta(days=i)).isoformat() for i in range((d1-d0).days+1)]
 else:
     all_dates = []
@@ -176,10 +188,10 @@ chart_input   = [daily.get(d,empty)['input']/1000  for d in chart_dates]
 chart_cr      = [daily.get(d,empty)['cache_read']/1000 for d in chart_dates]
 chart_cost    = [round(daily.get(d, {'cost':0.0})['cost'], 2) for d in chart_dates]
 
-# 每日明细行
+# 每日明细行（遍历完整日期轴，0 用量的天也显示，便于确认数据连续未丢）
 detail_rows = ''
-for d in sorted(daily.keys()):
-    v = daily[d]
+for d in all_dates:
+    v = daily.get(d) or {'input':0,'output':0,'cache_read':0,'cache_write':0,'cost':0.0}
     i,o,cr,cw,c = v['input'],v['output'],v['cache_read'],v['cache_write'],v['cost']
     detail_rows += f'<tr><td>{d}</td><td>{cn_num(i)}</td><td>{cn_num(o)}</td><td>{cn_num(cr)}</td><td>{cn_num(cw)}</td><td>{cn_num(i+o)}</td><td>{cn_num(i+o+cr+cw)}</td><td>${c:.2f}</td></tr>\n'
 
@@ -196,6 +208,17 @@ proj_list.sort(key=lambda x: -x[5])
 for proj,pi,po,pcr,pcw,pc in proj_list:
     short = proj[-60:] if len(proj)>60 else proj
     proj_rows += f'<tr><td title="{proj}">{short}</td><td>{cn_num(pi)}</td><td>{cn_num(po)}</td><td>{cn_num(pcr)}</td><td>{cn_num(pcw)}</td><td>${pc:.2f}</td></tr>\n'
+
+# 模型汇总行（按 input 降序，看出哪个模型吃掉了 token）
+model_rows = ''
+model_list = []
+for m, v in model_daily.items():
+    mi,mo,mcr,mcw,mc = v['input'],v['output'],v['cache_read'],v['cache_write'],v['cost']
+    if mi+mo+mcr+mcw == 0: continue
+    model_list.append((m, mi, mo, mcr, mcw, mc))
+model_list.sort(key=lambda x: -x[1])
+for m,mi,mo,mcr,mcw,mc in model_list:
+    model_rows += f'<tr><td>{m}</td><td>{cn_num(mi)}</td><td>{cn_num(mo)}</td><td>{cn_num(mcr)}</td><td>{cn_num(mcw)}</td><td>{cn_num(mi+mo+mcr+mcw)}</td><td>${mc:.2f}</td></tr>\n'
 
 # 汇总卡数据
 dc7,si7,so7,scr7,scw7,cost7   = period_stats(7)
@@ -324,6 +347,14 @@ html = f'''<!DOCTYPE html>
       <th>实计(in+out)</th><th>配额消耗(全)</th><th>费用USD</th>
     </tr></thead>
     <tbody>{detail_rows}</tbody>
+  </table>
+</div>
+
+<div class="section">
+  <h2>按模型汇总（按 input 降序，识别哪个模型吃掉了 token）</h2>
+  <table class="data">
+    <thead><tr><th>模型</th><th>input</th><th>output</th><th>缓存读</th><th>缓存写</th><th>配额消耗(全)</th><th>费用USD</th></tr></thead>
+    <tbody>{model_rows}</tbody>
   </table>
 </div>
 
