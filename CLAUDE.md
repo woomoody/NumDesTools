@@ -128,6 +128,10 @@ LiteLLM 网关地址：`https://litellm.solotopia.net/v1/chat/completions`，Key
 
 ### 多 Agent / Workflow 规则
 
+- **所有 Workflow 脚本里的 `agent()` 调用必须显式传 `model` 参数**，不能依赖继承——网关会把无 `-v1` 的 claude 名字改路成 GLM。
+  - Claude 协调/综合角色：`model: "claude-sonnet-4-6-v1"` 或 `model: "claude-opus-4-8-v1"`
+  - 批量采集/翻译/格式化：`model: "deepseek-v4-flash"`
+  - 复杂推理/架构：`model: "claude-opus-4-8-v1"`
 - **至少 1 个 agent 必须是 `claude-sonnet-4-6-v1` 或 `claude-opus-4-8-v1`**，承担协调、验证或综合角色。（⚠️ 必须带 `-v1`，不带会被网关改路成 GLM）
 - 其他 agent 可用任意 LiteLLM 模型，按任务类型从映射表选取。
 - 不确定质量的结果必须经过 sonnet/opus 二次核查后再返回用户。
