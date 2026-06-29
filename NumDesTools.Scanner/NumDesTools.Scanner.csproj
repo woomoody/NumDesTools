@@ -39,14 +39,5 @@
     <ProjectReference Include="..\NumDesTools\NumDesTools.csproj" />
   </ItemGroup>
 
-  <!-- publish 后把单文件 exe 复制到 packFromBin\scanner_publish，供对外分发 -->
-  <Target Name="CopyToPackFromBin" AfterTargets="Publish">
-    <PropertyGroup>
-      <ScannerPublishDir>$(MSBuildThisFileDirectory)..\packFromBin\scanner_publish\</ScannerPublishDir>
-    </PropertyGroup>
-    <MakeDir Directories="$(ScannerPublishDir)" />
-    <Copy SourceFiles="$(PublishDir)NumDesTools.Scanner.exe" DestinationFolder="$(ScannerPublishDir)" />
-    <Message Text="[Scanner] 单文件 exe → $(ScannerPublishDir)" Importance="high" />
-  </Target>
 
 </Project>
