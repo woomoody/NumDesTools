@@ -113,9 +113,11 @@ public static class ConflictApplier
         // 如果所有 OnlyTheirs 行都没有 TheirsRowIndex（旧数据兼容）则退回追加末尾
         if (theirsOrdered.All(r => r.DiffType == RowDiffType.OnlyTheirs && r.TheirsRowIndex < 0))
         {
-            foreach (var rc in sheetDiff.Rows.Where(r =>
-                r.DiffType == RowDiffType.OnlyTheirs && r.RowChoice == ConflictChoice.Theirs
-            ))
+            foreach (
+                var rc in sheetDiff.Rows.Where(r =>
+                    r.DiffType == RowDiffType.OnlyTheirs && r.RowChoice == ConflictChoice.Theirs
+                )
+            )
                 LegacyAppendTheirsRow(sheet, rc, allCols);
             return;
         }
@@ -145,8 +147,7 @@ public static class ConflictApplier
                 {
                     var colCount = sheet.Dimension?.End.Column ?? 1;
                     for (int col = 1; col <= colCount; col++)
-                        sheet.Cells[insertAt, col].StyleID =
-                            sheet.Cells[insertAt - 1, col].StyleID;
+                        sheet.Cells[insertAt, col].StyleID = sheet.Cells[insertAt - 1, col].StyleID;
                 }
 
                 // 写入 THEIRS 行数据
@@ -337,16 +338,25 @@ public static class ConflictApplier
                 Path.Combine(git, "rebase-merge", "message"),
                 Path.Combine(git, "rebase-apply", "msg"),
             };
-            var target = candidates.FirstOrDefault(File.Exists)
-                         ?? candidates[0]; // 兜底：建 MERGE_MSG
+            var target = candidates.FirstOrDefault(File.Exists) ?? candidates[0]; // 兜底：建 MERGE_MSG
 
             var existing = File.Exists(target) ? File.ReadAllText(target) : "";
             if (existing.Contains(line))
                 return;
-            if (File.Exists(target))
-                File.AppendAllText(target, $"\n{line}");
+
+            string updated;
+            if (!File.Exists(target))
+            {
+                updated = line;
+            }
             else
-                File.WriteAllText(target, line);
+            {
+                // 插到第一个 "# " 注释行之前（# Conflicts: 块），让解决记录出现在输入框可见区
+                var insertAt = existing.IndexOf("\n# ", StringComparison.Ordinal);
+                updated =
+                    insertAt >= 0 ? existing.Insert(insertAt, $"\n{line}") : existing + $"\n{line}";
+            }
+            File.WriteAllText(target, updated);
 
             PluginLog.Write($"[ConflictApplier] 冲突日志 → {Path.GetFileName(target)}: {line}");
         }
