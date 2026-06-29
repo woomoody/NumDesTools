@@ -9,9 +9,15 @@
     <AssemblyName>NumDesTools.Scanner</AssemblyName>
     <RootNamespace>NumDesTools.Scanner</RootNamespace>
     <Nullable>enable</Nullable>
-    <!-- 发布为单文件独立可执行，方便 Cron 直接调用 -->
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+
+  <!-- dotnet publish -c Release 时生效：单文件独立包，不需要目标机装 .NET -->
+  <!-- Build 时这段不生效，本地 scanner_publish/ 仍走普通 dll 集合 -->
+  <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <PublishReadyToRun>false</PublishReadyToRun>
   </PropertyGroup>
 
   <!-- UseWPF=true 切换到 Microsoft.NET.Sdk.WindowsDesktop，隐式 using 集合与
