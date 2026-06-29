@@ -116,6 +116,11 @@ internal class Program
     {
         Console.OutputEncoding = Encoding.UTF8;
 
+        // ── xlsx 冲突解决 WPF GUI（独立，可被 lazygit/SmartGit/Fork 调用）──────
+        // 用法：--conflict-gui <ours.xlsx> <theirs.xlsx>
+        if (args.Contains("--conflict-gui"))
+            return ConflictGui.Run(args);
+
         // ── xlsx 冲突解决 TUI（独立，不依赖飞书）────────────────────────────────
         // 用法：--conflict <ours.xlsx> <theirs.xlsx> [base.xlsx]
         if (args.Contains("--conflict"))
@@ -125,6 +130,11 @@ internal class Program
         // 用法：--search [--index <path.json.gz>]
         if (args.Contains("--search"))
             return SearchTui.Run(args);
+
+        // ── Excel 索引构建（独立，不依赖插件进程）──────────────────────────────
+        // 用法：--build-index <excels-root-dir>
+        if (args.Contains("--build-index"))
+            return IndexBuilder.Run(args);
 
         // ── 配置自检模式（独立，不依赖飞书）────────────────────────────────────
         if (args.Contains("--validate"))

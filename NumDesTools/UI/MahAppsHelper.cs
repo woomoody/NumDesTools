@@ -41,7 +41,9 @@ internal static class MahAppsHelper
 
     internal static void SetExcelOwner(System.Windows.Window window)
     {
-        new WindowInteropHelper(window).Owner = (IntPtr)ExcelDnaUtil.WindowHandle;
+        var hwnd = (IntPtr)ExcelDnaUtil.WindowHandle;
+        if (hwnd != IntPtr.Zero)
+            new WindowInteropHelper(window).Owner = hwnd;
         window.Loaded += (_, _) => AttachTitleBarDrag(window);
     }
 
