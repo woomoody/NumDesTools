@@ -14,6 +14,22 @@ internal class ExcelIndexBuilder
 {
     private readonly string _excelsRoot;
 
+    /// <summary>
+    /// 测试用 seam：覆盖文件列表收集，返回绝对路径数组。
+    /// 生产代码保持 null，走真实 SelfExcelFileCollector 路径。
+    /// </summary>
+    internal Func<string[]>? FileListOverride;
+
+    /// <summary>
+    /// 测试用 seam：覆盖真实文件扫描。
+    /// 签名：(absPath, bag) → 向 bag 写入命中记录。
+    /// 生产代码保持 null，走真实 MiniExcel 路径。
+    /// </summary>
+    internal Action<
+        string,
+        ConcurrentBag<(string relPath, string sheet, string val, int row, int col, string md5)>
+    >? ScanOverride;
+
     public ExcelIndexBuilder(string excelsRoot) => _excelsRoot = excelsRoot;
 
     /// <summary>
@@ -23,34 +39,54 @@ internal class ExcelIndexBuilder
     public ExcelSearchIndex Build(
         ExcelSearchIndex? existing = null,
         IProgress<(int done, int total)>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
-        var files = new SelfExcelFileCollector(_excelsRoot).GetAllExcelFilesPath();
+        var files =
+            FileListOverride != null
+                ? FileListOverride()
+                : new SelfExcelFileCollector(_excelsRoot).GetAllExcelFilesPath();
         var total = files.Length;
         var done = 0;
 
         // 确定需要重扫的文件（MD5 变化或新增）
-        var toRebuild = files
-            .Where(f => NeedsRebuild(f, existing))
-            .ToArray();
+        var toRebuild = files.Where(f => NeedsRebuild(f, existing)).ToArray();
 
         var newIndex = new ExcelSearchIndex { BuiltAt = DateTime.UtcNow };
 
         // 把未变化文件的命中从 existing 迁移进 newIndex
         if (existing != null)
-            MergeUnchanged(existing, files.Except(toRebuild, StringComparer.OrdinalIgnoreCase), newIndex);
+            MergeUnchanged(
+                existing,
+                files.Except(toRebuild, StringComparer.OrdinalIgnoreCase),
+                newIndex
+            );
 
         // 并行扫需要重建的文件
-        var bag = new ConcurrentBag<(string relPath, string sheet, string val, int row, int col, string md5)>();
+        var bag =
+            new ConcurrentBag<(
+                string relPath,
+                string sheet,
+                string val,
+                int row,
+                int col,
+                string md5
+            )>();
+        var scanFunc = ScanOverride ?? ((f, b) => ScanFile(f, b));
         Parallel.ForEach(
             toRebuild,
-            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = ct },
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                CancellationToken = ct,
+            },
             file =>
             {
-                ScanFile(file, bag);
+                scanFunc(file, bag);
                 var cur = Interlocked.Increment(ref done);
                 progress?.Report((cur, total));
-            });
+            }
+        );
 
         // 单线程合并 bag → newIndex（避免 Dictionary 并发写）
         var knownPairs = new HashSet<(int, int)>();
@@ -58,9 +94,11 @@ internal class ExcelIndexBuilder
         {
             AddHit(newIndex, relPath, sheet, val, row, col);
             newIndex.FileMd5[relPath] = md5;
-            if (newIndex.FileIds.TryGetValue(relPath, out var fid) &&
-                newIndex.SheetIds.TryGetValue(sheet, out var sid) &&
-                knownPairs.Add((fid, sid)))
+            if (
+                newIndex.FileIds.TryGetValue(relPath, out var fid)
+                && newIndex.SheetIds.TryGetValue(sheet, out var sid)
+                && knownPairs.Add((fid, sid))
+            )
                 newIndex.AllSheets.Add((fid, sid));
         }
 
@@ -71,16 +109,25 @@ internal class ExcelIndexBuilder
 
     private bool NeedsRebuild(string absPath, ExcelSearchIndex? existing)
     {
-        if (existing == null) return true;
+        if (existing == null)
+            return true;
         var rel = ToRelative(absPath);
-        if (!existing.FileMd5.TryGetValue(rel, out var oldMd5)) return true;
-        try { return ComputeMd5(absPath) != oldMd5; }
-        catch { return true; }
+        if (!existing.FileMd5.TryGetValue(rel, out var oldMd5))
+            return true;
+        try
+        {
+            return ComputeMd5(absPath) != oldMd5;
+        }
+        catch
+        {
+            return true;
+        }
     }
 
     private void ScanFile(
         string absPath,
-        ConcurrentBag<(string, string, string, int, int, string)> bag)
+        ConcurrentBag<(string, string, string, int, int, string)> bag
+    )
     {
         try
         {
@@ -90,12 +137,17 @@ internal class ExcelIndexBuilder
 
             foreach (var sheetName in sheetNames)
             {
-                if (sheetName.Contains('#') ||
-                    (sheetName.Contains("Sheet") && sheetName != "Sheet1"))
+                if (
+                    sheetName.Contains('#')
+                    || (sheetName.Contains("Sheet") && sheetName != "Sheet1")
+                )
                     continue;
 
-                var rows = MiniExcel.Query(absPath, sheetName: sheetName,
-                    configuration: NumDesAddIn.OnOffMiniExcelCatches);
+                var rows = MiniExcel.Query(
+                    absPath,
+                    sheetName: sheetName,
+                    configuration: NumDesAddIn.OnOffMiniExcelCatches
+                );
 
                 int rowIdx = 1;
                 foreach (IDictionary<string, object> row in rows)
@@ -118,29 +170,37 @@ internal class ExcelIndexBuilder
                 }
             }
         }
-        catch { /* 单文件失败不中断整体 */ }
+        catch
+        { /* 单文件失败不中断整体 */
+        }
     }
 
     private void MergeUnchanged(
         ExcelSearchIndex existing,
         IEnumerable<string> unchangedAbs,
-        ExcelSearchIndex target)
+        ExcelSearchIndex target
+    )
     {
         var unchangedRels = unchangedAbs
             .Select(ToRelative)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // 预先把 rel→fileId 转成 int set，内循环只做 int 比较，无 GC
+        var unchangedFileIds = unchangedRels
+            .Select(rel => existing.FileIds.TryGetValue(rel, out var id) ? id : -1)
+            .Where(id => id >= 0)
+            .ToHashSet();
 
         // 把 existing 中属于未变化文件的命中迁移到 target
         foreach (var (val, hits) in existing.Exact)
         {
             foreach (var hit in hits)
             {
-                if (hit.FileId >= existing.Files.Count) continue;
-                var rel = existing.Files[hit.FileId];
-                if (!unchangedRels.Contains(rel)) continue;
+                if (!unchangedFileIds.Contains(hit.FileId))
+                    continue;
 
-                var sheet = hit.SheetId < existing.Sheets.Count
-                    ? existing.Sheets[hit.SheetId] : "";
+                var rel = hit.FileId < existing.Files.Count ? existing.Files[hit.FileId] : "";
+                var sheet = hit.SheetId < existing.Sheets.Count ? existing.Sheets[hit.SheetId] : "";
                 AddHit(target, rel, sheet, val, hit.Row, hit.Col);
             }
         }
@@ -154,20 +214,29 @@ internal class ExcelIndexBuilder
         var knownPairs = new HashSet<(int, int)>(target.AllSheets);
         foreach (var (fid, sid) in existing.AllSheets)
         {
-            if (fid >= existing.Files.Count || sid >= existing.Sheets.Count) continue;
-            var rel   = existing.Files[fid];
+            if (fid >= existing.Files.Count || sid >= existing.Sheets.Count)
+                continue;
+            var rel = existing.Files[fid];
             var sheet = existing.Sheets[sid];
-            if (!unchangedRels.Contains(rel)) continue;
-            if (!target.FileIds.TryGetValue(rel, out var newFid)) continue;
-            if (!target.SheetIds.TryGetValue(sheet, out var newSid)) continue;
+            if (!unchangedRels.Contains(rel))
+                continue;
+            if (!target.FileIds.TryGetValue(rel, out var newFid))
+                continue;
+            if (!target.SheetIds.TryGetValue(sheet, out var newSid))
+                continue;
             if (knownPairs.Add((newFid, newSid)))
                 target.AllSheets.Add((newFid, newSid));
         }
     }
 
     private static void AddHit(
-        ExcelSearchIndex idx, string relPath, string sheet,
-        string val, int row, int col)
+        ExcelSearchIndex idx,
+        string relPath,
+        string sheet,
+        string val,
+        int row,
+        int col
+    )
     {
         if (!idx.FileIds.TryGetValue(relPath, out var fid))
         {

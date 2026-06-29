@@ -50,6 +50,11 @@
     <None Remove="ScUDFs.cs~RF14a310c8.TMP" />
   </ItemGroup>
   <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>NumDesTools.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
     <None Update="NumDesTools-AddIn.dna">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
