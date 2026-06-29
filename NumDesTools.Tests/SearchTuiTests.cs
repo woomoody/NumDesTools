@@ -80,7 +80,7 @@ public class SearchTuiTests
             pageSize: 20
         );
 
-        var count = CountOccurrences(text, "[包含]");
+        var count = CountOccurrences(text, "[[包含]]");
         Assert.Equal(1, count);
     }
 

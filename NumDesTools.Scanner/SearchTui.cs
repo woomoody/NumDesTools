@@ -375,7 +375,7 @@ internal static class SearchTui
 
         var sb = new StringBuilder(2048);
 
-        var modeTag = usePrefix ? "[dim][前缀][/]" : "[dim][包含][/]";
+        var modeTag = usePrefix ? "[dim][[前缀]][/]" : "[dim][[包含]][/]";
         sb.AppendLine($"搜索 {modeTag} > [bold]{Markup.Escape(query)}[/]▌");
 
         if (!string.IsNullOrEmpty(statusMsg))
