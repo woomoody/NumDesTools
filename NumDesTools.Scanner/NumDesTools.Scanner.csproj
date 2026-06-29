@@ -33,4 +33,17 @@
     <ProjectReference Include="..\NumDesTools\NumDesTools.csproj" />
   </ItemGroup>
 
+  <!-- build 后自动把 exe 同步到 packFromBin\scanner_publish，方便手动分发 -->
+  <Target Name="CopyToPackFromBin" AfterTargets="Build">
+    <PropertyGroup>
+      <ScannerPublishDir>$(MSBuildThisFileDirectory)..\packFromBin\scanner_publish\</ScannerPublishDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(ScannerPublishDir)" />
+    <Copy
+      SourceFiles="$(OutputPath)$(AssemblyName).exe"
+      DestinationFolder="$(ScannerPublishDir)"
+      SkipUnchangedFiles="true"
+    />
+  </Target>
+
 </Project>
