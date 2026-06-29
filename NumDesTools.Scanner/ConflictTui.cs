@@ -33,6 +33,8 @@ internal static class ConflictTui
             return 1;
         }
 
+        OfficeOpenXml.ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
+
         var oursPath = args[idx + 1];
         var theirsPath = args[idx + 2];
         var basePath =
@@ -80,7 +82,7 @@ internal static class ConflictTui
                 + $"  Modified=[cyan]{modifiedCount}[/]  仅一方=[cyan]{onlyCount}[/]"
         );
         AnsiConsole.MarkupLine(
-            $"  [dim][{KeyOurs}]我方  [{KeyTheirs}]对方  [{KeyAllOurs}]整行我方  [{KeyAllTheirs}]整行对方  [{KeySkip}]跳过  [{KeyQuit}]放弃[/]"
+            $"  [dim][[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  [[{KeyAllOurs}]]整行我方  [[{KeyAllTheirs}]]整行对方  [[{KeySkip}]]跳过  [[{KeyQuit}]]放弃[/]"
         );
         AnsiConsole.WriteLine();
 
@@ -255,7 +257,7 @@ internal static class ConflictTui
             );
 
         AnsiConsole.MarkupLine(
-            $"[dim][{KeyOurs}]我方  [{KeyTheirs}]对方  [{KeyAllOurs}]整行我方  [{KeyAllTheirs}]整行对方  [{KeySkip}]跳过(默认我方)  [{KeyQuit}]放弃[/]"
+            $"[dim][[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  [[{KeyAllOurs}]]整行我方  [[{KeyAllTheirs}]]整行对方  [[{KeySkip}]]跳过(默认我方)  [[{KeyQuit}]]放弃[/]"
         );
     }
 
@@ -304,11 +306,11 @@ internal static class ConflictTui
         // 根据行类型给出有语义的按键说明
         if (isOurs)
             AnsiConsole.MarkupLine(
-                $"[dim][{KeyOurs}/{KeyAllOurs}]保留此行  [{KeyTheirs}/{KeyAllTheirs}]删除此行(接受对方删除)  [{KeySkip}]跳过(默认保留)  [{KeyQuit}]放弃[/]"
+                $"[dim][[{KeyOurs}/{KeyAllOurs}]]保留此行  [[{KeyTheirs}/{KeyAllTheirs}]]删除此行(接受对方删除)  [[{KeySkip}]]跳过(默认保留)  [[{KeyQuit}]]放弃[/]"
             );
         else
             AnsiConsole.MarkupLine(
-                $"[dim][{KeyTheirs}/{KeyAllTheirs}]接受此行  [{KeyOurs}/{KeyAllOurs}]拒绝此行  [{KeySkip}]跳过(默认接受)  [{KeyQuit}]放弃[/]"
+                $"[dim][[{KeyTheirs}/{KeyAllTheirs}]]接受此行  [[{KeyOurs}/{KeyAllOurs}]]拒绝此行  [[{KeySkip}]]跳过(默认接受)  [[{KeyQuit}]]放弃[/]"
             );
     }
 
