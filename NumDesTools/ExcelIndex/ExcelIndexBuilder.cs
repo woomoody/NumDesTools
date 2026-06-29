@@ -52,7 +52,7 @@ internal class ExcelIndexBuilder
         // 确定需要重扫的文件（MD5 变化或新增）
         var toRebuild = files.Where(f => NeedsRebuild(f, existing)).ToArray();
 
-        var newIndex = new ExcelSearchIndex { BuiltAt = DateTime.UtcNow };
+        var newIndex = new ExcelSearchIndex { BuiltAt = DateTime.UtcNow, ExcelsRoot = _excelsRoot };
 
         // 把未变化文件的命中从 existing 迁移进 newIndex
         if (existing != null)

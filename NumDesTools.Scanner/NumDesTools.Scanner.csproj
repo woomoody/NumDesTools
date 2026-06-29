@@ -33,17 +33,20 @@
     <ProjectReference Include="..\NumDesTools\NumDesTools.csproj" />
   </ItemGroup>
 
-  <!-- build 后自动把 exe 同步到 packFromBin\scanner_publish，方便手动分发 -->
+  <!-- build 后把完整 bin 输出同步到 packFromBin\scanner_publish，lazygit 直接调用 -->
   <Target Name="CopyToPackFromBin" AfterTargets="Build">
     <PropertyGroup>
       <ScannerPublishDir>$(MSBuildThisFileDirectory)..\packFromBin\scanner_publish\</ScannerPublishDir>
     </PropertyGroup>
     <MakeDir Directories="$(ScannerPublishDir)" />
+    <ItemGroup>
+      <ScannerBinFiles Include="$(OutputPath)**\*" />
+    </ItemGroup>
     <Copy
-      SourceFiles="$(OutputPath)$(AssemblyName).exe"
-      DestinationFolder="$(ScannerPublishDir)"
-      SkipUnchangedFiles="true"
+      SourceFiles="@(ScannerBinFiles)"
+      DestinationFiles="@(ScannerBinFiles->'$(ScannerPublishDir)%(RecursiveDir)%(Filename)%(Extension)')"
     />
+    <Message Text="[Scanner] 已同步 bin → $(ScannerPublishDir)" Importance="high" />
   </Target>
 
 </Project>

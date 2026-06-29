@@ -121,6 +121,11 @@ internal class Program
         if (args.Contains("--conflict-gui"))
             return ConflictGui.Run(args);
 
+        // ── 全功能冲突管理器（自动发现 git 仓库中所有 xlsx 冲突）─────────────
+        // 用法：--conflict-manager（在 git 仓库根目录下运行，或 lazygit global context）
+        if (args.Contains("--conflict-manager"))
+            return ConflictManager.Run(args);
+
         // ── xlsx 冲突解决 TUI（独立，不依赖飞书）────────────────────────────────
         // 用法：--conflict <ours.xlsx> <theirs.xlsx> [base.xlsx]
         if (args.Contains("--conflict"))

@@ -32,6 +32,9 @@ public class ExcelSearchIndex
     /// <summary>索引构建时间</summary>
     public DateTime BuiltAt { get; set; }
 
+    /// <summary>构建索引时的 Excels 根目录绝对路径，SearchTui 用来拼绝对路径打开文件</summary>
+    public string ExcelsRoot { get; set; } = string.Empty;
+
     // ── 仅运行时使用，不序列化 ────────────────────────────────────────────────
 
     [JsonIgnore]

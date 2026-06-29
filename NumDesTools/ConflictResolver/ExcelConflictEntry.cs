@@ -25,9 +25,16 @@ public static class ExcelConflictEntry
             );
             return;
         }
+        RunConflictManager(gitRoot, AppServices.Config.Git.SkipHashFiles);
+    }
 
+    /// <summary>
+    /// Scanner --conflict-manager 入口：全功能冲突管理器，不依赖 AppServices。
+    /// gitRoot 由调用方从 cwd 向上找 .git 目录后传入。
+    /// </summary>
+    internal static void RunConflictManager(string gitRoot, bool skipHash = true)
+    {
         string? lastSelected = null;
-        bool skipHash = AppServices.Config.Git.SkipHashFiles;
 
         while (true)
         {
@@ -38,9 +45,7 @@ public static class ExcelConflictEntry
             {
                 using var repo = new Repository(gitRoot);
                 var allConflicted = repo
-                    .Index.Conflicts.Select(c =>
-                        c.Ours?.Path ?? c.Theirs?.Path ?? string.Empty
-                    )
+                    .Index.Conflicts.Select(c => c.Ours?.Path ?? c.Theirs?.Path ?? string.Empty)
                     .Where(p => !string.IsNullOrEmpty(p))
                     .Distinct()
                     .OrderBy(p => p)
@@ -59,10 +64,9 @@ public static class ExcelConflictEntry
                 // 收集所有带 # 的冲突文件（不限扩展名：xlsm/txt 都要）
                 if (skipHash)
                     allHashFiles.AddRange(
-                        allConflicted
-                            .Where(p =>
-                                Path.GetFileName(p).Contains('#') && !allHashFiles.Contains(p)
-                            )
+                        allConflicted.Where(p =>
+                            Path.GetFileName(p).Contains('#') && !allHashFiles.Contains(p)
+                        )
                     );
             }
             catch (Exception ex)
@@ -699,10 +703,9 @@ public static class ExcelConflictEntry
         // ── 阶段一：并行 Diff（纯读，MiniExcel + libgit2 读取，无写操作）──────────
         // 每线程独立 Repository 实例（libgit2 非线程安全），临时文件名含 index 防碰撞
         // ours 临时文件留到 Phase 2 Apply 之后再删（ConflictApplier.Apply 内部用 diff.OursPath）
-        var diffResults = new System.Collections.Concurrent.ConcurrentDictionary<
-            string,
-            FileDiff
-        >(StringComparer.Ordinal);
+        var diffResults = new System.Collections.Concurrent.ConcurrentDictionary<string, FileDiff>(
+            StringComparer.Ordinal
+        );
         var diffErrors = new System.Collections.Concurrent.ConcurrentBag<(
             string relPath,
             string msg
@@ -841,8 +844,7 @@ public static class ExcelConflictEntry
 
         if (errors.Count > 0)
             PluginLog.Write(
-                $"[BatchAutoResolve] {errors.Count} 个文件处理报错:\n"
-                    + string.Join("\n", errors)
+                $"[BatchAutoResolve] {errors.Count} 个文件处理报错:\n" + string.Join("\n", errors)
             );
 
         return (manual, errors);
@@ -888,10 +890,7 @@ public static class ExcelConflictEntry
             // 同步追加到 merge 消息文件，与手动解决冲突保持一致
             try
             {
-                ConflictApplier.AppendMergeMsgPublic(
-                    gitRoot,
-                    Path.GetFileName(relativePath)
-                );
+                ConflictApplier.AppendMergeMsgPublic(gitRoot, Path.GetFileName(relativePath));
             }
             catch { }
         }

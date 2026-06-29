@@ -19,7 +19,11 @@ public partial class GitConflictPickerWindow : MetroWindow
     private string? _gitRoot;
     private List<string> _currentFiles = [];
 
-    public GitConflictPickerWindow(IReadOnlyList<string> files, bool skipHash, string? gitRoot = null)
+    public GitConflictPickerWindow(
+        IReadOnlyList<string> files,
+        bool skipHash,
+        string? gitRoot = null
+    )
     {
         MahAppsHelper.EnsureInitialized();
         MahAppsHelper.SetExcelOwner(this);
@@ -45,8 +49,8 @@ public partial class GitConflictPickerWindow : MetroWindow
         {
             using var repo = new LibGit2Sharp.Repository(gitRoot);
             var current = repo.Head.FriendlyName;
-            var branches = repo.Branches
-                .Where(b => !b.IsRemote)
+            var branches = repo
+                .Branches.Where(b => !b.IsRemote)
                 .Select(b => b.FriendlyName)
                 .OrderBy(n => n)
                 .ToList();
@@ -110,7 +114,7 @@ public partial class GitConflictPickerWindow : MetroWindow
 
     private void SkipHash_Changed(object sender, RoutedEventArgs e)
     {
-        AppServices.GlobalValue.SaveValue(
+        AppServices.GlobalValue?.SaveValue(
             "ConflictSkipHashFiles",
             SkipHashBox.IsChecked == true ? "true" : "false"
         );
@@ -163,7 +167,9 @@ public partial class GitConflictPickerWindow : MetroWindow
         if (manual.Count > 0)
             sb.AppendLine($"剩余 {manual.Count} 个文件需手动处理（双方均有改动）。");
         if (errors.Count > 0)
-            sb.AppendLine($"\n⚠ {errors.Count} 个文件处理出错（已保留在列表）：\n{string.Join("\n", errors)}");
+            sb.AppendLine(
+                $"\n⚠ {errors.Count} 个文件处理出错（已保留在列表）：\n{string.Join("\n", errors)}"
+            );
         if (autoCount == 0 && errors.Count == 0)
             sb.AppendLine("所有文件均有需人工判断的冲突格，无法自动解决。");
 

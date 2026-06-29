@@ -1734,7 +1734,7 @@ public partial class ExcelConflictWindow : MetroWindow
         catch (Exception ex)
         {
             MessageBox.Show(
-                $"写回失败：{ex.Message}",
+                $"写回失败：{ex.Message}\n\n{ex.StackTrace}",
                 "错误",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error
