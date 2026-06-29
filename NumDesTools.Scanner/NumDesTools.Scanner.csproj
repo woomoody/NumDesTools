@@ -39,28 +39,14 @@
     <ProjectReference Include="..\NumDesTools\NumDesTools.csproj" />
   </ItemGroup>
 
-  <!-- build 后把 win-x64 最小运行集同步到 packFromBin\scanner_publish -->
-  <!-- 只保留：根目录 dll/exe/json + runtimes/win-x64/native/*.dll；跳过 pdb/xml/多平台 runtimes/语言资源目录 -->
-  <Target Name="CopyToPackFromBin" AfterTargets="Build">
+  <!-- publish 后把单文件 exe 复制到 packFromBin\scanner_publish，供对外分发 -->
+  <Target Name="CopyToPackFromBin" AfterTargets="Publish">
     <PropertyGroup>
       <ScannerPublishDir>$(MSBuildThisFileDirectory)..\packFromBin\scanner_publish\</ScannerPublishDir>
     </PropertyGroup>
     <MakeDir Directories="$(ScannerPublishDir)" />
-    <MakeDir Directories="$(ScannerPublishDir)runtimes\win-x64\native\" />
-
-    <!-- 根目录：只要 .dll / .exe / .runtimeconfig.json / .deps.json -->
-    <ItemGroup>
-      <ScannerRootFiles Include="$(OutputPath)*.dll;$(OutputPath)*.exe;$(OutputPath)*.runtimeconfig.json;$(OutputPath)*.deps.json" />
-    </ItemGroup>
-    <Copy SourceFiles="@(ScannerRootFiles)" DestinationFolder="$(ScannerPublishDir)" />
-
-    <!-- native：只要 win-x64（LibGit2Sharp / SQLite / Lua） -->
-    <ItemGroup>
-      <ScannerNativeFiles Include="$(OutputPath)runtimes\win-x64\native\*.dll" />
-    </ItemGroup>
-    <Copy SourceFiles="@(ScannerNativeFiles)" DestinationFolder="$(ScannerPublishDir)runtimes\win-x64\native\" />
-
-    <Message Text="[Scanner] 已同步最小集 → $(ScannerPublishDir)" Importance="high" />
+    <Copy SourceFiles="$(PublishDir)NumDesTools.Scanner.exe" DestinationFolder="$(ScannerPublishDir)" />
+    <Message Text="[Scanner] 单文件 exe → $(ScannerPublishDir)" Importance="high" />
   </Target>
 
 </Project>
