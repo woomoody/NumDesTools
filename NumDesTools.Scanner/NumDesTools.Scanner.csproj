@@ -17,6 +17,12 @@
     <PackageReference Include="EPPlus" Version="8.2.0" />
     <PackageReference Include="LibGit2Sharp" Version="0.31.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="Spectre.Console" Version="0.49.1" />
+    <PackageReference Include="MiniExcel" Version="1.42.0" />
+    <PackageReference Include="TextCopy" Version="6.2.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NumDesTools\NumDesTools.csproj" />
   </ItemGroup>
 
 </Project>

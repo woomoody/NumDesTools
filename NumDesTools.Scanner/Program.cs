@@ -116,6 +116,16 @@ internal class Program
     {
         Console.OutputEncoding = Encoding.UTF8;
 
+        // ── xlsx 冲突解决 TUI（独立，不依赖飞书）────────────────────────────────
+        // 用法：--conflict <ours.xlsx> <theirs.xlsx> [base.xlsx]
+        if (args.Contains("--conflict"))
+            return ConflictTui.Run(args);
+
+        // ── Excel 索引搜索 TUI（独立）───────────────────────────────────────────
+        // 用法：--search [--index <path.json.gz>]
+        if (args.Contains("--search"))
+            return SearchTui.Run(args);
+
         // ── 配置自检模式（独立，不依赖飞书）────────────────────────────────────
         if (args.Contains("--validate"))
             return ConfigValidator.Run(args);
