@@ -37,7 +37,6 @@ internal static class ConflictTui
             return 1;
         }
 
-        OfficeOpenXml.ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
 
         var oursPath = args[idx + 1];
         var theirsPath = args[idx + 2];

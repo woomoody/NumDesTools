@@ -381,7 +381,6 @@ public static class MergeCookingWriter
 
     public static void Run(string? outputDir = null)
     {
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
         var dir = outputDir ?? OutputPaths.Reports;
         var outPath = Path.Combine(dir, OutFileName);
 

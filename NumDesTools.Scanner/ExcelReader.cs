@@ -23,7 +23,6 @@ public static class ExcelReader
     public static (List<string> Fields, List<(int Row, Dictionary<string, string> Data)> Rows)
         Read(string excelPath, string? sheetName = null)
     {
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
         using var pkg = new ExcelPackage(new FileInfo(excelPath));
         var ws = sheetName != null
             ? pkg.Workbook.Worksheets[sheetName] ?? pkg.Workbook.Worksheets[0]

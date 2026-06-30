@@ -33,7 +33,6 @@ internal static class ConflictGui
             return 2;
         }
 
-        OfficeOpenXml.ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
 
         int exitCode = 3;
 

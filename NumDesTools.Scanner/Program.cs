@@ -1,5 +1,6 @@
 using System.Text;
 using Newtonsoft.Json;
+using OfficeOpenXml;
 
 namespace NumDesTools.Scanner;
 
@@ -115,6 +116,7 @@ internal class Program
     static async Task<int> Main(string[] args)
     {
         Console.OutputEncoding = Encoding.UTF8;
+        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
 
         // ── xlsx 冲突解决 WPF GUI（独立，可被 lazygit/SmartGit/Fork 调用）──────
         // 用法：--conflict-gui <ours.xlsx> <theirs.xlsx>

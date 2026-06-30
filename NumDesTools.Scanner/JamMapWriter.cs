@@ -138,7 +138,6 @@ public static class JamMapWriter
         string produceConsumePath = DefaultProduceConsumePath
     )
     {
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
 
         var dir = outputDir ?? OutputPaths.Reports;
         var outputPath = Path.Combine(dir, "CC收集活动-果酱节地编信息.xlsx");

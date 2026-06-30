@@ -11,7 +11,6 @@ internal static class ReadCardPackData
 {
     public static void Run()
     {
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
 
         Console.WriteLine("=== 1. 读取 ActivityPhotoCardPack 卡包信息 ===\n");
 

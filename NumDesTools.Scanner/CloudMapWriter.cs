@@ -212,7 +212,6 @@ public static class CloudMapWriter
 
     public static void RunAll(string? outputDir = null, string? dataDir = null)
     {
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
         var dir = dataDir ?? DecryptedJsonDir;
         foreach (var cfg in KnownActivities)
         {
@@ -230,7 +229,6 @@ public static class CloudMapWriter
 
     public static void Run(ActivityConfig cfg, string? outputDir = null, string? dataDir = null)
     {
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
         var dir = dataDir ?? DecryptedJsonDir;
         var outDir = outputDir ?? OutputPaths.Reports;
         var dataPath = Path.Combine(dir, cfg.FileName);

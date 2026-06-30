@@ -14,7 +14,6 @@ internal static class ConflictManager
 {
     public static int Run(string[] args)
     {
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
 
         // 优先用 --git-root 显式传入（lazygit 用 {{.RepoPath}}），否则从 cwd 向上查找
         string? gitRoot = null;

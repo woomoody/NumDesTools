@@ -90,7 +90,6 @@ public static class L1_TableValidator
         var result = new HashSet<string>();
         try
         {
-            OfficeOpenXml.ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
             using var pkg = new OfficeOpenXml.ExcelPackage(new FileInfo(path));
             var ws = sheetName != null
                 ? pkg.Workbook.Worksheets[sheetName] ?? pkg.Workbook.Worksheets[0]

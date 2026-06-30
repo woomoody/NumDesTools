@@ -33,7 +33,6 @@ public static class ActivityWriter
 
     public static void Run(WritePlan plan)
     {
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
         Console.WriteLine($"[INFO] 开始写入，共 {plan.Operations.Count} 个操作\n");
 
         int ok = 0, fail = 0;

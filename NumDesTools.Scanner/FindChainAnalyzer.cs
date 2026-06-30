@@ -150,7 +150,6 @@ public sealed class FindChainAnalyzer
         if (_loaded) return;
         _loaded = true;
 
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools.Scanner");
 
         LoadFindTargetTemplateData();
         LoadItemExchangeMat();

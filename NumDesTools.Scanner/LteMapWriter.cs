@@ -1611,7 +1611,6 @@ public static class LteMapWriter
 
     private static void WriteMap(string xlsxPath, MapData data)
     {
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
         using var pkg = new ExcelPackage(new FileInfo(xlsxPath));
         var ws = pkg.Workbook.Worksheets[0];
 

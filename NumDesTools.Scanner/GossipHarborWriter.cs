@@ -110,7 +110,6 @@ public static class GossipHarborWriter
     // ── 公开入口 ──────────────────────────────────────────────────────────────
     public static void Run(string? outputDir = null)
     {
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
         var dir = outputDir ?? OutputPaths.Reports;
         var outPath = Path.Combine(dir, OutFileName);
 

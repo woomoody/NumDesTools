@@ -34,7 +34,6 @@ public class ActivityTypeIndex
         File.Copy(xlsxPath, tmp, overwrite: true);
         try
         {
-            ExcelPackage.License.SetNonCommercialPersonal("NumDesTools.Scanner");
             using var pkg = new ExcelPackage(new FileInfo(tmp));
             var ws = pkg.Workbook.Worksheets[0];
             if (ws == null) return;

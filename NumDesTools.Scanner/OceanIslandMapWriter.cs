@@ -63,7 +63,6 @@ public static class OceanIslandMapWriter
 
     public static void Run(string? outputDir = null, string dataPath = DefaultDataPath)
     {
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
 
         var dir = outputDir ?? OutputPaths.Reports;
         var outputPath = Path.Combine(dir, "CC收集活动-海岛地编信息.xlsx");

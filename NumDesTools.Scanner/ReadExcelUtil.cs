@@ -8,7 +8,6 @@ public static class ReadExcelUtil
 {
     public static void ReadExcelRanges()
     {
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
 
         string filePath = @"C:\M1Work\Public\Excels\Tables\#【A创新活动】数值.xlsx";
         string sheetName = "二合棋盘V6-4【高】";
