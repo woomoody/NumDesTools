@@ -92,7 +92,7 @@ public class ScannerTests
         var story  = new WorkItem("1", "续期需求第2期", "", "");
         var tables = new List<TableMatch> { new("ActivityClientData.xlsx", "主表", [], "id", null) };
         var comment = CommentBuilder.BuildStoryComment(story, tables, 2);
-        Assert.Contains("续期需求", comment);
+        Assert.Contains("第2期续期", comment);
         Assert.DoesNotContain("必填字段", comment);
     }
 
