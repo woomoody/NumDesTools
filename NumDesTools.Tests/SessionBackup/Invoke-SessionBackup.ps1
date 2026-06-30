@@ -7,7 +7,8 @@
 function Invoke-SessionBackup {
     param(
         [Parameter(Mandatory = $true)] [string] $RepoPath,
-        [Parameter(Mandatory = $true)] [string] $SourcePath
+        [Parameter(Mandatory = $true)] [string] $SourcePath,
+        [string] $StagingSubdir = 'sessions'
     )
     $result = [pscustomobject]@{
         Changed     = $false
@@ -30,8 +31,8 @@ function Invoke-SessionBackup {
         git -C $RepoPath config user.name 'session-backup'
     }
 
-    # 把源目录内容镜像复制到工作仓\sessions
-    $stagingDir = $RepoPath.TrimEnd('\') + '\sessions'
+    # 把源目录内容镜像复制到工作仓\<StagingSubdir>
+    $stagingDir = $RepoPath.TrimEnd('\') + '\' + $StagingSubdir
     if (-not (Test-Path -LiteralPath $stagingDir)) {
         New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
     }
