@@ -1,4 +1,5 @@
 using System.Windows;
+using NumDesTools;
 using NumDesTools.ConflictResolver;
 using NumDesTools.UI;
 using OfficeOpenXml;
@@ -21,7 +22,7 @@ internal static class ConflictManager
         if (idx >= 0 && idx + 1 < args.Length)
             gitRoot = args[idx + 1];
 
-        gitRoot ??= FindGitRoot(Environment.CurrentDirectory);
+        gitRoot ??= SvnGitTools.FindGitRoot(Environment.CurrentDirectory);
 
         if (gitRoot == null)
         {
@@ -60,17 +61,5 @@ internal static class ConflictManager
         }
 
         return 0;
-    }
-
-    private static string? FindGitRoot(string startDir)
-    {
-        var dir = new DirectoryInfo(startDir);
-        while (dir != null)
-        {
-            if (Directory.Exists(Path.Combine(dir.FullName, ".git")))
-                return dir.FullName;
-            dir = dir.Parent;
-        }
-        return null;
     }
 }

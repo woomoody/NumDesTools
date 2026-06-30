@@ -1,4 +1,5 @@
 using LibGit2Sharp;
+using NumDesTools;
 using NumDesTools.ConflictResolver;
 using Spectre.Console;
 
@@ -478,7 +479,7 @@ internal static class ConflictTui
     {
         try
         {
-            var repoRoot = FindGitRoot(filePath);
+            var repoRoot = SvnGitTools.FindGitRoot(filePath);
             if (repoRoot == null)
                 return null;
             using var repo = new Repository(repoRoot);
@@ -490,17 +491,5 @@ internal static class ConflictTui
         {
             return null;
         }
-    }
-
-    internal static string? FindGitRoot(string path)
-    {
-        var dir = File.Exists(path) ? Path.GetDirectoryName(path) : path;
-        while (!string.IsNullOrEmpty(dir))
-        {
-            if (Directory.Exists(Path.Combine(dir, ".git")))
-                return dir;
-            dir = Path.GetDirectoryName(dir);
-        }
-        return null;
     }
 }

@@ -147,12 +147,11 @@ internal class SvnGitTools
 
     public static string FindGitRoot(string startPath)
     {
-        var directory = new DirectoryInfo(startPath);
-        while (directory != null && !Directory.Exists(Path.Combine(directory.FullName, ".git")))
-        {
-            directory = directory.Parent;
-        }
-        return directory?.FullName;
+        var gitDir = Repository.Discover(startPath);
+        if (gitDir is null)
+            return null;
+        var root = Directory.GetParent(gitDir)?.FullName;
+        return root;
     }
 
     public static bool IsFileModified(string filePath)

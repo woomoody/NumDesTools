@@ -739,18 +739,6 @@ internal static class CellGitHistoryController
         ExcelAsyncUtil.QueueAsMacro(() => TryQuery(sh, target));
     }
 
-    private static string? FindGitRoot(string filePath)
-    {
-        var dir = Path.GetDirectoryName(filePath);
-        while (!string.IsNullOrEmpty(dir))
-        {
-            if (Directory.Exists(Path.Combine(dir, ".git")))
-                return dir;
-            dir = Path.GetDirectoryName(dir);
-        }
-        return null;
-    }
-
     private static void TryQuery(object sh, Microsoft.Office.Interop.Excel.Range target)
     {
         try
@@ -775,7 +763,7 @@ internal static class CellGitHistoryController
             }
 
             // 从文件路径自动检测 git 仓库根目录（不依赖配置）
-            var gitRoot = FindGitRoot(absFilePath);
+            var gitRoot = SvnGitTools.FindGitRoot(absFilePath);
             if (gitRoot == null)
             {
                 PluginLog.Verbose($"[谁的锅] skip: no .git found for {absFilePath}");
