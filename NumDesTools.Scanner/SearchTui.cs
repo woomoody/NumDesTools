@@ -15,7 +15,7 @@ namespace NumDesTools.Scanner;
 /// 工作流：
 ///   1. 加载 excel_index_*.json（自动发现 Documents\NumDesTools 下的索引文件）
 ///   2. 用户实时输入关键词 → 动态过滤命中项
-///   3. 上下键选择结果，Enter 打开文件，Tab 切换前缀/包含模式，Esc 退出
+///   3. 上下键选择结果，o 打开文件，Tab 切换前缀/包含模式，Esc 退出
 /// </summary>
 internal static class SearchTui
 {
@@ -155,7 +155,7 @@ internal static class SearchTui
                 + $"[dim](构建于 {idx.BuiltAt:yyyy-MM-dd HH:mm})[/]"
         );
         AnsiConsole.MarkupLine(
-            "[dim]输入关键词实时搜索 | ↑↓/PgUp/PgDn 翻页 | Enter 打开文件 | Tab 切换模式 | Esc 退出[/]"
+            "[dim]输入关键词后按 Enter 搜索 | ↑↓/PgUp/PgDn 翻页 | o 打开文件 | Tab 切换模式 | Esc 退出[/]"
         );
         AnsiConsole.WriteLine();
 
@@ -165,10 +165,11 @@ internal static class SearchTui
         var usePrefix = false;
         List<SearchResult> results = [];
         string? statusMsg = null;
+        var dirty = true; // query 变更后置 true，Enter 时才真正搜索
 
         while (true)
         {
-            Render(query, results, selectedIdx, usePrefix, statusMsg);
+            Render(query, results, selectedIdx, usePrefix, statusMsg, dirty);
             statusMsg = null;
 
             var key = Console.ReadKey(intercept: true);
@@ -181,7 +182,21 @@ internal static class SearchTui
                     return 0;
 
                 case ConsoleKey.Enter:
-                    if (results.Count > 0 && selectedIdx < results.Count)
+                    // query 有变更 → 搜索；Enter 不再打开文件（改用 o 打开）
+                    if (dirty)
+                    {
+                        selectedIdx = 0;
+                        results = DoSearch(idx, query, usePrefix);
+                        dirty = false;
+                        statusMsg =
+                            results.Count > 0
+                                ? $"[dim]搜索完成，命中 {results.Count} 条，按 o 打开选中项[/]"
+                                : "[dim]无结果[/]";
+                    }
+                    continue;
+
+                case ConsoleKey.O:
+                    if (!dirty && results.Count > 0 && selectedIdx < results.Count)
                         statusMsg = OpenFile(idx, results[selectedIdx]);
                     continue;
 
@@ -189,6 +204,7 @@ internal static class SearchTui
                     usePrefix = !usePrefix;
                     selectedIdx = 0;
                     results = DoSearch(idx, query, usePrefix);
+                    dirty = false;
                     continue;
 
                 case ConsoleKey.UpArrow:
@@ -211,17 +227,20 @@ internal static class SearchTui
 
                 case ConsoleKey.Backspace:
                     if (query.Length > 0)
+                    {
                         query = query[..^1];
+                        dirty = true;
+                    }
                     break;
 
                 default:
                     if (!char.IsControl(key.KeyChar))
+                    {
                         query += key.KeyChar;
+                        dirty = true;
+                    }
                     break;
             }
-
-            selectedIdx = 0;
-            results = DoSearch(idx, query, usePrefix);
         }
     }
 
@@ -367,6 +386,7 @@ internal static class SearchTui
         int selectedIdx,
         bool usePrefix,
         string? statusMsg,
+        bool dirty = false,
         int pageSize = 0
     )
     {
@@ -382,17 +402,28 @@ internal static class SearchTui
             sb.AppendLine(statusMsg);
         else if (string.IsNullOrEmpty(query))
             sb.AppendLine("[dim]等待输入...[/]");
+        else if (dirty)
+            sb.AppendLine("[dim]输入完成按 Enter 搜索[/]");
         else
             sb.AppendLine($"[dim]命中 {results.Count} 条[/]");
 
         sb.AppendLine();
+
+        // query 未确认（dirty）时，不渲染旧结果，避免误以为已搜索
+        if (dirty)
+        {
+            sb.AppendLine("[dim]  （等待 Enter 确认搜索）[/]");
+            sb.AppendLine();
+            sb.AppendLine("[dim]↑↓/PgUp/PgDn 翻页  Enter 搜索  o 打开  Tab 切换模式  Esc 退出[/]");
+            return sb.ToString();
+        }
 
         if (results.Count == 0)
         {
             if (!string.IsNullOrEmpty(query))
                 sb.AppendLine("[dim]  无结果[/]");
             sb.AppendLine();
-            sb.AppendLine("[dim]↑↓/PgUp/PgDn 翻页  Enter 打开  Tab 切换模式  Esc 退出[/]");
+            sb.AppendLine("[dim]↑↓/PgUp/PgDn 翻页  Enter 搜索  o 打开  Tab 切换模式  Esc 退出[/]");
             return sb.ToString();
         }
 
@@ -436,7 +467,7 @@ internal static class SearchTui
             );
 
         sb.AppendLine();
-        sb.AppendLine("[dim]↑↓/PgUp/PgDn 翻页  Enter 打开  Tab 切换模式  Esc 退出[/]");
+        sb.AppendLine("[dim]↑↓/PgUp/PgDn 翻页  Enter 搜索  o 打开  Tab 切换模式  Esc 退出[/]");
 
         return sb.ToString();
     }
@@ -446,11 +477,12 @@ internal static class SearchTui
         List<SearchResult> results,
         int selectedIdx,
         bool usePrefix,
-        string? statusMsg
+        string? statusMsg,
+        bool dirty
     )
     {
         AnsiConsole.Clear();
-        AnsiConsole.Markup(BuildRenderText(query, results, selectedIdx, usePrefix, statusMsg));
+        AnsiConsole.Markup(BuildRenderText(query, results, selectedIdx, usePrefix, statusMsg, dirty));
     }
 
     internal readonly record struct SearchResult(
