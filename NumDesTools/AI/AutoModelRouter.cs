@@ -9,8 +9,8 @@ public static class AutoModelRouter
     public static readonly string[] DefaultModelList =
     {
         AutoModelName,
-        "claude-sonnet-4-6",
-        "claude-opus-4-8",
+        "claude-sonnet-4-6-v1",
+        "claude-opus-4-8-v1",
         "deepseek-v4-flash",
         "gemini-3.1-flash-image-preview",
         "gpt-5.5",
@@ -34,7 +34,7 @@ public static class AutoModelRouter
                 @"设计.{0,4}系统|架构.{0,4}方案|留存.{0,4}分析|数值.{0,4}系统|前提.{0,4}矛盾",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled
             ),
-            "claude-opus-4-8",
+            "claude-opus-4-8-v1",
             "复杂推理/架构设计"
         ),
         (
@@ -42,7 +42,7 @@ public static class AutoModelRouter
                 @"代码|编程|C#|Python|Lua|脚本|算法|重构",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled
             ),
-            "claude-sonnet-4-6",
+            "claude-sonnet-4-6-v1",
             "代码任务"
         ),
         (

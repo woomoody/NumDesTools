@@ -151,7 +151,7 @@ public class LiteLlmClient : ILlmClient
         }
     }
 
-    private const string FallbackModel = "claude-sonnet-4-6";
+    private const string FallbackModel = "claude-sonnet-4-6-v1";
     private static readonly string[] ContentFilterKeywords =
         ["inappropriate content", "content policy", "content_filter", "DashscopeException"];
 
