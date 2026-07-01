@@ -215,6 +215,9 @@ namespace NumDesTools.Config
             return result.ToList(); // 转回 List
         }
 
+        // ponytail: 白名单固定两个值，无需外部配置
+        private static readonly HashSet<string> ValidSpotlightModes = ["overlay", "fill"];
+
         private void MergeWithDefaults()
         {
             // 合并键值对配置
@@ -232,6 +235,18 @@ namespace NumDesTools.Config
                 && savedList.Contains("global.")
             )
                 _configData.Value["LiteLLMModelList"] = DefaultValue["LiteLLMModelList"];
+
+            // SpotlightMode 白名单校验
+            if (
+                _configData.Value.TryGetValue("SpotlightMode", out var mode)
+                && !ValidSpotlightModes.Contains(mode)
+            )
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[GlobalVariable] SpotlightMode 非法值 '{mode}'，已回退为 'overlay'"
+                );
+                _configData.Value["SpotlightMode"] = "overlay";
+            }
 
             // 合并列表配置
             _configData.NormaKeyList = MergeLists(_configData.NormaKeyList, DefaultNormaKeyList);

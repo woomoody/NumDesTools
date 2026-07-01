@@ -32,17 +32,17 @@ internal class Program
         "no_permission_items.json"
     );
 
-    // ── 已写入记录 ───────────────────────────────────────────────────────────
-    private static HashSet<string> LoadWrittenItems()
+    // ── 工作项记录（written / no-permission）────────────────────────────────
+    // ponytail: 两对 Load/Save 逻辑相同，合并为单对；overwriteExisting 区分幂等性
+    private static HashSet<string> LoadSet(string path)
     {
-        if (!File.Exists(WrittenItemsPath))
+        if (!File.Exists(path))
             return [];
         try
         {
             var dict =
-                JsonConvert.DeserializeObject<Dictionary<string, string>>(
-                    File.ReadAllText(WrittenItemsPath)
-                ) ?? [];
+                JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(path))
+                ?? [];
             return dict.Keys.ToHashSet();
         }
         catch
@@ -51,61 +51,46 @@ internal class Program
         }
     }
 
-    private static void SaveWrittenItem(string itemId)
+    private static void SaveSet(string path, string itemId, bool overwriteExisting = true)
     {
         Dictionary<string, string> dict = [];
-        if (File.Exists(WrittenItemsPath))
+        if (File.Exists(path))
             try
             {
                 dict =
                     JsonConvert.DeserializeObject<Dictionary<string, string>>(
-                        File.ReadAllText(WrittenItemsPath)
+                        File.ReadAllText(path)
                     ) ?? [];
             }
             catch { }
+        if (!overwriteExisting && dict.ContainsKey(itemId))
+            return;
         dict[itemId] = DateTime.Today.ToString("yyyy-MM-dd");
-        File.WriteAllText(WrittenItemsPath, JsonConvert.SerializeObject(dict, Formatting.Indented));
+        File.WriteAllText(path, JsonConvert.SerializeObject(dict, Formatting.Indented));
     }
 
-    // ── 无权限记录（workItemId → 首次发现日期）───────────────────────────────
-    private static HashSet<string> LoadNoPermItems()
-    {
-        if (!File.Exists(NoPermItemsPath))
-            return [];
-        try
-        {
-            var dict =
-                JsonConvert.DeserializeObject<Dictionary<string, string>>(
-                    File.ReadAllText(NoPermItemsPath)
-                ) ?? [];
-            return dict.Keys.ToHashSet();
-        }
-        catch
-        {
-            return [];
-        }
-    }
+    // ── 前置配置校验（只警告，不阻断扫描）──────────────────────────────────
+    private const string TablesDir = @"C:\M1Work\Public\Excels\Tables";
 
-    private static void SaveNoPermItem(string itemId)
+    private static void WarnIfConfigDirty(ActivityTableRules rules)
     {
-        Dictionary<string, string> dict = [];
-        if (File.Exists(NoPermItemsPath))
-            try
-            {
-                dict =
-                    JsonConvert.DeserializeObject<Dictionary<string, string>>(
-                        File.ReadAllText(NoPermItemsPath)
-                    ) ?? [];
-            }
-            catch { }
-        if (!dict.ContainsKey(itemId))
+        int errorCount = 0;
+        foreach (var def in rules.Tables.Where(t => !string.IsNullOrEmpty(t.ExcelFile)))
         {
-            dict[itemId] = DateTime.Today.ToString("yyyy-MM-dd");
-            File.WriteAllText(
-                NoPermItemsPath,
-                JsonConvert.SerializeObject(dict, Formatting.Indented)
-            );
+            var path = Path.Combine(TablesDir, def.ExcelFile);
+            var r1 = L1_TableValidator.Validate(path, def);
+            var r2 = L2_RefValidator.Validate(TablesDir, def, rules);
+            errorCount += r1.Issues.Count(i => i.Level == Severity.Error);
+            errorCount += r2.Issues.Count(i => i.Level == Severity.Error);
         }
+        if (errorCount <= 0)
+            return;
+        var prev = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine(
+            $"[WARN] 配置表有 {errorCount} 处引用断裂，AI 评论可能基于脏数据（使用 --validate 查看详情）"
+        );
+        Console.ForegroundColor = prev;
     }
 
     private static bool IsPermissionError(Exception ex) =>
@@ -301,8 +286,10 @@ internal class Program
             return 0;
         }
 
-        var writtenItems = LoadWrittenItems();
-        var noPermItems = LoadNoPermItems();
+        WarnIfConfigDirty(rules);
+
+        var writtenItems = LoadSet(WrittenItemsPath);
+        var noPermItems = LoadSet(NoPermItemsPath);
 
         // ── 缺陷分析模式 ─────────────────────────────────────────────────────
         if (bugsMode)
@@ -526,7 +513,7 @@ internal class Program
                 if (mainDef != null)
                     tables =
                     [
-                        new TableMatch(mainDef.ExcelFile, mainDef.Desc, [], mainDef.KeyField, null)
+                        new TableMatch(mainDef.ExcelFile, mainDef.Desc, [], mainDef.KeyField, null),
                     ];
             }
             if (tables.Count == 0)
@@ -573,14 +560,18 @@ internal class Program
             var noPerm = noPermItems?.Contains(issue.Id) == true;
             // SkipComment = 无权限 OR 关键词未命中（两者都不写飞书，但都参与分析）
             var skipWrite = noPerm || !hintMatched;
-            var skipReason = noPerm ? "无编辑权限" : (hintMatched ? "" : "标题关键词未匹配到已知配置规则");
+            var skipReason = noPerm
+                ? "无编辑权限"
+                : (hintMatched ? "" : "标题关键词未匹配到已知配置规则");
 
             if (noPerm)
                 Console.WriteLine($"  新增缺陷（无写入权限）：{Truncate(issue.Name, 40)}");
             else if (hintMatched)
                 Console.WriteLine($"  新增缺陷待写入：{Truncate(issue.Name, 40)}");
             else
-                Console.WriteLine($"  新增缺陷（仅报告，关键词未命中）：{Truncate(issue.Name, 40)}");
+                Console.WriteLine(
+                    $"  新增缺陷（仅报告，关键词未命中）：{Truncate(issue.Name, 40)}"
+                );
             Console.WriteLine($"    activityID={actId}, type={typeNum?.ToString() ?? "?"}");
             if (historyNotes.Count > 0)
                 Console.WriteLine($"    引用历史经验：{historyNotes.Count} 条");
@@ -625,7 +616,11 @@ internal class Program
     {
         Console.WriteLine();
         Console.WriteLine(new string('=', 60));
-        Console.WriteLine(releaseMode ? "【发布模式】待写入评论摘要（输入 y 执行写入）：" : "【测试模式】分析结果预览（不会写入飞书）：");
+        Console.WriteLine(
+            releaseMode
+                ? "【发布模式】待写入评论摘要（输入 y 执行写入）："
+                : "【测试模式】分析结果预览（不会写入飞书）："
+        );
         Console.WriteLine(new string('=', 60));
         for (int i = 0; i < pending.Count; i++)
         {
@@ -685,14 +680,16 @@ internal class Program
             return;
         }
 
-        var noPermItems = LoadNoPermItems();
+        var noPermItems = LoadSet(NoPermItemsPath);
 
         int skipped = pending.Count(p => p.SkipComment);
         int noPerm = pending.Count(p => !p.SkipComment && noPermItems.Contains(p.Id));
         if (skipped > 0)
             Console.WriteLine($"[INFO] 跳过 {skipped} 条关键词未命中的缺陷（仅报告不写飞书）");
         if (noPerm > 0)
-            Console.WriteLine($"[INFO] 跳过 {noPerm} 条无编辑权限的工作项（已记录在 no_permission_items.json）");
+            Console.WriteLine(
+                $"[INFO] 跳过 {noPerm} 条无编辑权限的工作项（已记录在 no_permission_items.json）"
+            );
 
         Console.WriteLine("\n[INFO] 开始写入飞书正文...");
         int ok = 0,
@@ -731,7 +728,7 @@ internal class Program
                     : $"{humanPart}\n\n---\n\n{item.Comment}";
 
                 await FeishuMcpClient.UpdateTextField(item.Id, typeKey, fieldKey, fullDesc);
-                SaveWrittenItem(item.Id);
+                SaveSet(WrittenItemsPath, item.Id);
                 Console.WriteLine($"  [OK] {Truncate(item.Name, 50)}");
                 ok++;
             }
@@ -739,9 +736,11 @@ internal class Program
             {
                 if (IsPermissionError(ex))
                 {
-                    SaveNoPermItem(item.Id);
+                    SaveSet(NoPermItemsPath, item.Id, overwriteExisting: false);
                     noPermItems.Add(item.Id);
-                    Console.WriteLine($"  [无权限] {Truncate(item.Name, 50)}（已记录，后续自动跳过写入）");
+                    Console.WriteLine(
+                        $"  [无权限] {Truncate(item.Name, 50)}（已记录，后续自动跳过写入）"
+                    );
                 }
                 else
                 {
@@ -845,7 +844,12 @@ internal class Program
                 || n.Contains("季节")
             )
                 typeGroups["BattlePass / 季节BP"].Add(item.Name);
-            else if (n.Contains("二合") || n.Contains("砸冰") || n.Contains("V4") || n.Contains("V6"))
+            else if (
+                n.Contains("二合")
+                || n.Contains("砸冰")
+                || n.Contains("V4")
+                || n.Contains("V6")
+            )
                 typeGroups["合并玩法 (二合/砸冰)"].Add(item.Name);
             else if (
                 n.Contains("礼包")
@@ -947,9 +951,19 @@ internal class Program
                 || n.Contains("季节")
             )
                 module = "BattlePass / 季节BP";
-            else if (n.Contains("二合") || n.Contains("砸冰") || n.Contains("V4") || n.Contains("V6"))
+            else if (
+                n.Contains("二合")
+                || n.Contains("砸冰")
+                || n.Contains("V4")
+                || n.Contains("V6")
+            )
                 module = "合并玩法";
-            else if (n.Contains("礼包") || n.Contains("商业化") || n.Contains("付费") || n.Contains("超级卡"))
+            else if (
+                n.Contains("礼包")
+                || n.Contains("商业化")
+                || n.Contains("付费")
+                || n.Contains("超级卡")
+            )
                 module = "礼包 / 商业化";
             else if (n.Contains("关卡岛") || n.Contains("地编") || n.Contains("地图"))
                 module = "关卡岛 / 地编";
@@ -969,7 +983,10 @@ internal class Program
         // ── 第二层：症状类型（宽泛匹配，覆盖自然语言描述） ─────────────────
         var symptomDefs = new (string Label, string[] Keywords)[]
         {
-            ("多语言 / 文案", ["多语言", "翻译", "文案", "文字", "本地化", "语言缺失", "语言", "key"]),
+            (
+                "多语言 / 文案",
+                ["多语言", "翻译", "文案", "文字", "本地化", "语言缺失", "语言", "key"]
+            ),
             (
                 "UI / 界面 / 位置",
                 [
@@ -986,12 +1003,18 @@ internal class Program
                     "展示",
                     "帮助图",
                     "遮挡",
-                    "云层"
+                    "云层",
                 ]
             ),
             ("缺失 / 不显示", ["缺失", "缺少", "不显示", "未显示", "没有", "丢失", "消失"]),
-            ("合成 / 链条", ["合成", "主链", "链条", "三合", "二合", "合并", "merge", "产出不够", "材料不够"]),
-            ("任务 / 触发", ["任务", "触发", "不触发", "不生效", "无法触发", "卡住", "卡死", "卡关", "寻找"]),
+            (
+                "合成 / 链条",
+                ["合成", "主链", "链条", "三合", "二合", "合并", "merge", "产出不够", "材料不够"]
+            ),
+            (
+                "任务 / 触发",
+                ["任务", "触发", "不触发", "不生效", "无法触发", "卡住", "卡死", "卡关", "寻找"]
+            ),
             ("奖励 / 数值", ["奖励", "数值", "数量", "价格", "积分", "得分"]),
             ("配置 / 数据", ["配置", "数据错误", "表格", "配表", "error", "报错"]),
             ("崩溃 / 闪退", ["崩溃", "闪退", "crash", "卡顿", "ANR"]),
