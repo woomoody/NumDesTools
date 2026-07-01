@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using OfficeOpenXml;
@@ -15,70 +15,6 @@ public static class TravelTownWriter
 {
     private const string DataDir = @"C:\tmp\traveltown_lua";
     private const string OutFileName = "竞品-TravelTown核心循环分析.xlsx";
-
-    // ── 样式辅助（与 GossipHarborWriter 相同风格）─────────────────────────────
-    private static void Header(ExcelRange c, string text, string hex = "2F5496")
-    {
-        c.Value = text;
-        c.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        c.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
-        c.Style.Font.Bold = true;
-        c.Style.Font.Color.SetColor(Color.White);
-        c.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-        c.Style.WrapText = true;
-        Border(c);
-    }
-
-    private static void Cell(ExcelRange c, object? value, string? hex = null, bool wrap = false)
-    {
-        c.Value = value;
-        if (hex != null)
-        {
-            c.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            c.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
-        }
-        if (wrap)
-            c.Style.WrapText = true;
-        Border(c);
-    }
-
-    private static void Border(ExcelRange c)
-    {
-        var b = c.Style.Border;
-        b.Top.Style = b.Bottom.Style = b.Left.Style = b.Right.Style = ExcelBorderStyle.Thin;
-        b.Top.Color.SetColor(Color.FromArgb(0xBD, 0xBD, 0xBD));
-        b.Bottom.Color.SetColor(Color.FromArgb(0xBD, 0xBD, 0xBD));
-        b.Left.Color.SetColor(Color.FromArgb(0xBD, 0xBD, 0xBD));
-        b.Right.Color.SetColor(Color.FromArgb(0xBD, 0xBD, 0xBD));
-    }
-
-    private static Color HexColor(string hex)
-    {
-        hex = hex.TrimStart('#');
-        return Color.FromArgb(
-            Convert.ToInt32(hex[..2], 16),
-            Convert.ToInt32(hex[2..4], 16),
-            Convert.ToInt32(hex[4..6], 16)
-        );
-    }
-
-    private static void MechNote(
-        ExcelWorksheet ws,
-        int row,
-        int startCol,
-        string text,
-        int mergeWidth
-    )
-    {
-        var cell = ws.Cells[row, startCol, row, startCol + mergeWidth - 1];
-        cell.Merge = true;
-        cell.Value = text;
-        cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        cell.Style.Fill.BackgroundColor.SetColor(HexColor("F0F4FA"));
-        cell.Style.Font.Size = 9;
-        cell.Style.WrapText = true;
-        Border(cell);
-    }
 
     // ── 数据模型 ──────────────────────────────────────────────────────────────
     private record ChainItem(
@@ -399,7 +335,7 @@ public static class TravelTownWriter
         var ws = pkg.Workbook.Worksheets.Add("生成器链");
         ws.View.FreezePanes(3, 1);
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -438,7 +374,7 @@ public static class TravelTownWriter
             "595959",
         ];
         for (var j = 0; j < headers.Length; j++)
-            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+            XlsxStyleHelper.Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
 
         var chains = LoadChains();
         var genChains = chains.Where(c => c.IsGeneratorChain).OrderBy(c => c.UniqueId).ToList();
@@ -458,9 +394,9 @@ public static class TravelTownWriter
             titleCell.Value = $"▶ {ChainShortName(chain.UniqueId)}  共{chain.Items.Count}级";
             titleCell.Style.Font.Bold = true;
             titleCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            titleCell.Style.Fill.BackgroundColor.SetColor(HexColor("1F4E79"));
+            titleCell.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("1F4E79"));
             titleCell.Style.Font.Color.SetColor(Color.White);
-            Border(titleCell);
+            XlsxStyleHelper.Border(titleCell);
             curRow++;
 
             foreach (var item in chain.Items)
@@ -484,44 +420,44 @@ public static class TravelTownWriter
                 var typeLabel = item.CycleDelay is > 0 ? "自动填充" : "点击即产";
                 var typeHex = item.CycleDelay is > 0 ? "EBF3FB" : "D9EAD3";
 
-                Cell(
+                XlsxStyleHelper.Cell(
                     ws.Cells[curRow, 1],
                     isFirst ? ChainShortName(chain.UniqueId) : "",
                     isFirst ? "D9EAD3" : "F5F5F5"
                 );
-                Cell(ws.Cells[curRow, 2], lvLabel, "F5F5F5");
-                Cell(ws.Cells[curRow, 3], ShortName(item.UniqueId), rowHex);
-                Cell(
+                XlsxStyleHelper.Cell(ws.Cells[curRow, 2], lvLabel, "F5F5F5");
+                XlsxStyleHelper.Cell(ws.Cells[curRow, 3], ShortName(item.UniqueId), rowHex);
+                XlsxStyleHelper.Cell(
                     ws.Cells[curRow, 4],
                     item.CycleDelay is > 0 ? (object)item.CycleDelay : "即时",
                     item.CycleDelay is > 0 ? "FFF2CC" : "D9EAD3"
                 );
-                Cell(
+                XlsxStyleHelper.Cell(
                     ws.Cells[curRow, 5],
                     item.Capacity.HasValue ? (object)item.Capacity.Value : "—",
                     item.Capacity.HasValue ? "EBF3FB" : null
                 );
-                Cell(
+                XlsxStyleHelper.Cell(
                     ws.Cells[curRow, 6],
                     item.ItemsPerSubCycle.HasValue ? (object)item.ItemsPerSubCycle.Value : "—",
                     null
                 );
-                Cell(
+                XlsxStyleHelper.Cell(
                     ws.Cells[curRow, 7],
                     item.EnergyCost.HasValue ? (object)item.EnergyCost.Value : "—",
                     item.EnergyCost is 1 ? "D9EAD3" : null
                 );
-                Cell(
+                XlsxStyleHelper.Cell(
                     ws.Cells[curRow, 8],
                     item.SpawnTarget is not null ? ShortName(item.SpawnTarget) : "—",
                     item.SpawnTarget is not null ? "F0F8FF" : null
                 );
-                Cell(
+                XlsxStyleHelper.Cell(
                     ws.Cells[curRow, 9],
                     item.SpawnWeight.HasValue ? (object)item.SpawnWeight.Value : "—",
                     null
                 );
-                Cell(ws.Cells[curRow, 10], typeLabel, typeHex);
+                XlsxStyleHelper.Cell(ws.Cells[curRow, 10], typeLabel, typeHex);
                 curRow++;
             }
             curRow++;
@@ -552,7 +488,7 @@ public static class TravelTownWriter
         var ws = pkg.Workbook.Worksheets.Add("产品合并链");
         ws.View.FreezePanes(3, 1);
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -598,11 +534,11 @@ public static class TravelTownWriter
         string[] baseHeaders = ["链名", "等级", "元素ID(短)", "平均难度", "出售(笑脸)", "订单需求"];
         string[] baseHex = ["1F4E79", "595959", "2F5496", "2F5496", "595959", "1F4E79"];
         for (var j = 0; j < baseHeaders.Length; j++)
-            Header(ws.Cells[2, j + 1], baseHeaders[j], baseHex[j]);
+            XlsxStyleHelper.Header(ws.Cells[2, j + 1], baseHeaders[j], baseHex[j]);
         for (var j = 0; j < displaySpawners.Count; j++)
         {
             var spawnShort = ShortName(displaySpawners[j]);
-            Header(ws.Cells[2, baseColCount + j + 1], $"难度@\n{spawnShort}", "2F5496");
+            XlsxStyleHelper.Header(ws.Cells[2, baseColCount + j + 1], $"难度@\n{spawnShort}", "2F5496");
         }
 
         var chainColors = new[] { "D9EAD3", "FFF2CC", "EBF3FB", "FCE5CD", "E8DAEF", "F3F3F3" };
@@ -620,9 +556,9 @@ public static class TravelTownWriter
                 $"▶ {ChainShortName(chain.UniqueId)}  共{chain.Items.Count}级  订单元素:{chain.Items.Count(i => i.RequestedByOrders)}种";
             titleCell.Style.Font.Bold = true;
             titleCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            titleCell.Style.Fill.BackgroundColor.SetColor(HexColor("1F4E79"));
+            titleCell.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("1F4E79"));
             titleCell.Style.Font.Color.SetColor(Color.White);
-            Border(titleCell);
+            XlsxStyleHelper.Border(titleCell);
             curRow++;
 
             foreach (var item in chain.Items)
@@ -642,24 +578,24 @@ public static class TravelTownWriter
                     _ => "FADADD", // hard
                 };
 
-                Cell(
+                XlsxStyleHelper.Cell(
                     ws.Cells[curRow, 1],
                     isFirst ? ChainShortName(chain.UniqueId) : "",
                     isFirst ? "D9EAD3" : "F5F5F5"
                 );
-                Cell(ws.Cells[curRow, 2], $"Lv.{item.LevelIndex}", "F5F5F5");
-                Cell(ws.Cells[curRow, 3], ShortName(item.UniqueId), rowHex);
-                Cell(
+                XlsxStyleHelper.Cell(ws.Cells[curRow, 2], $"Lv.{item.LevelIndex}", "F5F5F5");
+                XlsxStyleHelper.Cell(ws.Cells[curRow, 3], ShortName(item.UniqueId), rowHex);
+                XlsxStyleHelper.Cell(
                     ws.Cells[curRow, 4],
                     item.AvgDifficulty > 0 ? (object)item.AvgDifficulty : "—",
                     diffHex
                 );
-                Cell(
+                XlsxStyleHelper.Cell(
                     ws.Cells[curRow, 5],
                     item.SellAmount > 0 ? (object)item.SellAmount : "—",
                     item.SellAmount > 0 ? "FFF2CC" : null
                 );
-                Cell(
+                XlsxStyleHelper.Cell(
                     ws.Cells[curRow, 6],
                     item.RequestedByOrders ? "✓" : "",
                     item.RequestedByOrders ? "D9EAD3" : null
@@ -678,11 +614,11 @@ public static class TravelTownWriter
                             <= 1.0 => "FCE5CD",
                             _ => "FADADD",
                         };
-                        Cell(ws.Cells[curRow, baseColCount + j + 1], dv, dvHex);
+                        XlsxStyleHelper.Cell(ws.Cells[curRow, baseColCount + j + 1], dv, dvHex);
                     }
                     else
                     {
-                        Cell(ws.Cells[curRow, baseColCount + j + 1], "—", "F0F0F0");
+                        XlsxStyleHelper.Cell(ws.Cells[curRow, baseColCount + j + 1], "—", "F0F0F0");
                     }
                 }
                 curRow++;
@@ -713,7 +649,7 @@ public static class TravelTownWriter
         var ws = pkg.Workbook.Worksheets.Add("订单任务树");
         ws.View.FreezePanes(3, 1);
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -739,7 +675,7 @@ public static class TravelTownWriter
             "595959"
         ];
         for (var j = 0; j < headers.Length; j++)
-            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+            XlsxStyleHelper.Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
 
         var orders = LoadOrders();
         var byTree = orders.GroupBy(o => o.TreeId).OrderBy(g => long.Parse(g.Key)).ToList();
@@ -784,25 +720,25 @@ public static class TravelTownWriter
                 // Short order ID: remove tree prefix
                 var shortId = Regex.Replace(step.OrderId, @"^intro_", "");
 
-                Cell(
+                XlsxStyleHelper.Cell(
                     ws.Cells[curRow, 1],
                     isFirst ? $"Tree {step.TreeId}" : "",
                     isFirst ? "1F4E79" : null
                 );
                 if (isFirst)
                     ws.Cells[curRow, 1].Style.Font.Color.SetColor(Color.White);
-                Cell(ws.Cells[curRow, 2], stepNum, "F5F5F5");
-                Cell(ws.Cells[curRow, 3], shortId, treeHex);
-                Cell(ws.Cells[curRow, 4], objStr, treeHex, wrap: true);
-                Cell(ws.Cells[curRow, 5], objAmt, "F9F9F9");
-                Cell(
+                XlsxStyleHelper.Cell(ws.Cells[curRow, 2], stepNum, "F5F5F5");
+                XlsxStyleHelper.Cell(ws.Cells[curRow, 3], shortId, treeHex);
+                XlsxStyleHelper.Cell(ws.Cells[curRow, 4], objStr, treeHex, wrap: true);
+                XlsxStyleHelper.Cell(ws.Cells[curRow, 5], objAmt, "F9F9F9");
+                XlsxStyleHelper.Cell(
                     ws.Cells[curRow, 6],
                     rewardStr,
                     step.Rewards.Any(r => r.ItemRef.Contains("diamond")) ? "FFF2CC" : treeHex,
                     wrap: true
                 );
-                Cell(ws.Cells[curRow, 7], lockedStr, lockedStr == "（起始）" ? "D9EAD3" : "F9F9F9");
-                Cell(ws.Cells[curRow, 8], step.TaskType, "F5F5F5");
+                XlsxStyleHelper.Cell(ws.Cells[curRow, 7], lockedStr, lockedStr == "（起始）" ? "D9EAD3" : "F9F9F9");
+                XlsxStyleHelper.Cell(ws.Cells[curRow, 8], step.TaskType, "F5F5F5");
                 ws.Row(curRow).Height = 20;
                 curRow++;
             }
@@ -834,7 +770,7 @@ public static class TravelTownWriter
         var ws = pkg.Workbook.Worksheets.Add("建筑→生成器映射");
         ws.View.FreezePanes(3, 1);
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -848,7 +784,7 @@ public static class TravelTownWriter
         string[] headers = ["#", "解锁玩家等级", "生成器链(stem)", "生成器ItemID", "绑定订单树ID", "树类型", "备注",];
         string[] hdrHex = ["595959", "1F4E79", "1F4E79", "2F5496", "1F6E4A", "595959", "595959",];
         for (var j = 0; j < headers.Length; j++)
-            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+            XlsxStyleHelper.Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
 
         var producersPath = Path.Combine(DataDir, "producers_inventory_slots.json");
         var chainsPath = Path.Combine(DataDir, "item_merge_graphs_full.json");
@@ -933,13 +869,13 @@ public static class TravelTownWriter
             var noteStr = unlockLevel == 0 ? "开局即有" : "";
             var rowHex = unlockLevel == 0 ? "EBF3FB" : null;
 
-            Cell(ws.Cells[row, 1], idx, "F5F5F5");
-            Cell(ws.Cells[row, 2], unlockLevel == 0 ? "—(初始)" : (object)unlockLevel, rowHex);
-            Cell(ws.Cells[row, 3], stem, rowHex ?? "FAFAFA");
-            Cell(ws.Cells[row, 4], genItemId, "F8F8F8");
-            Cell(ws.Cells[row, 5], treeId, treeHex);
-            Cell(ws.Cells[row, 6], treeType, treeHex);
-            Cell(ws.Cells[row, 7], noteStr, null);
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], idx, "F5F5F5");
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], unlockLevel == 0 ? "—(初始)" : (object)unlockLevel, rowHex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], stem, rowHex ?? "FAFAFA");
+            XlsxStyleHelper.Cell(ws.Cells[row, 4], genItemId, "F8F8F8");
+            XlsxStyleHelper.Cell(ws.Cells[row, 5], treeId, treeHex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 6], treeType, treeHex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 7], noteStr, null);
             row++;
         }
 
@@ -964,7 +900,7 @@ public static class TravelTownWriter
         var ws = pkg.Workbook.Worksheets.Add("付费设计");
         ws.View.FreezePanes(3, 1);
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -979,7 +915,7 @@ public static class TravelTownWriter
         string[] headers = ["价格(USD)", "SKU数量", "示例SKU", "类型"];
         string[] hdrHex = ["1F4E79", "2F5496", "2F5496", "595959"];
         for (var j = 0; j < headers.Length; j++)
-            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+            XlsxStyleHelper.Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
 
         var cache22Path = Path.Combine(DataDir, "cache_22.dat_full.json");
         if (!File.Exists(cache22Path))
@@ -1033,10 +969,10 @@ public static class TravelTownWriter
         {
             var hex = TierHex(price);
             var skuType = skus[0].Contains("bundle") ? "bundle包" : "store单品";
-            Cell(ws.Cells[row, 1], $"${price:F2}", hex);
-            Cell(ws.Cells[row, 2], skus.Count, hex);
-            Cell(ws.Cells[row, 3], skus[0], "F8F8F8");
-            Cell(ws.Cells[row, 4], $"{TierLabel(price)} / {skuType}", hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], $"${price:F2}", hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], skus.Count, hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], skus[0], "F8F8F8");
+            XlsxStyleHelper.Cell(ws.Cells[row, 4], $"{TierLabel(price)} / {skuType}", hex);
             row++;
         }
 
@@ -1054,7 +990,7 @@ public static class TravelTownWriter
             ("卡牌册系统", "7个赛季册（cache_1A albums），完成册子获得额外道具奖励"),
         };
 
-        Header(ws.Cells[row, 1, row, 4], "付费设计关键结论（高置信直接数据）", "1A3A5C");
+        XlsxStyleHelper.Header(ws.Cells[row, 1, row, 4], "付费设计关键结论（高置信直接数据）", "1A3A5C");
         ws.Cells[row, 1, row, 4].Merge = true;
         row++;
 
@@ -1063,16 +999,16 @@ public static class TravelTownWriter
             ws.Cells[row, 1].Value = k;
             ws.Cells[row, 1].Style.Font.Bold = true;
             ws.Cells[row, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            ws.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(HexColor("EBF3FB"));
-            Border(ws.Cells[row, 1]);
+            ws.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("EBF3FB"));
+            XlsxStyleHelper.Border(ws.Cells[row, 1]);
 
             var vc = ws.Cells[row, 2, row, 4];
             vc.Merge = true;
             vc.Value = v;
             vc.Style.WrapText = true;
             vc.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            vc.Style.Fill.BackgroundColor.SetColor(HexColor("F8FAFF"));
-            Border(vc);
+            vc.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("F8FAFF"));
+            XlsxStyleHelper.Border(vc);
             ws.Row(row).Height = 18;
             row++;
         }
@@ -1100,10 +1036,10 @@ public static class TravelTownWriter
             cell.Style.Font.Bold = true;
             cell.Style.Font.Size = 14;
             cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            cell.Style.Fill.BackgroundColor.SetColor(HexColor("1F2D40"));
+            cell.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("1F2D40"));
             cell.Style.Font.Color.SetColor(Color.White);
             cell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            Border(cell);
+            XlsxStyleHelper.Border(cell);
             ws.Row(r).Height = 32;
         }
 
@@ -1115,9 +1051,9 @@ public static class TravelTownWriter
             cell.Style.Font.Bold = true;
             cell.Style.Font.Size = 11;
             cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            cell.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
+            cell.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor(hex));
             cell.Style.Font.Color.SetColor(Color.White);
-            Border(cell);
+            XlsxStyleHelper.Border(cell);
             ws.Row(r).Height = 22;
         }
 
@@ -1135,10 +1071,10 @@ public static class TravelTownWriter
             cell.Style.Font.Size = 10;
             cell.Style.Font.Bold = bold;
             cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            cell.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
+            cell.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor(hex));
             cell.Style.WrapText = true;
             cell.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-            Border(cell);
+            XlsxStyleHelper.Border(cell);
             ws.Row(r).Height = height;
         }
 
@@ -1194,7 +1130,7 @@ public static class TravelTownWriter
         {
             var (text, bg) = stepDefs[si];
             var baseRow = row + si * (StepRowCount + ArrowRowCount);
-            var bgColor = HexColor(bg);
+            var bgColor = XlsxStyleHelper.HexColor(bg);
             var darkColor = Color.FromArgb(
                 Math.Max(0, bgColor.R - 25),
                 Math.Max(0, bgColor.G - 25),
@@ -1241,7 +1177,7 @@ public static class TravelTownWriter
                 arr.SetPosition(arrRow - 1, 1, 2, 8);
                 arr.SetSize(30, ArrowRowH + 2);
                 arr.Fill.Style = OfficeOpenXml.Drawing.eFillStyle.SolidFill;
-                arr.Fill.Color = HexColor("7F7F7F");
+                arr.Fill.Color = XlsxStyleHelper.HexColor("7F7F7F");
                 arr.Border.Fill.Style = OfficeOpenXml.Drawing.eFillStyle.NoFill;
             }
         }
@@ -1252,11 +1188,11 @@ public static class TravelTownWriter
         loopCell.Value = "↑─────── 任务树完成后解锁新生成器，循环继续 ───────↑";
         loopCell.Style.Font.Bold = true;
         loopCell.Style.Font.Size = 10;
-        loopCell.Style.Font.Color.SetColor(HexColor("145A32"));
+        loopCell.Style.Font.Color.SetColor(XlsxStyleHelper.HexColor("145A32"));
         loopCell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
         loopCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        loopCell.Style.Fill.BackgroundColor.SetColor(HexColor("E8F5EE"));
-        Border(loopCell);
+        loopCell.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("E8F5EE"));
+        XlsxStyleHelper.Border(loopCell);
         ws.Row(loopRow).Height = 16;
 
         row += BlockRows + 1;
@@ -1279,10 +1215,10 @@ public static class TravelTownWriter
             hc.Value = label;
             hc.Style.Font.Bold = true;
             hc.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            hc.Style.Fill.BackgroundColor.SetColor(HexColor("2F5496"));
+            hc.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("2F5496"));
             hc.Style.Font.Color.SetColor(Color.White);
             hc.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            Border(hc);
+            XlsxStyleHelper.Border(hc);
         }
         ws.Row(row++).Height = 20;
 
@@ -1341,10 +1277,10 @@ public static class TravelTownWriter
                 c.Value = v;
                 c.Style.Font.Size = 10;
                 c.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                c.Style.Fill.BackgroundColor.SetColor(HexColor(h));
+                c.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor(h));
                 c.Style.WrapText = true;
                 c.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-                Border(c);
+                XlsxStyleHelper.Border(c);
             }
             FC(1, 2, dim, "F0F4FA");
             ws.Cells[row, 1, row, 2].Style.Font.Bold = true;
@@ -1395,21 +1331,21 @@ public static class TravelTownWriter
             lc.Style.Font.Bold = true;
             lc.Style.Font.Size = 10;
             lc.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            lc.Style.Fill.BackgroundColor.SetColor(HexColor("1A5E4A"));
+            lc.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("1A5E4A"));
             lc.Style.Font.Color.SetColor(Color.White);
             lc.Style.WrapText = true;
             lc.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-            Border(lc);
+            XlsxStyleHelper.Border(lc);
 
             var rc = ws.Cells[row, 4, row, 12];
             rc.Merge = true;
             rc.Value = desc;
             rc.Style.Font.Size = 10;
             rc.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            rc.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
+            rc.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor(hex));
             rc.Style.WrapText = true;
             rc.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-            Border(rc);
+            XlsxStyleHelper.Border(rc);
             ws.Row(row++).Height = 44;
         }
         row++;
@@ -1458,21 +1394,21 @@ public static class TravelTownWriter
             lc.Style.Font.Bold = true;
             lc.Style.Font.Size = 10;
             lc.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            lc.Style.Fill.BackgroundColor.SetColor(HexColor("595959"));
+            lc.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("595959"));
             lc.Style.Font.Color.SetColor(Color.White);
             lc.Style.WrapText = true;
             lc.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-            Border(lc);
+            XlsxStyleHelper.Border(lc);
 
             var rc = ws.Cells[row, 4, row, 12];
             rc.Merge = true;
             rc.Value = desc;
             rc.Style.Font.Size = 10;
             rc.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            rc.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
+            rc.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor(hex));
             rc.Style.WrapText = true;
             rc.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-            Border(rc);
+            XlsxStyleHelper.Border(rc);
             ws.Row(row++).Height = 44;
         }
 

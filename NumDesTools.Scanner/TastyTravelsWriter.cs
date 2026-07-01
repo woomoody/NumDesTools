@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using OfficeOpenXml;
@@ -36,72 +36,6 @@ public static class TastyTravelsWriter
     private record BoardCell(int Row, int Col, string Item, bool Locked, bool Boxed, int LevelLock);
 
     private record MergeChain(string GraphId, string GraphName, List<string> ItemIds);
-
-    // ── 样式辅助 ──────────────────────────────────────────────────────────────
-
-    private static void Header(ExcelRange c, string text, string hex = "2F5496")
-    {
-        c.Value = text;
-        c.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        c.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
-        c.Style.Font.Bold = true;
-        c.Style.Font.Color.SetColor(Color.White);
-        c.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-        c.Style.WrapText = true;
-        Border(c);
-    }
-
-    private static void Cell(ExcelRange c, object? value, string? hex = null, bool wrap = false)
-    {
-        c.Value = value;
-        if (hex != null)
-        {
-            c.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            c.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
-        }
-        if (wrap)
-            c.Style.WrapText = true;
-        Border(c);
-    }
-
-    private static void MechNote(
-        ExcelWorksheet ws,
-        int row,
-        int startCol,
-        string text,
-        int mergeWidth
-    )
-    {
-        var cell = ws.Cells[row, startCol, row, startCol + mergeWidth - 1];
-        cell.Merge = true;
-        cell.Value = text;
-        cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        cell.Style.Fill.BackgroundColor.SetColor(HexColor("F0F4FA"));
-        cell.Style.Font.Size = 9;
-        cell.Style.WrapText = true;
-        Border(cell);
-    }
-
-    private static void Border(ExcelRange c)
-    {
-        var b = c.Style.Border;
-        b.Top.Style = b.Bottom.Style = b.Left.Style = b.Right.Style = ExcelBorderStyle.Thin;
-        var gray = Color.FromArgb(0xBD, 0xBD, 0xBD);
-        b.Top.Color.SetColor(gray);
-        b.Bottom.Color.SetColor(gray);
-        b.Left.Color.SetColor(gray);
-        b.Right.Color.SetColor(gray);
-    }
-
-    private static Color HexColor(string hex)
-    {
-        hex = hex.TrimStart('#');
-        return Color.FromArgb(
-            Convert.ToInt32(hex[..2], 16),
-            Convert.ToInt32(hex[2..4], 16),
-            Convert.ToInt32(hex[4..6], 16)
-        );
-    }
 
     // ── 数据加载 ──────────────────────────────────────────────────────────────
 
@@ -269,7 +203,7 @@ public static class TastyTravelsWriter
     {
         var ws = pkg.Workbook.Worksheets.Add("概览");
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -310,8 +244,8 @@ public static class TastyTravelsWriter
             ("棋盘扩展", "初始7格，最大30格，10HC起步×1.25倍率"),
         };
 
-        Header(ws.Cells[2, 1], "项目", "1F4E79");
-        Header(ws.Cells[2, 2, 2, 3], "数值 / 说明", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 1], "项目", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[2, 2, 2, 3], "数值 / 说明", "2F5496");
         ws.Cells[2, 2, 2, 3].Merge = true;
         ws.Row(2).Height = 22;
 
@@ -320,15 +254,15 @@ public static class TastyTravelsWriter
         {
             var row = i + 3;
             var (key, val) = kv[i];
-            Cell(ws.Cells[row, 1], key, "F2F2F2");
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], key, "F2F2F2");
             ws.Cells[row, 1].Style.Font.Bold = true;
             var valCell = ws.Cells[row, 2, row, 3];
             valCell.Merge = true;
             valCell.Value = val;
             valCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            valCell.Style.Fill.BackgroundColor.SetColor(HexColor(altColors[i % 2]));
+            valCell.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor(altColors[i % 2]));
             valCell.Style.WrapText = true;
-            Border(valCell);
+            XlsxStyleHelper.Border(valCell);
             ws.Row(row).Height = 18;
         }
 
@@ -385,7 +319,7 @@ public static class TastyTravelsWriter
     {
         var ws = pkg.Workbook.Worksheets.Add("订单系统");
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -418,7 +352,7 @@ public static class TastyTravelsWriter
             "385623",
         ];
         for (var j = 0; j < headers.Length; j++)
-            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+            XlsxStyleHelper.Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
         ws.Row(2).Height = 22;
         ws.View.FreezePanes(3, 1);
 
@@ -444,9 +378,9 @@ public static class TastyTravelsWriter
                 var r = row + oi;
                 if (oi == 0)
                 {
-                    Cell(ws.Cells[r, 1], o.OrderId, "F2F2F2");
-                    Cell(ws.Cells[r, 2], o.TreeId, "EBF3FB");
-                    Cell(ws.Cells[r, 3], o.SeqInTree, "EBF3FB");
+                    XlsxStyleHelper.Cell(ws.Cells[r, 1], o.OrderId, "F2F2F2");
+                    XlsxStyleHelper.Cell(ws.Cells[r, 2], o.TreeId, "EBF3FB");
+                    XlsxStyleHelper.Cell(ws.Cells[r, 3], o.SeqInTree, "EBF3FB");
                 }
 
                 if (oi < o.Objectives.Count)
@@ -454,16 +388,16 @@ public static class TastyTravelsWriter
                     var obj = o.Objectives[oi];
                     var tier = TierFromItemId(obj.ItemReference);
                     var tierHex = tierColors.GetValueOrDefault(Math.Min(tier, 5), "F5F5F5");
-                    Cell(ws.Cells[r, 4], obj.ItemReference.Replace("item_", ""), tierHex);
-                    Cell(ws.Cells[r, 5], tier >= 0 ? tier : "", tierHex);
-                    Cell(ws.Cells[r, 6], obj.Amount, tierHex);
+                    XlsxStyleHelper.Cell(ws.Cells[r, 4], obj.ItemReference.Replace("item_", ""), tierHex);
+                    XlsxStyleHelper.Cell(ws.Cells[r, 5], tier >= 0 ? tier : "", tierHex);
+                    XlsxStyleHelper.Cell(ws.Cells[r, 6], obj.Amount, tierHex);
                 }
 
                 if (oi < o.Rewards.Count)
                 {
                     var rew = o.Rewards[oi];
-                    Cell(ws.Cells[r, 7], rew.ItemReference.Replace("item_", ""), "D9EAD3");
-                    Cell(ws.Cells[r, 8], rew.Amount, "D9EAD3");
+                    XlsxStyleHelper.Cell(ws.Cells[r, 7], rew.ItemReference.Replace("item_", ""), "D9EAD3");
+                    XlsxStyleHelper.Cell(ws.Cells[r, 8], rew.Amount, "D9EAD3");
                 }
             }
 
@@ -483,7 +417,7 @@ public static class TastyTravelsWriter
         // 简化：每订单一行，多个 objective 合并显示
         // 重新渲染（覆盖上面的多行逻辑，改为单行）
         var ws2 = pkg.Workbook.Worksheets.Add("订单系统（单行）");
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws2,
             1,
             1,
@@ -492,7 +426,7 @@ public static class TastyTravelsWriter
         );
         ws2.Row(1).Height = 40;
         for (var j = 0; j < headers.Length; j++)
-            Header(ws2.Cells[2, j + 1], headers[j], hdrHex[j]);
+            XlsxStyleHelper.Header(ws2.Cells[2, j + 1], headers[j], hdrHex[j]);
         ws2.Row(2).Height = 22;
         ws2.View.FreezePanes(3, 1);
 
@@ -502,9 +436,9 @@ public static class TastyTravelsWriter
             var o = orders[i];
             var altHex = o.TreeId % 2 == 0 ? "EBF3FB" : "F8FBFF";
 
-            Cell(ws2.Cells[row, 1], o.OrderId, "F2F2F2");
-            Cell(ws2.Cells[row, 2], o.TreeId, altHex);
-            Cell(ws2.Cells[row, 3], o.SeqInTree, altHex);
+            XlsxStyleHelper.Cell(ws2.Cells[row, 1], o.OrderId, "F2F2F2");
+            XlsxStyleHelper.Cell(ws2.Cells[row, 2], o.TreeId, altHex);
+            XlsxStyleHelper.Cell(ws2.Cells[row, 3], o.SeqInTree, altHex);
 
             var objText = string.Join(
                 " | ",
@@ -519,9 +453,9 @@ public static class TastyTravelsWriter
             var maxTier = objTiers.Count > 0 ? objTiers.Max() : -1;
             var tierHex = tierColors.GetValueOrDefault(Math.Min(maxTier, 5), "F5F5F5");
 
-            Cell(ws2.Cells[row, 4], objText, tierHex, wrap: true);
-            Cell(ws2.Cells[row, 5], maxTier >= 0 ? maxTier : "", tierHex);
-            Cell(
+            XlsxStyleHelper.Cell(ws2.Cells[row, 4], objText, tierHex, wrap: true);
+            XlsxStyleHelper.Cell(ws2.Cells[row, 5], maxTier >= 0 ? maxTier : "", tierHex);
+            XlsxStyleHelper.Cell(
                 ws2.Cells[row, 6],
                 o.Objectives.Count > 0 ? o.Objectives.Sum(x => x.Amount) : 0,
                 tierHex
@@ -531,8 +465,8 @@ public static class TastyTravelsWriter
                 " | ",
                 o.Rewards.Select(r => $"{r.ItemReference.Replace("item_", "")} ×{r.Amount}")
             );
-            Cell(ws2.Cells[row, 7], rewText, "D9EAD3", wrap: true);
-            Cell(
+            XlsxStyleHelper.Cell(ws2.Cells[row, 7], rewText, "D9EAD3", wrap: true);
+            XlsxStyleHelper.Cell(
                 ws2.Cells[row, 8],
                 o.Rewards.Count > 0 ? o.Rewards.Sum(r => r.Amount) : 0,
                 "D9EAD3"
@@ -559,7 +493,7 @@ public static class TastyTravelsWriter
     {
         var ws = pkg.Workbook.Worksheets.Add("棋盘布局");
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -571,7 +505,7 @@ public static class TastyTravelsWriter
 
         string[] headers = ["行", "列", "物品ID", "物品类型", "Tier", "锁定", "装箱", "等级解锁"];
         for (var j = 0; j < headers.Length; j++)
-            Header(ws.Cells[2, j + 1], headers[j], j < 2 ? "1F4E79" : "2F5496");
+            XlsxStyleHelper.Header(ws.Cells[2, j + 1], headers[j], j < 2 ? "1F4E79" : "2F5496");
         ws.Row(2).Height = 22;
         ws.View.FreezePanes(3, 1);
 
@@ -592,14 +526,14 @@ public static class TastyTravelsWriter
             else
                 hex = "EBF3FB"; // 普通锁定：蓝
 
-            Cell(ws.Cells[row, 1], c.Row, "F2F2F2");
-            Cell(ws.Cells[row, 2], c.Col, "F2F2F2");
-            Cell(ws.Cells[row, 3], c.Item, hex);
-            Cell(ws.Cells[row, 4], itemType, hex);
-            Cell(ws.Cells[row, 5], tier >= 0 ? tier : "", hex);
-            Cell(ws.Cells[row, 6], c.Locked ? "✓" : "", c.Locked ? "FCE5CD" : "D9EAD3");
-            Cell(ws.Cells[row, 7], c.Boxed ? "✓" : "", c.Boxed ? "FCE5CD" : null);
-            Cell(
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], c.Row, "F2F2F2");
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], c.Col, "F2F2F2");
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], c.Item, hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 4], itemType, hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 5], tier >= 0 ? tier : "", hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 6], c.Locked ? "✓" : "", c.Locked ? "FCE5CD" : "D9EAD3");
+            XlsxStyleHelper.Cell(ws.Cells[row, 7], c.Boxed ? "✓" : "", c.Boxed ? "FCE5CD" : null);
+            XlsxStyleHelper.Cell(
                 ws.Cells[row, 8],
                 c.LevelLock > 0 ? c.LevelLock : "",
                 c.LevelLock > 0 ? "F5F5F5" : null
@@ -634,7 +568,7 @@ public static class TastyTravelsWriter
         var maxLen = chains.Count > 0 ? chains.Max(c => c.ItemIds.Count) : 1;
         var colCount = 3 + Math.Min(maxLen, 15);
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -644,11 +578,11 @@ public static class TastyTravelsWriter
         );
         ws.Row(1).Height = 50;
 
-        Header(ws.Cells[2, 1], "序号", "1F4E79");
-        Header(ws.Cells[2, 2], "GraphID", "1F4E79");
-        Header(ws.Cells[2, 3], "链长", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 1], "序号", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[2, 2], "GraphID", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[2, 3], "链长", "2F5496");
         for (var j = 0; j < Math.Min(maxLen, 15); j++)
-            Header(ws.Cells[2, 4 + j], $"T{j:D2}", "2F5496");
+            XlsxStyleHelper.Header(ws.Cells[2, 4 + j], $"T{j:D2}", "2F5496");
         ws.Row(2).Height = 22;
         ws.View.FreezePanes(3, 1);
 
@@ -656,16 +590,16 @@ public static class TastyTravelsWriter
         {
             var row = i + 3;
             var chain = chains[i];
-            Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
-            Cell(ws.Cells[row, 2], chain.GraphId, "F0F4FA");
-            Cell(ws.Cells[row, 3], chain.ItemIds.Count, "EBF3FB");
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], chain.GraphId, "F0F4FA");
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], chain.ItemIds.Count, "EBF3FB");
 
             var displayCount = Math.Min(chain.ItemIds.Count, 15);
             for (var j = 0; j < displayCount; j++)
             {
                 var isLast = j == chain.ItemIds.Count - 1;
                 var itemShort = chain.ItemIds[j].Replace("item_", "");
-                Cell(ws.Cells[row, 4 + j], itemShort, isLast ? "FFF2CC" : "EBF3FB");
+                XlsxStyleHelper.Cell(ws.Cells[row, 4 + j], itemShort, isLast ? "FFF2CC" : "EBF3FB");
             }
             if (chain.ItemIds.Count > 15)
                 ws.Cells[row, 4 + 15].Value = $"…+{chain.ItemIds.Count - 15}";
@@ -728,7 +662,7 @@ public static class TastyTravelsWriter
             }
         }
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -744,13 +678,13 @@ public static class TastyTravelsWriter
         titleA.Value = "▶ 生成器物品列表（来源：设备缓存文件名）";
         titleA.Style.Font.Bold = true;
         titleA.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        titleA.Style.Fill.BackgroundColor.SetColor(HexColor("1F4E79"));
+        titleA.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("1F4E79"));
         titleA.Style.Font.Color.SetColor(Color.White);
-        Border(titleA);
+        XlsxStyleHelper.Border(titleA);
 
         string[] hA = ["#", "生成器ID", "Tier", "推断关联Chain", "备注", ""];
         for (var j = 0; j < 5; j++)
-            Header(ws.Cells[3, j + 1], hA[j], "2F5496");
+            XlsxStyleHelper.Header(ws.Cells[3, j + 1], hA[j], "2F5496");
         ws.Row(3).Height = 20;
 
         var spawnerGroups = spawnerItems.GroupBy(s => s.ItemId).OrderBy(g => g.Key).ToList();
@@ -764,11 +698,11 @@ public static class TastyTravelsWriter
                 chains.FirstOrDefault(c => c.GraphId.ToLower().Contains(g.Key.ToLower()))?.GraphId
                 ?? "—";
             var hex = i % 2 == 0 ? "EBF3FB" : "F0F4FA";
-            Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
-            Cell(ws.Cells[row, 2], g.Key, hex);
-            Cell(ws.Cells[row, 3], $"T{tiers.Min():D2}~T{tiers.Max():D2}（{tiers.Count}级）", hex);
-            Cell(ws.Cells[row, 4], relatedChain, "FFF2CC");
-            Cell(ws.Cells[row, 5], "", hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], g.Key, hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], $"T{tiers.Min():D2}~T{tiers.Max():D2}（{tiers.Count}级）", hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 4], relatedChain, "FFF2CC");
+            XlsxStyleHelper.Cell(ws.Cells[row, 5], "", hex);
             row++;
         }
 
@@ -779,26 +713,26 @@ public static class TastyTravelsWriter
         titleB.Value = "▶ 含生成逻辑的合成链（mergeItemGraphs 中含 spawner 关键词）";
         titleB.Style.Font.Bold = true;
         titleB.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        titleB.Style.Fill.BackgroundColor.SetColor(HexColor("385623"));
+        titleB.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("385623"));
         titleB.Style.Font.Color.SetColor(Color.White);
-        Border(titleB);
+        XlsxStyleHelper.Border(titleB);
         row++;
 
         string[] hB = ["#", "GraphID", "链长", "首项(T00)", "末项", "备注"];
         for (var j = 0; j < hB.Length; j++)
-            Header(ws.Cells[row, j + 1], hB[j], "2F5496");
+            XlsxStyleHelper.Header(ws.Cells[row, j + 1], hB[j], "2F5496");
         row++;
 
         for (var i = 0; i < spawnerChains.Count; i++)
         {
             var c = spawnerChains[i];
             var hex = i % 2 == 0 ? "D9EAD3" : "EBF3FB";
-            Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
-            Cell(ws.Cells[row, 2], c.GraphId, hex);
-            Cell(ws.Cells[row, 3], c.ItemIds.Count, hex);
-            Cell(ws.Cells[row, 4], c.ItemIds.FirstOrDefault()?.Replace("item_", "") ?? "", hex);
-            Cell(ws.Cells[row, 5], c.ItemIds.LastOrDefault()?.Replace("item_", "") ?? "", "FFF2CC");
-            Cell(ws.Cells[row, 6], "", hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], c.GraphId, hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], c.ItemIds.Count, hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 4], c.ItemIds.FirstOrDefault()?.Replace("item_", "") ?? "", hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 5], c.ItemIds.LastOrDefault()?.Replace("item_", "") ?? "", "FFF2CC");
+            XlsxStyleHelper.Cell(ws.Cells[row, 6], "", hex);
             row++;
         }
 

@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 
@@ -13,72 +13,6 @@ namespace NumDesTools.Scanner;
 public static class MergeCookingWriter
 {
     private const string OutFileName = "竞品-MergeCooking核心循环分析.xlsx";
-
-    // ── 样式辅助 ──────────────────────────────────────────────────────────────
-
-    private static void Header(ExcelRange c, string text, string hex = "2F5496")
-    {
-        c.Value = text;
-        c.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        c.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
-        c.Style.Font.Bold = true;
-        c.Style.Font.Color.SetColor(Color.White);
-        c.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-        c.Style.WrapText = true;
-        Border(c);
-    }
-
-    private static void Cell(ExcelRange c, object? value, string? hex = null, bool wrap = false)
-    {
-        c.Value = value;
-        if (hex is not null)
-        {
-            c.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            c.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
-        }
-        if (wrap)
-            c.Style.WrapText = true;
-        Border(c);
-    }
-
-    private static void Border(ExcelRange c)
-    {
-        var b = c.Style.Border;
-        b.Top.Style = b.Bottom.Style = b.Left.Style = b.Right.Style = ExcelBorderStyle.Thin;
-        var gray = Color.FromArgb(0xBD, 0xBD, 0xBD);
-        b.Top.Color.SetColor(gray);
-        b.Bottom.Color.SetColor(gray);
-        b.Left.Color.SetColor(gray);
-        b.Right.Color.SetColor(gray);
-    }
-
-    private static Color HexColor(string hex)
-    {
-        hex = hex.TrimStart('#');
-        return Color.FromArgb(
-            Convert.ToInt32(hex[..2], 16),
-            Convert.ToInt32(hex[2..4], 16),
-            Convert.ToInt32(hex[4..6], 16)
-        );
-    }
-
-    private static void MechNote(
-        ExcelWorksheet ws,
-        int row,
-        int startCol,
-        string text,
-        int mergeWidth
-    )
-    {
-        var cell = ws.Cells[row, startCol, row, startCol + mergeWidth - 1];
-        cell.Merge = true;
-        cell.Value = text;
-        cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        cell.Style.Fill.BackgroundColor.SetColor(HexColor("F0F4FA"));
-        cell.Style.Font.Size = 9;
-        cell.Style.WrapText = true;
-        Border(cell);
-    }
 
     // ── 内嵌数据（ADB playerprefs.xml + UnityPy 资产解包 + 语言包提取）─────────
 
@@ -404,7 +338,7 @@ public static class MergeCookingWriter
         var ws = pkg.Workbook.Worksheets.Add("生成器配置");
         ws.View.FreezePanes(3, 1);
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -423,7 +357,7 @@ public static class MergeCookingWriter
         string[] headers = ["生成器ID", "推断名称", "当前surplus", "产出项目", "产出概率%", "置信度", "备注",];
         string[] hdrHex = ["1F4E79", "2F5496", "2F5496", "1F4E79", "2F5496", "595959", "595959"];
         for (var j = 0; j < headers.Length; j++)
-            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+            XlsxStyleHelper.Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
 
         var row = 3;
         var colors = new[] { "D9EAD3", "FFF2CC", "EBF3FB", "FCE5CD", "E8DAEF", "F3F3F3" };
@@ -457,11 +391,11 @@ public static class MergeCookingWriter
                 ws.Cells[row, 7, row + rowSpan - 1, 7].Merge = true;
             }
 
-            Cell(ws.Cells[row, 1], gen.GoodsId, hex);
-            Cell(ws.Cells[row, 2], gen.Name, hex);
-            Cell(ws.Cells[row, 3], gen.Surplus, hex);
-            Cell(ws.Cells[row, 6], conf, confHex);
-            Cell(
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], gen.GoodsId, hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], gen.Name, hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], gen.Surplus, hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 6], conf, confHex);
+            XlsxStyleHelper.Cell(
                 ws.Cells[row, 7],
                 gen.GoodsId >= 101554
                     ? "主题/限时活动专属机器"
@@ -484,15 +418,15 @@ public static class MergeCookingWriter
                             : probPct > 0
                                 ? "FCE5CD"
                                 : "F0F0F0";
-                Cell(ws.Cells[row + k, 4], probItem, k == 0 ? hex : "FAFAFA");
-                Cell(
+                XlsxStyleHelper.Cell(ws.Cells[row + k, 4], probItem, k == 0 ? hex : "FAFAFA");
+                XlsxStyleHelper.Cell(
                     ws.Cells[row + k, 5],
                     probPct > 0 ? (object)Math.Round(probPct, 1) : "N/A",
                     probHex
                 );
-                Border(ws.Cells[row + k, 1]);
-                Border(ws.Cells[row + k, 2]);
-                Border(ws.Cells[row + k, 3]);
+                XlsxStyleHelper.Border(ws.Cells[row + k, 1]);
+                XlsxStyleHelper.Border(ws.Cells[row + k, 2]);
+                XlsxStyleHelper.Border(ws.Cells[row + k, 3]);
             }
 
             row += rowSpan;
@@ -520,7 +454,7 @@ public static class MergeCookingWriter
         var ws = pkg.Workbook.Worksheets.Add("元素合并链");
         ws.View.FreezePanes(3, 1);
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -540,7 +474,7 @@ public static class MergeCookingWriter
         string[] headers = ["链名", "来源", "元素ID", "推断名称", "链内等级", "订单消耗", "备注"];
         string[] hdrHex = ["1F4E79", "595959", "2F5496", "2F5496", "595959", "1F4E79", "595959"];
         for (var j = 0; j < headers.Length; j++)
-            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+            XlsxStyleHelper.Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
 
         var chainColors = new[] { "D9EAD3", "FFF2CC", "EBF3FB", "FCE5CD", "E8DAEF", "F3F3F3" };
         var row = 3;
@@ -556,9 +490,9 @@ public static class MergeCookingWriter
             title.Value = $"▶ {chain.ChainId}  共 {chain.Items.Length} 种元素  |  来源：{chain.Source}";
             title.Style.Font.Bold = true;
             title.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            title.Style.Fill.BackgroundColor.SetColor(HexColor("1F4E79"));
+            title.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("1F4E79"));
             title.Style.Font.Color.SetColor(Color.White);
-            Border(title);
+            XlsxStyleHelper.Border(title);
             row++;
 
             foreach (var (id, name, level, orderUsed) in chain.Items)
@@ -569,11 +503,11 @@ public static class MergeCookingWriter
                         : level >= 6
                             ? "FADADD"
                             : hex;
-                Cell(ws.Cells[row, 1], chain.ChainId, "F5F5F5");
-                Cell(ws.Cells[row, 2], chain.Source, "F5F5F5", wrap: true);
-                Cell(ws.Cells[row, 3], id, rowHex);
-                Cell(ws.Cells[row, 4], name, rowHex);
-                Cell(
+                XlsxStyleHelper.Cell(ws.Cells[row, 1], chain.ChainId, "F5F5F5");
+                XlsxStyleHelper.Cell(ws.Cells[row, 2], chain.Source, "F5F5F5", wrap: true);
+                XlsxStyleHelper.Cell(ws.Cells[row, 3], id, rowHex);
+                XlsxStyleHelper.Cell(ws.Cells[row, 4], name, rowHex);
+                XlsxStyleHelper.Cell(
                     ws.Cells[row, 5],
                     $"L{level}",
                     level <= 2
@@ -582,8 +516,8 @@ public static class MergeCookingWriter
                             ? "FADADD"
                             : "FFF2CC"
                 );
-                Cell(ws.Cells[row, 6], orderUsed ? "是" : "", orderUsed ? "D9EAD3" : null);
-                Cell(
+                XlsxStyleHelper.Cell(ws.Cells[row, 6], orderUsed ? "是" : "", orderUsed ? "D9EAD3" : null);
+                XlsxStyleHelper.Cell(
                     ws.Cells[row, 7],
                     name.Contains("GEN")
                         ? "该元素本身是生成器"
@@ -619,7 +553,7 @@ public static class MergeCookingWriter
         var ws = pkg.Workbook.Worksheets.Add("订单配置");
         ws.View.FreezePanes(3, 1);
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -648,7 +582,7 @@ public static class MergeCookingWriter
             "595959",
         ];
         for (var j = 0; j < headers.Length; j++)
-            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+            XlsxStyleHelper.Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
 
         var row = 3;
         var colors = new[] { "EBF3FB", "FFF2CC", "D9EAD3", "FCE5CD" };
@@ -670,14 +604,14 @@ public static class MergeCookingWriter
                 r.RewardId == 1001
             );
 
-            Cell(ws.Cells[row, 1], $"波次订单#{order.Idx}", hex);
-            Cell(ws.Cells[row, 2], order.WaveDesc, "F5F5F5");
-            Cell(ws.Cells[row, 3], order.TotalWave, "F5F5F5");
-            Cell(ws.Cells[row, 4], $"ID:{req1.ItemId} ×{req1.Num}", hex);
-            Cell(ws.Cells[row, 5], req2.ItemId > 0 ? $"ID:{req2.ItemId} ×{req2.Num}" : "—", hex);
-            Cell(ws.Cells[row, 6], energyReward.Num > 0 ? (object)energyReward.Num : "—", "D9EAD3");
-            Cell(ws.Cells[row, 7], coinReward.Num > 0 ? (object)coinReward.Num : "—", "FFF2CC");
-            Cell(ws.Cells[row, 8], "动态随机(mainOrderID=-1)", "EBF3FB");
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], $"波次订单#{order.Idx}", hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], order.WaveDesc, "F5F5F5");
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], order.TotalWave, "F5F5F5");
+            XlsxStyleHelper.Cell(ws.Cells[row, 4], $"ID:{req1.ItemId} ×{req1.Num}", hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 5], req2.ItemId > 0 ? $"ID:{req2.ItemId} ×{req2.Num}" : "—", hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 6], energyReward.Num > 0 ? (object)energyReward.Num : "—", "D9EAD3");
+            XlsxStyleHelper.Cell(ws.Cells[row, 7], coinReward.Num > 0 ? (object)coinReward.Num : "—", "FFF2CC");
+            XlsxStyleHelper.Cell(ws.Cells[row, 8], "动态随机(mainOrderID=-1)", "EBF3FB");
             row++;
         }
 
@@ -692,10 +626,10 @@ public static class MergeCookingWriter
             + "共35个已跟踪，按餐厅编号分段：103xx=餐厅3第1段…108xx=餐厅8。这是类似 TravelTown 线性推进的部分，"
             + "但玩家同时有动态波次订单（随机刷新）和主线进度订单（线性推进）——双轨并行设计。";
         noteCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        noteCell.Style.Fill.BackgroundColor.SetColor(HexColor("F0F4FA"));
+        noteCell.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("F0F4FA"));
         noteCell.Style.Font.Size = 9;
         noteCell.Style.WrapText = true;
-        Border(noteCell);
+        XlsxStyleHelper.Border(noteCell);
         ws.Row(row).Height = 52;
         row += 2;
 
@@ -705,15 +639,15 @@ public static class MergeCookingWriter
         boxTitle.Value = "■ 箱子掉落概率分析（来源：GAME_DYNAMIC_BOX_DROP_DATA）";
         boxTitle.Style.Font.Bold = true;
         boxTitle.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        boxTitle.Style.Fill.BackgroundColor.SetColor(HexColor("4472C4"));
+        boxTitle.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("4472C4"));
         boxTitle.Style.Font.Color.SetColor(Color.White);
-        Border(boxTitle);
+        XlsxStyleHelper.Border(boxTitle);
         ws.Row(row).Height = 20;
         row++;
 
         string[] boxHeaders = ["箱子ID", "第几次开", "掉落元素", "次数", "概率%", "置信度", "", ""];
         for (var j = 0; j < 6; j++)
-            Header(ws.Cells[row, j + 1], boxHeaders[j], "2F5496");
+            XlsxStyleHelper.Header(ws.Cells[row, j + 1], boxHeaders[j], "2F5496");
         row++;
 
         foreach (var box in BoxDrops)
@@ -731,19 +665,19 @@ public static class MergeCookingWriter
                             : "FCE5CD";
                 if (isFirst)
                 {
-                    Cell(ws.Cells[row, 1], box.BoxId, "EBF3FB");
-                    Cell(ws.Cells[row, 2], box.Seq, "EBF3FB");
+                    XlsxStyleHelper.Cell(ws.Cells[row, 1], box.BoxId, "EBF3FB");
+                    XlsxStyleHelper.Cell(ws.Cells[row, 2], box.Seq, "EBF3FB");
                     isFirst = false;
                 }
                 else
                 {
-                    Cell(ws.Cells[row, 1], "", "F5F5F5");
-                    Cell(ws.Cells[row, 2], "", "F5F5F5");
+                    XlsxStyleHelper.Cell(ws.Cells[row, 1], "", "F5F5F5");
+                    XlsxStyleHelper.Cell(ws.Cells[row, 2], "", "F5F5F5");
                 }
-                Cell(ws.Cells[row, 3], itemId, "FAFAFA");
-                Cell(ws.Cells[row, 4], count, "FAFAFA");
-                Cell(ws.Cells[row, 5], Math.Round(pct, 1), probHex);
-                Cell(ws.Cells[row, 6], "中（样本量小）", "FFF8E8");
+                XlsxStyleHelper.Cell(ws.Cells[row, 3], itemId, "FAFAFA");
+                XlsxStyleHelper.Cell(ws.Cells[row, 4], count, "FAFAFA");
+                XlsxStyleHelper.Cell(ws.Cells[row, 5], Math.Round(pct, 1), probHex);
+                XlsxStyleHelper.Cell(ws.Cells[row, 6], "中（样本量小）", "FFF8E8");
                 row++;
             }
         }
@@ -767,7 +701,7 @@ public static class MergeCookingWriter
         var ws = pkg.Workbook.Worksheets.Add("活动日历");
         ws.View.FreezePanes(3, 1);
 
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -826,7 +760,7 @@ public static class MergeCookingWriter
         string[] headers = ["活动ID", "活动周期/参数", "规律/备注", "周期类型"];
         string[] hdrHex = ["1F4E79", "2F5496", "595959", "2F5496"];
         for (var j = 0; j < headers.Length; j++)
-            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+            XlsxStyleHelper.Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
 
         var colors = new[] { "EBF3FB", "FFF2CC", "D9EAD3", "FCE5CD", "E8DAEF", "F3F3F3" };
         var row = 3;
@@ -857,10 +791,10 @@ public static class MergeCookingWriter
                 _ => "F5F5F5"
             };
 
-            Cell(ws.Cells[row, 1], $"Act_{id}", hex);
-            Cell(ws.Cells[row, 2], schedule, "FAFAFA", wrap: true);
-            Cell(ws.Cells[row, 3], note, "F0F0F0", wrap: true);
-            Cell(ws.Cells[row, 4], cycleType, typeHex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], $"Act_{id}", hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], schedule, "FAFAFA", wrap: true);
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], note, "F0F0F0", wrap: true);
+            XlsxStyleHelper.Cell(ws.Cells[row, 4], cycleType, typeHex);
             ws.Row(row).Height = 30;
             row++;
         }
@@ -872,9 +806,9 @@ public static class MergeCookingWriter
         statTitle.Value = "■ 波次能量统计 & 玩家行为数据（来源：WAVE_ORDER_DATA_KEY + USER_DATA）";
         statTitle.Style.Font.Bold = true;
         statTitle.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        statTitle.Style.Fill.BackgroundColor.SetColor(HexColor("1F4E79"));
+        statTitle.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("1F4E79"));
         statTitle.Style.Font.Color.SetColor(Color.White);
-        Border(statTitle);
+        XlsxStyleHelper.Border(statTitle);
         row++;
 
         var waveStats = new (string Key, string Value, string Desc)[]
@@ -895,14 +829,14 @@ public static class MergeCookingWriter
 
         string[] statHeaders = ["指标", "值", "说明", ""];
         for (var j = 0; j < 3; j++)
-            Header(ws.Cells[row, j + 1], statHeaders[j], "2F5496");
+            XlsxStyleHelper.Header(ws.Cells[row, j + 1], statHeaders[j], "2F5496");
         row++;
 
         foreach (var (key, value, desc) in waveStats)
         {
-            Cell(ws.Cells[row, 1], key, "EBF3FB");
-            Cell(ws.Cells[row, 2], value, "FFF2CC");
-            Cell(ws.Cells[row, 3], desc, "F5F5F5");
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], key, "EBF3FB");
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], value, "FFF2CC");
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], desc, "F5F5F5");
             row++;
         }
 
@@ -929,10 +863,10 @@ public static class MergeCookingWriter
             c.Style.Font.Bold = true;
             c.Style.Font.Size = 14;
             c.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            c.Style.Fill.BackgroundColor.SetColor(HexColor("1F2D40"));
+            c.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("1F2D40"));
             c.Style.Font.Color.SetColor(Color.White);
             c.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            Border(c);
+            XlsxStyleHelper.Border(c);
             ws.Row(r).Height = 32;
         }
 
@@ -944,9 +878,9 @@ public static class MergeCookingWriter
             c.Style.Font.Bold = true;
             c.Style.Font.Size = 11;
             c.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            c.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
+            c.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor(hex));
             c.Style.Font.Color.SetColor(Color.White);
-            Border(c);
+            XlsxStyleHelper.Border(c);
             ws.Row(r).Height = 22;
         }
 
@@ -964,10 +898,10 @@ public static class MergeCookingWriter
             c.Style.Font.Size = 10;
             c.Style.Font.Bold = bold;
             c.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            c.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
+            c.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor(hex));
             c.Style.WrapText = true;
             c.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-            Border(c);
+            XlsxStyleHelper.Border(c);
             ws.Row(r).Height = height;
         }
 
@@ -1032,7 +966,7 @@ public static class MergeCookingWriter
         {
             var (text, bg) = stepDefs[si];
             var baseRow = row + si * (StepRowCount + 1);
-            var bgColor = HexColor(bg);
+            var bgColor = XlsxStyleHelper.HexColor(bg);
             var darkColor = Color.FromArgb(
                 Math.Max(0, bgColor.R - 25),
                 Math.Max(0, bgColor.G - 25),
@@ -1079,7 +1013,7 @@ public static class MergeCookingWriter
                 arr.SetPosition(arrRow - 1, 1, 2, 8);
                 arr.SetSize(30, ArrowRowH + 2);
                 arr.Fill.Style = OfficeOpenXml.Drawing.eFillStyle.SolidFill;
-                arr.Fill.Color = HexColor("7F7F7F");
+                arr.Fill.Color = XlsxStyleHelper.HexColor("7F7F7F");
                 arr.Border.Fill.Style = OfficeOpenXml.Drawing.eFillStyle.NoFill;
             }
         }
@@ -1090,11 +1024,11 @@ public static class MergeCookingWriter
         loopCell.Value = "↑───── 订单产出能量 → 点击生成器继续产出 → 短期能量闭环；餐厅升级 → 新链解锁 → 长期扩展 ─────↑";
         loopCell.Style.Font.Bold = true;
         loopCell.Style.Font.Size = 10;
-        loopCell.Style.Font.Color.SetColor(HexColor("145A32"));
+        loopCell.Style.Font.Color.SetColor(XlsxStyleHelper.HexColor("145A32"));
         loopCell.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
         loopCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        loopCell.Style.Fill.BackgroundColor.SetColor(HexColor("E8F5EE"));
-        Border(loopCell);
+        loopCell.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("E8F5EE"));
+        XlsxStyleHelper.Border(loopCell);
         ws.Row(loopRow).Height = 16;
 
         row += BlockRows + 2;
@@ -1117,7 +1051,7 @@ public static class MergeCookingWriter
             hc.Style.Font.Bold = true;
             hc.Style.Fill.PatternType = ExcelFillStyle.Solid;
             hc.Style.Fill.BackgroundColor.SetColor(
-                HexColor(
+                XlsxStyleHelper.HexColor(
                     label == "Merge Cooking"
                         ? "C55A11"
                         : label == "Travel Town"
@@ -1129,7 +1063,7 @@ public static class MergeCookingWriter
             );
             hc.Style.Font.Color.SetColor(Color.White);
             hc.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            Border(hc);
+            XlsxStyleHelper.Border(hc);
         }
         ws.Row(row++).Height = 20;
 
@@ -1183,10 +1117,10 @@ public static class MergeCookingWriter
                 c.Value = v;
                 c.Style.Font.Size = 10;
                 c.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                c.Style.Fill.BackgroundColor.SetColor(HexColor(h));
+                c.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor(h));
                 c.Style.WrapText = true;
                 c.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-                Border(c);
+                XlsxStyleHelper.Border(c);
             }
             FC(1, 2, dim, "F0F4FA");
             ws.Cells[row, 1, row, 2].Style.Font.Bold = true;
@@ -1236,21 +1170,21 @@ public static class MergeCookingWriter
             lc.Style.Font.Bold = true;
             lc.Style.Font.Size = 10;
             lc.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            lc.Style.Fill.BackgroundColor.SetColor(HexColor("7B3F00"));
+            lc.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("7B3F00"));
             lc.Style.Font.Color.SetColor(Color.White);
             lc.Style.WrapText = true;
             lc.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-            Border(lc);
+            XlsxStyleHelper.Border(lc);
 
             var rc = ws.Cells[row, 4, row, 12];
             rc.Merge = true;
             rc.Value = desc;
             rc.Style.Font.Size = 10;
             rc.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            rc.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
+            rc.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor(hex));
             rc.Style.WrapText = true;
             rc.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-            Border(rc);
+            XlsxStyleHelper.Border(rc);
             ws.Row(row++).Height = 58;
         }
         row++;
@@ -1316,21 +1250,21 @@ public static class MergeCookingWriter
             lc.Style.Font.Bold = true;
             lc.Style.Font.Size = 10;
             lc.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            lc.Style.Fill.BackgroundColor.SetColor(HexColor("595959"));
+            lc.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("595959"));
             lc.Style.Font.Color.SetColor(Color.White);
             lc.Style.WrapText = true;
             lc.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-            Border(lc);
+            XlsxStyleHelper.Border(lc);
 
             var rc = ws.Cells[row, 4, row, 12];
             rc.Merge = true;
             rc.Value = desc;
             rc.Style.Font.Size = 10;
             rc.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            rc.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
+            rc.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor(hex));
             rc.Style.WrapText = true;
             rc.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-            Border(rc);
+            XlsxStyleHelper.Border(rc);
             ws.Row(row++).Height = 52;
         }
 

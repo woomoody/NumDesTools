@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using OfficeOpenXml;
@@ -17,70 +17,6 @@ public static class GossipHarborWriter
     private const string ParsedDir = @"C:\tmp\gossipharbor_parsed";
 
     private const string OutFileName = "竞品-GossipHarbor核心循环分析.xlsx";
-
-    // ── 样式辅助 ──────────────────────────────────────────────────────────────
-    private static void Header(ExcelRange c, string text, string hex = "2F5496")
-    {
-        c.Value = text;
-        c.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        c.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
-        c.Style.Font.Bold = true;
-        c.Style.Font.Color.SetColor(Color.White);
-        c.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-        c.Style.WrapText = true;
-        Border(c);
-    }
-
-    private static void Cell(ExcelRange c, object? value, string? hex = null, bool wrap = false)
-    {
-        c.Value = value;
-        if (hex != null)
-        {
-            c.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            c.Style.Fill.BackgroundColor.SetColor(HexColor(hex));
-        }
-        if (wrap)
-            c.Style.WrapText = true;
-        Border(c);
-    }
-
-    private static void MechNote(
-        ExcelWorksheet ws,
-        int row,
-        int startCol,
-        string text,
-        int mergeWidth
-    )
-    {
-        var cell = ws.Cells[row, startCol, row, startCol + mergeWidth - 1];
-        cell.Merge = true;
-        cell.Value = text;
-        cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        cell.Style.Fill.BackgroundColor.SetColor(HexColor("F0F4FA"));
-        cell.Style.Font.Size = 9;
-        cell.Style.WrapText = true;
-        Border(cell);
-    }
-
-    private static void Border(ExcelRange c)
-    {
-        var b = c.Style.Border;
-        b.Top.Style = b.Bottom.Style = b.Left.Style = b.Right.Style = ExcelBorderStyle.Thin;
-        b.Top.Color.SetColor(Color.FromArgb(0xBD, 0xBD, 0xBD));
-        b.Bottom.Color.SetColor(Color.FromArgb(0xBD, 0xBD, 0xBD));
-        b.Left.Color.SetColor(Color.FromArgb(0xBD, 0xBD, 0xBD));
-        b.Right.Color.SetColor(Color.FromArgb(0xBD, 0xBD, 0xBD));
-    }
-
-    private static Color HexColor(string hex)
-    {
-        hex = hex.TrimStart('#');
-        return Color.FromArgb(
-            Convert.ToInt32(hex[..2], 16),
-            Convert.ToInt32(hex[2..4], 16),
-            Convert.ToInt32(hex[4..6], 16)
-        );
-    }
 
     // ── 数据加载 ──────────────────────────────────────────────────────────────
     private static (List<string> Strings, List<double> Numbers) Load(string name)
@@ -134,7 +70,7 @@ public static class GossipHarborWriter
         var ws = pkg.Workbook.Worksheets.Add("核心机制");
 
         // Row 1：机制说明
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -227,13 +163,13 @@ public static class GossipHarborWriter
         }
 
         // ── 标题行（Row 2）─────────────────────────────────────────────────────
-        Header(ws.Cells[2, 1], "生成器产出物(pb#)", "1F4E79");
-        Header(ws.Cells[2, 2], "链位置", "2F5496");
-        Header(ws.Cells[2, 3], "链长", "2F5496");
-        Header(ws.Cells[2, 4], "链头(L1)", "2F5496");
-        Header(ws.Cells[2, 5], "链尾(终点)", "2F5496");
-        Header(ws.Cells[2, 6], "产出包(Spread_Weight)", "2F5496");
-        Header(ws.Cells[2, 7], "生成器CD / 容量", "595959");
+        XlsxStyleHelper.Header(ws.Cells[2, 1], "生成器产出物(pb#)", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[2, 2], "链位置", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 3], "链长", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 4], "链头(L1)", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 5], "链尾(终点)", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 6], "产出包(Spread_Weight)", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 7], "生成器CD / 容量", "595959");
         ws.View.FreezePanes(3, 1);
 
         var row = 3;
@@ -242,14 +178,14 @@ public static class GossipHarborWriter
             var chain = pbChains.TryGetValue(pb, out var ch) ? ch : [pb];
             var pos = chain.IndexOf(pb) + 1;
             var spreadPkg = spreadWeightMap.TryGetValue(pb, out var sp) ? sp : "—";
-            Cell(ws.Cells[row, 1], pb, "EBF3FB");
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], pb, "EBF3FB");
             ws.Cells[row, 1].Style.Font.Bold = true;
-            Cell(ws.Cells[row, 2], $"L{pos}", "F2F2F2");
-            Cell(ws.Cells[row, 3], chain.Count, "EBF3FB");
-            Cell(ws.Cells[row, 4], chain[0], "D9EAD3");
-            Cell(ws.Cells[row, 5], chain[^1], "FFF2CC");
-            Cell(ws.Cells[row, 6], spreadPkg, "F0F4FA");
-            Cell(ws.Cells[row, 7], "N/A（配置加密）", "F5F5F5");
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], $"L{pos}", "F2F2F2");
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], chain.Count, "EBF3FB");
+            XlsxStyleHelper.Cell(ws.Cells[row, 4], chain[0], "D9EAD3");
+            XlsxStyleHelper.Cell(ws.Cells[row, 5], chain[^1], "FFF2CC");
+            XlsxStyleHelper.Cell(ws.Cells[row, 6], spreadPkg, "F0F4FA");
+            XlsxStyleHelper.Cell(ws.Cells[row, 7], "N/A（配置加密）", "F5F5F5");
             ws.Cells[row, 7].Style.Font.Italic = true;
             row++;
         }
@@ -262,9 +198,9 @@ public static class GossipHarborWriter
         blockBTitle.Value = "▶ 完整合并链展开（按族群）— 含链头、各级、终点";
         blockBTitle.Style.Font.Bold = true;
         blockBTitle.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        blockBTitle.Style.Fill.BackgroundColor.SetColor(HexColor("2F5496"));
+        blockBTitle.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("2F5496"));
         blockBTitle.Style.Font.Color.SetColor(Color.White);
-        Border(blockBTitle);
+        XlsxStyleHelper.Border(blockBTitle);
         ws.Row(row).Height = 22;
         row++;
 
@@ -286,23 +222,23 @@ public static class GossipHarborWriter
         allChains.Sort((a, b) => b.Count.CompareTo(a.Count));
 
         var maxLen = allChains.Count > 0 ? allChains.Max(c => c.Count) : 1;
-        Header(ws.Cells[row, 1], "链头(L1)", "1F4E79");
-        Header(ws.Cells[row, 2], "链长", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[row, 1], "链头(L1)", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[row, 2], "链长", "1F4E79");
         for (var j = 0; j < Math.Min(maxLen, 5); j++)
-            Header(ws.Cells[row, 3 + j], $"L{j + 1}", "2F5496");
+            XlsxStyleHelper.Header(ws.Cells[row, 3 + j], $"L{j + 1}", "2F5496");
         row++;
 
         foreach (var chain in allChains)
         {
             var isGenChain = chain.Any(item => pbItems.Contains(item));
             var rowHex = isGenChain ? "D9EAD3" : "F5F5F5";
-            Cell(ws.Cells[row, 1], chain[0], rowHex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], chain[0], rowHex);
             ws.Cells[row, 1].Style.Font.Bold = isGenChain;
-            Cell(ws.Cells[row, 2], chain.Count, "EBF3FB");
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], chain.Count, "EBF3FB");
             for (var j = 0; j < Math.Min(chain.Count, 5); j++)
             {
                 var isLast = j == chain.Count - 1;
-                Cell(ws.Cells[row, 3 + j], chain[j], isLast ? "FFF2CC" : "EBF3FB");
+                XlsxStyleHelper.Cell(ws.Cells[row, 3 + j], chain[j], isLast ? "FFF2CC" : "EBF3FB");
             }
             if (chain.Count > 5)
                 ws.Cells[row, 7].Value = $"…+{chain.Count - 5}级";
@@ -317,9 +253,9 @@ public static class GossipHarborWriter
         blockCTitle.Value = "▶ 订单机制（ChestOrderRandomConfig）— 关键参数摘要";
         blockCTitle.Style.Font.Bold = true;
         blockCTitle.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        blockCTitle.Style.Fill.BackgroundColor.SetColor(HexColor("2F5496"));
+        blockCTitle.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("2F5496"));
         blockCTitle.Style.Font.Color.SetColor(Color.White);
-        Border(blockCTitle);
+        XlsxStyleHelper.Border(blockCTitle);
         ws.Row(row).Height = 22;
         row++;
 
@@ -335,8 +271,8 @@ public static class GossipHarborWriter
             ("与动态权重关系", "生成器产出受 CurWeight=BaseW×CapFactor×ChainMultiple×RepeatFactor 调控（见Sheet7）"),
         };
 
-        Header(ws.Cells[row, 1], "机制项", "1F4E79");
-        Header(ws.Cells[row, 2, row, 7], "说明", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[row, 1], "机制项", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[row, 2, row, 7], "说明", "2F5496");
         ws.Cells[row, 2, row, 7].Merge = true;
         row++;
 
@@ -344,15 +280,15 @@ public static class GossipHarborWriter
         for (var i = 0; i < orderKv.Length; i++)
         {
             var (key, val) = orderKv[i];
-            Cell(ws.Cells[row, 1], key, "F2F2F2");
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], key, "F2F2F2");
             ws.Cells[row, 1].Style.Font.Bold = true;
             var valCell = ws.Cells[row, 2, row, 7];
             valCell.Merge = true;
             valCell.Value = val;
             valCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            valCell.Style.Fill.BackgroundColor.SetColor(HexColor(orderColors[i % 2]));
+            valCell.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor(orderColors[i % 2]));
             valCell.Style.WrapText = true;
-            Border(valCell);
+            XlsxStyleHelper.Border(valCell);
             ws.Row(row).Height = 30;
             row++;
         }
@@ -434,7 +370,7 @@ public static class GossipHarborWriter
         var colCount = 2 + maxLen;
 
         // Row 1：机制说明
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -444,10 +380,10 @@ public static class GossipHarborWriter
         ws.Row(1).Height = 70;
 
         // Row 2：标题
-        Header(ws.Cells[2, 1], "链序号", "1F4E79");
-        Header(ws.Cells[2, 2], "链长", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[2, 1], "链序号", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[2, 2], "链长", "1F4E79");
         for (var j = 0; j < maxLen; j++)
-            Header(ws.Cells[2, 3 + j], $"Lv.{j + 1}", "2F5496");
+            XlsxStyleHelper.Header(ws.Cells[2, 3 + j], $"Lv.{j + 1}", "2F5496");
         ws.Row(2).Height = 22;
 
         ws.View.FreezePanes(3, 1);
@@ -457,12 +393,12 @@ public static class GossipHarborWriter
         {
             var row = i + 3;
             var chain = chains[i];
-            Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
-            Cell(ws.Cells[row, 2], chain.Count, "EBF3FB");
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], chain.Count, "EBF3FB");
             for (var j = 0; j < chain.Count; j++)
             {
                 var color = j == chain.Count - 1 ? "FFF2CC" : "EBF3FB";
-                Cell(ws.Cells[row, 3 + j], chain[j], color);
+                XlsxStyleHelper.Cell(ws.Cells[row, 3 + j], chain[j], color);
             }
         }
 
@@ -492,7 +428,7 @@ public static class GossipHarborWriter
         var cells = strings.Where(s => !string.IsNullOrEmpty(s)).ToList();
 
         // Row 1：机制说明
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -502,10 +438,10 @@ public static class GossipHarborWriter
         ws.Row(1).Height = 70;
 
         // Row 2：标题
-        Header(ws.Cells[2, 1], "格子编码", "1F4E79");
-        Header(ws.Cells[2, 2], "是否初始生成(pb)", "2F5496");
-        Header(ws.Cells[2, 3], "是否锁定(c)", "2F5496");
-        Header(ws.Cells[2, 4], "元素名称", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 1], "格子编码", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[2, 2], "是否初始生成(pb)", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 3], "是否锁定(c)", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 4], "元素名称", "2F5496");
         ws.Row(2).Height = 22;
 
         ws.View.FreezePanes(3, 1);
@@ -518,10 +454,10 @@ public static class GossipHarborWriter
             var isC = Regex.IsMatch(raw, @"(?<![a-z])c#");
             var itemName = raw.Replace("pb#", "").Replace("c#", "");
 
-            Cell(ws.Cells[row, 1], raw);
-            Cell(ws.Cells[row, 2], isPb ? "✓" : "", isPb ? "D9EAD3" : null);
-            Cell(ws.Cells[row, 3], isC ? "✓" : "", isC ? "FCE5CD" : null);
-            Cell(ws.Cells[row, 4], itemName, "EBF3FB");
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], raw);
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], isPb ? "✓" : "", isPb ? "D9EAD3" : null);
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], isC ? "✓" : "", isC ? "FCE5CD" : null);
+            XlsxStyleHelper.Cell(ws.Cells[row, 4], itemName, "EBF3FB");
         }
 
         ws.Column(1).Width = 36;
@@ -545,7 +481,7 @@ public static class GossipHarborWriter
         var (strings, numbers) = Load("ChestOrderRandomConfig");
 
         // Row 1：机制说明
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -555,8 +491,8 @@ public static class GossipHarborWriter
         ws.Row(1).Height = 70;
 
         // Row 2：标题
-        Header(ws.Cells[2, 1], "字段名（字符串常量）", "1F4E79");
-        Header(ws.Cells[2, 2], "数值常量（按序）", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 1], "字段名（字符串常量）", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[2, 2], "数值常量（按序）", "2F5496");
         ws.Row(2).Height = 22;
 
         ws.View.FreezePanes(3, 1);
@@ -566,9 +502,9 @@ public static class GossipHarborWriter
         {
             var row = i + 3;
             if (i < strings.Count)
-                Cell(ws.Cells[row, 1], strings[i], "EBF3FB");
+                XlsxStyleHelper.Cell(ws.Cells[row, 1], strings[i], "EBF3FB");
             if (i < numbers.Count)
-                Cell(ws.Cells[row, 2], numbers[i], "FFF2CC");
+                XlsxStyleHelper.Cell(ws.Cells[row, 2], numbers[i], "FFF2CC");
         }
 
         // 字段说明（已知含义）
@@ -595,12 +531,12 @@ public static class GossipHarborWriter
             ["eMonthPay"] = "月卡玩家订单区间止",
         };
 
-        Header(ws.Cells[2, 3], "字段说明", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 3], "字段说明", "2F5496");
         for (var i = 0; i < strings.Count; i++)
         {
             var row = i + 3;
             if (notes.TryGetValue(strings[i], out var note))
-                Cell(ws.Cells[row, 3], note, "F4CCCC");
+                XlsxStyleHelper.Cell(ws.Cells[row, 3], note, "F4CCCC");
         }
 
         ws.Column(1).Width = 22;
@@ -633,7 +569,7 @@ public static class GossipHarborWriter
             .ToList();
 
         // Row 1：机制说明
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -643,9 +579,9 @@ public static class GossipHarborWriter
         ws.Row(1).Height = 70;
 
         // Row 2：标题
-        Header(ws.Cells[2, 1], "#", "1F4E79");
-        Header(ws.Cells[2, 2], "顾客名（英文）", "2F5496");
-        Header(ws.Cells[2, 3], "备注", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 1], "#", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[2, 2], "顾客名（英文）", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 3], "备注", "2F5496");
         ws.Row(2).Height = 22;
 
         ws.View.FreezePanes(3, 1);
@@ -655,9 +591,9 @@ public static class GossipHarborWriter
         {
             var row = i + 3;
             var hex = colors[i % colors.Length];
-            Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
-            Cell(ws.Cells[row, 2], customers[i], hex);
-            Cell(ws.Cells[row, 3], "");
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], customers[i], hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], "");
         }
 
         ws.Column(1).Width = 6;
@@ -702,7 +638,7 @@ public static class GossipHarborWriter
             .ToList();
 
         // Row 1：机制说明
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -712,11 +648,11 @@ public static class GossipHarborWriter
         ws.Row(1).Height = 70;
 
         // Row 2：标题
-        Header(ws.Cells[2, 1], "#", "1F4E79");
-        Header(ws.Cells[2, 2], "分数", "1F4E79");
-        Header(ws.Cells[2, 3], "时间(分)", "2F5496");
-        Header(ws.Cells[2, 4], "难度", "2F5496");
-        Header(ws.Cells[2, 5], "分钟得分速率", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 1], "#", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[2, 2], "分数", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[2, 3], "时间(分)", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 4], "难度", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, 5], "分钟得分速率", "2F5496");
         ws.Row(2).Height = 22;
 
         ws.View.FreezePanes(3, 1);
@@ -739,16 +675,16 @@ public static class GossipHarborWriter
             var e = entries[i];
             var row = i + 3;
             var hex = diffColors.GetValueOrDefault(e.Difficulty, "EBF3FB");
-            Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
-            Cell(ws.Cells[row, 2], e.Score, hex);
-            Cell(ws.Cells[row, 3], e.Time, hex);
-            Cell(
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], i + 1, "F2F2F2");
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], e.Score, hex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], e.Time, hex);
+            XlsxStyleHelper.Cell(
                 ws.Cells[row, 4],
                 diffNames.GetValueOrDefault(e.Difficulty, e.Difficulty.ToString()),
                 hex
             );
             var rate = e.Time > 0 ? Math.Round((double)e.Score / e.Time, 1) : 0;
-            Cell(ws.Cells[row, 5], rate, "EBF3FB");
+            XlsxStyleHelper.Cell(ws.Cells[row, 5], rate, "EBF3FB");
         }
 
         ws.Column(1).Width = 6;
@@ -759,15 +695,15 @@ public static class GossipHarborWriter
 
         // 右侧：分组 ID 列表
         var gCol = 7;
-        Header(ws.Cells[2, gCol], "GroupId", "1F4E79");
-        Header(ws.Cells[2, gCol + 1], "分组轮数", "2F5496");
+        XlsxStyleHelper.Header(ws.Cells[2, gCol], "GroupId", "1F4E79");
+        XlsxStyleHelper.Header(ws.Cells[2, gCol + 1], "分组轮数", "2F5496");
         for (var i = 0; i < groupIds.Count; i++)
         {
             var row = i + 3;
-            Cell(ws.Cells[row, gCol], groupIds[i], "EBF3FB");
+            XlsxStyleHelper.Cell(ws.Cells[row, gCol], groupIds[i], "EBF3FB");
             // groupId 格式：10x00y → x 是轮次，y 是序号（推测）
             var round = groupIds[i] / 100000;
-            Cell(ws.Cells[row, gCol + 1], $"Round {round}", "F2F2F2");
+            XlsxStyleHelper.Cell(ws.Cells[row, gCol + 1], $"Round {round}", "F2F2F2");
         }
 
         // 统计摘要
@@ -786,7 +722,7 @@ public static class GossipHarborWriter
         var ws = pkg.Workbook.Worksheets.Add("动态权重系统");
 
         // Row 1：机制说明
-        MechNote(
+        XlsxStyleHelper.MechNote(
             ws,
             1,
             1,
@@ -799,7 +735,7 @@ public static class GossipHarborWriter
         string[] headers = ["问题", "结论", "置信度", "关键证据字段/函数", "具体数值", "备注"];
         string[] hdrHex = ["1F4E79", "2F5496", "595959", "2F5496", "595959", "595959"];
         for (var j = 0; j < headers.Length; j++)
-            Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
+            XlsxStyleHelper.Header(ws.Cells[2, j + 1], headers[j], hdrHex[j]);
         ws.Row(2).Height = 22;
 
         ws.View.FreezePanes(3, 1);
@@ -852,15 +788,15 @@ public static class GossipHarborWriter
         foreach (var (q, conclusion, conf, evidence, value, note) in findings)
         {
             var confHex = confColors.GetValueOrDefault(conf, "F5F5F5");
-            Cell(ws.Cells[row, 1], q, "F0F4FA");
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], q, "F0F4FA");
             ws.Cells[row, 1].Style.Font.Bold = true;
-            Cell(ws.Cells[row, 2], conclusion, confHex);
-            Cell(ws.Cells[row, 3], conf, confHex);
-            Cell(ws.Cells[row, 4], evidence, "FAFAFA");
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], conclusion, confHex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], conf, confHex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 4], evidence, "FAFAFA");
             ws.Cells[row, 4].Style.WrapText = true;
-            Cell(ws.Cells[row, 5], value, "FFF8E8");
+            XlsxStyleHelper.Cell(ws.Cells[row, 5], value, "FFF8E8");
             ws.Cells[row, 5].Style.WrapText = true;
-            Cell(ws.Cells[row, 6], note, "F5F5F5");
+            XlsxStyleHelper.Cell(ws.Cells[row, 6], note, "F5F5F5");
             ws.Cells[row, 6].Style.WrapText = true;
             ws.Row(row).Height = 52;
             row++;
@@ -874,9 +810,9 @@ public static class GossipHarborWriter
         formulaTitle.Value = "■ CurWeight 4因子公式（逆向推导，置信度：中-高）";
         formulaTitle.Style.Font.Bold = true;
         formulaTitle.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        formulaTitle.Style.Fill.BackgroundColor.SetColor(HexColor("4A235A"));
+        formulaTitle.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("4A235A"));
         formulaTitle.Style.Font.Color.SetColor(Color.White);
-        Border(formulaTitle);
+        XlsxStyleHelper.Border(formulaTitle);
         ws.Row(row).Height = 22;
         row++;
 
@@ -914,7 +850,7 @@ public static class GossipHarborWriter
 
         string[] factorHeaders = ["因子名", "字段/公式", "置信度", "语义", "证据来源"];
         for (var j = 0; j < factorHeaders.Length; j++)
-            Header(ws.Cells[row, j + 1], factorHeaders[j], "2F5496");
+            XlsxStyleHelper.Header(ws.Cells[row, j + 1], factorHeaders[j], "2F5496");
         row++;
 
         var fColors = new[] { "EBF3FB", "FFF2CC", "D9EAD3", "FCE5CD" };
@@ -922,14 +858,14 @@ public static class GossipHarborWriter
         {
             var (fname, formula, fconf, fmean, fevidence) = formulaFactors[fi];
             var fhex = fColors[fi % fColors.Length];
-            Cell(ws.Cells[row, 1], fname, fhex);
+            XlsxStyleHelper.Cell(ws.Cells[row, 1], fname, fhex);
             ws.Cells[row, 1].Style.Font.Bold = true;
-            Cell(ws.Cells[row, 2], formula, "FAFAFA");
+            XlsxStyleHelper.Cell(ws.Cells[row, 2], formula, "FAFAFA");
             ws.Cells[row, 2].Style.WrapText = true;
-            Cell(ws.Cells[row, 3], fconf, fconf.StartsWith("高") ? "D9EAD3" : "FFF2CC");
-            Cell(ws.Cells[row, 4], fmean, "F5F5F5");
+            XlsxStyleHelper.Cell(ws.Cells[row, 3], fconf, fconf.StartsWith("高") ? "D9EAD3" : "FFF2CC");
+            XlsxStyleHelper.Cell(ws.Cells[row, 4], fmean, "F5F5F5");
             ws.Cells[row, 4].Style.WrapText = true;
-            Cell(ws.Cells[row, 5], fevidence, "F0F0F0");
+            XlsxStyleHelper.Cell(ws.Cells[row, 5], fevidence, "F0F0F0");
             ws.Cells[row, 5].Style.WrapText = true;
             ws.Row(row).Height = 38;
             row++;
@@ -948,10 +884,10 @@ public static class GossipHarborWriter
             + "主要未获取：各因子的具体数值参数（配置表加密，内存中以IL2CPP偏移量而非字符串字段存储）。";
         summaryCell.Style.Font.Size = 10;
         summaryCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-        summaryCell.Style.Fill.BackgroundColor.SetColor(HexColor("EBF3FB"));
+        summaryCell.Style.Fill.BackgroundColor.SetColor(XlsxStyleHelper.HexColor("EBF3FB"));
         summaryCell.Style.WrapText = true;
         summaryCell.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-        Border(summaryCell);
+        XlsxStyleHelper.Border(summaryCell);
         ws.Row(row).Height = 60;
 
         ws.Column(1).Width = 18;
