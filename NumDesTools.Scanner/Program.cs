@@ -147,6 +147,10 @@ internal class Program
         bool bugsMode = args.Contains("--bugs");
         bool reviewOnly = args.Contains("--review");
         bool forceMode = args.Contains("--force");
+        var xlsxIdx = Array.IndexOf(args, "--xlsx");
+        var summaryXlsx = xlsxIdx >= 0 && xlsxIdx + 1 < args.Length ? args[xlsxIdx + 1] : null;
+        var summaryApiKey = Environment.GetEnvironmentVariable("ANTHROPIC_AUTH_TOKEN") ?? "";
+        var summaryBaseUrl = "https://litellm.solotopia.net/v1";
         List<string>? itemIds = null;
         int itemIdx = Array.IndexOf(args, "--item");
         if (itemIdx >= 0 && itemIdx + 1 < args.Length)
@@ -197,6 +201,12 @@ internal class Program
             }
 
             var docPath = ReportGenerator.WriteBugDoc(pending);
+            if (summaryXlsx is not null)
+                await ReportGenerator.GenerateSummaryAsync(
+                    summaryXlsx,
+                    summaryApiKey,
+                    summaryBaseUrl
+                );
             Console.WriteLine($"\n[INFO] 缺陷分析文档：{docPath}");
 
             if (!releaseMode)
@@ -228,7 +238,15 @@ internal class Program
                 noPermItems
             );
             if (pending.Count > 0)
+            {
                 await ScanOrchestrator.PromptAndWrite(pending, releaseMode, confirmMode);
+                if (summaryXlsx is not null)
+                    await ReportGenerator.GenerateSummaryAsync(
+                        summaryXlsx,
+                        summaryApiKey,
+                        summaryBaseUrl
+                    );
+            }
             else
                 Console.WriteLine("[INFO] 无待写入项。");
             return 0;

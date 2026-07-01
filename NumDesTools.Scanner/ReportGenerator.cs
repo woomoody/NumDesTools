@@ -1,4 +1,7 @@
+using System.Net.Http;
 using System.Text;
+using System.Text.Json;
+using OfficeOpenXml;
 
 namespace NumDesTools.Scanner;
 
@@ -326,5 +329,88 @@ internal static class ReportGenerator
         }
 
         return sb.ToString();
+    }
+
+    internal static async Task GenerateSummaryAsync(string xlsxPath, string apiKey, string baseUrl)
+    {
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            Console.WriteLine("[INFO] GenerateSummaryAsync: apiKey 为空，跳过摘要生成。");
+            return;
+        }
+        if (!File.Exists(xlsxPath))
+        {
+            Console.WriteLine($"[INFO] GenerateSummaryAsync: 文件不存在 {xlsxPath}，跳过。");
+            return;
+        }
+
+        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
+        var rows = new List<string[]>();
+        using (var pkg = new ExcelPackage(new FileInfo(xlsxPath)))
+        {
+            var ws = pkg.Workbook.Worksheets.FirstOrDefault();
+            if (ws is null)
+            {
+                Console.WriteLine("[INFO] GenerateSummaryAsync: xlsx 无工作表，跳过。");
+                return;
+            }
+            var maxRow = Math.Min(ws.Dimension?.Rows ?? 0, 20);
+            var maxCol = ws.Dimension?.Columns ?? 0;
+            for (var r = 1; r <= maxRow; r++)
+            {
+                var cells = new string[maxCol];
+                for (var c = 1; c <= maxCol; c++)
+                    cells[c - 1] = ws.Cells[r, c].Text ?? "";
+                rows.Add(cells);
+            }
+        }
+
+        var tableText = string.Join("\n", rows.Select(r => string.Join("\t", r)));
+        var prompt =
+            $"以下是一份竞品分析 Excel 的前 20 行数据（制表符分隔列）：\n\n{tableText}\n\n"
+            + "请用中文输出 100-200 字摘要，包含：主要发现、亮点、建议关注点。";
+
+        var requestBody = JsonSerializer.Serialize(
+            new
+            {
+                model = "deepseek-v4-flash",
+                messages = new[] { new { role = "user", content = prompt } },
+                max_tokens = 512,
+            }
+        );
+
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+        var response = await client.PostAsync(
+            baseUrl.TrimEnd('/') + "/chat/completions",
+            new StringContent(requestBody, Encoding.UTF8, "application/json")
+        );
+        var responseText = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode)
+        {
+            Console.WriteLine(
+                $"[WARN] GenerateSummaryAsync: API 返回 {(int)response.StatusCode}，跳过写文件。"
+            );
+            return;
+        }
+
+        using var doc = JsonDocument.Parse(responseText);
+        var summary =
+            doc.RootElement.GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString()
+            ?? "";
+
+        var today = DateTime.Today.ToString("yyyyMMdd");
+        var outPath = Path.Combine(OutputPaths.Analysis, $"scanner-summary-{today}.md");
+        var sb = new StringBuilder();
+        sb.AppendLine($"# 竞品分析摘要 {today}");
+        sb.AppendLine($"生成时间：{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($"来源文件：{xlsxPath}");
+        sb.AppendLine();
+        sb.AppendLine(summary);
+        File.WriteAllText(outPath, sb.ToString(), Encoding.UTF8);
+        Console.WriteLine($"[INFO] 竞品分析摘要已写入：{outPath}");
     }
 }

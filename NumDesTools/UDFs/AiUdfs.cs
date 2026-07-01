@@ -21,10 +21,10 @@ public partial class ExcelUdf
     public static object ChatTransfer(
         [ExcelArgument(
             AllowReference = true,
-            Description = "Range&Cell,eg:A1",
+            Description = "单格或多格区域；多格时批量发送",
             Name = "要翻译的单元格"
         )]
-            object[,] sourceLan,
+            object sourceLan,
         [ExcelArgument(
             AllowReference = true,
             Description = "Range&Cell,eg:A1",
@@ -41,7 +41,6 @@ public partial class ExcelUdf
             string ignoreValue
     )
     {
-        // 使用 ExcelAsyncUtil.Run 实现异步操作
         return ExcelAsyncUtil.Run(
             "ChatTransfer",
             new object[] { sourceLan, lanType, addContent, ignoreValue },
@@ -49,53 +48,89 @@ public partial class ExcelUdf
             {
                 try
                 {
-                    // 处理 sourceLan 数据
-                    var sourceLanStr = ProcessInputRange(sourceLan, ignoreValue, @"\n");
-
-                    // 处理 lanType 数据
                     var lanTypeStr = ProcessInputRange(lanType, ignoreValue, ",");
-
-                    // 构造系统提示内容
-                    var sysContent =
-                        AppServices.Config.AiPrompts.TransferAssistant + "翻译为：" + lanTypeStr;
-
-                    // 调用 Chat API（统一走 LiteLLM）
                     var apiKey = AppServices.Config.Llm.ApiKey;
                     if (string.IsNullOrWhiteSpace(apiKey))
                         return "错误：请在默认配置中填写 LiteLLM API Key 或设置环境变量 ANTHROPIC_AUTH_TOKEN";
-                    var response = ChatApiClient
-                        .CallApiAsync(
-                            AppServices.Config.Llm.Model,
-                            sysContent,
-                            sourceLanStr,
-                            apiKey,
-                            AppServices.Config.Llm.ChatCompletionsUrl
-                        )
-                        .GetAwaiter()
-                        .GetResult();
 
-                    // 解析返回结果
-                    var responseList = JsonConvert.DeserializeObject<List<List<object>>>(response);
+                    if (sourceLan is object[,] grid)
+                    {
+                        var items = new List<string>();
+                        foreach (var item in grid)
+                        {
+                            if (
+                                item is ExcelEmpty
+                                || item is ExcelError
+                                || item.ToString() == ignoreValue
+                            )
+                                continue;
+                            items.Add(item.ToString());
+                        }
 
-                    // 使用 LINQ 转置
-                    responseList = responseList[0]
-                        .Select((_, colIndex) => responseList.Select(row => row[colIndex]).ToList())
-                        .ToList();
+                        if (items.Count == 0)
+                            return ExcelError.ExcelErrorNA;
 
-                    var responseRange = PubMetToExcel.ConvertListToArray(responseList);
+                        var sysContent =
+                            $"{AppServices.Config.AiPrompts.TransferAssistant}翻译为：{lanTypeStr}\n"
+                            + $"输入共{items.Count}条，每行对应一条原文，请输出恰好{items.Count}行译文，不加序号、不加解释。";
+                        var userContent = Join("\n", items);
 
-                    return responseRange;
+                        var response = ChatApiClient
+                            .CallApiAsync(
+                                "deepseek-v4-flash",
+                                sysContent,
+                                userContent,
+                                apiKey,
+                                AppServices.Config.Llm.ChatCompletionsUrl
+                            )
+                            .GetAwaiter()
+                            .GetResult();
+
+                        var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+                        var result = new object[lines.Length, 1];
+                        for (var i = 0; i < lines.Length; i++)
+                            result[i, 0] = lines[i].Trim();
+                        return result;
+                    }
+                    else
+                    {
+                        var sourceLanStr = sourceLan?.ToString() ?? "";
+                        var sysContent =
+                            AppServices.Config.AiPrompts.TransferAssistant
+                            + "翻译为："
+                            + lanTypeStr;
+
+                        var response = ChatApiClient
+                            .CallApiAsync(
+                                AppServices.Config.Llm.Model,
+                                sysContent,
+                                sourceLanStr,
+                                apiKey,
+                                AppServices.Config.Llm.ChatCompletionsUrl
+                            )
+                            .GetAwaiter()
+                            .GetResult();
+
+                        var responseList = JsonConvert.DeserializeObject<List<List<object>>>(
+                            response
+                        );
+                        responseList = responseList[0]
+                            .Select(
+                                (_, colIndex) => responseList.Select(row => row[colIndex]).ToList()
+                            )
+                            .ToList();
+                        return PubMetToExcel.ConvertListToArray(responseList);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    // 捕获异常并返回错误信息
                     return $"Error: {ex.Message}";
                 }
             }
         );
     }
 
-    // 处理输入范围数据
     private static string ProcessInputRange(
         object[,] inputRange,
         string ignoreValue,
@@ -103,14 +138,12 @@ public partial class ExcelUdf
     )
     {
         var result = new List<string>();
-
         foreach (var item in inputRange)
         {
             if (item is ExcelEmpty || item is ExcelError || item.ToString() == ignoreValue)
                 continue;
             result.Add(item.ToString());
         }
-
         return Join(delimiter, result);
     }
 
