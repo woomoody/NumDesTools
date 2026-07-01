@@ -16,6 +16,14 @@ public static class ExcelReader
     public const int HeaderRow = 2;
     public const int DataStartRow = 5;
 
+    // ponytail: process-lifetime cache，CLI 单次运行，无 TTL 需求
+    private static readonly Dictionary<
+        (string Path, string? Sheet),
+        (List<string> Fields, List<(int Row, Dictionary<string, string> Data)> Rows)
+    > _cache = new();
+
+    public static void ClearCache() => _cache.Clear();
+
     /// <summary>
     /// 读取工作表，返回 (字段名列表, 数据行列表)。
     /// 每行数据是 fieldName→cellText 的字典。
@@ -23,6 +31,10 @@ public static class ExcelReader
     public static (List<string> Fields, List<(int Row, Dictionary<string, string> Data)> Rows)
         Read(string excelPath, string? sheetName = null)
     {
+        var key = (Path.GetFullPath(excelPath), sheetName);
+        if (_cache.TryGetValue(key, out var cached))
+            return cached;
+
         using var pkg = new ExcelPackage(new FileInfo(excelPath));
         var ws = sheetName != null
             ? pkg.Workbook.Worksheets[sheetName] ?? pkg.Workbook.Worksheets[0]
@@ -61,7 +73,9 @@ public static class ExcelReader
             rows.Add((r, dict));
         }
 
-        return (fields, rows);
+        var result = (fields, rows);
+        _cache[key] = result;
+        return result;
     }
 
     /// <summary>
