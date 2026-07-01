@@ -1,5 +1,9 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -125,6 +129,9 @@ public partial class ExcelConflictWindow : MetroWindow
     private bool _isDragging;
     private int _dragStartIndex = -1;
     private List<RowConflict> _selectedRows = [];
+
+    private RowConflict? _currentDetailRow;
+    private static readonly HttpClient _httpClient = new();
 
     // 全量模式分批加载
     private const int PageSize = 200;
@@ -1350,6 +1357,93 @@ public partial class ExcelConflictWindow : MetroWindow
                 .ToList();
         }
         BuildDetailPanel(items);
+
+        _currentDetailRow = rc;
+        AiSuggestionText.Text = rc.AiSuggestion;
+        AiSuggestBtn.Visibility = rc.IsResolved ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private async void AiSuggest_Click(object sender, RoutedEventArgs e)
+    {
+        var row = _currentDetailRow;
+        if (row is null)
+            return;
+
+        var apiKey = AppServices.Config.Llm.ApiKey;
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            row.AiSuggestion = "未配置 API Key";
+            AiSuggestionText.Text = row.AiSuggestion;
+            return;
+        }
+
+        AiSuggestBtn.IsEnabled = false;
+        AiSuggestionText.Text = "AI 思考中…";
+
+        try
+        {
+            var cells = row.Cells.Take(3).ToList();
+            string colDesc;
+            if (cells.Count == 0)
+            {
+                row.AiSuggestion = "无可分析的冲突列";
+                AiSuggestionText.Text = row.AiSuggestion;
+                return;
+            }
+            else if (cells.Count == 1)
+            {
+                colDesc =
+                    $"列名：{cells[0].ColName}。我方：{cells[0].OursDisplay}。对方：{cells[0].TheirsDisplay}";
+            }
+            else
+            {
+                colDesc = string.Join(
+                    "；",
+                    cells.Select(c =>
+                        $"{c.ColName}（我方：{c.OursDisplay}，对方：{c.TheirsDisplay}）"
+                    )
+                );
+                colDesc = $"多列冲突：{colDesc}";
+            }
+
+            var prompt = $"Excel 冲突解决。{colDesc}。一句话建议选哪边，给出理由。";
+
+            var payload = JsonSerializer.Serialize(
+                new
+                {
+                    model = "deepseek-v4-flash",
+                    messages = new[] { new { role = "user", content = prompt } },
+                    max_tokens = 128,
+                }
+            );
+
+            var apiUrl = AppServices.Config.Llm.ApiUrl;
+            using var req = new HttpRequestMessage(HttpMethod.Post, apiUrl);
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            req.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+
+            using var resp = await _httpClient.SendAsync(req);
+            var body = await resp.Content.ReadAsStringAsync();
+
+            using var doc = JsonDocument.Parse(body);
+            var suggestion =
+                doc.RootElement.GetProperty("choices")[0]
+                    .GetProperty("message")
+                    .GetProperty("content")
+                    .GetString()
+                ?? "无结果";
+
+            row.AiSuggestion = suggestion.Trim();
+        }
+        catch
+        {
+            row.AiSuggestion = "AI 建议失败";
+        }
+        finally
+        {
+            AiSuggestionText.Text = row.AiSuggestion;
+            AiSuggestBtn.IsEnabled = true;
+        }
     }
 
     // ── 按钮事件 ─────────────────────────────────────────────────────────────

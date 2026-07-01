@@ -24,10 +24,10 @@ public enum RowDiffType
 public enum RowOrigin
 {
     Unknown,
-    AddedByOurs,     // 不在 base、只在 OURS：A 新增
+    AddedByOurs, // 不在 base、只在 OURS：A 新增
     DeletedByTheirs, // 在 base、只在 OURS：B 删除
-    AddedByTheirs,   // 不在 base、只在 THEIRS：B 新增
-    DeletedByOurs,   // 在 base、只在 THEIRS：A 删除
+    AddedByTheirs, // 不在 base、只在 THEIRS：B 新增
+    DeletedByOurs, // 在 base、只在 THEIRS：A 删除
 }
 
 /// <summary>单元格级别的冲突</summary>
@@ -223,6 +223,17 @@ public class RowConflict : INotifyPropertyChanged
         };
 
     private bool _rowChoiceExplicit;
+
+    private string _aiSuggestion = string.Empty;
+    public string AiSuggestion
+    {
+        get => _aiSuggestion;
+        set
+        {
+            _aiSuggestion = value;
+            OnPropertyChanged();
+        }
+    }
 
     /// <summary>拖拽多选时的行选中状态（纯视觉，不持久化）</summary>
     private bool _isSelected;

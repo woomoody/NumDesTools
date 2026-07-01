@@ -488,11 +488,27 @@
 
                     <Border Grid.Row="0" Background="#1A1A2A"
                             BorderBrush="#333" BorderThickness="0,0,0,1">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
-                            <TextBlock x:Name="DetailRowKey" Foreground="#A8C8FF" FontSize="11"/>
-                            <TextBlock x:Name="DetailHint" Foreground="#555" FontSize="10"
-                                       Margin="12,0,0,0" Text="点击任意行查看完整值对比"/>
-                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                                <TextBlock x:Name="DetailRowKey" Foreground="#A8C8FF" FontSize="11"/>
+                                <TextBlock x:Name="DetailHint" Foreground="#555" FontSize="10"
+                                           Margin="12,0,0,0" Text="点击任意行查看完整值对比"/>
+                                <TextBlock x:Name="AiSuggestionText" Foreground="#FFD080" FontSize="10"
+                                           Margin="12,0,0,0" TextWrapping="Wrap" MaxWidth="200"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button x:Name="AiSuggestBtn" Grid.Column="1"
+                                    Content="AI建议" Margin="4,2"
+                                    Padding="8,3" FontSize="10"
+                                    Background="#2A2A1A" Foreground="#FFD080"
+                                    BorderBrush="#554400" BorderThickness="1"
+                                    Cursor="Hand" Visibility="Collapsed"
+                                    Click="AiSuggest_Click"/>
+                        </Grid>
                     </Border>
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
