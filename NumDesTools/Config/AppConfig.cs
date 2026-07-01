@@ -123,6 +123,26 @@ public class UiConfig(GlobalVariable store)
         get => store.Value.GetValueOrDefault("SpotlightMode", "overlay");
         set => store.Value["SpotlightMode"] = value;
     }
+
+    public int HighlightColor
+    {
+        get =>
+            int.TryParse(store.Value.GetValueOrDefault("HighlightColor", "16776960"), out var v)
+                ? v
+                : 0xFFFF00;
+        set => store.Value["HighlightColor"] = value.ToString();
+    }
+
+    public bool HighlightMatchCase
+    {
+        get =>
+            string.Equals(
+                store.Value.GetValueOrDefault("HighlightMatchCase", "false"),
+                "true",
+                StringComparison.OrdinalIgnoreCase
+            );
+        set => store.Value["HighlightMatchCase"] = value ? "true" : "false";
+    }
 }
 
 public class GitConfig(GlobalVariable store)

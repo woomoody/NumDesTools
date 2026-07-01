@@ -23,9 +23,7 @@ internal class Program
     );
     private const string ActivityXlsx = @"C:\M1Work\public\Excels\Tables\ActivityClientData.xlsx";
     private static readonly string RulesPath = Path.Combine(ConfigDir, "ActivityTableRules.json");
-
-    private const string McpToken = "m-002580b6-b3db-405a-aab8-007f927ef4eb";
-    private const string ProjectKey = "t89j73";
+    private static readonly string FeishuConfigPath = Path.Combine(ConfigDir, "feishu_config.json");
     private static readonly string WrittenItemsPath = Path.Combine(ConfigDir, "written_items.json");
     private static readonly string NoPermItemsPath = Path.Combine(
         ConfigDir,
@@ -91,6 +89,36 @@ internal class Program
             $"[WARN] 配置表有 {errorCount} 处引用断裂，AI 评论可能基于脏数据（使用 --validate 查看详情）"
         );
         Console.ForegroundColor = prev;
+    }
+
+    private static (string mcpToken, string projectKey) LoadFeishuConfig()
+    {
+        var token = Environment.GetEnvironmentVariable("FEISHU_MCP_TOKEN");
+        var key = Environment.GetEnvironmentVariable("FEISHU_PROJECT_KEY");
+
+        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(key))
+        {
+            if (File.Exists(FeishuConfigPath))
+            {
+                var cfg =
+                    JsonConvert.DeserializeObject<Dictionary<string, string>>(
+                        File.ReadAllText(FeishuConfigPath)
+                    ) ?? [];
+                token ??= cfg.GetValueOrDefault("McpToken");
+                key ??= cfg.GetValueOrDefault("ProjectKey");
+            }
+        }
+
+        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(key))
+        {
+            Console.Error.WriteLine(
+                $"[ERROR] 飞书配置缺失。请设置环境变量 FEISHU_MCP_TOKEN / FEISHU_PROJECT_KEY，"
+                    + $"或在 {FeishuConfigPath} 中提供 {{\"McpToken\":\"...\",\"ProjectKey\":\"...\"}}。"
+            );
+            Environment.Exit(1);
+        }
+
+        return (token!, key!);
     }
 
     private static bool IsPermissionError(Exception ex) =>
@@ -268,9 +296,8 @@ internal class Program
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToList();
 
-        // 初始化飞书客户端
-        FeishuMcpClient.McpToken = McpToken;
-        FeishuMcpClient.ProjectKey = ProjectKey;
+        // 初始化飞书客户端（环境变量优先，fallback 到 ConfigDir/feishu_config.json）
+        (FeishuMcpClient.McpToken, FeishuMcpClient.ProjectKey) = LoadFeishuConfig();
 
         // 加载规则 & 索引
         var rules = LoadRules();

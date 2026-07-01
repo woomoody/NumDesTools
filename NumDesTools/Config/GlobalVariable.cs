@@ -45,6 +45,8 @@ namespace NumDesTools.Config
             { "ConflictSkipHashFiles", "true" },
             { "CellHistoryTipText", "谁的锅：关闭" },
             { "SpotlightMode", "overlay" },
+            { "HighlightColor", "16776960" }, // 0xFFFF00 黄色
+            { "HighlightMatchCase", "false" },
             {
                 "OutputRootPath",
                 Path.Combine(
@@ -134,15 +136,26 @@ namespace NumDesTools.Config
                 try
                 {
                     ReadFromFile();
-                    return;
                 }
                 catch
                 {
                     // JSON 损坏或读取失败：降级到默认配置，不影响插件加载
+                    _configData = CreateDefaultConfig();
+                    SaveConfig();
                 }
             }
-            _configData = CreateDefaultConfig();
-            SaveConfig();
+            else
+            {
+                _configData = CreateDefaultConfig();
+                SaveConfig();
+            }
+            // 环境变量兜底：Key 为空时从 ANTHROPIC_AUTH_TOKEN 读取（内存生效，不写 JSON）
+            if (string.IsNullOrWhiteSpace(_configData.Value.GetValueOrDefault("LiteLLMApiKey")))
+            {
+                var envKey = Environment.GetEnvironmentVariable("ANTHROPIC_AUTH_TOKEN");
+                if (!string.IsNullOrWhiteSpace(envKey))
+                    _configData.Value["LiteLLMApiKey"] = envKey;
+            }
         }
 
         private void ReadFromFile()

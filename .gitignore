@@ -373,3 +373,6 @@ FodyWeavers.xsd
 packFromBin/scanner_publish/
 packFromBin/scanner_tmp/
 packFromBin/conflict_tool/
+
+# 飞书凭据（勿提交）
+**/feishu_config.json

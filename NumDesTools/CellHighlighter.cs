@@ -40,8 +40,6 @@ internal static class ViewportHelper
 /// </summary>
 internal static class CellHighlighter
 {
-    private const int HighlightColor = 0xFFFF00;
-
     private static readonly List<(Range Cell, int ColorIndex, object Color)> _lastHighlighted = [];
     private static Worksheet _lastSheet;
 
@@ -64,7 +62,7 @@ internal static class CellHighlighter
                 searchValue,
                 LookIn: XlFindLookIn.xlValues,
                 LookAt: XlLookAt.xlWhole,
-                MatchCase: true
+                MatchCase: AppServices.Config.Ui.HighlightMatchCase
             );
             if (first == null)
                 return;
@@ -78,7 +76,7 @@ internal static class CellHighlighter
                     colorIndex == (int)XlColorIndex.xlColorIndexNone
                         ? null
                         : current.Interior.Color;
-                current.Interior.Color = HighlightColor;
+                current.Interior.Color = AppServices.Config.Ui.HighlightColor;
                 _lastHighlighted.Add((current, colorIndex, originalColor));
                 current = searchRange.FindNext(current);
             } while (current != null && current.Address != firstAddress);

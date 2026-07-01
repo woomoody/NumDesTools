@@ -3522,6 +3522,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         if (_showAgentText == "Agent模式：开启")
         {
             GlobalValue.ReadOrCreate();
+            if (string.IsNullOrWhiteSpace(AppServices.Config.Llm.ApiKey))
+            {
+                MessageBox.Show(
+                    "请先在 Ribbon → 默认配置 中填写 LiteLLM API Key，或设置环境变量 ANTHROPIC_AUTH_TOKEN",
+                    "AI Key 未配置",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning
+                );
+                _showAgentText = "Agent模式：关闭";
+                CustomRibbon?.InvalidateControl("ShowAIAgent");
+                return;
+            }
             NumDesCTP.DeleteCTP(true, ctpName);
             _agentCtp = (AIAgentPanel)
                 NumDesCTP.ShowCTP(
@@ -3588,6 +3600,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             if (ShowAiText == "AI对话：开启")
             {
                 GlobalValue.ReadOrCreate();
+                if (string.IsNullOrWhiteSpace(AppServices.Config.Llm.ApiKey))
+                {
+                    MessageBox.Show(
+                        "请先在 Ribbon → 默认配置 中填写 LiteLLM API Key，或设置环境变量 ANTHROPIC_AUTH_TOKEN",
+                        "AI Key 未配置",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning
+                    );
+                    ShowAiText = "AI对话：关闭";
+                    CustomRibbon.InvalidateControl("ShowAI");
+                    return;
+                }
 
                 NumDesCTP.DeleteCTP(true, ctpName);
                 PluginLog.Write($"[ShowAi] 构造 AiChatTaskPanel");

@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+using System.Net;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -16,6 +16,59 @@ public static class FeishuMcpClient
     public static string McpUrl { get; set; } = "https://project.feishu.cn/mcp_server/v1";
     public static string ProjectKey { get; set; } = string.Empty;
 
+    // ponytail: 手写指数退避，不引入 Polly，3次已够用
+    private static readonly int[] RetryDelaysMs = [1000, 2000, 4000];
+
+    /// <summary>
+    /// 带指数退避重试的 HTTP 发送。只对网络异常和 5xx 重试，4xx 直接抛出。
+    /// 使用 requestFactory 在每次重试时重新构造 HttpRequestMessage（避免 disposed 复用）。
+    /// </summary>
+    private static async Task<HttpResponseMessage> SendWithRetryAsync(
+        Func<HttpRequestMessage> requestFactory,
+        CancellationToken ct = default
+    )
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            using var request = requestFactory();
+            HttpResponseMessage response;
+            try
+            {
+                response = await Http.SendAsync(request, ct);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                if (attempt >= RetryDelaysMs.Length)
+                    throw;
+                await Task.Delay(RetryDelaysMs[attempt], ct);
+                continue;
+            }
+
+            // 4xx → 鉴权失败/请求错误，不重试直接抛
+            if ((int)response.StatusCode is >= 400 and < 500)
+            {
+                response.Dispose();
+                throw new HttpRequestException(
+                    $"飞书 MCP 请求失败：HTTP {(int)response.StatusCode} {response.ReasonPhrase}"
+                );
+            }
+
+            // 5xx → 服务端错误，重试
+            if (response.StatusCode >= HttpStatusCode.InternalServerError)
+            {
+                response.Dispose();
+                if (attempt >= RetryDelaysMs.Length)
+                    throw new HttpRequestException(
+                        $"飞书 MCP 服务端错误（已重试 {RetryDelaysMs.Length} 次）：HTTP {(int)response.StatusCode}"
+                    );
+                await Task.Delay(RetryDelaysMs[attempt], ct);
+                continue;
+            }
+
+            return response;
+        }
+    }
+
     /// <summary>
     /// 调用飞书 MCP 工具，返回解析后的 JToken（对象或数组），失败抛出异常。
     /// </summary>
@@ -31,13 +84,14 @@ public static class FeishuMcpClient
             }
         );
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, McpUrl)
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
-        };
-        request.Headers.Add("X-Mcp-Token", McpToken);
+        HttpRequestMessage Factory() =>
+            new HttpRequestMessage(HttpMethod.Post, McpUrl)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+                Headers = { { "X-Mcp-Token", McpToken } },
+            };
 
-        using var response = await Http.SendAsync(request);
+        using var response = await SendWithRetryAsync(Factory);
         var raw = await response.Content.ReadAsStringAsync();
         var root = JObject.Parse(raw);
 

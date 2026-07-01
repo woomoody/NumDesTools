@@ -60,12 +60,15 @@ public partial class ExcelUdf
                         AppServices.Config.AiPrompts.TransferAssistant + "翻译为：" + lanTypeStr;
 
                     // 调用 Chat API（统一走 LiteLLM）
+                    var apiKey = AppServices.Config.Llm.ApiKey;
+                    if (string.IsNullOrWhiteSpace(apiKey))
+                        return "错误：请在默认配置中填写 LiteLLM API Key 或设置环境变量 ANTHROPIC_AUTH_TOKEN";
                     var response = ChatApiClient
                         .CallApiAsync(
                             AppServices.Config.Llm.Model,
                             sysContent,
                             sourceLanStr,
-                            AppServices.Config.Llm.ApiKey,
+                            apiKey,
                             AppServices.Config.Llm.ChatCompletionsUrl
                         )
                         .GetAwaiter()
