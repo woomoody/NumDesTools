@@ -4,8 +4,8 @@ using OfficeOpenXml;
 namespace NumDesTools;
 
 // a.xlsx ↔ b.xlsx 按 Key 列（约定列名 "id"）跨表同步，全自动：给定根目录 A/B，
-// 按当前打开文件在哪侧根目录下推出对侧同名文件，逐个同名 Sheet 比较表头，
-// 交集列（去掉 id）就同步，两侧都没有的列或没有 id 列的 Sheet 直接跳过。
+// 按当前打开文件算出对侧文件名（可选后缀），在对侧根目录下递归搜同名文件（不假设子文件夹结构一致），
+// 逐个同名 Sheet 比较表头，交集列（去掉 id）就同步，两侧都没有的列或没有 id 列的 Sheet 直接跳过。
 // 插入位置复用 LTEData.cs 的分组算法：按 Key 前缀找同组最后一行插入其后。
 internal static class XlsxCrossSync
 {
@@ -70,10 +70,12 @@ internal static class XlsxCrossSync
         var targetFileName = reverse
             ? AddSuffix(fileName, suffixA)
             : RemoveSuffix(fileName, suffixA);
-        var targetPath = Path.Combine(targetRoot, targetFileName);
-        if (!File.Exists(targetPath))
+        // 根目录下子文件夹名不一定对得上（比如 Table_Update ↔ Tables 不是简单去后缀能推出来的），
+        // 按文件名在根目录下递归搜，不假设子路径结构一致。
+        var targetPath = FindFileUnder(targetRoot, targetFileName);
+        if (targetPath is null)
         {
-            MessageBox.Show($"对侧文件不存在：{targetPath}", "跨表同步");
+            MessageBox.Show($"在「{targetRoot}」下没找到对侧文件：{targetFileName}", "跨表同步");
             return;
         }
 
@@ -86,6 +88,11 @@ internal static class XlsxCrossSync
             MessageBox.Show($"同步失败：{ex.Message}", "跨表同步");
         }
     }
+
+    private static string? FindFileUnder(string root, string fileName) =>
+        Directory.Exists(root)
+            ? Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories).FirstOrDefault()
+            : null;
 
     private static bool IsUnderRoot(string path, string root)
     {
