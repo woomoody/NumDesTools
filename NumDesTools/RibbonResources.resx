@@ -184,6 +184,15 @@
   <data name="nd_格式瘦身诊断" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>image\nd_格式瘦身诊断.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="nd_跨表同步设置" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_跨表同步设置.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_跨表同步正向" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_跨表同步正向.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="nd_跨表同步反向" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>image\nd_跨表同步反向.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="nd_查验模版写入数据" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>image\nd_查验模版写入数据.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
