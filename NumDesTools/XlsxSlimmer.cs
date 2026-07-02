@@ -33,7 +33,7 @@ internal static class XlsxSlimmer
             return;
         }
 
-        ShowDiagnosis(Diagnose(wb.FullName));
+        ShowDiagnosis(wb, Diagnose(wb.FullName));
     }
 
     private static DiagnoseResult Diagnose(string path)
@@ -78,40 +78,51 @@ internal static class XlsxSlimmer
         return new DiagnoseResult(path, new FileInfo(path).Length, sheets, namedRangeCount);
     }
 
-    private static void Slim(DiagnoseResult diag)
+    private static void Slim(Workbook wb, DiagnoseResult diag)
     {
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
-        using var pkg = new ExcelPackage(new FileInfo(diag.FilePath));
-        foreach (var sd in diag.Sheets)
+        if (!wb.Saved)
         {
-            var ws = pkg.Workbook.Worksheets[sd.Name];
-            if (ws.Dimension is null)
-                continue;
-
-            if (ws.ConditionalFormatting.Count > 0)
-                ws.ConditionalFormatting.RemoveAll();
-
-            if (sd.TrueMaxRow > 0 && ws.Dimension.End.Row > sd.TrueMaxRow)
-                ws.DeleteRow(sd.TrueMaxRow + 1, ws.Dimension.End.Row - sd.TrueMaxRow);
-
-            if (sd.TrueMaxCol > 0 && ws.Dimension.End.Column > sd.TrueMaxCol)
-                ws.DeleteColumn(sd.TrueMaxCol + 1, ws.Dimension.End.Column - sd.TrueMaxCol);
+            MessageBox.Show(
+                "当前工作簿有未保存的改动，请先 Ctrl+S 保存后再执行瘦身（原地覆写会跟内存态冲突）。",
+                "格式瘦身诊断"
+            );
+            return;
         }
 
-        var outPath = Path.Combine(
-            Path.GetDirectoryName(diag.FilePath) ?? "",
-            Path.GetFileNameWithoutExtension(diag.FilePath) + "_slim.xlsx"
-        );
-        pkg.SaveAs(new FileInfo(outPath));
+        var path = diag.FilePath;
+        wb.Close(false);
 
-        var newSize = new FileInfo(outPath).Length;
+        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
+        using (var pkg = new ExcelPackage(new FileInfo(path)))
+        {
+            foreach (var sd in diag.Sheets)
+            {
+                var ws = pkg.Workbook.Worksheets[sd.Name];
+                if (ws.Dimension is null)
+                    continue;
+
+                if (ws.ConditionalFormatting.Count > 0)
+                    ws.ConditionalFormatting.RemoveAll();
+
+                if (sd.TrueMaxRow > 0 && ws.Dimension.End.Row > sd.TrueMaxRow)
+                    ws.DeleteRow(sd.TrueMaxRow + 1, ws.Dimension.End.Row - sd.TrueMaxRow);
+
+                if (sd.TrueMaxCol > 0 && ws.Dimension.End.Column > sd.TrueMaxCol)
+                    ws.DeleteColumn(sd.TrueMaxCol + 1, ws.Dimension.End.Column - sd.TrueMaxCol);
+            }
+            pkg.Save();
+        }
+
+        AppServices.App.Workbooks.Open(path);
+
+        var newSize = new FileInfo(path).Length;
         MessageBox.Show(
-            $"瘦身完成：\n原文件 {diag.OriginalBytes / 1024.0 / 1024.0:F1} MB\n新文件 {newSize / 1024.0 / 1024.0:F1} MB\n\n已另存为：\n{outPath}\n\n请核对数据无误后手动替换原文件。",
+            $"瘦身完成（原地保存，git 可回溯）：\n原体积 {diag.OriginalBytes / 1024.0 / 1024.0:F1} MB\n新体积 {newSize / 1024.0 / 1024.0:F1} MB",
             "格式瘦身完成"
         );
     }
 
-    private static void ShowDiagnosis(DiagnoseResult diag)
+    private static void ShowDiagnosis(Workbook wb, DiagnoseResult diag)
     {
         var form = new Form
         {
@@ -180,7 +191,7 @@ internal static class XlsxSlimmer
         slimButton.Click += (_, _) =>
         {
             form.Close();
-            Slim(diag);
+            Slim(wb, diag);
         };
         bottomPanel.Controls.Add(infoLabel);
         bottomPanel.Controls.Add(slimButton);

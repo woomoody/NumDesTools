@@ -26,10 +26,10 @@ namespace NumDesTools.Config
             { "ShowAIText", "AI对话：关闭" },
             { "LiteLLMApiKey", "" },
             { "LiteLLMApiUrl", "https://litellm.solotopia.net/v1/chat/completions" },
-            { "LiteLLMModel", "claude-sonnet-4-6" },
+            { "LiteLLMModel", "claude-sonnet-5" },
             {
                 "LiteLLMModelList",
-                "claude-opus-4-8-v1,claude-opus-4-7,claude-opus-4-8,claude-haiku-4-5-20251001,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.3-codex,gemini-3.1-pro-preview,gemini-2.5-pro,gemini-3-flash-preview,gemini-2.5-flash,gemini-2.5-flash-lite,gemini-3.1-flash-lite,gemini-3.1-flash-image-preview,gemini-3-pro-image-preview,kimi-k2.6,kimi-k2.7-code,qwen3.7-max,glm-5.1,glm-5,deepseek-v4-flash,deepseek-v4-pro"
+                "claude-opus-4-8-v1,claude-opus-4-7,claude-opus-4-8,claude-sonnet-5,claude-haiku-4-5-20251001,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.3-codex,gemini-3.1-pro-preview,gemini-2.5-pro,gemini-3-flash-preview,gemini-2.5-flash,gemini-2.5-flash-lite,gemini-3.1-flash-lite,gemini-3.1-flash-image-preview,gemini-3-pro-image-preview,kimi-k2.6,kimi-k2.7-code,qwen3.7-max,glm-5.1,glm-5,deepseek-v4-flash,deepseek-v4-pro"
             },
             {
                 "ChatSysContentExcelAss",

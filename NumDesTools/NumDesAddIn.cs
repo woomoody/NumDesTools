@@ -329,7 +329,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ActivityTestById"] = ActivityTestById_Click,
             ["ActivityTestGitChanged"] = ActivityTestGitChanged_Click,
             ["ActivityRulesUpdateButton"] = ActivityRulesUpdate_Click,
-            ["ScanStaleActivityData"] = _ => StaleActivityScanner.Scan(),
             ["XlsxSlimDiagnose"] = _ => XlsxSlimmer.Run(),
             ["ExcelConflictGit"] = _ => ExcelConflictEntry.OpenGitConflict(),
             ["ExcelConflictManual"] = _ => ExcelConflictEntry.OpenManualCompare(),

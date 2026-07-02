@@ -9,7 +9,7 @@ public static class AutoModelRouter
     public static readonly string[] DefaultModelList =
     {
         AutoModelName,
-        "claude-sonnet-4-6",
+        "claude-sonnet-5",
         "claude-opus-4-8-v1",
         "deepseek-v4-flash",
         "gemini-3.1-flash-image-preview",
@@ -42,7 +42,7 @@ public static class AutoModelRouter
                 @"代码|编程|C#|Python|Lua|脚本|算法|重构",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled
             ),
-            "claude-sonnet-4-6",
+            "claude-sonnet-5",
             "代码任务"
         ),
         (
