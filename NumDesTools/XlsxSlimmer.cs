@@ -80,14 +80,10 @@ internal static class XlsxSlimmer
 
     private static void Slim(Workbook wb, DiagnoseResult diag)
     {
+        // Saved 可能因 Excel 打开时重算公式/易变函数而变 false，未必是用户真的改了内容；
+        // 直接保存再关闭比拦住用户手动 Ctrl+S 更顺畅，且同样安全（没改动=空操作）。
         if (!wb.Saved)
-        {
-            MessageBox.Show(
-                "当前工作簿有未保存的改动，请先 Ctrl+S 保存后再执行瘦身（原地覆写会跟内存态冲突）。",
-                "格式瘦身诊断"
-            );
-            return;
-        }
+            wb.Save();
 
         var path = diag.FilePath;
         wb.Close(false);
@@ -127,10 +123,13 @@ internal static class XlsxSlimmer
         var form = new Form
         {
             Text = $"格式瘦身诊断 — {Path.GetFileName(diag.FilePath)}",
-            Width = 700,
-            Height = 480,
+            Width = 720,
+            Height = 520,
+            MinimumSize = new System.Drawing.Size(640, 420),
             StartPosition = FormStartPosition.CenterScreen,
             KeyPreview = true,
+            Padding = new Padding(12),
+            Font = new System.Drawing.Font("Microsoft YaHei UI", 9F),
         };
         form.KeyDown += (_, e) =>
         {
@@ -138,15 +137,37 @@ internal static class XlsxSlimmer
                 form.Close();
         };
 
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            RowCount = 3,
+            ColumnCount = 1,
+        };
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
         var grid = new DataGridView
         {
             Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 10),
             ReadOnly = true,
             AllowUserToAddRows = false,
             AllowUserToDeleteRows = false,
             AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
             BackgroundColor = System.Drawing.SystemColors.Window,
+            BorderStyle = BorderStyle.Fixed3D,
+            RowHeadersVisible = false,
+            ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+            ColumnHeadersDefaultCellStyle =
+            {
+                Font = new System.Drawing.Font(
+                    "Microsoft YaHei UI",
+                    9F,
+                    System.Drawing.FontStyle.Bold
+                ),
+            },
         };
         grid.Columns.Add("Sheet", "Sheet");
         grid.Columns.Add("Used", "当前范围(行x列)");
@@ -172,20 +193,25 @@ internal static class XlsxSlimmer
             );
         }
 
-        var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 70 };
         var infoLabel = new System.Windows.Forms.Label
         {
             Text =
                 $"原文件 {diag.OriginalBytes / 1024.0 / 1024.0:F1} MB ｜ 命名区域 {diag.NamedRangeCount} 个（不自动清理，需手动核查）\n"
-                + "批注保留不清理；瘦身只收缩超出真实数据的冗余行列 + 清空条件格式，另存为 _slim.xlsx，不覆盖原文件。",
-            Dock = DockStyle.Top,
-            Height = 45,
+                + "批注保留不清理；瘦身只收缩超出真实数据的冗余行列 + 清空条件格式，原地覆写（git 可回溯，不再另存副本）。",
+            AutoSize = false,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 0, 10),
+            Padding = new Padding(2),
+            ForeColor = System.Drawing.SystemColors.GrayText,
         };
+
         var slimButton = new System.Windows.Forms.Button
         {
-            Text = "执行瘦身（另存为 _slim.xlsx）",
-            Dock = DockStyle.Bottom,
-            Height = 25,
+            Text = "执行瘦身（原地保存）",
+            Dock = DockStyle.Fill,
+            Height = 34,
+            Margin = new Padding(0),
+            FlatStyle = FlatStyle.System,
             Enabled = hasWaste,
         };
         slimButton.Click += (_, _) =>
@@ -193,11 +219,12 @@ internal static class XlsxSlimmer
             form.Close();
             Slim(wb, diag);
         };
-        bottomPanel.Controls.Add(infoLabel);
-        bottomPanel.Controls.Add(slimButton);
 
-        form.Controls.Add(grid);
-        form.Controls.Add(bottomPanel);
+        layout.Controls.Add(grid, 0, 0);
+        layout.Controls.Add(infoLabel, 0, 1);
+        layout.Controls.Add(slimButton, 0, 2);
+
+        form.Controls.Add(layout);
         form.Show();
     }
 }
