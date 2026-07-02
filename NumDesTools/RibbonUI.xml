@@ -69,6 +69,7 @@
                                         <button id="CheckFileFormat" size='large' label="检查数据&#13;格式" screentip='手动检查数据格式，取消隐藏，过滤符配置在\Document\NumDesToolsConfig.json' onAction='OnButtonClick' image='nd_检查数据格式' tag='检查数据格式' />
                                         <button id="ActivityRulesUpdateButton" size='large' label="更新活动&#13;规则" screentip='扫描 EnumCmds/ActivityManager/LogicBase 自动补全 ActivityTableRules.json 的 typeTableMap（只增不改）' onAction='OnButtonClick' image='nd_更新活动规则' tag='更新活动规则' />
                                         <button id="ScanStaleActivityData" size='large' label="扫描陈旧&#13;活动数据" screentip='扫描当前 Sheet，找出包含一年前过期 LTE 活动ID 的数据行' onAction='OnButtonClick' imageMso="QueryAppend" tag='扫描陈旧活动数据' />
+                                        <button id="XlsxSlimDiagnose" size='large' label="格式瘦身&#13;诊断" screentip='诊断当前 xlsx 冗余的空白行列/条件格式，另存为瘦身版，不覆盖原文件' onAction='OnButtonClick' imageMso="CompressPictures" tag='格式瘦身诊断' />
                                 </group>
                                 <!-- ══ 冲突与活动 ══ -->
                                 <group id='GroupConflictMain' label='冲突与活动'>
