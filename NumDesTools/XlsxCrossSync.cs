@@ -12,6 +12,7 @@ internal static class XlsxCrossSync
     private const int HeaderRow = 2;
     private const int DataStartRow = 5;
     private const string KeyColumnName = "id";
+    private const string DeleteMarker = "删除";
     private const int GroupPrefixLen = 6;
     private const string RootAKey = "XlsxSyncRootA";
     private const string RootBKey = "XlsxSyncRootB";
@@ -169,25 +170,24 @@ internal static class XlsxCrossSync
             return;
         }
 
-        var previews = new List<(string SheetName, int Updates, int Inserts, int Cleared)>();
+        var previews = new List<(string SheetName, int Updates, int Inserts, int Deleted)>();
         foreach (var (fromSheet, toSheet, cols) in plans)
         {
-            var (u, i, c) = ExecuteSync(
+            var (u, i, d) = ExecuteSync(
                 fromSheet,
                 toSheet,
                 KeyColumnName,
                 GroupPrefixLen,
                 cols,
-                reverse,
                 preview: true
             );
-            previews.Add((fromSheet.Name, u, i, c));
+            previews.Add((fromSheet.Name, u, i, d));
         }
 
         var totalUpdates = previews.Sum(p => p.Updates);
         var totalInserts = previews.Sum(p => p.Inserts);
-        var totalCleared = previews.Sum(p => p.Cleared);
-        if (totalUpdates == 0 && totalInserts == 0 && totalCleared == 0)
+        var totalDeleted = previews.Sum(p => p.Deleted);
+        if (totalUpdates == 0 && totalInserts == 0 && totalDeleted == 0)
         {
             MessageBox.Show("没有需要同步的差异。", "跨表同步");
             return;
@@ -196,13 +196,15 @@ internal static class XlsxCrossSync
         var detail = string.Join(
             "\n",
             previews
-                .Where(p => p.Updates + p.Inserts + p.Cleared > 0)
-                .Select(p => $"[{p.SheetName}] 更新{p.Updates} / 新增{p.Inserts} / 清空{p.Cleared}")
+                .Where(p => p.Updates + p.Inserts + p.Deleted > 0)
+                .Select(p => $"[{p.SheetName}] 更新{p.Updates} / 新增{p.Inserts} / 删除{p.Deleted}")
         );
-        // a→b 不删/不清对侧独有行（b 可能有不来自 a 的合法行）；b→a 对 a 侧独有的行只清空同步列，不删行。
+        // 增量同步：源侧新 key 插入、已存在的 key 更新；不按 key 集合清理对侧独有行。
+        // 唯一删除方式：源行第1列文本严格等于"删除"，且对侧存在同 key 时，删掉对侧那一整行。
         var confirm = MessageBox.Show(
             $"{(reverse ? "反向 b→a" : "正向 a→b")}\n{detail}\n\n"
                 + "新增行只会写入 id 列 + 同步列，其余列留空需自行补全。\n"
+                + "源第1列标注「删除」的行，若对侧存在同 key 会被整行删除。\n"
                 + $"确认后原地覆写 {Path.GetFileName(toPath)}（git 可回溯）。是否继续？",
             "跨表同步 - 预览确认",
             MessageBoxButtons.OKCancel
@@ -211,21 +213,13 @@ internal static class XlsxCrossSync
             return;
 
         foreach (var (fromSheet, toSheet, cols) in plans)
-            ExecuteSync(
-                fromSheet,
-                toSheet,
-                KeyColumnName,
-                GroupPrefixLen,
-                cols,
-                reverse,
-                preview: false
-            );
+            ExecuteSync(fromSheet, toSheet, KeyColumnName, GroupPrefixLen, cols, preview: false);
 
         if (!SaveWithFriendlyError(toPkg, toPath))
             return;
 
         MessageBox.Show(
-            $"同步完成：更新 {totalUpdates} / 新增 {totalInserts} / 清空 {totalCleared}",
+            $"同步完成：更新 {totalUpdates} / 新增 {totalInserts} / 删除 {totalDeleted}",
             "跨表同步"
         );
     }
@@ -248,15 +242,14 @@ internal static class XlsxCrossSync
         }
     }
 
-    // reverse=false（a→b）：target(b) 独有的 key 完全不动——b 可能有不来自 a 的合法行，不能按 a 的 key 集合清理。
-    // reverse=true（b→a）：target(a) 独有的 key 不删行，只清空本次的同步列（source 已经不再提供这些列的数据了）。
-    private static (int Updates, int Inserts, int Cleared) ExecuteSync(
+    // 增量同步：源侧新 key 插入，已存在的 key 更新。不按 key 集合清理对侧独有行（对侧可能有不来自源的合法行）。
+    // 唯一删除方式：源行第1列文本严格等于 DeleteMarker（"删除"），且对侧存在同 key 时，删掉对侧那一整行。
+    private static (int Updates, int Inserts, int Deleted) ExecuteSync(
         ExcelWorksheet source,
         ExcelWorksheet target,
         string keyColumnName,
         int groupPrefixLen,
         List<string> syncCols,
-        bool reverse,
         bool preview
     )
     {
@@ -291,9 +284,9 @@ internal static class XlsxCrossSync
         }
 
         var targetEmpty = targetKeyRow.Count == 0;
-        var sourceKeys = new HashSet<string>(StringComparer.Ordinal);
         var updateOps = new List<(int TargetRow, int SourceRow)>();
         var insertOps = new List<(string Key, int SourceRow)>();
+        var deleteRows = new List<int>();
 
         if (source.Dimension is not null)
         {
@@ -302,25 +295,33 @@ internal static class XlsxCrossSync
                 var k = source.Cells[r, sourceKeyCol].Text?.Trim();
                 if (string.IsNullOrEmpty(k))
                     continue;
-                sourceKeys.Add(k);
+                var markedDeleted = source.Cells[r, 1].Text?.Trim() == DeleteMarker;
                 if (targetKeyRow.TryGetValue(k, out var existingRow))
-                    updateOps.Add((existingRow, r));
-                else
+                {
+                    if (markedDeleted)
+                        deleteRows.Add(existingRow);
+                    else
+                        updateOps.Add((existingRow, r));
+                }
+                else if (!markedDeleted)
+                {
                     insertOps.Add((k, r));
+                }
             }
         }
 
-        var orphanRows = reverse
-            ? targetKeyRow.Where(kv => !sourceKeys.Contains(kv.Key)).Select(kv => kv.Value).ToList()
-            : [];
-
         if (preview)
-            return (updateOps.Count, insertOps.Count, orphanRows.Count);
+            return (updateOps.Count, insertOps.Count, deleteRows.Count);
 
-        // 2a. 清空孤儿行的同步列（只在反向发生；正向完全不碰 target 独有行）
-        foreach (var row in orphanRows)
-        foreach (var col in syncCols)
-            target.Cells[row, targetColIdx[col]].Value = null;
+        // 2a. 删除标记行（倒序，修正后续行号）
+        deleteRows.Sort((a, b) => b.CompareTo(a));
+        foreach (var rowToDel in deleteRows)
+        {
+            target.DeleteRow(rowToDel);
+            for (int i = 0; i < updateOps.Count; i++)
+                if (updateOps[i].TargetRow > rowToDel)
+                    updateOps[i] = (updateOps[i].TargetRow - 1, updateOps[i].SourceRow);
+        }
 
         // 2b. 原地更新
         foreach (var (targetRow, sourceRow) in updateOps)
@@ -371,6 +372,6 @@ internal static class XlsxCrossSync
                     .Value;
         }
 
-        return (updateOps.Count, groupedInserts.Count + tailInserts.Count, orphanRows.Count);
+        return (updateOps.Count, groupedInserts.Count + tailInserts.Count, deleteRows.Count);
     }
 }
