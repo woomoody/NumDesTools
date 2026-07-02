@@ -33,7 +33,7 @@ internal static class XlsxSlimmer
             return;
         }
 
-        ShowDiagnosis(wb, Diagnose(wb.FullName));
+        new UI.XlsxSlimmerWindow(wb, Diagnose(wb.FullName)).Show();
     }
 
     private static DiagnoseResult Diagnose(string path)
@@ -78,153 +78,41 @@ internal static class XlsxSlimmer
         return new DiagnoseResult(path, new FileInfo(path).Length, sheets, namedRangeCount);
     }
 
-    private static void Slim(Workbook wb, DiagnoseResult diag)
+    // 全程只用 Excel COM 自己的 Save，文件句柄从头到尾都在 Excel 手里，不给别的进程留抢锁窗口
+    // （之前 close→EPPlus 重开→Save 的方案在 close 和 EPPlus 重开之间有个空档，SmartGit/杀软等偶尔会抢到）。
+    internal static void Slim(Workbook wb, DiagnoseResult diag)
     {
-        // Saved 可能因 Excel 打开时重算公式/易变函数而变 false，未必是用户真的改了内容；
-        // 直接保存再关闭比拦住用户手动 Ctrl+S 更顺畅，且同样安全（没改动=空操作）。
-        if (!wb.Saved)
-            wb.Save();
-
-        var path = diag.FilePath;
-        wb.Close(false);
-
-        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
-        using (var pkg = new ExcelPackage(new FileInfo(path)))
+        foreach (var sd in diag.Sheets)
         {
-            foreach (var sd in diag.Sheets)
-            {
-                var ws = pkg.Workbook.Worksheets[sd.Name];
-                if (ws.Dimension is null)
-                    continue;
+            var ws = (Worksheet)wb.Worksheets[sd.Name];
+            var used = ws.UsedRange;
+            var endRow = used.Row + used.Rows.Count - 1;
+            var endCol = used.Column + used.Columns.Count - 1;
 
-                if (ws.ConditionalFormatting.Count > 0)
-                    ws.ConditionalFormatting.RemoveAll();
+            if (ws.Cells.FormatConditions.Count > 0)
+                ws.Cells.FormatConditions.Delete();
 
-                if (sd.TrueMaxRow > 0 && ws.Dimension.End.Row > sd.TrueMaxRow)
-                    ws.DeleteRow(sd.TrueMaxRow + 1, ws.Dimension.End.Row - sd.TrueMaxRow);
+            if (sd.TrueMaxRow > 0 && endRow > sd.TrueMaxRow)
+                ((Range)ws.Rows[$"{sd.TrueMaxRow + 1}:{endRow}"]).Delete();
 
-                if (sd.TrueMaxCol > 0 && ws.Dimension.End.Column > sd.TrueMaxCol)
-                    ws.DeleteColumn(sd.TrueMaxCol + 1, ws.Dimension.End.Column - sd.TrueMaxCol);
-            }
-            pkg.Save();
+            if (sd.TrueMaxCol > 0 && endCol > sd.TrueMaxCol)
+                ws.Range[ws.Cells[1, sd.TrueMaxCol + 1], ws.Cells[1, endCol]].EntireColumn.Delete();
         }
 
-        AppServices.App.Workbooks.Open(path);
+        try
+        {
+            wb.Save();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"保存失败：{ex.Message}", "格式瘦身");
+            return;
+        }
 
-        var newSize = new FileInfo(path).Length;
+        var newSize = new FileInfo(diag.FilePath).Length;
         MessageBox.Show(
             $"瘦身完成（原地保存，git 可回溯）：\n原体积 {diag.OriginalBytes / 1024.0 / 1024.0:F1} MB\n新体积 {newSize / 1024.0 / 1024.0:F1} MB",
             "格式瘦身完成"
         );
-    }
-
-    private static void ShowDiagnosis(Workbook wb, DiagnoseResult diag)
-    {
-        var form = new Form
-        {
-            Text = $"格式瘦身诊断 — {Path.GetFileName(diag.FilePath)}",
-            Width = 720,
-            Height = 520,
-            MinimumSize = new System.Drawing.Size(640, 420),
-            StartPosition = FormStartPosition.CenterScreen,
-            KeyPreview = true,
-            Padding = new Padding(12),
-            Font = new System.Drawing.Font("Microsoft YaHei UI", 9F),
-        };
-        form.KeyDown += (_, e) =>
-        {
-            if (e.KeyCode == Keys.Escape)
-                form.Close();
-        };
-
-        var layout = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            RowCount = 3,
-            ColumnCount = 1,
-        };
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-        var grid = new DataGridView
-        {
-            Dock = DockStyle.Fill,
-            Margin = new Padding(0, 0, 0, 10),
-            ReadOnly = true,
-            AllowUserToAddRows = false,
-            AllowUserToDeleteRows = false,
-            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-            SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-            BackgroundColor = System.Drawing.SystemColors.Window,
-            BorderStyle = BorderStyle.Fixed3D,
-            RowHeadersVisible = false,
-            ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
-            ColumnHeadersDefaultCellStyle =
-            {
-                Font = new System.Drawing.Font(
-                    "Microsoft YaHei UI",
-                    9F,
-                    System.Drawing.FontStyle.Bold
-                ),
-            },
-        };
-        grid.Columns.Add("Sheet", "Sheet");
-        grid.Columns.Add("Used", "当前范围(行x列)");
-        grid.Columns.Add("True", "真实数据范围(行x列)");
-        grid.Columns.Add("Waste", "冗余行/列");
-        grid.Columns.Add("Comment", "批注数");
-        grid.Columns.Add("CF", "条件格式");
-
-        var hasWaste = false;
-        foreach (var sd in diag.Sheets)
-        {
-            var wasteRows = sd.UsedRows - sd.TrueMaxRow;
-            var wasteCols = sd.UsedCols - sd.TrueMaxCol;
-            if (wasteRows > 0 || wasteCols > 0 || sd.ConditionalFormatCount > 0)
-                hasWaste = true;
-            grid.Rows.Add(
-                sd.Name,
-                $"{sd.UsedRows}x{sd.UsedCols}",
-                $"{sd.TrueMaxRow}x{sd.TrueMaxCol}",
-                $"{wasteRows}行/{wasteCols}列",
-                sd.CommentCount,
-                sd.ConditionalFormatCount
-            );
-        }
-
-        var infoLabel = new System.Windows.Forms.Label
-        {
-            Text =
-                $"原文件 {diag.OriginalBytes / 1024.0 / 1024.0:F1} MB ｜ 命名区域 {diag.NamedRangeCount} 个（不自动清理，需手动核查）\n"
-                + "批注保留不清理；瘦身只收缩超出真实数据的冗余行列 + 清空条件格式，原地覆写（git 可回溯，不再另存副本）。",
-            AutoSize = false,
-            Dock = DockStyle.Fill,
-            Margin = new Padding(0, 0, 0, 10),
-            Padding = new Padding(2),
-            ForeColor = System.Drawing.SystemColors.GrayText,
-        };
-
-        var slimButton = new System.Windows.Forms.Button
-        {
-            Text = "执行瘦身（原地保存）",
-            Dock = DockStyle.Fill,
-            Height = 34,
-            Margin = new Padding(0),
-            FlatStyle = FlatStyle.System,
-            Enabled = hasWaste,
-        };
-        slimButton.Click += (_, _) =>
-        {
-            form.Close();
-            Slim(wb, diag);
-        };
-
-        layout.Controls.Add(grid, 0, 0);
-        layout.Controls.Add(infoLabel, 0, 1);
-        layout.Controls.Add(slimButton, 0, 2);
-
-        form.Controls.Add(layout);
-        form.Show();
     }
 }

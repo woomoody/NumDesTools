@@ -69,9 +69,9 @@
                                         <button id="CheckFileFormat" size='large' label="检查数据&#13;格式" screentip='手动检查数据格式，取消隐藏，过滤符配置在\Document\NumDesToolsConfig.json' onAction='OnButtonClick' image='nd_检查数据格式' tag='检查数据格式' />
                                         <button id="ActivityRulesUpdateButton" size='large' label="更新活动&#13;规则" screentip='扫描 EnumCmds/ActivityManager/LogicBase 自动补全 ActivityTableRules.json 的 typeTableMap（只增不改）' onAction='OnButtonClick' image='nd_更新活动规则' tag='更新活动规则' />
                                         <button id="XlsxSlimDiagnose" size='large' label="格式瘦身&#13;诊断" screentip='诊断当前 xlsx 冗余的空白行列/条件格式，确认后原地覆写（git 可回溯）' onAction='OnButtonClick' image='nd_格式瘦身诊断' tag='格式瘦身诊断' />
-                                        <button id="XlsxSyncSettings" size='large' label="跨表同步&#13;设置" screentip='配置 a.xlsx↔b.xlsx 按 Key 列同步的映射关系' onAction='OnButtonClick' image='nd_跨表同步设置' tag='跨表同步设置' />
-                                        <button id="XlsxSyncForward" size='large' label="同步&#13;a→b" screentip='按已配置的映射，把 a.xlsx 的改动同步到 b.xlsx（高频）' onAction='OnButtonClick' image='nd_跨表同步正向' tag='同步a→b' />
-                                        <button id="XlsxSyncReverse" size='large' label="同步&#13;b→a" screentip='把 b.xlsx 的反向列同步回 a.xlsx（低频，仅更新已存在行）' onAction='OnButtonClick' image='nd_跨表同步反向' tag='同步b→a' />
+                                        <button id="XlsxSyncSettings" size='large' label="跨表同步&#13;设置" screentip='配置根目录 A/B（a/b 同名文件），Sheet 和同步列全自动比对，不用手配' onAction='OnButtonClick' image='nd_跨表同步设置' tag='跨表同步设置' />
+                                        <button id="XlsxSyncForward" size='large' label="同步&#13;a→b" screentip='当前需在根目录 A 下打开的文件，自动找到 B 侧同名文件，比对同名 Sheet 的表头交集列（约定 id 列为 Key）同步过去' onAction='OnButtonClick' image='nd_跨表同步正向' tag='同步a→b' />
+                                        <button id="XlsxSyncReverse" size='large' label="同步&#13;b→a" screentip='当前需在根目录 B 下打开的文件，反向同步回 A 侧同名文件，规则同「同步 a→b」' onAction='OnButtonClick' image='nd_跨表同步反向' tag='同步b→a' />
                                 </group>
                                 <!-- ══ 冲突与活动 ══ -->
                                 <group id='GroupConflictMain' label='冲突与活动'>
