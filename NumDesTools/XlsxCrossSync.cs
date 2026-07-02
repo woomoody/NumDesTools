@@ -15,17 +15,22 @@ internal static class XlsxCrossSync
     private const int GroupPrefixLen = 6;
     private const string RootAKey = "XlsxSyncRootA";
     private const string RootBKey = "XlsxSyncRootB";
+    private const string SuffixAKey = "XlsxSyncSuffixA";
 
-    internal static (string RootA, string RootB) LoadRoots() =>
+    // a 侧文件名可能比 b 侧多一个后缀（比如 ActivityClientData_Update.xlsx ↔ ActivityClientData.xlsx），
+    // 后缀留空则要求两侧文件名完全一致。
+    internal static (string RootA, string RootB, string SuffixA) LoadRoots() =>
         (
             AppServices.GlobalValue.Value.GetValueOrDefault(RootAKey, ""),
-            AppServices.GlobalValue.Value.GetValueOrDefault(RootBKey, "")
+            AppServices.GlobalValue.Value.GetValueOrDefault(RootBKey, ""),
+            AppServices.GlobalValue.Value.GetValueOrDefault(SuffixAKey, "")
         );
 
-    internal static void SaveRoots(string rootA, string rootB)
+    internal static void SaveRoots(string rootA, string rootB, string suffixA)
     {
         AppServices.GlobalValue.SaveValue(RootAKey, rootA);
         AppServices.GlobalValue.SaveValue(RootBKey, rootB);
+        AppServices.GlobalValue.SaveValue(SuffixAKey, suffixA);
     }
 
     internal static void OpenSettings() => new UI.XlsxSyncSettingsWindow().Show();
@@ -36,7 +41,7 @@ internal static class XlsxCrossSync
 
     private static void RunSync(bool reverse)
     {
-        var (rootA, rootB) = LoadRoots();
+        var (rootA, rootB, suffixA) = LoadRoots();
         if (string.IsNullOrWhiteSpace(rootA) || string.IsNullOrWhiteSpace(rootB))
         {
             MessageBox.Show("还没有配置根目录 A/B，请先点「同步设置」。", "跨表同步");
@@ -61,8 +66,11 @@ internal static class XlsxCrossSync
             return;
         }
 
-        var relativeName = Path.GetRelativePath(sourceRoot, activePath);
-        var targetPath = Path.Combine(targetRoot, relativeName);
+        var fileName = Path.GetFileName(activePath);
+        var targetFileName = reverse
+            ? AddSuffix(fileName, suffixA)
+            : RemoveSuffix(fileName, suffixA);
+        var targetPath = Path.Combine(targetRoot, targetFileName);
         if (!File.Exists(targetPath))
         {
             MessageBox.Show($"对侧文件不存在：{targetPath}", "跨表同步");
@@ -88,6 +96,21 @@ internal static class XlsxCrossSync
         return Path.GetFullPath(path).StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static string RemoveSuffix(string fileName, string suffix)
+    {
+        if (string.IsNullOrEmpty(suffix))
+            return fileName;
+        var name = Path.GetFileNameWithoutExtension(fileName);
+        return name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)
+            ? name[..^suffix.Length] + Path.GetExtension(fileName)
+            : fileName;
+    }
+
+    private static string AddSuffix(string fileName, string suffix) =>
+        string.IsNullOrEmpty(suffix)
+            ? fileName
+            : Path.GetFileNameWithoutExtension(fileName) + suffix + Path.GetExtension(fileName);
+
     private static HashSet<string> ReadHeaderColumns(ExcelWorksheet sheet)
     {
         var names = new HashSet<string>(StringComparer.Ordinal);
@@ -96,7 +119,7 @@ internal static class XlsxCrossSync
         for (var col = 2; col <= sheet.Dimension.End.Column; col++)
         {
             var name = sheet.Cells[HeaderRow, col].Text?.Trim();
-            if (!string.IsNullOrEmpty(name) && !name.StartsWith('#'))
+            if (!string.IsNullOrEmpty(name))
                 names.Add(name);
         }
         return names;
@@ -139,24 +162,25 @@ internal static class XlsxCrossSync
             return;
         }
 
-        var previews = new List<(string SheetName, int Updates, int Inserts, int Deletes)>();
+        var previews = new List<(string SheetName, int Updates, int Inserts, int Cleared)>();
         foreach (var (fromSheet, toSheet, cols) in plans)
         {
-            var (u, i, d) = ExecuteSync(
+            var (u, i, c) = ExecuteSync(
                 fromSheet,
                 toSheet,
                 KeyColumnName,
                 GroupPrefixLen,
                 cols,
+                reverse,
                 preview: true
             );
-            previews.Add((fromSheet.Name, u, i, d));
+            previews.Add((fromSheet.Name, u, i, c));
         }
 
         var totalUpdates = previews.Sum(p => p.Updates);
         var totalInserts = previews.Sum(p => p.Inserts);
-        var totalDeletes = previews.Sum(p => p.Deletes);
-        if (totalUpdates == 0 && totalInserts == 0 && totalDeletes == 0)
+        var totalCleared = previews.Sum(p => p.Cleared);
+        if (totalUpdates == 0 && totalInserts == 0 && totalCleared == 0)
         {
             MessageBox.Show("没有需要同步的差异。", "跨表同步");
             return;
@@ -165,9 +189,10 @@ internal static class XlsxCrossSync
         var detail = string.Join(
             "\n",
             previews
-                .Where(p => p.Updates + p.Inserts + p.Deletes > 0)
-                .Select(p => $"[{p.SheetName}] 更新{p.Updates} / 新增{p.Inserts} / 删除{p.Deletes}")
+                .Where(p => p.Updates + p.Inserts + p.Cleared > 0)
+                .Select(p => $"[{p.SheetName}] 更新{p.Updates} / 新增{p.Inserts} / 清空{p.Cleared}")
         );
+        // a→b 不删/不清对侧独有行（b 可能有不来自 a 的合法行）；b→a 对 a 侧独有的行只清空同步列，不删行。
         var confirm = MessageBox.Show(
             $"{(reverse ? "反向 b→a" : "正向 a→b")}\n{detail}\n\n"
                 + "新增行只会写入 id 列 + 同步列，其余列留空需自行补全。\n"
@@ -179,13 +204,21 @@ internal static class XlsxCrossSync
             return;
 
         foreach (var (fromSheet, toSheet, cols) in plans)
-            ExecuteSync(fromSheet, toSheet, KeyColumnName, GroupPrefixLen, cols, preview: false);
+            ExecuteSync(
+                fromSheet,
+                toSheet,
+                KeyColumnName,
+                GroupPrefixLen,
+                cols,
+                reverse,
+                preview: false
+            );
 
         if (!SaveWithFriendlyError(toPkg, toPath))
             return;
 
         MessageBox.Show(
-            $"同步完成：更新 {totalUpdates} / 新增 {totalInserts} / 删除 {totalDeletes}",
+            $"同步完成：更新 {totalUpdates} / 新增 {totalInserts} / 清空 {totalCleared}",
             "跨表同步"
         );
     }
@@ -208,12 +241,15 @@ internal static class XlsxCrossSync
         }
     }
 
-    private static (int Updates, int Inserts, int Deletes) ExecuteSync(
+    // reverse=false（a→b）：target(b) 独有的 key 完全不动——b 可能有不来自 a 的合法行，不能按 a 的 key 集合清理。
+    // reverse=true（b→a）：target(a) 独有的 key 不删行，只清空本次的同步列（source 已经不再提供这些列的数据了）。
+    private static (int Updates, int Inserts, int Cleared) ExecuteSync(
         ExcelWorksheet source,
         ExcelWorksheet target,
         string keyColumnName,
         int groupPrefixLen,
         List<string> syncCols,
+        bool reverse,
         bool preview
     )
     {
@@ -267,23 +303,17 @@ internal static class XlsxCrossSync
             }
         }
 
-        var deleteRows = targetKeyRow
-            .Where(kv => !sourceKeys.Contains(kv.Key))
-            .Select(kv => kv.Value)
-            .ToList();
+        var orphanRows = reverse
+            ? targetKeyRow.Where(kv => !sourceKeys.Contains(kv.Key)).Select(kv => kv.Value).ToList()
+            : [];
 
         if (preview)
-            return (updateOps.Count, insertOps.Count, deleteRows.Count);
+            return (updateOps.Count, insertOps.Count, orphanRows.Count);
 
-        // 2a. 删除（倒序，修正后续行号）
-        deleteRows.Sort((a, b) => b.CompareTo(a));
-        foreach (var rowToDel in deleteRows)
-        {
-            target.DeleteRow(rowToDel);
-            for (int i = 0; i < updateOps.Count; i++)
-                if (updateOps[i].TargetRow > rowToDel)
-                    updateOps[i] = (updateOps[i].TargetRow - 1, updateOps[i].SourceRow);
-        }
+        // 2a. 清空孤儿行的同步列（只在反向发生；正向完全不碰 target 独有行）
+        foreach (var row in orphanRows)
+        foreach (var col in syncCols)
+            target.Cells[row, targetColIdx[col]].Value = null;
 
         // 2b. 原地更新
         foreach (var (targetRow, sourceRow) in updateOps)
@@ -334,6 +364,6 @@ internal static class XlsxCrossSync
                     .Value;
         }
 
-        return (updateOps.Count, groupedInserts.Count + tailInserts.Count, deleteRows.Count);
+        return (updateOps.Count, groupedInserts.Count + tailInserts.Count, orphanRows.Count);
     }
 }

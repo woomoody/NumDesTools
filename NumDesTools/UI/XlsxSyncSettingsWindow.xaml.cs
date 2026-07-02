@@ -14,9 +14,10 @@ public partial class XlsxSyncSettingsWindow : MetroWindow
         MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
 
-        var (rootA, rootB) = XlsxCrossSync.LoadRoots();
+        var (rootA, rootB, suffixA) = XlsxCrossSync.LoadRoots();
         RootABox.Text = rootA;
         RootBBox.Text = rootB;
+        SuffixABox.Text = suffixA;
     }
 
     private void Window_KeyDown(object sender, WpfKeyEventArgs e)
@@ -27,7 +28,7 @@ public partial class XlsxSyncSettingsWindow : MetroWindow
 
     private void SaveRoots_Click(object sender, System.Windows.RoutedEventArgs e)
     {
-        XlsxCrossSync.SaveRoots(RootABox.Text.Trim(), RootBBox.Text.Trim());
+        XlsxCrossSync.SaveRoots(RootABox.Text.Trim(), RootBBox.Text.Trim(), SuffixABox.Text.Trim());
         MessageBox.Show("已保存。", "同步设置");
     }
 

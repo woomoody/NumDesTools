@@ -4,12 +4,13 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     Title="跨表同步设置"
-    Width="620" Height="260" MinWidth="520" MinHeight="220"
+    Width="620" Height="300" MinWidth="520" MinHeight="260"
     WindowStartupLocation="CenterScreen"
     KeyDown="Window_KeyDown">
 
     <Grid Margin="14,12,14,12">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -31,12 +32,17 @@
         <TextBox x:Name="RootBBox" Grid.Row="1" Grid.Column="1" Margin="0,4,6,4"/>
         <Button Grid.Row="1" Grid.Column="2" Content="浏览…" Margin="0,4,0,4" Click="BrowseRootB_Click"/>
 
-        <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,10,0,0"
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="a 侧后缀" VerticalAlignment="Center"
+                   Foreground="{DynamicResource MahApps.Brushes.Gray3}"/>
+        <TextBox x:Name="SuffixABox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,4,0,4"
+                 Tag="留空则要求 a/b 文件名完全一致，比如填 _Update 表示 a 侧文件名 = b 侧文件名 + _Update"/>
+
+        <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,10,0,0"
                    TextWrapping="Wrap" VerticalAlignment="Top"
                    Foreground="{DynamicResource MahApps.Brushes.Gray3}" FontSize="11"
-                   Text="a/b 同名，只需各配一个根目录。同步时按当前打开文件在哪侧根目录下，自动推出对侧同名文件；逐个同名 Sheet 比较表头（约定 id 列为 Key），交集列自动同步，不用再配 Sheet 名和列名单。"/>
+                   Text="同步时按当前打开文件在哪侧根目录下，自动推出对侧文件（按上面的后缀规则换算文件名）；逐个同名 Sheet 比较表头（约定 id 列为 Key），交集列自动同步，不用再配 Sheet 名和列名单。"/>
 
-        <Button x:Name="SaveButton" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
+        <Button x:Name="SaveButton" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
                 Content="保存" Height="34" IsDefault="True"
                 Style="{DynamicResource MahApps.Styles.Button.Square.Accent}"
                 Click="SaveRoots_Click"/>
