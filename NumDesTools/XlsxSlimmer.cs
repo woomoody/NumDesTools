@@ -99,6 +99,7 @@ internal static class XlsxSlimmer
                 ws.Range[ws.Cells[1, sd.TrueMaxCol + 1], ws.Cells[1, endCol]].EntireColumn.Delete();
         }
 
+        var path = diag.FilePath;
         try
         {
             wb.Save();
@@ -109,10 +110,30 @@ internal static class XlsxSlimmer
             return;
         }
 
-        var newSize = new FileInfo(diag.FilePath).Length;
+        // 内容改动已经安全落盘；Excel 自己的增量 Save 不会像 EPPlus 全量重写那样彻底重新压缩 zip，
+        // 体积瘦不下去。这一步只是"尽力再压一压"，失败（比如瞬时被占用）就跳过，不影响已保存的正确内容。
+        wb.Close(false);
+        TryRecompress(path);
+        AppServices.App.Workbooks.Open(path);
+
+        var newSize = new FileInfo(path).Length;
         MessageBox.Show(
             $"瘦身完成（原地保存，git 可回溯）：\n原体积 {diag.OriginalBytes / 1024.0 / 1024.0:F1} MB\n新体积 {newSize / 1024.0 / 1024.0:F1} MB",
             "格式瘦身完成"
         );
+    }
+
+    private static void TryRecompress(string path)
+    {
+        try
+        {
+            ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
+            using var pkg = new ExcelPackage(new FileInfo(path));
+            pkg.Save();
+        }
+        catch
+        {
+            // 压缩是加分项，失败不影响正确性（内容已在上面 wb.Save() 里存好），静默跳过。
+        }
     }
 }
