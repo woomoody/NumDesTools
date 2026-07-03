@@ -268,7 +268,9 @@ public static class ExcelDataAutoInsertMulti
             foreach (var cell in sheet.Cells)
                 if (cell.Formula is { Length: > 0 })
                 {
-                    errorList.Add((excelRealName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@"));
+                    errorList.Add(
+                        (excelRealName, @"不推荐自动写入，单元格有公式:" + cell.Address, "@@@")
+                    );
                     return errorList;
                 }
 
@@ -522,13 +524,18 @@ public static class ExcelDataAutoInsertMulti
                     if (cellFixValue == "^error^")
                     {
                         string errorExcelLog =
-                            excelName + "#" + rowId.Value + "#【修改模式】#[" + excelKey + "]字段方法写错";
+                            excelName
+                            + "#"
+                            + rowId.Value
+                            + "#【修改模式】#["
+                            + excelKey
+                            + "]字段方法写错";
                         errorList.Add((excelKey, errorExcelLog, excelName));
                     }
 
-                    cellFix.Value = double.TryParse(cellFixValue, out double number)
-                        ? number
-                        : cellFixValue;
+                    // 往返校验版归一化：比裸 double.TryParse 多防前导零丢失/超长ID精度丢失/
+                    // 大数字显示成科学计数法，且顺带锁 NumberFormat。
+                    CellValueNormalizer.ApplyTo(cellFix, cellFixValue);
                 }
             }
         }
@@ -569,7 +576,8 @@ public static class ExcelDataAutoInsertMulti
                     var excelFileFixKey = PubMetToExcel.FindSourceCol(sheet, 2, excelKey);
                     if (excelFileFixKey == -1)
                     {
-                        var errorExcelLog = excelName + "#【初始模板】#[" + excelKey + "]未找到(字段出错)";
+                        var errorExcelLog =
+                            excelName + "#【初始模板】#[" + excelKey + "]未找到(字段出错)";
                         errorList.Add((excelKey, errorExcelLog, excelName));
                         continue;
                     }
@@ -678,9 +686,8 @@ public static class ExcelDataAutoInsertMulti
                                         errorList.Add((excelKey, errorExcelLog, excelName));
                                     }
 
-                                    cellFix.Value = double.TryParse(cellFixValue, out double number)
-                                        ? number
-                                        : cellFixValue;
+                                    // 往返校验版归一化：见 SingleWrite 里同款替换的注释。
+                                    CellValueNormalizer.ApplyTo(cellFix, cellFixValue);
                                 }
                             }
                         }

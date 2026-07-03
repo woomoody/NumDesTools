@@ -332,6 +332,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["XlsxSyncSettings"] = _ => XlsxCrossSync.OpenSettings(),
             ["XlsxSyncForward"] = _ => XlsxCrossSync.RunForward(),
             ["XlsxSyncReverse"] = _ => XlsxCrossSync.RunReverse(),
+            ["XlsxSlimmerButton"] = _ => new NumDesTools.UI.XlsxSlimmerWindow().Show(),
             ["ExcelConflictGit"] = _ => ExcelConflictEntry.OpenGitConflict(),
             ["ExcelConflictManual"] = _ => ExcelConflictEntry.OpenManualCompare(),
             ["ExcelConflictHistory"] = _ => ExcelConflictEntry.OpenGitHistory(),

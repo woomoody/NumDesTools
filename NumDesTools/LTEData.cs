@@ -652,7 +652,9 @@ public class LteData
                                 )
                             )
                         );
-                        targetSheet.Cells[rowIndex, col].Value = val;
+                        // val 来自 AnalyzeWildcard，永远是 string；本该是数字的字段直接写会
+                        // 落成 sharedStrings 引用，纯数字大多不重复，去重零收益，纯体积浪费。
+                        CellValueNormalizer.ApplyTo(targetSheet.Cells[rowIndex, col], val);
                     }
                     dataWritten = true;
                 }
@@ -832,7 +834,7 @@ public class LteData
                     ($"itemId={itemId} {e.Item1}", e.Item2, e.Item3, e.Item4, e.Item5, e.Item6)
                 )
             );
-            ctx.TargetSheet.Cells[writeRow, j].Value = cellRealValue;
+            CellValueNormalizer.ApplyTo(ctx.TargetSheet.Cells[writeRow, j], cellRealValue);
             wrote = true;
         }
         return wrote;

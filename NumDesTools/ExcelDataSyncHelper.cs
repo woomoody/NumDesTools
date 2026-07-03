@@ -210,7 +210,11 @@ public static class ExcelDataSyncHelper
                     && replacePair.Count >= 2
                 )
                 {
-                    cell.Value = value?.ToString()?.Replace(replacePair[0], replacePair[1]);
+                    // Replace 之后原始类型已经不可靠(数字被 ToString 过了)，归一化一次再写。
+                    CellValueNormalizer.ApplyTo(
+                        cell,
+                        value?.ToString()?.Replace(replacePair[0], replacePair[1])
+                    );
                 }
                 else
                 {

@@ -1947,8 +1947,8 @@ public static class PubMetToExcelFunc
             if (iconFixData.ContainsKey(iconKey))
             {
                 var iconValue1 = iconFixData[iconKey];
-                targetSheet.Cells[row, fieldValue1Col].Value = iconValue1;
-                targetSheet.Cells[row, fieldValue2Col].Value = iconValue1;
+                CellValueNormalizer.ApplyTo(targetSheet.Cells[row, fieldValue1Col], iconValue1);
+                CellValueNormalizer.ApplyTo(targetSheet.Cells[row, fieldValue2Col], iconValue1);
                 isWrite = true;
             }
         }
@@ -2197,7 +2197,8 @@ public static class PubMetToExcelFunc
         else
         {
             PluginLog.Write($"[ExcelIndex] index not ready");
-            var msg = "搜索索引未准备好（正在后台构建或缓存文件不存在）。\n\n"
+            var msg =
+                "搜索索引未准备好（正在后台构建或缓存文件不存在）。\n\n"
                 + "• 点击「是」→ 使用慢速全文件遍历（可能需要几十秒）\n"
                 + "• 点击「否」→ 等待索引构建完成后重试（通常 30 秒内就绪）";
             var choice = System.Windows.MessageBox.Show(

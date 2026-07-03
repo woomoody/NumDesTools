@@ -319,7 +319,8 @@ public static class ExcelDataAutoInsertMultiNew
                 var startRowSource = PubMetToExcel.FindSourceRow(sheetModel, 2, startValue);
                 if (startRowSource == -1)
                 {
-                    errorExcelLog = excelName + "#【初始模板】#[" + startValue + "]未找到(序号出错)";
+                    errorExcelLog =
+                        excelName + "#【初始模板】#[" + startValue + "]未找到(序号出错)";
                     errorList.Add((startValue, errorExcelLog, excelName));
                     return errorList;
                 }
@@ -334,7 +335,8 @@ public static class ExcelDataAutoInsertMultiNew
 
                 if (endRowSource - startRowSource < 0)
                 {
-                    errorExcelLog = excelName + "#【初始模板】#[" + endValue + "]起始、终结ID顺序反了";
+                    errorExcelLog =
+                        excelName + "#【初始模板】#[" + endValue + "]起始、终结ID顺序反了";
                     errorList.Add((endValue, errorExcelLog, excelName));
                     return errorList;
                 }
@@ -449,7 +451,8 @@ public static class ExcelDataAutoInsertMultiNew
                         }
                         partCount++;
                     }
-                    replaceCell.Value = cellValue;
+                    // 通用批量替换列没做任何类型判断,regex替换后原样写回,数字列会被固化成字符串。
+                    CellValueNormalizer.ApplyTo(replaceCell, cellValue);
                 }
             }
             //自定义修改（修改方法）
@@ -491,13 +494,17 @@ public static class ExcelDataAutoInsertMultiNew
                     if (cellFixValue == "^error^")
                     {
                         string errorExcelLog =
-                            excelName + "#" + rowId.Value + "#【修改模式】#[" + cellKey + "]字段方法写错";
+                            excelName
+                            + "#"
+                            + rowId.Value
+                            + "#【修改模式】#["
+                            + cellKey
+                            + "]字段方法写错";
                         errorList.Add((cellKey, errorExcelLog, excelName));
                     }
 
-                    cellFix.Value = double.TryParse(cellFixValue, out double number)
-                        ? number
-                        : cellFixValue;
+                    // 往返校验版归一化：见 ExcelDataAutoInsertMulti.SingleWrite 里同款替换的注释。
+                    CellValueNormalizer.ApplyTo(cellFix, cellFixValue);
                 }
             }
             //备注修改（替换）

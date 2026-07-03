@@ -171,7 +171,10 @@ public static class ExcelDataAutoInsertLanguage
                 catch (Exception ex)
                 {
                     errorExcel = i * 2 + 2;
-                    errorExcelLog = fixFileName + "无法删除重复数据，sheet格式问题，复制数据到新表" + ex.Message;
+                    errorExcelLog =
+                        fixFileName
+                        + "无法删除重复数据，sheet格式问题，复制数据到新表"
+                        + ex.Message;
                     errorList.Add((errorExcel, errorExcelLog, fixFileName));
                 }
 
@@ -233,7 +236,8 @@ public static class ExcelDataAutoInsertLanguage
                         }
 
                         errorExcel = i * 2 + 2;
-                        errorExcelLog = fixFileName + "#表格字段#[" + fixKeyList[sourceCount] + "]未找到";
+                        errorExcelLog =
+                            fixFileName + "#表格字段#[" + fixKeyList[sourceCount] + "]未找到";
                         errorList.Add((errorExcel, errorExcelLog, fixFileName));
                         sourceCount++;
                         continue;
@@ -274,7 +278,7 @@ public static class ExcelDataAutoInsertLanguage
                         }
 
                         newStr = "[" + newStr.Substring(0, newStr.Length - 1) + "]";
-                        cellTarget.Value = newStr;
+                        CellValueNormalizer.ApplyTo(cellTarget, newStr?.ToString());
                     }
                     else if (source == "枚举1")
                     {
@@ -300,7 +304,7 @@ public static class ExcelDataAutoInsertLanguage
                         var oldId = matches[0].Value.ToString();
                         if (newId != "")
                             sourceStr = sourceStr.Replace(oldId, newId);
-                        cellTarget.Value = sourceStr;
+                        CellValueNormalizer.ApplyTo(cellTarget, sourceStr?.ToString());
                     }
                     else if (source == "角色表情")
                     {
@@ -317,7 +321,7 @@ public static class ExcelDataAutoInsertLanguage
                                 {
                                     emoId = "idle";
                                 }
-                                cellTarget.Value = emoId;
+                                CellValueNormalizer.ApplyTo(cellTarget, emoId?.ToString());
                                 break;
                             }
                         }
@@ -351,7 +355,7 @@ public static class ExcelDataAutoInsertLanguage
                         }
 
                         strBranch = "[" + strBranch.Substring(0, strBranch.Length - 1) + "]";
-                        cellTarget.Value = strBranch;
+                        CellValueNormalizer.ApplyTo(cellTarget, strBranch?.ToString());
                     }
                     //else if (source == "分支多语言")
                     //{
@@ -387,7 +391,7 @@ public static class ExcelDataAutoInsertLanguage
                             }
                         }
 
-                        cellTarget.Value = newValue;
+                        CellValueNormalizer.ApplyTo(cellTarget, newValue?.ToString());
                     }
                     else if (source == "角色换装2")
                     {
@@ -410,19 +414,19 @@ public static class ExcelDataAutoInsertLanguage
                             }
                         }
 
-                        cellTarget.Value = newValue;
+                        CellValueNormalizer.ApplyTo(cellTarget, newValue?.ToString());
                     }
                     else if (source == "UI对话框")
                     {
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf("UI对话框")];
                         sourceValue = sourceValue == null ? "1" : sourceValue.ToString();
                         if (fixKeyList[sourceCount] == "bgType")
-                            cellTarget.Value = sourceValue;
+                            CellValueNormalizer.ApplyTo(cellTarget, sourceValue?.ToString());
                     }
                     else
                     {
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)];
-                        cellTarget.Value = sourceValue;
+                        CellValueNormalizer.ApplyTo(cellTarget, sourceValue?.ToString());
                     }
 
                     sourceCount++;
@@ -630,7 +634,10 @@ public static class ExcelDataAutoInsertLanguage
                 catch (Exception ex)
                 {
                     errorExcel = i * 2 + 2;
-                    errorExcelLog = fixFileName + "无法删除重复数据，sheet格式问题，复制数据到新表" + ex.Message;
+                    errorExcelLog =
+                        fixFileName
+                        + "无法删除重复数据，sheet格式问题，复制数据到新表"
+                        + ex.Message;
                     errorList.Add((errorExcel, errorExcelLog, fixFileName));
                 }
 
@@ -687,7 +694,8 @@ public static class ExcelDataAutoInsertLanguage
                         }
 
                         errorExcel = i * 2 + 2;
-                        errorExcelLog = fixFileName + "#表格字段#[" + fixKeyList[sourceCount] + "]未找到";
+                        errorExcelLog =
+                            fixFileName + "#表格字段#[" + fixKeyList[sourceCount] + "]未找到";
                         errorList.Add((errorExcel, errorExcelLog, fixFileName));
                         sourceCount++;
                         continue;
@@ -728,7 +736,7 @@ public static class ExcelDataAutoInsertLanguage
                         }
 
                         newStr = "[" + newStr.Substring(0, newStr.Length - 1) + "]";
-                        cellTarget.Value = newStr;
+                        CellValueNormalizer.ApplyTo(cellTarget, newStr?.ToString());
                     }
                     else if (source == "枚举1")
                     {
@@ -759,7 +767,7 @@ public static class ExcelDataAutoInsertLanguage
                         var oldId = matches[0].Value;
                         if (newId != "")
                             sourceStr = sourceStr.Replace(oldId, newId);
-                        cellTarget.Value = sourceStr;
+                        CellValueNormalizer.ApplyTo(cellTarget, sourceStr?.ToString());
                     }
                     else if (source == "角色表情")
                     {
@@ -776,7 +784,7 @@ public static class ExcelDataAutoInsertLanguage
                                 {
                                     emoId = "idle";
                                 }
-                                cellTarget.Value = emoId;
+                                CellValueNormalizer.ApplyTo(cellTarget, emoId?.ToString());
                                 break;
                             }
                         }
@@ -810,7 +818,7 @@ public static class ExcelDataAutoInsertLanguage
                         }
 
                         strBranch = "[" + strBranch.Substring(0, strBranch.Length - 1) + "]";
-                        cellTarget.Value = strBranch;
+                        CellValueNormalizer.ApplyTo(cellTarget, strBranch?.ToString());
                     }
                     else if (source == "分支多语言")
                     {
@@ -823,7 +831,7 @@ public static class ExcelDataAutoInsertLanguage
                         var oldId = matches[0].Value;
                         if (newId != "")
                             sourceStr = sourceStr.Replace(oldId, newId);
-                        cellTarget.Value = sourceStr;
+                        CellValueNormalizer.ApplyTo(cellTarget, sourceStr?.ToString());
                     }
                     else if (source == "角色换装1")
                     {
@@ -846,7 +854,7 @@ public static class ExcelDataAutoInsertLanguage
                             }
                         }
 
-                        cellTarget.Value = newValue;
+                        CellValueNormalizer.ApplyTo(cellTarget, newValue?.ToString());
                     }
                     else if (source == "角色换装2")
                     {
@@ -869,19 +877,19 @@ public static class ExcelDataAutoInsertLanguage
                             }
                         }
 
-                        cellTarget.Value = newValue;
+                        CellValueNormalizer.ApplyTo(cellTarget, newValue?.ToString());
                     }
                     else if (source == "UI对话框")
                     {
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf("UI对话框")];
                         sourceValue = sourceValue == null ? "1" : sourceValue.ToString();
                         if (fixKeyList[sourceCount] == "bgType")
-                            cellTarget.Value = sourceValue;
+                            CellValueNormalizer.ApplyTo(cellTarget, sourceValue?.ToString());
                     }
                     else
                     {
                         var sourceValue = sourceDataList[m][sourceTitle.IndexOf(source)];
-                        cellTarget.Value = sourceValue;
+                        CellValueNormalizer.ApplyTo(cellTarget, sourceValue?.ToString());
                     }
 
                     sourceCount++;
@@ -1020,7 +1028,6 @@ public static class ExcelDataAutoInsertLanguage
     {
         // 替换通配符生成数据
 
-
         var dicValue = new Dictionary<(string, string), List<string>>();
 
         string error = String.Empty;
@@ -1034,7 +1041,7 @@ public static class ExcelDataAutoInsertLanguage
                 "GuideDialogDetail.xlsx" => "DetailID",
                 "Localizations.xlsx" => "多语言KEY",
                 "GuideDialogBranch.xlsx" => "BranchID",
-                _ => ""
+                _ => "",
             };
 
             // 获取列索引
@@ -1130,7 +1137,9 @@ public static class ExcelDataAutoInsertLanguage
                 }
                 catch (Exception e)
                 {
-                    LogDisplay.RecordLine($"[{DateTime.Now}] , {$"sheet表有问题无法删除: {e.Message}"}");
+                    LogDisplay.RecordLine(
+                        $"[{DateTime.Now}] , {$"sheet表有问题无法删除: {e.Message}"}"
+                    );
                 }
 
             var writeCol = targetSheet.Dimension.End.Column;
@@ -1223,7 +1232,7 @@ public static class ExcelDataAutoInsertLanguage
                 "Dic" => Dic(funDy1, funDy2, funDy3),
                 "Find" => Find(funDy1, funDy2, funDy3),
                 "Merge" => Merge(funDy1, funDy2, funDy3),
-                _ => GetValue(funName)
+                _ => GetValue(funName),
             };
             fixWildcardValue ??= "";
             if (fixWildcardValue.Contains("Error"))

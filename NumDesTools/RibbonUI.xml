@@ -109,6 +109,7 @@
                                         <button id="XlsxSyncSettings" size='large' label="跨表同步&#13;设置" screentip='配置根目录 A/B 及 a 侧文件名后缀，Sheet 和同步列全自动比对，不用手配' onAction='OnButtonClick' image='nd_跨表同步设置' tag='跨表同步设置' />
                                         <button id="XlsxSyncForward" size='large' label="同步&#13;a→b" screentip='当前需在根目录 A 下打开的文件，自动找到 B 侧对应文件，比对同名 Sheet 的表头交集列（约定 id 列为 Key）同步过去' onAction='OnButtonClick' image='nd_跨表同步正向' tag='同步a→b' />
                                         <button id="XlsxSyncReverse" size='large' label="同步&#13;b→a" screentip='当前需在根目录 B 下打开的文件，反向同步回 A 侧对应文件，规则同「同步 a→b」' onAction='OnButtonClick' image='nd_跨表同步反向' tag='同步b→a' />
+                                        <button id="XlsxSlimmerButton" size='large' label="xlsx&#13;瘦身" screentip='把纯数字误存成字符串的单元格转回原生数字类型，压缩体积；支持当前工作簿/全量扫描两种模式' onAction='OnButtonClick' imageMso='DataRefreshAll' tag='xlsx瘦身' />
                                 </group>
                                 <group id='Group10' label='玩法计算'>
                                         <button id='Button15' size='large' label='Alice大富翁' image='nd_Alice大富翁' screentip='大富翁方案整理' onAction='OnButtonClick' tag='Alice大富翁' />

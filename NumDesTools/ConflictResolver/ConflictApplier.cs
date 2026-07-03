@@ -83,7 +83,9 @@ public static class ConflictApplier
                 continue;
 
             var colIdx = FindOrCreateHeaderCol(sheet, cell.ColName, allColumns);
-            sheet.Cells[rowIdx, colIdx].Value = cell.TheirsValue;
+            // 冲突 diff 引擎内部按 string 比较，数字也会被读成字符串；写回时归一化一次，
+            // 避免把本该是数字的值(如 id)固化成 sharedStrings 里的文本。
+            CellValueNormalizer.ApplyTo(sheet.Cells[rowIdx, colIdx], cell.TheirsValue?.ToString());
         }
     }
 
@@ -156,7 +158,7 @@ public static class ConflictApplier
                     if (string.IsNullOrEmpty(header))
                         continue;
                     var colIdx = FindOrCreateHeaderCol(sheet, header, allCols);
-                    sheet.Cells[insertAt, colIdx].Value = val;
+                    CellValueNormalizer.ApplyTo(sheet.Cells[insertAt, colIdx], val?.ToString());
                 }
 
                 // InsertRow 使 insertAt 及之后的所有行号 +1，同步更新 keyToRow
@@ -187,7 +189,7 @@ public static class ConflictApplier
             if (string.IsNullOrEmpty(header))
                 continue;
             var colIdx = FindOrCreateHeaderCol(sheet, header, allColumns);
-            sheet.Cells[lastRow, colIdx].Value = val;
+            CellValueNormalizer.ApplyTo(sheet.Cells[lastRow, colIdx], val?.ToString());
         }
 
         var srcRow = lastRow - 1;
