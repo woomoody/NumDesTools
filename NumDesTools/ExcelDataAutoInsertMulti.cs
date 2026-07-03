@@ -238,7 +238,8 @@ public static class ExcelDataAutoInsertMulti
             return errorList;
         }
 
-        var excel = new ExcelPackage(new FileInfo(path));
+        // using 声明：下面几条 catch/公式检查失败会 return errorList，用 using 保证都能自动释放。
+        using var excel = new ExcelPackage(new FileInfo(path));
         ExcelWorkbook workBook;
         try
         {
@@ -425,7 +426,6 @@ public static class ExcelDataAutoInsertMulti
         }
 
         excel.Save();
-        excel?.Dispose();
         excelNew?.Dispose();
 
         errorList.Add(("-1", errorExcelLog, excelName));

@@ -75,6 +75,7 @@ public class ExcelDataByEpplus
             errorExcelLog = excelRealName + "#不能创建WorkBook对象" + ex.Message;
             errorList.Add((excelRealName, errorExcelLog, excelRealName));
             ErrorList = errorList;
+            excel?.Dispose();
             return false;
         }
 
@@ -87,6 +88,7 @@ public class ExcelDataByEpplus
             errorExcelLog = excelRealName + "#不能创建WorkBook对象" + ex.Message;
             errorList.Add((excelRealName, errorExcelLog, excelRealName));
             ErrorList = errorList;
+            excel?.Dispose();
             return false;
         }
 

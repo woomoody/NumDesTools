@@ -107,7 +107,8 @@ public static class ExcelDataAutoInsertLanguage
             var fixFileModeId = fixDataList[i][modelIdIndex].ToString();
 
             string path = ExcelDataAutoInsert.ExcelPathIgnore(excelPath, fixFileName);
-            var targetExcel = new ExcelPackage(new FileInfo(path));
+            // using 声明：异常路径 continue 也能自动释放，不用在每个 catch 分支里手动补 Dispose。
+            using var targetExcel = new ExcelPackage(new FileInfo(path));
             ExcelWorkbook targetBook;
             string errorExcelLog;
             try
@@ -463,7 +464,6 @@ public static class ExcelDataAutoInsertLanguage
             }
 
             targetExcel.Save();
-            targetExcel.Dispose();
             var excelCount = i / 2 + 1;
             app.StatusBar =
                 "写入数据" + "<" + excelCount + "/" + fixDataList.Count / 2 + ">" + fixFileName;
@@ -570,7 +570,8 @@ public static class ExcelDataAutoInsertLanguage
             var fixFileName = fixDataList[i][fileIndex].ToString();
 
             string path = ExcelDataAutoInsert.ExcelPathIgnore(excelPath, fixFileName);
-            var targetExcel = new ExcelPackage(new FileInfo(path));
+            // using 声明：异常路径 continue 也能自动释放，不用在每个 catch 分支里手动补 Dispose。
+            using var targetExcel = new ExcelPackage(new FileInfo(path));
             ExcelWorkbook targetBook;
             string errorExcelLog;
             try
@@ -926,7 +927,6 @@ public static class ExcelDataAutoInsertLanguage
             }
 
             targetExcel.Save();
-            targetExcel.Dispose();
             var excelCount = i / 2 + 1;
             app.StatusBar =
                 "写入数据" + "<" + excelCount + "/" + fixDataList.Count / 2 + ">" + fixFileName;
