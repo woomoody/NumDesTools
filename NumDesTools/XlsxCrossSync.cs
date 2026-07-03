@@ -5,8 +5,13 @@ namespace NumDesTools;
 
 // a.xlsx ↔ b.xlsx 按 Key 列（约定列名 "id"）跨表同步，全自动：给定根目录 A/B，
 // 按当前打开文件算出对侧文件名（可选后缀），在对侧根目录下递归搜同名文件（不假设子文件夹结构一致），
-// 逐个同名 Sheet 比较表头，交集列（去掉 id）就同步，两侧都没有的列或没有 id 列的 Sheet 直接跳过。
-// 插入位置复用 LTEData.cs 的分组算法：按 Key 前缀找同组最后一行插入其后。
+// 逐个同名 Sheet 比较表头，没有 id 列的 Sheet 直接跳过。
+// 两个方向机制不同：
+//   a→b：交集列（去掉 id）整行同步——已存在 id 更新、新 id 插入整行、标记「删除」的行整行删掉。
+//        插入位置复用 LTEData.cs 的分组算法：按 Key 前缀找同组最后一行插入其后。
+//        若发现 b 有 a 没有的合法列，只弹提示，不处理（引导去跑 b→a）。
+//   b→a：只把 b 有而 a 没有的列（字段结构，行1-4）搬到 a；该列数据只回填 a 中已存在的 id 行，
+//        不新增行、不管 a 独有列——这是列结构补齐，不是行同步。
 internal static class XlsxCrossSync
 {
     private const int HeaderRow = 2;
@@ -140,7 +145,14 @@ internal static class XlsxCrossSync
         using var fromPkg = new ExcelPackage(new FileInfo(fromPath));
         using var toPkg = new ExcelPackage(new FileInfo(toPath));
 
+        if (reverse)
+        {
+            ExecuteColumnSync(fromPkg, toPkg, toPath);
+            return;
+        }
+
         var plans = new List<(ExcelWorksheet From, ExcelWorksheet To, List<string> Cols)>();
+        var bOnlyBySheet = new List<(string SheetName, List<string> Cols)>();
         foreach (var fromSheet in fromPkg.Workbook.Worksheets)
         {
             if (fromSheet.Name.StartsWith('#'))
@@ -154,12 +166,27 @@ internal static class XlsxCrossSync
             if (!fromCols.Contains(KeyColumnName) || !toCols.Contains(KeyColumnName))
                 continue;
 
+            var bOnly = toCols.Except(fromCols).Where(c => c != KeyColumnName).ToList();
+            if (bOnly.Count > 0)
+                bOnlyBySheet.Add((fromSheet.Name, bOnly));
+
             var syncCols = fromCols.Intersect(toCols).Where(c => c != KeyColumnName).ToList();
             if (syncCols.Count == 0)
                 continue;
 
             plans.Add((fromSheet, toSheet, syncCols));
         }
+
+        if (bOnlyBySheet.Count > 0)
+            MessageBox.Show(
+                "检测到 b 有 a 没有的合法列，本次 a→b 不会处理：\n"
+                    + string.Join(
+                        "\n",
+                        bOnlyBySheet.Select(s => $"[{s.SheetName}] {string.Join("、", s.Cols)}")
+                    )
+                    + "\n\n建议先打开 b 侧文件执行「b→a」把这些列同步过去，再继续 a→b。",
+                "跨表同步 - 发现 b 独有列"
+            );
 
         if (plans.Count == 0)
         {
@@ -202,7 +229,7 @@ internal static class XlsxCrossSync
         // 增量同步：源侧新 key 插入、已存在的 key 更新；不按 key 集合清理对侧独有行。
         // 唯一删除方式：源行第1列文本严格等于"删除"，且对侧存在同 key 时，删掉对侧那一整行。
         var confirm = MessageBox.Show(
-            $"{(reverse ? "反向 b→a" : "正向 a→b")}\n{detail}\n\n"
+            $"正向 a→b\n{detail}\n\n"
                 + "新增行只会写入 id 列 + 同步列，其余列留空需自行补全。\n"
                 + "源第1列标注「删除」的行，若对侧存在同 key 会被整行删除。\n"
                 + $"确认后原地覆写 {Path.GetFileName(toPath)}（git 可回溯）。是否继续？",
@@ -222,6 +249,167 @@ internal static class XlsxCrossSync
             $"同步完成：更新 {totalUpdates} / 新增 {totalInserts} / 删除 {totalDeleted}",
             "跨表同步"
         );
+    }
+
+    // b→a：只把 b 有而 a 没有的列（字段）搬到 a，数据只回填 a 中已存在的 id 行，不新增行、不管 a 独有列。
+    private static void ExecuteColumnSync(ExcelPackage fromPkg, ExcelPackage toPkg, string toPath)
+    {
+        var plans =
+            new List<(
+                ExcelWorksheet From,
+                ExcelWorksheet To,
+                List<int> FromColIdx,
+                List<string> Names
+            )>();
+        foreach (var fromSheet in fromPkg.Workbook.Worksheets)
+        {
+            if (fromSheet.Name.StartsWith('#'))
+                continue;
+            var toSheet = toPkg.Workbook.Worksheets[fromSheet.Name];
+            if (toSheet is null)
+                continue;
+
+            var fromCols = ReadHeaderColumns(fromSheet);
+            var toCols = ReadHeaderColumns(toSheet);
+            if (!fromCols.Contains(KeyColumnName) || !toCols.Contains(KeyColumnName))
+                continue;
+
+            var newColNames = fromCols.Except(toCols).Where(c => c != KeyColumnName).ToList();
+            if (newColNames.Count == 0)
+                continue;
+
+            var fromColIdx = newColNames
+                .Select(name => PubMetToExcel.FindSourceCol(fromSheet, HeaderRow, name))
+                .ToList();
+            plans.Add((fromSheet, toSheet, fromColIdx, newColNames));
+        }
+
+        if (plans.Count == 0)
+        {
+            MessageBox.Show("没有发现 b 独有的新列（a 已具备 b 的全部字段）。", "跨表同步 - b→a");
+            return;
+        }
+
+        var sourceKeyCols = plans.ToDictionary(
+            p => p.From.Name,
+            p => PubMetToExcel.FindSourceCol(p.From, HeaderRow, KeyColumnName)
+        );
+        var targetKeyCols = plans.ToDictionary(
+            p => p.From.Name,
+            p => PubMetToExcel.FindSourceCol(p.To, HeaderRow, KeyColumnName)
+        );
+        var previews = plans
+            .Select(p =>
+                (
+                    p.From.Name,
+                    p.Names,
+                    Matched: CountMatchingRows(
+                        p.From,
+                        p.To,
+                        sourceKeyCols[p.From.Name],
+                        targetKeyCols[p.From.Name]
+                    )
+                )
+            )
+            .ToList();
+
+        var detail = string.Join(
+            "\n",
+            previews.Select(p =>
+                $"[{p.Name}] 新增列: {string.Join("、", p.Names)}，可回填 {p.Matched} 行"
+            )
+        );
+        var confirm = MessageBox.Show(
+            $"反向 b→a 列结构同步\n{detail}\n\n"
+                + "只新增列头（字段名/类型/标签），数据只回填 a 中已存在的 id 行，不新增行，a 独有列不受影响。\n"
+                + $"确认后原地覆写 {Path.GetFileName(toPath)}（git 可回溯）。是否继续？",
+            "跨表同步 - 预览确认",
+            MessageBoxButtons.OKCancel
+        );
+        if (confirm != DialogResult.OK)
+            return;
+
+        foreach (var (fromSheet, toSheet, fromColIdx, names) in plans)
+            ApplyColumnSync(fromSheet, toSheet, fromColIdx, names);
+
+        if (!SaveWithFriendlyError(toPkg, toPath))
+            return;
+
+        MessageBox.Show(
+            $"列同步完成：新增 {previews.Sum(p => p.Names.Count)} 列，共 {previews.Sum(p => p.Matched)} 行被回填",
+            "跨表同步"
+        );
+    }
+
+    // 统计 target 中有多少行的 id 在 source 里也存在（即会被回填的行数，仅预览用，不修改任何数据）。
+    private static int CountMatchingRows(
+        ExcelWorksheet source,
+        ExcelWorksheet target,
+        int sourceKeyCol,
+        int targetKeyCol
+    )
+    {
+        var sourceKeys = new HashSet<string>(StringComparer.Ordinal);
+        if (source.Dimension is not null)
+            for (int r = DataStartRow; r <= source.Dimension.End.Row; r++)
+            {
+                var k = source.Cells[r, sourceKeyCol].Text?.Trim();
+                if (!string.IsNullOrEmpty(k))
+                    sourceKeys.Add(k);
+            }
+
+        if (target.Dimension is null)
+            return 0;
+        var count = 0;
+        for (int r = DataStartRow; r <= target.Dimension.End.Row; r++)
+        {
+            var k = target.Cells[r, targetKeyCol].Text?.Trim();
+            if (!string.IsNullOrEmpty(k) && sourceKeys.Contains(k))
+                count++;
+        }
+        return count;
+    }
+
+    // 在 target 末尾追加 source 独有列（行1-4：分组/字段名/类型/标签），并对 target 中已存在的 id 行回填数据。
+    private static void ApplyColumnSync(
+        ExcelWorksheet source,
+        ExcelWorksheet target,
+        List<int> fromColIndices,
+        List<string> colNames
+    )
+    {
+        var sourceKeyCol = PubMetToExcel.FindSourceCol(source, HeaderRow, KeyColumnName);
+        var targetKeyCol = PubMetToExcel.FindSourceCol(target, HeaderRow, KeyColumnName);
+
+        var sourceKeyRow = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (source.Dimension is not null)
+            for (int r = DataStartRow; r <= source.Dimension.End.Row; r++)
+            {
+                var k = source.Cells[r, sourceKeyCol].Text?.Trim();
+                if (!string.IsNullOrEmpty(k))
+                    sourceKeyRow[k] = r;
+            }
+
+        var appendAt = target.Dimension?.End.Column ?? 1;
+        var targetCols = new List<int>();
+        foreach (var idx in fromColIndices)
+        {
+            appendAt++;
+            for (var headerRow = 1; headerRow <= DataStartRow - 1; headerRow++)
+                target.Cells[headerRow, appendAt].Value = source.Cells[headerRow, idx].Value;
+            targetCols.Add(appendAt);
+        }
+
+        if (target.Dimension is null)
+            return;
+        for (int r = DataStartRow; r <= target.Dimension.End.Row; r++)
+        {
+            var k = target.Cells[r, targetKeyCol].Text?.Trim();
+            if (string.IsNullOrEmpty(k) || !sourceKeyRow.TryGetValue(k, out var sr))
+                continue;
+            for (var i = 0; i < fromColIndices.Count; i++)
+                target.Cells[r, targetCols[i]].Value = source.Cells[sr, fromColIndices[i]].Value;
+        }
     }
 
     // EPPlus 遇到 DeleteFile 失败时不是直接抛 IOException，是包成 InvalidOperationException（内部异常才是 IOException）。
