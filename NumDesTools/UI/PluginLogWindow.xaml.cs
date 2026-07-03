@@ -4,7 +4,6 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using ExcelDna.Integration;
 using MahApps.Metro.Controls;
-using Clipboard = System.Windows.Clipboard;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace NumDesTools.UI;
@@ -60,8 +59,7 @@ public partial class PluginLogWindow : MetroWindow
         _drainTimer.Start();
     }
 
-    private void UpdateStatus() =>
-        StatusText.Text = $"{PluginLog.Lines.Count} 行";
+    private void UpdateStatus() => StatusText.Text = $"{PluginLog.Lines.Count} 行";
 
     // ── 按钮 ──────────────────────────────────────────────────────────────
 
@@ -77,7 +75,7 @@ public partial class PluginLogWindow : MetroWindow
     private void BtnCopy_Click(object sender, RoutedEventArgs e) => CopySelected();
 
     private void BtnCopyAll_Click(object sender, RoutedEventArgs e) =>
-        Clipboard.SetText(string.Join(Environment.NewLine, PluginLog.Lines));
+        ClipboardHelper.SetTextSafe(string.Join(Environment.NewLine, PluginLog.Lines));
 
     private void BtnClear_Click(object sender, RoutedEventArgs e)
     {
@@ -109,7 +107,7 @@ public partial class PluginLogWindow : MetroWindow
                 ? string.Join(Environment.NewLine, selected)
                 : string.Join(Environment.NewLine, PluginLog.Lines);
         if (!string.IsNullOrEmpty(text))
-            Clipboard.SetText(text);
+            ClipboardHelper.SetTextSafe(text);
     }
 
     // ── 关闭 ──────────────────────────────────────────────────────────────

@@ -1014,7 +1014,7 @@ public static partial class PubMetToExcel
         }
 
         // 将字符串复制到剪贴板
-        Clipboard.SetText(sb.ToString());
+        ClipboardHelper.SetTextSafe(sb.ToString());
     }
 
     //数组变为二维化字符串

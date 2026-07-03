@@ -77,7 +77,8 @@ internal class SvnGitTools
         repoPath = FindGitRoot(repoPath) ?? repoPath;
         using var repo = new Repository(repoPath);
         var commit =
-            repo.Lookup<Commit>(commitSha) ?? throw new ArgumentException($"找不到提交 {commitSha}");
+            repo.Lookup<Commit>(commitSha)
+            ?? throw new ArgumentException($"找不到提交 {commitSha}");
         var parent = commit.Parents.FirstOrDefault();
         if (parent is null)
             return [];
@@ -150,7 +151,11 @@ internal class SvnGitTools
         var gitDir = Repository.Discover(startPath);
         if (gitDir is null)
             return null;
-        var root = Directory.GetParent(gitDir)?.FullName;
+        // Repository.Discover 固定返回带尾部分隔符的路径("...\.git\")，Directory.GetParent
+        // 对带尾部分隔符的路径只会去掉斜杠返回原路径本身，不会真的往上一级——不去掉这个
+        // 尾部分隔符，FindGitRoot 返回的是 ".git" 目录，不是仓库根目录。
+        var trimmed = gitDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var root = Directory.GetParent(trimmed)?.FullName;
         return root;
     }
 
@@ -207,7 +212,7 @@ internal class SvnGitTools
                         new CommitFilter
                         {
                             SortBy = CommitSortStrategies.Time,
-                            IncludeReachableFrom = repo.Refs // 查询所有分支（类似 --all）
+                            IncludeReachableFrom = repo.Refs, // 查询所有分支（类似 --all）
                         }
                     )
                     .FirstOrDefault(commit => commit.Author.Name.Contains(authorName)); // 根据需求调整匹配逻辑

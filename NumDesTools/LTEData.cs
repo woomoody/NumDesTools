@@ -3382,7 +3382,7 @@ public class LteData
                     // 复制到剪切板
                     if (valueString.Length > 0)
                     {
-                        Clipboard.SetText(valueString.ToString());
+                        ClipboardHelper.SetTextSafe(valueString.ToString());
                     }
                     else
                     {
