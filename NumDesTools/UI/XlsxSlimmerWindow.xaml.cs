@@ -10,7 +10,7 @@ using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace NumDesTools.UI;
 
-// xlsx 瘦身：当前工作簿走 COM（不 Close/不重开，避免文件锁竞态），全量扫描走 EPPlus（离线文件）。
+// xlsx 瘦身：全量扫描指定根目录，EPPlus 离线处理（无文件锁竞态）。
 public partial class XlsxSlimmerWindow : MetroWindow
 {
     private List<string> _scanFiles = [];
@@ -31,19 +31,6 @@ public partial class XlsxSlimmerWindow : MetroWindow
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
-    private void Mode_Changed(object sender, RoutedEventArgs e)
-    {
-        if (ScanRootRow is null)
-            return;
-        ScanRootRow.IsEnabled = ModeScan.IsChecked == true;
-        SelectAllBox.Visibility =
-            ModeScan.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        ResultPanel.Children.Clear();
-        SummaryText.Text = "";
-        StatusText.Text = "";
-        _scanFiles = [];
-    }
-
     private void BrowseRoot_Click(object sender, RoutedEventArgs e)
     {
         using var dlg = new System.Windows.Forms.FolderBrowserDialog();
@@ -51,7 +38,7 @@ public partial class XlsxSlimmerWindow : MetroWindow
             RootBox.Text = dlg.SelectedPath;
     }
 
-    // ── 全量扫描：找候选文件，铺成勾选列表 ──────────────────────────────────
+    // ── 找候选文件，铺成勾选列表 ─────────────────────────────────────────────
 
     private void Scan_Click(object sender, RoutedEventArgs e)
     {
@@ -61,7 +48,8 @@ public partial class XlsxSlimmerWindow : MetroWindow
             return;
         }
 
-        _scanFiles = XlsxSlimmer.FindSlimmableFiles(RootBox.Text);
+        var minSizeMb = double.TryParse(MinSizeBox.Text, out var m) ? m : 0;
+        _scanFiles = XlsxSlimmer.FindSlimmableFiles(RootBox.Text, minSizeMb);
         ResultPanel.Children.Clear();
         foreach (var f in _scanFiles)
             ResultPanel.Children.Add(MakeFileRow(f));
@@ -155,9 +143,7 @@ public partial class XlsxSlimmerWindow : MetroWindow
     private async void Run_Click(object sender, RoutedEventArgs e)
     {
         var confirm = MessageBox.Show(
-            ModeScan.IsChecked == true
-                ? $"即将原地覆写 {GetCheckedFiles().Count} 个 xlsx 文件（git 可回溯）。是否继续？"
-                : "即将覆写当前工作簿并保存。是否继续？",
+            $"即将原地覆写 {GetCheckedFiles().Count} 个 xlsx 文件（git 可回溯）。是否继续？",
             "xlsx 瘦身 - 确认",
             MessageBoxButton.OKCancel
         );
@@ -168,51 +154,6 @@ public partial class XlsxSlimmerWindow : MetroWindow
 
     private async Task RunAsync(bool preview)
     {
-        PreviewButton.IsEnabled = false;
-        RunButton.IsEnabled = false;
-        try
-        {
-            if (ModeCurrent.IsChecked == true)
-                RunCurrentWorkbook(preview);
-            else
-                await RunScanAsync(preview);
-        }
-        finally
-        {
-            PreviewButton.IsEnabled = true;
-            RunButton.IsEnabled = true;
-        }
-    }
-
-    private void RunCurrentWorkbook(bool preview)
-    {
-        var wb = AppServices.App.ActiveWorkbook;
-        if (wb is null)
-        {
-            StatusText.Text = "请先打开一个 xlsx 文件。";
-            return;
-        }
-
-        var results = XlsxSlimmer.SlimCurrentWorkbook(wb, preview);
-        ResultPanel.Children.Clear();
-        foreach (var r in results)
-            ResultPanel.Children.Add(
-                new TextBlock
-                {
-                    Text =
-                        $"[{r.SheetName}] 扫描 {r.Scanned} 格，{(preview ? "可转" : "已转")} {r.Converted} 格",
-                    Margin = new Thickness(6, 3, 6, 3),
-                }
-            );
-
-        var total = results.Sum(r => r.Converted);
-        StatusText.Text = preview
-            ? $"预览完成：共可转换 {total} 格。点「执行瘦身」写入并保存。"
-            : $"瘦身完成：共转换 {total} 格，已保存。";
-    }
-
-    private async Task RunScanAsync(bool preview)
-    {
         var files = GetCheckedFiles();
         if (files.Count == 0)
         {
@@ -220,39 +161,53 @@ public partial class XlsxSlimmerWindow : MetroWindow
             return;
         }
 
-        long totalBefore = 0,
-            totalAfter = 0;
-        int totalConverted = 0,
-            failCount = 0;
-
-        // EPPlus 处理离线文件，无 COM 线程亲和问题，丢后台线程跑不卡 UI。
-        foreach (var path in files)
+        PreviewButton.IsEnabled = false;
+        RunButton.IsEnabled = false;
+        try
         {
-            StatusText.Text = $"处理中：{Path.GetFileName(path)}";
-            var result = await Task.Run(() => XlsxSlimmer.SlimFile(path, preview));
-            if (result.Error != null)
+            long totalBefore = 0,
+                totalAfter = 0;
+            int totalConverted = 0,
+                failCount = 0;
+
+            // EPPlus 处理离线文件，无 COM 线程亲和问题，丢后台线程跑不卡 UI。
+            foreach (var path in files)
             {
-                failCount++;
-                SetRowDetail(path, $"失败：{result.Error}");
-                continue;
+                StatusText.Text = $"处理中：{Path.GetFileName(path)}";
+                var result = await Task.Run(() => XlsxSlimmer.SlimFile(path, preview));
+                if (result.Error != null)
+                {
+                    failCount++;
+                    SetRowDetail(path, $"失败：{result.Error}");
+                    continue;
+                }
+
+                totalBefore += result.SizeBefore;
+                totalAfter += result.SizeAfter;
+                totalConverted += result.Converted;
+                var beforeMb = result.SizeBefore / 1024.0 / 1024;
+                var afterMb = result.SizeAfter / 1024.0 / 1024;
+                var trimNote =
+                    result.TrimmedRows > 0 || result.TrimmedCols > 0
+                        ? $"，清 {result.TrimmedRows} 空行/{result.TrimmedCols} 空列"
+                        : "";
+                SetRowDetail(
+                    path,
+                    preview
+                        ? $"可转 {result.Converted} 格{trimNote}"
+                        : $"转 {result.Converted} 格{trimNote}，{beforeMb:F2}MB→{afterMb:F2}MB"
+                );
             }
 
-            totalBefore += result.SizeBefore;
-            totalAfter += result.SizeAfter;
-            totalConverted += result.Converted;
-            var beforeMb = result.SizeBefore / 1024.0 / 1024;
-            var afterMb = result.SizeAfter / 1024.0 / 1024;
-            SetRowDetail(
-                path,
-                preview
-                    ? $"可转 {result.Converted} 格"
-                    : $"转 {result.Converted} 格，{beforeMb:F2}MB→{afterMb:F2}MB"
-            );
+            var savedMb = (totalBefore - totalAfter) / 1024.0 / 1024;
+            StatusText.Text = preview
+                ? $"预览完成：共可转换 {totalConverted} 格（{files.Count - failCount} 个文件，失败 {failCount}）。点「执行瘦身」写入。"
+                : $"瘦身完成：共转换 {totalConverted} 格，省 {savedMb:F2}MB（{files.Count - failCount} 个文件，失败 {failCount}）。";
         }
-
-        var savedMb = (totalBefore - totalAfter) / 1024.0 / 1024;
-        StatusText.Text = preview
-            ? $"预览完成：共可转换 {totalConverted} 格（{files.Count - failCount} 个文件，失败 {failCount}）。点「执行瘦身」写入。"
-            : $"瘦身完成：共转换 {totalConverted} 格，省 {savedMb:F2}MB（{files.Count - failCount} 个文件，失败 {failCount}）。";
+        finally
+        {
+            PreviewButton.IsEnabled = true;
+            RunButton.IsEnabled = true;
+        }
     }
 }

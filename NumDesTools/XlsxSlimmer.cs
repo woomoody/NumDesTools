@@ -2,114 +2,37 @@ using OfficeOpenXml;
 
 namespace NumDesTools;
 
-// 瘦身：把 xlsx 里被误存成 sharedStrings 的纯数字改回原生数字类型（判定见 CellValueNormalizer），
-// 省体积、去重零收益的冗余。只处理数据行（第5行起），不动行1-4的字段结构元数据。
-// 两种模式机制不同：当前工作簿走 COM（整块 Value2 读写，避免逐格调用），全量扫描走 EPPlus（离线文件，无锁竞态）。
+// 瘦身：全量扫描指定根目录下的 xlsx，EPPlus 离线处理，无文件锁竞态。两类瘦身：
+// 1) 把被误存成 sharedStrings 的纯数字改回原生数字类型（判定见 CellValueNormalizer）；
+// 2) 清掉空白行列尾部残留格式（老版本"格式瘦身诊断"功能的诊断逻辑，复用同一次遍历顺便算）。
+// 只处理数据行（第5行起），不动行1-4的字段结构元数据。
+// "当前工作簿"(COM)模式已删除：Excel 自己的 Save() 不会像 EPPlus 全量重写那样重新压缩 zip，
+// 体积瘦不下去，COM 逐格/整块操作还多一堆性能和锁竞态坑，收益不值得维护这条路径。
 internal static class XlsxSlimmer
 {
     private const int DataStartRow = 5;
-
-    internal record SheetSlimResult(string SheetName, int Scanned, int Converted);
 
     internal record FileSlimResult(
         string FilePath,
         long SizeBefore,
         long SizeAfter,
         int Converted,
+        int TrimmedRows,
+        int TrimmedCols,
         string? Error
     );
 
-    // ── 当前工作簿：纯 COM，全程不 Close/不用 EPPlus 重开，避免文件锁竞态 ──────
-
-    internal static List<SheetSlimResult> SlimCurrentWorkbook(Workbook wb, bool preview)
-    {
-        var results = new List<SheetSlimResult>();
-        foreach (Worksheet sheet in wb.Worksheets)
-        {
-            if (sheet.Name.StartsWith('#'))
-                continue;
-            var used = sheet.UsedRange;
-            var lastRow = used.Row + used.Rows.Count - 1;
-            var lastCol = used.Column + used.Columns.Count - 1;
-            var dataStart = Math.Max(DataStartRow, used.Row);
-            if (dataStart > lastRow)
-                continue;
-
-            var range = (Range)
-                sheet.Range[sheet.Cells[dataStart, used.Column], sheet.Cells[lastRow, lastCol]];
-            var data = (object[,])range.Value2; // 一次性整块读，避免逐格 COM 往返
-            int rows = data.GetLength(0),
-                cols = data.GetLength(1);
-
-            int scanned = 0,
-                converted = 0;
-            var colFormats = new Dictionary<int, HashSet<string>>(); // 列 -> 该列出现过的格式集合
-
-            for (int r = 1; r <= rows; r++)
-            for (int c = 1; c <= cols; c++)
-            {
-                if (data[r, c] is not string s || s.Length == 0)
-                    continue;
-                scanned++;
-                var normalized = CellValueNormalizer.Normalize(s);
-                if (normalized is null)
-                    continue;
-                data[r, c] = normalized;
-                converted++;
-                var fmt = normalized is long ? "0" : "0.##############";
-                if (!colFormats.TryGetValue(c, out var fmts))
-                    colFormats[c] = fmts = [];
-                fmts.Add(fmt);
-            }
-
-            if (scanned > 0)
-                results.Add(new SheetSlimResult(sheet.Name, scanned, converted));
-
-            if (preview || converted == 0)
-                continue;
-
-            range.Value2 = data; // 一次性写回
-
-            // 按列批量锁格式，一列一次 COM 调用：实测踩过逐格调用的坑——56 万格逐格设置
-            // NumberFormat 在 Item.xlsx(12.8 万行)上直接卡死看起来像死机。前提：同一列的
-            // 转换结果类型一致（实测三张大表全是 long，没混过 double），这个前提当前成立；
-            // 真出现混合类型的列，退化成对该列逐格设置（数量通常很小，不会再卡）。
-            foreach (var (col, fmts) in colFormats)
-            {
-                var colRange = (Range)
-                    sheet.Range[
-                        sheet.Cells[dataStart, used.Column + col - 1],
-                        sheet.Cells[lastRow, used.Column + col - 1]
-                    ];
-                if (fmts.Count == 1)
-                {
-                    colRange.NumberFormat = fmts.First();
-                    continue;
-                }
-                for (int r = 1; r <= rows; r++)
-                {
-                    if (data[r, col] is not (long or double))
-                        continue;
-                    ((Range)sheet.Cells[dataStart + r - 1, used.Column + col - 1]).NumberFormat =
-                        data[r, col] is long ? "0" : "0.##############";
-                }
-            }
-        }
-
-        if (!preview)
-            wb.Save();
-        return results;
-    }
-
-    // ── 全量扫描：EPPlus 逐文件处理，离线文件无锁竞态 ─────────────────────────
-
-    internal static List<string> FindSlimmableFiles(string rootDir) =>
+    internal static List<string> FindSlimmableFiles(string rootDir, double minSizeMb = 0) =>
         Directory
             .EnumerateFiles(rootDir, "*.xlsx", SearchOption.AllDirectories)
             .Where(f =>
             {
                 var name = Path.GetFileName(f);
-                return !name.Contains('#') && !name.Contains('~');
+                if (name.Contains('#') || name.Contains('~'))
+                    return false;
+                // 小文件本来就没多少 sharedStrings 冗余，转换收益微乎其微，还多一次踩坑
+                // 机会（EPPlus 存盘偏偏对某些文件有独立于本工具的内部 bug），不值得处理。
+                return minSizeMb <= 0 || new FileInfo(f).Length >= minSizeMb * 1024 * 1024;
             })
             .ToList();
 
@@ -124,13 +47,30 @@ internal static class XlsxSlimmer
             // （反射确认过，文档示例没提到）。锦上添花，风险低，跟 P0 数字归一化一起顺手做。
             pkg.Compression = CompressionLevel.BestCompression;
             var converted = 0;
+            var trimmedRows = 0;
+            var trimmedCols = 0;
             foreach (var sheet in pkg.Workbook.Worksheets)
             {
                 if (sheet.Name.StartsWith('#') || sheet.Dimension is null)
                     continue;
+
+                // 真实数据边界 vs Dimension：老版本"格式瘦身诊断"功能(已删除)的诊断逻辑，
+                // 复用同一次 sheet.Cells 遍历顺便算，不用再多扫一遍。空白行列尾部残留格式
+                // 常见于误 Ctrl+A 设置过格式，本身不带数据但仍占 cell entry。
+                int trueMaxRow = 0,
+                    trueMaxCol = 0;
+
                 // ws.Cells 只枚举实际存在的稀疏 cell，比双重 for + 索引器快
                 foreach (var cell in sheet.Cells)
                 {
+                    if (cell.Value is not null)
+                    {
+                        if (cell.Start.Row > trueMaxRow)
+                            trueMaxRow = cell.Start.Row;
+                        if (cell.Start.Column > trueMaxCol)
+                            trueMaxCol = cell.Start.Column;
+                    }
+
                     if (cell.Start.Row < DataStartRow)
                         continue;
                     if (cell.Value is not string s || s.Length == 0)
@@ -144,17 +84,47 @@ internal static class XlsxSlimmer
                     cell.Value = normalized;
                     cell.Style.Numberformat.Format = normalized is long ? "0" : "0.##############";
                 }
+
+                var dimEndRow = sheet.Dimension.End.Row;
+                var dimEndCol = sheet.Dimension.End.Column;
+                if (trueMaxRow > 0 && dimEndRow > trueMaxRow)
+                    trimmedRows += dimEndRow - trueMaxRow;
+                if (trueMaxCol > 0 && dimEndCol > trueMaxCol)
+                    trimmedCols += dimEndCol - trueMaxCol;
+
+                if (preview)
+                    continue;
+                if (trueMaxRow > 0 && dimEndRow > trueMaxRow)
+                    sheet.DeleteRow(trueMaxRow + 1, dimEndRow - trueMaxRow);
+                if (trueMaxCol > 0 && dimEndCol > trueMaxCol)
+                    sheet.DeleteColumn(trueMaxCol + 1, dimEndCol - trueMaxCol);
             }
 
-            if (preview || converted == 0)
-                return new FileSlimResult(path, sizeBefore, sizeBefore, converted, null);
+            if (preview || (converted == 0 && trimmedRows == 0 && trimmedCols == 0))
+                return new FileSlimResult(
+                    path,
+                    sizeBefore,
+                    sizeBefore,
+                    converted,
+                    trimmedRows,
+                    trimmedCols,
+                    null
+                );
 
             pkg.Save();
-            return new FileSlimResult(path, sizeBefore, new FileInfo(path).Length, converted, null);
+            return new FileSlimResult(
+                path,
+                sizeBefore,
+                new FileInfo(path).Length,
+                converted,
+                trimmedRows,
+                trimmedCols,
+                null
+            );
         }
         catch (Exception ex)
         {
-            return new FileSlimResult(path, sizeBefore, sizeBefore, 0, ex.Message);
+            return new FileSlimResult(path, sizeBefore, sizeBefore, 0, 0, 0, ex.Message);
         }
     }
 }
