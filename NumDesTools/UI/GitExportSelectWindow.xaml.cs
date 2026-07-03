@@ -105,7 +105,15 @@ public partial class GitExportSelectWindow : MetroWindow
     private static bool IsExportable(string path)
     {
         var name = System.IO.Path.GetFileName(path);
-        return !name.Contains('#')
+        // git 状态扫的是整个仓库，需限定在 Excels\ 目录下（严格按目录段匹配，
+        // 排除 Excels_Update\ 等同名前缀目录——那是跨表同步的编辑副本，不是导出源）。
+        var underExcels = path.Split(
+                System.IO.Path.DirectorySeparatorChar,
+                System.IO.Path.AltDirectorySeparatorChar
+            )
+            .Any(s => s.Equals("Excels", StringComparison.OrdinalIgnoreCase));
+        return underExcels
+            && !name.Contains('#')
             && !name.Contains('~')
             && !path.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase)
             && !path.EndsWith(".xll", StringComparison.OrdinalIgnoreCase)
@@ -263,7 +271,7 @@ public partial class GitExportSelectWindow : MetroWindow
             var commits = SvnGitTools.GetCommitList(_repoBasePath, 50);
             _allCommitItems = commits
                 .Select(c => new CommitItem(
-                    $"{c.ShortSha}  {c.When:MM-dd HH:mm}  {c.Author,-16}  {c.Message}",
+                    $"{c.ShortSha}  {c.When:MM-dd HH:mm}  {c.Author, -16}  {c.Message}",
                     c.Sha,
                     c.Author
                 ))
