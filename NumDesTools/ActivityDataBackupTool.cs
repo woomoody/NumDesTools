@@ -365,27 +365,39 @@ internal static class ActivityDataBackupTool
             + "\n\n"
             + (delete ? "确认后原地删除这些行" : "确认后原地覆写这些行")
             + "（git 可回溯）。是否继续？";
-        if (
-            MessageBox.Show(confirmBody, confirmTitle, MessageBoxButtons.OKCancel)
-            != DialogResult.OK
-        )
+        if (!UI.ActivityBackupReportWindow.Confirm(confirmTitle, confirmBody))
             return;
 
         var resultLines = new List<string>();
+        var mismatchDetails = new List<string>();
         foreach (var (table, livePath, backupCandidates, ranges) in plans)
         {
-            resultLines.Add(
-                delete
-                    ? ApplyDelete(table, livePath, ranges)
-                    : ApplyRestore(table, livePath, backupCandidates, ranges)
-            );
+            if (delete)
+            {
+                var (summary, mismatchDetail) = ApplyDelete(table, livePath, ranges);
+                resultLines.Add(summary);
+                if (!string.IsNullOrEmpty(mismatchDetail))
+                    mismatchDetails.Add(mismatchDetail);
+            }
+            else
+            {
+                resultLines.Add(ApplyRestore(table, livePath, backupCandidates, ranges));
+            }
         }
 
         UpdateStatusColumn(activities, delete ? "已删除" : "已还原");
 
-        MessageBox.Show(
-            string.Join("\n", resultLines),
-            delete ? "大文件备份 - 删除完成" : "大文件备份 - 还原完成"
+        // 混入数据的详情单独走 CTP 日志面板列举，不塞进结果弹窗打断操作；三个表都跑完才统一写一次，
+        // 避免逐表调用互相覆盖同一个全局 CTP 面板。
+        if (mismatchDetails.Count > 0)
+        {
+            ErrorLogCtp.DisposeCtp();
+            ErrorLogCtp.CreateCtpNormal(string.Join("\n\n", mismatchDetails));
+        }
+
+        UI.ActivityBackupReportWindow.ShowResult(
+            delete ? "大文件备份 - 删除完成" : "大文件备份 - 还原完成",
+            string.Join("\n", resultLines)
         );
     }
 
@@ -406,9 +418,7 @@ internal static class ActivityDataBackupTool
             sheet.Cells[activity.Row, 2].Value = status;
     }
 
-    private const string CommentColumnName = "#备注";
-
-    internal static string ApplyDelete(
+    internal static (string Summary, string MismatchDetail) ApplyDelete(
         string table,
         string livePath,
         List<(Activity Activity, string Start, string End)> ranges
@@ -422,12 +432,8 @@ internal static class ActivityDataBackupTool
             XlsxCrossSync.KeyColumnName
         );
         if (idCol == -1)
-            return $"[{table}] 没找到 id 列，跳过。";
-        var commentCol = PubMetToExcel.FindSourceCol(
-            sheet,
-            XlsxCrossSync.HeaderRow,
-            CommentColumnName
-        );
+            return ($"[{table}] 没找到 id 列，跳过。", "");
+        var commentCol = FindDescriptiveHashCol(sheet, XlsxCrossSync.HeaderRow);
 
         var blocks = new List<(int Start, int End)>();
         var notFound = new List<string>();
@@ -441,20 +447,11 @@ internal static class ActivityDataBackupTool
                 notFound.Add(activity.Id);
                 continue;
             }
-            var mismatch = FindRangeMismatch(
-                sheet,
-                idCol,
-                commentCol,
-                startRow,
-                endRow,
-                start,
-                end
-            );
+            var mismatch = FindRangeMismatch(sheet, idCol, commentCol, startRow, endRow);
             if (mismatch is not null)
-            {
                 mismatched.Add($"{activity.Id}：{mismatch}");
-                continue;
-            }
+            // 不再因为疑似混入就跳过整段——起止id本身常是预留占位行，误报率太高，删不删交给用户
+            // 看日志自己判断，这里只管照常删，不做阻断。
             blocks.Add((startRow, endRow));
         }
 
@@ -475,73 +472,142 @@ internal static class ActivityDataBackupTool
             (deletedRows > 0 || trimmedRows > 0)
             && !XlsxCrossSync.SaveWithFriendlyError(pkg, livePath, "大文件备份")
         )
-            return $"[{table}] 保存失败（文件被占用）。";
+            return ($"[{table}] 保存失败（文件被占用）。", "");
 
         var notFoundNote =
             notFound.Count > 0 ? $"，找不到区间的活动：{string.Join("、", notFound)}" : "";
         var mismatchNote =
             mismatched.Count > 0
-                ? $"，以下区间疑似混入其它活动数据，已跳过未删，请自行核实：{string.Join("；", mismatched)}"
+                ? $"，{mismatched.Count} 个区间有id/说明核实提示（已照常删除），详情见错误日志面板"
                 : "";
         var trimNote = trimmedRows > 0 ? $"，顺手清掉表尾 {trimmedRows} 行残留格式空行" : "";
-        return $"[{table}] 删除 {deletedRows} 行{notFoundNote}{mismatchNote}{trimNote}";
+        var summary = $"[{table}] 删除 {deletedRows} 行{notFoundNote}{mismatchNote}{trimNote}";
+        var mismatchDetail =
+            mismatched.Count > 0
+                ? $"[{table}] 以下区间的id/说明跟区间内主流数据有差异（已照常删除，非阻断，多为起止占位行，也可能是混入嫌疑，请自行核实）：\n"
+                    + string.Join("\n", mismatched)
+                : "";
+        return (summary, mismatchDetail);
     }
 
-    // 区间内每一行理应都属于同一个活动：先看 id 分组前缀（跟 XlsxCrossSync 分组插入用的规则一致）
-    // 是否跟起止id一致；前缀不一致时退一步比 #备注 的中文字符前缀（同活动的备注通常共享同一个中文名前缀）。
-    // 两边都不一致才当成"混进了别的活动数据"，整段跳过不删——宁可少删，不能错删，交给用户自己核实。
+    // 从左到右找第一个文本以 # 开头且长度 > 1 的列，作为区间核实用的"说明列"。这一列在各表里命名
+    // 并不统一（Type/Icon.xlsx 叫 #备注，Item.xlsx 叫 #竞品名称/#新品名称），唯一共同点是都带 # 前缀；
+    // 纯 "#" 一个字符的那一列是行标记列，不是活动说明，长度过滤会自动跳过它。
+    private static int FindDescriptiveHashCol(ExcelWorksheet sheet, int headerRow)
+    {
+        if (sheet.Dimension is null)
+            return -1;
+        for (var c = 1; c <= sheet.Dimension.End.Column; c++)
+        {
+            var text = sheet.Cells[headerRow, c].Text?.Trim();
+            if (text?.Length > 1 && text[0] == '#')
+                return c;
+        }
+        return -1;
+    }
+
+    // 拿区间内出现次数最多的 id分组前缀 / 说明列中文签名作基准，而不是起止id自己的前缀/备注——
+    // 起止id经常只是预留占位行，内容跟实际数据无关，拿它当基准会把绝大多数正常行误判成混入。
+    // 只有 id前缀、中文签名都偏离"主流"的行才算疑似混入，返回描述交给调用方记日志，不阻塞删除。
     private static string? FindRangeMismatch(
         ExcelWorksheet sheet,
         int idCol,
         int commentCol,
         int startRow,
-        int endRow,
-        string startId,
-        string endId
+        int endRow
     )
     {
-        var startPrefix = IdGroupPrefix(startId);
-        var endPrefix = IdGroupPrefix(endId);
-        var startComment =
-            commentCol == -1 ? "" : ChineseNamePrefix(sheet.Cells[startRow, commentCol].Text);
-        var endComment =
-            commentCol == -1 ? "" : ChineseNamePrefix(sheet.Cells[endRow, commentCol].Text);
+        var commentColName =
+            commentCol == -1
+                ? ""
+                : sheet.Cells[XlsxCrossSync.HeaderRow, commentCol].Text?.Trim() ?? "";
 
+        var rows = new List<(int Row, string Id, string IdPrefix, string Comment, string Sig)>();
+        var idPrefixCounts = new Dictionary<string, int>();
+        var sigCounts = new Dictionary<string, int>();
         for (var r = startRow; r <= endRow; r++)
         {
             var id = sheet.Cells[r, idCol].Text?.Trim() ?? "";
-            var idPrefix = IdGroupPrefix(id);
-            if (idPrefix == startPrefix || idPrefix == endPrefix)
+            var idPrefix = ActivityIdPrefix(id);
+            var comment = commentCol == -1 ? "" : sheet.Cells[r, commentCol].Text?.Trim() ?? "";
+            var sig = FirstChineseRun(comment);
+            rows.Add((r, id, idPrefix, comment, sig));
+            if (idPrefix.Length > 0)
+                idPrefixCounts[idPrefix] = idPrefixCounts.GetValueOrDefault(idPrefix) + 1;
+            if (sig.Length > 0)
+                sigCounts[sig] = sigCounts.GetValueOrDefault(sig) + 1;
+        }
+
+        var majorIdPrefix =
+            idPrefixCounts.Count > 0
+                ? idPrefixCounts.OrderByDescending(kv => kv.Value).First().Key
+                : "";
+        var majorSig =
+            sigCounts.Count > 0 ? sigCounts.OrderByDescending(kv => kv.Value).First().Key : "";
+
+        foreach (var row in rows)
+        {
+            // id前缀一致就不用再查中文签名——同活动内不同道具的备注命名可能完全不搭（"阿拉丁"vs
+            // "阿拉丁副本纪念品"、纯中文 vs "Lte-xxx-yyy"），id前缀已经能确认是同一活动就不用较真备注。
+            if (row.IdPrefix == majorIdPrefix)
                 continue;
+
+            var isBoundary = row.Row == startRow || row.Row == endRow;
 
             if (commentCol == -1)
-                return $"第{r}行 id={id} 前缀跟起止id不一致，且没有「{CommentColumnName}」列可核对";
+            {
+                return isBoundary
+                    ? $"第{row.Row}行 id={row.Id} 是起止id本身，前缀跟区间内主流id前缀「{majorIdPrefix}」不完全一致，大概率是预留占位行，非混入风险，仅供参考"
+                    : $"第{row.Row}行 id={row.Id} 前缀跟区间内主流id前缀「{majorIdPrefix}」不一致，且这个表没有#开头的说明列可核对";
+            }
 
-            var comment = sheet.Cells[r, commentCol].Text?.Trim() ?? "";
-            var commentPrefix = ChineseNamePrefix(comment);
-            if (
-                commentPrefix.Length > 0
-                && (commentPrefix == startComment || commentPrefix == endComment)
-            )
+            if (SigMatches(row.Sig, majorSig))
                 continue;
 
-            return $"第{r}行 id={id}（备注「{comment}」）前缀跟起止id及{CommentColumnName}都不一致";
+            // 起止id往往是预留占位/特殊道具行（比如"XX副本纪念品"），跟主流数据不一致大概率不是
+            // 混入，只是降级提示；区间中间的行才值得当真警告。
+            return isBoundary
+                ? $"第{row.Row}行 id={row.Id}（{commentColName}「{row.Comment}」）是起止id本身，前缀跟区间内主流id前缀「{majorIdPrefix}」及{commentColName}主流签名「{majorSig}」不完全一致——大概率是预留占位/特殊行，非混入风险，仅供参考"
+                : $"第{row.Row}行 id={row.Id}（{commentColName}「{row.Comment}」）前缀跟区间内主流id前缀「{majorIdPrefix}」及{commentColName}主流签名「{majorSig}」都不一致";
         }
         return null;
     }
 
-    private static string IdGroupPrefix(string id) =>
-        id.Length >= XlsxCrossSync.GroupPrefixLen ? id[..XlsxCrossSync.GroupPrefixLen] : id;
+    // 只取前4位作"同一活动"的判定粒度，跟 XlsxCrossSync.GroupPrefixLen（6位，给跨表同步插入定位用）
+    // 是两个不同语义，不能共用：活动id惯例是前4位标活动本身（比如 2101=阿拉丁、4506=某活动），
+    // 第5-6位往往是活动内部的道具/预留分桶，用6位比会把同一活动的不同分桶误判成混入。
+    private const int ActivityIdPrefixLen = 4;
 
-    private static string ChineseNamePrefix(string? text)
+    private static string ActivityIdPrefix(string id) =>
+        id.Length >= ActivityIdPrefixLen ? id[..ActivityIdPrefixLen] : id;
+
+    // 中文签名允许"谁是谁的前缀"就算匹配，不要求完全相等——同活动里有的道具备注是"阿拉丁-神灯1"
+    // (签名"阿拉丁")，有的是"阿拉丁副本纪念品"(签名整段都是中文，没有分隔符可截断)，后者虽然比
+    // 前者长，但确实包含前者，应该算同一活动。
+    private static bool SigMatches(string sig, string majorSig) =>
+        sig.Length > 0
+        && majorSig.Length > 0
+        && (
+            sig.StartsWith(majorSig, StringComparison.Ordinal)
+            || majorSig.StartsWith(sig, StringComparison.Ordinal)
+        );
+
+    // 找字符串里第一段连续的中文字符，不要求从第0个字符开始——老数据里常见"Lte-阿拉丁-神灯1"这种
+    // 英文/数字前缀+中文名的格式，只从头找会永远匹配不到，必须跳过前面的非中文字符再开始找。
+    private static string FirstChineseRun(string? text)
     {
         if (string.IsNullOrEmpty(text))
             return "";
-        var i = 0;
-        while (i < text.Length && text[i] >= 0x4E00 && text[i] <= 0x9FFF)
-            i++;
-        return text[..i];
+        var start = 0;
+        while (start < text.Length && !IsChineseChar(text[start]))
+            start++;
+        var end = start;
+        while (end < text.Length && IsChineseChar(text[end]))
+            end++;
+        return text[start..end];
     }
+
+    private static bool IsChineseChar(char c) => c is >= (char)0x4E00 and <= (char)0x9FFF;
 
     // backupCandidates 按修改时间从新到旧排列；每个活动区间独立地从最新的备份开始试，
     // 该备份里没有这段 id 区间（比如那次备份之前活动就已经被删）就换下一份更旧的，直到找到或试完。

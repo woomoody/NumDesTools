@@ -61,8 +61,12 @@ public class ActivityDataBackupToolTests : IDisposable
         return result;
     }
 
-    // id/#备注 布局跟 Icon.xlsx 生产表一致（#备注在 id 右边一列），用于测试区间混入其它活动数据时的拦截。
-    private string MakeXlsxWithComment(params (string id, string comment)[] rows)
+    // id/说明列布局跟 Icon.xlsx 生产表一致（说明列在 id 右边一列）。commentHeader 默认"#备注"，
+    // 传"#竞品名称"之类的非标准名字用于测试 FindDescriptiveHashCol 的兼容逻辑。
+    private string MakeXlsxWithComment(
+        (string id, string comment)[] rows,
+        string commentHeader = "#备注"
+    )
     {
         var path = Path.GetTempFileName() + ".xlsx";
         _tmpFiles.Add(path);
@@ -71,7 +75,7 @@ public class ActivityDataBackupToolTests : IDisposable
         var ws = pkg.Workbook.Worksheets.Add("Sheet1");
         ws.Cells[2, 1].Value = "#";
         ws.Cells[2, 2].Value = "id";
-        ws.Cells[2, 3].Value = "#备注";
+        ws.Cells[2, 3].Value = commentHeader;
 
         var r = 5;
         foreach (var (id, comment) in rows)
@@ -124,10 +128,10 @@ public class ActivityDataBackupToolTests : IDisposable
     }
 
     [Fact]
-    public void ApplyDelete_SkipsRange_WhenMixedInRowHasDifferentIdAndComment()
+    public void ApplyDelete_StillDeletes_ButLogsMismatch_WhenMixedInRowHasDifferentIdAndComment()
     {
         var rows = SampleRowsWithComment("常规活动");
-        rows[4] = ("99990001", "神秘活动"); // 区间中间混入了不同活动的数据（id前缀、#备注中文前缀都不一致）
+        rows[4] = ("99990001", "神秘活动"); // 区间中间混入了不同活动的数据（id前缀、说明列中文签名都不一致）
         var livePath = MakeXlsxWithComment(rows);
         var activity = new ActivityDataBackupTool.Activity(0, "9001", "测试活动", new());
         var ranges = new List<(ActivityDataBackupTool.Activity Activity, string Start, string End)>
@@ -137,8 +141,110 @@ public class ActivityDataBackupToolTests : IDisposable
 
         var result = ActivityDataBackupTool.ApplyDelete("Icon.xlsx", livePath, ranges);
 
-        Assert.Equal(10, ReadIds(livePath).Count); // 疑似混入数据，整段跳过不删
-        Assert.Contains("跳过", result);
+        Assert.Equal(7, ReadIds(livePath).Count); // 疑似混入不阻断，照常删除整段
+        Assert.False(string.IsNullOrEmpty(result.MismatchDetail)); // 详情走 CTP，先确认真的收集到了
+    }
+
+    [Fact]
+    public void ApplyDelete_LogsWithActualColumnName_WhenCommentColumnIsNonStandardName()
+    {
+        // Item.xlsx 的说明列不叫"#备注"，叫"#竞品名称"——只要带 # 前缀就该被 FindDescriptiveHashCol 认出来。
+        var rows = SampleRowsWithComment("常规活动");
+        rows[4] = ("99990001", "神秘活动");
+        var livePath = MakeXlsxWithComment(rows, commentHeader: "#竞品名称");
+        var activity = new ActivityDataBackupTool.Activity(0, "9001", "测试活动", new());
+        var ranges = new List<(ActivityDataBackupTool.Activity Activity, string Start, string End)>
+        {
+            (activity, "11010004", "11010006"),
+        };
+
+        var result = ActivityDataBackupTool.ApplyDelete("Item.xlsx", livePath, ranges);
+
+        Assert.Equal(7, ReadIds(livePath).Count); // 非标准列名也能核实到，同样不阻断
+        Assert.Contains("#竞品名称", result.MismatchDetail); // 提示信息里用的是实际列名，不是硬编码的"#备注"
+    }
+
+    [Fact]
+    public void ApplyDelete_DoesNotFlagRealItems_WhenBoundaryRowsAreReservedPlaceholders()
+    {
+        // 还原真实故障场景：起止id（21010000/21011008）是预留占位行，备注是空的；真实数据是
+        // "Lte-阿拉丁-神灯1"~"神灯8" 这种英文前缀+中文名的老数据格式。id前缀只取前4位（"2101"对
+        // 起止id和真实条目都一致）就足够判定同一活动，根本不会走到备注比对那一步。
+        var rows = new (string id, string comment)[]
+        {
+            ("21010000", ""),
+            ("21010101", "Lte-阿拉丁-神灯1"),
+            ("21010102", "Lte-阿拉丁-神灯2"),
+            ("21010103", "Lte-阿拉丁-神灯3"),
+            ("21010104", "Lte-阿拉丁-神灯4"),
+            ("21010105", "Lte-阿拉丁-神灯5"),
+            ("21010106", "Lte-阿拉丁-神灯6"),
+            ("21010107", "Lte-阿拉丁-神灯7"),
+            ("21010108", "Lte-阿拉丁-神灯8"),
+            ("21011008", ""),
+        };
+        var livePath = MakeXlsxWithComment(rows);
+        var activity = new ActivityDataBackupTool.Activity(0, "9001", "阿拉丁", new());
+        var ranges = new List<(ActivityDataBackupTool.Activity Activity, string Start, string End)>
+        {
+            (activity, "21010000", "21011008"),
+        };
+
+        var result = ActivityDataBackupTool.ApplyDelete("Icon.xlsx", livePath, ranges);
+
+        Assert.Empty(ReadIds(livePath)); // 整段照常删除
+        Assert.True(string.IsNullOrEmpty(result.MismatchDetail)); // 起止id和真实条目共享4位前缀，不该有任何提示
+    }
+
+    [Fact]
+    public void ApplyDelete_SkipsMismatchNote_WhenIdSharesOnlyFirst4Digits()
+    {
+        // 还原真实故障场景二：id 45061701~45061708 是同一活动，第5-6位是活动内部分桶（不是活动本身），
+        // 45069901 前4位"4506"跟主流一致，只是分桶不同——4位前缀判定同一活动即可，不该被判成混入。
+        var rows = new (string id, string comment)[]
+        {
+            ("45061701", "常规道具1"),
+            ("45061702", "常规道具2"),
+            ("45061703", "常规道具3"),
+            ("45069901", "活动体力-3-礼包触发"), // 前4位仍是"4506"，只是5-6位分桶不同
+            ("45061704", "常规道具4"),
+        };
+        var livePath = MakeXlsxWithComment(rows);
+        var activity = new ActivityDataBackupTool.Activity(0, "9001", "测试活动", new());
+        var ranges = new List<(ActivityDataBackupTool.Activity Activity, string Start, string End)>
+        {
+            (activity, "45061701", "45061704"),
+        };
+
+        var result = ActivityDataBackupTool.ApplyDelete("Icon.xlsx", livePath, ranges);
+
+        Assert.Empty(ReadIds(livePath)); // 整段照常删除
+        Assert.True(string.IsNullOrEmpty(result.MismatchDetail)); // 前4位一致，不该有提示
+    }
+
+    [Fact]
+    public void ApplyDelete_SkipsMismatchNote_WhenCommentIsCompoundNameContainingMajoritySig()
+    {
+        // 备注签名放宽成"谁是谁的前缀"：多数签名是"阿拉丁"，这一行备注是"阿拉丁副本纪念品"
+        // （没有分隔符可截断，整段都是中文），应该算同一活动，不能要求精确相等。
+        var rows = new (string id, string comment)[]
+        {
+            ("21010101", "阿拉丁-神灯1"),
+            ("21010102", "阿拉丁-神灯2"),
+            ("99990000", "阿拉丁副本纪念品"), // id前缀不同，靠备注签名核实
+            ("21010103", "阿拉丁-神灯3"),
+        };
+        var livePath = MakeXlsxWithComment(rows);
+        var activity = new ActivityDataBackupTool.Activity(0, "9001", "测试活动", new());
+        var ranges = new List<(ActivityDataBackupTool.Activity Activity, string Start, string End)>
+        {
+            (activity, "21010101", "21010103"),
+        };
+
+        var result = ActivityDataBackupTool.ApplyDelete("Icon.xlsx", livePath, ranges);
+
+        Assert.Empty(ReadIds(livePath)); // 整段照常删除
+        Assert.True(string.IsNullOrEmpty(result.MismatchDetail)); // 备注互为前缀关系，不该有提示
     }
 
     [Fact]
