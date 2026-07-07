@@ -2,111 +2,25 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Build
+通用工程规则（构建命令、架构、数据约定、编码规范、Excel读写规范、输出目录规范）见 [AGENTS.md](AGENTS.md)——
+那份是给任何在这个仓库里写代码的 agent（包括 Codex）看的，不分工具。本文件只记 Claude Code 专属行为。
+
+### 输出目录规范 · CC 专属操作习惯
+
+`OutputRootPath`（默认 `Documents\NumDesOutput\`，本地独立 git 仓库不推送）下写文件的子目录规范
+见 AGENTS.md。CC（我）手动写文件时，直接写到对应子目录，**写完立即执行**：
 
 ```bash
-# Debug build
-dotnet build NumDesTools.sln -c Debug
-
-# Release build (also packs .xll via Excel-DNA post-build → packFromBin/)
-dotnet build NumDesTools.sln -c Release
-
-# Run tests
-dotnet test NumDesTools.sln
+git -C "C:\Users\cent\Documents\NumDesOutput" add -A
+git -C "C:\Users\cent\Documents\NumDesOutput" diff --cached --quiet || git -C "C:\Users\cent\Documents\NumDesOutput" commit -m "[描述] 说明内容"
 ```
 
-Post-build calls `packFromBin\ReNamePack.bat` which renames packed XLL files to `NumDesToolsPack64.xll` / `NumDesToolsPack.xll`.
+### 与 Codex 协作
 
-Code must pass **0 errors** before reporting done. Follow **ReSharper** naming rules and format with **CSharpier**.
-
-## Architecture
-
-Three projects in one solution:
-
-| Project | Type | Purpose |
-|---------|------|---------|
-| **NumDesTools** | Excel XLL add-in (net9.0-windows) | Main plugin: ribbon, UDFs, UI windows |
-| **NumDesTools.Scanner** | Console app (net9.0-windows) | CLI validator for activity config tables + Feishu integration |
-| **NumDesTools.Tests** | xUnit test (net9.0-windows) | Unit tests for LTE calc, scanner, map operations |
-
-### NumDesTools — Key Modules
-
-**Entry point:** `NumDesAddIn.cs` — implements `IExcelAddIn` + `ExcelRibbon`; holds the global `App` (Excel.Application) reference; routes all ribbon button clicks through a debounced (500 ms) dictionary dispatch.
-
-**Ribbon definition:** `RibbonUI.xml` — XML layout. Label/state driven by `GlobalVariable.cs` toggle strings.
-
-**UDFs:** `ScUDFs.cs` (2100+ lines) — all `[ExcelFunction]`-decorated functions exposed to Excel: FindKey*, Trans2Array*, JSON export helpers, game-specific calculations (LTE chains, Alice, Dota sim).
-
-**Config:** `Config/GlobalVariable.cs` — loads/saves `Documents\NumDesGlobalKey.json`; holds paths, API keys, UI toggle labels, spotlight mode, git root.
-
-**ConflictResolver namespace** — Git-based Excel conflict resolution UI:
-- `ExcelConflictDiffer.cs` — diffs two Excel files into `FileDiff` / `SheetDiff` / `RowConflict` / `CellConflict` models
-- `ConflictModels.cs` — data models with `IsResolved`, drag-selection `IsSelected`, `INotifyPropertyChanged`
-- `ConflictApplier.cs` — writes chosen values back, calls `git add`, appends to `.git/MERGE_MSG`
-- `UI/ExcelConflictWindow.xaml(.cs)` — WPF window: drag multi-select, filter-select, selection action bar, unresolved-check before apply
-
-**Cell highlighting:** `CellHighlighter.cs` — `ViewportHelper.GetViewportRange` (unions all `win.Panes[i].VisibleRange`, intersects with UsedRange) shared by `CellHighlighter` (Find/FindNext same-value) and `CellSpotlightHighlighter` (fill-mode row/col color). `CrosslightOverlay.cs` handles the overlay (transparent cross-lines) mode.
-
-**Advance namespace:** `ExcelDataToDB.cs`, `IdPrefixIndex.cs` — game data extraction and cross-table indexing.
-
-**ExcelToLua namespace:** `ExcelReader.cs` — converts Excel table schemas (row 2 = col names, row 3 = types, row 4 = labels) to Lua with type definitions.
-
-### Data Conventions (Excel tables)
-
-- Sheet prefix `c_*` = client-side, `s_*` = server-side, `#*` = hidden/meta
-- Row 1 = header, Row 2 = column names, Row 3 = types (`int`/`string`/…), Row 4 = Chinese labels
-- `#` prefix columns = comment/display columns; shown in conflict resolver row headers
-
-### Threading
-
-Long operations use `ExcelAsyncUtil.QueueAsMacro()`. Never block the Excel UI thread directly.
-
-### Key dependencies
-
-`ExcelDna.AddIn 1.9.0`, `EPPlus 8.2.0`, `MiniExcel 1.42.0`, `LibGit2Sharp 0.31.0`, `NLua`, `MathNet.Numerics`.
-
-### 输出目录规范
-
-所有值得保留的产出文件（xlsx 报告、md 分析文档、html、json 分析产物）统一写到 **`OutputRootPath`** 下，默认值为 `Documents\NumDesOutput\`（本地独立 git 仓库，不推送）。
-
-**子目录规范：**
-
-| 子目录 | 用途 |
-|--------|------|
-| `reports\` | xlsx/html 报告（竞品分析、地编信息、LTE 配置模版等） |
-| `analysis\` | md 分析文档（竞品深度分析、设计规范、配置草稿等） |
-| `misc\` | 插件偶发产出（溯源结果.xlsx、表格关系.json 等） |
-
-**写文件规则（CC 和代码都适用）：**
-- Scanner 代码：用 `OutputPaths.Reports` / `OutputPaths.Analysis` / `OutputPaths.Misc`（`NumDesTools.Scanner/OutputPaths.cs`），不要 hardcode 路径
-- 主插件代码：用 `OutputPaths.Reports` / `OutputPaths.Analysis` / `OutputPaths.Misc`（`NumDesTools/OutputPaths.cs`）
-- 新功能需要新子目录时：在对应 `OutputPaths.cs` 加一个属性，不要直接 `Path.Combine`
-- CC（我）手动写文件：直接写到 `OutputRootPath` 对应子目录，**写完立即执行**：
-  ```bash
-  git -C "C:\Users\cent\Documents\NumDesOutput" add -A
-  git -C "C:\Users\cent\Documents\NumDesOutput" diff --cached --quiet || git -C "C:\Users\cent\Documents\NumDesOutput" commit -m "[描述] 说明内容"
-  ```
-
-**不纳入 OutputRootPath 的：**
-- `Documents\workspace\plugin.log` — 运行日志
-- `Documents\NumDesTools\Config\` — 飞书工作流配置，路径被其他系统依赖
-- `AppData\NumDesTools\` — 个人操作历史
-- `C:\tmp\` — 原始 ADB 数据和中间产物
-- `M1Work\` 写回 — 游戏配置表，不是插件产出
-
-### 源文件编码
-
-**C# 源文件必须用 UTF-8 保存**，禁止 GBK/ANSI。GBK 编码的中文提交后在 Git 里变成乱码（`"链"` → `"��"`），后续修复极易还原错误引发业务 bug（曾因此将类型判断 `"链"` 错误还原为 `"合"`，导致 ID 计算逻辑反转）。
-
-- Visual Studio：文件 → 高级保存选项 → UTF-8
-- 提交前 `git diff` 检查中文是否正常，出现方块乱码立即排查编码再提交
-
-### Excel 读写规范
-
-- **读取 xlsx** → EPPlus（`OfficeOpenXml`）。参考 `NumDesTools.Scanner/ExcelReader.cs`。
-- **写入 xlsx** → EPPlus（`OfficeOpenXml`）。参考 `NumDesTools.Scanner/ActivityWriter.cs`（追加行）和 `NumDesTools.Scanner/LteMapWriter.cs`（新建带样式/列宽/行高的 sheet）。
-- 每个入口必须先调用 `ExcelPackage.License.SetNonCommercialPersonal("NumDesTools")`。
-- MiniExcel 已在依赖中但**不用于本项目**，不要引入。
+- 实时交接协议见 `docs/agent-handoff.md`
+- 运行态交接文件统一放 `.remember/agent-handoff/<task-name>/`，不提交
+- 值得长期保留的结论必须回写到版本化文件，不要只留在交接文件里
+- 没有具体任务前不要预建 worktree；并行改动时再按 `docs/agent-handoff.md` 建
 
 ## 多模型自动路由
 

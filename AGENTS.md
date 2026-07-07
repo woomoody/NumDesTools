@@ -1,0 +1,113 @@
+# AGENTS.md
+
+给任何在这个仓库里写代码的 agent（Codex、Claude Code 等）或人看的通用工程规则，跟用的是哪个工具无关。
+Claude Code 专属的行为约定（多模型路由等）在 `CLAUDE.md`，不重复写在这里。
+
+## Build
+
+```bash
+# Debug build
+dotnet build NumDesTools.sln -c Debug
+
+# Release build (also packs .xll via Excel-DNA post-build → packFromBin/)
+dotnet build NumDesTools.sln -c Release
+
+# Run tests
+dotnet test NumDesTools.sln
+```
+
+Post-build 调用 `packFromBin\ReNamePack.bat`，把打包出的 XLL 重命名为 `NumDesToolsPack64.xll` / `NumDesToolsPack.xll`。
+
+改完代码必须**0 error**才算完成。命名遵循 **ReSharper** 规则，格式化用 **CSharpier**。
+
+## Architecture
+
+三个项目在一个 solution 里：
+
+| Project | Type | Purpose |
+|---------|------|---------|
+| **NumDesTools** | Excel XLL add-in (net9.0-windows) | 主插件：ribbon、UDF、UI 窗口 |
+| **NumDesTools.Scanner** | Console app (net9.0-windows) | 活动配置表校验 CLI + 飞书集成 |
+| **NumDesTools.Tests** | xUnit test (net9.0-windows) | LTE 计算、scanner、map 操作的单测 |
+
+### NumDesTools — 关键模块
+
+**入口：** `NumDesAddIn.cs` — 实现 `IExcelAddIn` + `ExcelRibbon`；持有全局 `App`（Excel.Application）引用；所有 ribbon 按钮点击都走带防抖（500ms）的字典分发。
+
+**Ribbon 定义：** `RibbonUI.xml` — XML 布局。Label/状态由 `GlobalVariable.cs` 的 toggle 字符串驱动。
+
+**UDF：** `ScUDFs.cs`（2100+ 行）— 所有暴露给 Excel 的 `[ExcelFunction]` 函数：FindKey*、Trans2Array*、JSON 导出辅助、游戏专用计算（LTE 链、Alice、Dota 模拟）。
+
+**配置：** `Config/GlobalVariable.cs` — 加载/保存 `Documents\NumDesGlobalKey.json`；存路径、API key、UI toggle 标签、spotlight 模式、git root。
+
+**ConflictResolver 命名空间** — 基于 Git 的 Excel 冲突解决 UI：
+- `ExcelConflictDiffer.cs` — 把两个 Excel 文件的 diff 拆成 `FileDiff` / `SheetDiff` / `RowConflict` / `CellConflict` 模型
+- `ConflictModels.cs` — 数据模型，带 `IsResolved`、拖选 `IsSelected`、`INotifyPropertyChanged`
+- `ConflictApplier.cs` — 写回选中的值，调 `git add`，追加到 `.git/MERGE_MSG`
+- `UI/ExcelConflictWindow.xaml(.cs)` — WPF 窗口：拖选多选、筛选选择、选区操作栏、apply 前的未解决检查
+
+**单元格高亮：** `CellHighlighter.cs` — `ViewportHelper.GetViewportRange`（合并所有 `win.Panes[i].VisibleRange`，跟 UsedRange 求交集）被 `CellHighlighter`（Find/FindNext 同值）和 `CellSpotlightHighlighter`（填色模式行列高亮）共用。`CrosslightOverlay.cs` 处理十字线覆盖层模式。
+
+**Advance 命名空间：** `ExcelDataToDB.cs`、`IdPrefixIndex.cs` — 游戏数据提取和跨表索引。
+
+**ExcelToLua 命名空间：** `ExcelReader.cs` — 把 Excel 表结构（第2行=列名，第3行=类型，第4行=中文标签）转成带类型定义的 Lua。
+
+### 数据约定（Excel 表）
+
+- Sheet 前缀 `c_*` = 客户端，`s_*` = 服务端，`#*` = 隐藏/元数据
+- 第1行=表头，第2行=列名，第3行=类型（`int`/`string`/…），第4行=中文标签
+- `#` 前缀列 = 注释/展示列；冲突解决器行头会显示这些
+
+### Threading
+
+长耗时操作用 `ExcelAsyncUtil.QueueAsMacro()`。不能直接阻塞 Excel UI 线程。
+
+### Key dependencies
+
+`ExcelDna.AddIn 1.9.0`、`EPPlus 8.2.0`、`MiniExcel 1.42.0`、`LibGit2Sharp 0.31.0`、`NLua`、`MathNet.Numerics`。
+
+### 输出目录规范
+
+所有值得保留的产出文件（xlsx 报告、md 分析文档、html、json 分析产物）统一写到 **`OutputRootPath`** 下，默认值为 `Documents\NumDesOutput\`（本地独立 git 仓库，不推送）。
+
+**子目录规范：**
+
+| 子目录 | 用途 |
+|--------|------|
+| `reports\` | xlsx/html 报告（竞品分析、地编信息、LTE 配置模版等） |
+| `analysis\` | md 分析文档（竞品深度分析、设计规范、配置草稿等） |
+| `misc\` | 插件偶发产出（溯源结果.xlsx、表格关系.json 等） |
+
+**写文件规则：**
+- Scanner 代码：用 `OutputPaths.Reports` / `OutputPaths.Analysis` / `OutputPaths.Misc`（`NumDesTools.Scanner/OutputPaths.cs`），不要 hardcode 路径
+- 主插件代码：用 `OutputPaths.Reports` / `OutputPaths.Analysis` / `OutputPaths.Misc`（`NumDesTools/OutputPaths.cs`）
+- 新功能需要新子目录时：在对应 `OutputPaths.cs` 加一个属性，不要直接 `Path.Combine`
+
+**不纳入 OutputRootPath 的：**
+- `Documents\workspace\plugin.log` — 运行日志
+- `Documents\NumDesTools\Config\` — 飞书工作流配置，路径被其他系统依赖
+- `AppData\NumDesTools\` — 个人操作历史
+- `C:\tmp\` — 原始 ADB 数据和中间产物
+- `M1Work\` 写回 — 游戏配置表，不是插件产出
+
+### 源文件编码
+
+**C# 源文件必须用 UTF-8 保存**，禁止 GBK/ANSI。GBK 编码的中文提交后在 Git 里变成乱码（`"链"` → `"��"`），后续修复极易还原错误引发业务 bug（曾因此将类型判断 `"链"` 错误还原为 `"合"`，导致 ID 计算逻辑反转）。
+
+- Visual Studio：文件 → 高级保存选项 → UTF-8
+- 提交前 `git diff` 检查中文是否正常，出现方块乱码立即排查编码再提交
+
+### Excel 读写规范
+
+- **读取 xlsx** → EPPlus（`OfficeOpenXml`）。参考 `NumDesTools.Scanner/ExcelReader.cs`。
+- **写入 xlsx** → EPPlus（`OfficeOpenXml`）。参考 `NumDesTools.Scanner/ActivityWriter.cs`（追加行）和 `NumDesTools.Scanner/LteMapWriter.cs`（新建带样式/列宽/行高的 sheet）。
+- 每个入口必须先调用 `ExcelPackage.License.SetNonCommercialPersonal("NumDesTools")`。
+- MiniExcel 已在依赖中但**不用于本项目**，不要引入。
+- 不用 Python 生成 xlsx——生成的文件结构不规范会触发 Excel 修复提示，xlsx 一律用上面的 EPPlus 方案写。
+
+## 多 agent 协作
+
+- Claude Code 与 Codex 协作时，实时交接协议见 `docs/agent-handoff.md`
+- 运行态交接文件统一放 `.remember/agent-handoff/<task-name>/`，不提交
+- 值得长期保留的结论必须回写到版本化文件，不要只留在交接文件里
+- 没有具体任务前不要预建 worktree；并行改动时再按 `docs/agent-handoff.md` 建
