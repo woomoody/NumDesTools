@@ -154,6 +154,7 @@ public class ActivityDataBackupToolTests : IDisposable
 
         Assert.Equal(7, ReadIds(livePath).Count); // 疑似混入不阻断，照常删除整段
         Assert.False(string.IsNullOrEmpty(result.MismatchDetail)); // 详情走 CTP，先确认真的收集到了
+        Assert.Contains("11010004~11010006", result.MismatchDetail);
     }
 
     [Fact]

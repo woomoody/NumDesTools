@@ -450,7 +450,7 @@ internal static class ActivityDataBackupTool
             }
             var mismatch = FindRangeMismatch(sheet, idCol, commentCol, startRow, endRow);
             if (mismatch is not null)
-                mismatched.Add($"{activity.Id}：{mismatch}");
+                mismatched.Add($"{activity.Id}（{start}~{end}）：{mismatch}");
             // 不再因为疑似混入就跳过整段——起止id本身常是预留占位行，误报率太高，删不删交给用户
             // 看日志自己判断，这里只管照常删，不做阻断。
             blocks.Add((startRow, endRow));
