@@ -108,6 +108,17 @@ public class ActivityDataBackupToolTests : IDisposable
         return result;
     }
 
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
+    [InlineData("半年", true)]
+    [InlineData("x", true)]
+    public void HasIgnoreValue_TreatsAnyNonEmptyTextAsIgnored(string? text, bool expected)
+    {
+        Assert.Equal(expected, ActivityDataBackupTool.HasIgnoreValue(text));
+    }
+
     [Fact]
     public void ApplyDelete_RemovesOnlyRowsInIdRange()
     {

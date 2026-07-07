@@ -53,7 +53,7 @@ internal static class ActivityDataBackupTool
     private const string StatusDeleted = "已删除";
 
     // internal：便于 NumDesTools.Tests 直接构造样例数据测试 ApplyDelete/ApplyRestore。
-    // IsIgnored 对应「数据状态」左边那一列（Ignore），只要填了内容（不管填的是"半年"还是别的字），
+    // IsIgnored 对应「数据状态」左边那一列（Ignore），只要单元格里有任何非空字符，
     // 这个活动就跳过，不做删除/还原。
     // Status 是「数据状态」列当前的值：删除不限制状态；还原要求正好是"已删除"，防止拿备份盖掉正式表已改内容。
     internal sealed record Activity(
@@ -70,6 +70,8 @@ internal static class ActivityDataBackupTool
     // 可能已经手动改过的正式表内容，这个必须拦。
     private static bool StatusAllows(Activity activity, bool delete) =>
         delete || activity.Status == StatusDeleted;
+
+    internal static bool HasIgnoreValue(string? text) => !string.IsNullOrWhiteSpace(text);
 
     public static void DeleteSelected_Click(CommandBarButton ctrl, ref bool cancelDefault)
     {
@@ -215,8 +217,7 @@ internal static class ActivityDataBackupTool
             if (string.IsNullOrEmpty(id))
                 continue;
             var name = sheet.Cells[r, nameCol].Text?.Trim() ?? "";
-            var isIgnored =
-                ignoreCol != -1 && !string.IsNullOrEmpty(sheet.Cells[r, ignoreCol].Text?.Trim());
+            var isIgnored = ignoreCol != -1 && HasIgnoreValue(sheet.Cells[r, ignoreCol].Text);
             var status = liveStatusSheet is not null
                 ? (liveStatusSheet.Cells[r, 2].Text?.ToString()?.Trim() ?? "")
                 : (sheet.Cells[r, 2].Text?.Trim() ?? "");
