@@ -14,7 +14,6 @@
       "Read(//c/temp/readonly/**)",
       "Bash(python3)",
       "WebFetch(domain:project.feishu.cn)",
-      "Bash(curl -s -o - -w '\\\\nHTTP_STATUS:%{http_code}' -X POST https://project.feishu.cn/mcp_server/v1 -H 'X-Mcp-Token: m-002580b6-b3db-405a-aab8-007f927ef4eb' -H 'Content-Type: application/json' -d '{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{}},\"id\":1}')",
       "Read(//c/Users/cent/.claude/**)",
       "Read(//c/Users/cent/AppData/Roaming/Claude/**)",
       "Read(//c/Users/cent/AppData/Local/**)",
