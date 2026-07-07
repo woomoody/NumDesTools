@@ -1,0 +1,15 @@
+interface:
+  display_name: "NumDes Feishu"
+  short_description: "用 FeishuProjectMcp 查询项目数据"
+  default_prompt: "Use $numdestools-feishu-project to look up Feishu Project data needed for NumDesTools work."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "FeishuProjectMcp"
+      description: "Feishu Project MCP server configured in local Codex user config."
+      transport: "streamable_http"
+      url: "https://project.feishu.cn/mcp_server/v1"
+
+policy:
+  allow_implicit_invocation: true

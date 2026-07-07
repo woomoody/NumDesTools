@@ -1,6 +1,7 @@
 approval_policy = "on-request"
 approvals_reviewer = "auto_review"
 sandbox_mode = "workspace-write"
+# Keep secret-bearing MCP authentication in local user config, not in repo config.
 
 [sandbox_workspace_write]
 network_access = true

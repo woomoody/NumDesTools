@@ -1,0 +1,18 @@
+{
+  "name": "numdestools-codex",
+  "version": "0.1.0",
+  "description": "NumDesTools 仓库的 Codex 本地插件",
+  "author": {
+    "name": "cent"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "NumDesTools Codex",
+    "shortDescription": "NumDesTools 的本地 Codex 工作流",
+    "longDescription": "提供 NumDesTools 的 xlsx 规范技能、Feishu Project MCP 依赖说明，以及 repo 级 Codex 协作入口。",
+    "developerName": "cent",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "帮我在 NumDesTools 仓库里完成开发、排查或配置工作。"
+  }
+}

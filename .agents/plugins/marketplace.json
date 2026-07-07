@@ -1,0 +1,20 @@
+{
+  "name": "numdestools-local",
+  "interface": {
+    "displayName": "NumDesTools Local"
+  },
+  "plugins": [
+    {
+      "name": "numdestools-codex",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/plugins/numdestools-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

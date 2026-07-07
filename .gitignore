@@ -376,4 +376,5 @@ packFromBin/conflict_tool/
 
 # 飞书凭据（勿提交）
 **/feishu_config.json
+.mcp.json
 session-report-*.html

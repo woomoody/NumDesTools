@@ -4,7 +4,7 @@
       "type": "http",
       "url": "https://project.feishu.cn/mcp_server/v1",
       "headers": {
-        "X-Mcp-Token": "m-002580b6-b3db-405a-aab8-007f927ef4eb"
+        "X-Mcp-Token": "set-your-local-token-here"
       }
     }
   }

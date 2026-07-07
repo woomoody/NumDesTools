@@ -1,0 +1,7 @@
+interface:
+  display_name: "NumDes xlsx-rw"
+  short_description: "NumDesTools 的 xlsx 读写规则"
+  default_prompt: "Use $numdestools-xlsx-rw to implement or review xlsx handling in NumDesTools."
+
+policy:
+  allow_implicit_invocation: true
