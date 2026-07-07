@@ -219,7 +219,14 @@
       "WebFetch(domain:www.nuget.org)",
       "WebFetch(domain:excel-dna.net)",
       "WebFetch(domain:docs.avaloniaui.net)",
-      "WebFetch(*)"
+      "WebFetch(*)",
+      "mcp__windows-mcp__Screenshot",
+      "mcp__windows-mcp__Snapshot",
+      "mcp__windows-mcp__Wait",
+      "mcp__unity-mcp__read_console",
+      "mcp__plugin_lumen_lumen__semantic_search",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs"
     ],
     "defaultMode": "bypassPermissions",
     "additionalDirectories": [

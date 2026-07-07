@@ -285,7 +285,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["AutoInsertExcelDataThreadNew"] = AutoInsertExcelDataThreadNew_Click,
             ["AutoInsertExcelDataModelCreat"] = AutoInsertExcelDataModelCreat_Click,
             ["AutoInsertExcelDialog"] = AutoInsertExcelDataDialog_Click,
-            ["AutoMergeExcel"] = AutoMergeExcel_Click,
             ["AutoSeachExcel"] = AutoSeachExcel_Click,
             ["AutoInsertNumChanges"] = AutoInsertNumChanges_Click,
             ["ExcelSearchBoxButton1"] = ExcelSearchAll_Click,
@@ -435,6 +434,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     private void HandleError(string buttonId, Exception ex, IRibbonControl control)
     {
         PluginLog.Write($"按钮 [{buttonId}] 执行失败: {ex.Message}");
+        MessageBox.Show(
+            $"操作执行失败：{ex.Message}",
+            "NumDesTools",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Warning
+        );
         // 可选：禁用问题按钮
         (control.Context as IRibbonUI)?.InvalidateControl(buttonId);
     }
@@ -2387,11 +2392,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         ExcelDataAutoInsertActivityServer.ModeDataUpdate();
     }
 
-    public void AutoMergeExcel_Click(IRibbonControl control)
-    {
-        ExcelDataAutoInsertCopyMulti.MergeData(true);
-    }
-
     public void AliceBigRicher_Click(IRibbonControl control)
     {
         var ws = App.ActiveSheet;
@@ -2852,8 +2852,10 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         // 批量导出会解析大量大文件(Item/Icon/Type等30MB+)，NPOI/EPPlus产生的大对象大多进大对象
         // 堆——Dispose() 后对象可回收，但默认 GC 不会主动把这些内存段还给系统，进程内存会长期
         // 偏高。跑完整批后主动触发一次带压缩的 GC，把能还的内存真的还给操作系统。
-        System.Runtime.GCSettings.LargeObjectHeapCompactionMode =
-            System.Runtime.GCLargeObjectHeapCompactionMode.CompactOnce;
+        System.Runtime.GCSettings.LargeObjectHeapCompactionMode = System
+            .Runtime
+            .GCLargeObjectHeapCompactionMode
+            .CompactOnce;
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();

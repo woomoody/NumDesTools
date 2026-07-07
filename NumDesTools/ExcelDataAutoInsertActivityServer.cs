@@ -15,6 +15,10 @@ public static class ExcelDataAutoInsertActivityServer
     {
         var indexWk = AppServices.App.ActiveWorkbook;
 
+        // 「#【A自动填表】创新活动【数值模板】.xlsm」跟这个表在同一个目录，查一下有没有被"大文件备份"
+        // 功能标记成"已删除"——数据（Type/Icon/Item）都被删了还生成新的排期，容易生成出引用不到资源的活动。
+        var deletedActivityStatus = ActivityDataBackupTool.LoadActivityStatusById(indexWk.Path);
+
         var sourceSheet = indexWk.Worksheets["运营排期"];
         var targetSheet = indexWk.Worksheets["Sheet1"];
         var fixSheet = indexWk.Worksheets["活动模板"];
@@ -64,6 +68,7 @@ public static class ExcelDataAutoInsertActivityServer
 
         Array sourceDataArr = sourceDateRange.Value2;
         var sourceData = new List<(string, double, double, int, int, int, string)>();
+        var errorLog = new StringBuilder();
 
         for (int col = 1; col <= sourceMaxCol - 3 + 1; col++)
         {
@@ -71,8 +76,16 @@ public static class ExcelDataAutoInsertActivityServer
             {
                 var cell = sourceRange[row, col];
 
-                // 过滤已删除活动
-                bool hasStrikethrough = cell.Font.Strikethrough;
+                // 过滤已删除活动。单元格内文字删除线格式不统一时，Excel 返回 Null（非 true/false），
+                // 此时不当作已删除处理，但记录该单元格地址供用户排查
+                object strikethroughRaw = cell.Font.Strikethrough;
+                if (strikethroughRaw is not bool hasStrikethrough)
+                {
+                    errorLog.Append(
+                        $"运营排期-单元格【{cell.Address}】文字删除线格式不统一（部分文字划线部分未划线），已按未删除处理，请检查\r\n"
+                    );
+                    hasStrikethrough = false;
+                }
                 if (hasStrikethrough)
                     continue;
 
@@ -139,8 +152,18 @@ public static class ExcelDataAutoInsertActivityServer
             }
         }
 
+        if (sourceData.Count == 0)
+        {
+            MessageBox.Show(
+                "运营排期表中未找到需要导出的活动，请检查：\n"
+                    + "1. 目标活动所在列第2行是否精确填写「#导出」标记\n"
+                    + "2. 该活动是否被打上了删除线（视为已删除）",
+                "生成活动"
+            );
+            return;
+        }
+
         var targetDataList = new List<List<string>>();
-        var errorLog = new StringBuilder();
         var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         foreach (var a in sourceData)
@@ -154,27 +177,25 @@ public static class ExcelDataAutoInsertActivityServer
                     activeName = $"{a.Item7}：{a.Item1}";
                 }
                 errorLog.Append($"运营排期-未找到-活动模版【{nameOrIdString}】：{activeName}\r\n");
-                targetDataList.Add(
-                    [
-                        "targetId",
-                        a.Item1,
-                        "targetPushTimeString",
-                        "targetPushTimeLong",
-                        "targetPushEndTimeString",
-                        "targetPushEndTimeLong",
-                        "targetPreHeatTimeString",
-                        "targetPreHeatTimeLong",
-                        "targetOpenTimeString",
-                        "targetOpenTimeLong",
-                        "targetEndTimeString",
-                        "targetEndTimeLong",
-                        "targetCloseTimeString",
-                        "targetCloseTimeLong",
-                        "targetActGroup",
-                        "targetOpenCondition",
-                        "targetLifeType"
-                    ]
-                );
+                targetDataList.Add([
+                    "targetId",
+                    a.Item1,
+                    "targetPushTimeString",
+                    "targetPushTimeLong",
+                    "targetPushEndTimeString",
+                    "targetPushEndTimeLong",
+                    "targetPreHeatTimeString",
+                    "targetPreHeatTimeLong",
+                    "targetOpenTimeString",
+                    "targetOpenTimeLong",
+                    "targetEndTimeString",
+                    "targetEndTimeLong",
+                    "targetCloseTimeString",
+                    "targetCloseTimeLong",
+                    "targetActGroup",
+                    "targetOpenCondition",
+                    "targetLifeType",
+                ]);
                 continue;
             }
 
@@ -207,6 +228,17 @@ public static class ExcelDataAutoInsertActivityServer
             if (a.Item7 != "")
             {
                 targetName = $"{a.Item7}：{a.Item1}";
+            }
+            // targetId 是从 fixDataMatch 动态索引取出来的，静态类型是 dynamic；GetValueOrDefault
+            // 是扩展方法，动态绑定解析不了，用 TryGetValue（Dictionary 自己的实例方法）绕开这个限制。
+            if (
+                deletedActivityStatus.TryGetValue((string)targetId, out var activityStatus)
+                && activityStatus == "已删除"
+            )
+            {
+                errorLog.Append(
+                    $"运营排期-活动【{nameOrIdString}】：{targetName}（id={targetId}）在「大文件备份」里数据状态是「已删除」，Type/Icon/Item 数据可能还没还原，请检查\r\n"
+                );
             }
             var targetPushTimeString = ConvertToDateString(a.Item2, fixDataMatch[fixPush]);
             var targetPushTimeLong = ConvertToUnixTime(sourceStartTimeLong, fixDataMatch[fixPush]);
@@ -288,27 +320,25 @@ public static class ExcelDataAutoInsertActivityServer
                     targetLifeValue = lifeTypeMatch[lifeTypeValue]?.ToString() ?? "";
                 }
             }
-            targetDataList.Add(
-                [
-                    targetId,
-                    targetName,
-                    targetPushTimeString,
-                    targetPushTimeLong.ToString(),
-                    targetPushEndTimeString,
-                    targetPushEndTimeLong.ToString(CultureInfo.InvariantCulture),
-                    targetPreHeatTimeString,
-                    targetPreHeatTimeLong.ToString(),
-                    targetOpenTimeString,
-                    targetOpenTimeLong.ToString(),
-                    targetEndTimeString,
-                    targetEndTimeLong.ToString(CultureInfo.InvariantCulture),
-                    targetCloseTimeString,
-                    targetCloseTimeLong.ToString(CultureInfo.InvariantCulture),
-                    targetActGroup,
-                    targetOpenCondition,
-                    targetLifeValue
-                ]
-            );
+            targetDataList.Add([
+                targetId,
+                targetName,
+                targetPushTimeString,
+                targetPushTimeLong.ToString(),
+                targetPushEndTimeString,
+                targetPushEndTimeLong.ToString(CultureInfo.InvariantCulture),
+                targetPreHeatTimeString,
+                targetPreHeatTimeLong.ToString(),
+                targetOpenTimeString,
+                targetOpenTimeLong.ToString(),
+                targetEndTimeString,
+                targetEndTimeLong.ToString(CultureInfo.InvariantCulture),
+                targetCloseTimeString,
+                targetCloseTimeLong.ToString(CultureInfo.InvariantCulture),
+                targetActGroup,
+                targetOpenCondition,
+                targetLifeValue,
+            ]);
         }
 
         if (errorLog.Length > 0)

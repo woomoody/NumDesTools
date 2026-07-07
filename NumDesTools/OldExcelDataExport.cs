@@ -92,6 +92,9 @@ public static class ErrorLogCtp
         LabelControl.BackColor = panelBack;
         var strErrorFilter = Regex.Split(errorLog, "\r\n", RegexOptions.IgnoreCase);
         var font = new Font("微软雅黑", 9, FontStyle.Regular);
+        var ctpWidth = CalcCtpWidth(errorLog, font);
+        var rowWidth = ctpWidth - 20;
+        var rowY = 20;
         var i = 0;
         foreach (var unused in strErrorFilter)
         {
@@ -105,9 +108,9 @@ public static class ErrorLogCtp
                     var errorTextBox = new TextBox
                     {
                         Text = errorLine,
-                        Height = 20,
-                        Width = 550,
-                        Location = new Point(10, 40 + (i - 1) * 20),
+                        Width = rowWidth,
+                        Location = new Point(10, rowY),
+                        Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                         ReadOnly = true,
                         BorderStyle = BorderStyle.None,
                         Font = font,
@@ -115,6 +118,7 @@ public static class ErrorLogCtp
                         ForeColor = fore,
                     };
                     LabelControl.Controls.Add(errorTextBox);
+                    rowY += errorTextBox.PreferredHeight + 2;
                 }
             }
 
@@ -126,7 +130,7 @@ public static class ErrorLogCtp
             i < 46 ? "单元格错误集合" : "部分错误：错误大于45个"
         );
         Ctp.DockPosition = MsoCTPDockPosition.msoCTPDockPositionRight;
-        Ctp.Width = CalcCtpWidth(errorLog, font);
+        Ctp.Width = ctpWidth;
         Ctp.Visible = true;
     }
 
