@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using OfficeOpenXml;
 
 namespace NumDesTools;
@@ -14,11 +13,11 @@ namespace NumDesTools;
 //        不新增行、不管 a 独有列——这是列结构补齐，不是行同步。
 internal static class XlsxCrossSync
 {
-    private const int HeaderRow = 2;
-    private const int DataStartRow = 5;
-    private const string KeyColumnName = "id";
+    internal const int HeaderRow = 2;
+    internal const int DataStartRow = 5;
+    internal const string KeyColumnName = "id";
     private const string DeleteMarker = "删除";
-    private const int GroupPrefixLen = 6;
+    internal const int GroupPrefixLen = 6;
     private const string RootAKey = "XlsxSyncRootA";
     private const string RootBKey = "XlsxSyncRootB";
     private const string SuffixAKey = "XlsxSyncSuffixA";
@@ -44,6 +43,45 @@ internal static class XlsxCrossSync
     internal static void RunForward() => RunSync(reverse: false);
 
     internal static void RunReverse() => RunSync(reverse: true);
+
+    // SheetName 非空时仅处理该 Sheet；Row/Col 区间非空时仅同步落在区间内的 id 行 / 同步列。
+    // 取代旧的「合并表格Row/Col」右键功能——选中整行/整列后再跑同步即可缩小范围。
+    private readonly record struct SyncScope(
+        string? SheetName,
+        int? RowStart,
+        int? RowEnd,
+        int? ColStart,
+        int? ColEnd
+    );
+
+    private static SyncScope BuildSelectionScope(Workbook wb)
+    {
+        if (
+            wb.ActiveSheet is not Worksheet activeSheet
+            || AppServices.App.Selection is not Range selection
+        )
+            return default;
+
+        if (selection.Address == selection.EntireRow.Address)
+            return new SyncScope(
+                activeSheet.Name,
+                selection.Row,
+                selection.Row + selection.Rows.Count - 1,
+                null,
+                null
+            );
+
+        if (selection.Address == selection.EntireColumn.Address)
+            return new SyncScope(
+                activeSheet.Name,
+                null,
+                null,
+                selection.Column,
+                selection.Column + selection.Columns.Count - 1
+            );
+
+        return default;
+    }
 
     private static void RunSync(bool reverse)
     {
@@ -87,7 +125,7 @@ internal static class XlsxCrossSync
 
         try
         {
-            ExecuteAutoSync(activePath, targetPath, reverse);
+            ExecuteAutoSync(activePath, targetPath, reverse, BuildSelectionScope(wb));
         }
         catch (Exception ex)
         {
@@ -124,7 +162,7 @@ internal static class XlsxCrossSync
             ? fileName
             : Path.GetFileNameWithoutExtension(fileName) + suffix + Path.GetExtension(fileName);
 
-    private static HashSet<string> ReadHeaderColumns(ExcelWorksheet sheet)
+    internal static HashSet<string> ReadHeaderColumns(ExcelWorksheet sheet)
     {
         var names = new HashSet<string>(StringComparer.Ordinal);
         if (sheet.Dimension is null)
@@ -138,7 +176,23 @@ internal static class XlsxCrossSync
         return names;
     }
 
-    private static void ExecuteAutoSync(string fromPath, string toPath, bool reverse)
+    private static bool IsColumnInRange(
+        ExcelWorksheet sheet,
+        string colName,
+        int colStart,
+        int colEnd
+    )
+    {
+        var idx = PubMetToExcel.FindSourceCol(sheet, HeaderRow, colName);
+        return idx >= colStart && idx <= colEnd;
+    }
+
+    private static void ExecuteAutoSync(
+        string fromPath,
+        string toPath,
+        bool reverse,
+        SyncScope scope
+    )
     {
         ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
 
@@ -147,7 +201,7 @@ internal static class XlsxCrossSync
 
         if (reverse)
         {
-            ExecuteColumnSync(fromPkg, toPkg, toPath);
+            ExecuteColumnSync(fromPkg, toPkg, toPath, scope);
             return;
         }
 
@@ -156,6 +210,8 @@ internal static class XlsxCrossSync
         foreach (var fromSheet in fromPkg.Workbook.Worksheets)
         {
             if (fromSheet.Name.StartsWith('#'))
+                continue;
+            if (scope.SheetName is not null && fromSheet.Name != scope.SheetName)
                 continue;
             var toSheet = toPkg.Workbook.Worksheets[fromSheet.Name];
             if (toSheet is null)
@@ -171,6 +227,12 @@ internal static class XlsxCrossSync
                 bOnlyBySheet.Add((fromSheet.Name, bOnly));
 
             var syncCols = fromCols.Intersect(toCols).Where(c => c != KeyColumnName).ToList();
+            if (scope.ColStart is not null)
+                syncCols = syncCols
+                    .Where(c =>
+                        IsColumnInRange(fromSheet, c, scope.ColStart.Value, scope.ColEnd!.Value)
+                    )
+                    .ToList();
             if (syncCols.Count == 0)
                 continue;
 
@@ -206,7 +268,9 @@ internal static class XlsxCrossSync
                 KeyColumnName,
                 GroupPrefixLen,
                 cols,
-                preview: true
+                preview: true,
+                scope.RowStart,
+                scope.RowEnd
             );
             previews.Add((fromSheet.Name, u, i, d));
         }
@@ -228,8 +292,9 @@ internal static class XlsxCrossSync
         );
         // 增量同步：源侧新 key 插入、已存在的 key 更新；不按 key 集合清理对侧独有行。
         // 唯一删除方式：源行第1列文本严格等于"删除"，且对侧存在同 key 时，删掉对侧那一整行。
+        var scopeNote = scope.SheetName is null ? "" : "\n（当前选中了整行/整列，仅同步选中范围）";
         var confirm = MessageBox.Show(
-            $"正向 a→b\n{detail}\n\n"
+            $"正向 a→b{scopeNote}\n{detail}\n\n"
                 + "新增行只会写入 id 列 + 同步列，其余列留空需自行补全。\n"
                 + "源第1列标注「删除」的行，若对侧存在同 key 会被整行删除。\n"
                 + $"确认后原地覆写 {Path.GetFileName(toPath)}（git 可回溯）。是否继续？",
@@ -240,7 +305,16 @@ internal static class XlsxCrossSync
             return;
 
         foreach (var (fromSheet, toSheet, cols) in plans)
-            ExecuteSync(fromSheet, toSheet, KeyColumnName, GroupPrefixLen, cols, preview: false);
+            ExecuteSync(
+                fromSheet,
+                toSheet,
+                KeyColumnName,
+                GroupPrefixLen,
+                cols,
+                preview: false,
+                scope.RowStart,
+                scope.RowEnd
+            );
 
         if (!SaveWithFriendlyError(toPkg, toPath))
             return;
@@ -252,7 +326,12 @@ internal static class XlsxCrossSync
     }
 
     // b→a：只把 b 有而 a 没有的列（字段）搬到 a，数据只回填 a 中已存在的 id 行，不新增行、不管 a 独有列。
-    private static void ExecuteColumnSync(ExcelPackage fromPkg, ExcelPackage toPkg, string toPath)
+    private static void ExecuteColumnSync(
+        ExcelPackage fromPkg,
+        ExcelPackage toPkg,
+        string toPath,
+        SyncScope scope
+    )
     {
         var plans =
             new List<(
@@ -265,6 +344,8 @@ internal static class XlsxCrossSync
         {
             if (fromSheet.Name.StartsWith('#'))
                 continue;
+            if (scope.SheetName is not null && fromSheet.Name != scope.SheetName)
+                continue;
             var toSheet = toPkg.Workbook.Worksheets[fromSheet.Name];
             if (toSheet is null)
                 continue;
@@ -275,6 +356,12 @@ internal static class XlsxCrossSync
                 continue;
 
             var newColNames = fromCols.Except(toCols).Where(c => c != KeyColumnName).ToList();
+            if (scope.ColStart is not null)
+                newColNames = newColNames
+                    .Where(c =>
+                        IsColumnInRange(fromSheet, c, scope.ColStart.Value, scope.ColEnd!.Value)
+                    )
+                    .ToList();
             if (newColNames.Count == 0)
                 continue;
 
@@ -319,8 +406,9 @@ internal static class XlsxCrossSync
                 $"[{p.Name}] 新增列: {string.Join("、", p.Names)}，可回填 {p.Matched} 行"
             )
         );
+        var scopeNote = scope.SheetName is null ? "" : "\n（当前选中了整列，仅同步选中范围）";
         var confirm = MessageBox.Show(
-            $"反向 b→a 列结构同步\n{detail}\n\n"
+            $"反向 b→a 列结构同步{scopeNote}\n{detail}\n\n"
                 + "只新增列头（字段名/类型/标签），数据只回填 a 中已存在的 id 行，不新增行，a 独有列不受影响。\n"
                 + $"确认后原地覆写 {Path.GetFileName(toPath)}（git 可回溯）。是否继续？",
             "跨表同步 - 预览确认",
@@ -413,7 +501,11 @@ internal static class XlsxCrossSync
     }
 
     // EPPlus 遇到 DeleteFile 失败时不是直接抛 IOException，是包成 InvalidOperationException（内部异常才是 IOException）。
-    private static bool SaveWithFriendlyError(ExcelPackage pkg, string path)
+    internal static bool SaveWithFriendlyError(
+        ExcelPackage pkg,
+        string path,
+        string caption = "跨表同步"
+    )
     {
         try
         {
@@ -424,7 +516,7 @@ internal static class XlsxCrossSync
         {
             MessageBox.Show(
                 $"{Path.GetFileName(path)} 当前被其他程序占用（可能在 Excel 中打开），请关闭后重试。",
-                "跨表同步"
+                caption
             );
             return false;
         }
@@ -432,13 +524,16 @@ internal static class XlsxCrossSync
 
     // 增量同步：源侧新 key 插入，已存在的 key 更新。不按 key 集合清理对侧独有行（对侧可能有不来自源的合法行）。
     // 唯一删除方式：源行第1列文本严格等于 DeleteMarker（"删除"），且对侧存在同 key 时，删掉对侧那一整行。
-    private static (int Updates, int Inserts, int Deleted) ExecuteSync(
+    // internal：ActivityDataBackupTool 复用同一套按 id 更新/分组插入逻辑做"还原"。
+    internal static (int Updates, int Inserts, int Deleted) ExecuteSync(
         ExcelWorksheet source,
         ExcelWorksheet target,
         string keyColumnName,
         int groupPrefixLen,
         List<string> syncCols,
-        bool preview
+        bool preview,
+        int? rowStart = null,
+        int? rowEnd = null
     )
     {
         var sourceKeyCol = PubMetToExcel.FindSourceCol(source, HeaderRow, keyColumnName);
@@ -480,6 +575,8 @@ internal static class XlsxCrossSync
         {
             for (int r = DataStartRow; r <= source.Dimension.End.Row; r++)
             {
+                if (rowStart is not null && (r < rowStart || r > rowEnd))
+                    continue;
                 var k = source.Cells[r, sourceKeyCol].Text?.Trim();
                 if (string.IsNullOrEmpty(k))
                     continue;
@@ -519,21 +616,29 @@ internal static class XlsxCrossSync
                 .Value;
 
         // 2c. 分组插入：按 Key 前缀找同组最后一行插入其后；找不到同组或目标为空则追加末尾
+        // 锚点行一次性从 targetKeyRow 按前缀分组算出来（O(rows)），而不是每插入一行就整表反向扫一次
+        // （O(inserts*rows)——插入几千行时是主要耗时来源，见「大文件备份」还原大表的性能问题）。
+        // targetKeyRow 在插入循环开始前就已建好，跟旧的逐行 FindSourceRowBlur 扫的是同一份"插入前"
+        // 的表状态，语义等价。
+        var prefixLastRow = targetKeyRow
+            .Where(kv => kv.Key.Length >= groupPrefixLen)
+            .GroupBy(kv => kv.Key[..groupPrefixLen])
+            .ToDictionary(g => g.Key, g => g.Max(kv => kv.Value));
+
         var groupedInserts = new List<(int BaseRow, string Key, int SourceRow)>();
         var tailInserts = new List<(string Key, int SourceRow)>();
         foreach (var op in insertOps)
         {
-            if (targetEmpty || op.Key.Length < groupPrefixLen)
+            if (
+                targetEmpty
+                || op.Key.Length < groupPrefixLen
+                || !prefixLastRow.TryGetValue(op.Key[..groupPrefixLen], out var baseRow)
+            )
             {
                 tailInserts.Add(op);
                 continue;
             }
-            var regex = new Regex($"^{Regex.Escape(op.Key[..groupPrefixLen])}");
-            var baseRow = PubMetToExcel.FindSourceRowBlur(target, targetKeyCol, regex);
-            if (baseRow == -1)
-                tailInserts.Add(op);
-            else
-                groupedInserts.Add((baseRow, op.Key, op.SourceRow));
+            groupedInserts.Add((baseRow, op.Key, op.SourceRow));
         }
         groupedInserts.Sort((a, b) => a.BaseRow.CompareTo(b.BaseRow));
 

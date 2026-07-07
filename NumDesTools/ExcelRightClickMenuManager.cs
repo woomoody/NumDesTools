@@ -27,11 +27,10 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
             var isEntireRow = target.EntireRow.Address == target.Address;
 
             // 获取对应菜单栏
-            currentBar = isEntireColumn
-                ? _excelApp.CommandBars["Column"]
-                : isEntireRow
-                    ? _excelApp.CommandBars["Row"]
-                    : _excelApp.CommandBars["Cell"];
+            currentBar =
+                isEntireColumn ? _excelApp.CommandBars["Column"]
+                : isEntireRow ? _excelApp.CommandBars["Row"]
+                : _excelApp.CommandBars["Cell"];
 
             // 清理旧按钮
             CleanExistingButtons(currentBar);
@@ -85,7 +84,6 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
 
         var sheetName = sheet.Name;
         var bookName = book.Name;
-        var bookPath = book.FullName;
 
         // 判断是否是全选列或全选行
         var isEntireColumn = target.EntireColumn.Address == target.Address;
@@ -120,20 +118,44 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 FaceId: 755
             ),
             new(
-                Condition: (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables"))
-                    || bookPath.Contains(@"Public\Excels\Localizations"),
-                Tag: "合并表格Row",
-                Caption: "合并表格Row",
-                Handler: ExcelDataAutoInsertCopyMulti.RightClickMergeData,
-                FaceId: 2049
+                Condition: bookName.Contains("#【A自动填表】创新活动【数值模板】")
+                    && sheetName == "大文件备份",
+                Tag: "大文件备份-删除选中",
+                Caption: "大文件备份-删除选中",
+                Handler: ActivityDataBackupTool.DeleteSelected_Click,
+                FaceId: 0
             ),
             new(
-                Condition: (!bookName.Contains("#") && bookPath.Contains(@"Public\Excels\Tables"))
-                    || bookPath.Contains(@"Public\Excels\Localizations"),
-                Tag: "合并表格Col",
-                Caption: "合并表格Col",
-                Handler: ExcelDataAutoInsertCopyMulti.RightClickMergeDataCol,
-                FaceId: 2050
+                Condition: bookName.Contains("#【A自动填表】创新活动【数值模板】")
+                    && sheetName == "大文件备份",
+                Tag: "大文件备份-还原选中",
+                Caption: "大文件备份-还原选中",
+                Handler: ActivityDataBackupTool.RestoreSelected_Click,
+                FaceId: 459
+            ),
+            new(
+                Condition: bookName.Contains("#【A自动填表】创新活动【数值模板】")
+                    && sheetName == "大文件备份",
+                Tag: "大文件备份-全量删除",
+                Caption: "大文件备份-全量删除",
+                Handler: ActivityDataBackupTool.DeleteAll_Click,
+                FaceId: 0
+            ),
+            new(
+                Condition: bookName.Contains("#【A自动填表】创新活动【数值模板】")
+                    && sheetName == "大文件备份",
+                Tag: "大文件备份-全量还原",
+                Caption: "大文件备份-全量还原",
+                Handler: ActivityDataBackupTool.RestoreAll_Click,
+                FaceId: 459
+            ),
+            new(
+                Condition: bookName.Contains("#【A自动填表】创新活动【数值模板】")
+                    && sheetName == "大文件备份",
+                Tag: "大文件备份设置",
+                Caption: "大文件备份设置",
+                Handler: ActivityDataBackupTool.OpenSettings_Click,
+                FaceId: 0
             ),
             new(
                 Condition: (targetValue != null && targetValue.Contains(".xlsx")),
@@ -209,42 +231,48 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 FaceId: 19
             ),
             new(
-                Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【设计】"),
+                Condition: bookName.Contains("#【A-LTE】配置模版")
+                    && sheetName.Contains("【设计】"),
                 Tag: "LTE基础数据-首次",
                 Caption: "LTE基础数据-首次",
                 Handler: LteData.FirstCopyValue,
                 FaceId: 3
             ),
             new(
-                Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【设计】"),
+                Condition: bookName.Contains("#【A-LTE】配置模版")
+                    && sheetName.Contains("【设计】"),
                 Tag: "LTE基础数据-更新",
                 Caption: "LTE基础数据-更新",
                 Handler: LteData.UpdateCopyValue,
                 FaceId: 459
             ),
             new(
-                Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【任务】"),
+                Condition: bookName.Contains("#【A-LTE】配置模版")
+                    && sheetName.Contains("【任务】"),
                 Tag: "LTE任务数据-首次",
                 Caption: "LTE任务数据-首次",
                 Handler: LteData.FirstCopyTaskValue,
                 FaceId: 3
             ),
             new(
-                Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【任务】"),
+                Condition: bookName.Contains("#【A-LTE】配置模版")
+                    && sheetName.Contains("【任务】"),
                 Tag: "LTE任务数据-更新",
                 Caption: "LTE任务数据-更新",
                 Handler: LteData.UpdateCopyTaskValue,
                 FaceId: 459
             ),
             new(
-                Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【地组】"),
+                Condition: bookName.Contains("#【A-LTE】配置模版")
+                    && sheetName.Contains("【地组】"),
                 Tag: "LTE地组数据-首次",
                 Caption: "LTE地组数据-首次",
                 Handler: LteData.FirstCopyFieldValue,
                 FaceId: 3
             ),
             new(
-                Condition: bookName.Contains("#【A-LTE】配置模版") && sheetName.Contains("【地组】"),
+                Condition: bookName.Contains("#【A-LTE】配置模版")
+                    && sheetName.Contains("【地组】"),
                 Tag: "LTE地组数据-更新",
                 Caption: "LTE地组数据-更新",
                 Handler: LteData.UpdateCopyFieldValue,
@@ -263,7 +291,7 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 Caption: "去重复制",
                 Handler: LteData.FilterRepeatValueCopy,
                 FaceId: 19
-            )
+            ),
         };
 
         var validConfigs = buttonConfigs.Where(b => b.Condition).ToList();

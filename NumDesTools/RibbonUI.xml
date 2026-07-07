@@ -103,12 +103,11 @@
                                         <button id='Button5' size='large' getLabel='GetLableText' image='nd_放大镜' onAction='OnButtonClick' screentip='放大镜开关，对当前选中单元格进行放大显示' tag='放大镜开关' />
                                         <button id='FocusLightButton' size='large' getLabel='GetLableText' image='nd_聚光灯菜单' onAction='OnButtonClick' screentip='聚光灯开关：半透明行列色条覆盖显示，不修改单元格格式' tag='聚光灯-Overlay' />
                                         <button id='CellHistoryTipButton' size='large' getLabel='GetLableText' image='nd_单元格历史' onAction='OnButtonClick' screentip='选择任务单元格以确定这个单元格的值最近是谁改的，并甩锅给TA！' tag='单元格历史' />
-                                        <button id='AutoMergeExcel' size='large' label='合并Excel&#13;(Alice-Cove)' image='nd_合并Excel' onAction='OnButtonClick' screentip='合并Alice和Cove的Excel配置数据' tag='合并Excel(Alice-Cove)' />
                                         <button id='AutoSeachExcel' size='large' label='查验模版&#13;写入数据' image='nd_查验模版写入数据' onAction='OnButtonClick' screentip='查验模版写入数据是否正确' tag='查验模版写入数据' />
                                         <button id='AutoInsertNumChanges' size='large' label='活动奖励&#13;写入' image='nd_活动奖励写入' onAction='OnButtonClick' screentip='活动奖励数据写入' tag='活动奖励写入' />
                                         <button id="XlsxSyncSettings" size='large' label="跨表同步&#13;设置" screentip='配置根目录 A/B 及 a 侧文件名后缀，Sheet 和同步列全自动比对，不用手配' onAction='OnButtonClick' image='nd_跨表同步设置' tag='跨表同步设置' />
-                                        <button id="XlsxSyncForward" size='large' label="同步&#13;a→b" screentip='当前需在根目录 A 下打开的文件，自动找到 B 侧对应文件，比对同名 Sheet 的表头交集列（约定 id 列为 Key）同步过去' onAction='OnButtonClick' image='nd_跨表同步正向' tag='同步a→b' />
-                                        <button id="XlsxSyncReverse" size='large' label="同步&#13;b→a" screentip='当前需在根目录 B 下打开的文件，反向同步回 A 侧对应文件，规则同「同步 a→b」' onAction='OnButtonClick' image='nd_跨表同步反向' tag='同步b→a' />
+                                        <button id="XlsxSyncForward" size='large' label="同步&#13;a→b" screentip='当前需在根目录 A 下打开的文件，自动找到 B 侧对应文件，比对同名 Sheet 的表头交集列（约定 id 列为 Key）同步过去；若先选中整行/整列再点击，只同步选中范围' onAction='OnButtonClick' image='nd_跨表同步正向' tag='同步a→b' />
+                                        <button id="XlsxSyncReverse" size='large' label="同步&#13;b→a" screentip='当前需在根目录 B 下打开的文件，反向同步回 A 侧对应文件，规则同「同步 a→b」；若先选中整行/整列再点击，只同步选中范围' onAction='OnButtonClick' image='nd_跨表同步反向' tag='同步b→a' />
                                         <button id="XlsxSlimmerButton" size='large' label="xlsx&#13;瘦身" screentip='把纯数字误存成字符串的单元格转回原生数字类型+清空白行列尾部残留格式，压缩体积；全量扫描指定根目录下所有 xlsx' onAction='OnButtonClick' imageMso='DataRefreshAll' tag='xlsx瘦身' />
                                 </group>
                                 <group id='Group10' label='玩法计算'>
