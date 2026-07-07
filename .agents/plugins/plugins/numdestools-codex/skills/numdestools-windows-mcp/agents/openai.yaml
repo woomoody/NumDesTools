@@ -1,0 +1,13 @@
+interface:
+  display_name: "NumDes Windows MCP"
+  short_description: "通过 windows-mcp 获取桌面上下文"
+  default_prompt: "Use $numdestools-windows-mcp when Windows desktop state or screenshots are needed."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "windows-mcp"
+      description: "Local Windows MCP server launched from user-level Codex config."
+
+policy:
+  allow_implicit_invocation: true
