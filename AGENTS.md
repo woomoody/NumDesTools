@@ -18,6 +18,11 @@ dotnet test NumDesTools.sln
 
 Post-build 调用 `packFromBin\ReNamePack.bat`，把打包出的 XLL 重命名为 `NumDesToolsPack64.xll` / `NumDesToolsPack.xll`。
 
+### Git hooks
+
+- 仓库提供了 `.githooks/pre-commit`，会在提交前自动跑 `dotnet build NumDesTools.sln -c Debug` 和 `dotnet test NumDesTools.Tests\NumDesTools.Tests.csproj -c Debug --no-build`。
+- 首次启用时运行 `scripts/install-githooks.ps1`，它会把当前仓库的 `core.hooksPath` 指向 `.githooks`。
+
 改完代码必须**0 error**才算完成。命名遵循 **ReSharper** 规则，格式化用 **CSharpier**。
 
 ## Architecture
