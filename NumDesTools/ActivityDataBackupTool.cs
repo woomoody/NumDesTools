@@ -18,6 +18,11 @@ internal static class ActivityDataBackupTool
     private const int DataStartRow = 3;
     private static readonly string[] TrackedTables = { "Type.xlsx", "Icon.xlsx", "Item.xlsx" };
 
+    internal static bool IsTrackedTableFile(string fileName) =>
+        TrackedTables.Any(table =>
+            string.Equals(Path.GetFileName(fileName), table, StringComparison.OrdinalIgnoreCase)
+        );
+
     internal static (string BackupRoot, string LiveRoot) LoadRoots()
     {
         var liveRoot = AppServices.GlobalValue.Value.GetValueOrDefault(
@@ -507,9 +512,9 @@ internal static class ActivityDataBackupTool
         return -1;
     }
 
-    // 拿区间内出现次数最多的 id分组前缀 / 说明列中文签名作基准，而不是起止id自己的前缀/备注——
-    // 起止id经常只是预留占位行，内容跟实际数据无关，拿它当基准会把绝大多数正常行误判成混入。
-    // 只有 id前缀、中文签名都偏离"主流"的行才算疑似混入，返回描述交给调用方记日志，不阻塞删除。
+    // 拿区间内出现次数最多的 id分组前缀 / 说明列中文签名 / _sub_table_id 作基准，而不是起止id自己的
+    // 前缀/备注/子表 id——起止id经常只是预留占位行，内容跟实际数据无关，拿它当基准会把绝大多数正常行
+    // 误判成混入。只有三层都偏离"主流"的行才算疑似混入，返回描述交给调用方记日志，不阻塞删除。
     private static string? FindRangeMismatch(
         ExcelWorksheet sheet,
         int idCol,
@@ -522,21 +527,37 @@ internal static class ActivityDataBackupTool
             commentCol == -1
                 ? ""
                 : sheet.Cells[XlsxCrossSync.HeaderRow, commentCol].Text?.Trim() ?? "";
+        var subTableIdCol = sheet.Dimension is null
+            ? -1
+            : PubMetToExcel.FindSourceCol(sheet, XlsxCrossSync.HeaderRow, "_sub_table_id");
 
-        var rows = new List<(int Row, string Id, string IdPrefix, string Comment, string Sig)>();
+        var rows =
+            new List<(
+                int Row,
+                string Id,
+                string IdPrefix,
+                string Comment,
+                string Sig,
+                string SubTableId
+            )>();
         var idPrefixCounts = new Dictionary<string, int>();
         var sigCounts = new Dictionary<string, int>();
+        var subTableIdCounts = new Dictionary<string, int>();
         for (var r = startRow; r <= endRow; r++)
         {
             var id = sheet.Cells[r, idCol].Text?.Trim() ?? "";
             var idPrefix = ActivityIdPrefix(id);
             var comment = commentCol == -1 ? "" : sheet.Cells[r, commentCol].Text?.Trim() ?? "";
             var sig = FirstChineseRun(comment);
-            rows.Add((r, id, idPrefix, comment, sig));
+            var subTableId =
+                subTableIdCol == -1 ? "" : sheet.Cells[r, subTableIdCol].Text?.Trim() ?? "";
+            rows.Add((r, id, idPrefix, comment, sig, subTableId));
             if (idPrefix.Length > 0)
                 idPrefixCounts[idPrefix] = idPrefixCounts.GetValueOrDefault(idPrefix) + 1;
             if (sig.Length > 0)
                 sigCounts[sig] = sigCounts.GetValueOrDefault(sig) + 1;
+            if (subTableId.Length > 0)
+                subTableIdCounts[subTableId] = subTableIdCounts.GetValueOrDefault(subTableId) + 1;
         }
 
         var majorIdPrefix =
@@ -545,12 +566,26 @@ internal static class ActivityDataBackupTool
                 : "";
         var majorSig =
             sigCounts.Count > 0 ? sigCounts.OrderByDescending(kv => kv.Value).First().Key : "";
+        var majorSubTableId =
+            subTableIdCounts.Count > 0
+                ? subTableIdCounts.OrderByDescending(kv => kv.Value).First().Key
+                : "";
 
         foreach (var row in rows)
         {
             // id前缀一致就不用再查中文签名——同活动内不同道具的备注命名可能完全不搭（"阿拉丁"vs
             // "阿拉丁副本纪念品"、纯中文 vs "Lte-xxx-yyy"），id前缀已经能确认是同一活动就不用较真备注。
             if (row.IdPrefix == majorIdPrefix)
+                continue;
+
+            if (commentCol != -1 && SigMatches(row.Sig, majorSig))
+                continue;
+
+            if (
+                subTableIdCol != -1
+                && !string.IsNullOrEmpty(majorSubTableId)
+                && row.SubTableId == majorSubTableId
+            )
                 continue;
 
             var isBoundary = row.Row == startRow || row.Row == endRow;
@@ -561,9 +596,6 @@ internal static class ActivityDataBackupTool
                     ? $"第{row.Row}行 id={row.Id} 是起止id本身，前缀跟区间内主流id前缀「{majorIdPrefix}」不完全一致，大概率是预留占位行，非混入风险，仅供参考"
                     : $"第{row.Row}行 id={row.Id} 前缀跟区间内主流id前缀「{majorIdPrefix}」不一致，且这个表没有#开头的说明列可核对";
             }
-
-            if (SigMatches(row.Sig, majorSig))
-                continue;
 
             // 起止id往往是预留占位/特殊道具行（比如"XX副本纪念品"），跟主流数据不一致大概率不是
             // 混入，只是降级提示；区间中间的行才值得当真警告。
@@ -714,14 +746,14 @@ internal static class ActivityDataBackupTool
         return $"[{table}] 还原：更新 {totalUpdates} 行 / 插回 {totalInserts} 行{notFoundNote}{fallbackNote}";
     }
 
-    private static string? FindFileUnder(string root, string fileName) =>
+    internal static string? FindFileUnder(string root, string fileName) =>
         Directory.Exists(root)
             ? Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories).FirstOrDefault()
             : null;
 
     // backup 文件名约定 {stem}_backup_{日期}.xlsx，同一个表可能有多份不同日期的备份。
     // 按修改时间从新到旧排好序返回，ApplyRestore 会按这个顺序试，最新那份没有这段 id 区间就换下一份。
-    private static List<string> FindAllBackups(string backupRoot, string liveFileName)
+    internal static List<string> FindAllBackups(string backupRoot, string liveFileName)
     {
         if (!Directory.Exists(backupRoot))
             return [];

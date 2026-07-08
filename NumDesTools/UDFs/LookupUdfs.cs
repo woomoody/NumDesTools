@@ -27,6 +27,16 @@ public partial class ExcelUdf
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1"
     )
     {
+        var workbookName = Path.GetFileName(targetWorkbook);
+        if (ActivityDataBackupTool.IsTrackedTableFile(workbookName))
+            return FormalTableLookupFallback.FindKeyCol(
+                ActiveWorkbookPath(),
+                targetWorkbook,
+                row,
+                searchValue,
+                targetSheet
+            );
+
         var path = ActiveWorkbookPath() + @"\" + targetWorkbook;
         using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         using var workbook = new XSSFWorkbook(fs);
@@ -56,6 +66,16 @@ public partial class ExcelUdf
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1"
     )
     {
+        var workbookName = Path.GetFileName(targetWorkbook);
+        if (ActivityDataBackupTool.IsTrackedTableFile(workbookName))
+            return FormalTableLookupFallback.FindKeyRow(
+                ActiveWorkbookPath(),
+                targetWorkbook,
+                col,
+                searchValue,
+                targetSheet
+            );
+
         var path = ActiveWorkbookPath() + @"\" + targetWorkbook;
         using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         using var workbook = new XSSFWorkbook(fs);
@@ -83,6 +103,17 @@ public partial class ExcelUdf
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1"
     )
     {
+        var workbookName = Path.GetFileName(targetWorkbook);
+        if (ActivityDataBackupTool.IsTrackedTableFile(workbookName))
+            return FormalTableLookupFallback.FindKeyColToRow(
+                ActiveWorkbookPath(),
+                targetWorkbook,
+                row,
+                rowOut,
+                searchValue,
+                targetSheet
+            );
+
         var path = ActiveWorkbookPath() + @"\" + targetWorkbook;
         using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         using var workbook = new XSSFWorkbook(fs);
@@ -112,6 +143,17 @@ public partial class ExcelUdf
         [ExcelArgument(Description = "工作表")] string targetSheet = "Sheet1"
     )
     {
+        var workbookName = Path.GetFileName(targetWorkbook);
+        if (ActivityDataBackupTool.IsTrackedTableFile(workbookName))
+            return FormalTableLookupFallback.FindKeyRowToCol(
+                ActiveWorkbookPath(),
+                targetWorkbook,
+                col,
+                outCol,
+                searchValue,
+                targetSheet
+            );
+
         var path = ActiveWorkbookPath() + @"\" + targetWorkbook;
         using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         using var workbook = new XSSFWorkbook(fs);

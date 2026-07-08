@@ -89,8 +89,51 @@ public class ActivityDataBackupToolTests : IDisposable
         return path;
     }
 
+    // 额外带 _sub_table_id 列的样例表，用来测三层混入判定的最后一层兜底。
+    private string MakeXlsxWithCommentAndSubTableId(
+        (string id, string comment, string subTableId)[] rows,
+        string commentHeader = "#备注",
+        string subTableHeader = "_sub_table_id"
+    )
+    {
+        var path = Path.GetTempFileName() + ".xlsx";
+        _tmpFiles.Add(path);
+
+        using var pkg = new ExcelPackage();
+        var ws = pkg.Workbook.Worksheets.Add("Sheet1");
+        ws.Cells[2, 1].Value = "#";
+        ws.Cells[2, 2].Value = "id";
+        ws.Cells[2, 3].Value = commentHeader;
+        ws.Cells[2, 4].Value = subTableHeader;
+        ws.Cells[3, 2].Value = "int";
+        ws.Cells[3, 3].Value = "string";
+        ws.Cells[3, 4].Value = "string";
+        ws.Cells[4, 2].Value = "编号";
+        ws.Cells[4, 3].Value = "名称";
+        ws.Cells[4, 4].Value = "子表ID";
+
+        var r = 5;
+        foreach (var (id, comment, subTableId) in rows)
+        {
+            ws.Cells[r, 2].Value = id;
+            ws.Cells[r, 3].Value = comment;
+            ws.Cells[r, 4].Value = subTableId;
+            r++;
+        }
+
+        pkg.SaveAs(new FileInfo(path));
+        return path;
+    }
+
     private static (string Id, string Comment)[] SampleRowsWithComment(string comment) =>
         Enumerable.Range(1, 10).Select(i => ($"110100{i:D2}", comment)).ToArray();
+
+    private static (
+        string Id,
+        string Comment,
+        string SubTableId
+    )[] SampleRowsWithCommentAndSubTableId(string comment, string subTableId) =>
+        Enumerable.Range(1, 10).Select(i => ($"110100{i:D2}", comment, subTableId)).ToArray();
 
     private static List<string> ReadIds(string path)
     {
@@ -154,6 +197,45 @@ public class ActivityDataBackupToolTests : IDisposable
 
         Assert.Equal(7, ReadIds(livePath).Count); // 疑似混入不阻断，照常删除整段
         Assert.False(string.IsNullOrEmpty(result.MismatchDetail)); // 详情走 CTP，先确认真的收集到了
+        Assert.Contains("11010004~11010006", result.MismatchDetail);
+    }
+
+    [Fact]
+    public void ApplyDelete_SkipsMismatchNote_WhenSubTableIdMatchesMajority()
+    {
+        // 前两层都不一致时，_sub_table_id 还一致的话也应该放行，不算混入。
+        var rows = SampleRowsWithCommentAndSubTableId("常规活动", "sub-main");
+        rows[4] = ("99990001", "神秘活动", "sub-main"); // id/备注都不一致，但子表 id 仍然一致
+        var livePath = MakeXlsxWithCommentAndSubTableId(rows);
+        var activity = new ActivityDataBackupTool.Activity(0, "9001", "测试活动", new());
+        var ranges = new List<(ActivityDataBackupTool.Activity Activity, string Start, string End)>
+        {
+            (activity, "11010004", "11010006"),
+        };
+
+        var result = ActivityDataBackupTool.ApplyDelete("Icon.xlsx", livePath, ranges);
+
+        Assert.Equal(7, ReadIds(livePath).Count);
+        Assert.True(string.IsNullOrEmpty(result.MismatchDetail));
+    }
+
+    [Fact]
+    public void ApplyDelete_StillLogsMismatch_WhenIdCommentAndSubTableIdAllDiffer()
+    {
+        // 三层都不一致时，才该真的记为疑似混入。
+        var rows = SampleRowsWithCommentAndSubTableId("常规活动", "sub-main");
+        rows[4] = ("99990001", "神秘活动", "sub-other");
+        var livePath = MakeXlsxWithCommentAndSubTableId(rows);
+        var activity = new ActivityDataBackupTool.Activity(0, "9001", "测试活动", new());
+        var ranges = new List<(ActivityDataBackupTool.Activity Activity, string Start, string End)>
+        {
+            (activity, "11010004", "11010006"),
+        };
+
+        var result = ActivityDataBackupTool.ApplyDelete("Icon.xlsx", livePath, ranges);
+
+        Assert.Equal(7, ReadIds(livePath).Count);
+        Assert.False(string.IsNullOrEmpty(result.MismatchDetail));
         Assert.Contains("11010004~11010006", result.MismatchDetail);
     }
 
