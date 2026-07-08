@@ -1,0 +1,13 @@
+# NumDesTools 项目级 OMP 配置
+# 更高优先级的全局设置见 ~/.omp/agent/config.yml
+
+modelRoles:
+  default: deepseek/deepseek-v4-pro
+  smol: deepseek/deepseek-v4-flash
+
+compaction:
+  thresholdPercent: 70
+
+read:
+  summarize:
+    prose: true

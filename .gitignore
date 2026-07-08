@@ -379,3 +379,6 @@ packFromBin/conflict_tool/
 **/feishu_config.json
 .mcp.json
 session-report-*.html
+
+# OMP 项目配置（提交），但命令文件是个人 skill 桥接（不提交）
+.omp/commands/
