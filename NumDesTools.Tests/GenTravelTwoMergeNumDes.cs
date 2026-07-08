@@ -7,7 +7,7 @@ namespace NumDesTools.Tests;
 /// <summary>
 /// 生成「旅行任务·二合棋盘」数值设计 xlsx（EPPlus，Chinese-safe）
 /// Run: dotnet test --filter GenTravelTwoMergeNumDes
-/// Output: C:\Users\cent\Desktop\旅行任务二合棋盘_数值设计.xlsx
+/// Output: %TEMP%\NumDesTools.Tests\output\旅行任务二合棋盘_数值设计.xlsx
 /// </summary>
 public class GenTravelTwoMergeNumDes
 {
@@ -87,7 +87,13 @@ public class GenTravelTwoMergeNumDes
         // 冻结首行（标题）
         ws.View.FreezePanes(3, 1);
 
-        var outPath = @"C:\Users\cent\Desktop\旅行任务二合棋盘_数值设计.xlsx";
+        var outPath = Path.Combine(
+            Path.GetTempPath(),
+            "NumDesTools.Tests",
+            "output",
+            "旅行任务二合棋盘_数值设计.xlsx"
+        );
+        Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
         pkg.SaveAs(new FileInfo(outPath));
         Assert.True(File.Exists(outPath));
     }

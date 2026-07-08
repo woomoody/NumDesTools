@@ -6,7 +6,8 @@ public class GlobalVariableTests
 {
     private static string TmpPath(string name) =>
         Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            Path.GetTempPath(),
+            "NumDesTools.Tests",
             "tmp",
             name
         );

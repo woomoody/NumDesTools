@@ -6,7 +6,7 @@ namespace NumDesTools.Tests;
 
 /// <summary>
 /// 用真实索引文件测量 SearchByContains 性能。
-/// 结果写到 Documents\tmp\search_benchmark.txt
+/// 结果写到系统临时目录下的 search_benchmark.txt
 /// 运行：dotnet test --filter "SearchByContainsBenchmark" -c Release
 /// </summary>
 public class SearchByContainsBenchmark
@@ -18,7 +18,8 @@ public class SearchByContainsBenchmark
     );
 
     private static readonly string OutputPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        Path.GetTempPath(),
+        "NumDesTools.Tests",
         "tmp",
         "search_benchmark.txt"
     );
