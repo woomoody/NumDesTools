@@ -533,7 +533,8 @@ internal static class XlsxCrossSync
         List<string> syncCols,
         bool preview,
         int? rowStart = null,
-        int? rowEnd = null
+        int? rowEnd = null,
+        HashSet<string>? keyFilter = null
     )
     {
         var sourceKeyCol = PubMetToExcel.FindSourceCol(source, HeaderRow, keyColumnName);
@@ -579,6 +580,8 @@ internal static class XlsxCrossSync
                     continue;
                 var k = source.Cells[r, sourceKeyCol].Text?.Trim();
                 if (string.IsNullOrEmpty(k))
+                    continue;
+                if (keyFilter is not null && !keyFilter.Contains(k))
                     continue;
                 var markedDeleted = source.Cells[r, 1].Text?.Trim() == DeleteMarker;
                 if (targetKeyRow.TryGetValue(k, out var existingRow))
