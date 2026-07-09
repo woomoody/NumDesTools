@@ -53,6 +53,12 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
 
     private const string BtnTagPrefix = "NumDesTools_";
 
+    // 不手动调用 Marshal.ReleaseComObject：对 foreach 枚举拿到的 COM 对象强制释放引用计数是
+    // Office 互操作里的已知反模式——同一个底层 COM 接口指针可能还被别的 RCW（比如 Excel 自己内部
+    // 的缓存）引用着，强制释放会导致那些引用变成"已从 RCW 分离"而报错，报错又被下面 catch{} 静默
+    // 吞掉，表现就是这次清理/重建没有真正成功但看不出来——多次右键里偶尔正常、偶尔失败，正好对应
+    // "点好几次才响应"这个症状。这里的 CommandBarButton 对象让 .NET GC 自然回收即可，插件是长驻
+    // 进程，不差这点 RCW 释放延迟。
     private void CleanExistingButtons(CommandBar commandBar)
     {
         var toDelete = new List<CommandBarControl>();
@@ -66,16 +72,21 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
                 )
                     toDelete.Add(control);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                PluginLog.Verbose($"扫描右键菜单旧按钮失败: {ex.Message}");
+            }
         }
         foreach (var control in toDelete)
         {
             try
             {
                 control.Delete();
-                Marshal.ReleaseComObject(control);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                PluginLog.Verbose($"删除右键菜单旧按钮失败: {ex.Message}");
+            }
         }
     }
 
@@ -312,7 +323,10 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
             if (nativeFirst != null)
                 nativeFirst.BeginGroup = true;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            PluginLog.Verbose($"设置右键菜单分隔线失败: {ex.Message}");
+        }
     }
 
     private void AddSafeButton(CommandBar commandBar, ButtonConfig config, int position = 1)
@@ -329,10 +343,7 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
 
             var button = control as CommandBarButton;
             if (button == null)
-            {
-                Marshal.ReleaseComObject(control);
                 return;
-            }
 
             button.Tag = BtnTagPrefix + config.Tag;
             button.Caption = "[策] " + config.Caption;

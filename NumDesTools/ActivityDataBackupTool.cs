@@ -357,6 +357,30 @@ internal static class ActivityDataBackupTool
             plans.Add((table, livePath, backupCandidates, ranges));
         }
 
+        // 新方案：只要 Item.xlsx 有区间，Icon/Type 也自动纳入处理（即使模板没填它们的起止id）
+        var itemPlan = plans.Find(p => p.Table == "Item.xlsx");
+        if (itemPlan.Table != null)
+        {
+            foreach (var table in new[] { "Type.xlsx", "Icon.xlsx" })
+            {
+                if (plans.Any(p => p.Table == table))
+                    continue;
+                var livePath = FindFileUnder(liveRoot, table);
+                if (livePath is null)
+                {
+                    tableNotes.Add($"[{table}] 在正式表根目录下没找到，跳过。");
+                    continue;
+                }
+                var backupCandidates = !delete ? FindAllBackups(backupRoot, table) : [];
+                if (!delete && backupCandidates.Count == 0)
+                {
+                    tableNotes.Add($"[{table}] 在备份根目录下没找到备份文件，跳过。");
+                    continue;
+                }
+                plans.Add((table, livePath, backupCandidates, itemPlan.Ranges));
+            }
+        }
+
         if (plans.Count == 0)
         {
             MessageBox.Show(
@@ -389,9 +413,27 @@ internal static class ActivityDataBackupTool
         if (!UI.ActivityBackupReportWindow.Confirm(confirmTitle, confirmBody))
             return;
 
-        // Type/Icon/Item 各自是独立文件、独立 ExcelPackage，互不共享状态，天然可并行。只有区间数够多
-        // （超过 ParallelThreshold）才值得开线程——单表操作本身有 I/O 开销，区间少的表并行反而更慢。
-        // 用索引保序收集结果，不依赖 foreach 的执行顺序，保证多次运行时汇总文案的表顺序稳定。
+        // 删除模式下，为 Type/Icon/Item 构建 belongMapType 可删 id 集合
+        var deletableIds = new HashSet<string>();
+        var preservedDetails = new List<string>();
+        if (delete)
+        {
+            var itemRanges = plans
+                .Where(p => p.Table == "Item.xlsx")
+                .SelectMany(p => p.Ranges)
+                .ToList();
+            var typeLivePath = FindFileUnder(liveRoot, "Type.xlsx");
+            var itemLivePath = FindFileUnder(liveRoot, "Item.xlsx");
+            if (itemRanges.Count > 0 && typeLivePath is not null && itemLivePath is not null)
+            {
+                (deletableIds, preservedDetails) = BuildDeletableIdSet(
+                    itemLivePath,
+                    typeLivePath,
+                    itemRanges
+                );
+            }
+        }
+
         var planResults = new (string Summary, string MismatchDetail)[plans.Count];
         var parallelPlans = plans
             .Select((plan, index) => (plan, index))
@@ -408,7 +450,7 @@ internal static class ActivityDataBackupTool
             {
                 var (table, livePath, backupCandidates, ranges) = item.plan;
                 planResults[item.index] = delete
-                    ? ApplyDelete(table, livePath, ranges)
+                    ? ApplyDeleteFiltered(table, livePath, ranges, deletableIds, preservedDetails)
                     : (ApplyRestore(table, livePath, backupCandidates, ranges), "");
             }
         );
@@ -416,7 +458,7 @@ internal static class ActivityDataBackupTool
         {
             var (table, livePath, backupCandidates, ranges) = plan;
             planResults[index] = delete
-                ? ApplyDelete(table, livePath, ranges)
+                ? ApplyDeleteFiltered(table, livePath, ranges, deletableIds, preservedDetails)
                 : (ApplyRestore(table, livePath, backupCandidates, ranges), "");
         }
 
@@ -426,10 +468,19 @@ internal static class ActivityDataBackupTool
             .Where(m => !string.IsNullOrEmpty(m))
             .ToList();
 
+        // 续开链路检测
+        if (delete)
+        {
+            var followUpWarnings = CheckFollowUpChainForActivities(
+                liveRoot,
+                activities.Select(a => a.Id).ToList()
+            );
+            if (followUpWarnings.Count > 0)
+                mismatchDetails.AddRange(followUpWarnings);
+        }
+
         UpdateStatusColumn(activities, delete ? "已删除" : "已还原");
 
-        // 混入数据的详情单独走 CTP 日志面板列举，不塞进结果弹窗打断操作；三个表都跑完才统一写一次，
-        // 避免逐表调用互相覆盖同一个全局 CTP 面板。
         if (mismatchDetails.Count > 0)
         {
             ErrorLogCtp.DisposeCtp();
@@ -481,9 +532,8 @@ internal static class ActivityDataBackupTool
         var mismatched = new List<string>();
         foreach (var (activity, start, end) in ranges)
         {
-            var startRow = PubMetToExcel.FindSourceRow(sheet, idCol, start);
-            var endRow = PubMetToExcel.FindSourceRow(sheet, idCol, end);
-            if (startRow == -1 || endRow == -1 || endRow < startRow)
+            var (startRow, endRow) = FindRowRangeByIdValue(sheet, idCol, start, end);
+            if (startRow == -1 || endRow == -1)
             {
                 notFound.Add(activity.Id);
                 continue;
@@ -744,9 +794,12 @@ internal static class ActivityDataBackupTool
                     );
                     if (idCol == -1)
                         continue;
-                    var rowStart = PubMetToExcel.FindSourceRow(sheet, idCol, start);
-                    var rowEnd = PubMetToExcel.FindSourceRow(sheet, idCol, end);
-                    if (rowStart == -1 || rowEnd == -1 || rowEnd < rowStart)
+                    // 不要求区间两端点id本身存在——Icon.xlsx这类表id分布本来就不连续（不是每个
+                    // Item都配图标），要求Start/End精确命中会导致整个区间被误判"找不到"。改成按id
+                    // 数值扫描全表，收集落在[start,end]区间内的所有真实存在的行，取这些行的最小/
+                    // 最大行号喂给ExecuteSync——区间内一行都没有才算真的找不到。
+                    var (rowStart, rowEnd) = FindRowRangeByIdValue(sheet, idCol, start, end);
+                    if (rowStart == -1 || rowEnd == -1)
                         continue;
                     matchedSheet = sheet;
                     matchedRowStart = rowStart;
@@ -805,6 +858,35 @@ internal static class ActivityDataBackupTool
         return $"[{table}] 还原：更新 {totalUpdates} 行 / 插回 {totalInserts} 行{notFoundNote}{fallbackNote}";
     }
 
+    // 按id数值区间扫描全表，返回落在[start,end]内所有真实存在行的最小/最大行号；
+    // 区间内一行都不存在时返回(-1,-1)。不要求start/end自己对应的行存在。
+    private static (int RowStart, int RowEnd) FindRowRangeByIdValue(
+        ExcelWorksheet sheet,
+        int idCol,
+        string start,
+        string end
+    )
+    {
+        if (!long.TryParse(start, out var startVal) || !long.TryParse(end, out var endVal))
+            return (-1, -1);
+
+        var lastRow = sheet.Dimension?.End.Row ?? 0;
+        var rowStart = -1;
+        var rowEnd = -1;
+        for (var r = XlsxCrossSync.HeaderRow + 1; r <= lastRow; r++)
+        {
+            var text = sheet.Cells[r, idCol].Text?.Trim();
+            if (string.IsNullOrEmpty(text) || !long.TryParse(text, out var idVal))
+                continue;
+            if (idVal < startVal || idVal > endVal)
+                continue;
+            if (rowStart == -1)
+                rowStart = r;
+            rowEnd = r;
+        }
+        return (rowStart, rowEnd);
+    }
+
     internal static string? FindFileUnder(string root, string fileName) =>
         Directory.Exists(root)
             ? Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories).FirstOrDefault()
@@ -839,5 +921,199 @@ internal static class ActivityDataBackupTool
             .OrderByDescending(f => f.LastWriteTimeUtc)
             .Select(f => f.FullName)
             .ToList();
+    }
+
+    internal static (
+        HashSet<string> DeletableIds,
+        List<string> PreservedDetails
+    ) BuildDeletableIdSet(
+        string itemLivePath,
+        string typeLivePath,
+        List<(Activity Activity, string Start, string End)> itemRanges
+    )
+    {
+        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
+        var deletable = new HashSet<string>();
+        var preserved = new List<string>();
+
+        var itemIds = new HashSet<string>();
+        using (var itemPkg = new ExcelPackage(new FileInfo(itemLivePath)))
+        {
+            var itemSheet = itemPkg.Workbook.Worksheets["Sheet1"];
+            var itemIdCol = PubMetToExcel.FindSourceCol(
+                itemSheet,
+                XlsxCrossSync.HeaderRow,
+                XlsxCrossSync.KeyColumnName
+            );
+            if (itemIdCol == -1)
+                return (deletable, preserved);
+            foreach (var (_, start, end) in itemRanges)
+            {
+                var startRow = PubMetToExcel.FindSourceRow(itemSheet, itemIdCol, start);
+                var endRow = PubMetToExcel.FindSourceRow(itemSheet, itemIdCol, end);
+                if (startRow == -1 || endRow == -1 || endRow < startRow)
+                    continue;
+                for (var r = startRow; r <= endRow; r++)
+                {
+                    var id = itemSheet.Cells[r, itemIdCol].Text?.Trim();
+                    if (!string.IsNullOrEmpty(id))
+                        itemIds.Add(id);
+                }
+            }
+        }
+        if (itemIds.Count == 0)
+            return (deletable, preserved);
+
+        var typeBelongMap = new Dictionary<string, string>();
+        using (var typePkg = new ExcelPackage(new FileInfo(typeLivePath)))
+        {
+            var typeSheet = typePkg.Workbook.Worksheets["Sheet1"];
+            var typeIdCol = PubMetToExcel.FindSourceCol(
+                typeSheet,
+                XlsxCrossSync.HeaderRow,
+                XlsxCrossSync.KeyColumnName
+            );
+            if (typeIdCol == -1)
+            {
+                preserved.Add("Type.xlsx 中没找到 id 列");
+                return (deletable, preserved);
+            }
+            var bmtCol = FindColByText(typeSheet, XlsxCrossSync.HeaderRow, "belongMapType");
+            if (bmtCol == -1)
+            {
+                preserved.Add("Type.xlsx 中没找到 belongMapType 列");
+                return (deletable, preserved);
+            }
+            var lastRow = typeSheet.Dimension?.End.Row ?? 0;
+            for (var r = XlsxCrossSync.HeaderRow + 1; r <= lastRow; r++)
+            {
+                var id = typeSheet.Cells[r, typeIdCol].Text?.Trim();
+                if (string.IsNullOrEmpty(id) || !itemIds.Contains(id))
+                    continue;
+                typeBelongMap[id] = typeSheet.Cells[r, bmtCol].Text?.Trim() ?? "";
+            }
+        }
+        foreach (var id in itemIds)
+        {
+            if (!typeBelongMap.TryGetValue(id, out var bmt))
+            {
+                preserved.Add($"id={id}：Type.xlsx 中不存在该id，保守不删");
+            }
+            else if (string.IsNullOrEmpty(bmt))
+            {
+                preserved.Add($"id={id}：belongMapType 为空，保守不删");
+            }
+            else if (bmt == "[4]")
+            {
+                deletable.Add(id);
+            }
+            else
+            {
+                preserved.Add($"id={id}：belongMapType={bmt}（非纯[4]），不删");
+            }
+        }
+        return (deletable, preserved);
+    }
+
+    internal static (string Summary, string Detail) ApplyDeleteWithIdFilter(
+        string table,
+        string livePath,
+        HashSet<string> deletableIds,
+        List<string> preservedDetails
+    )
+    {
+        using var pkg = new ExcelPackage(new FileInfo(livePath));
+        var sheet = pkg.Workbook.Worksheets["Sheet1"];
+        var idCol = PubMetToExcel.FindSourceCol(
+            sheet,
+            XlsxCrossSync.HeaderRow,
+            XlsxCrossSync.KeyColumnName
+        );
+        if (idCol == -1)
+            return ($"[{table}] 没找到 id 列，跳过。", "");
+
+        var deleteRows = new HashSet<int>();
+        var lastRow = sheet.Dimension?.End.Row ?? 0;
+        for (var r = XlsxCrossSync.HeaderRow + 1; r <= lastRow; r++)
+        {
+            var id = sheet.Cells[r, idCol].Text?.Trim();
+            if (!string.IsNullOrEmpty(id) && deletableIds.Contains(id))
+                deleteRows.Add(r);
+        }
+        var deletedRows = deleteRows.Count;
+        if (deletedRows > 0)
+        {
+            var lastCol = sheet.Dimension!.End.Column;
+            var writeRow = 1;
+            for (var readRow = 1; readRow <= lastRow; readRow++)
+            {
+                if (deleteRows.Contains(readRow))
+                    continue;
+                if (writeRow != readRow)
+                    for (var col = 1; col <= lastCol; col++)
+                        sheet.Cells[writeRow, col].Value = sheet.Cells[readRow, col].Value;
+                writeRow++;
+            }
+            var newLastRow = writeRow - 1;
+            if (newLastRow < lastRow)
+                sheet.DeleteRow(newLastRow + 1, lastRow - newLastRow);
+        }
+        var (trimmedRows, _) = deletedRows > 0 ? XlsxSlimmer.TrimTrailingBlank(sheet) : (0, 0);
+        if (
+            (deletedRows > 0 || trimmedRows > 0)
+            && !XlsxCrossSync.SaveWithFriendlyError(pkg, livePath, "大文件备份")
+        )
+            return ($"[{table}] 保存失败（文件被占用）。", "");
+
+        var preservedNote =
+            preservedDetails.Count > 0
+                ? $"，保留 {preservedDetails.Count} 个 id（belongMapType 非纯[4] 或查不到）"
+                : "";
+        var trimNote = trimmedRows > 0 ? $"，清掉表尾 {trimmedRows} 行残留" : "";
+        var summary = $"[{table}] 删除 {deletedRows} 行{preservedNote}{trimNote}";
+        var detail =
+            preservedDetails.Count > 0
+                ? $"[{table}] 保留的 id：\n" + string.Join("\n", preservedDetails)
+                : "";
+        return (summary, detail);
+    }
+
+    internal static (string, string) ApplyDeleteFiltered(
+        string table,
+        string livePath,
+        List<(Activity Activity, string Start, string End)> ranges,
+        HashSet<string> deletableIds,
+        List<string> preservedDetails
+    )
+    {
+        if (deletableIds.Count == 0)
+            return ApplyDelete(table, livePath, ranges);
+        return ApplyDeleteWithIdFilter(table, livePath, deletableIds, preservedDetails);
+    }
+
+    private static List<string> CheckFollowUpChainForActivities(
+        string liveRoot,
+        List<string> activityIds
+    )
+    {
+        var warnings = new List<string>();
+        var batchSet = new HashSet<string>(activityIds);
+        try
+        {
+            var predMap = ExcelDataAutoInsertActivityServer.BuildFollowUpPredecessorMap(liveRoot);
+            foreach (var id in activityIds)
+            {
+                if (predMap.TryGetValue(id, out var targets) && targets.Count > 0)
+                {
+                    var missing = targets.Where(t => !batchSet.Contains(t)).Distinct().ToList();
+                    if (missing.Count > 0)
+                        warnings.Add(
+                            $"续开链路警告：活动 {id} 是续开前驱，其续开目标 {string.Join("、", missing)} 未同批处理，续开可能触发这些活动重读 Type/Icon/Item，请确认数据完整"
+                        );
+                }
+            }
+        }
+        catch { }
+        return warnings;
     }
 }
