@@ -10,7 +10,10 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
 {
     private readonly Application _excelApp =
         excelApp ?? throw new ArgumentNullException(nameof(excelApp));
-    private DateTime _lastHandlerClickTime = DateTime.MinValue;
+
+    // 按钮 Tag 各自独立防抖，不能用一个全局时间戳——那样点任意一个按钮都会刷新时间戳，
+    // 导致 500ms 内点别的按钮也被无声吞掉（cancel=true 没有任何提示），表现就是"点好几次才响应"。
+    private readonly ConcurrentDictionary<string, DateTime> _lastClickTimeByTag = new();
     private const int ClickDelayMs = 500;
 
     // 性能统计
@@ -345,15 +348,20 @@ public class ExcelRightClickMenuManager(Application excelApp) : IDisposable
             }
 
             // 包装点击事件
+            var buttonTag = config.Tag;
             button.Click += (CommandBarButton btn, ref bool cancel) =>
             {
-                // 防抖检查 - 针对特定handler
-                if ((DateTime.Now - _lastHandlerClickTime).TotalMilliseconds < ClickDelayMs)
+                // 防抖检查——只防同一个按钮的连续误触发，不跟其它按钮共享时间戳。
+                var now = DateTime.Now;
+                if (
+                    _lastClickTimeByTag.TryGetValue(buttonTag, out var lastClick)
+                    && (now - lastClick).TotalMilliseconds < ClickDelayMs
+                )
                 {
                     cancel = true;
                     return;
                 }
-                _lastHandlerClickTime = DateTime.Now;
+                _lastClickTimeByTag[buttonTag] = now;
 
                 SafeExecuteWithCommonControls(config.Handler, btn, ref cancel);
             };
