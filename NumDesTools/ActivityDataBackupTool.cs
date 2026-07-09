@@ -869,6 +869,10 @@ internal static class ActivityDataBackupTool
     {
         if (!long.TryParse(start, out var startVal) || !long.TryParse(end, out var endVal))
             return (-1, -1);
+        // 模板里偶尔会把起始/结束两列填反（起始id比结束id还大），这里做兜底容错，
+        // 不因此判定整个区间"找不到"，正常按数值区间处理。
+        if (startVal > endVal)
+            (startVal, endVal) = (endVal, startVal);
 
         var lastRow = sheet.Dimension?.End.Row ?? 0;
         var rowStart = -1;
