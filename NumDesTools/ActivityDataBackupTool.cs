@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using OfficeOpenXml;
 
 namespace NumDesTools;
@@ -16,6 +18,10 @@ internal static class ActivityDataBackupTool
     private const int TableNameRow = 1;
     private const int ColumnLabelRow = 2;
     private const int DataStartRow = 3;
+
+    // 区间数超过这个门槛才把该表的删除/还原丢去并行跑：单表操作本身有独立开线程的开销，区间少的表
+    // 串行更快，不值得为它多开一个线程。
+    private const int ParallelThreshold = 10;
     private static readonly string[] TrackedTables = { "Type.xlsx", "Icon.xlsx", "Item.xlsx" };
 
     internal static bool IsTrackedTableFile(string fileName) =>
@@ -36,15 +42,15 @@ internal static class ActivityDataBackupTool
         return (backupRoot, liveRoot);
     }
 
-    // 没手动配过备份根目录时，跟正式表根目录联动推算（Excels\Tables → Excels_Backup\TablesBackup
+    // 没手动配过备份根目录时，跟正式表根目录联动推算（Excels\Tables → Excels_Backup\Tables_backup
     // 是同级目录，换机器/换环境时正式表根目录一变，备份根目录默认值跟着变，不用写死绝对路径）。
     private static string DeriveDefaultBackupRoot(string liveRoot)
     {
         const string liveMarker = @"Excels\Tables";
-        const string backupMarker = @"Excels_Backup\TablesBackup";
+        const string backupMarker = @"Excels_Backup\Tables_backup";
         return liveRoot.Contains(liveMarker, StringComparison.OrdinalIgnoreCase)
             ? liveRoot.Replace(liveMarker, backupMarker, StringComparison.OrdinalIgnoreCase)
-            : Path.Combine(Path.GetDirectoryName(liveRoot) ?? liveRoot, "TablesBackup");
+            : Path.Combine(Path.GetDirectoryName(liveRoot) ?? liveRoot, "Tables_backup");
     }
 
     internal static void SaveRoots(string backupRoot, string liveRoot)
@@ -173,9 +179,18 @@ internal static class ActivityDataBackupTool
     {
         var wb = AppServices.App.ActiveWorkbook;
         var templatePath = System.IO.Path.Combine(wb.Path, wb.Name);
-        // 数据状态列是本工具自己用 COM 直接改活的 workbook（不强制存盘），
-        // 从磁盘用 EPPlus 重新读这一列可能还是上一次存盘前的旧值，所以单独从 COM 读，跟别的字段区分开。
         var liveStatusSheet = wb.Worksheets[TemplateSheetName] as Worksheet;
+        return LoadTemplateActivitiesFromFile(templatePath, liveStatusSheet);
+    }
+
+    // 方便诊断/测试直接从文件读模板，不依赖 ActiveWorkbook。
+    // 数据状态列是本工具自己用 COM 直接改活的 workbook（不强制存盘），
+    // 从磁盘用 EPPlus 重新读这一列可能还是上一次存盘前的旧值，所以单独从 COM 读，跟别的字段区分开。
+    internal static List<Activity>? LoadTemplateActivitiesFromFile(
+        string templatePath,
+        Worksheet? liveStatusSheet
+    )
+    {
         ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
         using var pkg = new ExcelPackage(new FileInfo(templatePath));
         var sheet = pkg.Workbook.Worksheets[TemplateSheetName];
@@ -374,22 +389,42 @@ internal static class ActivityDataBackupTool
         if (!UI.ActivityBackupReportWindow.Confirm(confirmTitle, confirmBody))
             return;
 
-        var resultLines = new List<string>();
-        var mismatchDetails = new List<string>();
-        foreach (var (table, livePath, backupCandidates, ranges) in plans)
+        // Type/Icon/Item 各自是独立文件、独立 ExcelPackage，互不共享状态，天然可并行。只有区间数够多
+        // （超过 ParallelThreshold）才值得开线程——单表操作本身有 I/O 开销，区间少的表并行反而更慢。
+        // 用索引保序收集结果，不依赖 foreach 的执行顺序，保证多次运行时汇总文案的表顺序稳定。
+        var planResults = new (string Summary, string MismatchDetail)[plans.Count];
+        var parallelPlans = plans
+            .Select((plan, index) => (plan, index))
+            .Where(x => x.plan.Ranges.Count > ParallelThreshold)
+            .ToList();
+        var sequentialPlans = plans
+            .Select((plan, index) => (plan, index))
+            .Where(x => x.plan.Ranges.Count <= ParallelThreshold)
+            .ToList();
+
+        Parallel.ForEach(
+            parallelPlans,
+            item =>
+            {
+                var (table, livePath, backupCandidates, ranges) = item.plan;
+                planResults[item.index] = delete
+                    ? ApplyDelete(table, livePath, ranges)
+                    : (ApplyRestore(table, livePath, backupCandidates, ranges), "");
+            }
+        );
+        foreach (var (plan, index) in sequentialPlans)
         {
-            if (delete)
-            {
-                var (summary, mismatchDetail) = ApplyDelete(table, livePath, ranges);
-                resultLines.Add(summary);
-                if (!string.IsNullOrEmpty(mismatchDetail))
-                    mismatchDetails.Add(mismatchDetail);
-            }
-            else
-            {
-                resultLines.Add(ApplyRestore(table, livePath, backupCandidates, ranges));
-            }
+            var (table, livePath, backupCandidates, ranges) = plan;
+            planResults[index] = delete
+                ? ApplyDelete(table, livePath, ranges)
+                : (ApplyRestore(table, livePath, backupCandidates, ranges), "");
         }
+
+        var resultLines = planResults.Select(r => r.Summary).ToList();
+        var mismatchDetails = planResults
+            .Select(r => r.MismatchDetail)
+            .Where(m => !string.IsNullOrEmpty(m))
+            .ToList();
 
         UpdateStatusColumn(activities, delete ? "已删除" : "已还原");
 
@@ -461,13 +496,37 @@ internal static class ActivityDataBackupTool
             blocks.Add((startRow, endRow));
         }
 
-        // 从下往上删，避免前面删除后挪动了后面区块的行号
-        blocks.Sort((a, b) => b.Start.CompareTo(a.Start));
-        var deletedRows = 0;
+        // 不用多次 sheet.DeleteRow：EPPlus 8.2.0~8.6.1（含最新版）在同一个打开的 ExcelWorksheet 上连续
+        // 执行大量、跨度很大的 DeleteRow 调用时，内部行索引/偏移维护会出错——实测在236个真实区间上复现，
+        // 某一段本该被"挤"上来的数据行会整体错位，中间留出一大段完全空白（详见
+        // 2026-07-08-epplus-deleterow-bug-fix-task.md 的复现记录），Icon.xlsx 上出现过 2 万多行的假空白。
+        // 改成一次性重建：只把"没被删除的行"按原顺序搬到新行号，最后裁掉多余的尾部行，完全绕开
+        // DeleteRow 的偏移计算路径。只搬单元格的值，不搬格式/批注/超链接——ExcelRangeBase.Copy 会连带
+        // 处理批注，实测遇到某些异常批注对象（Text 为 null）会直接抛异常，逐格搬值可以完全规避这条路径；
+        // 目标行沿用它原来自己的格式，跟被删表整体的样式排布规律一致，不需要跟着值搬。
+        var deleteRows = new HashSet<int>();
         foreach (var (start, end) in blocks)
+            for (var r = start; r <= end; r++)
+                deleteRows.Add(r);
+        var deletedRows = deleteRows.Count;
+
+        if (deletedRows > 0)
         {
-            sheet.DeleteRow(start, end - start + 1);
-            deletedRows += end - start + 1;
+            var lastRow = sheet.Dimension!.End.Row;
+            var lastCol = sheet.Dimension.End.Column;
+            var writeRow = 1;
+            for (var readRow = 1; readRow <= lastRow; readRow++)
+            {
+                if (deleteRows.Contains(readRow))
+                    continue;
+                if (writeRow != readRow)
+                    for (var col = 1; col <= lastCol; col++)
+                        sheet.Cells[writeRow, col].Value = sheet.Cells[readRow, col].Value;
+                writeRow++;
+            }
+            var newLastRow = writeRow - 1;
+            if (newLastRow < lastRow)
+                sheet.DeleteRow(newLastRow + 1, lastRow - newLastRow);
         }
 
         // 顺手清一次表尾残留格式（误 Ctrl+A 设过格式留下的"空白行"，跟这次删除本身无关，
@@ -751,16 +810,31 @@ internal static class ActivityDataBackupTool
             ? Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories).FirstOrDefault()
             : null;
 
-    // backup 文件名约定 {stem}_backup_{日期}.xlsx，同一个表可能有多份不同日期的备份。
-    // 按修改时间从新到旧排好序返回，ApplyRestore 会按这个顺序试，最新那份没有这段 id 区间就换下一份。
+    // backup 文件名约定 {stem}_backup_{yyyy-M-d}.xlsx（月份/日期不强制补 0），同一个表可能有多份不同日期的备份。
+    // 这里也兼容老的零补齐命名，按修改时间从新到旧排好序返回，ApplyRestore 会按这个顺序试，最新那份没有
+    // 这段 id 区间就换下一份。
     internal static List<string> FindAllBackups(string backupRoot, string liveFileName)
     {
         if (!Directory.Exists(backupRoot))
             return [];
         var stem = Path.GetFileNameWithoutExtension(liveFileName);
-        var pattern = $"{stem}_backup_*{Path.GetExtension(liveFileName)}";
+        var extension = Path.GetExtension(liveFileName);
         return Directory
-            .EnumerateFiles(backupRoot, pattern, SearchOption.AllDirectories)
+            .EnumerateFiles(backupRoot, $"{stem}_backup_*{extension}", SearchOption.AllDirectories)
+            .Where(path =>
+            {
+                var fileName = Path.GetFileNameWithoutExtension(path);
+                return Regex.IsMatch(
+                        fileName,
+                        $"^{Regex.Escape(stem)}_backup_\\d{{4}}-\\d{{1,2}}-\\d{{1,2}}$",
+                        RegexOptions.IgnoreCase
+                    )
+                    || Regex.IsMatch(
+                        fileName,
+                        $"^{Regex.Escape(stem)}_backup_\\d{{4}}-\\d{{2}}-\\d{{2}}$",
+                        RegexOptions.IgnoreCase
+                    );
+            })
             .Select(p => new FileInfo(p))
             .OrderByDescending(f => f.LastWriteTimeUtc)
             .Select(f => f.FullName)
