@@ -997,11 +997,15 @@ internal static class ActivityDataBackupTool
         {
             if (!typeBelongMap.TryGetValue(id, out var bmt))
             {
-                preserved.Add($"id={id}：Type.xlsx 中不存在该id，保守不删");
+                preserved.Add(
+                    $"id={id}：Type.xlsx 中不存在该id，无法判断所属场景，Item/Icon 中保留该id不删"
+                );
             }
             else if (string.IsNullOrEmpty(bmt))
             {
-                preserved.Add($"id={id}：belongMapType 为空，保守不删");
+                preserved.Add(
+                    $"id={id}：belongMapType 为空，无法判断所属场景，Item/Icon 中保留该id不删"
+                );
             }
             else if (bmt == "[4]")
             {
@@ -1009,7 +1013,7 @@ internal static class ActivityDataBackupTool
             }
             else
             {
-                preserved.Add($"id={id}：belongMapType={bmt}（非纯[4]），不删");
+                preserved.Add($"id={id}：belongMapType={bmt}（非纯[4]），Item/Icon 中保留该id不删");
             }
         }
         return (deletable, preserved);
