@@ -924,7 +924,7 @@ internal static class ActivityDataBackupTool
 
         var notFoundNote =
             notFoundIdsByActivity.Count > 0
-                ? $"，所有备份里都找不到的id：{string.Join("、", notFoundIdsByActivity)}"
+                ? $"，以下id在本表所有备份里都不存在（多为本表本身不覆盖该id，比如不是所有Item都需要Icon数据，通常非异常，仅供核对）：{string.Join("、", notFoundIdsByActivity)}"
                 : "";
         var notFoundActivityNote =
             notFoundActivities.Count > 0
