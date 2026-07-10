@@ -114,48 +114,68 @@ internal static class ActivityDataBackupTool
         OpenSettings();
     }
 
+    // 选中区域支持多行/多个不连续区域（Ctrl+多选、拖拽跨行选），不再只认 ActiveCell 单行——
+    // 用户反馈"只会识别到一个单元格（一行）"，逐行收集选中区域覆盖的所有行号，去重后按行号
+    // 排序处理，跳过的行汇总成一条提示，不逐行弹窗打断操作。
     private static void RunOnSelected(bool delete)
     {
-        var activeRow = AppServices.App.ActiveCell.Row;
+        var selectedRows = new SortedSet<int>();
+        if (AppServices.App.Selection is Range selection)
+            foreach (Range area in selection.Areas)
+            foreach (Range row in area.Rows)
+                selectedRows.Add(row.Row);
+
         var activities = LoadTemplateActivities();
         if (activities is null)
             return;
 
-        var activity = activities.Find(a => a.Row == activeRow);
-        if (activity is null)
+        var matched = new List<Activity>();
+        var skipped = new List<string>();
+        foreach (var row in selectedRows)
+        {
+            var activity = activities.Find(a => a.Row == row);
+            if (activity is null)
+                continue; // 选中区域里混入了非活动数据行（比如表头），静默跳过。
+            if (activity.IsIgnored)
+            {
+                skipped.Add($"{activity.Id}：Ignore 列有填值");
+                continue;
+            }
+            if (activity.RangeByTable.Count == 0)
+            {
+                skipped.Add($"{activity.Id}：没有填起始/终止id");
+                continue;
+            }
+            if (!StatusAllows(activity, delete))
+            {
+                var reason = string.IsNullOrEmpty(activity.Status)
+                    ? "数据状态是空的"
+                    : $"数据状态是「{activity.Status}」";
+                skipped.Add($"{activity.Id}：{reason}（还原要求正好是「已删除」）");
+                continue;
+            }
+            matched.Add(activity);
+        }
+
+        if (matched.Count == 0)
         {
             MessageBox.Show(
-                "当前选中行不是一条活动数据，请把光标定位到活动所在行再操作。",
-                "大文件备份"
-            );
-            return;
-        }
-        if (activity.IsIgnored)
-        {
-            MessageBox.Show($"活动 {activity.Id} 的 Ignore 列有填值，忽略，不处理。", "大文件备份");
-            return;
-        }
-        if (activity.RangeByTable.Count == 0)
-        {
-            MessageBox.Show(
-                $"活动 {activity.Id} 没有填起始/终止id，无需处理，忽略。",
-                "大文件备份"
-            );
-            return;
-        }
-        if (!StatusAllows(activity, delete))
-        {
-            var reason = string.IsNullOrEmpty(activity.Status)
-                ? "数据状态是空的"
-                : $"数据状态是「{activity.Status}」";
-            MessageBox.Show(
-                $"活动 {activity.Id} {reason}，还原要求数据状态正好是「已删除」，跳过（防止拿备份盖掉正式表里可能已经改过的内容）。",
+                skipped.Count > 0
+                    ? "选中的活动都被跳过了：\n" + string.Join("\n", skipped)
+                    : "当前选中范围里没有活动数据，请选中活动所在行再操作。",
                 "大文件备份"
             );
             return;
         }
 
-        Run(delete, new List<Activity> { activity });
+        if (skipped.Count > 0)
+            MessageBox.Show(
+                $"以下 {skipped.Count} 个活动被跳过，不影响其余 {matched.Count} 个活动继续处理：\n"
+                    + string.Join("\n", skipped),
+                "大文件备份"
+            );
+
+        Run(delete, matched);
     }
 
     private static void RunOnAll(bool delete)
