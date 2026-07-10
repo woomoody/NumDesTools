@@ -1,5 +1,6 @@
 using System.Text;
 using MiniExcelLibs;
+using OfficeOpenXml;
 using MessageBox = System.Windows.MessageBox;
 
 #pragma warning disable CA1416
@@ -18,6 +19,10 @@ public static class ExcelDataAutoInsertActivityServer
         // 「#【A自动填表】创新活动【数值模板】.xlsm」跟这个表在同一个目录，查一下有没有被"大文件备份"
         // 功能标记成"已删除"——数据（Type/Icon/Item）都被删了还生成新的排期，容易生成出引用不到资源的活动。
         var deletedActivityStatus = ActivityDataBackupTool.LoadActivityStatusById(indexWk.Path);
+
+        // 加载续开链路数据：target→predecessors 和 predecessor→targets
+        var followUpTargetMap = BuildFollowUpTargetMap(indexWk.Path);
+        var followUpPredMap = BuildFollowUpPredecessorMap(indexWk.Path);
 
         var sourceSheet = indexWk.Worksheets["运营排期"];
         var targetSheet = indexWk.Worksheets["Sheet1"];
@@ -163,6 +168,15 @@ public static class ExcelDataAutoInsertActivityServer
             return;
         }
 
+        // 构建本次批量处理的活动ID集合（用于续开链路检测）
+        var batchIds = new HashSet<string>();
+        foreach (var a in sourceData)
+        {
+            var match = fixDataList.FirstOrDefault(b => b[nameOrId].ToString() == a.Item1);
+            if (match != null)
+                batchIds.Add(match[fixIds].ToString() ?? "");
+        }
+
         var targetDataList = new List<List<string>>();
         var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -239,6 +253,32 @@ public static class ExcelDataAutoInsertActivityServer
                 errorLog.Append(
                     $"运营排期-活动【{nameOrIdString}】：{targetName}（id={targetId}）在「大文件备份」里数据状态是「已删除」，Type/Icon/Item 数据可能还没还原，请检查\r\n"
                 );
+            }
+
+            // 续开链路检测：前驱在同批但目标不在 → 警告
+            if (
+                followUpTargetMap.TryGetValue((string)targetId, out var predecessors)
+                && predecessors.Count > 0
+            )
+            {
+                var missingTargets = new List<string>();
+                foreach (var pred in predecessors)
+                {
+                    if (followUpPredMap.TryGetValue(pred, out var predTargets))
+                    {
+                        foreach (var t in predTargets)
+                        {
+                            if (t != (string)targetId && !batchIds.Contains(t))
+                                missingTargets.Add(t);
+                        }
+                    }
+                }
+                if (missingTargets.Count > 0)
+                {
+                    errorLog.Append(
+                        $"运营排期-活动【{nameOrIdString}】：{targetName}（id={targetId}）是续开目标，其续开链中 {string.Join("、", missingTargets.Distinct())} 未同批处理，续开可能触发这些活动重新读取 Type/Icon/Item 配置，请确认数据完整\r\n"
+                    );
+                }
             }
             var targetPushTimeString = ConvertToDateString(a.Item2, fixDataMatch[fixPush]);
             var targetPushTimeLong = ConvertToUnixTime(sourceStartTimeLong, fixDataMatch[fixPush]);
@@ -604,5 +644,98 @@ public static class ExcelDataAutoInsertActivityServer
         activityList.Resize(
             activityList.Range.Resize[rowMax + 1, activityList.Range.Columns.Count]
         );
+    }
+
+    internal static Dictionary<string, List<string>> BuildFollowUpTargetMap(string templateDir)
+    {
+        var map = new Dictionary<string, List<string>>();
+        var path = System.IO.Path.Combine(templateDir, "ActivityClientFollowUpData.xlsx");
+        if (!System.IO.File.Exists(path))
+            return map;
+        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
+        using var pkg = new ExcelPackage(new System.IO.FileInfo(path));
+        var ws = pkg.Workbook.Worksheets[0];
+        if (ws?.Dimension is null)
+            return map;
+        var idCol = FindColByText(ws, 2, "id");
+        var activityIdsCol = FindColByText(ws, 2, "activityIds");
+        if (idCol == -1 || activityIdsCol == -1)
+            return map;
+        for (var r = 5; r <= ws.Dimension.Rows; r++)
+        {
+            var predId = ws.Cells[r, idCol].Text.Trim();
+            var idsStr = ws.Cells[r, activityIdsCol].Text.Trim();
+            if (string.IsNullOrEmpty(predId) || string.IsNullOrEmpty(idsStr))
+                continue;
+            foreach (
+                var target in idsStr
+                    .Trim('[', ']')
+                    .Split(',')
+                    .Select(s => s.Trim())
+                    .Where(s => !string.IsNullOrEmpty(s))
+            )
+            {
+                if (!map.TryGetValue(target, out var preds))
+                {
+                    preds = new List<string>();
+                    map[target] = preds;
+                }
+                preds.Add(predId);
+            }
+        }
+        return map;
+    }
+
+    internal static Dictionary<string, List<string>> BuildFollowUpPredecessorMap(string templateDir)
+    {
+        var map = new Dictionary<string, List<string>>();
+        var path = System.IO.Path.Combine(templateDir, "ActivityClientFollowUpData.xlsx");
+        if (!System.IO.File.Exists(path))
+            return map;
+        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
+        using var pkg = new ExcelPackage(new System.IO.FileInfo(path));
+        var ws = pkg.Workbook.Worksheets[0];
+        if (ws?.Dimension is null)
+            return map;
+        var idCol = FindColByText(ws, 2, "id");
+        var activityIdsCol = FindColByText(ws, 2, "activityIds");
+        if (idCol == -1 || activityIdsCol == -1)
+            return map;
+        for (var r = 5; r <= ws.Dimension.Rows; r++)
+        {
+            var predId = ws.Cells[r, idCol].Text.Trim();
+            var idsStr = ws.Cells[r, activityIdsCol].Text.Trim();
+            if (string.IsNullOrEmpty(predId) || string.IsNullOrEmpty(idsStr))
+                continue;
+            var targets = idsStr
+                .Trim('[', ']')
+                .Split(',')
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .Distinct();
+            if (!map.TryGetValue(predId, out var list))
+            {
+                list = new List<string>();
+                map[predId] = list;
+            }
+            list.AddRange(targets);
+        }
+        return map;
+    }
+
+    private static int FindColByText(ExcelWorksheet sheet, int row, string text)
+    {
+        if (sheet.Dimension is null)
+            return -1;
+        for (var c = 1; c <= sheet.Dimension.Columns; c++)
+            if (
+                string.Equals(
+                    sheet.Cells[row, c].Text.Trim(),
+                    text,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+                return c;
+        return -1;
     }
 }

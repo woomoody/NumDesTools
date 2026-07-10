@@ -1,4 +1,5 @@
 using System.Text;
+using NumDesTools;
 using OfficeOpenXml;
 
 namespace NumDesTools.Scanner;
@@ -36,6 +37,52 @@ internal class Program
 
         if (args.Contains("--validate"))
             return ConfigValidator.Run(args);
+
+        if (args.Contains("--activity-batch"))
+        {
+            int idx = Array.IndexOf(args, "--activity-batch");
+            var idsFile =
+                idx + 1 < args.Length && !args[idx + 1].StartsWith("--")
+                    ? args[idx + 1]
+                    : @"C:\Users\cent\Documents\tmp\activity_ids_since_2026_03_01.txt";
+            var mdPath =
+                idx + 2 < args.Length && !args[idx + 2].StartsWith("--") ? args[idx + 2] : null;
+
+            if (!File.Exists(idsFile))
+            {
+                Console.Error.WriteLine($"[ERROR] 活动 ID 清单文件不存在：{idsFile}");
+                return 1;
+            }
+
+            var allIds = File.ReadAllLines(idsFile, Encoding.UTF8)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s) && s.All(char.IsDigit))
+                .ToHashSet();
+
+            Console.WriteLine($"读取到 {allIds.Count} 个活动 ID，开始批量验证...");
+
+            var excelPath = @"C:\M1Work\public\Excels\Tables\ActivityClientData.xlsx";
+            var result = ActivityConfigTester.RunHeadless(excelPath, allIds);
+
+            Console.WriteLine();
+            Console.WriteLine(
+                result.Success
+                    ? $"✅ 批量验证完成：{result.ErrorCount} 个配置问题"
+                    : $"❌ 批量验证失败：{result.ErrorMessage}"
+            );
+            Console.WriteLine(
+                $"详细报告：{Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)}\\tmp\\activity_batch_result.txt"
+            );
+
+            if (mdPath != null && result.ReportText is { Length: > 0 })
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(mdPath)!);
+                File.WriteAllText(mdPath, result.ReportText, Encoding.UTF8);
+                Console.WriteLine($"📄 Markdown 报告：{mdPath}");
+            }
+
+            return result.Success ? 0 : 1;
+        }
 
         if (args.Contains("--write-map"))
         {

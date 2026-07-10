@@ -37,11 +37,16 @@ public static class ActivityConfigTester
         );
 
     // Lua 错误中行号的正则：[string "..."]:42:
-    private static readonly Regex LuaErrorLineRegex =
-        new(@"\[string[^\]]*\]:(\d+):", RegexOptions.Compiled);
+    private static readonly Regex LuaErrorLineRegex = new(
+        @"\[string[^\]]*\]:(\d+):",
+        RegexOptions.Compiled
+    );
 
     // Lua txt 每条数据行的 key 正则：\t[123] = {
     private static readonly Regex LuaRowKeyRegex = new(@"^\t\[(\d+)\]", RegexOptions.Compiled);
+
+    // 是否处于无头模式（CLI 批量调用），跳过所有 ExcelAsyncUtil/MessageBox/SetStatus
+    private static bool _isHeadless;
 
     // ─── 规则数据模型（对应 JSON 结构）──────────────────────────────────────────
 
@@ -150,7 +155,7 @@ public static class ActivityConfigTester
                             {
                                 Table = "Tables." + name,
                                 LookupField = "activityID",
-                                Desc = name
+                                Desc = name,
                             }
                         );
                     }
@@ -261,48 +266,77 @@ public static class ActivityConfigTester
             !changedFiles.Any(f => activityTableNames.Contains(Path.GetFileNameWithoutExtension(f)))
         )
         {
-            ExcelAsyncUtil.QueueAsMacro(() => MessageBox.Show("当前 Git 工作区没有活动相关表格的改动。"));
+            ExcelAsyncUtil.QueueAsMacro(() =>
+                MessageBox.Show("当前 Git 工作区没有活动相关表格的改动。")
+            );
             return;
         }
 
         Run(excelPath, null, changedFiles, rules);
     }
 
-    private static void SetStatus(object msg) =>
+    private static void SetStatus(object msg)
+    {
+        if (_isHeadless)
+            return;
         ExcelAsyncUtil.QueueAsMacro(() => AppServices.App.StatusBar = msg);
+    }
 
     // ─── 核心流程 ─────────────────────────────────────────────────────────────────
 
-    private static void Run(
+    /// <summary>
+    /// CLI / 脚本可用的无头验证入口。不依赖 ExcelAsyncUtil / MessageBox / ErrorLogCtp。
+    /// 调用方保证 excelPath 能让 FindLuaOutputDir 找到正确的 Lua 目录。
+    /// </summary>
+    public static BatchResult RunHeadless(
         string excelPath,
-        HashSet<string> filterIds,
-        List<string> gitChangedFiles,
-        RulesRoot rules = null
+        HashSet<string>? filterIds,
+        List<string>? gitChangedFiles = null
     )
     {
-        SetStatus("活动配置验证：读取规则...");
+        _isHeadless = true;
+        try
+        {
+            var rules = LoadRulesHeadless();
+            if (rules == null)
+                return new BatchResult
+                {
+                    Success = false,
+                    ErrorMessage = $"规则文件不存在或解析失败：{RulesFilePath}",
+                };
 
-        rules ??= LoadRules();
-        if (rules == null)
-            return;
+            return RunCore(excelPath, filterIds, gitChangedFiles, rules);
+        }
+        finally
+        {
+            _isHeadless = false;
+        }
+    }
 
-        // 2. 推断 Lua 输出目录
+    /// <summary>共享核心：加载、验证、写结果文件。返回结构化结果。</summary>
+    private static BatchResult RunCore(
+        string excelPath,
+        HashSet<string>? filterIds,
+        List<string>? gitChangedFiles,
+        RulesRoot rules
+    )
+    {
         var luaDir = FindLuaOutputDir(excelPath);
         if (luaDir == null)
-        {
-            ExcelAsyncUtil.QueueAsMacro(
-                () =>
-                    MessageBox.Show(
-                        "无法定位 Code/Assets/LuaScripts/Tables 目录。\n请确认当前工作簿在 public/Excels/Tables/ 下。"
-                    )
-            );
-            return;
-        }
+            return new BatchResult
+            {
+                Success = false,
+                ErrorMessage = "无法定位 Code/Assets/LuaScripts/Tables 目录",
+            };
 
-        // 3. 只导 git 有改动的文件，lua.txt 已存在的表直接复用
-        var needExport =
-            gitChangedFiles ?? SvnGitTools.GitDiffFileCount(Path.GetDirectoryName(excelPath) ?? "");
-        ExportChangedActivityExcels(needExport, rules);
+        // 只在非无头模式下做 Excel 导表（需要 Excel 宏上下文）
+        if (!_isHeadless)
+        {
+            var needExport =
+                gitChangedFiles
+                ?? SvnGitTools.GitDiffFileCount(Path.GetDirectoryName(excelPath) ?? "");
+            ExportChangedActivityExcels(needExport, rules);
+        }
 
         var report = new StringBuilder();
         report.AppendLine("═══════════════ 活动配置验证报告 ═══════════════");
@@ -317,15 +351,88 @@ public static class ActivityConfigTester
         report.AppendLine($"═════ 合计：{errorCount} 个配置问题 ══════");
 
         var reportText = report.ToString();
-        var msg = errorCount > 0 ? $"发现 {errorCount} 个配置问题，查看右侧报告面板。" : "所有活动配置验证通过！";
+        var msg = errorCount > 0 ? $"发现 {errorCount} 个配置问题" : "所有活动配置验证通过！";
+        WriteBatchResult(reportText, msg);
+
+        return new BatchResult
+        {
+            Success = true,
+            ReportText = reportText,
+            ErrorCount = errorCount,
+            WarningCount = 0,
+        };
+    }
+
+    /// <summary>Excel Ribbon 按钮入口：加载规则后调 RunCore，再用 QueueAsMacro 展示结果。</summary>
+    private static void Run(
+        string excelPath,
+        HashSet<string> filterIds,
+        List<string> gitChangedFiles,
+        RulesRoot rules = null
+    )
+    {
+        SetStatus("活动配置验证：读取规则...");
+        rules ??= LoadRules();
+        if (rules == null)
+            return;
+
+        var luaDir = FindLuaOutputDir(excelPath);
+        if (luaDir == null)
+        {
+            ExcelAsyncUtil.QueueAsMacro(() =>
+                MessageBox.Show(
+                    "无法定位 Code/Assets/LuaScripts/Tables 目录。\n请确认当前工作簿在 public/Excels/Tables/ 下。"
+                )
+            );
+            return;
+        }
+
+        var result = RunCore(excelPath, filterIds, gitChangedFiles, rules);
+
+        var msg =
+            result.ErrorCount > 0
+                ? $"发现 {result.ErrorCount} 个配置问题，查看右侧报告面板。"
+                : "所有活动配置验证通过！";
         ExcelAsyncUtil.QueueAsMacro(() =>
         {
             AppServices.App.StatusBar = false;
             ErrorLogCtp.DisposeCtp();
-            PluginLog.Write(reportText);
-            ErrorLogCtp.CreateCtpNormal(reportText);
+            PluginLog.Write(result.ReportText ?? "");
+            ErrorLogCtp.CreateCtpNormal(result.ReportText ?? "");
             MessageBox.Show(msg);
         });
+    }
+
+    private static void WriteBatchResult(string reportText, string msg)
+    {
+        var path = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            "tmp",
+            "activity_batch_result.txt"
+        );
+
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(
+            path,
+            $"{msg}{Environment.NewLine}{Environment.NewLine}{reportText}",
+            Encoding.UTF8
+        );
+    }
+
+    /// <summary>无头模式用：加载规则文件，不弹 MessageBox。</summary>
+    private static RulesRoot? LoadRulesHeadless()
+    {
+        if (!File.Exists(RulesFilePath))
+            return null;
+        try
+        {
+            var json = File.ReadAllText(RulesFilePath, Encoding.UTF8);
+            return JsonConvert.DeserializeObject<RulesRoot>(json);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     // ─── 规则文件加载 ─────────────────────────────────────────────────────────────
@@ -338,7 +445,9 @@ public static class ActivityConfigTester
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(RulesFilePath)!);
                 File.WriteAllText(RulesFilePath, DefaultRulesJson, Encoding.UTF8);
-                MessageBox.Show($"已在以下路径生成默认规则配置文件，请按实际项目填写后重新执行验证：\n{RulesFilePath}");
+                MessageBox.Show(
+                    $"已在以下路径生成默认规则配置文件，请按实际项目填写后重新执行验证：\n{RulesFilePath}"
+                );
             }
             catch (Exception ex)
             {
@@ -732,7 +841,7 @@ public static class ActivityConfigTester
                     "BpMergeScore",
                     "LandmarkBuilding",
                     "Object",
-                    "LteMultiScenarioData"
+                    "LteMultiScenarioData",
                 }
             )
             {
@@ -761,7 +870,7 @@ public static class ActivityConfigTester
                         "Help_",
                         "FindTargetTemplateData_",
                         "PictorialBookItemData_",
-                        "ItemExchangePointObstacle_"
+                        "ItemExchangePointObstacle_",
                     }
                 )
                 {
@@ -945,8 +1054,10 @@ public static class ActivityConfigTester
     // ─── 从 Lua 错误消息推断配置问题位置 ─────────────────────────────────────────
 
     // 尝试从 Lua 错误中提取类似 "ActivityClientData[1234]" 的配置引用，定位 Excel 行
-    private static readonly Regex LuaConfigRefRegex =
-        new(@"ActivityClient\w*\[(\d+)\]|Tables\.(\w+)\[(\d+)\]", RegexOptions.Compiled);
+    private static readonly Regex LuaConfigRefRegex = new(
+        @"ActivityClient\w*\[(\d+)\]|Tables\.(\w+)\[(\d+)\]",
+        RegexOptions.Compiled
+    );
 
     private static string InferConfigLocation(
         string errorMsg,
@@ -1064,8 +1175,9 @@ public static class ActivityConfigTester
         {
             if (typeKey == "2")
                 continue; // LTE chain handled separately
+            var tableExpr = ToLuaTableExpr(rule.Table);
             sb.AppendLine(
-                $"_typeMap[{typeKey}] = {{tbl={ToLuaTableExpr(rule.Table)}, lf='{rule.LookupField}'}}"
+                $"_typeMap[{typeKey}] = {{tbl={tableExpr}, lf='{rule.LookupField}', name='{EscapeLua(tableExpr)}'}}"
             );
         }
         foreach (var (typeKey, luaKey) in typeTableMap)
@@ -1074,8 +1186,9 @@ public static class ActivityConfigTester
                 continue;
             if (typeSubTableRules.ContainsKey(typeKey))
                 continue;
+            var tableExpr = ToLuaTableExpr(luaKey);
             sb.AppendLine(
-                $"_typeMap[{typeKey}] = {{tbl={ToLuaTableExpr(luaKey)}, lf='activityID'}}"
+                $"_typeMap[{typeKey}] = {{tbl={tableExpr}, lf='activityID', name='{EscapeLua(tableExpr)}'}}"
             );
         }
         sb.AppendLine();
@@ -1135,7 +1248,7 @@ local function _checkClientData(actId, actData)
         local _sub = _typeEntry.tbl and _typeEntry.tbl[_lookupKey]
         if not _sub then
             _e('ActivityClientData', actId, 'activityID',
-                'ERR_REF:'..tostring(_typeEntry.tbl)..'_BY_TYPE:'..tostring(_lookupKey))
+                'ERR_REF:'.._typeEntry.name..'_BY_TYPE:'..tostring(_lookupKey))
         else
             _tl('  [OK] sub-table: type='..tostring(actData.type)..' subId='..tostring(_lookupKey))
             local _deepCheck = _subCheckFuncs and _subCheckFuncs[actData.type]
@@ -1905,5 +2018,15 @@ SolarRoot        = setmetatable({}, { __index=function(t,k) t[k]=setmetatable({}
         const string prefix = "Tables.";
         string key = tableRef.StartsWith(prefix) ? tableRef[prefix.Length..] : tableRef;
         return IsLuaIdentifier(key) ? $"Tables.{key}" : $"Tables[\"{EscapeLua(key)}\"]";
+    }
+
+    /// <summary>无头模式批量验证的结构化返回值。</summary>
+    public record BatchResult
+    {
+        public bool Success { get; init; }
+        public string ReportText { get; init; } = "";
+        public int ErrorCount { get; init; }
+        public int WarningCount { get; init; }
+        public string? ErrorMessage { get; init; }
     }
 }

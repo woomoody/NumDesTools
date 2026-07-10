@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "omnisharp": {
+      "disabled": true
+    },
+    "csharp-ls": {
+      "command": "csharp-ls",
+      "fileTypes": [".cs", ".csproj", ".sln"],
+      "rootMarkers": ["*.sln", "*.csproj"]
+    }
+  }
+}

@@ -154,9 +154,7 @@ public class ExcelSearchIndex
     /// </summary>
     public void SaveToDisk(string jsonPath)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(jsonPath)!);
-        var tmpPath = jsonPath + ".tmp";
-        try
+        var ok = FileLockHelper.TryAtomicWriteWithRetry(jsonPath, tmpPath =>
         {
             using var fs = new FileStream(
                 tmpPath,
@@ -167,22 +165,11 @@ public class ExcelSearchIndex
             );
             using var gz = new GZipStream(fs, CompressionLevel.Fastest);
             JsonSerializer.Serialize(gz, this, _opts);
-            // GZipStream 必须在 fs 关闭前 Flush，否则尾部不完整
             gz.Flush();
             fs.Flush();
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"[ExcelIndex] SaveToDisk write failed: {ex.Message}");
-            try
-            {
-                File.Delete(tmpPath);
-            }
-            catch { }
-            throw;
-        }
-        // 写成功后原子替换
-        File.Move(tmpPath, jsonPath, overwrite: true);
+        });
+        if (!ok)
+            PluginLog.Write($"[ExcelIndex] SaveToDisk write failed after retries");
     }
 
     public static ExcelSearchIndex? LoadFromDisk(string jsonPath)

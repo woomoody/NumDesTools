@@ -744,7 +744,7 @@ public class LteData
                 }
 
                 if (dataWritten)
-                    targetExcel.Save();
+                    FileLockHelper.SaveWithRetry(targetExcel, targetExcel.File.FullName);
             }
 
             targetExcel?.Dispose();
