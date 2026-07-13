@@ -932,43 +932,85 @@ public static class ExcelConflictEntry
             {
                 string? oursLabel,
                     theirsLabel;
-                try
-                {
-                    var oursBranch = oursBranchHint ?? repo.Head.FriendlyName;
-                    var oursSha = repo.Head.Tip?.Sha[..8] ?? "?";
-                    oursLabel = $"{oursBranch}  ({oursSha})";
+                var gitDir = repo.Info.Path;
+                // rebase 下 stage 语义反转：conflict.Ours(stage2)=upstream 基线，
+                // conflict.Theirs(stage3)=本地重放。两侧均存在时对调 blob 提取目标 + label，
+                // 让 UI"我的=本地、他的=upstream"与 merge 直觉一致；三方合并内容对称，
+                // 以"我的"(本地) 为基写回结果仍正确。
+                bool isRebase =
+                    File.Exists(Path.Combine(gitDir, "REBASE_HEAD"))
+                    || Directory.Exists(Path.Combine(gitDir, "rebase-merge"));
+                bool canSwap = isRebase && conflict.Ours != null && conflict.Theirs != null;
 
-                    var gitDir = repo.Info.Path;
-                    var theirsSha =
-                        knownTheirsSha
-                        ?? ReadGitHeadFile(gitDir, "CHERRY_PICK_HEAD")
-                        ?? ReadGitHeadFile(gitDir, "MERGE_HEAD");
-                    if (theirsSha != null)
+                if (canSwap)
+                {
+                    var rebaseHeadSha = ReadGitHeadFile(gitDir, "REBASE_HEAD");
+                    var ontoRef = ReadRebaseFile(gitDir, "onto");
+                    var headName = ReadRebaseFile(gitDir, "head-name");
+                    var localBranch =
+                        headName?.Replace("refs/heads/", string.Empty) ?? "(nobranch)";
+
+                    var mySha8 = rebaseHeadSha != null ? ShortSha(rebaseHeadSha) : "?";
+                    oursLabel = $"{localBranch}  ({mySha8})  rebase";
+
+                    string? theirSha = null;
+                    var theirDesc = "(upstream)";
+                    if (ontoRef != null)
                     {
-                        var sha8 = theirsSha.Length >= 8 ? theirsSha[..8] : theirsSha;
-                        if (theirsBranchHint != null)
+                        var ontoCommit =
+                            repo.Lookup<Commit>(ontoRef) ?? repo.Branches[ontoRef]?.Tip;
+                        if (ontoCommit != null)
                         {
-                            theirsLabel = $"{theirsBranchHint}  ({sha8})";
+                            theirSha = ontoCommit.Sha;
+                            var ontoBranch = repo
+                                .Branches.Where(b => !b.IsRemote && b.Tip?.Sha == ontoCommit.Sha)
+                                .Select(b => b.FriendlyName)
+                                .FirstOrDefault();
+                            theirDesc = ontoBranch ?? ShortSha(ontoCommit.Sha);
+                        }
+                    }
+                    theirsLabel = $"{theirDesc}  ({(theirSha != null ? ShortSha(theirSha) : "?")})";
+                }
+                else
+                {
+                    try
+                    {
+                        var oursBranch = oursBranchHint ?? repo.Head.FriendlyName;
+                        var oursSha = repo.Head.Tip?.Sha[..8] ?? "?";
+                        oursLabel = $"{oursBranch}  ({oursSha})";
+
+                        var theirsSha =
+                            knownTheirsSha
+                            ?? ReadGitHeadFile(gitDir, "CHERRY_PICK_HEAD")
+                            ?? ReadGitHeadFile(gitDir, "MERGE_HEAD");
+                        if (theirsSha != null)
+                        {
+                            var sha8 = theirsSha.Length >= 8 ? theirsSha[..8] : theirsSha;
+                            if (theirsBranchHint != null)
+                            {
+                                theirsLabel = $"{theirsBranchHint}  ({sha8})";
+                            }
+                            else
+                            {
+                                var theirsBranch = repo
+                                    .Branches.Where(b => b.Tip?.Sha == theirsSha)
+                                    .OrderBy(b => b.IsRemote)
+                                    .Select(b => b.FriendlyName)
+                                    .FirstOrDefault();
+                                theirsLabel =
+                                    theirsBranch != null ? $"{theirsBranch}  ({sha8})" : sha8;
+                            }
                         }
                         else
                         {
-                            var theirsBranch = repo
-                                .Branches.Where(b => b.Tip?.Sha == theirsSha)
-                                .OrderBy(b => b.IsRemote)
-                                .Select(b => b.FriendlyName)
-                                .FirstOrDefault();
-                            theirsLabel = theirsBranch != null ? $"{theirsBranch}  ({sha8})" : sha8;
+                            theirsLabel = theirsBranchHint;
                         }
                     }
-                    else
+                    catch
                     {
+                        oursLabel = oursBranchHint;
                         theirsLabel = theirsBranchHint;
                     }
-                }
-                catch
-                {
-                    oursLabel = oursBranchHint;
-                    theirsLabel = theirsBranchHint;
                 }
 
                 void WriteBlob(IndexEntry? entry, string outFile)
@@ -981,25 +1023,35 @@ public static class ExcelConflictEntry
                     src.CopyTo(dst);
                 }
 
-                WriteBlob(conflict.Ours, oursPath);
-
-                // Theirs：优先用 Index conflict blob，fallback 到 knownTheirsSha / HEAD 文件
-                if (conflict.Theirs != null)
+                if (canSwap)
                 {
-                    WriteBlob(conflict.Theirs, theirsPath);
-                }
-                else if (knownTheirsSha != null)
-                {
-                    GitShowBySha(gitRoot, knownTheirsSha, relativePath, theirsPath);
+                    // rebase 对调：我的(oursPath) ← 本地重放(stage3=Theirs)，
+                    // 他的(theirsPath) ← upstream 基线(stage2=Ours)
+                    WriteBlob(conflict.Theirs!, oursPath);
+                    WriteBlob(conflict.Ours!, theirsPath);
                 }
                 else
                 {
-                    var theirsSha =
-                        ReadGitHeadFile(repo.Info.Path, "CHERRY_PICK_HEAD")
-                        ?? ReadGitHeadFile(repo.Info.Path, "MERGE_HEAD");
-                    if (theirsSha == null)
-                        throw new InvalidOperationException("找不到 theirs 版本");
-                    GitShowBySha(gitRoot, theirsSha, relativePath, theirsPath);
+                    WriteBlob(conflict.Ours, oursPath);
+
+                    // Theirs：优先用 Index conflict blob，fallback 到 knownTheirsSha / HEAD 文件
+                    if (conflict.Theirs != null)
+                    {
+                        WriteBlob(conflict.Theirs, theirsPath);
+                    }
+                    else if (knownTheirsSha != null)
+                    {
+                        GitShowBySha(gitRoot, knownTheirsSha, relativePath, theirsPath);
+                    }
+                    else
+                    {
+                        var theirsSha =
+                            ReadGitHeadFile(repo.Info.Path, "CHERRY_PICK_HEAD")
+                            ?? ReadGitHeadFile(repo.Info.Path, "MERGE_HEAD");
+                        if (theirsSha == null)
+                            throw new InvalidOperationException("找不到 theirs 版本");
+                        GitShowBySha(gitRoot, theirsSha, relativePath, theirsPath);
+                    }
                 }
 
                 // merge-base（失败不影响主流程）
@@ -1014,6 +1066,11 @@ public static class ExcelConflictEntry
                     catch { }
                 }
 
+                // rebase 下工作区分支用 head-name（branchB）使"我的"标 [当前]；否则用 HEAD 分支名
+                var headBranchForUi = canSwap
+                    ? ReadRebaseFile(gitDir, "head-name")?.Replace("refs/heads/", string.Empty)
+                    : repo.Head.FriendlyName;
+
                 var result = OpenWindow(
                     oursPath,
                     theirsPath,
@@ -1022,7 +1079,7 @@ public static class ExcelConflictEntry
                     basePath: resolvedBasePath,
                     oursLabel: oursLabel,
                     theirsLabel: theirsLabel,
-                    headBranch: repo.Head.FriendlyName
+                    headBranch: headBranchForUi
                 );
 
                 // "无差异"时 OpenWindow 返回 true 但不做 git add，冲突仍在 Index → 补做
@@ -1062,6 +1119,14 @@ public static class ExcelConflictEntry
         var sha = File.ReadAllText(path).Trim();
         return string.IsNullOrEmpty(sha) ? null : sha;
     }
+
+    // 读 .git/rebase-merge/ 下的状态文件（onto / head-name / orig-head 等）
+    private static string? ReadRebaseFile(string gitDir, string name) =>
+        File.Exists(Path.Combine(gitDir, "rebase-merge", name))
+            ? File.ReadAllText(Path.Combine(gitDir, "rebase-merge", name)).Trim()
+            : null;
+
+    private static string ShortSha(string sha) => sha.Length >= 8 ? sha[..8] : sha;
 
     // 通过 gitRoot 工作区路径定位 .git/ 目录后读取 HEAD 文件
     private static string? ResolveHeadFileSha(string gitRoot, string name)
