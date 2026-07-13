@@ -45,9 +45,6 @@ public static class ActivityConfigTester
     // Lua txt 每条数据行的 key 正则：\t[123] = {
     private static readonly Regex LuaRowKeyRegex = new(@"^\t\[(\d+)\]", RegexOptions.Compiled);
 
-    // 是否处于无头模式（CLI 批量调用），跳过所有 ExcelAsyncUtil/MessageBox/SetStatus
-    private static bool _isHeadless;
-
     // ─── 规则数据模型（对应 JSON 结构）──────────────────────────────────────────
 
     private class RulesRoot
@@ -277,8 +274,6 @@ public static class ActivityConfigTester
 
     private static void SetStatus(object msg)
     {
-        if (_isHeadless)
-            return;
         ExcelAsyncUtil.QueueAsMacro(() => AppServices.App.StatusBar = msg);
     }
 
@@ -294,23 +289,15 @@ public static class ActivityConfigTester
         List<string>? gitChangedFiles = null
     )
     {
-        _isHeadless = true;
-        try
-        {
-            var rules = LoadRulesHeadless();
-            if (rules == null)
-                return new BatchResult
-                {
-                    Success = false,
-                    ErrorMessage = $"规则文件不存在或解析失败：{RulesFilePath}",
-                };
+        var rules = LoadRulesHeadless();
+        if (rules == null)
+            return new BatchResult
+            {
+                Success = false,
+                ErrorMessage = $"规则文件不存在或解析失败：{RulesFilePath}",
+            };
 
-            return RunCore(excelPath, filterIds, gitChangedFiles, rules);
-        }
-        finally
-        {
-            _isHeadless = false;
-        }
+        return RunCore(excelPath, filterIds, gitChangedFiles, rules, isHeadless: true);
     }
 
     /// <summary>共享核心：加载、验证、写结果文件。返回结构化结果。</summary>
@@ -318,7 +305,8 @@ public static class ActivityConfigTester
         string excelPath,
         HashSet<string>? filterIds,
         List<string>? gitChangedFiles,
-        RulesRoot rules
+        RulesRoot rules,
+        bool isHeadless
     )
     {
         var luaDir = FindLuaOutputDir(excelPath);
@@ -330,7 +318,7 @@ public static class ActivityConfigTester
             };
 
         // 只在非无头模式下做 Excel 导表（需要 Excel 宏上下文）
-        if (!_isHeadless)
+        if (!isHeadless)
         {
             var needExport =
                 gitChangedFiles
@@ -376,18 +364,14 @@ public static class ActivityConfigTester
         if (rules == null)
             return;
 
-        var luaDir = FindLuaOutputDir(excelPath);
-        if (luaDir == null)
+        var result = RunCore(excelPath, filterIds, gitChangedFiles, rules, isHeadless: false);
+
+        if (!result.Success)
         {
-            ExcelAsyncUtil.QueueAsMacro(() =>
-                MessageBox.Show(
-                    "无法定位 Code/Assets/LuaScripts/Tables 目录。\n请确认当前工作簿在 public/Excels/Tables/ 下。"
-                )
-            );
+            var errMsg = result.ErrorMessage ?? "验证失败";
+            ExcelAsyncUtil.QueueAsMacro(() => MessageBox.Show(errMsg));
             return;
         }
-
-        var result = RunCore(excelPath, filterIds, gitChangedFiles, rules);
 
         var msg =
             result.ErrorCount > 0
@@ -405,13 +389,8 @@ public static class ActivityConfigTester
 
     private static void WriteBatchResult(string reportText, string msg)
     {
-        var path = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            "tmp",
-            "activity_batch_result.txt"
-        );
+        var path = Path.Combine(OutputPaths.Misc, "activity_batch_result.txt");
 
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(
             path,
             $"{msg}{Environment.NewLine}{Environment.NewLine}{reportText}",

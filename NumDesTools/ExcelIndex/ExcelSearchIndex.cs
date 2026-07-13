@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 
 namespace NumDesTools.ExcelIndex;
 
@@ -154,22 +155,59 @@ public class ExcelSearchIndex
     /// </summary>
     public void SaveToDisk(string jsonPath)
     {
-        var ok = FileLockHelper.TryAtomicWriteWithRetry(jsonPath, tmpPath =>
-        {
-            using var fs = new FileStream(
-                tmpPath,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None,
-                65536
-            );
-            using var gz = new GZipStream(fs, CompressionLevel.Fastest);
-            JsonSerializer.Serialize(gz, this, _opts);
-            gz.Flush();
-            fs.Flush();
-        });
+        var ok = TryAtomicWriteWithRetry(
+            jsonPath,
+            tmpPath =>
+            {
+                using var fs = new FileStream(
+                    tmpPath,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None,
+                    65536
+                );
+                using var gz = new GZipStream(fs, CompressionLevel.Fastest);
+                JsonSerializer.Serialize(gz, this, _opts);
+                gz.Flush();
+                fs.Flush();
+            }
+        );
         if (!ok)
             PluginLog.Write($"[ExcelIndex] SaveToDisk write failed after retries");
+    }
+
+    private static bool TryAtomicWriteWithRetry(string jsonPath, Action<string> writeAction)
+    {
+        const int maxRetries = 3;
+        const int retryDelayMs = 200;
+
+        var tmpPath = jsonPath + ".tmp";
+
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(jsonPath)!);
+                writeAction(tmpPath);
+                File.Move(tmpPath, jsonPath, overwrite: true);
+                return true;
+            }
+            catch (IOException) when (attempt < maxRetries)
+            {
+                Thread.Sleep(retryDelayMs);
+            }
+            catch (IOException)
+            {
+                try
+                {
+                    File.Delete(tmpPath);
+                }
+                catch { }
+                return false;
+            }
+        }
+
+        return false;
     }
 
     public static ExcelSearchIndex? LoadFromDisk(string jsonPath)
