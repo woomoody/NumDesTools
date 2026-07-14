@@ -136,6 +136,18 @@ namespace NumDesTools.Config
                 try
                 {
                     ReadFromFile();
+                    // 补全新版本新增的默认字段
+                    var added = 0;
+                    foreach (var kv in DefaultValue)
+                    {
+                        if (!_configData.Value.ContainsKey(kv.Key))
+                        {
+                            _configData.Value[kv.Key] = kv.Value;
+                            added++;
+                        }
+                    }
+                    if (added > 0)
+                        lock (_saveLock) { SaveConfigCore(); }
                 }
                 catch (Exception ex)
                 {

@@ -274,7 +274,15 @@ public static class ActivityConfigTester
 
     private static void SetStatus(object msg)
     {
-        ExcelAsyncUtil.QueueAsMacro(() => AppServices.App.StatusBar = msg);
+        try
+        {
+            ExcelAsyncUtil.QueueAsMacro(() => AppServices.App.StatusBar = msg);
+        }
+        catch (NullReferenceException)
+        {
+            // headless mode: Excel not running, just log to console
+            Console.WriteLine($"[Status] {msg}");
+        }
     }
 
     // ─── 核心流程 ─────────────────────────────────────────────────────────────────

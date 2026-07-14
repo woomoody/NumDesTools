@@ -585,52 +585,59 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         GlobalValue.ReadOrCreate();
         if (GitRootPath != String.Empty)
         {
-            var (delta, _) = SvnGitTools.GetLastCommitDelta("cent", GitRootPath);
-            var lastDay = delta.Days;
-
-            // 超过期限进行密码验证
-            if (lastDay > 20)
+            try
             {
-                // 弹出输入框让用户输入密码
-                string password = ShowPasswordInputDialog("密码验证", "请输入密码:");
+                var (delta, _) = SvnGitTools.GetLastCommitDelta("cent", GitRootPath);
+                var lastDay = delta.Days;
 
-                if (!string.IsNullOrEmpty(password))
+                // 超过期限进行密码验证
+                if (lastDay > 20)
                 {
-                    // 验证密码
-                    bool isPasswordValid = ValidatePassword(password);
+                    // 弹出输入框让用户输入密码
+                    string password = ShowPasswordInputDialog("密码验证", "请输入密码:");
 
-                    if (isPasswordValid)
+                    if (!string.IsNullOrEmpty(password))
                     {
-                        MessageBox.Show(
-                            "密码验证成功！",
-                            "成功",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information
-                        );
-                        return true;
-                        // 验证通过，继续执行其他操作
+                        // 验证密码
+                        bool isPasswordValid = ValidatePassword(password);
+
+                        if (isPasswordValid)
+                        {
+                            MessageBox.Show(
+                                "密码验证成功！",
+                                "成功",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Information
+                            );
+                            return true;
+                            // 验证通过，继续执行其他操作
+                        }
+                        else
+                        {
+                            MessageBox.Show(
+                                "密码错误！",
+                                "错误",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error
+                            );
+                            return false;
+                        }
                     }
                     else
                     {
                         MessageBox.Show(
-                            "密码错误！",
-                            "错误",
+                            "密码输入已取消",
+                            "提示",
                             MessageBoxButtons.OK,
-                            MessageBoxIcon.Error
+                            MessageBoxIcon.Information
                         );
                         return false;
                     }
                 }
-                else
-                {
-                    MessageBox.Show(
-                        "密码输入已取消",
-                        "提示",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information
-                    );
-                    return false;
-                }
+            }
+            catch (Exception ex)
+            {
+                PluginLog.Write($"[CheckRes] Git 验证失败，跳过（{ex.Message}）");
             }
         }
         return true;
