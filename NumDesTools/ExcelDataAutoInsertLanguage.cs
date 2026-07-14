@@ -21,8 +21,6 @@ public static class ExcelDataAutoInsertLanguage
         ErrorLogCtp.DisposeCtp();
 
         var errorExcelList = new List<List<(int, string, string)>>();
-        if (errorExcelList == null)
-            throw new ArgumentNullException(nameof(errorExcelList));
 
         List<(int, string, string)> error = LanguageDialogData(
             sourceSheet,
@@ -486,8 +484,6 @@ public static class ExcelDataAutoInsertLanguage
         ErrorLogCtp.DisposeCtp();
 
         var errorExcelList = new List<List<(int, string, string)>>();
-        if (errorExcelList == null)
-            throw new ArgumentNullException(nameof(errorExcelList));
 
         List<(int, string, string)> error = LanguageDialogDataByUd(
             sourceSheet,
@@ -995,8 +991,6 @@ public static class ExcelDataAutoInsertLanguage
         ErrorLogCtp.DisposeCtp();
 
         var errorExcelList = new List<List<(int, string, string)>>();
-        if (errorExcelList == null)
-            throw new ArgumentNullException(nameof(errorExcelList));
 
         string error = LanguageDialogDataByUdNew(
             sourceTitle,

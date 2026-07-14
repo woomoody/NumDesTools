@@ -19,11 +19,11 @@ namespace NumDesTools.Tests
         public void TablePathFix_ClondikeComposite_MapsCorrectly()
         {
             var workbookPath = "C:\\Projects\\Test";
-            var input = "something克朗代克##sub#sheet"; // contains 克朗代克## and $
+            var input = "something鍏嬫湕浠ｅ厠##sub#sheet"; // contains 鍏嬫湕浠ｅ厠## and $
             // Simulate case with $ in string
-            input = "abc克朗代克##sub$sheet";
+            input = "abc鍏嬫湕浠ｅ厠##sub$sheet";
             var output = MapExcel.TablePathFix(input, workbookPath);
-            Assert.Contains("克朗代克", output);
+            Assert.Contains("鍏嬫湕浠ｅ厠", output);
         }
     }
 }

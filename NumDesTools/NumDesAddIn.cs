@@ -116,7 +116,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     public NumDesAddIn()
     {
         InitializeButtons();
-        ExcelPackage.License.SetNonCommercialPersonal("cent");
+        ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
     }
 
     // MiniExcel本地缓存管理
@@ -255,7 +255,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "CheckSheetValue" => CheckSheetValueText,
             "ShowDnaLog" => ShowDnaLogText,
             "ShowAI" => ShowAiText,
-            "ShowAIAgent" => _showAgentText,
+            "ShowAIAgent" => AgentText,
             _ => "",
         };
         return latext;
@@ -1117,7 +1117,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
 
         var agentCtpName = "AI Agent-Excel";
-        if (_showAgentText == "Agent模式：开启")
+        if (_agentMode)
         {
             PluginLog.Write($"[CTP] DeleteCTP before rebuild: {agentCtpName}");
             NumDesCTP.DeleteCTP(true, agentCtpName);
@@ -1161,7 +1161,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                             ExcelAsyncUtil.QueueAsMacro(() =>
                             {
                                 PluginLog.Write("[CTP][X] Agent X-close confirmed");
-                                _showAgentText = "Agent模式：关闭";
+                                _agentMode = false;
                                 CustomRibbon?.InvalidateControl("ShowAIAgent");
                             });
                         });
@@ -3523,18 +3523,20 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         GlobalValue.SaveValue("ShowDnaLogText", ShowDnaLogText);
     }
 
-    private static string _showAgentText = "Agent模式：关闭";
+    private const string AgentOn = "Agent模式：开启";
+    private const string AgentOff = "Agent模式：关闭";
+    private static bool _agentMode;
+    private static string AgentText => _agentMode ? AgentOn : AgentOff;
     private static AIAgentPanel _agentCtp;
 
     [ExcelCommand]
     public static void ShowAIAgent()
     {
-        _showAgentText =
-            _showAgentText == "Agent模式：开启" ? "Agent模式：关闭" : "Agent模式：开启";
+        _agentMode = !_agentMode;
         CustomRibbon?.InvalidateControl("ShowAIAgent");
 
         var ctpName = "AI Agent-Excel";
-        if (_showAgentText == "Agent模式：开启")
+        if (_agentMode)
         {
             GlobalValue.ReadOrCreate();
             if (string.IsNullOrWhiteSpace(AppServices.Config.Llm.ApiKey))
@@ -3545,7 +3547,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning
                 );
-                _showAgentText = "Agent模式：关闭";
+                _agentMode = false;
                 CustomRibbon?.InvalidateControl("ShowAIAgent");
                 return;
             }
@@ -3590,7 +3592,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                             ExcelAsyncUtil.QueueAsMacro(() =>
                             {
                                 PluginLog.Write("[CTP][X] Agent(ShowAIAgent) X-close confirmed");
-                                _showAgentText = "Agent模式：关闭";
+                                _agentMode = false;
                                 CustomRibbon?.InvalidateControl("ShowAIAgent");
                             });
                         });

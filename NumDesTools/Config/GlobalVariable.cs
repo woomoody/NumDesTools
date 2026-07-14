@@ -137,11 +137,18 @@ namespace NumDesTools.Config
                 {
                     ReadFromFile();
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // JSON 损坏或读取失败：降级到默认配置，不影响插件加载
+                    // JSON 损坏或读取失败：先备份损坏文件，再降级到默认配置
+                    try
+                    {
+                        var corruptPath = FilePath + $".corrupt.{DateTime.Now:yyyyMMddHHmmss}";
+                        File.Copy(FilePath, corruptPath, overwrite: true);
+                        PluginLog.Write($"[Config] 配置文件损坏，已备份至 {corruptPath}，降级为默认配置: {ex.Message}");
+                    }
+                    catch { /* 备份失败不影响降级 */ }
                     _configData = CreateDefaultConfig();
-                    SaveConfig();
+                    lock (_saveLock) { SaveConfigCore(); }
                 }
             }
             else
@@ -281,7 +288,7 @@ namespace NumDesTools.Config
             };
         }
 
-        private readonly object _saveLock = new();
+        private static readonly object _saveLock = new();
 
         public void SaveValue(string key, string value)
         {
@@ -326,13 +333,21 @@ namespace NumDesTools.Config
 
             // 序列化回文件
             var updatedJson = JsonConvert.SerializeObject(orderedDictAsDict, Formatting.Indented);
-            File.WriteAllText(FilePath, updatedJson, Encoding.UTF8);
+            AtomicWrite(FilePath, updatedJson);
 
             // 同步内存
             Value[key] = value;
         }
 
         public void SaveConfig()
+        {
+            lock (_saveLock)
+            {
+                SaveConfigCore();
+            }
+        }
+
+        private void SaveConfigCore()
         {
             // 创建一个新的有序字典，用于存储格式化后的值
             var formattedValue = new OrderedDictionary();
@@ -382,11 +397,19 @@ namespace NumDesTools.Config
             // 序列化为 JSON
             var json = JsonConvert.SerializeObject(orderedDictAsDict, Formatting.Indented);
 
-            // 写入文件
-            File.WriteAllText(FilePath, json, Encoding.UTF8);
+            // 写入文件（原子写入：先写临时文件，再替换）
+            AtomicWrite(FilePath, json);
         }
 
         public void ResetToDefault(params string[] ignoreKey)
+        {
+            lock (_saveLock)
+            {
+                ResetToDefaultCore(ignoreKey);
+            }
+        }
+
+        private void ResetToDefaultCore(params string[] ignoreKey)
         {
             try
             {
@@ -451,6 +474,38 @@ namespace NumDesTools.Config
         }
 
         #endregion
+
+        private static void AtomicWrite(string path, string content)
+        {
+            var tmp = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(tmp, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                var bak = path + ".bak";
+                if (File.Exists(path))
+                    File.Replace(tmp, path, bak, ignoreMetadataErrors: true);
+                else
+                    File.Move(tmp, path, overwrite: true);
+            }
+            catch
+            {
+                // File.Replace 可能因为跨卷失败，回退到 Move + Delete
+                try
+                {
+                    if (File.Exists(path))
+                    {
+                        var bak = path + ".bak";
+                        File.Copy(path, bak, overwrite: true);
+                    }
+                    File.Move(tmp, path, overwrite: true);
+                }
+                catch { /* 尽力而为 */ }
+            }
+            finally
+            {
+                try { File.Delete(tmp); } catch { }
+            }
+        }
 
         #region 长文本处理
 

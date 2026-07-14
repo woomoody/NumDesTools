@@ -34,10 +34,10 @@ public class LteCoreUnitTests
     {
         var dic = new Dictionary<string, string>
         {
-            ["��������"] = "1,2",
-            ["��Ʒ���"] = "a,b"
+            ["消耗量组"] = "1,2",
+            ["商品编号"] = "a,b"
         };
-        var result = LteCore.Arr(dic, "��Ʒ���", "��������", "");
+        var result = LteCore.Arr(dic, "商品编号", "消耗量组", "消耗量组");
         Assert.Equal("[a,1],[b,2]", result);
     }
 
@@ -52,14 +52,14 @@ public class LteCoreUnitTests
     [Fact]
     public void AnalyzeWildcard_ReplacesStaticWildcard()
     {
-        var exportWildcardData = new Dictionary<string, string> { ["X"] = "��ֵ̬" };
+        var exportWildcardData = new Dictionary<string, string> { ["X"] = "静态值" };
         var exportWildcardDyData = new Dictionary<string, string>();
         var strDic = new Dictionary<string, Dictionary<string, List<string>>>();
         var baseData = new Dictionary<string, List<string>>();
         var input = "prefix #X# suffix";
 
         var result = LteCore.AnalyzeWildcard(input, exportWildcardData, exportWildcardDyData, strDic, baseData, "id", "itemId");
-        Assert.Equal("prefix ��ֵ̬ suffix", result);
+        Assert.Equal("prefix 静态值 suffix", result);
     }
 
     [Fact]
@@ -123,9 +123,9 @@ public class LteCoreUnitTests
         var baseData = new Dictionary<string, List<string>>();
         baseData["id"] = new List<string> { "100", "101", "102" };
         baseData["����ID��"] = new List<string> { "1#2", "1#2", "1#2" };
-        baseData["��������"] = new List<string> { "1#1", "1#1", "1#1" };
+        baseData["消耗量组"] = new List<string> { "1#1", "1#1", "1#1" };
         var dy = new Dictionary<string, string> { ["dep"] = "100" };
-        var res = LteCore.CollectRow(dy, "dep", "1", "����ID��", "��������", "2", "1", baseData, "id");
+        var res = LteCore.CollectRow(dy, "dep", "1", "����ID��", "消耗量组", "2", "1", baseData, "id");
         Assert.StartsWith("[", res);
     }
 
