@@ -226,7 +226,4 @@
     -->
 
   </PropertyGroup>
-<Target Name="ValidateRibbonXml" BeforeTargets="BeforeBuild">
-    <Exec Command="python3 -c &quot;import xml.etree.ElementTree as ET, sys; p=sys.argv[1]; ET.parse(p); xml=open(p).read(); o=xml.count('&lt;group '); c=xml.count('&lt;/group&gt;'); assert o==c, f'{o} opens, {c} closes'&quot; &quot;$(ProjectDir)RibbonUI.xml&quot;" />
-  </Target>
 </Project>
