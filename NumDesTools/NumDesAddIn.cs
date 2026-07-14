@@ -2744,12 +2744,15 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             PluginLog.Write($"[ExcelToLua] GetGitUserInfo 失败: {ex.Message}");
         }
         var tablesPath = _activeTablesPath ?? BasePath;
-        var win = new NumDesTools.UI.GitExportSelectWindow(tablesPath, gitAuthor ?? string.Empty);
-        if (win.ShowDialog() != true || win.SelectedPaths == null || win.SelectedPaths.Count == 0)
-            return;
+        PluginLog.Write($"[ExcelToLua] tablesPath={tablesPath}");
+        try
+        {
+            var win = new NumDesTools.UI.GitExportSelectWindow(tablesPath, gitAuthor ?? string.Empty);
+            if (win.ShowDialog() != true || win.SelectedPaths == null || win.SelectedPaths.Count == 0)
+                return;
 
-        var fileList = win.SelectedPaths;
-        ExcelExporter.ClearNewFiles();
+            var fileList = win.SelectedPaths;
+            ExcelExporter.ClearNewFiles();
 
         // Localizations 文件（需要 MergeLocalization）必须串行，其余并行处理
         var locFiles = fileList
@@ -2859,6 +2862,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             $"[{DateTime.Now}] , 导出结束，{summary}，耗时 {sw.Elapsed.TotalSeconds:F1}s"
         );
         App.StatusBar = $"导出完成，{summary}，耗时 {sw.Elapsed.TotalSeconds:F1}s";
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[ExcelToLua] 导出整体崩溃: {ex}");
+            return;
+        }
 
         // 并行后 _newFiles 内部状态可能损坏，先清空再通知，避免遍历时崩溃
         ExcelExporter.ClearNewFiles();
