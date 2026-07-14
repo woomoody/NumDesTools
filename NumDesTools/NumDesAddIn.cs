@@ -2728,9 +2728,18 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     public void OutPutExcelDataToLuaAll_Click(IRibbonControl control)
     {
+        PluginLog.Write("[ExcelToLua] 多表导表开始");
         GlobalValue.ReadOrCreate();
 
-        var (gitAuthor, _) = SvnGitTools.GetGitUserInfo();
+        string gitAuthor = "unknown";
+        try
+        {
+            (gitAuthor, _) = SvnGitTools.GetGitUserInfo();
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[ExcelToLua] GetGitUserInfo 失败: {ex.Message}");
+        }
         var win = new NumDesTools.UI.GitExportSelectWindow(BasePath, gitAuthor ?? string.Empty);
         if (win.ShowDialog() != true || win.SelectedPaths == null || win.SelectedPaths.Count == 0)
             return;
@@ -2775,8 +2784,9 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                     );
                     System.Threading.Interlocked.Increment(ref successCount);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    PluginLog.Write($"[ExcelToLua] {Path.GetFileName(path)} 并行失败: {ex.Message}");
                     parallelFailed.Add(path); // 并行失败 → 降级串行重试
                 }
             }
