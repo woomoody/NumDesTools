@@ -86,8 +86,6 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         .Split(',', StringSplitOptions.RemoveEmptyEntries)
         .ToList();
     public static string GitRootPath = Cfg("GitRootPath");
-    private static string _activeGitRoot; // ponytail: detected from file path, used over GitRootPath
-    private static string _activeTablesPath; // ponytail: Tables dir detected from file path
 
     public static string ChatSysContentExcelAss = Cfg("ChatSysContentExcelAss");
 
@@ -585,12 +583,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         // 验证Git
         GlobalValue.ReadOrCreate();
-        var gitRoot = _activeGitRoot ?? GitRootPath;
-        if (!string.IsNullOrEmpty(gitRoot))
+        if (GitRootPath != String.Empty)
         {
             try
             {
-                var (delta, _) = SvnGitTools.GetLastCommitDelta("cent", gitRoot);
+                var (delta, _) = SvnGitTools.GetLastCommitDelta("cent", GitRootPath);
                 var lastDay = delta.Days;
 
                 // 超过期限进行密码验证
@@ -1184,27 +1181,19 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, agentCtpName);
         }
 
-        // 根据当前工作簿路径自动检测 Git 仓库 + Tables 目录
-        var filePath = wb.FullName;
-        PluginLog.Write($"[CTP] WorkbookActivate path={filePath}");
-        if (filePath.Contains("Excels") && filePath.Contains("Tables"))
+        // 获取当前工作簿是否有Git路径
+        GlobalValue.ReadOrCreate();
+        if (GitRootPath == String.Empty)
         {
-            var repoPath = SvnGitTools.FindGitRoot(filePath);
-            if (repoPath != null)
-                _activeGitRoot = repoPath;
-            // 检测 Tables 目录
-            var dir = Path.GetDirectoryName(filePath);
-            while (dir != null && !dir.EndsWith("Tables"))
-                dir = Path.GetDirectoryName(dir);
-            if (dir != null)
+            var filePath = wb.FullName;
+            if (filePath.Contains("Excels") && filePath.Contains("Tables"))
             {
-                _activeTablesPath = dir + "\\";
-                PluginLog.Write($"[CTP] detected tablesPath={_activeTablesPath}");
+                var repoPath = SvnGitTools.FindGitRoot(filePath);
+                if (repoPath != null)
+                {
+                    GlobalValue.SaveValue("GitRootPath", repoPath);
+                }
             }
-        }
-        else
-        {
-            PluginLog.Write($"[CTP] skip detection: path not Excels/Tables");
         }
 
         // 取消Sheet多选
@@ -2751,7 +2740,21 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             PluginLog.Write($"[ExcelToLua] GetGitUserInfo 失败: {ex.Message}");
         }
-        var tablesPath = _activeTablesPath ?? BasePath;
+        // ponytail: 从当前Excel文件路径向上找Tables目录，不依赖静态缓存或硬编码
+        var tablesPath = BasePath;
+        try
+        {
+            var wbPath = App.ActiveWorkbook?.FullName;
+            if (!string.IsNullOrEmpty(wbPath))
+            {
+                var dir = Path.GetDirectoryName(wbPath);
+                while (dir != null && !dir.EndsWith("Tables"))
+                    dir = Path.GetDirectoryName(dir);
+                if (dir != null)
+                    tablesPath = dir + "\\";
+            }
+        }
+        catch { /* fall back to BasePath */ }
         PluginLog.Write($"[ExcelToLua] tablesPath={tablesPath}");
         try
         {
