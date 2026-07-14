@@ -105,6 +105,7 @@
                                         <button id='CellHistoryTipButton' size='large' getLabel='GetLableText' image='nd_单元格历史' onAction='OnButtonClick' screentip='选择任务单元格以确定这个单元格的值最近是谁改的，并甩锅给TA！' tag='单元格历史' />
                                         <button id='AutoSeachExcel' size='large' label='查验模版&#13;写入数据' image='nd_查验模版写入数据' onAction='OnButtonClick' screentip='查验模版写入数据是否正确' tag='查验模版写入数据' />
                                         <button id='AutoInsertNumChanges' size='large' label='活动奖励&#13;写入' image='nd_活动奖励写入' onAction='OnButtonClick' screentip='活动奖励数据写入' tag='活动奖励写入' />
+                                        <button id='CheckColFromExcelMulti' size='large' label='删除冗余列' image='nd_删除冗余列' onAction='OnButtonClick' screentip='删除表格冗余列，以及Chart1类的非法配置表，打开的表格不能格式错误' tag='批量整理表格格式' />
                                         <button id="XlsxSyncSettings" size='large' label="跨表同步&#13;设置" screentip='配置根目录 A/B 及 a 侧文件名后缀，Sheet 和同步列全自动比对，不用手配' onAction='OnButtonClick' image='nd_跨表同步设置' tag='跨表同步设置' />
                                         <button id="XlsxSyncForward" size='large' label="同步&#13;a→b" screentip='当前需在根目录 A 下打开的文件，自动找到 B 侧对应文件，比对同名 Sheet 的表头交集列（约定 id 列为 Key）同步过去；若先选中整行/整列再点击，只同步选中范围' onAction='OnButtonClick' image='nd_跨表同步正向' tag='同步a→b' />
                                         <button id="XlsxSyncReverse" size='large' label="同步&#13;b→a" screentip='当前需在根目录 B 下打开的文件，反向同步回 A 侧对应文件，规则同「同步 a→b」；若先选中整行/整列再点击，只同步选中范围' onAction='OnButtonClick' image='nd_跨表同步反向' tag='同步b→a' />
@@ -117,8 +118,6 @@
                                         <button id='Button_MagicBottle' size='large' label='移动魔瓶' image='nd_移动魔瓶' screentip='移动魔瓶消耗模拟计算' onAction='OnButtonClick' tag='移动魔瓶' />
                                         <button id='Button_LoopRun' size='large' label='移动转盘' image='nd_移动转盘' screentip='移动转盘随机方案机选' onAction='OnButtonClick' tag='移动转盘' />
                                         <button id='Button_CardRatioSim' size='large' label='万能卡概率' image='nd_万能卡概率' screentip='相册万能卡概率模拟' onAction='OnButtonClick' tag='万能卡概率' />
-                                        <button id='CheckColFromExcelMulti' size='large' label='删除冗余列' image='nd_删除冗余列' onAction='OnButtonClick' screentip='删除表格冗余列，以及Chart1类的非法配置表，打开的表格不能格式错误' tag='批量整理表格格式' />
-                                </group>
                                 <group id='NormalFun' label='杂项'>
                                         <button id='ShowDnaLog' size='large' getLabel='GetLableText' image='nd_插件日志' onAction='OnButtonClick' screentip='展示插件Log' tag='插件日志开关' />
                                         <button id='GlobalVariableDefault' size='large' label='默认配置' image='nd_默认配置' onAction='OnButtonClick' screentip='恢复插件配置为默认' tag='默认配置' />
