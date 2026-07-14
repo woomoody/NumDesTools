@@ -87,6 +87,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         .ToList();
     public static string GitRootPath = Cfg("GitRootPath");
     private static string _activeGitRoot; // ponytail: detected from file path, used over GitRootPath
+    private static string _activeTablesPath; // ponytail: Tables dir detected from file path
 
     public static string ChatSysContentExcelAss = Cfg("ChatSysContentExcelAss");
 
@@ -1183,13 +1184,19 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, agentCtpName);
         }
 
-        // 根据当前工作簿路径自动检测 Git 仓库，缓存到 _activeGitRoot
+        // 根据当前工作簿路径自动检测 Git 仓库 + Tables 目录
         var filePath = wb.FullName;
         if (filePath.Contains("Excels") && filePath.Contains("Tables"))
         {
             var repoPath = SvnGitTools.FindGitRoot(filePath);
             if (repoPath != null)
                 _activeGitRoot = repoPath;
+            // 检测 Tables 目录
+            var dir = Path.GetDirectoryName(filePath);
+            while (dir != null && !dir.EndsWith("Tables"))
+                dir = Path.GetDirectoryName(dir);
+            if (dir != null)
+                _activeTablesPath = dir + "\\";
         }
 
         // 取消Sheet多选
@@ -2736,7 +2743,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             PluginLog.Write($"[ExcelToLua] GetGitUserInfo 失败: {ex.Message}");
         }
-        var win = new NumDesTools.UI.GitExportSelectWindow(BasePath, gitAuthor ?? string.Empty);
+        var tablesPath = _activeTablesPath ?? BasePath;
+        var win = new NumDesTools.UI.GitExportSelectWindow(tablesPath, gitAuthor ?? string.Empty);
         if (win.ShowDialog() != true || win.SelectedPaths == null || win.SelectedPaths.Count == 0)
             return;
 
