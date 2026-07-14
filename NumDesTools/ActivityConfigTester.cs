@@ -718,6 +718,33 @@ public static class ActivityConfigTester
             report.AppendLine();
         }
 
+        // e0. 模拟跑活动：对每个指定ID，用 activityTestEntry 模板调用业务逻辑
+        if (
+            filterIds != null
+            && filterIds.Count > 0
+            && !string.IsNullOrWhiteSpace(rules.ActivityTestEntry)
+        )
+        {
+            report.AppendLine("── 模拟跑活动 ──");
+            foreach (var fid in filterIds.OrderBy(x => x))
+            {
+                var entry = rules.ActivityTestEntry.Replace("{id}", fid);
+                SetStatus($"活动配置验证：模拟跑活动 {fid}...");
+                try
+                {
+                    lua.DoString(entry);
+                    report.AppendLine($"[活动] ✓ {fid} 执行成功");
+                }
+                catch (NLua.Exceptions.LuaException ex)
+                {
+                    errorCount++;
+                    report.AppendLine($"[活动] ✗ {fid} 执行出错");
+                    report.AppendLine($"    Lua错误：{CleanLuaError(ex.Message)}");
+                }
+            }
+            report.AppendLine();
+        }
+
         // e. 活动配置链追踪 + 子表验证（按 typeTableMap 加载 type 对应子表）
         if (filterIds != null && filterIds.Count > 0)
         {
