@@ -86,6 +86,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         .Split(',', StringSplitOptions.RemoveEmptyEntries)
         .ToList();
     public static string GitRootPath = Cfg("GitRootPath");
+    private static string _activeGitRoot; // ponytail: detected from file path, used over GitRootPath
 
     public static string ChatSysContentExcelAss = Cfg("ChatSysContentExcelAss");
 
@@ -583,11 +584,12 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
     {
         // 验证Git
         GlobalValue.ReadOrCreate();
-        if (GitRootPath != String.Empty)
+        var gitRoot = _activeGitRoot ?? GitRootPath;
+        if (!string.IsNullOrEmpty(gitRoot))
         {
             try
             {
-                var (delta, _) = SvnGitTools.GetLastCommitDelta("cent", GitRootPath);
+                var (delta, _) = SvnGitTools.GetLastCommitDelta("cent", gitRoot);
                 var lastDay = delta.Days;
 
                 // 超过期限进行密码验证
@@ -1181,19 +1183,13 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             NumDesCTP.DeleteCTP(true, agentCtpName);
         }
 
-        // 获取当前工作簿是否有Git路径
-        GlobalValue.ReadOrCreate();
-        if (GitRootPath == String.Empty)
+        // 根据当前工作簿路径自动检测 Git 仓库，缓存到 _activeGitRoot
+        var filePath = wb.FullName;
+        if (filePath.Contains("Excels") && filePath.Contains("Tables"))
         {
-            var filePath = wb.FullName;
-            if (filePath.Contains("Excels") && filePath.Contains("Tables"))
-            {
-                var repoPath = SvnGitTools.FindGitRoot(filePath);
-                if (repoPath != null)
-                {
-                    GlobalValue.SaveValue("GitRootPath", repoPath);
-                }
-            }
+            var repoPath = SvnGitTools.FindGitRoot(filePath);
+            if (repoPath != null)
+                _activeGitRoot = repoPath;
         }
 
         // 取消Sheet多选
