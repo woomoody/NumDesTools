@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using MahApps.Metro.Controls;
 using NumDesTools.ExcelToLua;
+using NumDesTools;
 using Border = System.Windows.Controls.Border;
 using CheckBox = System.Windows.Controls.CheckBox;
 using Window = System.Windows.Window;
@@ -65,8 +66,17 @@ public partial class GitExportSelectWindow : MetroWindow
         var list = new List<FileEntry>();
 
         // 工作区 + 暂存
-        var gitFiles = SvnGitTools.GitDiffAndStagedFiles(_repoBasePath);
-        foreach (var f in gitFiles)
+                List<string> gitFiles;
+                try
+                {
+                    gitFiles = SvnGitTools.GitDiffAndStagedFiles(_repoBasePath);
+                }
+                catch (Exception ex)
+                {
+                    PluginLog.Write($"[GitExport] GitDiff 失败: {ex.Message}");
+                    gitFiles = new List<string>();
+                }
+                foreach (var f in gitFiles)
         {
             if (IsExportable(f) && seen.Add(f))
                 list.Add(new FileEntry(f, "变更/暂存"));
