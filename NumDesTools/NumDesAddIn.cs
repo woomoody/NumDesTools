@@ -1186,6 +1186,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
         // 根据当前工作簿路径自动检测 Git 仓库 + Tables 目录
         var filePath = wb.FullName;
+        PluginLog.Write($"[CTP] WorkbookActivate path={filePath}");
         if (filePath.Contains("Excels") && filePath.Contains("Tables"))
         {
             var repoPath = SvnGitTools.FindGitRoot(filePath);
@@ -1196,7 +1197,14 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             while (dir != null && !dir.EndsWith("Tables"))
                 dir = Path.GetDirectoryName(dir);
             if (dir != null)
+            {
                 _activeTablesPath = dir + "\\";
+                PluginLog.Write($"[CTP] detected tablesPath={_activeTablesPath}");
+            }
+        }
+        else
+        {
+            PluginLog.Write($"[CTP] skip detection: path not Excels/Tables");
         }
 
         // 取消Sheet多选
