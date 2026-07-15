@@ -29,3 +29,13 @@ git -C "C:\Users\cent\Documents\NumDesOutput" diff --cached --quiet || git -C "C
 - LiteLLM 网关：`https://litellm.solotopia.net/v1/chat/completions`，Key 见 `ANTHROPIC_AUTH_TOKEN` 环境变量。
 - **中文游戏配置分析**（数值合理性、配置审查）用当前会话模型（sonnet/opus），有项目 Memory 和设计规范加成，实测优于 qwen。
 - 需要读写文件/代码/git 的任务留在当前会话，其他模型无 CC 工具权限。
+
+<!-- OPENWIKI:START -->
+
+## OpenWiki
+
+This repository uses OpenWiki for recurring code documentation. Start with `openwiki/quickstart.md`, then follow its links to architecture, workflows, domain concepts, operations, integrations, testing guidance, and source maps.
+
+The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do not hand-edit generated OpenWiki pages unless explicitly asked; prefer updating source code/docs and letting OpenWiki regenerate.
+
+<!-- OPENWIKI:END -->
