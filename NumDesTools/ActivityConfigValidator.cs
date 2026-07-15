@@ -25,7 +25,7 @@ namespace NumDesTools;
 ///   5. 根据规则动态生成 Lua 校验脚本并执行
 ///   6. 把 Lua 层错误行号映射回 Excel 行，输出可读报告
 /// </summary>
-public static class ActivityConfigTester
+public static class ActivityConfigValidator
 {
     // ─── 规则配置文件路径（我的文档\NumDesTools\Config\ActivityTableRules.json）──────
     private static string RulesFilePath =>
@@ -458,7 +458,7 @@ public static class ActivityConfigTester
     private const string DefaultRulesJson = """
         {
           "_comment": [
-            "活动配置验证规则映射。由 AI 分析 Code 业务代码后生成，供 ActivityConfigTester.cs 使用。",
+            "活动配置验证规则映射。由 AI 分析 Code 业务代码后生成，供 ActivityConfigValidator.cs 使用。",
             "人工可直接编辑扩展，无需修改 C# 代码。",
             "",
             "── 顶层字段说明 ──",
@@ -896,7 +896,7 @@ public static class ActivityConfigTester
             lua.RegisterFunction(
                 "_cs_file_exists",
                 null,
-                typeof(ActivityConfigTester).GetMethod(
+                typeof(ActivityConfigValidator).GetMethod(
                     nameof(LuaCheckFileExists),
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
                 )

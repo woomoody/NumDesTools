@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "活动配置验证规则映射。由 AI 分析 Code 业务代码后生成，供 ActivityConfigTester.cs 使用。",
+    "活动配置验证规则映射。由 AI 分析 Code 业务代码后生成，供 ActivityConfigValidator.cs 使用。",
     "人工可直接编辑扩展，无需修改 C# 代码。",
     "",
     "── 验证逻辑说明 ──",

@@ -3922,7 +3922,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             try
             {
-                ActivityConfigTester.TestAll(excelPath);
+                ActivityConfigValidator.TestAll(excelPath);
             }
             catch (Exception ex)
             {
@@ -3944,7 +3944,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             try
             {
-                ActivityConfigTester.TestByIds(excelPath, input);
+                ActivityConfigValidator.TestByIds(excelPath, input);
             }
             catch (Exception ex)
             {
@@ -3977,7 +3977,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             try
             {
-                ActivityConfigTester.TestGitChanged(excelPath);
+                ActivityConfigValidator.TestGitChanged(excelPath);
             }
             catch (Exception ex)
             {

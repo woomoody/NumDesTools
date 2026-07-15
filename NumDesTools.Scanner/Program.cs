@@ -62,7 +62,7 @@ internal class Program
             Console.WriteLine($"读取到 {allIds.Count} 个活动 ID，开始批量验证...");
 
             var excelPath = @"C:\M1Work\public\Excels\Tables\ActivityClientData.xlsx";
-            var result = ActivityConfigTester.RunHeadless(excelPath, allIds);
+            var result = ActivityConfigValidator.RunHeadless(excelPath, allIds);
 
             Console.WriteLine();
             Console.WriteLine(
