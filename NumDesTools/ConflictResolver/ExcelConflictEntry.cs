@@ -884,7 +884,7 @@ public static class ExcelConflictEntry
             repo.Index.Write();
 
             var sha8 = theirsSha.Length >= 8 ? theirsSha[..8] : theirsSha;
-            PluginLog.Write(
+            PluginLog.Verbose(
                 $"[SkipHash] 跳过 # 文件，以对方版本为准: {Path.GetFileName(relativePath)}  (theirs={sha8})"
             );
             // 同步追加到 merge 消息文件，与手动解决冲突保持一致

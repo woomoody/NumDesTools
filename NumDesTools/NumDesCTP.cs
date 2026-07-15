@@ -138,17 +138,23 @@ public class NumDesCTP
         {
             if (!ctpsWPF.TryGetValue(name, out ctpWPF))
             {
-                PluginLog.Write($"[ShowCTP] new host, name={name}");
+                PluginLog.Verbose($"[ShowCTP] new host, name={name}");
                 // 先断开该 name 旧宿主里的 ElementHost，防止 WPF 逻辑父元素残留
-                if (_wpfHosts.TryGetValue(name, out var oldHost) && oldHost is { IsDisposed: false })
+                if (
+                    _wpfHosts.TryGetValue(name, out var oldHost) && oldHost is { IsDisposed: false }
+                )
                     foreach (Control c in oldHost.Controls)
                         if (c is ElementHost eh)
-                            try { eh.Child = null; } catch { }
+                            try
+                            {
+                                eh.Child = null;
+                            }
+                            catch { }
 
                 var host = new SelfControl();
                 _wpfHosts[name] = host;
 
-                PluginLog.Write($"[ShowCTP] new ElementHost, Child={controlWPF.GetType().Name}");
+                PluginLog.Verbose($"[ShowCTP] new ElementHost, Child={controlWPF.GetType().Name}");
                 var elementHost = new ElementHost
                 {
                     Dock = DockStyle.Fill,
@@ -156,18 +162,18 @@ public class NumDesCTP
                     Tag = eleTag,
                 };
                 host.Controls.Add(elementHost);
-                PluginLog.Write($"[ShowCTP] CreateCustomTaskPane");
+                PluginLog.Verbose($"[ShowCTP] CreateCustomTaskPane");
                 ctpWPF = CustomTaskPaneFactory.CreateCustomTaskPane(host, name);
-                PluginLog.Write($"[ShowCTP] CTP created, setting DockPosition");
+                PluginLog.Verbose($"[ShowCTP] CTP created, setting DockPosition");
                 ctpWPF.DockPosition = dockPosition;
                 ctpWPF.Width = width;
                 ctpWPF.Visible = true;
                 ctpsWPF[name] = ctpWPF;
-                PluginLog.Write($"[ShowCTP] done, visible={ctpWPF.Visible}");
+                PluginLog.Verbose($"[ShowCTP] done, visible={ctpWPF.Visible}");
             }
             else
             {
-                PluginLog.Write($"[ShowCTP] reuse existing CTP, eleTag={eleTag}");
+                PluginLog.Verbose($"[ShowCTP] reuse existing CTP, eleTag={eleTag}");
                 // 用该 name 自己的宿主查找 ElementHost，不影响其他 CTP
                 if (_wpfHosts.TryGetValue(name, out var host))
                 {
@@ -184,7 +190,7 @@ public class NumDesCTP
                         elementHost.Child = controlWPF;
                 }
                 ctpWPF.Visible = true;
-                PluginLog.Write($"[ShowCTP] reuse done, visible={ctpWPF.Visible}");
+                PluginLog.Verbose($"[ShowCTP] reuse done, visible={ctpWPF.Visible}");
             }
         }
         catch (Exception ex)
@@ -198,11 +204,19 @@ public class NumDesCTP
     public static void DisposeAll()
     {
         foreach (var ctp in ctpsWPF.Values)
-            try { ctp.Delete(); } catch { }
+            try
+            {
+                ctp.Delete();
+            }
+            catch { }
         ctpsWPF.Clear();
 
         foreach (var ctp in ctpsWF.Values)
-            try { ctp.Delete(); } catch { }
+            try
+            {
+                ctp.Delete();
+            }
+            catch { }
         ctpsWF.Clear();
 
         foreach (var host in _wpfHosts.Values)
@@ -210,7 +224,11 @@ public class NumDesCTP
             {
                 foreach (Control c in host.Controls)
                     if (c is ElementHost eh)
-                        try { eh.Child = null; } catch { }
+                        try
+                        {
+                            eh.Child = null;
+                        }
+                        catch { }
                 host.Dispose();
             }
         _wpfHosts.Clear();
@@ -242,7 +260,11 @@ public class NumDesCTP
                 if (_wpfHosts.TryGetValue(name, out var host) && host is { IsDisposed: false })
                     foreach (Control c in host.Controls)
                         if (c is ElementHost eh)
-                            try { eh.Child = null; } catch { }
+                            try
+                            {
+                                eh.Child = null;
+                            }
+                            catch { }
             }
         }
     }

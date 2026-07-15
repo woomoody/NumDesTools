@@ -360,7 +360,7 @@ public static class ConflictApplier
             }
             File.WriteAllText(target, updated);
 
-            PluginLog.Write($"[ConflictApplier] 冲突日志 → {Path.GetFileName(target)}: {line}");
+            PluginLog.Verbose($"[ConflictApplier] 冲突日志 → {Path.GetFileName(target)}: {line}");
         }
         catch (Exception ex)
         {

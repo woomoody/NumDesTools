@@ -104,7 +104,7 @@ internal sealed class ExcelIndexManager
         if (disk == null)
             return null;
 
-        PluginLog.Write("[ExcelIndex] loaded from disk cache on search request");
+        PluginLog.Verbose("[ExcelIndex] loaded from disk cache on search request");
         disk.BuildSortedKeys();
         _index = disk;
         return disk;
@@ -237,7 +237,9 @@ internal sealed class ExcelIndexManager
             if (existing != null && _index == null)
                 _index = existing;
 
-            PluginLog.Write($"[ExcelIndex] building index for {root}  existing={existing != null}");
+            PluginLog.Verbose(
+                $"[ExcelIndex] building index for {root}  existing={existing != null}"
+            );
 
             var built = new ExcelIndexBuilder(root).Build(existing, ct: ct);
             if (ct.IsCancellationRequested)
@@ -246,7 +248,7 @@ internal sealed class ExcelIndexManager
             built.BuildSortedKeys();
             built.SaveToDisk(jsonPath);
             _index = built;
-            PluginLog.Write(
+            PluginLog.Verbose(
                 $"[ExcelIndex] ready  keys={built.Exact.Count}  files={built.Files.Count}"
             );
         }
@@ -312,7 +314,7 @@ internal sealed class ExcelIndexManager
         {
             try
             {
-                PluginLog.Write($"[ExcelIndex] incremental rebuild  changed={files.Length}");
+                PluginLog.Verbose($"[ExcelIndex] incremental rebuild  changed={files.Length}");
                 var root = _excelsRoot!;
                 var jsonPath = ExcelSearchIndex.GetIndexPath(root);
                 var existing = _index ?? ExcelSearchIndex.LoadFromDisk(jsonPath);

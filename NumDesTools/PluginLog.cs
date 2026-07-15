@@ -18,6 +18,14 @@ internal static class PluginLog
     );
 
     private const long MaxBytes = 2 * 1024 * 1024; // 2 MB
+
+    // ponytail: 主插件(xll)和 Scanner 共享同一份 plugin.log，靠进程名区分来源，
+    // 约定：非 EXCEL 进程（Scanner/Tests 等）打印时自动加 [Scanner] 前缀。
+    private static readonly string _sourceTag = Process
+        .GetCurrentProcess()
+        .ProcessName.Equals("EXCEL", StringComparison.OrdinalIgnoreCase)
+        ? ""
+        : "[Scanner] ";
     private static readonly object _lock = new();
 
     // ── 内存日志缓冲（供 UI 绑定）────────────────────────────────────────
@@ -46,7 +54,8 @@ internal static class PluginLog
     {
         try
         {
-            var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {message}{Environment.NewLine}";
+            var line =
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {_sourceTag}{message}{Environment.NewLine}";
             lock (_lock)
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);

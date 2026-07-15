@@ -105,7 +105,7 @@ namespace NumDesTools.ExcelToLua
             List<FieldData> luaTableFields = new List<FieldData>();
             var luaCheck = new Lua();
 
-            PluginLog.Write($"=== excel export type:{exportType}");
+            PluginLog.Verbose($"=== excel export type:{exportType}");
             if (exportType == 0)
             {
                 if (!Directory.Exists(LuaOutputFolder))
@@ -154,7 +154,7 @@ namespace NumDesTools.ExcelToLua
                 DateTime.Now.ToString(CultureInfo.InvariantCulture),
                 "导表完成"
             );
-            PluginLog.Write("导表完成!");
+            PluginLog.Verbose("导表完成!");
             NotifyUnityForNewFiles();
         }
 
@@ -176,7 +176,7 @@ namespace NumDesTools.ExcelToLua
             if (unityProcs.Count > 0)
             {
                 SetForegroundWindow(unityProcs[0].MainWindowHandle);
-                PluginLog.Write($"[ExcelToLua] 激活 Unity 生成 {_newFiles.Count} 个 .meta");
+                PluginLog.Verbose($"[ExcelToLua] 激活 Unity 生成 {_newFiles.Count} 个 .meta");
             }
             else
             {
@@ -221,7 +221,7 @@ namespace NumDesTools.ExcelToLua
                 LogDisplay.Show();
                 return false;
             }
-            PluginLog.Write($"[ExcelToLua] 输出目录: {LuaOutputFolder}");
+            PluginLog.Verbose($"[ExcelToLua] 输出目录: {LuaOutputFolder}");
             return true;
         }
 
@@ -884,7 +884,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
 
                     LogDisplay.Show();
 
-                    PluginLog.Write("===多语言存在重复key:" + key);
+                    PluginLog.Verbose("===多语言存在重复key:" + key);
                     for (int i = 0; i < contents.Count; i++)
                     {
                         if (contents[i].Contains($"\"{key}\""))
@@ -897,7 +897,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
 
                             LogDisplay.Show();
 
-                            PluginLog.Write("===重复key字段在表:" + fileNames[i]);
+                            PluginLog.Verbose("===重复key字段在表:" + fileNames[i]);
                         }
                     }
                 }
@@ -909,7 +909,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                 count
             );
 
-            PluginLog.Write("===多语言表总数:" + count);
+            PluginLog.Verbose("===多语言表总数:" + count);
         }
 
         public static void CheckLocalizationLuaDuplicateValues()
@@ -958,7 +958,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
 
                     LogDisplay.Show();
 
-                    PluginLog.Write($"=== 多语言值:{item.Key} 重复数量:{item.Value}");
+                    PluginLog.Verbose($"=== 多语言值:{item.Key} 重复数量:{item.Value}");
                     count++;
                 }
                 else
@@ -978,8 +978,8 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                 DateTime.Now.ToString(CultureInfo.InvariantCulture),
                 countAll
             );
-            PluginLog.Write("===多语言重复数量:" + count);
-            PluginLog.Write("===多语言重复行总数:" + countAll);
+            PluginLog.Verbose("===多语言重复数量:" + count);
+            PluginLog.Verbose("===多语言重复行总数:" + countAll);
         }
     }
 }

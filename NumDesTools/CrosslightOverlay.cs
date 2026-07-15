@@ -490,8 +490,7 @@ internal sealed class CrosslightOverlay : IDisposable
                     && CrosslightController.EditingStaleMs() > 600
                 )
                 {
-                    PluginLog.Verbose("[crosslight] stale _editing cleared (HIDE event missed)"
-                    );
+                    PluginLog.Verbose("[crosslight] stale _editing cleared (HIDE event missed)");
                     CrosslightController.SetEditing(false);
                 }
 
@@ -828,7 +827,7 @@ internal static class CrosslightController
         if (editing)
             _editingSetTick = Environment.TickCount64;
         var n = System.Threading.Interlocked.Increment(ref _setEditingCount);
-        PluginLog.Write(
+        PluginLog.Verbose(
             $"[crosslight] SetEditing={editing} n={n}"
                 + $" tid={Environment.CurrentManagedThreadId}"
                 + $" updateTotal={_updateCrossTotal} suppressed={_suppressedTotal}"
@@ -871,7 +870,9 @@ internal static class CrosslightController
             excelTid,
             WinEventOutofcontext | WinEventSkipownprocess
         );
-        PluginLog.Write($"[crosslight] WinEventHook installed tid={excelTid} hook={_winEventHook}");
+        PluginLog.Verbose(
+            $"[crosslight] WinEventHook installed tid={excelTid} hook={_winEventHook}"
+        );
     }
 
     private static void UninstallCommentHook()
@@ -901,7 +902,7 @@ internal static class CrosslightController
         _resumeDelayTimer?.Stop();
         _resumeDelayTimer?.Dispose();
         _resumeDelayTimer = null;
-        PluginLog.Write("[crosslight] UninstallCommentHook done");
+        PluginLog.Verbose("[crosslight] UninstallCommentHook done");
     }
 
     private static void OnWinEvent(
@@ -929,7 +930,7 @@ internal static class CrosslightController
             if (cls != "RICHEDIT60W")
                 return;
 
-            PluginLog.Write(
+            PluginLog.Verbose(
                 $"[crosslight] WinEvent ev={eventType:X4} cls={cls} idObj={idObject}"
                     + $" tid={Environment.CurrentManagedThreadId}"
             );
@@ -987,7 +988,7 @@ internal static class CrosslightController
             TriggerCurrent();
             return;
         }
-        PluginLog.Write("[crosslight] Enable start");
+        PluginLog.Verbose("[crosslight] Enable start");
         _active = true;
         _app = app;
         _excelHwnd = (IntPtr)app.Hwnd;
