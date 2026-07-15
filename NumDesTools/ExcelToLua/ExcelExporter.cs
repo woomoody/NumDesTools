@@ -9,51 +9,23 @@ namespace NumDesTools.ExcelToLua
     {
         //excel文件夹
 
-        static string JsonBaseFolder
-        {
-            get
-            {
-                var basePath = NumDesAddIn.BasePath;
-                string jsonBaseFolder;
+        // Unity 项目根，由 UnityProjectResolver 按 BasePath 推断+确认后缓存（取代硬编码 Code/）
+        static string _currentUnityRoot;
+        static string _resolvedBasePath;
 
-                if (
-                    basePath.Contains("Lte资源映射")
-                    || basePath.Contains("二合")
-                    || basePath.Contains("工会")
-                    || basePath.Contains("克朗代克")
-                )
-                {
-                    jsonBaseFolder = Path.GetFullPath(Path.Combine(basePath, "./../../../../"));
-                }
-                else if (
-                    basePath.Contains("Configs")
-                    || basePath.Contains("UIs")
-                    || basePath.Contains("Localizations")
-                )
-                {
-                    jsonBaseFolder = Path.GetFullPath(Path.Combine(basePath, "./../../"));
-                }
-                else
-                {
-                    jsonBaseFolder = Path.GetFullPath(Path.Combine(basePath, "./../../../"));
-                }
-                return jsonBaseFolder.Replace("\\", "/");
-            }
-        }
-
-        static string LocalizationOutputTempFolder => $"{JsonBaseFolder}Code/Localizations/Lua";
+        static string LocalizationOutputTempFolder => $"{_currentUnityRoot}/Localizations/Lua";
 
         //lua文件夹
-        static string LuaOutputFolder => $"{JsonBaseFolder}Code/Assets/LuaScripts/Tables";
+        static string LuaOutputFolder => $"{_currentUnityRoot}/Assets/LuaScripts/Tables";
 
         //luatemp文件夹
-        static string LuaOutputTempFolder => $"{JsonBaseFolder}Code/Assets/LuaScripts/TablesTemp~";
+        static string LuaOutputTempFolder => $"{_currentUnityRoot}/Assets/LuaScripts/TablesTemp~";
 
         static string LocalizationOutputFolder =>
-            $"{JsonBaseFolder}Code/Assets/LuaScripts/Localizations";
+            $"{_currentUnityRoot}/Assets/LuaScripts/Localizations";
 
         //json文件夹
-        static string JsonOutputFolder => $"{JsonBaseFolder}Code/Assets/Game/Jsons";
+        static string JsonOutputFolder => $"{_currentUnityRoot}/Assets/Game/Jsons";
 
         //导出json的excel列表
         static List<string> _toJsonExcels = new List<string>() { "Configs", "LocalizationFonts" };
@@ -128,6 +100,8 @@ namespace NumDesTools.ExcelToLua
         public static void ExportAll(string[] files, int exportType = 0)
         {
             _newFiles.Clear();
+            if (!EnsureUnityRoot())
+                return;
             List<FieldData> luaTableFields = new List<FieldData>();
             var luaCheck = new Lua();
 
@@ -157,7 +131,15 @@ namespace NumDesTools.ExcelToLua
                     continue;
 
                 var isAll = fileName.Contains("$");
-                Export(file, fileName, luaTableFields, isAll, fileName.Contains("$$"), luaCheck, exportType);
+                Export(
+                    file,
+                    fileName,
+                    luaTableFields,
+                    isAll,
+                    fileName.Contains("$$"),
+                    luaCheck,
+                    exportType
+                );
             }
 
             if (NeedMergeLocalization)
@@ -186,8 +168,8 @@ namespace NumDesTools.ExcelToLua
             if (_newFiles.Count == 0)
                 return;
 
-            var unityProcs = System.Diagnostics.Process
-                .GetProcessesByName("Unity")
+            var unityProcs = System
+                .Diagnostics.Process.GetProcessesByName("Unity")
                 .Where(p => p.MainWindowHandle != IntPtr.Zero)
                 .ToList();
 
@@ -211,6 +193,54 @@ namespace NumDesTools.ExcelToLua
             _newFiles.Clear();
         }
 
+        // 取代 Application.dataPath：Unity 项目根由 Resolver 推断+确认+缓存。
+        // 会话中途切 BasePath（换配置/换项目）则强制重解析，防写飞。
+        public static bool EnsureUnityRoot()
+        {
+            var normalized = UnityProjectResolver.Normalize(NumDesAddIn.BasePath);
+            if (
+                _currentUnityRoot is not null
+                && normalized == _resolvedBasePath
+                && UnityProjectResolver.IsUnityProject(_currentUnityRoot)
+            )
+            {
+                return true;
+            }
+
+            _currentUnityRoot = UnityProjectResolver.Resolve();
+            _resolvedBasePath = normalized;
+            if (!UnityProjectResolver.IsUnityProject(_currentUnityRoot))
+            {
+                PluginLog.Write("[ExcelToLua] 未确定 Unity 项目根，跳过导表。");
+                LogDisplay.RecordLine(
+                    "[{0}] ,{1}",
+                    DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                    "未确定Unity项目根,导表中止"
+                );
+                LogDisplay.Show();
+                return false;
+            }
+            PluginLog.Write($"[ExcelToLua] 输出目录: {LuaOutputFolder}");
+            return true;
+        }
+
+        // 写前 LF 归一；目标已存在且内容完全相同则跳过，避免改 mtime 产生 git 假脏。
+        // 照搬 Unity 端 Assets/Editor/Excel/ExcelExporter.cs WriteTextLfIfChanged。
+        static void WriteTextLfIfChanged(string path, string text)
+        {
+            if (!string.IsNullOrEmpty(text))
+            {
+                text = text.Replace("\r\n", "\n");
+            }
+
+            if (File.Exists(path) && File.ReadAllText(path).Replace("\r\n", "\n") == text)
+            {
+                return;
+            }
+
+            File.WriteAllText(path, text);
+        }
+
         private static void CopyDirectory(string src, string dst)
         {
             Directory.CreateDirectory(dst);
@@ -225,31 +255,7 @@ namespace NumDesTools.ExcelToLua
         static void ExportGitChangedExcelFiles()
         {
             var files = GetGitChangedExcelFiles();
-            List<FieldData> luaTableFields = new List<FieldData>();
-            var luaCheck = new Lua();
-            for (int i = 0; i < files.Count; i++)
-            {
-                string file = files[i].Replace('\\', '/');
-                string fileName = Path.GetFileNameWithoutExtension(file);
-                if (fileName.Contains("#") || fileName.Contains("~"))
-                    continue;
-
-                var isAll = fileName.Contains("$");
-                Export(file, fileName, luaTableFields, isAll, fileName.Contains("$$"), luaCheck);
-            }
-            luaCheck.Dispose();
-
-            if (NeedMergeLocalization)
-            {
-                MergeLocalizationLuaFile();
-            }
-
-            LogDisplay.RecordLine(
-                "[{0}] ,{1}",
-                DateTime.Now.ToString(CultureInfo.InvariantCulture),
-                "导表完成"
-            );
-            PluginLog.Write("导表完成!");
+            ExportAll(files.ToArray());
         }
 
         static List<string> GetGitChangedExcelFiles()
@@ -348,7 +354,18 @@ namespace NumDesTools.ExcelToLua
                 {
                     //ui config to lua table
                     string output = $"{LuaOutputFolder}/UIs.lua.txt";
-                    if (!ExportLuaTable(output, data, "UIs", data.fields[1], false, excelName, luaCheck, exportType))
+                    if (
+                        !ExportLuaTable(
+                            output,
+                            data,
+                            "UIs",
+                            data.fields[1],
+                            false,
+                            excelName,
+                            luaCheck,
+                            exportType
+                        )
+                    )
                     {
                         continue;
                     }
@@ -357,7 +374,18 @@ namespace NumDesTools.ExcelToLua
                 {
                     //ui config to lua table
                     string output = $"{LuaOutputFolder}/UIAppendItems.lua.txt";
-                    if (!ExportLuaTable(output, data, "UIAppendItems", data.fields[1], false, excelName, luaCheck, exportType))
+                    if (
+                        !ExportLuaTable(
+                            output,
+                            data,
+                            "UIAppendItems",
+                            data.fields[1],
+                            false,
+                            excelName,
+                            luaCheck,
+                            exportType
+                        )
+                    )
                     {
                         continue;
                     }
@@ -372,7 +400,7 @@ namespace NumDesTools.ExcelToLua
                     string jsonValue = JsonCodeGenerator.ConfigToJsonCode(data);
                     if (!Directory.Exists(output))
                         Directory.CreateDirectory(output);
-                    File.WriteAllText(outputWritePath, jsonValue);
+                    WriteTextLfIfChanged(outputWritePath, jsonValue);
                 }
                 else if (_toJsonExcels.Contains(fileName))
                 {
@@ -383,7 +411,7 @@ namespace NumDesTools.ExcelToLua
                     string jsonValue = JsonCodeGenerator.ToJsonCode(data);
                     if (!Directory.Exists(output))
                         Directory.CreateDirectory(output);
-                    File.WriteAllText(outputWritePath, jsonValue);
+                    WriteTextLfIfChanged(outputWritePath, jsonValue);
                 }
                 else
                 {
@@ -402,7 +430,9 @@ namespace NumDesTools.ExcelToLua
 
                         LogDisplay.Show();
 
-                        PluginLog.Write($"配表名称非法 ：<<{fileName}>> 已跳过该表，相关策划需确认");
+                        PluginLog.Write(
+                            $"配表名称非法 ：<<{fileName}>> 已跳过该表，相关策划需确认"
+                        );
                         continue;
                     }
 
@@ -456,7 +486,7 @@ namespace NumDesTools.ExcelToLua
                     string jsonValue = JsonCodeGenerator.RechargeToJson(data);
                     if (!Directory.Exists(output))
                         Directory.CreateDirectory(output);
-                    File.WriteAllText(outputWritePath, jsonValue);
+                    WriteTextLfIfChanged(outputWritePath, jsonValue);
                 }
 
                 LogDisplay.RecordLine(
@@ -517,7 +547,11 @@ namespace NumDesTools.ExcelToLua
             {
                 string tempOutput = outputFile.Replace(LuaOutputFolder, LuaOutputTempFolder);
                 string emptyValue = LuaCodeGenerator.ToEmptyLuaTable(
-                    data, tableName, excelName ?? tableName, commentField, isIgnoreCheckNullValue
+                    data,
+                    tableName,
+                    excelName ?? tableName,
+                    commentField,
+                    isIgnoreCheckNullValue
                 );
                 FileWriteLuaText(tableName, tempOutput, emptyValue, luaCheck);
             }
@@ -607,7 +641,7 @@ namespace NumDesTools.ExcelToLua
                         Directory.CreateDirectory(output);
                     }
 
-                File.WriteAllText($"{output}/{data.name}{locationName}.lua.txt", luaTableValue);
+                WriteTextLfIfChanged($"{output}/{data.name}{locationName}.lua.txt", luaTableValue);
             }
 
             NeedMergeLocalization = true;
@@ -666,7 +700,7 @@ end
 __RELATE_LOCALIZATION_TABLE_DATA()"
             );
 
-            File.WriteAllText(
+            WriteTextLfIfChanged(
                 $"{LocalizationOutputFolder}/{LuaLocalizationExcelFile}.lua.txt",
                 text.ToString()
             );
@@ -695,7 +729,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                         Directory.CreateDirectory(output);
                     }
 
-                File.WriteAllText(outputFile, jsonValue);
+                WriteTextLfIfChanged(outputFile, jsonValue);
             }
         }
 
@@ -748,7 +782,9 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
 
                     LogDisplay.Show();
 
-                    PluginLog.Write($"配表导出文件无法正确编译，请检查配置。   : {name}\n{e.Message}"); //
+                    PluginLog.Write(
+                        $"配表导出文件无法正确编译，请检查配置。   : {name}\n{e.Message}"
+                    ); //
                 }
                 if (createLua)
                     lua.Dispose();
@@ -756,7 +792,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
 
             #endregion 尝试模拟编译检测
 
-            File.WriteAllText(path, contents);
+            WriteTextLfIfChanged(path, contents);
             if (!File.Exists(path + ".meta"))
                 _newFiles.Add(path);
         }
@@ -784,7 +820,7 @@ __RELATE_LOCALIZATION_TABLE_DATA()"
                 }
 
                 content = content.Append("}").ToArray();
-                File.WriteAllLines(originPath, content);
+                WriteTextLfIfChanged(originPath, string.Join("\n", content) + "\n");
             }
 
             CheckLocalizationLuaDuplicateKeys();

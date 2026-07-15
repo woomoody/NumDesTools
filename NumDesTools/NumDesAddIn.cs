@@ -505,6 +505,11 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         //        }
         //#endif
 
+        // ponytail: 网络共享/映射盘上的仓库，owner SID 常与当前用户不一致，libgit2 的
+        // ownership 校验会直接拒绝打开仓库（"repository path ... is not owned by current
+        // user"），FindGitRoot/GitDiff 等因此静默失败。官方就有这个开关，关掉即可。
+        LibGit2Sharp.GlobalSettings.SetOwnerValidation(false);
+
         AppServices.Init(App, GlobalValue, Config);
 
         var xllBuildTime = File.GetLastWriteTime(ExcelDnaUtil.XllPath)
@@ -2711,6 +2716,8 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         List<FieldData> luaTableFields = new List<FieldData>();
 
         ExcelExporter.ClearNewFiles();
+        if (!ExcelExporter.EnsureUnityRoot())
+            return;
         ExcelExporter.Export(
             path,
             Path.GetFileNameWithoutExtension(path),
@@ -2747,49 +2754,98 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
             var wbPath = App.ActiveWorkbook?.FullName;
             if (!string.IsNullOrEmpty(wbPath))
             {
+                // 找"Tables"目录：当前目录名匹配，或者祖先目录下有个叫Tables的兄弟目录
+                // （比如工作簿开在 Excels\TablesTools\ 下，Tables 是 Excels\ 的兄弟目录）
                 var dir = Path.GetDirectoryName(wbPath);
                 while (dir != null && !dir.EndsWith("Tables"))
-                    dir = Path.GetDirectoryName(dir);
+                {
+                    var parent = Path.GetDirectoryName(dir);
+                    var siblingTables = parent is null ? null : Path.Combine(parent, "Tables");
+                    if (siblingTables != null && Directory.Exists(siblingTables))
+                    {
+                        dir = siblingTables;
+                        break;
+                    }
+                    dir = parent;
+                }
                 if (dir != null)
                     tablesPath = dir + "\\";
             }
         }
-        catch { /* fall back to BasePath */ }
+        catch
+        { /* fall back to BasePath */
+        }
         PluginLog.Write($"[ExcelToLua] tablesPath={tablesPath}");
         try
         {
-            var win = new NumDesTools.UI.GitExportSelectWindow(tablesPath, gitAuthor ?? string.Empty);
-            if (win.ShowDialog() != true || win.SelectedPaths == null || win.SelectedPaths.Count == 0)
+            var win = new NumDesTools.UI.GitExportSelectWindow(
+                tablesPath,
+                gitAuthor ?? string.Empty
+            );
+            if (
+                win.ShowDialog() != true
+                || win.SelectedPaths == null
+                || win.SelectedPaths.Count == 0
+            )
                 return;
 
             var fileList = win.SelectedPaths;
             ExcelExporter.ClearNewFiles();
+            if (!ExcelExporter.EnsureUnityRoot())
+                return;
 
-        // Localizations 文件（需要 MergeLocalization）必须串行，其余并行处理
-        var locFiles = fileList
-            .Where(p => p.Contains("Localizations", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        var normalFiles = fileList.Except(locFiles).ToList();
+            // Localizations 文件（需要 MergeLocalization）必须串行，其余并行处理
+            var locFiles = fileList
+                .Where(p => p.Contains("Localizations", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            var normalFiles = fileList.Except(locFiles).ToList();
 
-        int successCount = 0,
-            failCount = 0;
-        var errors = new System.Collections.Concurrent.ConcurrentBag<string>();
-        var sw = System.Diagnostics.Stopwatch.StartNew();
+            int successCount = 0,
+                failCount = 0;
+            var errors = new System.Collections.Concurrent.ConcurrentBag<string>();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
 
-        App.StatusBar =
-            $"开始并行导表（共 {fileList.Count} 个，{normalFiles.Count} 并行 + {locFiles.Count} 串行）…";
+            App.StatusBar =
+                $"开始并行导表（共 {fileList.Count} 个，{normalFiles.Count} 并行 + {locFiles.Count} 串行）…";
 
-        // ── 并行阶段（非 Localizations 文件）────────────────────────────────
-        // NLua 和 _newFiles（static List）存在潜在线程竞争：并行失败的文件自动降级串行重试。
-        var parallelFailed = new System.Collections.Concurrent.ConcurrentBag<string>();
-        Parallel.ForEach(
-            normalFiles,
-            new ParallelOptions
+            // ── 并行阶段（非 Localizations 文件）────────────────────────────────
+            // NLua 和 _newFiles（static List）存在潜在线程竞争：并行失败的文件自动降级串行重试。
+            var parallelFailed = new System.Collections.Concurrent.ConcurrentBag<string>();
+            Parallel.ForEach(
+                normalFiles,
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1),
+                },
+                path =>
+                {
+                    try
+                    {
+                        var isAll = path.Contains("$");
+                        ExcelExporter.Export(
+                            path,
+                            Path.GetFileNameWithoutExtension(path),
+                            new List<FieldData>(),
+                            isAll,
+                            path.Contains("$$")
+                        );
+                        System.Threading.Interlocked.Increment(ref successCount);
+                    }
+                    catch (Exception ex)
+                    {
+                        PluginLog.Write(
+                            $"[ExcelToLua] {Path.GetFileName(path)} 并行失败: {ex.Message}"
+                        );
+                        parallelFailed.Add(path); // 并行失败 → 降级串行重试
+                    }
+                }
+            );
+
+            // ── 串行重试（并行阶段失败的文件）──────────────────────────────────
+            foreach (var path in parallelFailed)
             {
-                MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1),
-            },
-            path =>
-            {
+                var name = Path.GetFileName(path);
+                App.StatusBar = $"串行重试: {name}";
                 try
                 {
                     var isAll = path.Contains("$");
@@ -2800,79 +2856,56 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                         isAll,
                         path.Contains("$$")
                     );
-                    System.Threading.Interlocked.Increment(ref successCount);
+                    successCount++;
+                    LogDisplay.RecordLine($"[{DateTime.Now}] , {name} 并行失败→串行重试成功");
                 }
                 catch (Exception ex)
                 {
-                    PluginLog.Write($"[ExcelToLua] {Path.GetFileName(path)} 并行失败: {ex.Message}");
-                    parallelFailed.Add(path); // 并行失败 → 降级串行重试
+                    errors.Add(name);
+                    LogDisplay.RecordLine($"[{DateTime.Now}] , {name} 导出失败: {ex.Message}");
+                    PluginLog.Write($"[ExcelToLua] {name} 失败: {ex}");
                 }
             }
-        );
 
-        // ── 串行重试（并行阶段失败的文件）──────────────────────────────────
-        foreach (var path in parallelFailed)
-        {
-            var name = Path.GetFileName(path);
-            App.StatusBar = $"串行重试: {name}";
-            try
+            // ── 串行阶段（Localizations 文件）───────────────────────────────────
+            foreach (var path in locFiles)
             {
-                var isAll = path.Contains("$");
-                ExcelExporter.Export(
-                    path,
-                    Path.GetFileNameWithoutExtension(path),
-                    new List<FieldData>(),
-                    isAll,
-                    path.Contains("$$")
-                );
-                successCount++;
-                LogDisplay.RecordLine($"[{DateTime.Now}] , {name} 并行失败→串行重试成功");
+                var name = Path.GetFileName(path);
+                App.StatusBar = $"导出 Localizations: {name}";
+                try
+                {
+                    var isAll = path.Contains("$");
+                    ExcelExporter.Export(
+                        path,
+                        Path.GetFileNameWithoutExtension(path),
+                        new List<FieldData>(),
+                        isAll,
+                        path.Contains("$$")
+                    );
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    failCount++;
+                    LogDisplay.RecordLine($"[{DateTime.Now}] , {name} 导出失败: {ex.Message}");
+                    PluginLog.Write($"[ExcelToLua] {name} 失败: {ex}");
+                }
             }
-            catch (Exception ex)
-            {
-                errors.Add(name);
-                LogDisplay.RecordLine($"[{DateTime.Now}] , {name} 导出失败: {ex.Message}");
-                PluginLog.Write($"[ExcelToLua] {name} 失败: {ex}");
-            }
-        }
 
-        // ── 串行阶段（Localizations 文件）───────────────────────────────────
-        foreach (var path in locFiles)
-        {
-            var name = Path.GetFileName(path);
-            App.StatusBar = $"导出 Localizations: {name}";
-            try
-            {
-                var isAll = path.Contains("$");
-                ExcelExporter.Export(
-                    path,
-                    Path.GetFileNameWithoutExtension(path),
-                    new List<FieldData>(),
-                    isAll,
-                    path.Contains("$$")
-                );
-                successCount++;
-            }
-            catch (Exception ex)
-            {
-                failCount++;
-                LogDisplay.RecordLine($"[{DateTime.Now}] , {name} 导出失败: {ex.Message}");
-                PluginLog.Write($"[ExcelToLua] {name} 失败: {ex}");
-            }
-        }
+            failCount += errors.Count;
 
-        failCount += errors.Count;
+            if (ExcelExporter.NeedMergeLocalization)
+                ExcelExporter.MergeLocalizationLuaFile();
 
-        if (ExcelExporter.NeedMergeLocalization)
-            ExcelExporter.MergeLocalizationLuaFile();
+            ExcelExporter.NotifyUnityForNewFiles();
 
-        sw.Stop();
-        var summary =
-            failCount > 0 ? $"成功 {successCount}，失败 {failCount}" : $"共 {successCount} 个";
-        LogDisplay.RecordLine(
-            $"[{DateTime.Now}] , 导出结束，{summary}，耗时 {sw.Elapsed.TotalSeconds:F1}s"
-        );
-        App.StatusBar = $"导出完成，{summary}，耗时 {sw.Elapsed.TotalSeconds:F1}s";
+            sw.Stop();
+            var summary =
+                failCount > 0 ? $"成功 {successCount}，失败 {failCount}" : $"共 {successCount} 个";
+            LogDisplay.RecordLine(
+                $"[{DateTime.Now}] , 导出结束，{summary}，耗时 {sw.Elapsed.TotalSeconds:F1}s"
+            );
+            App.StatusBar = $"导出完成，{summary}，耗时 {sw.Elapsed.TotalSeconds:F1}s";
         }
         catch (Exception ex)
         {

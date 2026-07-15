@@ -68,12 +68,22 @@ internal static class PluginLog
     // ── 新增方法 ──────────────────────────────────────────────────────────
 
     /// <summary>
-    /// 记录一行日志并同步到内存 UI 列表。
-    /// 调用方通常已自带 [DateTime.Now] 前缀，此方法原样写入，不再重复加时间戳。
+    /// 记录一行日志并同步到内存 UI 列表。统一加 [yyyy-MM-dd HH:mm:ss.fff] 前缀（与 Write 对齐）。
+    /// 兼容：调用方历史上自带 "[DateTime.Now] , msg" 前缀（格式不一），这里剥掉旧时间戳前缀，
+    /// 统一由本方法加，避免重复 + 格式不一致。
     /// </summary>
     public static void RecordLine(string format, params object[] args)
     {
-        var line = args.Length > 0 ? string.Format(format, args) : format;
+        var body = args.Length > 0 ? string.Format(format, args) : format;
+        if (body.Length > 0 && body[0] == '[')
+        {
+            var close = body.IndexOf(']');
+            if (close > 0 && close < 32)
+            {
+                body = body[(close + 1)..].TrimStart(' ', ',', '，');
+            }
+        }
+        var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {body}";
         WriteRaw(line);
         AppendToUi(line);
     }
