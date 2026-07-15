@@ -2716,7 +2716,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
         List<FieldData> luaTableFields = new List<FieldData>();
 
         ExcelExporter.ClearNewFiles();
-        if (!ExcelExporter.EnsureUnityRoot())
+        if (!ExcelExporter.EnsureUnityRoot(Path.GetDirectoryName(path)))
             return;
         ExcelExporter.Export(
             path,
@@ -2791,7 +2791,7 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
             var fileList = win.SelectedPaths;
             ExcelExporter.ClearNewFiles();
-            if (!ExcelExporter.EnsureUnityRoot())
+            if (!ExcelExporter.EnsureUnityRoot(tablesPath))
                 return;
 
             // Localizations 文件（需要 MergeLocalization）必须串行，其余并行处理

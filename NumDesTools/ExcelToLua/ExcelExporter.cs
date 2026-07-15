@@ -195,9 +195,10 @@ namespace NumDesTools.ExcelToLua
 
         // 取代 Application.dataPath：Unity 项目根由 Resolver 推断+确认+缓存。
         // 会话中途切 BasePath（换配置/换项目）则强制重解析，防写飞。
-        public static bool EnsureUnityRoot()
+        public static bool EnsureUnityRoot(string basePath = null)
         {
-            var normalized = UnityProjectResolver.Normalize(NumDesAddIn.BasePath);
+            basePath ??= NumDesAddIn.BasePath;
+            var normalized = UnityProjectResolver.Normalize(basePath);
             if (
                 _currentUnityRoot is not null
                 && normalized == _resolvedBasePath
@@ -207,7 +208,7 @@ namespace NumDesTools.ExcelToLua
                 return true;
             }
 
-            _currentUnityRoot = UnityProjectResolver.Resolve();
+            _currentUnityRoot = UnityProjectResolver.Resolve(basePath);
             _resolvedBasePath = normalized;
             if (!UnityProjectResolver.IsUnityProject(_currentUnityRoot))
             {

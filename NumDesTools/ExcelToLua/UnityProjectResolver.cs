@@ -34,9 +34,9 @@ static class UnityProjectResolver
         && Directory.Exists(Path.Combine(dir, "Assets"))
         && Directory.Exists(Path.Combine(dir, "ProjectSettings"));
 
-    public static string Resolve()
+    public static string Resolve(string basePath = null)
     {
-        var basePath = NumDesAddIn.BasePath;
+        basePath ??= NumDesAddIn.BasePath;
         if (string.IsNullOrWhiteSpace(basePath))
         {
             return null;
@@ -78,13 +78,18 @@ static class UnityProjectResolver
             {
                 break;
             }
-            foreach (var sibling in Directory.GetDirectories(parent))
+            try
             {
-                if (IsUnityProject(sibling) && !candidates.Contains(sibling))
+                foreach (var sibling in Directory.GetDirectories(parent))
                 {
-                    candidates.Add(sibling);
+                    if (IsUnityProject(sibling) && !candidates.Contains(sibling))
+                    {
+                        candidates.Add(sibling);
+                    }
                 }
             }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
             dir = parent;
         }
         return candidates;
