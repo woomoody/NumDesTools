@@ -856,25 +856,27 @@ public partial class ExcelConflictWindow : MetroWindow
             };
             var cellCapture = cell;
             colBtnRow.Children.Add(
-                MakeColBatchBtn(
-                    "全取我的",
-                    Color(0x1A, 0x3A, 0x6E),
-                    () =>
-                    {
-                        cellCapture.Choice = ConflictChoice.Ours;
-                    }
-                )
-            );
-            colBtnRow.Children.Add(
-                MakeColBatchBtn(
-                    "全取他的",
-                    Color(0x1A, 0x5C, 0x3A),
-                    () =>
-                    {
-                        cellCapture.Choice = ConflictChoice.Theirs;
-                    }
-                )
-            );
+                            MakeColBatchBtn(
+                                "全取我的",
+                                Color(0x1A, 0x3A, 0x6E),
+                                () =>
+                                {
+                                    cellCapture.Choice = ConflictChoice.Ours;
+                                    cellCapture.IsExplicit = true;
+                                }
+                            )
+                        );
+                        colBtnRow.Children.Add(
+                            MakeColBatchBtn(
+                                "全取他的",
+                                Color(0x1A, 0x5C, 0x3A),
+                                () =>
+                                {
+                                    cellCapture.Choice = ConflictChoice.Theirs;
+                                    cellCapture.IsExplicit = true;
+                                }
+                            )
+                        );
             colPanel.Children.Add(colBtnRow);
             var colBorder = new Border { Child = colPanel };
             Grid.SetColumn(colBorder, 0);
