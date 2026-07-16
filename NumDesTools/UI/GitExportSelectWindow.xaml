@@ -95,6 +95,10 @@
                               SelectionChanged="CommitCombo_SelectionChanged"
                               DisplayMemberPath="Display"/>
                 </StackPanel>
+
+                <!-- 全表导出模式 -->
+                <RadioButton x:Name="ModeFullExport" Content="全表导出（清空 Tables 后重新导 Localizations/Tables/UIs 全部）"
+                             GroupName="ExportMode" Margin="0,6,0,0" Checked="Mode_Changed"/>
             </StackPanel>
         </Border>
 

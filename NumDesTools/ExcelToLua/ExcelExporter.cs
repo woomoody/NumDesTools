@@ -13,6 +13,9 @@ namespace NumDesTools.ExcelToLua
         static string _currentUnityRoot;
         static string _resolvedBasePath;
 
+        /// <summary>当前解析到的 Unity 项目根（EnsureUnityRoot 后有值），供调用方拿输出目录。</summary>
+        public static string CurrentUnityRoot => _currentUnityRoot;
+
         static string LocalizationOutputTempFolder => $"{_currentUnityRoot}/Localizations/Lua";
 
         //lua文件夹

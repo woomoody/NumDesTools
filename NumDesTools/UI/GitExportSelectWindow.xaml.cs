@@ -28,6 +28,9 @@ public partial class GitExportSelectWindow : MetroWindow
     // 调用方读取导出结果
     public List<string>? SelectedPaths { get; private set; }
 
+    /// <summary>全表导出模式（清空 Tables 后导 Localizations/Tables/UIs 全部）。</summary>
+    public bool IsFullExport { get; private set; }
+
     public GitExportSelectWindow(string repoBasePath, string gitAuthor)
     {
         MahAppsHelper.EnsureInitialized();
@@ -265,11 +268,26 @@ public partial class GitExportSelectWindow : MetroWindow
             return;
         bool historyOn = ModeWithHistory.IsChecked == true;
         bool commitOn = ModeSpecificCommit.IsChecked == true;
+        bool fullOn = ModeFullExport.IsChecked == true;
         HistoryPanel.IsEnabled = historyOn;
         HistoryAuthorRow.IsEnabled = historyOn;
         CommitPickPanel.IsEnabled = commitOn;
 
-        if (!commitOn)
+        // 全表模式：文件列表/全选禁用（不选文件，直接导全部）
+        SelectAllBox.IsEnabled = !fullOn;
+        FileListPanel.IsEnabled = !fullOn;
+        if (fullOn)
+        {
+            FileListPanel.Children.Clear();
+            FileCountText.Text = "全表导出：将清空 Tables 输出目录（保留 NonOutputTable）后导 Localizations/Tables/UIs 全部";
+            StatusText.Text = "全表导出模式";
+        }
+        else
+        {
+            FileCountText.Text = "";
+        }
+
+        if (!commitOn && !fullOn)
             RefreshFileList();
         // 指定提交模式：等用户选择后再刷新，不自动刷新
     }
@@ -395,7 +413,15 @@ public partial class GitExportSelectWindow : MetroWindow
 
     private void Export_Click(object sender, RoutedEventArgs e)
     {
-        SelectedPaths = GetCheckedPaths();
+        if (ModeFullExport.IsChecked == true)
+        {
+            IsFullExport = true;
+            SelectedPaths = null; // 全表模式由调用方扫描，不选具体文件
+        }
+        else
+        {
+            SelectedPaths = GetCheckedPaths();
+        }
         DialogResult = true;
         Close();
     }

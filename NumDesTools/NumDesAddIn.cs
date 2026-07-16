@@ -2782,17 +2782,32 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 tablesPath,
                 gitAuthor ?? string.Empty
             );
-            if (
-                win.ShowDialog() != true
-                || win.SelectedPaths == null
-                || win.SelectedPaths.Count == 0
-            )
+            if (win.ShowDialog() != true)
+                return;
+            if (!win.IsFullExport && (win.SelectedPaths == null || win.SelectedPaths.Count == 0))
                 return;
 
             var fileList = win.SelectedPaths;
             ExcelExporter.ClearNewFiles();
             if (!ExcelExporter.EnsureUnityRoot(tablesPath))
                 return;
+
+            // 全表导出模式：清 txt（保留 meta）→ 扫 3 目录全表导出 → 剪孤儿 meta → 一次 git add
+            if (win.IsFullExport)
+            {
+                fileList = FullExportScanner.ScanAllExcels(
+                    Path.GetDirectoryName(tablesPath.TrimEnd('\\', '/')) ?? tablesPath
+                );
+                var unityRoot = ExcelExporter.CurrentUnityRoot;
+                if (!string.IsNullOrEmpty(unityRoot))
+                {
+                    var tablesOut = Path.Combine(unityRoot, "Assets", "LuaScripts", "Tables");
+                    // 阶段1：只删 txt（保留 meta，防 GUID 重置）
+                    FullExportScanner.CleanTablesOutput(tablesOut);
+                    // 阶段2 之后（导出完成）会剪孤儿 meta + git add，见 NotifyUnityForNewFiles 之后
+                }
+                PluginLog.Write($"[ExcelToLua] 全表导出：扫描到 {fileList.Count} 个 Excel");
+            }
 
             // Localizations 文件（需要 MergeLocalization）必须串行，其余并行处理
             var locFiles = fileList
@@ -2898,6 +2913,20 @@ public class NumDesAddIn : ExcelRibbon, IExcelAddIn
                 ExcelExporter.MergeLocalizationLuaFile();
 
             ExcelExporter.NotifyUnityForNewFiles();
+
+            // 全表模式：导出后剪孤儿 meta（死表 txt 没回来 → 删对应 meta）→ 一次 git add
+            if (win.IsFullExport)
+            {
+                var unityRoot = ExcelExporter.CurrentUnityRoot;
+                if (!string.IsNullOrEmpty(unityRoot))
+                {
+                    var tablesOut = Path.Combine(unityRoot, "Assets", "LuaScripts", "Tables");
+                    // 阶段3：剪孤儿 meta（同名 txt 不存在 = 死文件）
+                    FullExportScanner.PruneOrphanMetas(tablesOut);
+                    // 阶段4：一次 git add 纳入 删 txt + 新 txt + 删 meta
+                    FullExportScanner.GitAddTablesAndLocalizations(unityRoot);
+                }
+            }
 
             sw.Stop();
             var summary =
