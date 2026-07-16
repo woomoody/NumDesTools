@@ -1378,7 +1378,8 @@ public partial class ExcelConflictWindow : MetroWindow
         }
 
         AiSuggestBtn.IsEnabled = false;
-        AiSuggestionText.Text = "AI 思考中…";
+                AiSuggestionText.Text = "AI 思考中…";
+                DetailHint.Text = string.Empty;
 
         try
         {
@@ -1406,14 +1407,14 @@ public partial class ExcelConflictWindow : MetroWindow
                 colDesc = $"多列冲突：{colDesc}";
             }
 
-            var prompt = $"Excel 冲突解决。{colDesc}。一句话建议选哪边，给出理由。";
+            var prompt = $"Excel 冲突。{colDesc}。用10字内建议选哪边。";
 
             var payload = JsonSerializer.Serialize(
                 new
                 {
                     model = "deepseek-v4-flash",
                     messages = new[] { new { role = "user", content = prompt } },
-                    max_tokens = 128,
+                    max_tokens = 64,
                 }
             );
 

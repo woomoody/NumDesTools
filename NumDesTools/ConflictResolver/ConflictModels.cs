@@ -100,6 +100,24 @@ public class CellConflict : INotifyPropertyChanged
 /// <summary>一行内所有差异的聚合</summary>
 public class RowConflict : INotifyPropertyChanged
 {
+    public RowConflict()
+    {
+        Cells.CollectionChanged += (_, e) =>
+        {
+            if (e.NewItems != null)
+            {
+                foreach (CellConflict cell in e.NewItems)
+                    cell.PropertyChanged += OnCellPropertyChanged;
+            }
+        };
+    }
+
+    private void OnCellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        // 冒泡：单元格选择变化时通知行刷新
+        OnPropertyChanged(e.PropertyName);
+    }
+
     public string SheetName { get; init; } = string.Empty;
     public string RowKey { get; init; } = string.Empty;
     public RowDiffType DiffType { get; init; }

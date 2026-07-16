@@ -218,32 +218,37 @@ public partial class ConflictRowItem : UserControl
     }
 
     private void OnRcPropertyChanged(
-        object? sender,
-        System.ComponentModel.PropertyChangedEventArgs e
-    )
-    {
-        if (e.PropertyName == nameof(RowConflict.IsSelected) && _currentRc != null)
-        {
-            UpdateSelectionHighlight(_currentRc);
-            DeSelectBtn.Visibility = _currentRc.IsSelected
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-        }
-        else if (
-            (
-                e.PropertyName == nameof(RowConflict.RowChoiceOurs)
-                || e.PropertyName == nameof(RowConflict.RowChoiceTheirs)
-            )
-            && _currentRc != null
-            && RowChoicePanel.Visibility == Visibility.Visible
+            object? sender,
+            System.ComponentModel.PropertyChangedEventArgs e
         )
         {
-            _suppressChoiceHandlers = true;
-            RowChoiceOursRb.IsChecked = _currentRc.RowChoiceOurs;
-            RowChoiceTheirsRb.IsChecked = _currentRc.RowChoiceTheirs;
-            _suppressChoiceHandlers = false;
+            if (e.PropertyName == nameof(RowConflict.IsSelected) && _currentRc != null)
+            {
+                UpdateSelectionHighlight(_currentRc);
+                DeSelectBtn.Visibility = _currentRc.IsSelected
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            }
+            else if (
+                (
+                    e.PropertyName == nameof(RowConflict.RowChoiceOurs)
+                    || e.PropertyName == nameof(RowConflict.RowChoiceTheirs)
+                )
+                && _currentRc != null
+                && RowChoicePanel.Visibility == Visibility.Visible
+            )
+            {
+                _suppressChoiceHandlers = true;
+                RowChoiceOursRb.IsChecked = _currentRc.RowChoiceOurs;
+                RowChoiceTheirsRb.IsChecked = _currentRc.RowChoiceTheirs;
+                _suppressChoiceHandlers = false;
+            }
+            // 单元格选择变化 → 重绘整行
+            else if (_currentRc != null && e.PropertyName is nameof(CellConflict.ChoiceOurs) or nameof(CellConflict.ChoiceTheirs) or nameof(CellConflict.IsExplicit))
+            {
+                Render(_currentRc);
+            }
         }
-    }
 
     private void RowChoiceOursRb_Checked(object sender, RoutedEventArgs e)
     {

@@ -192,14 +192,18 @@ namespace NumDesTools.Config
 
             foreach (var kvp in fileValues)
             {
-                if (kvp.Value is JToken listValue)
+                if (kvp.Value is JToken token)
                 {
-                    if (listValue.Type == JTokenType.Array)
+                    if (token.Type == JTokenType.Array)
                     {
                         _configData.Value[kvp.Key] = string.Join(
                             "",
-                            listValue.ToObject<List<object>>()
+                            token.ToObject<List<object>>()
                         );
+                    }
+                    else if (token is JValue jVal)
+                    {
+                        _configData.Value[kvp.Key] = jVal.Value?.ToString() ?? "";
                     }
                 }
                 else if (kvp.Value is string stringValue)
