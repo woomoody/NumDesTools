@@ -77,7 +77,7 @@ internal class ExcelIndexBuilder
             toRebuild,
             new ParallelOptions
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                MaxDegreeOfParallelism = 4, // 实测：491个小文件场景下文件打开开销主导，核心数(28)反而比4慢58%
                 CancellationToken = ct,
             },
             file =>
