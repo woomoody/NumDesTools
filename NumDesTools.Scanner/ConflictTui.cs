@@ -37,7 +37,6 @@ internal static class ConflictTui
             return 1;
         }
 
-
         var oursPath = args[idx + 1];
         var theirsPath = args[idx + 2];
         var basePath =
@@ -54,6 +53,26 @@ internal static class ConflictTui
             return 1;
         }
 
+        return ResolveInteractive(oursPath, theirsPath, basePath, outPath: oursPath, gitAdd: true)
+            ? 0
+            : 2;
+    }
+
+    /// <summary>
+    /// 交互式解决一个文件的冲突并写回。供 --conflict（CLI直传路径）和
+    /// ConflictManagerTui（发现循环+git blob提取后传入临时路径）共用。
+    /// 返回 true：无差异或用户确认写回成功；false：用户中途放弃/取消。
+    /// </summary>
+    internal static bool ResolveInteractive(
+        string oursPath,
+        string theirsPath,
+        string? basePath,
+        string outPath,
+        bool gitAdd,
+        string? oursLabel = null,
+        string? theirsLabel = null
+    )
+    {
         FileDiff diff = null!;
         AnsiConsole
             .Status()
@@ -73,14 +92,17 @@ internal static class ConflictTui
         if (allRows.Count == 0)
         {
             AnsiConsole.MarkupLine("[green]✓ 无差异，文件内容一致。[/]");
-            return 0;
+            return true;
         }
 
         int modifiedCount = allRows.Count(r => r.DiffType == RowDiffType.Modified);
         int onlyCount = allRows.Count - modifiedCount;
+        var oursTag = oursLabel != null ? $"（我方={oursLabel}）" : "";
+        var theirsTag = theirsLabel != null ? $"（对方={theirsLabel}）" : "";
         AnsiConsole.MarkupLine(
             $"[yellow]发现 {allRows.Count} 行差异[/]"
                 + $"  Modified=[cyan]{modifiedCount}[/]  仅一方=[cyan]{onlyCount}[/]"
+                + $"  [dim]{Markup.Escape(oursTag + theirsTag)}[/]"
         );
         AnsiConsole.MarkupLine(
             $"  [dim][[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  [[{KeyAllOurs}]]整行我方  [[{KeyAllTheirs}]]整行对方"
@@ -99,7 +121,7 @@ internal static class ConflictTui
             if (exitCode != 0)
             {
                 AnsiConsole.MarkupLine("[red]已放弃，未写入任何文件。[/]");
-                return 2;
+                return false;
             }
         }
 
@@ -107,11 +129,11 @@ internal static class ConflictTui
         AnsiConsole.WriteLine();
         RenderSummary(diff);
 
-        var confirm = AnsiConsole.Confirm("确认写回 OURS 文件并执行 git add？", defaultValue: true);
+        var confirm = AnsiConsole.Confirm("确认写回并执行 git add？", defaultValue: true);
         if (!confirm)
         {
             AnsiConsole.MarkupLine("[yellow]已取消，未写入任何文件。[/]");
-            return 3;
+            return false;
         }
 
         string? gitLog = null;
@@ -121,15 +143,16 @@ internal static class ConflictTui
                 "写回文件...",
                 _ =>
                 {
-                    ConflictApplier.Apply(diff, oursPath, gitAdd: true);
-                    gitLog = BuildGitAddLog(oursPath);
+                    ConflictApplier.Apply(diff, outPath, gitAdd: gitAdd);
+                    if (gitAdd)
+                        gitLog = BuildGitAddLog(outPath);
                 }
             );
 
-        AnsiConsole.MarkupLine($"[green]✓ 已写回并 git add：{Path.GetFileName(oursPath)}[/]");
+        AnsiConsole.MarkupLine($"[green]✓ 已写回并 git add：{Path.GetFileName(outPath)}[/]");
         if (gitLog != null)
             AnsiConsole.MarkupLine($"  [dim]{Markup.Escape(gitLog)}[/]");
-        return 0;
+        return true;
     }
 
     // ── 入口：--conflict-add（一键 git add 所有无冲突 xlsx）─────────────────
@@ -137,7 +160,8 @@ internal static class ConflictTui
     public static int RunConflictAdd(string[] args)
     {
         int idx = Array.IndexOf(args, "--conflict-add");
-        var repoRoot = idx >= 0 && idx + 1 < args.Length ? args[idx + 1] : Directory.GetCurrentDirectory();
+        var repoRoot =
+            idx >= 0 && idx + 1 < args.Length ? args[idx + 1] : Directory.GetCurrentDirectory();
 
         if (!Directory.Exists(Path.Combine(repoRoot, ".git")))
         {
@@ -162,11 +186,16 @@ internal static class ConflictTui
                         var relPath = (entry.Ours ?? entry.Theirs)?.Path;
                         if (relPath == null)
                             continue;
-                        if (!relPath.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
-                            && !relPath.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase))
+                        if (
+                            !relPath.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
+                            && !relPath.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase)
+                        )
                             continue;
                         // 无冲突标记：git status 下 Stage == Both 的是真冲突，已被 TUI 处理过的会 stage clean
-                        var absPath = Path.Combine(repoRoot, relPath.Replace('/', Path.DirectorySeparatorChar));
+                        var absPath = Path.Combine(
+                            repoRoot,
+                            relPath.Replace('/', Path.DirectorySeparatorChar)
+                        );
                         skipped.Add(relPath);
                         _ = absPath;
                     }
@@ -174,11 +203,15 @@ internal static class ConflictTui
                     // 用 git status 找已暂存但未提交的（TUI 写回后 git add 过的）
                     foreach (var entry in repo.RetrieveStatus(new StatusOptions()))
                     {
-                        if (!entry.FilePath.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
-                            && !entry.FilePath.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase))
+                        if (
+                            !entry.FilePath.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
+                            && !entry.FilePath.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase)
+                        )
                             continue;
-                        if (entry.State.HasFlag(FileStatus.ModifiedInWorkdir)
-                            && !entry.State.HasFlag(FileStatus.Conflicted))
+                        if (
+                            entry.State.HasFlag(FileStatus.ModifiedInWorkdir)
+                            && !entry.State.HasFlag(FileStatus.Conflicted)
+                        )
                         {
                             repo.Index.Add(entry.FilePath);
                             repo.Index.Write();

@@ -26,6 +26,9 @@ internal class Program
         if (args.Contains("--conflict-manager"))
             return ConflictManager.Run(args);
 
+        if (args.Contains("--conflict-manager-tui"))
+            return ConflictManagerTui.Run(args);
+
         if (args.Contains("--conflict"))
             return ConflictTui.Run(args);
 
