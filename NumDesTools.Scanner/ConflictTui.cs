@@ -849,38 +849,28 @@ internal static class ConflictTui
         int max
     )
     {
-        var parts = new List<(string Text, bool Diff)>();
-        foreach (var (t, k) in segs)
-        {
-            if (k == 0)
-                parts.Add((t, false));
-            else if (oursView && k == 1)
-                parts.Add((t, true));
-            else if (!oursView && k == 2)
-                parts.Add((t, true));
-        }
+        // ours/theirs 共享同一 segs 序列，围绕同一 firstDiff 截断 → 两列上下文对应、差异段对齐
+        int firstDiff = segs.FindIndex(s => s.Kind != 0);
         var baseColor = oursView ? "blue" : "yellow";
-        var diffColor = oursView ? "bold white on red" : "bold white on darkgreen";
+        var diffColor = oursView ? "white on red" : "black on green";
 
-        int firstDiff = parts.FindIndex(p => p.Diff);
         if (firstDiff < 0)
-        {
-            var all = string.Concat(parts.Select(p => p.Text));
-            return $"[{baseColor}]{Markup.Escape(TruncateCell(all, max))}[/]";
-        }
+            return $"[{baseColor}]{Markup.Escape(TruncateCell(string.Concat(segs.Select(s => s.Text)), max))}[/]";
 
-        var pre = string.Concat(parts.Take(firstDiff).Select(p => p.Text));
-        int diffCount = 0;
-        while (firstDiff + diffCount < parts.Count && parts[firstDiff + diffCount].Diff)
-            diffCount++;
-        var diffStr = string.Concat(parts.Skip(firstDiff).Take(diffCount).Select(p => p.Text));
-        var post = string.Concat(parts.Skip(firstDiff + diffCount).Select(p => p.Text));
+        var pre = string.Concat(segs.Take(firstDiff).Select(s => s.Text));
+        var d = segs[firstDiff];
+        var post = string.Concat(segs.Skip(firstDiff + 1).Select(s => s.Text));
 
-        int ctx = Math.Max(4, (max - Math.Min(diffStr.Length, max / 2)) / 2);
+        int ctx = Math.Max(4, max / 3);
         var preShow = pre.Length > ctx ? "…" + pre[^(ctx)..] : pre;
-        var diffShow = diffStr.Length > max / 2 ? diffStr[..(max / 2)] + "…" : diffStr;
         var postShow = post.Length > ctx ? post[..ctx] + "…" : post;
-        return $"[{baseColor}]{Markup.Escape(preShow)}[/][{diffColor}]{Markup.Escape(diffShow)}[/][{baseColor}]{Markup.Escape(postShow)}[/]";
+
+        bool has = oursView ? d.Kind == 1 : d.Kind == 2;
+        string diffShow = has
+            ? $"[{diffColor}]{Markup.Escape(TruncateCell(d.Text, max / 2))}[/]"
+            : $"[dim]⟨{(oursView ? "对方" : "我方")}独有{d.Text.Length}字⟩[/]";
+
+        return $"[{baseColor}]{Markup.Escape(preShow)}[/]{diffShow}[{baseColor}]{Markup.Escape(postShow)}[/]";
     }
 
     /// <summary>v 详情：Console 直接打印完整 ours/theirs（终端原生可向下无限滚动），字符级 diff 高亮差异（我方独有红底/对方独有绿底），任意键返回。</summary>
@@ -904,12 +894,17 @@ internal static class ConflictTui
             }
             else if (k == 1)
             {
-                Console.BackgroundColor = ConsoleColor.DarkRed;
+                Console.BackgroundColor = ConsoleColor.Red;
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.Write(t);
                 Console.ResetColor();
             }
-            // k==2 仅对方，我方视角不打印
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write($"⟨对方独有{t.Length}字⟩");
+                Console.ResetColor();
+            }
         }
         Console.WriteLine();
 
@@ -923,12 +918,17 @@ internal static class ConflictTui
             }
             else if (k == 2)
             {
-                Console.BackgroundColor = ConsoleColor.DarkGreen;
-                Console.ForegroundColor = ConsoleColor.White;
+                Console.BackgroundColor = ConsoleColor.Green;
+                Console.ForegroundColor = ConsoleColor.Black;
                 Console.Write(t);
                 Console.ResetColor();
             }
-            // k==1 仅我方，对方视角不打印
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.Write($"⟨我方独有{t.Length}字⟩");
+                Console.ResetColor();
+            }
         }
         Console.WriteLine();
         Console.ResetColor();
