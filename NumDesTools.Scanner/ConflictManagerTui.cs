@@ -12,7 +12,7 @@ namespace NumDesTools.Scanner;
 /// </summary>
 internal static class ConflictManagerTui
 {
-    private const string QuitChoice = "[退出]";
+    private const string QuitChoice = "（退出）";
 
     public static int Run(string[] args)
     {
@@ -72,6 +72,7 @@ internal static class ConflictManagerTui
                 new SelectionPrompt<string>()
                     .Title($"[yellow]{allXlsx.Count} 个 xlsx 仍有冲突，选一个解决：[/]")
                     .PageSize(15)
+                    .UseConverter(Markup.Escape) // 冲突文件路径/QuitChoice 里的方括号等字符会被误判为 Markup 标签，统一转义
                     .AddChoices(choices)
             );
             if (chosen == QuitChoice)
@@ -97,7 +98,9 @@ internal static class ConflictManagerTui
             }
             if (blobs == null)
             {
-                AnsiConsole.MarkupLine($"[red]在 Index 中找不到冲突条目：{chosen}[/]");
+                AnsiConsole.MarkupLine(
+                    $"[red]在 Index 中找不到冲突条目：{Markup.Escape(chosen)}[/]"
+                );
                 continue;
             }
 
