@@ -885,12 +885,8 @@ internal static class ConflictTui
             $"列名: {Markup.Escape(e.ColName)}  我方(OURS)={Markup.Escape(oursLabel ?? "?")}  对方(THEIRS)={Markup.Escape(theirsLabel ?? "?")}"
         );
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine(
-            $"[blue]我方({e.OursDisplay.Length}字):[/] {BuildDiffLine(e.DiffSegs, true)}"
-        );
-        AnsiConsole.MarkupLine(
-            $"[yellow]对方({e.TheirsDisplay.Length}字):[/] {BuildDiffLine(e.DiffSegs, false)}"
-        );
+        AnsiConsole.MarkupLine($"[blue]我方(OURS):[/] {BuildDiffLine(e.DiffSegs, true)}");
+        AnsiConsole.MarkupLine($"[yellow]对方(THEIRS):[/] {BuildDiffLine(e.DiffSegs, false)}");
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("[dim]按任意键返回表格[/]");
     }
