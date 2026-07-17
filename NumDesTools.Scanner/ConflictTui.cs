@@ -296,14 +296,11 @@ internal static class ConflictTui
                     {
                         switch (key.KeyChar.ToString())
                         {
+                            // o/t 只记录选择并把焦点移到下一个待选格；不会因为"刚好选完最后一格"就自动退出——
+                            // 退出这一行必须显式按 Enter/s 确认，保留反悔空间（↑↓可以随时回去改已选格的选择）
                             case KeyOurs:
                                 row.Cells[sel].Choice = ConflictChoice.Ours;
                                 row.Cells[sel].IsExplicit = true;
-                                if (row.IsResolved)
-                                {
-                                    done = true;
-                                    break;
-                                }
                                 var nextO = FindIndex(row.Cells, c => !c.IsExplicit);
                                 if (nextO >= 0)
                                     sel = nextO;
@@ -312,11 +309,6 @@ internal static class ConflictTui
                             case KeyTheirs:
                                 row.Cells[sel].Choice = ConflictChoice.Theirs;
                                 row.Cells[sel].IsExplicit = true;
-                                if (row.IsResolved)
-                                {
-                                    done = true;
-                                    break;
-                                }
                                 var nextT = FindIndex(row.Cells, c => !c.IsExplicit);
                                 if (nextT >= 0)
                                     sel = nextT;
@@ -464,7 +456,7 @@ internal static class ConflictTui
                 + $"[blue]{Markup.Escape(cur.OursDisplay)}[/] vs [yellow]{Markup.Escape(cur.TheirsDisplay)}[/]"
         );
         var footer = new Markup(
-            $"[dim]↑↓移动  [[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  [[{KeyAllOurs}]]整行我方  [[{KeyAllTheirs}]]整行对方  Enter/[[{KeySkip}]]跳过(默认我方)  [[{KeyQuit}]]放弃[/]"
+            $"[dim]↑↓移动(可回到已选格改选)  [[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  [[{KeyAllOurs}]]整行我方  [[{KeyAllTheirs}]]整行对方  Enter/[[{KeySkip}]]确认此行(未选格默认我方)  [[{KeyQuit}]]放弃[/]"
         );
 
         var body = new Rows(table, Text.Empty, curInfo, Text.Empty, footer);
