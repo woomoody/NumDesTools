@@ -535,6 +535,7 @@ internal static class ConflictTui
         string ColName,
         string OursDisplay,
         string TheirsDisplay,
+        string Remark,
         CellConflict Cell
     );
 
@@ -553,6 +554,7 @@ internal static class ConflictTui
                         cell.ColName,
                         cell.OursDisplay,
                         cell.TheirsDisplay,
+                        row.DisplayName,
                         cell
                     )
                 );
@@ -578,6 +580,7 @@ internal static class ConflictTui
             .Expand()
             .AddColumn(new TableColumn("[bold]#[/]"))
             .AddColumn(new TableColumn("[bold]行[/]"))
+            .AddColumn(new TableColumn("[bold]备注[/]"))
             .AddColumn(new TableColumn("[bold]列名[/]"))
             .AddColumn(new TableColumn("[blue]我方 (OURS)[/]"))
             .AddColumn(new TableColumn("[yellow]对方 (THEIRS)[/]"))
@@ -608,9 +611,11 @@ internal static class ConflictTui
                 ? "[dim]未选(默认我方)[/]"
                 : (e.Cell.Choice == ConflictChoice.Ours ? "[blue]我方[/]" : "[yellow]对方[/]");
             string prefix = cursorHere ? "[bold green]▶[/] " : "  ";
+            var remarkShort = e.Remark.Length > 22 ? e.Remark[..22] + "…" : e.Remark;
             table.AddRow(
                 $"{prefix}{i + 1}",
                 Markup.Escape(e.RowKey),
+                Markup.Escape(remarkShort),
                 Markup.Escape(e.ColName),
                 oursVal,
                 theirsVal,
@@ -623,12 +628,12 @@ internal static class ConflictTui
         IRenderable curInfo =
             entries.Count > 0
                 ? new Markup(
-                    $"当前：[bold green]{Markup.Escape(cur.ColName)}[/]  光标在 [bold]{colWord}[/]列  按 [[{KeySelect}]] 选此版本"
+                    $"当前：[bold green]{Markup.Escape(cur.ColName)}[/]  [dim]{Markup.Escape(cur.Remark)}[/]  光标在 [bold]{colWord}[/]列  按 [[{KeySelect}]] 选此版本"
                 )
                 : Text.Empty;
         var legend = BuildLegendLine(oursLabel, theirsLabel);
         var footer = new Markup(
-            $"[dim]↑↓←→移动光标  [[{KeySelect}]]选当前列版本(默认我方)  Enter确认(未选默认我方)  [[{KeyQuit}]]放弃[/]"
+            $"[dim]↑↓←→移动光标  [[{KeySelect}]]选当前列版本(默认我方)  [[{KeyAllOurs}]]全选我方  [[{KeyAllTheirs}]]全选对方  Enter确认  [[{KeyQuit}]]放弃[/]"
         );
 
         var body = new Rows(table, Text.Empty, curInfo, Text.Empty, legend, Text.Empty, footer);
@@ -711,6 +716,20 @@ internal static class ConflictTui
                                 entries[cursorRow].Cell.IsExplicit = true;
                                 if (cursorRow < entries.Count - 1)
                                     cursorRow++;
+                                break;
+                            case KeyAllOurs:
+                                foreach (var e in entries.Where(e => !e.Cell.IsExplicit))
+                                {
+                                    e.Cell.Choice = ConflictChoice.Ours;
+                                    e.Cell.IsExplicit = true;
+                                }
+                                break;
+                            case KeyAllTheirs:
+                                foreach (var e in entries.Where(e => !e.Cell.IsExplicit))
+                                {
+                                    e.Cell.Choice = ConflictChoice.Theirs;
+                                    e.Cell.IsExplicit = true;
+                                }
                                 break;
                             case KeyQuit:
                                 result = -1;
