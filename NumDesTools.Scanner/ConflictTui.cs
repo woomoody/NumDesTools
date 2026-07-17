@@ -700,21 +700,19 @@ internal static class ConflictTui
 
                     if (key.Key == ConsoleKey.UpArrow)
                     {
-                        if (cursorRow > 0)
-                            cursorRow--;
+                        cursorRow = (cursorRow - 1 + entries.Count) % entries.Count;
                     }
                     else if (key.Key == ConsoleKey.DownArrow)
                     {
-                        if (cursorRow < entries.Count - 1)
-                            cursorRow++;
+                        cursorRow = (cursorRow + 1) % entries.Count;
                     }
                     else if (key.Key == ConsoleKey.LeftArrow)
                     {
-                        cursorCol = 0;
+                        cursorCol = (cursorCol - 1 + 2) % 2;
                     }
                     else if (key.Key == ConsoleKey.RightArrow)
                     {
-                        cursorCol = 1;
+                        cursorCol = (cursorCol + 1) % 2;
                     }
                     else if (key.Key == ConsoleKey.Enter)
                     {
