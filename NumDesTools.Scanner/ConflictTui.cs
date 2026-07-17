@@ -595,23 +595,25 @@ internal static class ConflictTui
             bool selected = e.Cell.IsExplicit;
             bool cursorHere = i == cursorRow;
 
-            // 光标格用 [reverse] 反色高亮（vim 式）；已选非光标格用蓝/黄底块 + ✓
-            string oursVal = (cursorHere, cursorCol, selected, e.Cell.Choice) switch
-            {
-                (true, 0, _, _) =>
-                    $"[reverse] {Markup.Escape(TruncateCell(e.OursDisplay, 30))} ◀[/]",
-                (_, _, true, ConflictChoice.Ours) =>
-                    $"[bold black on blue] {Markup.Escape(TruncateCell(e.OursDisplay, 30))} ✓[/]",
-                _ => DiffSnippetMarkup(e.DiffSegs, true, 30),
-            };
-            string theirsVal = (cursorHere, cursorCol, selected, e.Cell.Choice) switch
-            {
-                (true, 1, _, _) =>
-                    $"[reverse] {Markup.Escape(TruncateCell(e.TheirsDisplay, 30))} ◀[/]",
-                (_, _, true, ConflictChoice.Theirs) =>
-                    $"[bold black on yellow] {Markup.Escape(TruncateCell(e.TheirsDisplay, 30))} ✓[/]",
-                _ => DiffSnippetMarkup(e.DiffSegs, false, 30),
-            };
+            // 内容统一用 DiffSnippetMarkup（未选/光标格看差异）；已选格已定值用 TruncateCell+✓。
+            // 光标格 reverse 包裹高亮，但内容=未选时的 diff 区间，不变（之前光标格用 TruncateCell 导致内容跳变）
+            string oursVal;
+            if (selected && e.Cell.Choice == ConflictChoice.Ours)
+                oursVal =
+                    $"[bold black on blue] {Markup.Escape(TruncateCell(e.OursDisplay, 30))} ✓[/]";
+            else
+                oursVal = DiffSnippetMarkup(e.DiffSegs, true, 30);
+            if (cursorHere && cursorCol == 0 && !selected)
+                oursVal = $"[reverse]{oursVal}[/]";
+
+            string theirsVal;
+            if (selected && e.Cell.Choice == ConflictChoice.Theirs)
+                theirsVal =
+                    $"[bold black on yellow] {Markup.Escape(TruncateCell(e.TheirsDisplay, 30))} ✓[/]";
+            else
+                theirsVal = DiffSnippetMarkup(e.DiffSegs, false, 30);
+            if (cursorHere && cursorCol == 1 && !selected)
+                theirsVal = $"[reverse]{theirsVal}[/]";
             string choiceStr = !selected
                 ? "[dim]未选(默认我方)[/]"
                 : (e.Cell.Choice == ConflictChoice.Ours ? "[blue]我方[/]" : "[yellow]对方[/]");
