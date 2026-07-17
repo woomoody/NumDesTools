@@ -868,72 +868,47 @@ internal static class ConflictTui
         bool has = oursView ? d.Kind == 1 : d.Kind == 2;
         string diffShow = has
             ? $"[{diffColor}]{Markup.Escape(TruncateCell(d.Text, max / 2))}[/]"
-            : $"[dim]⟨{(oursView ? "对方" : "我方")}独有{d.Text.Length}字⟩[/]";
-
+            : "";
         return $"[{baseColor}]{Markup.Escape(preShow)}[/]{diffShow}[{baseColor}]{Markup.Escape(postShow)}[/]";
     }
 
-    /// <summary>v 详情：Console 直接打印完整 ours/theirs（终端原生可向下无限滚动），字符级 diff 高亮差异（我方独有红底/对方独有绿底），任意键返回。</summary>
+    /// <summary>v 详情：Spectre Markup 打印完整 ours/theirs（on red/green 底色块，TUI 效果非纯 Console），字符级 diff，任意键返回。</summary>
     private static void PrintCellDetail(AllConflictEntry e, string? oursLabel, string? theirsLabel)
     {
-        Console.Clear();
-        Console.WriteLine($"行 {e.RowKey}  {e.Remark}");
-        Console.WriteLine(
-            $"列名: {e.ColName}  我方(OURS)={oursLabel ?? "?"}  对方(THEIRS)={theirsLabel ?? "?"}"
+        AnsiConsole.Clear();
+        AnsiConsole.MarkupLine(
+            $"[bold]行 {Markup.Escape(e.RowKey)}[/]  [dim]{Markup.Escape(e.Remark)}[/]"
         );
-        Console.WriteLine();
-        var segs = CharDiff(e.OursDisplay, e.TheirsDisplay);
+        AnsiConsole.MarkupLine(
+            $"列名: {Markup.Escape(e.ColName)}  我方(OURS)={Markup.Escape(oursLabel ?? "?")}  对方(THEIRS)={Markup.Escape(theirsLabel ?? "?")}"
+        );
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine(
+            $"[blue]我方({e.OursDisplay.Length}字):[/] {BuildDiffLine(e.DiffSegs, true)}"
+        );
+        AnsiConsole.MarkupLine(
+            $"[yellow]对方({e.TheirsDisplay.Length}字):[/] {BuildDiffLine(e.DiffSegs, false)}"
+        );
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("[dim]按任意键返回表格[/]");
+    }
 
-        Console.Write($"我方({e.OursDisplay.Length}字): ");
+    /// <summary>组装 diff 行 Markup：common 行色，本方独有段底色块(我方 on red/对方 on green)，对方独有段不显示(各自到边界)。</summary>
+    private static string BuildDiffLine(List<(string Text, int Kind)> segs, bool oursView)
+    {
+        var sb = new StringBuilder();
         foreach (var (t, k) in segs)
         {
+            var esc = Markup.Escape(t);
             if (k == 0)
-            {
-                Console.ResetColor();
-                Console.Write(t);
-            }
-            else if (k == 1)
-            {
-                Console.BackgroundColor = ConsoleColor.Red;
-                Console.ForegroundColor = ConsoleColor.White;
-                Console.Write(t);
-                Console.ResetColor();
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.Write($"⟨对方独有{t.Length}字⟩");
-                Console.ResetColor();
-            }
+                sb.Append($"[{(oursView ? "blue" : "yellow")}]{esc}[/]");
+            else if (oursView && k == 1)
+                sb.Append($"[white on red]{esc}[/]");
+            else if (!oursView && k == 2)
+                sb.Append($"[black on green]{esc}[/]");
+            // 对方独有段在本方行不显示 → ours/theirs 各自到边界，区间 common 对应
         }
-        Console.WriteLine();
-
-        Console.Write($"对方({e.TheirsDisplay.Length}字): ");
-        foreach (var (t, k) in segs)
-        {
-            if (k == 0)
-            {
-                Console.ResetColor();
-                Console.Write(t);
-            }
-            else if (k == 2)
-            {
-                Console.BackgroundColor = ConsoleColor.Green;
-                Console.ForegroundColor = ConsoleColor.Black;
-                Console.Write(t);
-                Console.ResetColor();
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.Write($"⟨我方独有{t.Length}字⟩");
-                Console.ResetColor();
-            }
-        }
-        Console.WriteLine();
-        Console.ResetColor();
-        Console.WriteLine();
-        Console.Write("按任意键返回表格...");
+        return sb.ToString();
     }
 
     // ── 构建 Modified 视图 ───────────────────────────────────────────────────
