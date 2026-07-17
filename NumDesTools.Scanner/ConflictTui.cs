@@ -126,28 +126,46 @@ internal static class ConflictTui
             return true;
         }
 
-        int modifiedCount = allRows.Count(r => r.DiffType == RowDiffType.Modified);
-        int onlyCount = allRows.Count - modifiedCount;
+        // 已经被三方预选（单边改动）/新增删除默认值覆盖的行，不用停下来让人看——直接用算好的默认值。
+        // 只有真正"双方都改、选不出默认"的行才值得进向导逐格看，这是本来就该有的行为，之前漏掉了。
+        var autoResolved = allRows.Where(r => r.IsResolved).ToList();
+        var needsAttention = allRows.Where(r => !r.IsResolved).ToList();
+
+        int modifiedCount = needsAttention.Count(r => r.DiffType == RowDiffType.Modified);
+        int onlyCount = needsAttention.Count - modifiedCount;
         var oursTag = oursLabel != null ? $"（我方={oursLabel}）" : "";
         var theirsTag = theirsLabel != null ? $"（对方={theirsLabel}）" : "";
-        AnsiConsole.MarkupLine(
-            $"[yellow]发现 {allRows.Count} 行差异[/]"
-                + $"  Modified=[cyan]{modifiedCount}[/]  仅一方=[cyan]{onlyCount}[/]"
-                + $"  [dim]{Markup.Escape(oursTag + theirsTag)}[/]"
-        );
-        AnsiConsole.MarkupLine(
-            $"  [dim][[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  [[{KeyAllOurs}]]整行我方  [[{KeyAllTheirs}]]整行对方"
-                + $"  Enter/[[{KeySkip}]]跳过(用默认)  [[{KeyQuit}]]放弃[/]"
-        );
+
+        if (autoResolved.Count > 0)
+            AnsiConsole.MarkupLine(
+                $"[dim]{autoResolved.Count} 行已被三方预选/新增删除默认值覆盖，直接采用默认值，不需要人工看。[/]"
+            );
+
+        if (needsAttention.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[green]✓ 所有差异都已有默认值，无需人工判断。[/]");
+        }
+        else
+        {
+            AnsiConsole.MarkupLine(
+                $"[yellow]{needsAttention.Count} 行需要人工判断[/]"
+                    + $"  Modified=[cyan]{modifiedCount}[/]  仅一方=[cyan]{onlyCount}[/]"
+                    + $"  [dim]{Markup.Escape(oursTag + theirsTag)}[/]"
+            );
+            AnsiConsole.MarkupLine(
+                $"  [dim][[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  [[{KeyAllOurs}]]整行我方  [[{KeyAllTheirs}]]整行对方"
+                    + $"  Enter/[[{KeySkip}]]跳过(用默认)  [[{KeyQuit}]]放弃[/]"
+            );
+        }
         AnsiConsole.WriteLine();
 
-        for (int i = 0; i < allRows.Count; i++)
+        for (int i = 0; i < needsAttention.Count; i++)
         {
-            var row = allRows[i];
+            var row = needsAttention[i];
             int exitCode =
                 row.DiffType == RowDiffType.Modified
-                    ? ProcessModified(row, i + 1, allRows.Count, oursLabel, theirsLabel)
-                    : ProcessOnly(row, i + 1, allRows.Count, oursLabel, theirsLabel);
+                    ? ProcessModified(row, i + 1, needsAttention.Count, oursLabel, theirsLabel)
+                    : ProcessOnly(row, i + 1, needsAttention.Count, oursLabel, theirsLabel);
 
             if (exitCode != 0)
             {
