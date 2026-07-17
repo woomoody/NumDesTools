@@ -638,7 +638,7 @@ internal static class ConflictTui
                 new Markup(
                     $"  [yellow]对方({cur.TheirsDisplay.Length}字)[/] {Markup.Escape(TruncateCell(cur.TheirsDisplay, 60))}"
                 ),
-                new Markup($"  [dim]按 [[{KeySelect}]] 选当前列  [v] 查看完整值[/]")
+                new Markup($"  [dim]按 [[{KeySelect}]] 选当前列  [[v]] 查看完整值[/]")
             );
         }
         else
@@ -647,7 +647,7 @@ internal static class ConflictTui
         }
         var legend = BuildLegendLine(oursLabel, theirsLabel);
         var footer = new Markup(
-            $"[dim]↑↓←→移动光标  [[{KeySelect}]]选当前列版本(默认我方)  [[{KeyAllOurs}]]全选我方  [[{KeyAllTheirs}]]全选对方  [v]查看完整值  Enter确认  [[{KeyQuit}]]放弃[/]"
+            $"[dim]↑↓←→移动光标  [[{KeySelect}]]选当前列版本(默认我方)  [[{KeyAllOurs}]]全选我方  [[{KeyAllTheirs}]]全选对方  [[v]]查看完整值  Enter确认  [[{KeyQuit}]]放弃[/]"
         );
 
         var body = new Rows(table, Text.Empty, curInfo, Text.Empty, legend, Text.Empty, footer);
