@@ -112,7 +112,10 @@ public class RowConflict : INotifyPropertyChanged
         };
     }
 
-    private void OnCellPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void OnCellPropertyChanged(
+        object? sender,
+        System.ComponentModel.PropertyChangedEventArgs e
+    )
     {
         // 冒泡：单元格选择变化时通知行刷新
         OnPropertyChanged(e.PropertyName);
@@ -288,6 +291,9 @@ public record SheetDiff(string SheetName, List<RowConflict> Rows)
 {
     public bool HasConflict => Rows.Any(r => r.DiffType != RowDiffType.Same);
 
+    /// <summary>存在"双方都改、选不出默认值"的行——需要人工判断，不是靠三方预选/新增删除默认就能了事的真冲突。</summary>
+    public bool HasTrueConflict => Rows.Any(r => r.DiffType != RowDiffType.Same && !r.IsResolved);
+
     /// <summary>列名 → type 行值（第3行，如 "int", "string"）</summary>
     public Dictionary<string, string> TypeRow { get; init; } = new();
 
@@ -326,4 +332,7 @@ public record FileDiff(string OursPath, string TheirsPath, List<SheetDiff> Sheet
     public int TotalConflictRows =>
         Sheets.Sum(s => s.Rows.Count(r => r.DiffType != RowDiffType.Same));
     public int TotalConflictCells => Sheets.Sum(s => s.Rows.Sum(r => r.Cells.Count));
+
+    /// <summary>整个文件里有没有需要人工判断的行。false=所有差异都已被三方预选/新增删除默认值覆盖，可以一键接受。</summary>
+    public bool HasTrueConflict => Sheets.Any(s => s.HasTrueConflict);
 }

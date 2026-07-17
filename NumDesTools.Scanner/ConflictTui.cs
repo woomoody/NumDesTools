@@ -2,6 +2,7 @@ using LibGit2Sharp;
 using NumDesTools;
 using NumDesTools.ConflictResolver;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace NumDesTools.Scanner;
 
@@ -85,6 +86,20 @@ internal static class ConflictTui
                 }
             );
 
+        return ResolveInteractive(diff, outPath, gitAdd, oursLabel, theirsLabel);
+    }
+
+    /// <summary>
+    /// 同上，但接受调用方已经算好的 FileDiff（分类阶段就 diff 过一次时用这个重载，避免重复 diff）。
+    /// </summary>
+    internal static bool ResolveInteractive(
+        FileDiff diff,
+        string outPath,
+        bool gitAdd,
+        string? oursLabel = null,
+        string? theirsLabel = null
+    )
+    {
         var allRows = diff
             .Sheets.SelectMany(s => s.Rows.Where(r => r.DiffType != RowDiffType.Same))
             .ToList();
@@ -246,70 +261,94 @@ internal static class ConflictTui
         if (sel < 0)
             sel = 0;
 
-        while (true)
-        {
-            RenderModified(row, current, total, sel);
-            var key = Console.ReadKey(intercept: true);
-
-            if (key.Key == ConsoleKey.UpArrow)
+        int result = 0;
+        AnsiConsole
+            .Live(BuildModifiedView(row, current, total, sel))
+            .Start(ctx =>
             {
-                if (sel > 0)
-                    sel--;
-                continue;
-            }
-            if (key.Key == ConsoleKey.DownArrow)
-            {
-                if (sel < row.Cells.Count - 1)
-                    sel++;
-                continue;
-            }
-            // Enter / s = 未选格全用默认（Ours）然后确认
-            if (key.Key == ConsoleKey.Enter || key.KeyChar.ToString() == KeySkip)
-            {
-                foreach (var c in row.Cells.Where(c => !c.IsExplicit))
+                while (true)
                 {
-                    c.Choice = ConflictChoice.Ours;
-                    c.IsExplicit = true;
-                }
-                return 0;
-            }
+                    var key = Console.ReadKey(intercept: true);
+                    bool done = false;
 
-            switch (key.KeyChar.ToString())
-            {
-                case KeyOurs:
-                {
-                    row.Cells[sel].Choice = ConflictChoice.Ours;
-                    row.Cells[sel].IsExplicit = true;
-                    if (row.IsResolved)
-                        return 0;
-                    var next = FindIndex(row.Cells, c => !c.IsExplicit);
-                    if (next >= 0)
-                        sel = next;
-                    break;
-                }
-                case KeyTheirs:
-                {
-                    row.Cells[sel].Choice = ConflictChoice.Theirs;
-                    row.Cells[sel].IsExplicit = true;
-                    if (row.IsResolved)
-                        return 0;
-                    var next = FindIndex(row.Cells, c => !c.IsExplicit);
-                    if (next >= 0)
-                        sel = next;
-                    break;
-                }
-                case KeyAllOurs:
-                    row.SetAllCells(ConflictChoice.Ours);
-                    return 0;
+                    if (key.Key == ConsoleKey.UpArrow)
+                    {
+                        if (sel > 0)
+                            sel--;
+                    }
+                    else if (key.Key == ConsoleKey.DownArrow)
+                    {
+                        if (sel < row.Cells.Count - 1)
+                            sel++;
+                    }
+                    // Enter / s = 未选格全用默认（Ours）然后确认
+                    else if (key.Key == ConsoleKey.Enter || key.KeyChar.ToString() == KeySkip)
+                    {
+                        foreach (var c in row.Cells.Where(c => !c.IsExplicit))
+                        {
+                            c.Choice = ConflictChoice.Ours;
+                            c.IsExplicit = true;
+                        }
+                        result = 0;
+                        done = true;
+                    }
+                    else
+                    {
+                        switch (key.KeyChar.ToString())
+                        {
+                            case KeyOurs:
+                                row.Cells[sel].Choice = ConflictChoice.Ours;
+                                row.Cells[sel].IsExplicit = true;
+                                if (row.IsResolved)
+                                {
+                                    done = true;
+                                    break;
+                                }
+                                var nextO = FindIndex(row.Cells, c => !c.IsExplicit);
+                                if (nextO >= 0)
+                                    sel = nextO;
+                                break;
 
-                case KeyAllTheirs:
-                    row.SetAllCells(ConflictChoice.Theirs);
-                    return 0;
+                            case KeyTheirs:
+                                row.Cells[sel].Choice = ConflictChoice.Theirs;
+                                row.Cells[sel].IsExplicit = true;
+                                if (row.IsResolved)
+                                {
+                                    done = true;
+                                    break;
+                                }
+                                var nextT = FindIndex(row.Cells, c => !c.IsExplicit);
+                                if (nextT >= 0)
+                                    sel = nextT;
+                                break;
 
-                case KeyQuit:
-                    return -1;
-            }
-        }
+                            case KeyAllOurs:
+                                row.SetAllCells(ConflictChoice.Ours);
+                                result = 0;
+                                done = true;
+                                break;
+
+                            case KeyAllTheirs:
+                                row.SetAllCells(ConflictChoice.Theirs);
+                                result = 0;
+                                done = true;
+                                break;
+
+                            case KeyQuit:
+                                result = -1;
+                                done = true;
+                                break;
+                        }
+                    }
+
+                    ctx.UpdateTarget(BuildModifiedView(row, current, total, sel));
+                    ctx.Refresh();
+                    if (done)
+                        break;
+                }
+            });
+
+        return result;
     }
 
     private static int FindIndex<T>(IEnumerable<T> source, Func<T, bool> predicate)
@@ -328,46 +367,71 @@ internal static class ConflictTui
 
     private static int ProcessOnly(RowConflict row, int current, int total)
     {
-        RenderOnly(row, current, total);
-        while (true)
-        {
-            var key = Console.ReadKey(intercept: true);
-            // Enter / s = 用默认值跳过
-            if (key.Key == ConsoleKey.Enter || key.KeyChar.ToString() == KeySkip)
-                return 0;
-
-            switch (key.KeyChar.ToString())
+        int result = 0;
+        AnsiConsole
+            .Live(BuildOnlyView(row, current, total))
+            .Start(ctx =>
             {
-                case KeyOurs:
-                case KeyAllOurs:
-                    row.RowChoice = ConflictChoice.Ours;
-                    return 0;
+                while (true)
+                {
+                    var key = Console.ReadKey(intercept: true);
+                    bool done = false;
 
-                case KeyTheirs:
-                case KeyAllTheirs:
-                    row.RowChoice = ConflictChoice.Theirs;
-                    return 0;
+                    // Enter / s = 用默认值跳过
+                    if (key.Key == ConsoleKey.Enter || key.KeyChar.ToString() == KeySkip)
+                    {
+                        result = 0;
+                        done = true;
+                    }
+                    else
+                    {
+                        switch (key.KeyChar.ToString())
+                        {
+                            case KeyOurs:
+                            case KeyAllOurs:
+                                row.RowChoice = ConflictChoice.Ours;
+                                result = 0;
+                                done = true;
+                                break;
 
-                case KeyQuit:
-                    return -1;
-            }
-        }
+                            case KeyTheirs:
+                            case KeyAllTheirs:
+                                row.RowChoice = ConflictChoice.Theirs;
+                                result = 0;
+                                done = true;
+                                break;
+
+                            case KeyQuit:
+                                result = -1;
+                                done = true;
+                                break;
+                        }
+                    }
+
+                    if (done)
+                    {
+                        ctx.UpdateTarget(BuildOnlyView(row, current, total));
+                        ctx.Refresh();
+                        break;
+                    }
+                }
+            });
+
+        return result;
     }
 
-    // ── 渲染 Modified ────────────────────────────────────────────────────────
+    // ── 构建 Modified 视图 ───────────────────────────────────────────────────
 
-    private static void RenderModified(RowConflict row, int current, int total, int sel)
+    private static IRenderable BuildModifiedView(RowConflict row, int current, int total, int sel)
     {
-        AnsiConsole.Clear();
-        var header =
-            $"[bold]差异 {current}/{total}[/]  [yellow]Modified[/]  行 [cyan]{Markup.Escape(row.RowKey)}[/]";
+        var title =
+            $"差异 {current}/{total}  [yellow]Modified[/]  行 [cyan]{Markup.Escape(row.RowKey)}[/]";
         if (!string.IsNullOrEmpty(row.DisplayName))
-            header += $"  [dim]{Markup.Escape(row.DisplayName)}[/]";
-        AnsiConsole.MarkupLine(header);
-        AnsiConsole.WriteLine();
+            title += $"  [dim]{Markup.Escape(row.DisplayName)}[/]";
 
         var table = new Table()
             .Border(TableBorder.Rounded)
+            .Expand()
             .AddColumn(new TableColumn("[bold]列名[/]"))
             .AddColumn(new TableColumn("[blue]我方 (OURS)[/]"))
             .AddColumn(new TableColumn("[yellow]对方 (THEIRS)[/]"))
@@ -394,42 +458,45 @@ internal static class ConflictTui
             );
         }
 
-        AnsiConsole.Write(table);
-        AnsiConsole.WriteLine();
-
         var cur = row.Cells[sel];
-        AnsiConsole.MarkupLine(
+        var curInfo = new Markup(
             $"当前：[bold green]{Markup.Escape(cur.ColName)}[/]  "
                 + $"[blue]{Markup.Escape(cur.OursDisplay)}[/] vs [yellow]{Markup.Escape(cur.TheirsDisplay)}[/]"
         );
-        AnsiConsole.MarkupLine(
+        var footer = new Markup(
             $"[dim]↑↓移动  [[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  [[{KeyAllOurs}]]整行我方  [[{KeyAllTheirs}]]整行对方  Enter/[[{KeySkip}]]跳过(默认我方)  [[{KeyQuit}]]放弃[/]"
         );
+
+        var body = new Rows(table, Text.Empty, curInfo, Text.Empty, footer);
+        return new Panel(body)
+        {
+            Header = new PanelHeader($" {title} "),
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(Color.Grey),
+            Expand = true,
+        };
     }
 
-    // ── 渲染 OnlyOurs / OnlyTheirs ───────────────────────────────────────────
+    // ── 构建 OnlyOurs / OnlyTheirs 视图 ──────────────────────────────────────
 
-    private static void RenderOnly(RowConflict row, int current, int total)
+    private static IRenderable BuildOnlyView(RowConflict row, int current, int total)
     {
-        AnsiConsole.Clear();
-
         bool isOurs = row.DiffType == RowDiffType.OnlyOurs;
         var typeLabel = isOurs ? "[blue]仅我方[/]" : "[yellow]仅对方[/]";
         var badge = Markup.Escape(row.DiffTypeBadge);
 
-        var header =
-            $"[bold]差异 {current}/{total}[/]  {typeLabel}  行 [cyan]{Markup.Escape(row.RowKey)}[/]";
+        var title = $"差异 {current}/{total}  {typeLabel}  行 [cyan]{Markup.Escape(row.RowKey)}[/]";
         if (!string.IsNullOrEmpty(row.DisplayName))
-            header += $"  [dim]{Markup.Escape(row.DisplayName)}[/]";
-        AnsiConsole.MarkupLine(header);
-        AnsiConsole.MarkupLine($"  [dim]{badge}[/]");
-        AnsiConsole.WriteLine();
+            title += $"  [dim]{Markup.Escape(row.DisplayName)}[/]";
+
+        var parts = new List<IRenderable> { new Markup($"[dim]{badge}[/]"), Text.Empty };
 
         var src = isOurs ? row.OursFullRow : row.TheirsFullRow;
         if (src != null && row.AllColumns.Count > 0)
         {
             var table = new Table()
                 .Border(TableBorder.Simple)
+                .Expand()
                 .AddColumn(new TableColumn("[bold]列名[/]"))
                 .AddColumn(new TableColumn(isOurs ? "[blue]我方值[/]" : "[yellow]对方值[/]"));
 
@@ -444,18 +511,23 @@ internal static class ConflictTui
                 table.AddRow(Markup.Escape(col), colored);
             }
 
-            AnsiConsole.Write(table);
-            AnsiConsole.WriteLine();
+            parts.Add(table);
+            parts.Add(Text.Empty);
         }
 
-        if (isOurs)
-            AnsiConsole.MarkupLine(
-                $"[dim][[{KeyOurs}/{KeyAllOurs}]]保留此行  [[{KeyTheirs}/{KeyAllTheirs}]]删除此行  Enter/[[{KeySkip}]]跳过(默认保留)  [[{KeyQuit}]]放弃[/]"
-            );
-        else
-            AnsiConsole.MarkupLine(
-                $"[dim][[{KeyTheirs}/{KeyAllTheirs}]]接受此行  [[{KeyOurs}/{KeyAllOurs}]]拒绝此行  Enter/[[{KeySkip}]]跳过(默认接受)  [[{KeyQuit}]]放弃[/]"
-            );
+        var footer = isOurs
+            ? $"[dim][[{KeyOurs}/{KeyAllOurs}]]保留此行  [[{KeyTheirs}/{KeyAllTheirs}]]删除此行  Enter/[[{KeySkip}]]跳过(默认保留)  [[{KeyQuit}]]放弃[/]"
+            : $"[dim][[{KeyTheirs}/{KeyAllTheirs}]]接受此行  [[{KeyOurs}/{KeyAllOurs}]]拒绝此行  Enter/[[{KeySkip}]]跳过(默认接受)  [[{KeyQuit}]]放弃[/]";
+        parts.Add(new Markup(footer));
+
+        var body = new Rows(parts);
+        return new Panel(body)
+        {
+            Header = new PanelHeader($" {title} "),
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(isOurs ? Color.Blue : Color.Yellow),
+            Expand = true,
+        };
     }
 
     // ── 摘要 ─────────────────────────────────────────────────────────────────

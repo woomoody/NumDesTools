@@ -13,6 +13,14 @@ namespace NumDesTools.Scanner;
 internal static class ConflictManagerTui
 {
     private const string QuitChoice = "（退出）";
+    private const string BulkResolvePrefix = "（一键解决无真冲突文件";
+
+    /// <summary>一次分类结果：已提取好 blob + 算好 diff，避免选中后重复提取/diff。</summary>
+    private readonly record struct Classified(
+        string RelPath,
+        FileDiff Diff,
+        ExcelConflictEntry.ConflictBlobResult Blobs
+    );
 
     public static int Run(string[] args)
     {
@@ -67,56 +75,98 @@ internal static class ConflictManagerTui
             if (allXlsx.Count == 0)
                 break;
 
-            var choices = allXlsx.Append(QuitChoice).ToList();
+            // 提取 blob + diff 一次性分类：HasTrueConflict=false 的文件三方预选/新增删除默认值已经够用，
+            // 不需要人工判断，可以一键接受；只有双方都改同一格的文件才值得进 TUI 逐行看。
+            AnsiConsole.MarkupLine("[dim]正在分析各文件冲突情况...[/]");
+            var classified = new List<Classified>();
+            foreach (var relPath in allXlsx)
+            {
+                ExcelConflictEntry.ConflictBlobResult? blobs;
+                try
+                {
+                    blobs = ExcelConflictEntry.ExtractConflictBlobs(gitRoot, relPath);
+                }
+                catch (Exception ex)
+                {
+                    AnsiConsole.MarkupLine(
+                        $"[red]提取冲突版本失败：{Markup.Escape(relPath)}: {ex.Message}[/]"
+                    );
+                    continue;
+                }
+                if (blobs == null)
+                    continue;
+
+                var diff = ExcelConflictDiffer.Diff(
+                    blobs.Value.OursPath,
+                    blobs.Value.TheirsPath,
+                    blobs.Value.BasePath
+                );
+                classified.Add(new Classified(relPath, diff, blobs.Value));
+            }
+
+            var autoResolvable = classified.Where(c => !c.Diff.HasTrueConflict).ToList();
+            var needManual = classified.Where(c => c.Diff.HasTrueConflict).ToList();
+
+            var choices = new List<string>();
+            var bulkChoiceLabel = $"{BulkResolvePrefix}，共 {autoResolvable.Count} 个）";
+            if (autoResolvable.Count > 0)
+                choices.Add(bulkChoiceLabel);
+            choices.AddRange(needManual.Select(c => c.RelPath));
+            choices.AddRange(autoResolvable.Select(c => c.RelPath));
+            choices.Add(QuitChoice);
+
             var chosen = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title($"[yellow]{allXlsx.Count} 个 xlsx 仍有冲突，选一个解决：[/]")
+                    .Title(
+                        $"[yellow]{classified.Count} 个 xlsx 冲突[/]"
+                            + $"（[green]{autoResolvable.Count} 个无真冲突[/] / [red]{needManual.Count} 个需手动[/]），选择："
+                    )
                     .PageSize(15)
-                    .UseConverter(Markup.Escape) // 冲突文件路径/QuitChoice 里的方括号等字符会被误判为 Markup 标签，统一转义
+                    .UseConverter(Markup.Escape) // 冲突文件路径/占位选项里的方括号等字符会被误判为 Markup 标签，统一转义
                     .AddChoices(choices)
             );
+
             if (chosen == QuitChoice)
             {
                 AnsiConsole.MarkupLine("[dim]已退出，冲突未全部解决。[/]");
                 return 1;
             }
 
-            var workingFilePath = Path.Combine(
+            if (chosen == bulkChoiceLabel)
+            {
+                foreach (var c in autoResolvable)
+                {
+                    var workingPath = Path.Combine(
+                        gitRoot,
+                        c.RelPath.Replace('/', Path.DirectorySeparatorChar)
+                    );
+                    ConflictApplier.Apply(c.Diff, workingPath, gitAdd: true);
+                    ExcelConflictEntry.FinishGitAdd(gitRoot, c.RelPath);
+                    AnsiConsole.MarkupLine(
+                        $"[green]✓ 已自动解决（无真冲突）：{Markup.Escape(c.RelPath)}[/]"
+                    );
+                }
+                AnsiConsole.WriteLine();
+                continue;
+            }
+
+            var picked = classified.First(c => c.RelPath == chosen);
+            var pickedWorkingPath = Path.Combine(
                 gitRoot,
-                chosen.Replace('/', Path.DirectorySeparatorChar)
+                picked.RelPath.Replace('/', Path.DirectorySeparatorChar)
             );
 
-            ExcelConflictEntry.ConflictBlobResult? blobs;
-            try
-            {
-                blobs = ExcelConflictEntry.ExtractConflictBlobs(gitRoot, chosen);
-            }
-            catch (Exception ex)
-            {
-                AnsiConsole.MarkupLine($"[red]提取冲突版本失败：{ex.Message}[/]");
-                continue;
-            }
-            if (blobs == null)
-            {
-                AnsiConsole.MarkupLine(
-                    $"[red]在 Index 中找不到冲突条目：{Markup.Escape(chosen)}[/]"
-                );
-                continue;
-            }
-
             var resolved = ConflictTui.ResolveInteractive(
-                blobs.Value.OursPath,
-                blobs.Value.TheirsPath,
-                blobs.Value.BasePath,
-                outPath: workingFilePath,
+                picked.Diff,
+                outPath: pickedWorkingPath,
                 gitAdd: true,
-                oursLabel: blobs.Value.OursLabel,
-                theirsLabel: blobs.Value.TheirsLabel
+                oursLabel: picked.Blobs.OursLabel,
+                theirsLabel: picked.Blobs.TheirsLabel
             );
 
             // "无差异"或写回成功时 ResolveInteractive 返回 true 但可能未做 git add（无差异分支）→ 补做
             if (resolved)
-                ExcelConflictEntry.FinishGitAdd(gitRoot, chosen);
+                ExcelConflictEntry.FinishGitAdd(gitRoot, picked.RelPath);
 
             AnsiConsole.WriteLine();
         }
