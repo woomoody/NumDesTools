@@ -595,17 +595,19 @@ internal static class ConflictTui
             // 光标格用 [reverse] 反色高亮（vim 式）；已选非光标格用蓝/黄底块 + ✓
             string oursVal = (cursorHere, cursorCol, selected, e.Cell.Choice) switch
             {
-                (true, 0, _, _) => $"[reverse] {Markup.Escape(e.OursDisplay)} ◀[/]",
+                (true, 0, _, _) =>
+                    $"[reverse] {Markup.Escape(TruncateCell(e.OursDisplay, 30))} ◀[/]",
                 (_, _, true, ConflictChoice.Ours) =>
-                    $"[bold black on blue] {Markup.Escape(e.OursDisplay)} ✓[/]",
-                _ => $"[blue]{Markup.Escape(e.OursDisplay)}[/]",
+                    $"[bold black on blue] {Markup.Escape(TruncateCell(e.OursDisplay, 30))} ✓[/]",
+                _ => $"[blue]{Markup.Escape(TruncateCell(e.OursDisplay, 30))}[/]",
             };
             string theirsVal = (cursorHere, cursorCol, selected, e.Cell.Choice) switch
             {
-                (true, 1, _, _) => $"[reverse] {Markup.Escape(e.TheirsDisplay)} ◀[/]",
+                (true, 1, _, _) =>
+                    $"[reverse] {Markup.Escape(TruncateCell(e.TheirsDisplay, 30))} ◀[/]",
                 (_, _, true, ConflictChoice.Theirs) =>
-                    $"[bold black on yellow] {Markup.Escape(e.TheirsDisplay)} ✓[/]",
-                _ => $"[yellow]{Markup.Escape(e.TheirsDisplay)}[/]",
+                    $"[bold black on yellow] {Markup.Escape(TruncateCell(e.TheirsDisplay, 30))} ✓[/]",
+                _ => $"[yellow]{Markup.Escape(TruncateCell(e.TheirsDisplay, 30))}[/]",
             };
             string choiceStr = !selected
                 ? "[dim]未选(默认我方)[/]"
@@ -809,10 +811,10 @@ internal static class ConflictTui
             new Markup($"[bold]列名：[/] {Markup.Escape(e.ColName)}"),
             Text.Empty,
             new Markup($"[blue]我方 (OURS) ({e.OursDisplay.Length}字)[/]"),
-            new Markup(Markup.Escape(e.OursDisplay)),
+            new Markup(Markup.Escape(TruncateCell(e.OursDisplay, 30))),
             Text.Empty,
             new Markup($"[yellow]对方 (THEIRS) ({e.TheirsDisplay.Length}字)[/]"),
-            new Markup(Markup.Escape(e.TheirsDisplay)),
+            new Markup(Markup.Escape(TruncateCell(e.TheirsDisplay, 30))),
             Text.Empty,
             legend,
             new Markup("[dim]按任意键返回表格[/]")
