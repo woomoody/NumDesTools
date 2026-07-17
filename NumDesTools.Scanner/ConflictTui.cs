@@ -625,15 +625,29 @@ internal static class ConflictTui
 
         var cur = entries.Count > 0 ? entries[cursorRow] : default;
         var colWord = cursorCol == 0 ? "我方" : "对方";
-        IRenderable curInfo =
-            entries.Count > 0
-                ? new Markup(
-                    $"当前：[bold green]{Markup.Escape(cur.ColName)}[/]  [dim]{Markup.Escape(cur.Remark)}[/]  光标在 [bold]{colWord}[/]列  按 [[{KeySelect}]] 选此版本"
-                )
-                : Text.Empty;
+        IRenderable curInfo;
+        if (entries.Count > 0)
+        {
+            curInfo = new Rows(
+                new Markup(
+                    $"当前：[bold green]{Markup.Escape(cur.ColName)}[/]  [dim]{Markup.Escape(cur.Remark)}[/]  光标在 [bold]{colWord}[/]列"
+                ),
+                new Markup(
+                    $"  [blue]我方({cur.OursDisplay.Length}字)[/] {Markup.Escape(TruncateCell(cur.OursDisplay, 60))}"
+                ),
+                new Markup(
+                    $"  [yellow]对方({cur.TheirsDisplay.Length}字)[/] {Markup.Escape(TruncateCell(cur.TheirsDisplay, 60))}"
+                ),
+                new Markup($"  [dim]按 [[{KeySelect}]] 选当前列  [v] 查看完整值[/]")
+            );
+        }
+        else
+        {
+            curInfo = Text.Empty;
+        }
         var legend = BuildLegendLine(oursLabel, theirsLabel);
         var footer = new Markup(
-            $"[dim]↑↓←→移动光标  [[{KeySelect}]]选当前列版本(默认我方)  [[{KeyAllOurs}]]全选我方  [[{KeyAllTheirs}]]全选对方  Enter确认  [[{KeyQuit}]]放弃[/]"
+            $"[dim]↑↓←→移动光标  [[{KeySelect}]]选当前列版本(默认我方)  [[{KeyAllOurs}]]全选我方  [[{KeyAllTheirs}]]全选对方  [v]查看完整值  Enter确认  [[{KeyQuit}]]放弃[/]"
         );
 
         var body = new Rows(table, Text.Empty, curInfo, Text.Empty, legend, Text.Empty, footer);
@@ -659,6 +673,7 @@ internal static class ConflictTui
 
         int cursorRow = 0;
         int cursorCol = 0; // 0=我方值列, 1=对方值列；默认我方，未选按 s 即选我方
+        bool detailView = false; // v 键进入完整值详情视图，任意键返回表格
         int result = 0;
         try
         {
@@ -676,6 +691,23 @@ internal static class ConflictTui
                 {
                     var key = Console.ReadKey(intercept: true);
                     bool done = false;
+
+                    // 详情视图：任意键返回表格（不处理其它键）
+                    if (detailView)
+                    {
+                        detailView = false;
+                        ctx.UpdateTarget(
+                            BuildAllConflictsView(
+                                entries,
+                                cursorRow,
+                                cursorCol,
+                                oursLabel,
+                                theirsLabel
+                            )
+                        );
+                        ctx.Refresh();
+                        continue;
+                    }
 
                     if (key.Key == ConsoleKey.UpArrow)
                     {
@@ -731,6 +763,9 @@ internal static class ConflictTui
                                     e.Cell.IsExplicit = true;
                                 }
                                 break;
+                            case "v":
+                                detailView = true;
+                                break;
                             case KeyQuit:
                                 result = -1;
                                 done = true;
@@ -739,7 +774,15 @@ internal static class ConflictTui
                     }
 
                     ctx.UpdateTarget(
-                        BuildAllConflictsView(entries, cursorRow, cursorCol, oursLabel, theirsLabel)
+                        detailView
+                            ? BuildCellDetailView(entries[cursorRow], oursLabel, theirsLabel)
+                            : BuildAllConflictsView(
+                                entries,
+                                cursorRow,
+                                cursorCol,
+                                oursLabel,
+                                theirsLabel
+                            )
                     );
                     ctx.Refresh();
                     if (done)
@@ -748,6 +791,39 @@ internal static class ConflictTui
             });
 
         return result == 0;
+    }
+
+    /// <summary>超长单元格值截断（表格列里只显示前 N 字 + …，完整值用 v 进详情视图看）。</summary>
+    private static string TruncateCell(string s, int max) => s.Length > max ? s[..max] + "…" : s;
+
+    /// <summary>v 键进入的详情视图：完整显示当前光标格的 ours/theirs（自动换行），任意键返回表格。</summary>
+    private static IRenderable BuildCellDetailView(
+        AllConflictEntry e,
+        string? oursLabel,
+        string? theirsLabel
+    )
+    {
+        var legend = BuildLegendLine(oursLabel, theirsLabel);
+        var body = new Rows(
+            new Markup($"[bold]行 {Markup.Escape(e.RowKey)}[/]  [dim]{Markup.Escape(e.Remark)}[/]"),
+            new Markup($"[bold]列名：[/] {Markup.Escape(e.ColName)}"),
+            Text.Empty,
+            new Markup($"[blue]我方 (OURS) ({e.OursDisplay.Length}字)[/]"),
+            new Markup(Markup.Escape(e.OursDisplay)),
+            Text.Empty,
+            new Markup($"[yellow]对方 (THEIRS) ({e.TheirsDisplay.Length}字)[/]"),
+            new Markup(Markup.Escape(e.TheirsDisplay)),
+            Text.Empty,
+            legend,
+            new Markup("[dim]按任意键返回表格[/]")
+        );
+        return new Panel(body)
+        {
+            Header = new PanelHeader(" 查看完整冲突值 "),
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(Color.Grey),
+            Expand = true,
+        };
     }
 
     // ── 构建 Modified 视图 ───────────────────────────────────────────────────
