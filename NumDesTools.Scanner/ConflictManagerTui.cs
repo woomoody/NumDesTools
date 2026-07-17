@@ -86,13 +86,13 @@ internal static class ConflictManagerTui
             choices.AddRange(allXlsx);
             choices.Add(QuitChoice);
 
-            var chosen = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title($"[yellow]{allXlsx.Count} 个 xlsx 仍有冲突，选择：[/]")
-                    .PageSize(15)
-                    .UseConverter(Markup.Escape) // 冲突文件路径/占位选项里的方括号等字符会被误判为 Markup 标签，统一转义
-                    .AddChoices(choices)
-            );
+            var prompt = new SelectionPrompt<string>()
+                .Title($"[yellow]{allXlsx.Count} 个 xlsx 仍有冲突，选择：[/]")
+                .PageSize(15)
+                .UseConverter(Markup.Escape)
+                .AddChoices(choices);
+            prompt.WrapAround = true;
+            var chosen = AnsiConsole.Prompt(prompt);
 
             if (chosen == QuitChoice)
             {
