@@ -159,40 +159,11 @@ internal static class ConflictTui
         }
         AnsiConsole.WriteLine();
 
-        // 总览列表：一次列出所有需要人工判断的行，自由挑顺序处理，不用被迫按顺序一个个走。
-        // 处理完一行回到列表；行内按 q 只退回列表，不会连带放弃其它已经处理好的行。
-        const string QuitAllChoice = "（放弃全部，不写入）";
-        while (needsAttention.Any(r => !r.IsResolved))
-        {
-            var choices = needsAttention.Select(RowStatusLabel).ToList();
-            choices.Add(QuitAllChoice);
-
-            var chosen = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title(
-                        $"[yellow]{needsAttention.Count(r => !r.IsResolved)}/{needsAttention.Count} 行待处理[/]，选择要处理的行："
-                    )
-                    .PageSize(15)
-                    .UseConverter(Markup.Escape)
-                    .AddChoices(choices)
-            );
-
-            if (chosen == QuitAllChoice)
-            {
-                AnsiConsole.MarkupLine("[red]已放弃，未写入任何文件。[/]");
-                return false;
-            }
-
-            var idx = choices.IndexOf(chosen);
-            var row = needsAttention[idx];
-            var total = needsAttention.Count;
-            // 返回值只用来判断是不是用户主动放弃当前这一行——放弃只退回总览列表（保持未解决），
-            // 不会像旧版那样连带放弃其它已经处理好的行
-            _ =
-                row.DiffType == RowDiffType.Modified
-                    ? ProcessModified(row, idx + 1, total, oursLabel, theirsLabel)
-                    : ProcessOnly(row, idx + 1, total, oursLabel, theirsLabel);
-        }
+        // 整表一屏：把所有需要人工判断的冲突格拍平成一张表，集中显示，不用一个个选。
+        // 鼠标精确点单元格选版本受终端字符网格精度限制（需真实终端逐格校准坐标），
+        // 本版先做键盘：↑↓移光标，o/t 选版本（反色高亮），Enter 确认（未选用默认我方），q 放弃。
+        if (!ProcessAllConflictsTable(needsAttention, oursLabel, theirsLabel))
+            return false;
 
         // ── 摘要 + 确认写回 ──────────────────────────────────────────────────
         AnsiConsole.WriteLine();
@@ -552,6 +523,199 @@ internal static class ConflictTui
             });
 
         return result;
+    }
+
+    // ── 整表集中显示（所有未自动判定的冲突格一屏）──────────────────────────
+
+    private readonly record struct AllConflictEntry(
+        string RowKey,
+        string ColName,
+        string OursDisplay,
+        string TheirsDisplay,
+        CellConflict Cell
+    );
+
+    /// <summary>把 needsAttention 里每行的"未选格"拍平成一维列表——已三方预选的格不列（简略），只留真需人工的。</summary>
+    private static List<AllConflictEntry> FlattenUnresolved(List<RowConflict> needsAttention)
+    {
+        var list = new List<AllConflictEntry>();
+        foreach (var row in needsAttention)
+        {
+            if (row.DiffType != RowDiffType.Modified)
+                continue; // OnlyOurs/OnlyTheirs 默认已解决，不在 needsAttention 里
+            foreach (var cell in row.Cells.Where(c => !c.IsExplicit))
+                list.Add(
+                    new AllConflictEntry(
+                        row.RowKey,
+                        cell.ColName,
+                        cell.OursDisplay,
+                        cell.TheirsDisplay,
+                        cell
+                    )
+                );
+        }
+        return list;
+    }
+
+    private static IRenderable BuildAllConflictsView(
+        List<AllConflictEntry> entries,
+        int cursor,
+        string? oursLabel,
+        string? theirsLabel
+    )
+    {
+        var pending = entries.Count(e => !e.Cell.IsExplicit);
+        var title =
+            $"[yellow]{pending}/{entries.Count} 个冲突格待选[/]"
+            + (pending == 0 ? "  [green]全部已选，Enter 确认写回[/]" : "");
+
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .Expand()
+            .AddColumn(new TableColumn("[bold]#[/]"))
+            .AddColumn(new TableColumn("[bold]行[/]"))
+            .AddColumn(new TableColumn("[bold]列名[/]"))
+            .AddColumn(new TableColumn("[blue]我方 (OURS)[/]"))
+            .AddColumn(new TableColumn("[yellow]对方 (THEIRS)[/]"))
+            .AddColumn(new TableColumn("[bold]已选[/]"));
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            var e = entries[i];
+            bool isCursor = i == cursor;
+            bool selected = e.Cell.IsExplicit;
+            string oursVal =
+                selected && e.Cell.Choice == ConflictChoice.Ours
+                    ? $"[bold black on blue] {Markup.Escape(e.OursDisplay)} ✓[/]"
+                    : $"[blue]{Markup.Escape(e.OursDisplay)}[/]";
+            string theirsVal =
+                selected && e.Cell.Choice == ConflictChoice.Theirs
+                    ? $"[bold black on yellow] {Markup.Escape(e.TheirsDisplay)} ✓[/]"
+                    : $"[yellow]{Markup.Escape(e.TheirsDisplay)}[/]";
+            string choiceStr = !selected
+                ? "[dim]未选(默认我方)[/]"
+                : (e.Cell.Choice == ConflictChoice.Ours ? "[blue]我方[/]" : "[yellow]对方[/]");
+            string prefix = isCursor ? "[bold green]▶[/] " : "  ";
+            table.AddRow(
+                $"{prefix}{i + 1}",
+                Markup.Escape(e.RowKey),
+                Markup.Escape(e.ColName),
+                oursVal,
+                theirsVal,
+                choiceStr
+            );
+        }
+
+        var cur = entries.Count > 0 ? entries[cursor] : default;
+        IRenderable curInfo =
+            entries.Count > 0
+                ? new Markup(
+                    $"当前：[bold green]{Markup.Escape(cur.ColName)}[/]  "
+                        + $"[blue]{Markup.Escape(cur.OursDisplay)}[/] vs [yellow]{Markup.Escape(cur.TheirsDisplay)}[/]"
+                )
+                : Text.Empty;
+        var legend = BuildLegendLine(oursLabel, theirsLabel);
+        var footer = new Markup(
+            $"[dim]↑↓移动  [[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  Enter/[[{KeySkip}]]确认(未选默认我方)  [[{KeyQuit}]]放弃[/]"
+                + "  [dim](鼠标点单元格选版本：需真实终端逐格校准坐标，本版先用键盘)[/]"
+        );
+
+        var body = new Rows(table, Text.Empty, curInfo, Text.Empty, legend, Text.Empty, footer);
+        return new Panel(body)
+        {
+            Header = new PanelHeader($" {title} "),
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(Color.Grey),
+            Expand = true,
+        };
+    }
+
+    /// <summary>整表主循环：↑↓移光标，o/t 选版本（反色高亮+自动下移），Enter 确认，q 放弃。</summary>
+    private static bool ProcessAllConflictsTable(
+        List<RowConflict> needsAttention,
+        string? oursLabel,
+        string? theirsLabel
+    )
+    {
+        var entries = FlattenUnresolved(needsAttention);
+        if (entries.Count == 0)
+            return true;
+
+        int cursor = 0;
+        int result = 0;
+        try
+        {
+            AnsiConsole.Clear();
+            Console.SetCursorPosition(0, 0);
+        }
+        catch { }
+
+        AnsiConsole
+            .Live(BuildAllConflictsView(entries, cursor, oursLabel, theirsLabel))
+            .Start(ctx =>
+            {
+                ctx.Refresh();
+                while (true)
+                {
+                    var (isKey, key, _, _) = ConsoleMouseInput.ReadNext();
+                    bool done = false;
+
+                    if (!isKey)
+                        continue; // 鼠标事件暂忽略（坐标校准待真实终端）
+
+                    if (key.Key == ConsoleKey.UpArrow)
+                    {
+                        if (cursor > 0)
+                            cursor--;
+                    }
+                    else if (key.Key == ConsoleKey.DownArrow)
+                    {
+                        if (cursor < entries.Count - 1)
+                            cursor++;
+                    }
+                    else if (key.Key == ConsoleKey.Enter || key.KeyChar.ToString() == KeySkip)
+                    {
+                        foreach (var e in entries.Where(e => !e.Cell.IsExplicit))
+                        {
+                            e.Cell.Choice = ConflictChoice.Ours;
+                            e.Cell.IsExplicit = true;
+                        }
+                        result = 0;
+                        done = true;
+                    }
+                    else
+                    {
+                        switch (key.KeyChar.ToString())
+                        {
+                            case KeyOurs:
+                                entries[cursor].Cell.Choice = ConflictChoice.Ours;
+                                entries[cursor].Cell.IsExplicit = true;
+                                if (cursor < entries.Count - 1)
+                                    cursor++;
+                                break;
+                            case KeyTheirs:
+                                entries[cursor].Cell.Choice = ConflictChoice.Theirs;
+                                entries[cursor].Cell.IsExplicit = true;
+                                if (cursor < entries.Count - 1)
+                                    cursor++;
+                                break;
+                            case KeyQuit:
+                                result = -1;
+                                done = true;
+                                break;
+                        }
+                    }
+
+                    ctx.UpdateTarget(
+                        BuildAllConflictsView(entries, cursor, oursLabel, theirsLabel)
+                    );
+                    ctx.Refresh();
+                    if (done)
+                        break;
+                }
+            });
+
+        return result == 0;
     }
 
     // ── 构建 Modified 视图 ───────────────────────────────────────────────────
