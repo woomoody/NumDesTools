@@ -18,16 +18,14 @@ internal static class ConflictManagerTui
 
     public static int Run(string[] args)
     {
-        ConsoleMouseInput.EnterAltScreen();
-        ConsoleMouseInput.Enable();
+        ConflictTui.EnterAltScreen();
         try
         {
             return RunCore(args);
         }
         finally
         {
-            ConsoleMouseInput.Disable();
-            ConsoleMouseInput.ExitAltScreen();
+            ConflictTui.ExitAltScreen();
         }
     }
 

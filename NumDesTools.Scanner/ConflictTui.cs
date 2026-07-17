@@ -18,12 +18,17 @@ namespace NumDesTools.Scanner;
 /// </summary>
 internal static class ConflictTui
 {
-    private const string KeyOurs = "o";
+    private const string KeyOurs = "o"; // 死代码（ProcessModified 等）残留引用，下版清理时一并删
     private const string KeyTheirs = "t";
-    private const string KeySkip = "s";
+    private const string KeySelect = "s";
     private const string KeyQuit = "q";
     private const string KeyAllOurs = "O";
     private const string KeyAllTheirs = "T";
+
+    /// <summary>切到全屏替代屏幕缓冲区（vim/lazygit 同款 ANSI 转义），退出后原终端内容恢复。</summary>
+    internal static void EnterAltScreen() => Console.Write("\x1b[?1049h\x1b[H");
+
+    internal static void ExitAltScreen() => Console.Write("\x1b[?1049l");
 
     // ── 入口：--conflict ────────────────────────────────────────────────────
 
@@ -54,8 +59,7 @@ internal static class ConflictTui
             return 1;
         }
 
-        ConsoleMouseInput.EnterAltScreen();
-        ConsoleMouseInput.Enable();
+        EnterAltScreen();
         try
         {
             return ResolveInteractive(
@@ -70,8 +74,7 @@ internal static class ConflictTui
         }
         finally
         {
-            ConsoleMouseInput.Disable();
-            ConsoleMouseInput.ExitAltScreen();
+            ExitAltScreen();
         }
     }
 
@@ -154,7 +157,7 @@ internal static class ConflictTui
             );
             AnsiConsole.MarkupLine(
                 $"  [dim][[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  [[{KeyAllOurs}]]整行我方  [[{KeyAllTheirs}]]整行对方"
-                    + $"  Enter/[[{KeySkip}]]跳过(用默认)  [[{KeyQuit}]]放弃[/]"
+                    + $"  Enter/[[{KeySelect}]]跳过(用默认)  [[{KeyQuit}]]放弃[/]"
             );
         }
         AnsiConsole.WriteLine();
@@ -348,7 +351,7 @@ internal static class ConflictTui
                             sel++;
                     }
                     // Enter / s = 未选格全用默认（Ours）然后确认
-                    else if (key.Key == ConsoleKey.Enter || key.KeyChar.ToString() == KeySkip)
+                    else if (key.Key == ConsoleKey.Enter || key.KeyChar.ToString() == KeySelect)
                     {
                         foreach (var c in row.Cells.Where(c => !c.IsExplicit))
                         {
@@ -481,7 +484,7 @@ internal static class ConflictTui
                         continue; // 这个视图没有可点选的目标，鼠标事件直接忽略
 
                     // Enter / s = 用默认值跳过
-                    if (key.Key == ConsoleKey.Enter || key.KeyChar.ToString() == KeySkip)
+                    if (key.Key == ConsoleKey.Enter || key.KeyChar.ToString() == KeySelect)
                     {
                         result = 0;
                         done = true;
@@ -559,7 +562,8 @@ internal static class ConflictTui
 
     private static IRenderable BuildAllConflictsView(
         List<AllConflictEntry> entries,
-        int cursor,
+        int cursorRow,
+        int cursorCol,
         string? oursLabel,
         string? theirsLabel
     )
@@ -582,20 +586,28 @@ internal static class ConflictTui
         for (int i = 0; i < entries.Count; i++)
         {
             var e = entries[i];
-            bool isCursor = i == cursor;
             bool selected = e.Cell.IsExplicit;
-            string oursVal =
-                selected && e.Cell.Choice == ConflictChoice.Ours
-                    ? $"[bold black on blue] {Markup.Escape(e.OursDisplay)} ✓[/]"
-                    : $"[blue]{Markup.Escape(e.OursDisplay)}[/]";
-            string theirsVal =
-                selected && e.Cell.Choice == ConflictChoice.Theirs
-                    ? $"[bold black on yellow] {Markup.Escape(e.TheirsDisplay)} ✓[/]"
-                    : $"[yellow]{Markup.Escape(e.TheirsDisplay)}[/]";
+            bool cursorHere = i == cursorRow;
+
+            // 光标格用 [reverse] 反色高亮（vim 式）；已选非光标格用蓝/黄底块 + ✓
+            string oursVal = (cursorHere, cursorCol, selected, e.Cell.Choice) switch
+            {
+                (true, 0, _, _) => $"[reverse] {Markup.Escape(e.OursDisplay)} ◀[/]",
+                (_, _, true, ConflictChoice.Ours) =>
+                    $"[bold black on blue] {Markup.Escape(e.OursDisplay)} ✓[/]",
+                _ => $"[blue]{Markup.Escape(e.OursDisplay)}[/]",
+            };
+            string theirsVal = (cursorHere, cursorCol, selected, e.Cell.Choice) switch
+            {
+                (true, 1, _, _) => $"[reverse] {Markup.Escape(e.TheirsDisplay)} ◀[/]",
+                (_, _, true, ConflictChoice.Theirs) =>
+                    $"[bold black on yellow] {Markup.Escape(e.TheirsDisplay)} ✓[/]",
+                _ => $"[yellow]{Markup.Escape(e.TheirsDisplay)}[/]",
+            };
             string choiceStr = !selected
                 ? "[dim]未选(默认我方)[/]"
                 : (e.Cell.Choice == ConflictChoice.Ours ? "[blue]我方[/]" : "[yellow]对方[/]");
-            string prefix = isCursor ? "[bold green]▶[/] " : "  ";
+            string prefix = cursorHere ? "[bold green]▶[/] " : "  ";
             table.AddRow(
                 $"{prefix}{i + 1}",
                 Markup.Escape(e.RowKey),
@@ -606,18 +618,17 @@ internal static class ConflictTui
             );
         }
 
-        var cur = entries.Count > 0 ? entries[cursor] : default;
+        var cur = entries.Count > 0 ? entries[cursorRow] : default;
+        var colWord = cursorCol == 0 ? "我方" : "对方";
         IRenderable curInfo =
             entries.Count > 0
                 ? new Markup(
-                    $"当前：[bold green]{Markup.Escape(cur.ColName)}[/]  "
-                        + $"[blue]{Markup.Escape(cur.OursDisplay)}[/] vs [yellow]{Markup.Escape(cur.TheirsDisplay)}[/]"
+                    $"当前：[bold green]{Markup.Escape(cur.ColName)}[/]  光标在 [bold]{colWord}[/]列  按 [[{KeySelect}]] 选此版本"
                 )
                 : Text.Empty;
         var legend = BuildLegendLine(oursLabel, theirsLabel);
         var footer = new Markup(
-            $"[dim]↑↓移动  [[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  Enter/[[{KeySkip}]]确认(未选默认我方)  [[{KeyQuit}]]放弃[/]"
-                + "  [dim](鼠标点单元格选版本：需真实终端逐格校准坐标，本版先用键盘)[/]"
+            $"[dim]↑↓←→移动光标  [[{KeySelect}]]选当前列版本(默认我方)  Enter确认(未选默认我方)  [[{KeyQuit}]]放弃[/]"
         );
 
         var body = new Rows(table, Text.Empty, curInfo, Text.Empty, legend, Text.Empty, footer);
@@ -630,7 +641,7 @@ internal static class ConflictTui
         };
     }
 
-    /// <summary>整表主循环：↑↓移光标，o/t 选版本（反色高亮+自动下移），Enter 确认，q 放弃。</summary>
+    /// <summary>整表主循环：↑↓←→移光标（vim 式二维：行=冲突格，列=我方/对方值），s 选当前光标列版本，Enter 确认，q 放弃。</summary>
     private static bool ProcessAllConflictsTable(
         List<RowConflict> needsAttention,
         string? oursLabel,
@@ -641,7 +652,8 @@ internal static class ConflictTui
         if (entries.Count == 0)
             return true;
 
-        int cursor = 0;
+        int cursorRow = 0;
+        int cursorCol = 0; // 0=我方值列, 1=对方值列；默认我方，未选按 s 即选我方
         int result = 0;
         try
         {
@@ -651,29 +663,34 @@ internal static class ConflictTui
         catch { }
 
         AnsiConsole
-            .Live(BuildAllConflictsView(entries, cursor, oursLabel, theirsLabel))
+            .Live(BuildAllConflictsView(entries, cursorRow, cursorCol, oursLabel, theirsLabel))
             .Start(ctx =>
             {
                 ctx.Refresh();
                 while (true)
                 {
-                    var (isKey, key, _, _) = ConsoleMouseInput.ReadNext();
+                    var key = Console.ReadKey(intercept: true);
                     bool done = false;
-
-                    if (!isKey)
-                        continue; // 鼠标事件暂忽略（坐标校准待真实终端）
 
                     if (key.Key == ConsoleKey.UpArrow)
                     {
-                        if (cursor > 0)
-                            cursor--;
+                        if (cursorRow > 0)
+                            cursorRow--;
                     }
                     else if (key.Key == ConsoleKey.DownArrow)
                     {
-                        if (cursor < entries.Count - 1)
-                            cursor++;
+                        if (cursorRow < entries.Count - 1)
+                            cursorRow++;
                     }
-                    else if (key.Key == ConsoleKey.Enter || key.KeyChar.ToString() == KeySkip)
+                    else if (key.Key == ConsoleKey.LeftArrow)
+                    {
+                        cursorCol = 0;
+                    }
+                    else if (key.Key == ConsoleKey.RightArrow)
+                    {
+                        cursorCol = 1;
+                    }
+                    else if (key.Key == ConsoleKey.Enter)
                     {
                         foreach (var e in entries.Where(e => !e.Cell.IsExplicit))
                         {
@@ -687,17 +704,13 @@ internal static class ConflictTui
                     {
                         switch (key.KeyChar.ToString())
                         {
-                            case KeyOurs:
-                                entries[cursor].Cell.Choice = ConflictChoice.Ours;
-                                entries[cursor].Cell.IsExplicit = true;
-                                if (cursor < entries.Count - 1)
-                                    cursor++;
-                                break;
-                            case KeyTheirs:
-                                entries[cursor].Cell.Choice = ConflictChoice.Theirs;
-                                entries[cursor].Cell.IsExplicit = true;
-                                if (cursor < entries.Count - 1)
-                                    cursor++;
+                            // s = 选当前光标所在列的版本：cursorCol=0→我方，1→对方；选后自动下移到下一格
+                            case KeySelect:
+                                entries[cursorRow].Cell.Choice =
+                                    cursorCol == 0 ? ConflictChoice.Ours : ConflictChoice.Theirs;
+                                entries[cursorRow].Cell.IsExplicit = true;
+                                if (cursorRow < entries.Count - 1)
+                                    cursorRow++;
                                 break;
                             case KeyQuit:
                                 result = -1;
@@ -707,7 +720,7 @@ internal static class ConflictTui
                     }
 
                     ctx.UpdateTarget(
-                        BuildAllConflictsView(entries, cursor, oursLabel, theirsLabel)
+                        BuildAllConflictsView(entries, cursorRow, cursorCol, oursLabel, theirsLabel)
                     );
                     ctx.Refresh();
                     if (done)
@@ -783,7 +796,7 @@ internal static class ConflictTui
                 + $"[blue]{Markup.Escape(cur.OursDisplay)}[/] vs [yellow]{Markup.Escape(cur.TheirsDisplay)}[/]"
         );
         var footer = new Markup(
-            $"[dim]↑↓移动(可回到已选格改选)  [[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  [[{KeyAllOurs}]]整行我方  [[{KeyAllTheirs}]]整行对方  Enter/[[{KeySkip}]]确认此行(未选格默认我方)  [[{KeyQuit}]]放弃[/]"
+            $"[dim]↑↓移动(可回到已选格改选)  [[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  [[{KeyAllOurs}]]整行我方  [[{KeyAllTheirs}]]整行对方  Enter/[[{KeySelect}]]确认此行(未选格默认我方)  [[{KeyQuit}]]放弃[/]"
         );
 
         var body = new Rows(
@@ -856,8 +869,8 @@ internal static class ConflictTui
         }
 
         var footer = isOurs
-            ? $"[dim][[{KeyOurs}/{KeyAllOurs}]]保留此行  [[{KeyTheirs}/{KeyAllTheirs}]]删除此行  Enter/[[{KeySkip}]]跳过(默认保留)  [[{KeyQuit}]]放弃[/]"
-            : $"[dim][[{KeyTheirs}/{KeyAllTheirs}]]接受此行  [[{KeyOurs}/{KeyAllOurs}]]拒绝此行  Enter/[[{KeySkip}]]跳过(默认接受)  [[{KeyQuit}]]放弃[/]";
+            ? $"[dim][[{KeyOurs}/{KeyAllOurs}]]保留此行  [[{KeyTheirs}/{KeyAllTheirs}]]删除此行  Enter/[[{KeySelect}]]跳过(默认保留)  [[{KeyQuit}]]放弃[/]"
+            : $"[dim][[{KeyTheirs}/{KeyAllTheirs}]]接受此行  [[{KeyOurs}/{KeyAllOurs}]]拒绝此行  Enter/[[{KeySelect}]]跳过(默认接受)  [[{KeyQuit}]]放弃[/]";
         parts.Add(new Markup(footer));
         parts.Add(Text.Empty);
         parts.Add(BuildLegendLine(oursLabel, theirsLabel));
