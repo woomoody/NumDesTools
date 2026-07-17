@@ -339,6 +339,7 @@ internal static class ConflictTui
             .Live(BuildModifiedView(row, current, total, sel, oursLabel, theirsLabel))
             .Start(ctx =>
             {
+                ctx.Refresh(); // Live 默认要等到循环里第一次交互后才显示第一帧——这里强制先刷一次，否则画面"选了才出来"
                 while (true)
                 {
                     var (isKey, key, col, screenRow) = ConsoleMouseInput.ReadNext();
@@ -499,6 +500,7 @@ internal static class ConflictTui
             .Live(BuildOnlyView(row, current, total, oursLabel, theirsLabel))
             .Start(ctx =>
             {
+                ctx.Refresh();
                 while (true)
                 {
                     var (isKey, key, _, _) = ConsoleMouseInput.ReadNext();
