@@ -88,8 +88,8 @@ public class CellConflict : INotifyPropertyChanged
         }
     }
 
-    public string OursDisplay => OursValue?.ToString() ?? "(空)";
-    public string TheirsDisplay => TheirsValue?.ToString() ?? "(空)";
+    public string OursDisplay => OursValue?.ToString() is { Length: > 0 } s ? s : "(空)";
+    public string TheirsDisplay => TheirsValue?.ToString() is { Length: > 0 } t ? t : "(空)";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

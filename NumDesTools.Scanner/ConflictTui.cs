@@ -859,7 +859,10 @@ internal static class ConflictTui
 
         var pre = string.Concat(segs.Take(firstDiff).Select(s => s.Text));
         var d = segs[firstDiff];
-        var post = string.Concat(segs.Skip(firstDiff + 1).Select(s => s.Text));
+        // post 只取紧邻 firstDiff 之后的 common 段（到下一个差异止），不能含对方独有段——否则 ours 列把对方值也显示了（错位）
+        var post = string.Concat(
+            segs.Skip(firstDiff + 1).TakeWhile(s => s.Kind == 0).Select(s => s.Text)
+        );
 
         int ctx = Math.Max(4, max / 3);
         var preShow = pre.Length > ctx ? "…" + pre[^(ctx)..] : pre;
