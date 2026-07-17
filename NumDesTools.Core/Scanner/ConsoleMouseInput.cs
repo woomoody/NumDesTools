@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace NumDesTools.Scanner;
 
@@ -6,6 +7,7 @@ namespace NumDesTools.Scanner;
 /// Windows 控制台原始鼠标输入（ReadConsoleInput + ENABLE_MOUSE_INPUT）。
 /// Spectre.Console 本身不支持鼠标（纯键盘方向键交互），这是 lazygit 等 TUI 工具在其
 /// 终端库里做鼠标点击支持时用的同一层能力（gocui/tcell 在 Windows 上也是走这套 Console API）。
+/// 仅 Windows：在非 Windows 平台 Enable() 直接 no-op，ReadNext 退回纯键盘 Console.ReadKey。
 /// </summary>
 internal static class ConsoleMouseInput
 {
@@ -95,8 +97,11 @@ internal static class ConsoleMouseInput
     }
 
     /// <summary>开启鼠标报告模式。必须关掉 QuickEdit，否则点击会被系统用来做文本选中，抢在我们前面。</summary>
+    [SupportedOSPlatform("windows")]
     public static void Enable()
     {
+        if (!OperatingSystem.IsWindows())
+            return; // 非 Windows：鼠标交互不可用，ReadNext 退回纯键盘 Console.ReadKey
         if (_enabled)
             return;
         _handle = GetStdHandle(StdInputHandle);

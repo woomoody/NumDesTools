@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MiniExcelLibs;
+using MiniExcelLibs.OpenXml;
 
 namespace NumDesTools.ExcelIndex;
 
@@ -13,6 +14,7 @@ namespace NumDesTools.ExcelIndex;
 internal class ExcelIndexBuilder
 {
     private readonly string _excelsRoot;
+    private readonly OpenXmlConfiguration _miniExcelConfig;
 
     /// <summary>
     /// 测试用 seam：覆盖文件列表收集，返回绝对路径数组。
@@ -30,7 +32,11 @@ internal class ExcelIndexBuilder
         ConcurrentBag<(string relPath, string sheet, string val, int row, int col, string md5)>
     >? ScanOverride;
 
-    public ExcelIndexBuilder(string excelsRoot) => _excelsRoot = excelsRoot;
+    public ExcelIndexBuilder(string excelsRoot, OpenXmlConfiguration? miniExcelConfig = null)
+    {
+        _excelsRoot = excelsRoot;
+        _miniExcelConfig = miniExcelConfig ?? new OpenXmlConfiguration { EnableSharedStringCache = false };
+    }
 
     /// <summary>
     /// 构建或增量更新索引。
@@ -146,7 +152,7 @@ internal class ExcelIndexBuilder
                 var rows = MiniExcel.Query(
                     absPath,
                     sheetName: sheetName,
-                    configuration: NumDesAddIn.OnOffMiniExcelCatches
+                    configuration: _miniExcelConfig
                 );
 
                 int rowIdx = 1;
