@@ -1,3 +1,4 @@
+using System.Text;
 using LibGit2Sharp;
 using NumDesTools;
 using NumDesTools.ConflictResolver;
@@ -675,7 +676,6 @@ internal static class ConflictTui
 
         int cursorRow = 0;
         int cursorCol = 0; // 0=我方值列, 1=对方值列；默认我方，未选按 s 即选我方
-        bool detailView = false; // v 键进入完整值详情视图，任意键返回表格
         int result = 0;
         try
         {
@@ -693,23 +693,6 @@ internal static class ConflictTui
                 {
                     var key = Console.ReadKey(intercept: true);
                     bool done = false;
-
-                    // 详情视图：任意键返回表格（不处理其它键）
-                    if (detailView)
-                    {
-                        detailView = false;
-                        ctx.UpdateTarget(
-                            BuildAllConflictsView(
-                                entries,
-                                cursorRow,
-                                cursorCol,
-                                oursLabel,
-                                theirsLabel
-                            )
-                        );
-                        ctx.Refresh();
-                        continue;
-                    }
 
                     if (key.Key == ConsoleKey.UpArrow)
                     {
@@ -766,7 +749,8 @@ internal static class ConflictTui
                                 }
                                 break;
                             case "v":
-                                detailView = true;
+                                PrintCellDetail(entries[cursorRow], oursLabel, theirsLabel);
+                                Console.ReadKey(intercept: true);
                                 break;
                             case KeyQuit:
                                 result = -1;
@@ -776,15 +760,7 @@ internal static class ConflictTui
                     }
 
                     ctx.UpdateTarget(
-                        detailView
-                            ? BuildCellDetailView(entries[cursorRow], oursLabel, theirsLabel)
-                            : BuildAllConflictsView(
-                                entries,
-                                cursorRow,
-                                cursorCol,
-                                oursLabel,
-                                theirsLabel
-                            )
+                        BuildAllConflictsView(entries, cursorRow, cursorCol, oursLabel, theirsLabel)
                     );
                     ctx.Refresh();
                     if (done)
@@ -798,34 +774,123 @@ internal static class ConflictTui
     /// <summary>超长单元格值截断（表格列里只显示前 N 字 + …，完整值用 v 进详情视图看）。</summary>
     private static string TruncateCell(string s, int max) => s.Length > max ? s[..max] + "…" : s;
 
-    /// <summary>v 键进入的详情视图：完整显示当前光标格的 ours/theirs（自动换行），任意键返回表格。</summary>
-    private static IRenderable BuildCellDetailView(
-        AllConflictEntry e,
-        string? oursLabel,
-        string? theirsLabel
-    )
+    /// <summary>字符级 LCS diff：返回段列表 (文本, 0=相同 1=仅我方 2=仅对方)。</summary>
+    private static List<(string Text, int Kind)> CharDiff(string a, string b)
     {
-        var legend = BuildLegendLine(oursLabel, theirsLabel);
-        var body = new Rows(
-            new Markup($"[bold]行 {Markup.Escape(e.RowKey)}[/]  [dim]{Markup.Escape(e.Remark)}[/]"),
-            new Markup($"[bold]列名：[/] {Markup.Escape(e.ColName)}"),
-            Text.Empty,
-            new Markup($"[blue]我方 (OURS) ({e.OursDisplay.Length}字)[/]"),
-            new Markup(Markup.Escape(TruncateCell(e.OursDisplay, 30))),
-            Text.Empty,
-            new Markup($"[yellow]对方 (THEIRS) ({e.TheirsDisplay.Length}字)[/]"),
-            new Markup(Markup.Escape(TruncateCell(e.TheirsDisplay, 30))),
-            Text.Empty,
-            legend,
-            new Markup("[dim]按任意键返回表格[/]")
-        );
-        return new Panel(body)
+        int n = a.Length,
+            m = b.Length;
+        var dp = new int[n + 1, m + 1];
+        for (int i = n - 1; i >= 0; i--)
+        for (int j = m - 1; j >= 0; j--)
+            dp[i, j] = a[i] == b[j] ? dp[i + 1, j + 1] + 1 : Math.Max(dp[i + 1, j], dp[i, j + 1]);
+
+        var segs = new List<(string, int)>();
+        var sb = new StringBuilder();
+        int curKind = 0;
+        int x = 0,
+            y = 0;
+        void Flush(int kind)
         {
-            Header = new PanelHeader(" 查看完整冲突值 "),
-            Border = BoxBorder.Rounded,
-            BorderStyle = new Style(Color.Grey),
-            Expand = true,
-        };
+            if (sb.Length > 0)
+            {
+                segs.Add((sb.ToString(), kind));
+                sb.Clear();
+            }
+        }
+
+        while (x < n && y < m)
+        {
+            if (a[x] == b[y])
+            {
+                if (curKind != 0)
+                {
+                    Flush(curKind);
+                    curKind = 0;
+                }
+                sb.Append(a[x]);
+                x++;
+                y++;
+            }
+            else if (dp[x + 1, y] >= dp[x, y + 1])
+            {
+                if (curKind != 1)
+                {
+                    Flush(curKind);
+                    curKind = 1;
+                }
+                sb.Append(a[x]);
+                x++;
+            }
+            else
+            {
+                if (curKind != 2)
+                {
+                    Flush(curKind);
+                    curKind = 2;
+                }
+                sb.Append(b[y]);
+                y++;
+            }
+        }
+        Flush(curKind);
+        if (x < n)
+            segs.Add((a[x..], 1));
+        if (y < m)
+            segs.Add((b[y..], 2));
+        return segs;
+    }
+
+    /// <summary>v 详情：Console 直接打印完整 ours/theirs（终端原生可向下无限滚动），字符级 diff 高亮差异（我方独有红底/对方独有绿底），任意键返回。</summary>
+    private static void PrintCellDetail(AllConflictEntry e, string? oursLabel, string? theirsLabel)
+    {
+        Console.Clear();
+        Console.WriteLine($"行 {e.RowKey}  {e.Remark}");
+        Console.WriteLine(
+            $"列名: {e.ColName}  我方(OURS)={oursLabel ?? "?"}  对方(THEIRS)={theirsLabel ?? "?"}"
+        );
+        Console.WriteLine();
+        var segs = CharDiff(e.OursDisplay, e.TheirsDisplay);
+
+        Console.Write($"我方({e.OursDisplay.Length}字): ");
+        foreach (var (t, k) in segs)
+        {
+            if (k == 0)
+            {
+                Console.ResetColor();
+                Console.Write(t);
+            }
+            else if (k == 1)
+            {
+                Console.BackgroundColor = ConsoleColor.DarkRed;
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.Write(t);
+                Console.ResetColor();
+            }
+            // k==2 仅对方，我方视角不打印
+        }
+        Console.WriteLine();
+
+        Console.Write($"对方({e.TheirsDisplay.Length}字): ");
+        foreach (var (t, k) in segs)
+        {
+            if (k == 0)
+            {
+                Console.ResetColor();
+                Console.Write(t);
+            }
+            else if (k == 2)
+            {
+                Console.BackgroundColor = ConsoleColor.DarkGreen;
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.Write(t);
+                Console.ResetColor();
+            }
+            // k==1 仅我方，对方视角不打印
+        }
+        Console.WriteLine();
+        Console.ResetColor();
+        Console.WriteLine();
+        Console.Write("按任意键返回表格...");
     }
 
     // ── 构建 Modified 视图 ───────────────────────────────────────────────────
