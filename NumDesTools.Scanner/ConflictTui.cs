@@ -159,19 +159,39 @@ internal static class ConflictTui
         }
         AnsiConsole.WriteLine();
 
-        for (int i = 0; i < needsAttention.Count; i++)
+        // 总览列表：一次列出所有需要人工判断的行，自由挑顺序处理，不用被迫按顺序一个个走。
+        // 处理完一行回到列表；行内按 q 只退回列表，不会连带放弃其它已经处理好的行。
+        const string QuitAllChoice = "（放弃全部，不写入）";
+        while (needsAttention.Any(r => !r.IsResolved))
         {
-            var row = needsAttention[i];
-            int exitCode =
-                row.DiffType == RowDiffType.Modified
-                    ? ProcessModified(row, i + 1, needsAttention.Count, oursLabel, theirsLabel)
-                    : ProcessOnly(row, i + 1, needsAttention.Count, oursLabel, theirsLabel);
+            var choices = needsAttention.Select(RowStatusLabel).ToList();
+            choices.Add(QuitAllChoice);
 
-            if (exitCode != 0)
+            var chosen = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title(
+                        $"[yellow]{needsAttention.Count(r => !r.IsResolved)}/{needsAttention.Count} 行待处理[/]，选择要处理的行："
+                    )
+                    .PageSize(15)
+                    .UseConverter(Markup.Escape)
+                    .AddChoices(choices)
+            );
+
+            if (chosen == QuitAllChoice)
             {
                 AnsiConsole.MarkupLine("[red]已放弃，未写入任何文件。[/]");
                 return false;
             }
+
+            var idx = choices.IndexOf(chosen);
+            var row = needsAttention[idx];
+            var total = needsAttention.Count;
+            // 返回值只用来判断是不是用户主动放弃当前这一行——放弃只退回总览列表（保持未解决），
+            // 不会像旧版那样连带放弃其它已经处理好的行
+            _ =
+                row.DiffType == RowDiffType.Modified
+                    ? ProcessModified(row, idx + 1, total, oursLabel, theirsLabel)
+                    : ProcessOnly(row, idx + 1, total, oursLabel, theirsLabel);
         }
 
         // ── 摘要 + 确认写回 ──────────────────────────────────────────────────
@@ -429,6 +449,30 @@ internal static class ConflictTui
             i++;
         }
         return -1;
+    }
+
+    /// <summary>总览列表里一行的展示文本。带 RowKey，避免不同行凑巧文案相同时 IndexOf 选错。</summary>
+    private static string RowStatusLabel(RowConflict row)
+    {
+        var status =
+            row.DiffType == RowDiffType.Modified
+                ? row.IsResolved
+                    ? $"✓已选({row.Cells.Count(c => c.Choice == ConflictChoice.Ours)}我方/{row.Cells.Count(c => c.Choice == ConflictChoice.Theirs)}对方)"
+                    : $"未选 {row.Cells.Count(c => !c.IsExplicit)}/{row.Cells.Count} 格"
+                : row.IsResolved
+                    ? $"✓已选:{(row.RowChoice == ConflictChoice.Ours ? "我方" : "对方")}"
+                    : "未选";
+
+        var typeStr = row.DiffType switch
+        {
+            RowDiffType.Modified => "Modified",
+            RowDiffType.OnlyOurs => "仅我方",
+            RowDiffType.OnlyTheirs => "仅对方",
+            _ => row.DiffType.ToString(),
+        };
+
+        return $"行 {row.RowKey}  {typeStr}  {status}"
+            + (string.IsNullOrEmpty(row.DisplayName) ? "" : $"  {row.DisplayName}");
     }
 
     // ── OnlyOurs / OnlyTheirs 行处理 ────────────────────────────────────────
