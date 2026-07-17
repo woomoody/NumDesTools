@@ -718,14 +718,14 @@ internal static class ConflictTui
                                     cursorRow++;
                                 break;
                             case KeyAllOurs:
-                                foreach (var e in entries.Where(e => !e.Cell.IsExplicit))
+                                foreach (var e in entries)
                                 {
                                     e.Cell.Choice = ConflictChoice.Ours;
                                     e.Cell.IsExplicit = true;
                                 }
                                 break;
                             case KeyAllTheirs:
-                                foreach (var e in entries.Where(e => !e.Cell.IsExplicit))
+                                foreach (var e in entries)
                                 {
                                     e.Cell.Choice = ConflictChoice.Theirs;
                                     e.Cell.IsExplicit = true;
