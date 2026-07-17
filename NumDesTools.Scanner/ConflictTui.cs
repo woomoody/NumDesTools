@@ -308,6 +308,9 @@ internal static class ConflictTui
         int result = 0;
         try
         {
+            // 必须先清屏再归零光标——上一行的画面可能比这一行长，只挪光标不清屏会把
+            // 上一屏没覆盖到的残留内容叠在下面，"画面乱叠加"就是这个漏了清屏的锅
+            AnsiConsole.Clear();
             Console.SetCursorPosition(0, 0);
         }
         catch { }
@@ -441,6 +444,9 @@ internal static class ConflictTui
         int result = 0;
         try
         {
+            // 必须先清屏再归零光标——上一行的画面可能比这一行长，只挪光标不清屏会把
+            // 上一屏没覆盖到的残留内容叠在下面，"画面乱叠加"就是这个漏了清屏的锅
+            AnsiConsole.Clear();
             Console.SetCursorPosition(0, 0);
         }
         catch { }
