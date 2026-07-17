@@ -18,6 +18,21 @@ internal static class ConflictManagerTui
 
     public static int Run(string[] args)
     {
+        ConsoleMouseInput.EnterAltScreen();
+        ConsoleMouseInput.Enable();
+        try
+        {
+            return RunCore(args);
+        }
+        finally
+        {
+            ConsoleMouseInput.Disable();
+            ConsoleMouseInput.ExitAltScreen();
+        }
+    }
+
+    private static int RunCore(string[] args)
+    {
         string? gitRoot = null;
         int idx = Array.IndexOf(args, "--git-root");
         if (idx >= 0 && idx + 1 < args.Length)

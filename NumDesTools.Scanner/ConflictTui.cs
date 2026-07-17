@@ -54,9 +54,25 @@ internal static class ConflictTui
             return 1;
         }
 
-        return ResolveInteractive(oursPath, theirsPath, basePath, outPath: oursPath, gitAdd: true)
-            ? 0
-            : 2;
+        ConsoleMouseInput.EnterAltScreen();
+        ConsoleMouseInput.Enable();
+        try
+        {
+            return ResolveInteractive(
+                oursPath,
+                theirsPath,
+                basePath,
+                outPath: oursPath,
+                gitAdd: true
+            )
+                ? 0
+                : 2;
+        }
+        finally
+        {
+            ConsoleMouseInput.Disable();
+            ConsoleMouseInput.ExitAltScreen();
+        }
     }
 
     /// <summary>
@@ -253,7 +269,11 @@ internal static class ConflictTui
         return 0;
     }
 
-    // ── Modified 行处理（光标模式）──────────────────────────────────────────
+    // ── Modified 行处理（光标模式，键盘+鼠标）───────────────────────────────
+
+    // BuildModifiedView 的固定竖直布局：Panel顶边框(含标题)=行0，表格顶边框=行1，
+    // 表格表头=行2，分隔线=行3，第一条数据行=行4。渲染前必须把光标归零，这个偏移量才成立。
+    private const int TableDataStartRow = 4;
 
     private static int ProcessModified(RowConflict row, int current, int total)
     {
@@ -262,16 +282,43 @@ internal static class ConflictTui
             sel = 0;
 
         int result = 0;
+        try
+        {
+            Console.SetCursorPosition(0, 0);
+        }
+        catch { }
+
         AnsiConsole
             .Live(BuildModifiedView(row, current, total, sel))
             .Start(ctx =>
             {
                 while (true)
                 {
-                    var key = Console.ReadKey(intercept: true);
+                    var (isKey, key, col, screenRow) = ConsoleMouseInput.ReadNext();
                     bool done = false;
+                    bool mouseHandled = false;
 
-                    if (key.Key == ConsoleKey.UpArrow)
+                    if (!isKey)
+                    {
+                        // 鼠标左键点击：Y 落在某条数据行范围内则选中该格；X 落在窗口左半/右半决定选我方/对方
+                        // （表格 Expand 铺满整个终端宽度，colName+我方两列大致占左半，对方+选择占右半，
+                        //  不是逐列精确像素边界，是"点左边=我方、点右边=对方"的粗粒度命中，和 lazygit 类似工具的点击体验一致）
+                        int cellIdx = screenRow - TableDataStartRow;
+                        if (cellIdx >= 0 && cellIdx < row.Cells.Count)
+                        {
+                            sel = cellIdx;
+                            bool clickedLeft = col < Console.WindowWidth / 2;
+                            row.Cells[sel].Choice = clickedLeft
+                                ? ConflictChoice.Ours
+                                : ConflictChoice.Theirs;
+                            row.Cells[sel].IsExplicit = true;
+                            var next = FindIndex(row.Cells, c => !c.IsExplicit);
+                            if (next >= 0)
+                                sel = next;
+                            mouseHandled = true;
+                        }
+                    }
+                    else if (key.Key == ConsoleKey.UpArrow)
                     {
                         if (sel > 0)
                             sel--;
@@ -292,7 +339,7 @@ internal static class ConflictTui
                         result = 0;
                         done = true;
                     }
-                    else
+                    else if (!mouseHandled)
                     {
                         switch (key.KeyChar.ToString())
                         {
@@ -360,14 +407,23 @@ internal static class ConflictTui
     private static int ProcessOnly(RowConflict row, int current, int total)
     {
         int result = 0;
+        try
+        {
+            Console.SetCursorPosition(0, 0);
+        }
+        catch { }
+
         AnsiConsole
             .Live(BuildOnlyView(row, current, total))
             .Start(ctx =>
             {
                 while (true)
                 {
-                    var key = Console.ReadKey(intercept: true);
+                    var (isKey, key, _, _) = ConsoleMouseInput.ReadNext();
                     bool done = false;
+
+                    if (!isKey)
+                        continue; // 这个视图没有可点选的目标，鼠标事件直接忽略
 
                     // Enter / s = 用默认值跳过
                     if (key.Key == ConsoleKey.Enter || key.KeyChar.ToString() == KeySkip)
