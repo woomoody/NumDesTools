@@ -146,8 +146,8 @@ internal static class ConflictTui
             var row = allRows[i];
             int exitCode =
                 row.DiffType == RowDiffType.Modified
-                    ? ProcessModified(row, i + 1, allRows.Count)
-                    : ProcessOnly(row, i + 1, allRows.Count);
+                    ? ProcessModified(row, i + 1, allRows.Count, oursLabel, theirsLabel)
+                    : ProcessOnly(row, i + 1, allRows.Count, oursLabel, theirsLabel);
 
             if (exitCode != 0)
             {
@@ -275,7 +275,13 @@ internal static class ConflictTui
     // 表格表头=行2，分隔线=行3，第一条数据行=行4。渲染前必须把光标归零，这个偏移量才成立。
     private const int TableDataStartRow = 4;
 
-    private static int ProcessModified(RowConflict row, int current, int total)
+    private static int ProcessModified(
+        RowConflict row,
+        int current,
+        int total,
+        string? oursLabel,
+        string? theirsLabel
+    )
     {
         int sel = FindIndex(row.Cells, c => !c.IsExplicit);
         if (sel < 0)
@@ -289,7 +295,7 @@ internal static class ConflictTui
         catch { }
 
         AnsiConsole
-            .Live(BuildModifiedView(row, current, total, sel))
+            .Live(BuildModifiedView(row, current, total, sel, oursLabel, theirsLabel))
             .Start(ctx =>
             {
                 while (true)
@@ -380,7 +386,9 @@ internal static class ConflictTui
                         }
                     }
 
-                    ctx.UpdateTarget(BuildModifiedView(row, current, total, sel));
+                    ctx.UpdateTarget(
+                        BuildModifiedView(row, current, total, sel, oursLabel, theirsLabel)
+                    );
                     ctx.Refresh();
                     if (done)
                         break;
@@ -404,7 +412,13 @@ internal static class ConflictTui
 
     // ── OnlyOurs / OnlyTheirs 行处理 ────────────────────────────────────────
 
-    private static int ProcessOnly(RowConflict row, int current, int total)
+    private static int ProcessOnly(
+        RowConflict row,
+        int current,
+        int total,
+        string? oursLabel,
+        string? theirsLabel
+    )
     {
         int result = 0;
         try
@@ -414,7 +428,7 @@ internal static class ConflictTui
         catch { }
 
         AnsiConsole
-            .Live(BuildOnlyView(row, current, total))
+            .Live(BuildOnlyView(row, current, total, oursLabel, theirsLabel))
             .Start(ctx =>
             {
                 while (true)
@@ -458,7 +472,9 @@ internal static class ConflictTui
 
                     if (done)
                     {
-                        ctx.UpdateTarget(BuildOnlyView(row, current, total));
+                        ctx.UpdateTarget(
+                            BuildOnlyView(row, current, total, oursLabel, theirsLabel)
+                        );
                         ctx.Refresh();
                         break;
                     }
@@ -470,7 +486,14 @@ internal static class ConflictTui
 
     // ── 构建 Modified 视图 ───────────────────────────────────────────────────
 
-    private static IRenderable BuildModifiedView(RowConflict row, int current, int total, int sel)
+    private static IRenderable BuildModifiedView(
+        RowConflict row,
+        int current,
+        int total,
+        int sel,
+        string? oursLabel,
+        string? theirsLabel
+    )
     {
         var title =
             $"差异 {current}/{total}  [yellow]Modified[/]  行 [cyan]{Markup.Escape(row.RowKey)}[/]";
@@ -490,20 +513,34 @@ internal static class ConflictTui
             var cell = row.Cells[i];
             bool isCursor = i == sel;
 
-            var choiceStr = cell.IsExplicit
-                ? (cell.Choice == ConflictChoice.Ours ? "[blue]我方 ✓[/]" : "[yellow]对方 ✓[/]")
-                : "[dim]待选(默认我方)[/]";
+            // 选中的一方用反色底块强调，未选中的一方压暗——不用再去读"选择"那一列文字才能确认
+            string oursVal,
+                theirsVal,
+                choiceStr;
+            if (!cell.IsExplicit)
+            {
+                oursVal = $"[blue]{Markup.Escape(cell.OursDisplay)}[/]";
+                theirsVal = $"[yellow]{Markup.Escape(cell.TheirsDisplay)}[/]";
+                choiceStr = "[dim]待选(默认我方)[/]";
+            }
+            else if (cell.Choice == ConflictChoice.Ours)
+            {
+                oursVal = $"[bold black on blue] {Markup.Escape(cell.OursDisplay)} ✓[/]";
+                theirsVal = $"[dim]{Markup.Escape(cell.TheirsDisplay)}[/]";
+                choiceStr = "[bold blue]我方 ✓[/]";
+            }
+            else
+            {
+                oursVal = $"[dim]{Markup.Escape(cell.OursDisplay)}[/]";
+                theirsVal = $"[bold black on yellow] {Markup.Escape(cell.TheirsDisplay)} ✓[/]";
+                choiceStr = "[bold yellow]对方 ✓[/]";
+            }
 
             var colName = isCursor
                 ? $"[bold green]▶ {Markup.Escape(cell.ColName)}[/]"
                 : Markup.Escape(cell.ColName);
 
-            table.AddRow(
-                colName,
-                $"[blue]{Markup.Escape(cell.OursDisplay)}[/]",
-                $"[yellow]{Markup.Escape(cell.TheirsDisplay)}[/]",
-                choiceStr
-            );
+            table.AddRow(colName, oursVal, theirsVal, choiceStr);
         }
 
         var cur = row.Cells[sel];
@@ -515,7 +552,14 @@ internal static class ConflictTui
             $"[dim]↑↓移动(可回到已选格改选)  [[{KeyOurs}]]我方  [[{KeyTheirs}]]对方  [[{KeyAllOurs}]]整行我方  [[{KeyAllTheirs}]]整行对方  Enter/[[{KeySkip}]]确认此行(未选格默认我方)  [[{KeyQuit}]]放弃[/]"
         );
 
-        var body = new Rows(table, Text.Empty, curInfo, Text.Empty, footer);
+        var body = new Rows(
+            table,
+            Text.Empty,
+            curInfo,
+            Text.Empty,
+            BuildLegendLine(oursLabel, theirsLabel),
+            footer
+        );
         return new Panel(body)
         {
             Header = new PanelHeader($" {title} "),
@@ -525,9 +569,23 @@ internal static class ConflictTui
         };
     }
 
+    /// <summary>我方(OURS)/对方(THEIRS)具体对应哪个分支/commit——常驻在每一屏的面板里，不是进入全屏前打印一次就再也看不到。</summary>
+    private static IRenderable BuildLegendLine(string? oursLabel, string? theirsLabel)
+    {
+        var ours = oursLabel != null ? Markup.Escape(oursLabel) : "(未知)";
+        var theirs = theirsLabel != null ? Markup.Escape(theirsLabel) : "(未知)";
+        return new Markup($"[blue]我方(OURS)[/] = {ours}    [yellow]对方(THEIRS)[/] = {theirs}");
+    }
+
     // ── 构建 OnlyOurs / OnlyTheirs 视图 ──────────────────────────────────────
 
-    private static IRenderable BuildOnlyView(RowConflict row, int current, int total)
+    private static IRenderable BuildOnlyView(
+        RowConflict row,
+        int current,
+        int total,
+        string? oursLabel,
+        string? theirsLabel
+    )
     {
         bool isOurs = row.DiffType == RowDiffType.OnlyOurs;
         var typeLabel = isOurs ? "[blue]仅我方[/]" : "[yellow]仅对方[/]";
@@ -567,6 +625,8 @@ internal static class ConflictTui
             ? $"[dim][[{KeyOurs}/{KeyAllOurs}]]保留此行  [[{KeyTheirs}/{KeyAllTheirs}]]删除此行  Enter/[[{KeySkip}]]跳过(默认保留)  [[{KeyQuit}]]放弃[/]"
             : $"[dim][[{KeyTheirs}/{KeyAllTheirs}]]接受此行  [[{KeyOurs}/{KeyAllOurs}]]拒绝此行  Enter/[[{KeySkip}]]跳过(默认接受)  [[{KeyQuit}]]放弃[/]";
         parts.Add(new Markup(footer));
+        parts.Add(Text.Empty);
+        parts.Add(BuildLegendLine(oursLabel, theirsLabel));
 
         var body = new Rows(parts);
         return new Panel(body)
