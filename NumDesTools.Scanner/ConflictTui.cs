@@ -603,7 +603,7 @@ internal static class ConflictTui
                     $"[bold black on blue] {Markup.Escape(TruncateCell(e.OursDisplay, 30))} ✓[/]";
             else
                 oursVal = DiffSnippetMarkup(e.DiffSegs, true, 30);
-            if (cursorHere && cursorCol == 0 && !selected)
+            if (cursorHere && cursorCol == 0)
                 oursVal = $"[bold underline]{oursVal}[/]";
 
             string theirsVal;
@@ -612,7 +612,7 @@ internal static class ConflictTui
                     $"[bold black on yellow] {Markup.Escape(TruncateCell(e.TheirsDisplay, 30))} ✓[/]";
             else
                 theirsVal = DiffSnippetMarkup(e.DiffSegs, false, 30);
-            if (cursorHere && cursorCol == 1 && !selected)
+            if (cursorHere && cursorCol == 1)
                 theirsVal = $"[bold underline]{theirsVal}[/]";
             string choiceStr = !selected
                 ? "[dim]未选(默认我方)[/]"
