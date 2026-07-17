@@ -858,20 +858,27 @@ internal static class ConflictTui
             return $"[{baseColor}]{Markup.Escape(TruncateCell(string.Concat(segs.Select(s => s.Text)), max))}[/]";
 
         var pre = string.Concat(segs.Take(firstDiff).Select(s => s.Text));
-        var d = segs[firstDiff];
-        // post 只取紧邻 firstDiff 之后的 common 段（到下一个差异止），不能含对方独有段——否则 ours 列把对方值也显示了（错位）
+        // 差异区 = firstDiff 到下一个 kind0（连续非0段）；本方只显示区内本方独有段，对方独有段不显示（对应空）
+        int endDiff = firstDiff;
+        while (endDiff < segs.Count && segs[endDiff].Kind != 0)
+            endDiff++;
+        var diffStr = string.Concat(
+            segs.Skip(firstDiff)
+                .Take(endDiff - firstDiff)
+                .Where(s => oursView ? s.Kind == 1 : s.Kind == 2)
+                .Select(s => s.Text)
+        );
         var post = string.Concat(
-            segs.Skip(firstDiff + 1).TakeWhile(s => s.Kind == 0).Select(s => s.Text)
+            segs.Skip(endDiff).TakeWhile(s => s.Kind == 0).Select(s => s.Text)
         );
 
         int ctx = Math.Max(4, max / 3);
         var preShow = pre.Length > ctx ? "…" + pre[^(ctx)..] : pre;
         var postShow = post.Length > ctx ? post[..ctx] + "…" : post;
-
-        bool has = oursView ? d.Kind == 1 : d.Kind == 2;
-        string diffShow = has
-            ? $"[{diffColor}]{Markup.Escape(TruncateCell(d.Text, max / 2))}[/]"
-            : "";
+        string diffShow =
+            diffStr.Length > 0
+                ? $"[{diffColor}]{Markup.Escape(TruncateCell(diffStr, max / 2))}[/]"
+                : "";
         return $"[{baseColor}]{Markup.Escape(preShow)}[/]{diffShow}[{baseColor}]{Markup.Escape(postShow)}[/]";
     }
 
