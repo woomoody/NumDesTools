@@ -537,6 +537,7 @@ internal static class ConflictTui
         string OursDisplay,
         string TheirsDisplay,
         string Remark,
+        List<(string Text, int Kind)> DiffSegs,
         CellConflict Cell
     );
 
@@ -556,6 +557,7 @@ internal static class ConflictTui
                         cell.OursDisplay,
                         cell.TheirsDisplay,
                         row.DisplayName,
+                        CharDiff(cell.OursDisplay, cell.TheirsDisplay),
                         cell
                     )
                 );
@@ -600,7 +602,7 @@ internal static class ConflictTui
                     $"[reverse] {Markup.Escape(TruncateCell(e.OursDisplay, 30))} ◀[/]",
                 (_, _, true, ConflictChoice.Ours) =>
                     $"[bold black on blue] {Markup.Escape(TruncateCell(e.OursDisplay, 30))} ✓[/]",
-                _ => $"[blue]{Markup.Escape(TruncateCell(e.OursDisplay, 30))}[/]",
+                _ => DiffSnippetMarkup(e.DiffSegs, true, 30),
             };
             string theirsVal = (cursorHere, cursorCol, selected, e.Cell.Choice) switch
             {
@@ -608,7 +610,7 @@ internal static class ConflictTui
                     $"[reverse] {Markup.Escape(TruncateCell(e.TheirsDisplay, 30))} ◀[/]",
                 (_, _, true, ConflictChoice.Theirs) =>
                     $"[bold black on yellow] {Markup.Escape(TruncateCell(e.TheirsDisplay, 30))} ✓[/]",
-                _ => $"[yellow]{Markup.Escape(TruncateCell(e.TheirsDisplay, 30))}[/]",
+                _ => DiffSnippetMarkup(e.DiffSegs, false, 30),
             };
             string choiceStr = !selected
                 ? "[dim]未选(默认我方)[/]"
@@ -838,6 +840,47 @@ internal static class ConflictTui
         if (y < m)
             segs.Add((b[y..], 2));
         return segs;
+    }
+
+    /// <summary>整表列值：用预算 diff 段,围绕第一个差异截断 max 字,差异段高亮(我方红底/对方绿底),相同段底色。未选格用(帮决策),已选/光标格用简单 TruncateCell。</summary>
+    private static string DiffSnippetMarkup(
+        List<(string Text, int Kind)> segs,
+        bool oursView,
+        int max
+    )
+    {
+        var parts = new List<(string Text, bool Diff)>();
+        foreach (var (t, k) in segs)
+        {
+            if (k == 0)
+                parts.Add((t, false));
+            else if (oursView && k == 1)
+                parts.Add((t, true));
+            else if (!oursView && k == 2)
+                parts.Add((t, true));
+        }
+        var baseColor = oursView ? "blue" : "yellow";
+        var diffColor = oursView ? "bold white on red" : "bold white on darkgreen";
+
+        int firstDiff = parts.FindIndex(p => p.Diff);
+        if (firstDiff < 0)
+        {
+            var all = string.Concat(parts.Select(p => p.Text));
+            return $"[{baseColor}]{Markup.Escape(TruncateCell(all, max))}[/]";
+        }
+
+        var pre = string.Concat(parts.Take(firstDiff).Select(p => p.Text));
+        int diffCount = 0;
+        while (firstDiff + diffCount < parts.Count && parts[firstDiff + diffCount].Diff)
+            diffCount++;
+        var diffStr = string.Concat(parts.Skip(firstDiff).Take(diffCount).Select(p => p.Text));
+        var post = string.Concat(parts.Skip(firstDiff + diffCount).Select(p => p.Text));
+
+        int ctx = Math.Max(4, (max - Math.Min(diffStr.Length, max / 2)) / 2);
+        var preShow = pre.Length > ctx ? "…" + pre[^(ctx)..] : pre;
+        var diffShow = diffStr.Length > max / 2 ? diffStr[..(max / 2)] + "…" : diffStr;
+        var postShow = post.Length > ctx ? post[..ctx] + "…" : post;
+        return $"[{baseColor}]{Markup.Escape(preShow)}[/][{diffColor}]{Markup.Escape(diffShow)}[/][{baseColor}]{Markup.Escape(postShow)}[/]";
     }
 
     /// <summary>v 详情：Console 直接打印完整 ours/theirs（终端原生可向下无限滚动），字符级 diff 高亮差异（我方独有红底/对方独有绿底），任意键返回。</summary>
