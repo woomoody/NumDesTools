@@ -836,7 +836,7 @@ internal static class LteCore
 
         using StreamReader reader = new StreamReader(filePath, Encoding.UTF8);
 
-        string line;
+        string? line;
 
         while ((line = reader.ReadLine()) != null)
         {

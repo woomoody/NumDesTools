@@ -9,7 +9,9 @@ internal class SvnGitTools
 
     public static List<string> GitDiffAndStagedFiles(string path, bool workdirOnly = false)
     {
-        string repoPath = FindGitRoot(path);
+        var repoPath = FindGitRoot(path);
+        if (repoPath is null)
+            return [];
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var fileList = new List<string>();
         using var repo = new Repository(repoPath);
@@ -146,7 +148,7 @@ internal class SvnGitTools
         return fileList;
     }
 
-    public static string FindGitRoot(string startPath)
+    public static string? FindGitRoot(string startPath)
     {
         var gitDir = Repository.Discover(startPath);
         if (gitDir is null)
@@ -174,7 +176,7 @@ internal class SvnGitTools
             || (status & FileStatus.ModifiedInIndex) != 0;
     }
 
-    public static (string Name, string Email) GetGitUserInfo()
+    public static (string? Name, string? Email) GetGitUserInfo()
     {
         string configPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),

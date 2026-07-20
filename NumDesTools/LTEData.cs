@@ -108,7 +108,7 @@ public class LteData
             };
         }
     }
-    public static (string Name, string Email) GitConfig = SvnGitTools.GetGitUserInfo();
+    public static (string? Name, string? Email) GitConfig = SvnGitTools.GetGitUserInfo();
 
     private static void RunLteCommand(
         CommandBarButton ctrl,

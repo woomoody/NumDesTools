@@ -19,9 +19,9 @@ public class SelfExcelFileCollector(string currentPath)
     }
 
     //获取根目录
-    private static string FindRootDirectory(string rootPath, string rootFolderName)
+    private static string? FindRootDirectory(string rootPath, string rootFolderName)
     {
-        DirectoryInfo dirInfo = new DirectoryInfo(rootPath);
+        DirectoryInfo? dirInfo = new DirectoryInfo(rootPath);
 
         while (dirInfo != null && dirInfo.Name != rootFolderName)
         {
@@ -70,15 +70,6 @@ public class SelfExcelFileCollector(string currentPath)
         }
 
         return fileMd5Dictionary;
-    }
-
-    private string GetParentDirectory(string path, int levels)
-    {
-        for (int i = 0; i < levels; i++)
-        {
-            path = Path.GetDirectoryName(path);
-        }
-        return path;
     }
 
     // 不扫描这些目录（工具/基础设施，非游戏配置表）

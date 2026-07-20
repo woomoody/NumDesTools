@@ -36,9 +36,9 @@ public static class ExcelConflictDiffer
             }
         }
 
-        SheetBundle oursBundle = default;
-        SheetBundle theirsBundle = default;
-        SheetBundle baseBundle = default;
+        SheetBundle oursBundle = new() { Sheets = new() };
+        SheetBundle theirsBundle = new() { Sheets = new() };
+        SheetBundle baseBundle = new() { Sheets = new() };
 
         if (safeBase != null)
         {
