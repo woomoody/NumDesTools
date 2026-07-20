@@ -1,34 +1,70 @@
 """
 Claude Code Token 使用统计 — 生成 HTML 报告并自动用浏览器打开
 按实际使用的模型分别计价（$/MTok）
+支持 --date 参数筛选日期范围
 """
-import os, json, sys, subprocess, webbrowser
+import os, json, sys, subprocess, webbrowser, argparse
 from collections import defaultdict
 from datetime import datetime, date, timedelta
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-REMOTES = [
-    ("admin@100.96.48.30", r"C:\Users\admin\.claude\projects", "[remote-48]"),
-    ("muxi@100.70.90.51",  r"C:\Users\muxi\.claude\projects",  "[remote-90]"),
-]
+parser = argparse.ArgumentParser()
+parser.add_argument('--date', default='today', help='today / 2026-07-20 / 2026-07-15..2026-07-20')
+args = parser.parse_args()
 
-# 按模型前缀匹配的价格表（input, output, cache_read, cache_write）单位 $/MTok
-MODEL_PRICES = [
-    ('claude-fable',   (10.00, 50.00, 1.00,  12.50)),
-    ('claude-mythos',  (10.00, 50.00, 1.00,  12.50)),
-    ('claude-opus-4',  ( 5.00, 25.00, 0.50,   6.25)),
-    ('claude-sonnet-4',( 3.00, 15.00, 0.30,   3.75)),
-    ('claude-haiku-4', ( 1.00,  5.00, 0.10,   1.25)),
+today = date.today()
+if args.date == 'today':
+    date_start = today.isoformat()
+    date_end   = today.isoformat()
+    date_label = f"今天（{today.isoformat()}）"
+elif '..' in args.date:
+    parts = args.date.split('..')
+    date_start = parts[0].strip()
+    date_end   = parts[1].strip()
+    date_label = f"{date_start} ~ {date_end}"
+else:
+    date_start = args.date.strip()
+    date_end   = date_start
+    date_label = date_start
+
+# ── 模型价格（每天从 JSON 刷新一次）──
+_PRICE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model_prices.json')
+
+_DEFAULT_PRICES = [
+    {'prefix': 'claude-fable',   'input': 10.00, 'output': 50.00, 'cache_read': 1.00,  'cache_write': 12.50},
+    {'prefix': 'claude-mythos',  'input': 10.00, 'output': 50.00, 'cache_read': 1.00,  'cache_write': 12.50},
+    {'prefix': 'claude-opus-4',  'input':  5.00, 'output': 25.00, 'cache_read': 0.50,  'cache_write':  6.25},
+    {'prefix': 'claude-sonnet-4','input':  3.00, 'output': 15.00, 'cache_read': 0.30,  'cache_write':  3.75},
+    {'prefix': 'claude-haiku-4', 'input':  1.00, 'output':  5.00, 'cache_read': 0.10,  'cache_write':  1.25},
 ]
-_DEFAULT_PRICE = (5.00, 25.00, 0.50, 6.25)  # fallback: opus 价格
+_DEFAULT_FALLBACK = {'input': 5.00, 'output': 25.00, 'cache_read': 0.50, 'cache_write': 6.25}
+
+def _load_prices():
+    ts = today.isoformat()
+    if os.path.exists(_PRICE_FILE):
+        try:
+            with open(_PRICE_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if data.get('date') == ts:
+                return data['prices'], data['fallback']
+        except: pass
+    prices = _DEFAULT_PRICES[:]
+    fallback = dict(_DEFAULT_FALLBACK)
+    with open(_PRICE_FILE, 'w', encoding='utf-8') as f:
+        json.dump({'date': ts, 'prices': prices, 'fallback': fallback}, f, ensure_ascii=False, indent=2)
+    print(f"  prices updated ({ts}), {len(prices)} models")
+    return prices, fallback
+
+MODEL_PRICES, _PRICE_FALLBACK = _load_prices()
 
 def _model_price(model: str):
     m = (model or '').lower()
-    for prefix, p in MODEL_PRICES:
-        if m.startswith(prefix):
-            return p
-    return _DEFAULT_PRICE
+    for p in MODEL_PRICES:
+        if m.startswith(p['prefix']):
+            return (p['input'], p['output'], p['cache_read'], p['cache_write'])
+    return (_PRICE_FALLBACK['input'], _PRICE_FALLBACK['output'],
+            _PRICE_FALLBACK['cache_read'], _PRICE_FALLBACK['cache_write'])
 
 def calc_cost(inp, out, cr, cw, model=''):
     pi, po, pcr, pcw = _model_price(model)
@@ -41,52 +77,12 @@ def cn_num(n):
 
 BASES = [(os.path.expanduser(r'~/.claude/projects'), '[local]')]
 
-def _pull_remote_jsonl(ssh_host, remote_path, label):
-    r = subprocess.run(
-        ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
-         ssh_host, f'dir "{remote_path}" /s /b'],
-        capture_output=True, text=True, timeout=30)
-    if r.returncode != 0:
-        print(f"  [warn] {ssh_host} SSH 不可用，跳过", file=sys.stderr); return
-    for fpath in r.stdout.splitlines():
-        fpath = fpath.strip()
-        if not fpath.endswith('.jsonl'): continue
-        rel = fpath[len(remote_path):].lstrip('\\')
-        proj_key = label + rel.split('\\')[0]
-        r2 = subprocess.run(
-            ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
-             ssh_host, f'type "{fpath}"'],
-            capture_output=True, text=True, encoding='utf-8', errors='ignore', timeout=30)
-        for line in r2.stdout.splitlines():
-            line = line.strip()
-            if not line: continue
-            try: obj = json.loads(line)
-            except: continue
-            ts = obj.get('timestamp') or obj.get('ts') or obj.get('created_at')
-            if not ts:
-                msg = obj.get('message', {})
-                if isinstance(msg, dict): ts = msg.get('timestamp') or msg.get('created_at')
-            if not ts: continue
-            try:
-                date_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d') if isinstance(ts, (int, float)) else str(ts)[:10]
-            except: continue
-            usage = obj.get('usage') or (obj.get('message') or {}).get('usage')
-            if not isinstance(usage, dict): continue
-            inp = usage.get('input_tokens', 0) or 0
-            out = usage.get('output_tokens', 0) or 0
-            cr  = usage.get('cache_read_input_tokens', 0) or 0
-            cw  = usage.get('cache_creation_input_tokens', 0) or 0
-            if inp + out + cr + cw == 0: continue
-            if out < 200 and cr == 0 and cw == 0: continue
-            model = (obj.get('model') or (obj.get('message') or {}).get('model') or '<empty>')
-            yield proj_key, date_str, inp, out, cr, cw, model
-
 # ── 数据采集 ──────────────────────────────────────────────────────────────────
 _zero = lambda: {'input':0,'output':0,'cache_read':0,'cache_write':0,'cost':0.0}
 daily       = defaultdict(_zero)
 monthly     = defaultdict(_zero)
 proj_daily  = defaultdict(lambda: defaultdict(_zero))
-model_daily = defaultdict(_zero)
+model_daily = defaultdict(lambda: defaultdict(_zero))  # model_daily[date][model]
 total_msgs = skipped = 0
 
 for BASE, prefix in BASES:
@@ -96,7 +92,6 @@ for BASE, prefix in BASES:
         if not os.path.isdir(proj_path): continue
         proj_key = f"{prefix}{proj}"
         for dirpath, _, files in os.walk(proj_path):
-            # 跳过 subagents/workflows 子目录（子 agent 日志会重复计入主会话已统计的 token）
             if os.sep + 'subagents' in dirpath or os.sep + 'workflows' in dirpath:
                 continue
             for f in sorted(files):
@@ -124,8 +119,6 @@ for BASE, prefix in BASES:
                             cr  = usage.get('cache_read_input_tokens',0) or 0
                             cw  = usage.get('cache_creation_input_tokens',0) or 0
                             if inp+out+cr+cw == 0: continue
-                            # 过滤异常记录：output 极小且无 cache 的疑似工具/重试噪音
-                            # 正常对话 output 几千+，cache_read 巨大；这类 out<200&cache=0 是噪音
                             if out < 200 and cr == 0 and cw == 0:
                                 skipped += 1; continue
                             model = (obj.get('model') or
@@ -134,7 +127,7 @@ for BASE, prefix in BASES:
                             total_msgs += 1
                             for d in (daily[date_str], monthly[date_str[:7]],
                                       proj_daily[proj_key][date_str],
-                                      model_daily[model]):
+                                      model_daily[date_str][model]):
                                 d['input']      += inp
                                 d['output']     += out
                                 d['cache_read'] += cr
@@ -143,25 +136,12 @@ for BASE, prefix in BASES:
                 except Exception as e:
                     print(f'  [warn] {fpath}: {e}')
 
-for ssh_host, remote_path, label in REMOTES:
-    print(f"  正在读取远程 {label} ({ssh_host})...", flush=True)
-    for proj_key, date_str, inp, out, cr, cw, model in _pull_remote_jsonl(ssh_host, remote_path, label):
-        total_msgs += 1
-        cost = calc_cost(inp, out, cr, cw, model)
-        for d in (daily[date_str], monthly[date_str[:7]],
-                  proj_daily[proj_key][date_str], model_daily[model]):
-            d['input']      += inp;  d['output']     += out
-            d['cache_read'] += cr;   d['cache_write']+= cw
-            d['cost']       += cost
-
 # ── 汇总计算 ──────────────────────────────────────────────────────────────────
 grand_in = grand_out = grand_cr = grand_cw = grand_cost = 0
 for v in daily.values():
     grand_in += v['input']; grand_out += v['output']
     grand_cr += v['cache_read']; grand_cw += v['cache_write']
     grand_cost += v['cost']
-
-today = date.today()
 
 def period_stats(days):
     start = (today - timedelta(days=days-1)).isoformat() if days else '0000-00-00'
@@ -172,7 +152,7 @@ def period_stats(days):
             sc+=v['cost']; dc+=1
     return dc, si, so, scr, scw, sc
 
-# 填充完整日期轴：从最早记录到今天（含 0 用量的天，避免图表跳过空白天造成数据丢失错觉）
+# 填充完整日期轴
 if daily:
     raw = sorted(daily.keys())
     d0 = date.fromisoformat(raw[0])
@@ -188,7 +168,7 @@ chart_input   = [daily.get(d,empty)['input']/1000  for d in chart_dates]
 chart_cr      = [daily.get(d,empty)['cache_read']/1000 for d in chart_dates]
 chart_cost    = [round(daily.get(d, {'cost':0.0})['cost'], 2) for d in chart_dates]
 
-# 每日明细行（遍历完整日期轴，0 用量的天也显示，便于确认数据连续未丢）
+# 每日明细行
 detail_rows = ''
 for d in all_dates:
     v = daily.get(d) or {'input':0,'output':0,'cache_read':0,'cache_write':0,'cost':0.0}
@@ -209,16 +189,38 @@ for proj,pi,po,pcr,pcw,pc in proj_list:
     short = proj[-60:] if len(proj)>60 else proj
     proj_rows += f'<tr><td title="{proj}">{short}</td><td>{cn_num(pi)}</td><td>{cn_num(po)}</td><td>{cn_num(pcr)}</td><td>{cn_num(pcw)}</td><td>${pc:.2f}</td></tr>\n'
 
-# 模型汇总行（按 input 降序，看出哪个模型吃掉了 token）
+# 模型汇总行（全历史，扁平化聚合）
 model_rows = ''
+model_flat = defaultdict(_zero)
+for d, md in model_daily.items():
+    for m, v in md.items():
+        for k in ('input','output','cache_read','cache_write','cost'):
+            model_flat[m][k] += v[k]
 model_list = []
-for m, v in model_daily.items():
+for m, v in model_flat.items():
     mi,mo,mcr,mcw,mc = v['input'],v['output'],v['cache_read'],v['cache_write'],v['cost']
     if mi+mo+mcr+mcw == 0: continue
     model_list.append((m, mi, mo, mcr, mcw, mc))
 model_list.sort(key=lambda x: -x[1])
 for m,mi,mo,mcr,mcw,mc in model_list:
     model_rows += f'<tr><td>{m}</td><td>{cn_num(mi)}</td><td>{cn_num(mo)}</td><td>{cn_num(mcr)}</td><td>{cn_num(mcw)}</td><td>{cn_num(mi+mo+mcr+mcw)}</td><td>${mc:.2f}</td></tr>\n'
+
+# ── 按日期筛选的模型汇总 ──
+model_date_rows = ''
+model_date_list = []
+filtered_model = defaultdict(_zero)
+for d, md in model_daily.items():
+    if date_start <= d <= date_end:
+        for m, v in md.items():
+            for k in ('input','output','cache_read','cache_write','cost'):
+                filtered_model[m][k] += v[k]
+for m, v in filtered_model.items():
+    mi,mo,mcr,mcw,mc = v['input'],v['output'],v['cache_read'],v['cache_write'],v['cost']
+    if mi+mo+mcr+mcw == 0: continue
+    model_date_list.append((m, mi, mo, mcr, mcw, mc))
+model_date_list.sort(key=lambda x: -x[1])
+for m,mi,mo,mcr,mcw,mc in model_date_list:
+    model_date_rows += f'<tr><td>{m}</td><td>{cn_num(mi)}</td><td>{cn_num(mo)}</td><td>{cn_num(mcr)}</td><td>{cn_num(mcw)}</td><td>{cn_num(mi+mo+mcr+mcw)}</td><td>${mc:.2f}</td></tr>\n'
 
 # 汇总卡数据
 dc7,si7,so7,scr7,scw7,cost7   = period_stats(7)
@@ -241,7 +243,6 @@ def card(title, days, dc, si, so, scr, scw, cost):
       </table>
     </div>'''
 
-# 自然月卡：本月 + 上月
 def month_card(label, ym):
     v = monthly.get(ym, {'input':0,'output':0,'cache_read':0,'cache_write':0,'cost':0.0})
     mi,mo,mcr,mcw,mc = v['input'],v['output'],v['cache_read'],v['cache_write'],v['cost']
@@ -311,7 +312,7 @@ html = f'''<!DOCTYPE html>
 </head>
 <body>
 <h1>📊 Claude Code Token 使用统计</h1>
-<div class="meta">扫描消息: {total_msgs:,} 条 &nbsp;|&nbsp; 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
+<div class="meta">扫描消息: {total_msgs:,} 条 &nbsp;|&nbsp; 筛选: {date_label} &nbsp;|&nbsp; 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
 
 <div class="cards">{cards}</div>
 
@@ -326,6 +327,14 @@ html = f'''<!DOCTYPE html>
 <div class="chart-box">
   <h2>每日费用（USD）</h2>
   <canvas id="costChart" height="60"></canvas>
+</div>
+
+<div class="section">
+  <h2>📅 {date_label} · 按模型消耗 Token</h2>
+  <table class="data">
+    <thead><tr><th>模型</th><th>input</th><th>output</th><th>缓存读</th><th>缓存写</th><th>配额消耗(全)</th><th>费用USD</th></tr></thead>
+    <tbody>{model_date_rows if model_date_rows else '<tr><td colspan="7" style="text-align:center;color:#666;">该时间段无数据</td></tr>'}</tbody>
+  </table>
 </div>
 
 <div class="section">
@@ -351,7 +360,7 @@ html = f'''<!DOCTYPE html>
 </div>
 
 <div class="section">
-  <h2>按模型汇总（按 input 降序，识别哪个模型吃掉了 token）</h2>
+  <h2>按模型汇总（全历史，按 input 降序）</h2>
   <table class="data">
     <thead><tr><th>模型</th><th>input</th><th>output</th><th>缓存读</th><th>缓存写</th><th>配额消耗(全)</th><th>费用USD</th></tr></thead>
     <tbody>{model_rows}</tbody>
@@ -369,8 +378,9 @@ html = f'''<!DOCTYPE html>
 <div class="note">
   口径说明：<br>
   · 实计(in+out) = input + output，纯生成 token 量<br>
-  · 配额消耗(全) = input + output + 缓存读 + 缓存写，Max 订阅月度 30 亿限额按此口径扣<br>
-  · 费用 USD = 按各类型单价加权（input $5/MTok · output $25/MTok · cache_read $0.5/MTok · cache_write $6.25/MTok）
+  · 配额消耗(全) = input + output + 缓存读 + 缓存写<br>
+  · 费用 USD 按当天价格文件计算（model_prices.json），每天刷新一次<br>
+  · 增减模型价格：编辑 claude_token_stats.py 中 _DEFAULT_PRICES，次日自动生效
 </div>
 
 <script>
