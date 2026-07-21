@@ -61,3 +61,12 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+###############################################################################
+# xlsx/xlsm 冲突自动走 NumDesTools 冲突解决工具（merge driver，git 核心机制，
+# 任何 GUI/命令行只要走 git merge/rebase 都会自动触发，不挑工具）。
+# 本机要用得先跑一次 tools/install-conflict-tool.ps1 注册 merge.numdes.driver
+# （本机路径没法提交，这条必须每台机器自己跑一次）。
+###############################################################################
+*.xlsx merge=numdes
+*.xlsm merge=numdes

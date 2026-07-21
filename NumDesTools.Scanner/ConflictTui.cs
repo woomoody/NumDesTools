@@ -59,6 +59,10 @@ internal static class ConflictTui
             return 1;
         }
 
+        // git merge driver（.gitattributes: *.xlsx merge=numdes）调用时，ours/theirs/base
+        // 都是 git 给的临时文件，不在工作区，对它们 git add 会直接报错——driver 配置里带 --no-add 关掉。
+        var gitAdd = !args.Contains("--no-add");
+
         EnterAltScreen();
         try
         {
@@ -67,7 +71,7 @@ internal static class ConflictTui
                 theirsPath,
                 basePath,
                 outPath: oursPath,
-                gitAdd: true
+                gitAdd: gitAdd
             )
                 ? 0
                 : 2;
@@ -181,7 +185,10 @@ internal static class ConflictTui
         AnsiConsole.WriteLine();
         RenderSummary(diff);
 
-        var confirm = AnsiConsole.Confirm("确认写回并执行 git add？", defaultValue: true);
+        var confirm = AnsiConsole.Confirm(
+            gitAdd ? "确认写回并执行 git add？" : "确认写回？",
+            defaultValue: true
+        );
         if (!confirm)
         {
             AnsiConsole.MarkupLine("[yellow]已取消，未写入任何文件。[/]");
