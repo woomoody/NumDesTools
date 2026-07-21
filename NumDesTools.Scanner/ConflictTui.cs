@@ -1,6 +1,5 @@
 using System.Text;
 using LibGit2Sharp;
-using NumDesTools;
 using NumDesTools.ConflictResolver;
 using Spectre.Console;
 using Spectre.Console.Rendering;
@@ -166,8 +165,17 @@ internal static class ConflictTui
         // 整表一屏：把所有需要人工判断的冲突格拍平成一张表，集中显示，不用一个个选。
         // 鼠标精确点单元格选版本受终端字符网格精度限制（需真实终端逐格校准坐标），
         // 本版先做键盘：↑↓移光标，o/t 选版本（反色高亮），Enter 确认（未选用默认我方），q 放弃。
-        if (!ProcessAllConflictsTable(needsAttention, oursLabel, theirsLabel))
+        // 混合架构：有 Rust TUI exe 时走 Rust（ratatui），没有则回退 Spectre 版
+        var rustTuiPath = FindRustTuiExe();
+        if (rustTuiPath is not null)
+        {
+            if (!ResolveViaRustTui(diff, rustTuiPath, needsAttention))
+                return false;
+        }
+        else if (!ProcessAllConflictsTable(needsAttention, oursLabel, theirsLabel))
+        {
             return false;
+        }
 
         // ── 摘要 + 确认写回 ──────────────────────────────────────────────────
         AnsiConsole.WriteLine();
@@ -280,6 +288,131 @@ internal static class ConflictTui
             $"\n[bold]完成[/]  已 add {added.Count} 个  仍冲突 {skipped.Count} 个（需先用 --conflict 解决）"
         );
         return 0;
+    }
+
+    // ── Rust TUI 混合架构：序列化 → 起子进程 → 读结果 ──────────────────────
+
+    /// <summary>找 Rust conflict-tui.exe。优先 Scanner 输出目录旁（发布后跟着走），
+    /// 其次 tools\conflict-tui\target\release\（开发环境兜底，脱离源码树后这条路径就没了）。</summary>
+    private static string? FindRustTuiExe()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "conflict-tui.exe"),
+            Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "..",
+                "..",
+                "..",
+                "..",
+                "tools",
+                "conflict-tui",
+                "target",
+                "release",
+                "conflict-tui.exe"
+            ),
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".local",
+                "bin",
+                "conflict-tui.exe"
+            ),
+        };
+        foreach (var p in candidates)
+        {
+            var full = Path.GetFullPath(p);
+            if (File.Exists(full))
+                return full;
+        }
+        return null;
+    }
+
+    /// <summary>走 Rust TUI：序列化 FileDiff → 起子进程 → 读 result.json 合并 selections。</summary>
+    private static bool ResolveViaRustTui(
+        FileDiff diff,
+        string rustTuiPath,
+        List<RowConflict> needsAttention
+    )
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), "NumDesConflictTui");
+        Directory.CreateDirectory(tempDir);
+        var diffPath = Path.Combine(tempDir, $"{Guid.NewGuid():N}_diff.json");
+        var resultPath = diffPath.Replace("diff.json", "result.json");
+
+        try
+        {
+            // 序列化（UTF8 无 BOM）
+            var dto = diff.ToDto();
+            var json = dto.ToJson();
+            File.WriteAllText(diffPath, json, new System.Text.UTF8Encoding(false));
+
+            // 起 Rust TUI 子进程。UseShellExecute=true：让 TUI 总是自己开一个新的可见控制台窗口——
+            // 用 false 时 TUI 继承父进程控制台，父进程是从无窗口环境（后台任务/服务）起的话 TUI 就没有可见窗口。
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = rustTuiPath,
+                Arguments = $"\"{diffPath}\"",
+                UseShellExecute = true,
+            };
+            using var proc = System.Diagnostics.Process.Start(psi);
+            if (proc is null)
+            {
+                AnsiConsole.MarkupLine("[red]启动 Rust TUI 失败[/]");
+                return false;
+            }
+            proc.WaitForExit();
+
+            if (proc.ExitCode != 0)
+            {
+                AnsiConsole.MarkupLine("[yellow]已取消，未写入任何文件。[/]");
+                return false;
+            }
+
+            // 读结果
+            if (!File.Exists(resultPath))
+            {
+                AnsiConsole.MarkupLine("[red]Rust TUI 未生成 result.json[/]");
+                return false;
+            }
+            var resultJson = File.ReadAllText(resultPath);
+            var result = System.Text.Json.JsonSerializer.Deserialize<SelectionResultDto>(
+                resultJson,
+                new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                    Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+                }
+            );
+            if (result is null || !result.Confirmed)
+            {
+                AnsiConsole.MarkupLine("[yellow]已取消，未写入任何文件。[/]");
+                return false;
+            }
+
+            // 合并 selections 到原 FileDiff
+            diff.ApplySelections(result);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Rust TUI 调用失败：{ex.Message}[/]");
+            return false;
+        }
+        finally
+        {
+            // 清理临时文件（NUMDES_KEEP_TUI_TEMP=1 调试时保留，方便查看 diff.json/result.json）
+            if (Environment.GetEnvironmentVariable("NUMDES_KEEP_TUI_TEMP") != "1")
+            {
+                try
+                {
+                    if (File.Exists(diffPath))
+                        File.Delete(diffPath);
+                    if (File.Exists(resultPath))
+                        File.Delete(resultPath);
+                }
+                catch { }
+            }
+        }
     }
 
     // ── Modified 行处理（光标模式，键盘+鼠标）───────────────────────────────

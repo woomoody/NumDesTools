@@ -39,5 +39,14 @@
     <ProjectReference Include="..\NumDesTools\NumDesTools.csproj" />
   </ItemGroup>
 
+  <!-- Rust conflict-tui.exe 跟随 Scanner 一起拷到输出目录，FindRustTuiExe 优先查这里，
+       source tree 相对路径只作为开发环境兜底（发布出去脱离源码树后那条路径就没了） -->
+  <ItemGroup Condition="Exists('..\tools\conflict-tui\target\release\conflict-tui.exe')">
+    <None
+      Include="..\tools\conflict-tui\target\release\conflict-tui.exe"
+      CopyToOutputDirectory="PreserveNewest"
+      Link="conflict-tui.exe"
+    />
+  </ItemGroup>
 
 </Project>

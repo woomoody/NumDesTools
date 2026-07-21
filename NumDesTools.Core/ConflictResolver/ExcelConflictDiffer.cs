@@ -144,8 +144,7 @@ public static class ExcelConflictDiffer
             var row4 = allRows.Count > 3 ? allRows[3] : null;
 
             // 按列字母排序构建有序列表（A,B,...,Z,AA,AB,...）
-            var colEntries = row2
-                .Where(kv => !string.IsNullOrEmpty(kv.Value?.ToString()))
+            var colEntries = row2.Where(kv => !string.IsNullOrEmpty(kv.Value?.ToString()))
                 .Select(kv => (letter: kv.Key, name: kv.Value!.ToString()!))
                 .OrderBy(x => x.letter.Length)
                 .ThenBy(x => x.letter)
@@ -185,10 +184,9 @@ public static class ExcelConflictDiffer
                 for (int j = 0; j < colEntries.Count; j++)
                 {
                     var letter = colEntries[j].letter;
-                    row[j] =
-                        raw.TryGetValue(letter, out var v)
-                            ? v?.ToString() ?? string.Empty
-                            : string.Empty;
+                    row[j] = raw.TryGetValue(letter, out var v)
+                        ? v?.ToString() ?? string.Empty
+                        : string.Empty;
                 }
                 rows.Add(row);
             }
