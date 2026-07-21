@@ -87,6 +87,24 @@ fn diff_snippet_spans(segs: &[(String, u8)], ours_view: bool, max: usize) -> Vec
     spans
 }
 
+/// 详情面板用：完整（不截断）diff 行，本方独有段着色，对方独有段不显示（各自到边界，对齐 common 段）。
+fn diff_line_full(segs: &[(String, u8)], ours_view: bool) -> Vec<Span<'static>> {
+    let base_color = if ours_view { Color::Blue } else { Color::Yellow };
+    let diff_style = if ours_view {
+        Style::default().fg(Color::White).bg(Color::Red)
+    } else {
+        Style::default().fg(Color::Black).bg(Color::Green)
+    };
+    let want_kind = if ours_view { 1u8 } else { 2u8 };
+    segs.iter()
+        .filter(|(_, k)| *k == 0 || *k == want_kind)
+        .map(|(t, k)| {
+            let style = if *k == 0 { Style::default().fg(base_color) } else { diff_style };
+            Span::styled(t.clone(), style)
+        })
+        .collect()
+}
+
 fn tail_chars(s: &str, n: usize) -> String {
     let chars: Vec<char> = s.chars().collect();
     let start = chars.len().saturating_sub(n);
@@ -138,20 +156,28 @@ fn run_core(
     let mut quit = false;
     let mut confirmed = false;
     let mut table_area = ratatui::layout::Rect::default(); // 记录整表渲染区域，鼠标点击换算行/列列用
+    let ours_label = diff.ours_label.clone().unwrap_or_else(|| "(未知)".to_string());
+    let theirs_label = diff.theirs_label.clone().unwrap_or_else(|| "(未知)".to_string());
+    // 除我方/对方两个百分比列外，其余固定列 + 6 条分隔线 + 2 边框的宽度总和，算动态截断长度要减掉这些
+    const FIXED_COLS_WIDTH: u16 = 3 + 10 + 22 + 12 + 14 + 6 + 2;
 
     while !quit && !confirmed {
         terminal.draw(|f| {
             let size = f.size();
-            table_area = size;
             let mut state = TableState::default();
             state.select(Some(cursor_row));
+
+            // 我方/对方列实际渲染宽度是 Percentage(30)，截断长度必须按这个算，不能瞎猜常量——
+            // 窄了会把长 value 砍得看不出原意，宽了会把短 value 也硬套一个夸张的截断长度
+            let val_max = ((size.width.saturating_sub(FIXED_COLS_WIDTH) as usize) * 30 / 100).max(15);
+
+            let sep = |_i: usize| Cell::from("│").style(Style::default().fg(Color::DarkGray));
 
             let rows: Vec<Row> = entries
                 .iter()
                 .enumerate()
                 .map(|(i, e)| {
                     let is_cursor = i == cursor_row;
-                    let prefix = if is_cursor { "▶" } else { " " };
                     let choice_str = if !e.cell.is_explicit {
                         "未选(默认我方)"
                     } else if e.cell.choice == ConflictChoice::Ours {
@@ -159,30 +185,49 @@ fn run_core(
                     } else {
                         "对方"
                     };
-                    let ours_cell = if e.cell.is_explicit && e.cell.choice == ConflictChoice::Ours {
-                        Cell::from(Span::styled(
-                            format!("{} ✓", truncate(&e.ours_display, 30)),
-                            Style::default().fg(Color::Black).bg(Color::Blue).add_modifier(Modifier::BOLD),
-                        ))
+                    // 底色只用来标字符级 diff，选中状态别再抢那个颜色——用纯文字 + 有色对勾区分选了哪边
+                    let mut ours_spans = if e.cell.is_explicit && e.cell.choice == ConflictChoice::Ours {
+                        vec![
+                            Span::styled(truncate(&e.ours_display, val_max), Style::default().fg(Color::Blue)),
+                            Span::styled(" ✓", Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD)),
+                        ]
                     } else {
-                        Cell::from(Line::from(diff_snippet_spans(&e.diff_segs, true, 30)))
+                        diff_snippet_spans(&e.diff_segs, true, val_max)
                     };
-                    let theirs_cell = if e.cell.is_explicit && e.cell.choice == ConflictChoice::Theirs {
-                        Cell::from(Span::styled(
-                            format!("{} ✓", truncate(&e.theirs_display, 30)),
-                            Style::default().fg(Color::Black).bg(Color::Yellow).add_modifier(Modifier::BOLD),
-                        ))
+                    let mut theirs_spans = if e.cell.is_explicit && e.cell.choice == ConflictChoice::Theirs {
+                        vec![
+                            Span::styled(truncate(&e.theirs_display, val_max), Style::default().fg(Color::Yellow)),
+                            Span::styled(" ✓", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                        ]
                     } else {
-                        Cell::from(Line::from(diff_snippet_spans(&e.diff_segs, false, 30)))
+                        diff_snippet_spans(&e.diff_segs, false, val_max)
                     };
+                    // 列光标：跟行光标同款三角箭头，纯靠背景色反差看不清——箭头形状比颜色更抢眼。
+                    // 固定占位（永远插一个字符，箭头或空格）而不是有条件插入，否则选中/未选中时内容会被推来推去。
+                    let col_cursor_style = Style::default().fg(Color::Green).add_modifier(Modifier::BOLD);
+                    ours_spans.insert(0, Span::styled(if is_cursor && cursor_col == 0 { "▶" } else { " " }, col_cursor_style));
+                    theirs_spans.insert(0, Span::styled(if is_cursor && cursor_col == 1 { "▶" } else { " " }, col_cursor_style));
+                    let ours_cell = Cell::from(Line::from(ours_spans));
+                    let theirs_cell = Cell::from(Line::from(theirs_spans));
                     let remark_short = truncate(&e.remark, 22);
+                    let idx_style = if is_cursor {
+                        Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default()
+                    };
                     Row::new(vec![
-                        Cell::from(format!("{}{}", prefix, i + 1)),
+                        Cell::from(format!("{}", i + 1)).style(idx_style),
+                        sep(i),
                         Cell::from(e.row_key.clone()),
+                        sep(i),
                         Cell::from(remark_short),
+                        sep(i),
                         Cell::from(e.col_name.clone().unwrap_or_else(|| "(整行)".to_string())),
+                        sep(i),
                         ours_cell,
+                        sep(i),
                         theirs_cell,
+                        sep(i),
                         Cell::from(choice_str),
                     ])
                 })
@@ -191,37 +236,85 @@ fn run_core(
             let table = Table::new(
                 rows,
                 [
-                    Constraint::Length(4),
+                    Constraint::Length(3),
+                    Constraint::Length(1),
                     Constraint::Length(10),
+                    Constraint::Length(1),
                     Constraint::Length(22),
+                    Constraint::Length(1),
                     Constraint::Length(12),
+                    Constraint::Length(1),
                     Constraint::Percentage(30),
+                    Constraint::Length(1),
                     Constraint::Percentage(30),
+                    Constraint::Length(1),
                     Constraint::Length(14),
                 ],
             )
+            .column_spacing(0)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
                     .title(format!(" {}/{} 个冲突格待选 ", entries.iter().filter(|e| !e.cell.is_explicit).count(), entries.len()))
                     .border_style(Style::default().fg(Color::Gray)),
             )
-            .highlight_style(
-                Style::default()
-                    .fg(Color::Black)
-                    .bg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )
-            .highlight_symbol("▶ ");
-            f.render_stateful_widget(table, size, &mut state);
+            .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+            .highlight_symbol("▶");
 
-            let footer = Paragraph::new("↑↓←→移动光标  s选当前列版本(默认我方)  O全选我方  T全选对方  鼠标点左/右半屏=选我方/对方  Enter确认  q放弃")
-                .style(Style::default().fg(Color::DarkGray));
-            let area = Layout::default()
+            // 参考 WPF 版 ExcelConflictWindow 的动态行高思路：详情面板只在真被截断时才展开占地方，
+            // 没截断（表里已经显示得下完整值）就收起来，把空间还给表格——不是无脑常驻一块
+            let cur = &entries[cursor_row];
+            let truncated = cur.ours_display.chars().count() > val_max
+                || cur.theirs_display.chars().count() > val_max;
+            let detail_height = if truncated { 4 } else { 0 };
+
+            let areas = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Min(3), Constraint::Length(1)])
+                .constraints([
+                    Constraint::Min(3),
+                    Constraint::Length(detail_height),
+                    Constraint::Length(1),
+                    Constraint::Length(1),
+                ])
                 .split(size);
-            f.render_widget(footer, area[1]);
+            table_area = areas[0]; // 鼠标点击换算行/列要用表格实际区域，不是整帧 size
+            f.render_stateful_widget(table, areas[0], &mut state);
+
+            if truncated {
+            let mut ours_line = vec![Span::styled(
+                "我方 ",
+                Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD),
+            )];
+            ours_line.extend(diff_line_full(&cur.diff_segs, true));
+            let mut theirs_line = vec![Span::styled(
+                "对方 ",
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+            )];
+            theirs_line.extend(diff_line_full(&cur.diff_segs, false));
+            let detail = Paragraph::new(vec![
+                Line::from(vec![
+                    Span::styled("当前 ", Style::default().add_modifier(Modifier::BOLD)),
+                    Span::styled(cur.col_name.clone().unwrap_or_else(|| "(整行)".to_string()), Style::default().fg(Color::Green)),
+                    Span::raw(format!("  {}", cur.remark)),
+                ]),
+                Line::from(ours_line),
+                Line::from(theirs_line),
+            ])
+            .block(Block::default().borders(Borders::TOP).border_style(Style::default().fg(Color::DarkGray)));
+            f.render_widget(detail, areas[1]);
+            }
+
+            let legend = Paragraph::new(Line::from(vec![
+                Span::styled("我方(OURS)", Style::default().fg(Color::Blue)),
+                Span::raw(format!(" = {}    ", ours_label)),
+                Span::styled("对方(THEIRS)", Style::default().fg(Color::Yellow)),
+                Span::raw(format!(" = {}", theirs_label)),
+            ]));
+            f.render_widget(legend, areas[2]);
+
+            let footer = Paragraph::new("↑↓←→移动光标  s选当前列版本(再按=取消)  O全选我方  T全选对方  鼠标点左/右半屏=选我方/对方  Enter确认  q放弃")
+                .style(Style::default().fg(Color::DarkGray));
+            f.render_widget(footer, areas[3]);
         })?;
 
         match event::read()? {
@@ -259,14 +352,17 @@ fn run_core(
                     confirmed = true;
                 }
                 KeyCode::Char('s') => {
-                    entries[cursor_row].cell.choice = if cursor_col == 0 {
-                        ConflictChoice::Ours
+                    let want = if cursor_col == 0 { ConflictChoice::Ours } else { ConflictChoice::Theirs };
+                    let cell = &mut entries[cursor_row].cell;
+                    if cell.is_explicit && cell.choice == want {
+                        // 再按一次同一列 = 取消选择，不自动跳下一行（撤销后应该停在原地看结果）
+                        cell.is_explicit = false;
                     } else {
-                        ConflictChoice::Theirs
-                    };
-                    entries[cursor_row].cell.is_explicit = true;
-                    if cursor_row < entries.len() - 1 {
-                        cursor_row += 1;
+                        cell.choice = want;
+                        cell.is_explicit = true;
+                        if cursor_row < entries.len() - 1 {
+                            cursor_row += 1;
+                        }
                     }
                 }
                 KeyCode::Char('O') => {
@@ -349,10 +445,11 @@ fn flatten_unresolved(diff: &FileDiffDto) -> Vec<ConflictEntry> {
     entries
 }
 
+/// 按字符数（不是字节数）截断——中文一个字符 3 字节，按字节切会切在字符中间导致 panic。
 fn truncate(s: &str, max: usize) -> String {
-    if s.len() <= max {
+    if s.chars().count() <= max {
         s.to_string()
     } else {
-        format!("{}…", &s[..max])
+        format!("{}…", s.chars().take(max).collect::<String>())
     }
 }

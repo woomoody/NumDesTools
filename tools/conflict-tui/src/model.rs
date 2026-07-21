@@ -8,6 +8,10 @@ use serde::{Deserialize, Serialize};
 pub struct FileDiffDto {
     pub ours_path: String,
     pub theirs_path: String,
+    #[serde(default)]
+    pub ours_label: Option<String>,
+    #[serde(default)]
+    pub theirs_label: Option<String>,
     pub sheets: Vec<SheetDiffDto>,
 }
 

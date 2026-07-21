@@ -169,7 +169,7 @@ internal static class ConflictTui
         var rustTuiPath = FindRustTuiExe();
         if (rustTuiPath is not null)
         {
-            if (!ResolveViaRustTui(diff, rustTuiPath, needsAttention))
+            if (!ResolveViaRustTui(diff, rustTuiPath, needsAttention, oursLabel, theirsLabel))
                 return false;
         }
         else if (!ProcessAllConflictsTable(needsAttention, oursLabel, theirsLabel))
@@ -331,7 +331,9 @@ internal static class ConflictTui
     private static bool ResolveViaRustTui(
         FileDiff diff,
         string rustTuiPath,
-        List<RowConflict> needsAttention
+        List<RowConflict> needsAttention,
+        string? oursLabel,
+        string? theirsLabel
     )
     {
         var tempDir = Path.Combine(Path.GetTempPath(), "NumDesConflictTui");
@@ -342,17 +344,17 @@ internal static class ConflictTui
         try
         {
             // 序列化（UTF8 无 BOM）
-            var dto = diff.ToDto();
+            var dto = diff.ToDto(oursLabel, theirsLabel);
             var json = dto.ToJson();
             File.WriteAllText(diffPath, json, new System.Text.UTF8Encoding(false));
 
-            // 起 Rust TUI 子进程。UseShellExecute=true：让 TUI 总是自己开一个新的可见控制台窗口——
-            // 用 false 时 TUI 继承父进程控制台，父进程是从无窗口环境（后台任务/服务）起的话 TUI 就没有可见窗口。
+            // UseShellExecute=false：直接继承父进程控制台（lazygit/终端都是真实交互控制台，
+            // 不需要另开窗口）。之前改成 true 是给"MCP 自动化无窗口环境"兜底，但那不是真实使用场景。
             var psi = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = rustTuiPath,
                 Arguments = $"\"{diffPath}\"",
-                UseShellExecute = true,
+                UseShellExecute = false,
             };
             using var proc = System.Diagnostics.Process.Start(psi);
             if (proc is null)

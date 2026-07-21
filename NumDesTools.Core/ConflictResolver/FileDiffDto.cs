@@ -12,6 +12,10 @@ public record FileDiffDto
 {
     public required string OursPath { get; init; }
     public required string TheirsPath { get; init; }
+
+    /// <summary>我方/对方对应的分支或 commit 名（git-add 场景下 OursPath/TheirsPath 只是临时提取路径，没有可读性）。</summary>
+    public string? OursLabel { get; init; }
+    public string? TheirsLabel { get; init; }
     public List<SheetDiffDto> Sheets { get; init; } = [];
 
     private static readonly JsonSerializerOptions s_jsonOptions = new()

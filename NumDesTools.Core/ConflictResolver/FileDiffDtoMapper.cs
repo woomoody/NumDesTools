@@ -3,11 +3,17 @@ namespace NumDesTools.ConflictResolver;
 /// <summary>FileDiff ↔ FileDiffDto 映射。只序列化纯数据，不碰 INotifyPropertyChanged/computed 属性。</summary>
 public static class FileDiffDtoMapper
 {
-    public static FileDiffDto ToDto(this FileDiff diff) =>
+    public static FileDiffDto ToDto(
+        this FileDiff diff,
+        string? oursLabel = null,
+        string? theirsLabel = null
+    ) =>
         new()
         {
             OursPath = diff.OursPath,
             TheirsPath = diff.TheirsPath,
+            OursLabel = oursLabel,
+            TheirsLabel = theirsLabel,
             Sheets = diff.Sheets.Select(ToDto).ToList(),
         };
 
