@@ -1,5 +1,4 @@
 using System.Text;
-using NumDesTools;
 using OfficeOpenXml;
 
 namespace NumDesTools.Scanner;
