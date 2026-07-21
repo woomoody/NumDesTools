@@ -1,4 +1,5 @@
 using System.Text;
+using NumDesTools;
 using OfficeOpenXml;
 
 namespace NumDesTools.Scanner;
@@ -18,22 +19,6 @@ internal class Program
     {
         Console.OutputEncoding = Encoding.UTF8;
         ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
-
-        // 不带任何参数 = 双击运行：这份 exe 分发出去只给"装冲突工具"用，双击就该直接装/更新，
-        // 不是弹"请指定模式"然后窗口一闪而过（没人会双击去跑 --all 全量扫描）。
-        if (args.Length == 0)
-        {
-            var code = ConflictToolInstaller.RunInstallOrUpdate();
-            Console.WriteLine("\n按任意键关闭...");
-            Console.ReadKey();
-            return code;
-        }
-
-        if (args.Contains("--install-conflict-tool") || args.Contains("--update-conflict-tool"))
-            return ConflictToolInstaller.RunInstallOrUpdate();
-
-        if (args.Contains("--uninstall-conflict-tool"))
-            return ConflictToolInstaller.RunUninstall();
 
         if (args.Contains("--conflict-gui"))
             return ConflictGui.Run(args);
