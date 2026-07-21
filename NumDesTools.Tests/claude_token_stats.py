@@ -277,6 +277,63 @@ input_js    = _json.dumps(chart_input)
 cr_js       = _json.dumps(chart_cr)
 cost_js     = _json.dumps(chart_cost)
 
+# 全量 model_daily 嵌进 HTML，供交互式区间筛选（按模型消耗表）
+_model_daily_plain = {
+    d: {m: {'input': v['input'], 'output': v['output'],
+           'cache_read': v['cache_read'], 'cache_write': v['cache_write'],
+           'cost': round(v['cost'], 4)} for m, v in md.items()}
+    for d, md in model_daily.items()
+}
+model_daily_js = _json.dumps(_model_daily_plain)
+_model_price_map = {m: dict(zip(['in','out','cr','cw'], _model_price(m))) for m in {mm for _md in _model_daily_plain.values() for mm in _md}}
+model_price_js = _json.dumps(_model_price_map)
+_all_dates_sorted = sorted(_model_daily_plain.keys())
+_date_min = _all_dates_sorted[0] if _all_dates_sorted else today.isoformat()
+_date_max = _all_dates_sorted[-1] if _all_dates_sorted else today.isoformat()
+model_date_js = r'''const MODEL_DAILY = ''' + model_daily_js + r''';
+const MODEL_PRICE = ''' + model_price_js + r''';
+let mdChart = null;
+function fmtN(n){ if(n>=1e8) return (n/1e8).toFixed(2)+'亿'; if(n>=1e4) return (n/1e4).toFixed(1)+'万'; return n.toLocaleString(); }
+function renderMdTable(start, end, sortBy){
+  var agg = {};
+  Object.keys(MODEL_DAILY).forEach(function(d){
+    if (d < start || d > end) return;
+    Object.keys(MODEL_DAILY[d]).forEach(function(m){
+      var v = MODEL_DAILY[d][m];
+      if (!agg[m]) agg[m] = {input:0, output:0, cache_read:0, cache_write:0, cost:0};
+      agg[m].input += v.input; agg[m].output += v.output;
+      agg[m].cache_read += v.cache_read; agg[m].cache_write += v.cache_write; agg[m].cost += v.cost;
+    });
+  });
+  var arr = Object.keys(agg).map(function(m){ var x = agg[m]; x.m = m; x.quota = x.input+x.output+x.cache_read+x.cache_write; return x; });
+  arr = arr.filter(function(x){ return x.input+x.output+x.cache_read+x.cache_write > 0; });
+  arr.sort(function(a,b){ return (b[sortBy] || 0) - (a[sortBy] || 0); });
+  var tbody = document.getElementById('mdTbody');
+  if (arr.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#666;">该时间段无数据</td></tr>';
+  } else {
+    tbody.innerHTML = arr.map(function(x){
+      return '<tr><td>' + x.m + '</td><td title="in/out $/MTok">' + (MODEL_PRICE[x.m] ? (MODEL_PRICE[x.m].in.toFixed(2)+'/'+MODEL_PRICE[x.m].out.toFixed(2)) : '-') + '</td><td>' + fmtN(x.input) + '</td><td>' + fmtN(x.output) + '</td><td>' + fmtN(x.cache_read) + '</td><td>' + fmtN(x.cache_write) + '</td><td>' + fmtN(x.quota) + '</td><td>$' + x.cost.toFixed(2) + '</td></tr>';
+    }).join('');
+  }
+  document.getElementById('mdTitle').textContent = '📅 ' + start + ' ~ ' + end + ' · 按模型消耗 Token';
+  if (mdChart) mdChart.destroy();
+  var ctx = document.getElementById('mdChart').getContext('2d');
+  mdChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: arr.map(function(x){return x.m;}), datasets: [{ label: '费用 USD', data: arr.map(function(x){return +x.cost.toFixed(2);}), backgroundColor: 'rgba(245,166,35,0.7)' }] },
+    options: { responsive: true, plugins: { legend: { labels: { color: '#aaa' } } },
+      scales: { x: { ticks: { color: '#666', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        y: { ticks: { color: '#666', callback: function(v){return '$'+v;} }, grid: { color: 'rgba(255,255,255,0.06)' } } } }
+  });
+}
+function mdApply(){ renderMdTable(document.getElementById('mdStart').value, document.getElementById('mdEnd').value, document.getElementById('mdSort').value); }
+document.getElementById('mdStart').addEventListener('change', mdApply);
+document.getElementById('mdEnd').addEventListener('change', mdApply);
+document.getElementById('mdSort').addEventListener('change', mdApply);
+mdApply();
+'''
+
 html = f'''<!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -330,10 +387,22 @@ html = f'''<!DOCTYPE html>
 </div>
 
 <div class="section">
-  <h2>📅 {date_label} · 按模型消耗 Token</h2>
+  <h2 id="mdTitle">📅 {date_label} · 按模型消耗 Token</h2>
+  <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <label>区间 <input type="date" id="mdStart" min="{_date_min}" max="{_date_max}" value="{date_start}"></label>
+    <span>~</span>
+    <input type="date" id="mdEnd" min="{_date_min}" max="{_date_max}" value="{date_end}">
+    <label>排序 <select id="mdSort">
+      <option value="cost">费用 USD ↓</option>
+      <option value="input">input ↓</option>
+      <option value="output">output ↓</option>
+      <option value="quota">配额消耗 ↓</option>
+    </select></label>
+  </div>
+  <canvas id="mdChart" height="60"></canvas>
   <table class="data">
-    <thead><tr><th>模型</th><th>input</th><th>output</th><th>缓存读</th><th>缓存写</th><th>配额消耗(全)</th><th>费用USD</th></tr></thead>
-    <tbody>{model_date_rows if model_date_rows else '<tr><td colspan="7" style="text-align:center;color:#666;">该时间段无数据</td></tr>'}</tbody>
+    <thead><tr><th>模型</th><th>价格 $/MTok (in/out)</th><th>input</th><th>output</th><th>缓存读</th><th>缓存写</th><th>配额消耗(全)</th><th>费用USD</th></tr></thead>
+    <tbody id="mdTbody"></tbody>
   </table>
 </div>
 
@@ -439,6 +508,8 @@ new Chart(document.getElementById('costChart'), {{
     }}
   }}
 }});
+
+{model_date_js}
 </script>
 </body>
 </html>'''
