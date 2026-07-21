@@ -75,8 +75,6 @@
                                                 <button id="ExcelConflictGit" label="解决Git冲突" imageMso="ResolveConflict" onAction='OnButtonClick' screentip='自动检测 Git 冲突的 xlsx，逐格选择保留哪一方' tag='解决Git冲突' />
                                                 <button id="ExcelConflictManual" label="手动两文件对比" imageMso="ReviewCompareTwoVersions" onAction='OnButtonClick' screentip='选择两个 xlsx 文件，逐格对比并选择合并结果' tag='手动两文件对比' />
                                                 <button id="ExcelConflictHistory" label="查看历史版本对比" imageMso="SourceControlShowHistory" onAction='OnButtonClick' screentip='浏览某个 xlsx 的 Git 提交历史，选历史版本与工作区或另一历史版本对比' tag='查看历史版本对比' />
-                                                <menuSeparator id="ConflictSep1"/>
-                                                <button id="ExcelBranchMerge" label="冲突解决(Rust TUI)" imageMso="SourceControlMerge" onAction='OnButtonClick' screentip='自动发现当前仓库里冲突的 xlsx，用 Rust TUI 解决（不做分支切换/merge/cherry-pick，那些用你自己的 git 客户端做）' tag='冲突解决RustTui' />
                                         </menu>
                                         <menu id='ActivityValidateMenuMain' label='验证活动&#13;' image='nd_验证活动菜单' size='large'>
                                                 <button id="ActivityTestAll" label="验证活动(全量)" screentip='验证所有活动配置表的跨表引用和字段规则' onAction='OnButtonClick' imageMso="DataValidation" tag='验证活动(全量)' />
