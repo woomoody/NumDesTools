@@ -12,30 +12,39 @@ public static class RustTuiLauncher
 {
     /// <summary>找 Rust conflict-tui.exe。优先调用方自己 exe 所在目录旁（发布后跟着走），
     /// 其次 tools\conflict-tui\target\release\（开发环境兜底，脱离源码树后这条路径就没了）。</summary>
-    public static string? FindRustTuiExe()
+    /// <param name="extraBaseDirs">额外要检查的基准目录（比如插件跑在 Excel.exe 里时，
+    /// AppDomain.CurrentDomain.BaseDirectory 不一定等于 Scanner.exe 独立跑时的那个目录，
+    /// 调用方可以传 ExcelDnaUtil.XllPath 所在目录进来兜底——Core 不引用 ExcelDna，只能靠调用方传）。</param>
+    public static string? FindRustTuiExe(params string[] extraBaseDirs)
     {
-        var candidates = new[]
-        {
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "conflict-tui.exe"),
-            Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
-                "..",
-                "..",
-                "..",
-                "..",
-                "tools",
-                "conflict-tui",
-                "target",
-                "release",
-                "conflict-tui.exe"
-            ),
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".local",
-                "bin",
-                "conflict-tui.exe"
-            ),
-        };
+        var baseDirs = extraBaseDirs.Append(AppDomain.CurrentDomain.BaseDirectory);
+        var candidates = baseDirs
+            .SelectMany(baseDir =>
+                new[]
+                {
+                    Path.Combine(baseDir, "conflict-tui.exe"),
+                    Path.Combine(
+                        baseDir,
+                        "..",
+                        "..",
+                        "..",
+                        "..",
+                        "tools",
+                        "conflict-tui",
+                        "target",
+                        "release",
+                        "conflict-tui.exe"
+                    ),
+                }
+            )
+            .Append(
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    ".local",
+                    "bin",
+                    "conflict-tui.exe"
+                )
+            );
         foreach (var p in candidates)
         {
             var full = Path.GetFullPath(p);

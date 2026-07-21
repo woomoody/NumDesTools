@@ -299,7 +299,8 @@ public static class ExcelConflictEntry
             return;
         }
 
-        var rustTuiPath = RustTuiLauncher.FindRustTuiExe();
+        var xllDir = Path.GetDirectoryName(ExcelDnaUtil.XllPath) ?? "";
+        var rustTuiPath = RustTuiLauncher.FindRustTuiExe(xllDir);
         if (rustTuiPath is null)
         {
             System.Windows.MessageBox.Show(
