@@ -301,6 +301,16 @@ public static class ExcelConflictEntry
 
         var xllDir = Path.GetDirectoryName(ExcelDnaUtil.XllPath) ?? "";
         var rustTuiPath = RustTuiLauncher.FindRustTuiExe(xllDir);
+
+        // 诊断：NUMDES_DEBUG_RUSTTUI=1 时每一步都弹框，排查"没走 Rust TUI"这类问题用，
+        // 不需要挂调试器。排查完可以去掉这个环境变量，代码不用改。
+        var debug = Environment.GetEnvironmentVariable("NUMDES_DEBUG_RUSTTUI") == "1";
+        if (debug)
+            System.Windows.MessageBox.Show(
+                $"gitRoot={gitRoot}\nxllDir={xllDir}\nAppDomain.BaseDirectory={AppDomain.CurrentDomain.BaseDirectory}\nrustTuiPath={rustTuiPath ?? "(null，没找到)"}",
+                "诊断：路径"
+            );
+
         if (rustTuiPath is null)
         {
             System.Windows.MessageBox.Show(
@@ -389,6 +399,12 @@ public static class ExcelConflictEntry
                 continue;
             }
 
+            if (debug)
+                System.Windows.MessageBox.Show(
+                    $"即将起 Rust TUI\nrustTuiPath={rustTuiPath}\nours={blobs.Value.OursPath}\ntheirs={blobs.Value.TheirsPath}\nTotalConflictRows={diff.TotalConflictRows}",
+                    "诊断：起子进程前"
+                );
+
             var confirmed = RustTuiLauncher.TryResolve(
                 diff,
                 rustTuiPath,
@@ -397,6 +413,13 @@ public static class ExcelConflictEntry
                 out var error,
                 ownConsole: true // Excel.exe 进程没有控制台，子进程得自己开一个
             );
+
+            if (debug)
+                System.Windows.MessageBox.Show(
+                    $"confirmed={confirmed}\nerror={error ?? "(null)"}",
+                    "诊断：子进程返回后"
+                );
+
             if (error != null)
                 System.Windows.MessageBox.Show(error, "错误");
             if (!confirmed)
