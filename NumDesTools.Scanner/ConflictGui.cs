@@ -4,8 +4,10 @@ using NumDesTools.UI;
 namespace NumDesTools.Scanner;
 
 /// <summary>
-/// WPF GUI 冲突解决器，可被 lazygit / SmartGit / Fork 等 git GUI 作为外部合并工具调用。
-/// 用法：NumDesTools.Scanner.exe --conflict-gui &lt;ours.xlsx&gt; &lt;theirs.xlsx&gt;
+/// WPF GUI 冲突解决器。给 git mergetool 用（<c>mergetool.numdes.cmd</c>），只在用户手动
+/// 点"解决冲突"/跑 <c>git mergetool</c> 时才启动——不是自动触发的 merge driver。
+/// 用法：NumDesTools.Scanner.exe --conflict-gui &lt;ours.xlsx&gt; &lt;theirs.xlsx&gt; [base.xlsx]
+///       [--merged &lt;path&gt;]（默认=ours，git mergetool 场景下应传 $MERGED）[--no-add]
 /// 退出码：0=已解决并写回，1=参数错误，2=文件不存在，3=用户取消
 /// </summary>
 internal static class ConflictGui
@@ -15,12 +17,20 @@ internal static class ConflictGui
         int idx = Array.IndexOf(args, "--conflict-gui");
         if (idx < 0 || idx + 2 >= args.Length)
         {
-            Console.Error.WriteLine("用法: --conflict-gui <ours.xlsx> <theirs.xlsx>");
+            Console.Error.WriteLine("用法: --conflict-gui <ours.xlsx> <theirs.xlsx> [base.xlsx]");
             return 1;
         }
 
         var oursPath = args[idx + 1];
         var theirsPath = args[idx + 2];
+        var basePath =
+            idx + 3 < args.Length && !args[idx + 3].StartsWith('-') ? args[idx + 3] : null;
+
+        var mergedIdx = Array.IndexOf(args, "--merged");
+        var outPath = mergedIdx >= 0 && mergedIdx + 1 < args.Length
+            ? args[mergedIdx + 1]
+            : oursPath;
+        var gitAdd = !args.Contains("--no-add");
 
         if (!File.Exists(oursPath))
         {
@@ -41,7 +51,7 @@ internal static class ConflictGui
             FileDiff diff;
             try
             {
-                diff = ExcelConflictDiffer.Diff(oursPath, theirsPath);
+                diff = ExcelConflictDiffer.Diff(oursPath, theirsPath, basePath);
             }
             catch (Exception ex)
             {
@@ -54,8 +64,8 @@ internal static class ConflictGui
 
             var win = new ExcelConflictWindow(
                 diff,
-                outPath: oursPath,
-                autoGitAdd: true,
+                outPath: outPath,
+                autoGitAdd: gitAdd,
                 oursLabel: "OURS",
                 theirsLabel: "THEIRS"
             );
