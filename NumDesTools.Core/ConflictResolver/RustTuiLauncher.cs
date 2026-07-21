@@ -47,12 +47,17 @@ public static class RustTuiLauncher
 
     /// <summary>走 Rust TUI：序列化 FileDiff → 起子进程 → 读 result.json 合并 selections。
     /// 返回 true=用户确认（diff 已通过 ApplySelections 就地合并选择）；false=取消/失败（error 有值时是失败）。</summary>
+    /// <param name="ownConsole">调用方进程本身没有控制台（比如 Excel.exe 里跑的 WPF 插件）时传 true，
+    /// 让子进程自己开一个新控制台窗口；调用方本来就在真实终端里（Scanner CLI/lazygit）传 false，
+    /// 直接继承父进程控制台就行，不用多开一个窗口。传错会导致 crossterm 拿不到控制台直接崩
+    /// （"Initial console modes not set"），不是明显的报错，容易被误以为"没起来"。</param>
     public static bool TryResolve(
         FileDiff diff,
         string rustTuiPath,
         string? oursLabel,
         string? theirsLabel,
-        out string? error
+        out string? error,
+        bool ownConsole = false
     )
     {
         error = null;
@@ -68,12 +73,11 @@ public static class RustTuiLauncher
             var json = dto.ToJson();
             File.WriteAllText(diffPath, json, new System.Text.UTF8Encoding(false));
 
-            // UseShellExecute=false：直接继承父进程控制台/窗口站，不需要另开窗口。
             var psi = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = rustTuiPath,
                 Arguments = $"\"{diffPath}\"",
-                UseShellExecute = false,
+                UseShellExecute = ownConsole,
             };
             using var proc = System.Diagnostics.Process.Start(psi);
             if (proc is null)

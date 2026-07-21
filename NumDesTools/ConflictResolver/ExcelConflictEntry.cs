@@ -393,7 +393,8 @@ public static class ExcelConflictEntry
                 rustTuiPath,
                 blobs.Value.OursLabel,
                 blobs.Value.TheirsLabel,
-                out var error
+                out var error,
+                ownConsole: true // Excel.exe 进程没有控制台，子进程得自己开一个
             );
             if (error != null)
                 System.Windows.MessageBox.Show(error, "错误");
