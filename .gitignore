@@ -382,3 +382,6 @@ session-report-*.html
 
 # OMP 项目配置（提交），但命令文件是个人 skill 桥接（不提交）
 .omp/commands/
+
+# claude_token_stats 运行时生成（每天刷新模型价格），不提交
+NumDesTools.Tests/model_prices.json
