@@ -54,7 +54,7 @@ fn run_core(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, keys: &[engin
     let mut result_summary = String::new();
     let mut custom_input = String::new(); // 自定义 key 输入缓冲
 
-    loop {
+    while !matches!(stage, Stage::Quit) {
         terminal.draw(|f| {
             let size = f.size();
             match stage {
@@ -260,6 +260,14 @@ fn handle_key(
     custom_input: &mut String,
     keys: &[engine::KeyDef],
 ) {
+    // Ctrl+C 全局退出（raw mode 下 Ctrl+C 不发 SIGINT，发键盘事件，要显式处理）
+    if key.modifiers.contains(event::KeyModifiers::CONTROL)
+        && matches!(key.code, KeyCode::Char('c'))
+    {
+        *stage = Stage::Quit;
+        return;
+    }
+
     match stage {
         Stage::PickKey => match key.code {
             KeyCode::Up => *key_sel = (*key_sel + key_count - 1) % key_count,
