@@ -382,7 +382,13 @@ public static class ExcelDataAutoInsertMultiNew
 
         if (excel != null)
         {
-            excel.Save();
+            if (!XlsxCrossSync.SaveWithFriendlyError(excel, excel.File.FullName, "自选文件写入"))
+            {
+                excel?.Dispose();
+                excelNew?.Dispose();
+                errorList.Add((excelName, "保存失败（文件被占用，请关闭后重试）", excelName));
+                return errorList;
+            }
         }
 
         excel?.Dispose();

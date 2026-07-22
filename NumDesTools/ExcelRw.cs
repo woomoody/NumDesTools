@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.OleDb;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -200,13 +201,10 @@ public static partial class PubMetToExcel
     {
         for (var col = 2; col <= sheet.Dimension.End.Column; col++)
         {
-            var cellValue = sheet.Cells[row, col].Text;
-
-            if (cellValue != null && cellValue == searchValue)
+            if (CellValueMatches(sheet.Cells[row, col], searchValue))
             {
                 var cellAddress = new ExcelCellAddress(row, col);
-                var rowAddress = cellAddress.Column;
-                return rowAddress;
+                return cellAddress.Column;
             }
         }
 
@@ -218,10 +216,8 @@ public static partial class PubMetToExcel
         // 遍历指定列的所有行，从第2行开始
         for (var row = 2; row <= sheet.Dimension.End.Row; row++)
         {
-            var cellValue = sheet.Cells[row, col].Text; // 获取单元格的文本值
-
             // 如果单元格值不为空且匹配目标值
-            if (!string.IsNullOrEmpty(cellValue) && cellValue == searchValue)
+            if (CellValueMatches(sheet.Cells[row, col], searchValue))
             {
                 return row; // 直接返回匹配的行号
             }
@@ -229,6 +225,24 @@ public static partial class PubMetToExcel
 
         // 如果未找到匹配值，返回 -1
         return -1;
+    }
+
+    /// <summary>
+    /// 比较单元格值与搜索字符串是否匹配。
+    /// 用 Value 替代 Text 做比较，避免 EPPlus 对 ≥11 位数字的 Text 属性返回科学计数法
+    /// （如 76340172990 的 Text 为 "7.634017299E+10"），导致字符串匹配失败。
+    /// </summary>
+    private static bool CellValueMatches(ExcelRange cell, string searchValue)
+    {
+        var val = cell.Value;
+        if (val == null)
+            return false;
+
+        var cellStr = val is double d
+            ? d.ToString(CultureInfo.InvariantCulture)
+            : val.ToString();
+
+        return !string.IsNullOrEmpty(cellStr) && cellStr == searchValue;
     }
 
     public static int FindSourceRowBlur(ExcelWorksheet sheet, int col, Regex regexValue)
