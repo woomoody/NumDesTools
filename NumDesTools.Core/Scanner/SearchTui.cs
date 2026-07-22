@@ -9,7 +9,7 @@ using Spectre.Console;
 namespace NumDesTools.Scanner;
 
 /// <summary>
-/// 终端交互式 Excel 索引搜索（fzf 风格）。
+/// 终端交互式 Excel 索引搜索（ratatui 风格美化版）。
 /// 用法：NumDesTools.Scanner --search [--index &lt;path.json.gz&gt;]
 ///
 /// 工作流：
@@ -20,7 +20,24 @@ namespace NumDesTools.Scanner;
 internal static class SearchTui
 {
     private const int MaxDisplayRows = 20;
-    private static int PageSize => Math.Max(5, Math.Min(MaxDisplayRows, Console.WindowHeight - 6));
+    private static int PageSize
+    {
+        get
+        {
+            try { return Math.Max(5, Math.Min(MaxDisplayRows, Console.WindowHeight - 6)); }
+            catch { return MaxDisplayRows; }
+        }
+    }
+
+    // ── 配色（对齐 ratatui Rust TUI 的 Catppuccin Mocha 调色板）──────────────
+    private static readonly Color Blue = new(137, 180, 250);   // #89b4fa — 文件路径
+    private static readonly Color Yellow = new(249, 226, 175); // #f9e2af — 值
+    private static readonly Color Green = new(166, 227, 161);  // #a6e3a1 — 光标/选中
+    private static readonly Color Cyan = new(148, 226, 213);   // #94e2d5 — Sheet 名
+    private static readonly Color Red = new(243, 139, 168);    // #f38ba8 — 错误
+    private static readonly Color Dim = new(88, 91, 112);      // #585b70 — 次要文本
+    private static readonly Color Border = new(69, 71, 90);    // #45475a — 边框
+    private static readonly Color Bg = new(30, 30, 46);        // #1e1e2e — 背景
 
     public static int Run(string[] args)
     {
@@ -182,7 +199,6 @@ internal static class SearchTui
                     return 0;
 
                 case ConsoleKey.Enter:
-                    // query 有变更 → 搜索；Enter 不再打开文件（改用 o 打开）
                     if (dirty)
                     {
                         selectedIdx = 0;
@@ -377,7 +393,7 @@ internal static class SearchTui
     // ── 渲染 ──────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// 构建渲染文本（纯函数，不依赖控制台，可被测试调用）。
+    /// 构建 Spectre markup 渲染文本（保留测试兼容性）。
     /// 返回的字符串含 Spectre markup，供测试断言。
     /// </summary>
     internal static string BuildRenderText(
@@ -409,7 +425,6 @@ internal static class SearchTui
 
         sb.AppendLine();
 
-        // query 未确认（dirty）时，不渲染旧结果，避免误以为已搜索
         if (dirty)
         {
             sb.AppendLine("[dim]  （等待 Enter 确认搜索）[/]");
@@ -432,6 +447,9 @@ internal static class SearchTui
         int pageEnd = Math.Min(pageStart + pageSize, results.Count);
         int totalPages = (results.Count + pageSize - 1) / pageSize;
         int curPage = selectedIdx / pageSize + 1;
+
+        // ── 表头 ──────────────────────────────────────────────────────────────
+        sb.AppendLine("[dim]#  文件 / Sheet / 值 / 位置[/]");
 
         for (int i = pageStart; i < pageEnd; i++)
         {
@@ -482,7 +500,102 @@ internal static class SearchTui
     )
     {
         AnsiConsole.Clear();
+
+        // ── 如果已有结果且非 dirty，用 Table 渲染（ratatui 风格）────────────────
+        if (!dirty && results.Count > 0)
+        {
+            RenderTable(query, results, selectedIdx, usePrefix, statusMsg);
+            return;
+        }
+
+        // ── 否则用纯文本渲染（输入中 / 无结果）─────────────────────────────────
         AnsiConsole.Markup(BuildRenderText(query, results, selectedIdx, usePrefix, statusMsg, dirty));
+    }
+
+    /// <summary>
+    /// 使用 Spectre.Console Table 渲染搜索结果（ratatui 风格）。
+    /// </summary>
+    private static void RenderTable(
+        string query,
+        List<SearchResult> results,
+        int selectedIdx,
+        bool usePrefix,
+        string? statusMsg
+    )
+    {
+        int pageSize = PageSize;
+        int pageStart = (selectedIdx / pageSize) * pageSize;
+        int pageEnd = Math.Min(pageStart + pageSize, results.Count);
+        int totalPages = (results.Count + pageSize - 1) / pageSize;
+        int curPage = selectedIdx / pageSize + 1;
+
+        // ── 顶部搜索栏 ────────────────────────────────────────────────────────
+        var modeTag = usePrefix ? "前缀" : "包含";
+
+        // ── 状态行 ────────────────────────────────────────────────────────────
+        var statusLine = !string.IsNullOrEmpty(statusMsg)
+            ? new Markup(statusMsg)
+            : new Markup($"[dim]命中 {results.Count} 条[/]");
+
+        // ── 表格 ───────────────────────────────────────────────────────────────
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .BorderColor(Border)
+            .AddColumn(new TableColumn("#").RightAligned().Width(3))
+            .AddColumn(new TableColumn("文件").LeftAligned())
+            .AddColumn(new TableColumn("Sheet").LeftAligned())
+            .AddColumn(new TableColumn("值").LeftAligned())
+            .AddColumn(new TableColumn("位置").RightAligned().Width(5));
+
+        for (int i = pageStart; i < pageEnd; i++)
+        {
+            var r = results[i];
+            var isSel = i == selectedIdx;
+
+            var parts = r.RelPath.Replace('\\', '/').Split('/');
+            var shortPath = parts.Length > 2 ? string.Join("/", parts[^2], parts[^1]) : r.RelPath;
+            var cellAddr = $"{ColToLetter(r.Col)}{r.Row}";
+
+            if (isSel)
+            {
+                table.AddRow(
+                    new Markup($"[green bold]▶[/]"),
+                    new Markup($"[bold]{Markup.Escape(shortPath)}[/]"),
+                    new Markup($"[cyan bold]{Markup.Escape(r.Sheet)}[/]"),
+                    new Markup($"[yellow bold]{Markup.Escape(r.Value)}[/]"),
+                    new Markup($"[bold]{cellAddr}[/]")
+                );
+            }
+            else
+            {
+                table.AddRow(
+                    new Markup("[dim] [/]"),
+                    new Markup($"[dim]{Markup.Escape(shortPath)}[/]"),
+                    new Markup($"[dim]{Markup.Escape(r.Sheet)}[/]"),
+                    new Markup($"[dim]{Markup.Escape(r.Value)}[/]"),
+                    new Markup($"[dim]{cellAddr}[/]")
+                );
+            }
+        }
+
+        // ── 底栏 ───────────────────────────────────────────────────────────────
+        var pageInfo = totalPages > 1
+            ? $"[dim]第 {curPage}/{totalPages} 页 · 共 {results.Count} 条  |  [/]"
+            : "";
+        var footer = new Markup(
+            $"{pageInfo}[dim]↑↓翻页  Enter搜索  o打开  Tab切换模式  Esc退出[/]"
+        );
+
+        // ── 组装布局 ──────────────────────────────────────────────────────────
+        var panel = new Panel(table)
+            .Header($"搜索 [{modeTag}] > {query}▌")
+            .BorderColor(Border);
+
+        AnsiConsole.Write(panel);
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(statusLine);
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(footer);
     }
 
     internal readonly record struct SearchResult(
@@ -498,13 +611,16 @@ internal static class SearchTui
     /// </summary>
     private static string? FindExcelsRoot(string startDir)
     {
-        var dir = new DirectoryInfo(startDir);
-        while (dir != null)
+        var current = startDir;
+        while (current != null)
         {
-            var excels = Path.Combine(dir.FullName, "Excels");
+            var excels = Path.Combine(current, "Excels");
             if (Directory.Exists(excels))
                 return excels;
-            dir = dir.Parent;
+            var parent = Path.GetDirectoryName(current);
+            if (parent == current)
+                break;
+            current = parent;
         }
         return null;
     }
