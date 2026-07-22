@@ -1,8 +1,12 @@
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using OfficeOpenXml;
+using NumDesTools;
+using NumDesTools.AutoInsert;
+using NumDesTools.Export;
+using NumDesTools.Sync;
 
-namespace NumDesTools;
+namespace NumDesTools.Backup;
 
 // 「大文件备份」表（#【A自动填表】创新活动【数值模板】.xlsm 的同名 Sheet）记录了每个创新活动在
 // Type.xlsx / Icon.xlsx / Item.xlsx 三个大表里各自的起始/终止 id。右键该 Sheet 的某一行/整表：

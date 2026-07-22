@@ -1,4 +1,6 @@
-﻿namespace NumDesTools.Com;
+﻿using NumDesTools.Export;
+
+namespace NumDesTools.Com;
 
 public class VstoExcel
 {

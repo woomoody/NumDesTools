@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable CA1416
 
-namespace NumDesTools;
+namespace NumDesTools.Battle;
 
 /// <summary>
 /// 卡牌战斗模拟-回合

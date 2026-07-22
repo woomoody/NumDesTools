@@ -1,6 +1,7 @@
 using MahApps.Metro.Controls;
 using MessageBox = System.Windows.MessageBox;
 using WpfKey = System.Windows.Input.Key;
+using NumDesTools.Sync;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace NumDesTools.UI;

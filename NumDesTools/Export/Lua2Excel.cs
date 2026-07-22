@@ -2,7 +2,7 @@
 using System.Text.RegularExpressions;
 using NLua;
 
-namespace NumDesTools;
+namespace NumDesTools.Export;
 
 public class Lua2Excel
 {

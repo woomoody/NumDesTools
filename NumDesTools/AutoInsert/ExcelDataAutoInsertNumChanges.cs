@@ -3,7 +3,7 @@ using MessageBox = System.Windows.MessageBox;
 
 #pragma warning disable CA1416
 
-namespace NumDesTools;
+namespace NumDesTools.AutoInsert;
 
 public class ExcelDataAutoInsertNumChanges
 {

@@ -1,6 +1,8 @@
 #pragma warning disable CA1416
 
-namespace NumDesTools;
+using NumDesTools.Sync;
+
+namespace NumDesTools.AutoInsert;
 
 public static class ExcelDataAutoInsertCopyActivity
 {

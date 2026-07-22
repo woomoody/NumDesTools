@@ -1,10 +1,14 @@
 ﻿using System.Text.RegularExpressions;
+using NumDesTools;
+using NumDesTools.AutoInsert;
+using NumDesTools.Export;
+using NumDesTools.Sync;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 
 #pragma warning disable CA1416
 
-namespace NumDesTools;
+namespace NumDesTools.AutoInsert;
 
 public static class ExcelDataAutoInsertMultiNew
 {

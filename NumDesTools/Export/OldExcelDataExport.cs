@@ -17,7 +17,7 @@ using UserControl = System.Windows.Forms.UserControl;
 
 #pragma warning disable CA1416
 
-namespace NumDesTools;
+namespace NumDesTools.Export;
 
 /// <summary>
 /// Excel插件基础类NumDesAddIn，其他为具体功能类，古早代码，主要完成Excel数据转换为Txt，之后的功能代码基本按文件名归类

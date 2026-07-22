@@ -1,7 +1,7 @@
 ﻿
 using System.ComponentModel;
 
-namespace NumDesTools
+namespace NumDesTools.Export
 {
     partial class DataExportForm
     {

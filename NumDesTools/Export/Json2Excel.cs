@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using OfficeOpenXml;
 
-namespace NumDesTools;
+namespace NumDesTools.Export;
 
 public class JsonToExcelConverter
 {

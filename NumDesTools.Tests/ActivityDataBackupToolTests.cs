@@ -1,3 +1,5 @@
+using NumDesTools.Backup;
+using NumDesTools.Sync;
 using OfficeOpenXml;
 
 namespace NumDesTools.Tests;

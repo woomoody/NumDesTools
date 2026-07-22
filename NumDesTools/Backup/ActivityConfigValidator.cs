@@ -9,7 +9,11 @@ using MessageBox = System.Windows.MessageBox;
 
 #pragma warning disable CA1416
 
-namespace NumDesTools;
+using NumDesTools;
+using NumDesTools.Backup;
+using NumDesTools.Export;
+
+namespace NumDesTools.Backup;
 
 /// <summary>
 /// 活动配置程序级验证器。

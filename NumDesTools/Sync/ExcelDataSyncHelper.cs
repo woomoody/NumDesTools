@@ -2,7 +2,7 @@ using OfficeOpenXml;
 
 #pragma warning disable CA1416
 
-namespace NumDesTools;
+namespace NumDesTools.Sync;
 
 public static class ExcelDataSyncHelper
 {

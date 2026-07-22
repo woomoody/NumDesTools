@@ -6,7 +6,7 @@ using Microsoft.VisualBasic;
 using NumDesTools.UI;
 using OfficeOpenXml;
 
-namespace NumDesTools;
+namespace NumDesTools.Battle;
 
 [SupportedOSPlatform("windows")]
 public class LteData

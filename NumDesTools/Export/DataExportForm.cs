@@ -1,4 +1,4 @@
-﻿namespace NumDesTools;
+﻿namespace NumDesTools.Export;
 
 public partial class DataExportForm : Form
 {

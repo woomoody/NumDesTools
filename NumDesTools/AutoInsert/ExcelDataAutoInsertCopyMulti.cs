@@ -2,7 +2,11 @@ using OfficeOpenXml;
 
 #pragma warning disable CA1416
 
-namespace NumDesTools;
+using NumDesTools;
+using NumDesTools.AutoInsert;
+using NumDesTools.Export;
+
+namespace NumDesTools.AutoInsert;
 
 public static class ExcelDataAutoInsertCopyMulti
 {

@@ -37,6 +37,7 @@ using NumDesTools.Com;
 using NumDesTools.Config;
 using NumDesTools.ConflictResolver;
 using NumDesTools.ExcelToLua;
+using NumDesTools.Sync;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using Button = System.Windows.Forms.Button;

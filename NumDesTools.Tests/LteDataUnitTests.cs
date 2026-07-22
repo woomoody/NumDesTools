@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using NumDesTools.Battle;
 using Xunit;
 
 namespace NumDesTools.Tests;

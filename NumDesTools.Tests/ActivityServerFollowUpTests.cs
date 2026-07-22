@@ -1,3 +1,4 @@
+using NumDesTools.AutoInsert;
 using OfficeOpenXml;
 
 namespace NumDesTools.Tests;

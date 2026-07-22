@@ -1,4 +1,5 @@
 ﻿using MessageBox = System.Windows.MessageBox;
+using NumDesTools.AutoInsert;
 
 #pragma warning disable CA1416
 

@@ -2,10 +2,14 @@ using System.Text;
 using MiniExcelLibs;
 using OfficeOpenXml;
 using MessageBox = System.Windows.MessageBox;
+using NumDesTools;
+using NumDesTools.AutoInsert;
+using NumDesTools.Backup;
+using NumDesTools.Export;
 
 #pragma warning disable CA1416
 
-namespace NumDesTools;
+namespace NumDesTools.AutoInsert;
 
 public static class ExcelDataAutoInsertActivityServer
 {

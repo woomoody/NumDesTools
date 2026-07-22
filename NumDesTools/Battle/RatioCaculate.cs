@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace NumDesTools;
+namespace NumDesTools.Battle;
 
 /// <summary>
 /// 概率计算类

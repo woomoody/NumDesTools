@@ -1,6 +1,6 @@
 using OfficeOpenXml;
 
-namespace NumDesTools;
+namespace NumDesTools.Sync;
 
 // a.xlsx ↔ b.xlsx 按 Key 列（约定列名 "id"）跨表同步，全自动：给定根目录 A/B，
 // 按当前打开文件算出对侧文件名（可选后缀），在对侧根目录下递归搜同名文件（不假设子文件夹结构一致），

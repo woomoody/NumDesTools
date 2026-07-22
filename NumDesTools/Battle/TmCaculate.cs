@@ -1,4 +1,4 @@
-﻿namespace NumDesTools;
+﻿namespace NumDesTools.Battle;
 
 public class TmCaculate
 {
