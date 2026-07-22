@@ -10,7 +10,7 @@ public static class AutoModelRouter
     {
         AutoModelName,
         "claude-sonnet-5",
-        "claude-opus-4-8-v1",
+        "claude-opus-4-8",
         "deepseek-v4-flash",
         "gemini-3.1-flash-image-preview",
         "gpt-5.5",
@@ -34,7 +34,7 @@ public static class AutoModelRouter
                 @"设计.{0,4}系统|架构.{0,4}方案|留存.{0,4}分析|数值.{0,4}系统|前提.{0,4}矛盾",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled
             ),
-            "claude-opus-4-8-v1",
+            "claude-opus-4-8",
             "复杂推理/架构设计"
         ),
         (
