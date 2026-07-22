@@ -109,6 +109,7 @@ fn run_core(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, keys: &[engin
                             };
                             Row::new(vec![
                                 Cell::from(mark),
+                                Cell::from(engine::label_for_path(path)),
                                 Cell::from(path.display().to_string()),
                                 Cell::from(cur),
                             ])
@@ -118,8 +119,9 @@ fn run_core(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, keys: &[engin
                         rows,
                         [
                             Constraint::Length(4),
-                            Constraint::Percentage(65),
-                            Constraint::Percentage(30),
+                            Constraint::Length(14),
+                            Constraint::Min(30),
+                            Constraint::Percentage(25),
                         ],
                     )
                     .block(
@@ -336,7 +338,7 @@ fn handle_key(
                     let (changed, skipped) = engine::switch_files_to_key(new_key, &chosen, &all);
                     *result_lines = changed
                         .iter()
-                        .map(|f| ("✓ 已切".to_string(), f.display().to_string()))
+                        .map(|f| ("✓ 已切".to_string(), format!("{}  {}", engine::label_for_path(f), f.display())))
                         .chain(skipped.iter().map(|s| ("- 跳过".to_string(), s.clone())))
                         .collect();
                     *result_summary = format!("完成：{} 个文件切到 {}", changed.len(), new_label);

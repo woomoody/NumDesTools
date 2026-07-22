@@ -50,6 +50,17 @@ pub fn get_key_target_files(home_root: &Path) -> Vec<PathBuf> {
             .join("Documents")
             .join("LazyGit")
             .join("ai_commit.ps1"),
+        // opencode 配置（.config/opencode/opencode.jsonc 的 apiKey）
+        home_root
+            .join(".config")
+            .join("opencode")
+            .join("opencode.jsonc"),
+        // hermes 配置（AppData/Local/hermes/config.yaml 的 api_key）
+        home_root
+            .join("AppData")
+            .join("Local")
+            .join("hermes")
+            .join("config.yaml"),
     ];
 
     if let Ok(entries) = fs::read_dir(home_root) {
@@ -97,18 +108,18 @@ pub fn switch_files_to_key(
         let content = match fs::read_to_string(f) {
             Ok(c) => c,
             Err(_) => {
-                skipped.push(format!("{} (不存在)", f.display()));
+                skipped.push(format!("{} (不存在)  {}", label_for_path(f), f.display()));
                 continue;
             }
         };
         if content.contains(new_key) {
-            skipped.push(format!("{} (已是目标)", f.display()));
+            skipped.push(format!("{} (已是目标)  {}", label_for_path(f), f.display()));
             continue;
         }
         let old_key = match find_file_key(f, key_values) {
             Some(k) => k,
             None => {
-                skipped.push(format!("{} (无已知 key)", f.display()));
+                skipped.push(format!("{} (无已知 key)  {}", label_for_path(f), f.display()));
                 continue;
             }
         };
@@ -142,6 +153,40 @@ pub fn label_of<'a>(key: &str, keys: &'a [KeyDef]) -> Option<&'a str> {
 /// 所有 key 的字符串列表（探测用）
 pub fn all_key_values(keys: &[KeyDef]) -> Vec<&str> {
     keys.iter().map(|d| d.key.as_str()).collect()
+}
+
+/// 路径 → 形象短名（TUI/输出显示用，替代长路径）
+pub fn label_for_path(path: &Path) -> String {
+    let s = path.to_string_lossy().replace('/', "\\");
+    if s.ends_with("\\.claude\\settings.json") {
+        // .claude 的 parent 是 home → 全局，否则 CC-<项目名>
+        let claude_parent = path.parent().and_then(|p| p.parent());
+        let home = std::env::var("USERPROFILE").unwrap_or_default();
+        let parent_str = claude_parent.map(|p| p.to_string_lossy().replace('/', "\\"));
+        if parent_str.as_deref() == Some(&home) {
+            "CC全局".to_string()
+        } else {
+            let name = claude_parent
+                .and_then(|p| p.file_name())
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default();
+            format!("CC-{}", name)
+        }
+    } else if s.contains("\\Code\\User\\settings.json") {
+        "VSCode".to_string()
+    } else if s.ends_with("\\NumDesGlobalKey.json") {
+        "全局key库".to_string()
+    } else if s.ends_with("\\ai_commit.ps1") {
+        "LazyGit提交".to_string()
+    } else if s.ends_with("\\opencode.jsonc") {
+        "opencode".to_string()
+    } else if s.ends_with("\\hermes\\config.yaml") {
+        "hermes".to_string()
+    } else {
+        path.file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| s)
+    }
 }
 
 #[cfg(test)]

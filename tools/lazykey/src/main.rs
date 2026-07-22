@@ -43,7 +43,7 @@ fn run_direct(name: &str, keys: &[engine::KeyDef]) -> io::Result<()> {
     let (changed, skipped) = engine::switch_files_to_key(&new_key, &files, &all);
 
     for f in &changed {
-        println!("✓ 已切：{}", f.display());
+        println!("✓ 已切：{}  {}", engine::label_for_path(f), f.display());
     }
     for s in &skipped {
         println!("- 跳过：{}", s);
