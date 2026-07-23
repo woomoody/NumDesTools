@@ -1,58 +1,44 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "build-debug",
-            "type": "shell",
-            "command": "dotnet build '${workspaceFolder}\\NumDesTools\\NumDesTools.csproj' -c Debug",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "_build-release-compile",
-            "type": "shell",
-            "command": "dotnet build '${workspaceFolder}\\NumDesTools\\NumDesTools.csproj' -c Release --no-incremental",
-            "problemMatcher": "$msCompile",
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": true
-            }
-        },
-        {
-            "label": "build-release",
-            "type": "shell",
-            "command": "& '${workspaceFolder}\\packFromBin\\ReNamePack.bat'",
-            "dependsOn": ["_build-release-compile"],
-            "dependsOrder": "sequence",
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
-            "problemMatcher": [],
-            "presentation": {
-                "reveal": "always",
-                "panel": "shared",
-                "clear": false
-            }
-        },
-        {
-            "label": "copy-xll-debug",
-            "type": "shell",
-            "command": "& '${workspaceFolder}\\packFromBin\\ReNamePack.bat'",
-            "dependsOn": ["build-debug"],
-            "problemMatcher": []
-        },
-        {
-            "label": "copy-xll-release",
-            "type": "shell",
-            "command": "& '${workspaceFolder}\\packFromBin\\ReNamePack.bat'",
-            "dependsOn": ["_build-release-compile"],
-            "dependsOrder": "sequence",
-            "problemMatcher": []
-        }
-    ]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build-debug",
+      "type": "shell",
+      "command": "dotnet build '${workspaceFolder}\\NumDesTools\\NumDesTools.csproj' -c Debug",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build-release",
+      "type": "shell",
+      "command": "& '${workspaceFolder}\\packFromBin\\ReNamePack.bat'",
+      "dependsOn": ["_build-release-compile"],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "_build-release-compile",
+      "type": "shell",
+      "command": "dotnet build '${workspaceFolder}\\NumDesTools\\NumDesTools.csproj' -c Release --no-incremental",
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "start-excel-debug",
+      "type": "shell",
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File '${workspaceFolder}\\tools\\Debug-NumDesTools.ps1' -AttachVsCode",
+      "problemMatcher": []
+    }
+  ]
 }

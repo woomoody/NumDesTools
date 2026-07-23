@@ -1,16 +1,28 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": ".NET Core Launch (console)",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build-debug",
-            "program": "C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE",
-            "args": ["${workspaceFolder}\\NumDesTools\\bin\\Debug\\net9.0-windows\\NumDesTools-AddIn64.xll"],
-            "cwd": "${workspaceFolder}",
-            "console": "internalConsole",
-            "stopAtEntry": false
-        },      
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Excel with NumDesTools",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-debug",
+      "program": "C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE",
+      "args": [
+        "${workspaceFolder}\\NumDesTools\\bin\\Debug\\net9.0-windows\\NumDesTools-AddIn64.xll"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "internalConsole",
+      "stopAtEntry": false,
+      "justMyCode": false,
+      "enableStepping": true
+    },
+    {
+      "name": "Attach to Excel (NumDesTools)",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "justMyCode": false,
+      "requireExactSource": false
+    }
+  ]
 }
