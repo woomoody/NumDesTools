@@ -64,6 +64,14 @@ if (-not $XllPath) {
 
 Write-Host "[2/3] XLL: $XllPath" -ForegroundColor Cyan
 
+# 关闭已有 Excel 进程，确保新进程重新加载最新 XLL
+$existingExcel = Get-Process EXCEL -ErrorAction SilentlyContinue
+if ($existingExcel) {
+    Write-Host "检测到 $($existingExcel.Count) 个 Excel 进程正在运行，正在关闭以确保加载最新插件 ..." -ForegroundColor Yellow
+    $existingExcel | Stop-Process -Force
+    Start-Sleep -Milliseconds 500
+}
+
 # 启动 Excel 并加载 XLL
 Write-Host "[3/3] Launching Excel with XLL ..." -ForegroundColor Cyan
 $proc = Start-Process -FilePath $ExcelPath -ArgumentList `"$XllPath`" -PassThru
