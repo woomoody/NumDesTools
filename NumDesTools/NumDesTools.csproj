@@ -164,7 +164,7 @@
   <!--
   Dna打包文件移动并重命名
   -->
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <PostBuildEvent>if exist "$(SolutionDir)packFromBin\ReNamePack.bat" (call "$(SolutionDir)packFromBin\ReNamePack.bat" /y)</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>

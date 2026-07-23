@@ -9,6 +9,8 @@
     2. 启动 Excel 并加载生成的 XLL
     3. 输出 Excel PID，方便手动附加调试器
 
+    Release 模式只构建并执行打包脚本，不启动 Excel。
+
 .NOTES
     Windows Terminal Command Palette 调用示例：
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\Pro\ExcelToolsAlbum\ExcelDna-Pro\NumDesTools\tools\Debug-NumDesTools.ps1"
@@ -18,7 +20,8 @@
 param(
     [string]$Configuration = "Debug",
     [switch]$AttachVsCode,
-    [switch]$NoBuild
+    [switch]$NoBuild,
+    [switch]$NoLaunch
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,11 +46,12 @@ if (-not $NoBuild) {
     dotnet build `"$Project`" -c $Configuration
     if ($LASTEXITCODE -ne 0) { throw "Build failed" }
 
-    # Release 模式下需要重命名打包
-    if ($Configuration -eq "Release") {
-        & $PackScript
-        if ($LASTEXITCODE -ne 0) { throw "Pack script failed" }
-    }
+}
+
+# Release 只负责构建和打包，不启动 Excel。
+if ($Configuration -eq "Release") {
+    Write-Host "Release build and pack completed. Excel was not started." -ForegroundColor Green
+    exit 0
 }
 
 # 查找 XLL
