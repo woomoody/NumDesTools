@@ -161,6 +161,12 @@ public partial class GitConflictPickerWindow : MetroWindow
         var autoCount = files.Count - manual.Count;
         RefreshList(manual, null);
 
+        if (manual.Count == 0 && errors.Count == 0)
+        {
+            Close();
+            return;
+        }
+
         var sb = new System.Text.StringBuilder();
         if (autoCount > 0)
             sb.AppendLine($"已自动解决 {autoCount} 个文件。");
