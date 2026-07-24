@@ -1,0 +1,32 @@
+<mah:MetroWindow
+    x:Class="XlsxEditorPocWpf.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+    Title="xlsx 轻量编辑器 POC（WPF）"
+    WindowState="Maximized"
+    KeyDown="OnKeyDown">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ToolBar Grid.Row="0">
+            <Button Content="打开(Ctrl+O)" Click="OnOpenClick" />
+            <Button Content="保存(Ctrl+S)" Click="OnSaveClick" />
+            <Separator />
+            <Button Content="增行(Ctrl+N)" Click="OnAddRowClick" />
+            <Button Content="删行(Ctrl+D)" Click="OnDeleteRowClick" />
+        </ToolBar>
+
+        <TabControl x:Name="Tabs" Grid.Row="1" />
+
+        <StatusBar Grid.Row="2">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusText" />
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</mah:MetroWindow>
