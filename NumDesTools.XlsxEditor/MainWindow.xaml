@@ -1,9 +1,9 @@
 <mah:MetroWindow
-    x:Class="XlsxEditorPocWpf.MainWindow"
+    x:Class="NumDesTools.XlsxEditor.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
-    Title="xlsx 轻量编辑器 POC（WPF）"
+    Title="xlsx 轻量编辑器"
     WindowState="Maximized"
     KeyDown="OnKeyDown">
     <Grid>

@@ -3,14 +3,15 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>XlsxEditorPoc</RootNamespace>
+    <RootNamespace>NumDesTools.XlsxEditor</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="EPPlus" Version="8.2.0" />
+    <PackageReference Include="MahApps.Metro" Version="2.4.10" />
   </ItemGroup>
 
 </Project>

@@ -7,7 +7,7 @@ using System.Windows.Input;
 using Microsoft.Win32;
 using OfficeOpenXml;
 
-namespace XlsxEditorPocWpf;
+namespace NumDesTools.XlsxEditor;
 
 /// <summary>
 /// WPF + MahApps.Metro 版本，验证"现代 UI 外观 + 速度优先"能否兼得：
