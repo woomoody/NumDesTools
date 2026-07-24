@@ -326,7 +326,7 @@ public static class ActivityConfigValidator
             return new BatchResult
             {
                 Success = false,
-                ErrorMessage = "无法定位 Code/Assets/LuaScripts/Tables 目录",
+                ErrorMessage = "无法定位 Assets/LuaScripts/Tables 目录",
             };
 
         // 只在非无头模式下做 Excel 导表（需要 Excel 宏上下文）
@@ -1944,12 +1944,22 @@ SolarRoot        = setmetatable({}, { __index=function(t,k) t[k]=setmetatable({}
 
     private static string FindLuaOutputDir(string workbookPath)
     {
+        // 优先走 UnityProjectResolver：从 Excel 根推断 Unity 项目根，不再硬编码 "Code"
+        var unityRoot = UnityProjectResolver.Resolve(workbookPath);
+        if (unityRoot is not null)
+        {
+            var candidate = Path.Combine(unityRoot, "Assets", "LuaScripts", "Tables");
+            if (Directory.Exists(candidate))
+                return candidate;
+        }
+
+        // 回退：从工作簿路径向上找任意含 Assets/LuaScripts/Tables 的祖先（兼容旧布局）
         var dir = Path.GetDirectoryName(workbookPath);
         for (var depth = 0; depth <= 6; depth++)
         {
             if (dir == null)
                 break;
-            var candidate = Path.Combine(dir, "Code", "Assets", "LuaScripts", "Tables");
+            var candidate = Path.Combine(dir, "Assets", "LuaScripts", "Tables");
             if (Directory.Exists(candidate))
                 return candidate;
             dir = Path.GetDirectoryName(dir);
