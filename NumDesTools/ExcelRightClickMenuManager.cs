@@ -3,7 +3,7 @@ using System.Runtime.Versioning;
 using Microsoft.Office.Core;
 using CommandBar = Microsoft.Office.Core.CommandBar;
 using NumDesTools.AutoInsert;
-using NumDesTools.Backup;
+using NumDesTools.Activity;
 using NumDesTools.Battle;
 
 namespace NumDesTools;

@@ -6,12 +6,11 @@ using Newtonsoft.Json.Linq;
 using MessageBox = System.Windows.MessageBox;
 
 using NumDesTools;
-using NumDesTools.Backup;
 using NumDesTools.Export;
 
 #pragma warning disable CA1416
 
-namespace NumDesTools.Backup;
+namespace NumDesTools.Activity;
 
 /// <summary>
 /// 扫描 EnumCmds.lua.txt / ActivityManager.lua.txt / 各 LogicBase 文件，

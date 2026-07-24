@@ -16,7 +16,7 @@ public static class ExcelConflictEntry
     /// </summary>
     public static void OpenGitConflict()
     {
-        var gitRoot = AppServices.Config.Git.RootPath;
+        var gitRoot = ResolveGitRootFromActiveWorkbook() ?? AppServices.Config.Git.RootPath;
         if (string.IsNullOrEmpty(gitRoot) || !Directory.Exists(gitRoot))
         {
             System.Windows.MessageBox.Show(
@@ -159,6 +159,25 @@ public static class ExcelConflictEntry
     }
 
     /// <summary>
+    /// 从当前活动工作簿路径推算 Git 仓库根目录（ribbon 入口专用）。
+    /// Scanner / Rust-TUI 从项目上下文（--git-root / cwd / 文件路径）拿仓库根，天然知道项目路径；
+    /// ribbon 在 Excel.exe 里跑、cwd 不是仓库，只能靠当前打开的工作簿路径向上找 .git。
+    /// 找不到返回 null，由调用方回退到 GitRootPath 配置槽（避免被首次存盘的单一仓库锁死）。
+    /// </summary>
+    private static string? ResolveGitRootFromActiveWorkbook()
+    {
+        try
+        {
+            var wbPath = (string)AppServices.App.ActiveWorkbook.FullName;
+            return string.IsNullOrEmpty(wbPath) ? null : SvnGitTools.FindGitRoot(wbPath);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// 让用户选择一个 xlsx 文件，浏览其 Git 提交历史，
     /// 可选 "历史版本 vs 工作区"（支持写回 + git add）
     /// 或 "任意两个历史版本对比"（不写回）。
@@ -166,7 +185,7 @@ public static class ExcelConflictEntry
     /// </summary>
     public static void OpenGitHistory()
     {
-        var gitRoot = AppServices.Config.Git.RootPath;
+        var gitRoot = ResolveGitRootFromActiveWorkbook() ?? AppServices.Config.Git.RootPath;
         if (string.IsNullOrEmpty(gitRoot) || !Directory.Exists(gitRoot))
         {
             System.Windows.MessageBox.Show(
