@@ -5,9 +5,11 @@
     xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     Title="xlsx 轻量编辑器"
     WindowState="Maximized"
+    Closing="OnClosing"
     KeyDown="OnKeyDown">
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
@@ -19,11 +21,45 @@
             <Separator />
             <Button Content="增行(Ctrl+N)" Click="OnAddRowClick" />
             <Button Content="删行(Ctrl+D)" Click="OnDeleteRowClick" />
+            <Separator />
+            <Button Content="撤销(Ctrl+Z)" Click="OnUndoClick" />
+            <Button Content="重做(Ctrl+Y)" Click="OnRedoClick" />
+            <Separator />
+            <Button Content="清除筛选" Click="OnClearFilterClick" />
+            <Separator />
+            <ToggleButton x:Name="SpotlightToggle" Content="聚光灯" ToolTip="高亮选中单元格的整行整列" Checked="OnSpotlightToggleChecked" Unchecked="OnSpotlightToggleUnchecked" />
+            <Separator />
+            <Button Content="冻结到此列" Click="OnFreezeColumnClick" ToolTip="冻结当前选中列左侧所有列" />
+            <Button Content="冻结到此行" Click="OnFreezeRowClick" ToolTip="冻结当前选中行及以上所有行（顶部独立 grid）" />
+            <Button Content="取消冻结" Click="OnUnfreezeClick" />
+            <Separator />
+            <Button Content="查看完整值" Click="OnViewFullValueClick" ToolTip="弹窗显示当前单元格完整内容" />
         </ToolBar>
 
-        <TabControl x:Name="Tabs" Grid.Row="1" />
+        <Grid Grid.Row="1" Margin="4,2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="搜索：" VerticalAlignment="Center" Margin="0,0,4,0" />
+            <TextBox x:Name="SearchBox" Grid.Column="1" KeyDown="OnSearchBoxKeyDown" ToolTip="输入后回车搜索，Ctrl+Enter 搜索所有打开文件" />
+            <ComboBox x:Name="SearchScope" Grid.Column="2" Width="100" SelectedIndex="0" Margin="4,0">
+                <ComboBoxItem Content="当前 Sheet" />
+                <ComboBoxItem Content="当前工作簿" />
+                <ComboBoxItem Content="所有工作簿" />
+            </ComboBox>
+            <Button Grid.Column="3" Content="搜索" Click="OnSearchClick" Margin="4,0" />
+            <TextBlock x:Name="SearchResultText" Grid.Column="4" VerticalAlignment="Center" Margin="4,0" Text="0 条结果" />
+            <ListBox x:Name="SearchResults" Grid.Column="5" Visibility="Collapsed" MaxHeight="120" SelectionChanged="OnSearchResultSelected" />
+        </Grid>
 
-        <StatusBar Grid.Row="2">
+        <TabControl x:Name="Tabs" Grid.Row="2" Margin="0,4,0,0" Padding="4,2,4,4" Background="#181818" BorderBrush="#3C3C3C" BorderThickness="0,1,0,0" SelectionChanged="OnTabsSelectionChanged" />
+
+        <StatusBar Grid.Row="3">
             <StatusBarItem>
                 <TextBlock x:Name="StatusText" />
             </StatusBarItem>
