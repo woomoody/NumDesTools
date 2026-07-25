@@ -15,6 +15,7 @@ use ratatui::{
     widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState},
     Terminal,
 };
+use std::collections::HashMap;
 use std::io;
 
 enum Stage {
@@ -25,14 +26,18 @@ enum Stage {
     Quit,
 }
 
-pub fn run_interactive(keys: &[engine::KeyDef]) -> io::Result<()> {
+pub fn run_interactive(
+    keys: &[engine::KeyDef],
+    accumulated_spend: &HashMap<String, f64>,
+    period_spend: &HashMap<String, f64>,
+) -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    let result = run_core(&mut terminal, keys);
+    let result = run_core(&mut terminal, keys, accumulated_spend, period_spend);
 
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
@@ -40,7 +45,13 @@ pub fn run_interactive(keys: &[engine::KeyDef]) -> io::Result<()> {
     result
 }
 
-fn run_core(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, keys: &[engine::KeyDef]) -> io::Result<()> {
+#[allow(clippy::too_many_arguments)]
+fn run_core(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    keys: &[engine::KeyDef],
+    accumulated_spend: &HashMap<String, f64>,
+    period_spend: &HashMap<String, f64>,
+) -> io::Result<()> {
     let mut stage = Stage::PickKey;
     let mut key_sel = 0usize;
     let key_count = keys.len() + 1; // + 自定义
@@ -64,19 +75,32 @@ fn run_core(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, keys: &[engin
                     let rows: Vec<Row> = keys
                         .iter()
                         .map(|d| {
+                            let acc = accumulated_spend.get(&d.key);
+                            let per = period_spend.get(&d.key);
+                            let spend = match (acc, per) {
+                                (Some(a), Some(p)) => format!("${p:.2}/${a:.2}"),
+                                (Some(a), None) => format!("?/${a:.2}"),
+                                (None, _) => "--".to_string(),
+                            };
                             Row::new(vec![
                                 Cell::from(d.label.clone()),
                                 Cell::from(d.key.clone()),
+                                Cell::from(spend),
                             ])
                         })
                         .chain(std::iter::once(Row::new(vec![
                             Cell::from("自定义输入"),
                             Cell::from("sk-..."),
+                            Cell::from("--"),
                         ])))
                         .collect();
                     let table = Table::new(
                         rows,
-                        [Constraint::Percentage(55), Constraint::Percentage(45)],
+                        [
+                            Constraint::Percentage(40),
+                            Constraint::Percentage(35),
+                            Constraint::Length(20),
+                        ],
                     )
                     .block(
                         Block::default()
@@ -338,7 +362,12 @@ fn handle_key(
                     let (changed, skipped) = engine::switch_files_to_key(new_key, &chosen, &all);
                     *result_lines = changed
                         .iter()
-                        .map(|f| ("✓ 已切".to_string(), format!("{}  {}", engine::label_for_path(f), f.display())))
+                        .map(|f| {
+                            (
+                                "✓ 已切".to_string(),
+                                format!("{}  {}", engine::label_for_path(f), f.display()),
+                            )
+                        })
                         .chain(skipped.iter().map(|s| ("- 跳过".to_string(), s.clone())))
                         .collect();
                     *result_summary = format!("完成：{} 个文件切到 {}", changed.len(), new_label);

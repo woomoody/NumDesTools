@@ -20,7 +20,14 @@ fn main() -> io::Result<()> {
         return run_direct(name, &keys);
     }
 
-    tui::run_interactive(&keys)
+    let accumulated_spend = keys
+        .iter()
+        .find(|key| key.admin_key)
+        .map_or_else(std::collections::HashMap::new, |admin| {
+            engine::fetch_spend(&admin.key, &keys)
+        });
+    let period_spend = engine::compute_period_spend(&accumulated_spend);
+    tui::run_interactive(&keys, &accumulated_spend, &period_spend)
 }
 
 /// 直切：lazykey cent / lazykey sleep / lazykey sk-...
@@ -31,7 +38,10 @@ fn run_direct(name: &str, keys: &[engine::KeyDef]) -> io::Result<()> {
             eprintln!(
                 "未知 key 别名: {}（可选：{}，或完整 sk-...）",
                 name,
-                keys.iter().map(|k| k.alias.as_str()).collect::<Vec<_>>().join(" / ")
+                keys.iter()
+                    .map(|k| k.alias.as_str())
+                    .collect::<Vec<_>>()
+                    .join(" / ")
             );
             std::process::exit(1);
         }

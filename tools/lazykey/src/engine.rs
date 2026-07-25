@@ -1,10 +1,16 @@
-//! LiteLLM key 切换引擎：纯函数，不碰终端，可单测。
+//! LiteLLM key 切换引擎：配置、spend 查询和文件替换，不碰终端。
 //! 原理：key 字符串全局唯一，字面 replace 即可，不用 per-file regex。
 //! key 列表从外置 JSON 读（不进 git），见 `load_keys`。
 
-use serde::Deserialize;
+use chrono::Local;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
+
+const KEY_INFO_URL: &str = "https://litellm.solotopia.net/key/info";
 
 /// key 定义：label（菜单显示）、alias（直切短名）、key 字符串
 #[derive(Debug, Clone, Deserialize)]
@@ -12,6 +18,166 @@ pub struct KeyDef {
     pub label: String,
     pub alias: String,
     pub key: String,
+    #[serde(default)]
+    pub admin_key: bool,
+    /// 外部 key（如 DeepSeek 官方 API key，非 LiteLLM 管理），跳过 spend 查询
+    #[serde(default)]
+    pub external: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct KeySpend {
+    pub key_alias: String,
+    pub spend: f64,
+}
+
+#[derive(Deserialize)]
+struct KeyInfoResponse {
+    info: KeySpend,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SpendSnapshot {
+    #[serde(default)]
+    pub snapshot_month: String,
+    #[serde(default)]
+    pub snapshots: HashMap<String, f64>,
+}
+
+/// Current local calendar month in `YYYY-MM` format.
+pub fn current_month() -> String {
+    Local::now().format("%Y-%m").to_string()
+}
+
+/// Loads the local spend baseline. Missing or invalid files produce an empty snapshot.
+pub fn load_snapshot() -> SpendSnapshot {
+    load_snapshot_from(&snapshot_path())
+}
+
+fn load_snapshot_from(path: &Path) -> SpendSnapshot {
+    fs::read_to_string(path)
+        .ok()
+        .and_then(|content| serde_json::from_str(&content).ok())
+        .unwrap_or_default()
+}
+
+/// Saves the spend baseline through a temporary file before replacing the destination.
+pub fn save_snapshot(snapshot: &SpendSnapshot) -> io::Result<()> {
+    save_snapshot_to(&snapshot_path(), snapshot)
+}
+
+fn save_snapshot_to(path: &Path, snapshot: &SpendSnapshot) -> io::Result<()> {
+    let temporary_path = path.with_extension("json.tmp");
+    let content = serde_json::to_vec_pretty(snapshot).map_err(io::Error::other)?;
+    fs::write(&temporary_path, content)?;
+    if path.exists() {
+        fs::remove_file(path)?;
+    }
+    fs::rename(temporary_path, path)
+}
+
+/// Converts lifetime accumulated spend into spend since this month's baseline.
+pub fn compute_period_spend(current_spend: &HashMap<String, f64>) -> HashMap<String, f64> {
+    if current_spend.is_empty() {
+        return HashMap::new();
+    }
+
+    compute_period_spend_from(
+        current_spend,
+        load_snapshot(),
+        &current_month(),
+        save_snapshot,
+    )
+}
+
+#[cfg(test)]
+fn compute_period_spend_at(
+    current_spend: &HashMap<String, f64>,
+    path: &Path,
+    month: &str,
+) -> HashMap<String, f64> {
+    if current_spend.is_empty() {
+        return HashMap::new();
+    }
+
+    compute_period_spend_from(current_spend, load_snapshot_from(path), month, |snapshot| {
+        save_snapshot_to(path, snapshot)
+    })
+}
+
+fn compute_period_spend_from(
+    current_spend: &HashMap<String, f64>,
+    snapshot: SpendSnapshot,
+    month: &str,
+    save: impl FnOnce(&SpendSnapshot) -> io::Result<()>,
+) -> HashMap<String, f64> {
+    match snapshot.snapshot_month.as_str().cmp(month) {
+        std::cmp::Ordering::Greater => HashMap::new(),
+        std::cmp::Ordering::Equal => current_spend
+            .iter()
+            .filter_map(|(key, accumulated)| {
+                snapshot
+                    .snapshots
+                    .get(key)
+                    .map(|baseline| (key.clone(), (accumulated - baseline).max(0.0)))
+            })
+            .collect(),
+        std::cmp::Ordering::Less => {
+            let refreshed = SpendSnapshot {
+                snapshot_month: month.to_string(),
+                snapshots: current_spend.clone(),
+            };
+            if save(&refreshed).is_err() {
+                return HashMap::new();
+            }
+            current_spend.keys().map(|key| (key.clone(), 0.0)).collect()
+        }
+    }
+}
+
+fn snapshot_path() -> PathBuf {
+    let home = std::env::var("USERPROFILE").unwrap_or_else(|_| ".".to_string());
+    PathBuf::from(home).join("lazykey.spend-snapshot.json")
+}
+
+/// Fetches each key's accumulated LiteLLM spend in USD.
+/// Failed requests are represented as `0.0` so network issues never stop the TUI.
+pub fn fetch_spend(admin_key: &str, keys: &[KeyDef]) -> HashMap<String, f64> {
+    let agent = ureq::AgentBuilder::new()
+        .timeout(Duration::from_secs(5))
+        .build();
+    let authorization = format!("Bearer {admin_key}");
+
+    let mut any_success = false;
+    let spend_map = keys
+        .iter()
+        .filter(|k| !k.external) // 跳过外部 key（非 LiteLLM 管理，无 spend 数据）
+        .map(|key| {
+            let spend = agent
+                .get(KEY_INFO_URL)
+                .query("key", &key.key)
+                .set("Authorization", &authorization)
+                .call()
+                .ok()
+                .and_then(|response| response.into_string().ok())
+                .and_then(|body| parse_key_spend(&body));
+            any_success |= spend.is_some();
+            (key.key.clone(), spend)
+        })
+        .map(|(key, spend)| (key, spend.unwrap_or(0.0)))
+        .collect();
+
+    if any_success {
+        spend_map
+    } else {
+        HashMap::new()
+    }
+}
+
+fn parse_key_spend(body: &str) -> Option<f64> {
+    let response: KeyInfoResponse = serde_json::from_str(body).ok()?;
+    let _key_alias = response.info.key_alias;
+    Some(response.info.spend)
 }
 
 /// 从外置 JSON 读 key 列表。路径：`%USERPROFILE%\lazykey.keys.json`（不进 git，纯粹本地配置）。
@@ -119,7 +285,11 @@ pub fn switch_files_to_key(
         let old_key = match find_file_key(f, key_values) {
             Some(k) => k,
             None => {
-                skipped.push(format!("{} (无已知 key)  {}", label_for_path(f), f.display()));
+                skipped.push(format!(
+                    "{} (无已知 key)  {}",
+                    label_for_path(f),
+                    f.display()
+                ));
                 continue;
             }
         };
@@ -217,6 +387,82 @@ mod tests {
     }
 
     #[test]
+    fn test_snapshot_stale_month_refreshes() {
+        let dir = fixture_dir();
+        let path = dir.join("snapshot.json");
+        let old = SpendSnapshot {
+            snapshot_month: "2026-06".to_string(),
+            snapshots: HashMap::from([("sk-test".to_string(), 100.0)]),
+        };
+        save_snapshot_to(&path, &old).unwrap();
+        let current = HashMap::from([("sk-test".to_string(), 150.0)]);
+
+        let period = compute_period_spend_at(&current, &path, "2026-07");
+
+        assert_eq!(period.get("sk-test"), Some(&0.0));
+        let refreshed = load_snapshot_from(&path);
+        assert_eq!(refreshed.snapshot_month, "2026-07");
+        assert_eq!(refreshed.snapshots.get("sk-test"), Some(&150.0));
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn test_snapshot_current_month_subtracts() {
+        let dir = fixture_dir();
+        let path = dir.join("snapshot.json");
+        let baseline = SpendSnapshot {
+            snapshot_month: "2026-07".to_string(),
+            snapshots: HashMap::from([("sk-test".to_string(), 100.0)]),
+        };
+        save_snapshot_to(&path, &baseline).unwrap();
+        let current = HashMap::from([("sk-test".to_string(), 150.0)]);
+
+        let period = compute_period_spend_at(&current, &path, "2026-07");
+
+        assert_eq!(period.get("sk-test"), Some(&50.0));
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn test_missing_snapshot_creates_baseline() {
+        let dir = fixture_dir();
+        let path = dir.join("snapshot.json");
+        let current = HashMap::from([("sk-test".to_string(), 150.0)]);
+
+        let period = compute_period_spend_at(&current, &path, "2026-07");
+
+        assert_eq!(period.get("sk-test"), Some(&0.0));
+        let created = load_snapshot_from(&path);
+        assert_eq!(created.snapshot_month, "2026-07");
+        assert_eq!(created.snapshots, current);
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn test_corrupt_snapshot_graceful() {
+        let dir = fixture_dir();
+        let path = write_file(&dir, "snapshot.json", "not json");
+
+        let snapshot = load_snapshot_from(&path);
+
+        assert!(snapshot.snapshot_month.is_empty());
+        assert!(snapshot.snapshots.is_empty());
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn test_empty_current_spend_returns_empty() {
+        let dir = fixture_dir();
+        let path = dir.join("snapshot.json");
+
+        let period = compute_period_spend_at(&HashMap::new(), &path, "2026-07");
+
+        assert!(period.is_empty());
+        assert!(!path.exists());
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
     fn load_keys_from_reads_json() {
         let dir = fixture_dir();
         let json = r#"[
@@ -227,8 +473,67 @@ mod tests {
         let keys = load_keys_from(&p);
         assert_eq!(keys.len(), 2);
         assert_eq!(keys[0].alias, "cent");
+        assert!(!keys[0].admin_key);
         assert_eq!(keys[1].key, "sk-testSleep222");
         fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn load_keys_from_reads_admin_key_marker() {
+        let dir = fixture_dir();
+        let json = r#"[
+            { "label": "cent", "alias": "cent", "key": "sk-admin", "admin_key": true }
+        ]"#;
+        let p = write_file(&dir, "keys.json", json);
+
+        let keys = load_keys_from(&p);
+
+        assert!(keys[0].admin_key);
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn load_keys_from_reads_external_key() {
+        let dir = fixture_dir();
+        let json = r#"[
+            { "label": "外部key", "alias": "ext", "key": "sk-ext", "external": true }
+        ]"#;
+        let p = write_file(&dir, "keys.json", json);
+
+        let keys = load_keys_from(&p);
+
+        assert!(keys[0].external);
+        assert!(!keys[0].admin_key);
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn load_keys_from_defaults_external_false() {
+        let dir = fixture_dir();
+        let json = r#"[
+            { "label": "cent", "alias": "cent", "key": "sk-cent" }
+        ]"#;
+        let p = write_file(&dir, "keys.json", json);
+
+        let keys = load_keys_from(&p);
+
+        assert!(!keys[0].external);
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn parse_key_spend_reads_nested_info() {
+        let json = r#"{"key":"sk-user","info":{"key_alias":"cent","spend":123.45}}"#;
+
+        let spend = parse_key_spend(json);
+
+        assert_eq!(spend, Some(123.45));
+    }
+
+    #[test]
+    fn parse_key_spend_rejects_invalid_response() {
+        assert_eq!(parse_key_spend("not json"), None);
+        assert_eq!(parse_key_spend(r#"{"info":{}}"#), None);
     }
 
     #[test]
@@ -288,11 +593,26 @@ mod tests {
     #[test]
     fn resolve_key_alias_maps_and_passthrough() {
         let keys = vec![
-            KeyDef { label: "cent".into(), alias: "cent".into(), key: "sk-c1".into() },
-            KeyDef { label: "sleep".into(), alias: "sleep".into(), key: "sk-s2".into() },
+            KeyDef {
+                label: "cent".into(),
+                alias: "cent".into(),
+                key: "sk-c1".into(),
+                admin_key: false,
+                external: false,
+            },
+            KeyDef {
+                label: "sleep".into(),
+                alias: "sleep".into(),
+                key: "sk-s2".into(),
+                admin_key: false,
+                external: false,
+            },
         ];
         assert_eq!(resolve_key_alias("cent", &keys), Some("sk-c1".to_string()));
-        assert_eq!(resolve_key_alias("sk-custom", &keys), Some("sk-custom".to_string()));
+        assert_eq!(
+            resolve_key_alias("sk-custom", &keys),
+            Some("sk-custom".to_string())
+        );
         assert_eq!(resolve_key_alias("notexist", &keys), None);
     }
 
@@ -301,27 +621,55 @@ mod tests {
         let dir = fixture_dir();
         let home = dir.join("home");
         fs::create_dir_all(home.join(".claude")).unwrap();
-        fs::create_dir_all(home.join("AppData").join("Roaming").join("Code").join("User")).unwrap();
+        fs::create_dir_all(
+            home.join("AppData")
+                .join("Roaming")
+                .join("Code")
+                .join("User"),
+        )
+        .unwrap();
         fs::create_dir_all(home.join("Documents").join("LazyGit")).unwrap();
         fs::write(home.join(".claude").join("settings.json"), "{}").unwrap();
         fs::write(
-            home.join("AppData").join("Roaming").join("Code").join("User").join("settings.json"),
+            home.join("AppData")
+                .join("Roaming")
+                .join("Code")
+                .join("User")
+                .join("settings.json"),
             "{}",
         )
         .unwrap();
         fs::write(home.join("Documents").join("NumDesGlobalKey.json"), "{}").unwrap();
-        fs::write(home.join("Documents").join("LazyGit").join("ai_commit.ps1"), "").unwrap();
+        fs::write(
+            home.join("Documents").join("LazyGit").join("ai_commit.ps1"),
+            "",
+        )
+        .unwrap();
         fs::create_dir_all(home.join("CCglm").join(".claude")).unwrap();
-        fs::write(home.join("CCglm").join(".claude").join("settings.json"), "{}").unwrap();
+        fs::write(
+            home.join("CCglm").join(".claude").join("settings.json"),
+            "{}",
+        )
+        .unwrap();
         fs::create_dir_all(home.join("CCKimi").join(".claude")).unwrap();
-        fs::write(home.join("CCKimi").join(".claude").join("settings.json"), "{}").unwrap();
+        fs::write(
+            home.join("CCKimi").join(".claude").join("settings.json"),
+            "{}",
+        )
+        .unwrap();
         fs::create_dir_all(home.join("CCNoSettings")).unwrap();
 
         let targets = get_key_target_files(&home);
         assert_eq!(targets.len(), 6);
-        assert!(targets.iter().any(|t| t.to_string_lossy().contains("CCglm")));
-        assert!(targets.iter().any(|t| t.to_string_lossy().contains("CCKimi")));
-        assert!(!targets.iter().any(|t| t.to_string_lossy().contains("CCNoSettings")));
+        assert!(targets
+            .iter()
+            .any(|t| t.to_string_lossy().contains("CCglm")));
+        assert!(targets
+            .iter()
+            .any(|t| t.to_string_lossy().contains("CCKimi")));
+        assert!(!targets
+            .iter()
+            .any(|t| t.to_string_lossy().contains("CCNoSettings")));
         fs::remove_dir_all(&dir).ok();
     }
 }
