@@ -6,9 +6,10 @@
     Title="xlsx 轻量编辑器"
     WindowState="Maximized"
     Closing="OnClosing"
-    KeyDown="OnKeyDown">
+    PreviewKeyDown="OnKeyDown">
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -57,9 +58,22 @@
             <ListBox x:Name="SearchResults" Grid.Column="5" Visibility="Collapsed" MaxHeight="120" SelectionChanged="OnSearchResultSelected" />
         </Grid>
 
-        <TabControl x:Name="Tabs" Grid.Row="2" Margin="0,4,0,0" Padding="4,2,4,4" Background="#181818" BorderBrush="#3C3C3C" BorderThickness="0,1,0,0" SelectionChanged="OnTabsSelectionChanged" />
+        <Grid Grid.Row="2" Margin="4,0,4,2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="120" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="列筛选：" VerticalAlignment="Center" Margin="0,0,4,0" />
+            <ComboBox x:Name="FilterColumn" Grid.Column="1" Margin="0,0,4,0" ToolTip="选择要筛选的列" />
+            <TextBox x:Name="FilterText" Grid.Column="2" KeyDown="OnFilterKeyDown" ToolTip="输入关键字后回车筛选" />
+            <Button Grid.Column="3" Content="清除筛选" Click="OnClearFilterClick" Margin="4,0,0,0" />
+        </Grid>
 
-        <StatusBar Grid.Row="3">
+        <TabControl x:Name="Tabs" Grid.Row="3" Margin="0,4,0,0" Padding="4,2,4,4" Background="#3D3D3D" BorderBrush="#666666" BorderThickness="0,1,0,1" SelectionChanged="OnTabsSelectionChanged" />
+
+        <StatusBar Grid.Row="4">
             <StatusBarItem>
                 <TextBlock x:Name="StatusText" />
             </StatusBarItem>

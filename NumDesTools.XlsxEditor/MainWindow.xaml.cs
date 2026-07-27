@@ -25,9 +25,13 @@ public partial class MainWindow
     // 深色主题单元格边框颜色（比背景略亮）
     private static readonly Brush GridLineBrush = new SolidColorBrush(Color.FromRgb(60, 60, 60));
 
-    // 聚光灯：选中单元格所在行列高亮
-    private static readonly Brush SpotlightBrush = new SolidColorBrush(
-        Color.FromArgb(60, 0, 120, 215)
+    // 聚光灯：选中区域外框（亮黄色），行列用半透明背景色指示
+    private static readonly Brush SpotlightBorderBrush = new SolidColorBrush(
+        Color.FromRgb(255, 220, 50)
+    );
+    private static readonly Thickness SpotlightBorderThickness = new(2);
+    private static readonly Brush SpotlightRowColBrush = new SolidColorBrush(
+        Color.FromArgb(40, 0, 120, 215)
     );
 
     // sheet tab -> state（扁平，所有打开工作簿的 sheet 都在这，便于机械替换）
@@ -45,6 +49,7 @@ public partial class MainWindow
     public MainWindow()
     {
         InitializeComponent();
+        ApplyWorkbookTabStyle();
     }
 
     // ── 当前选中定位（集中逻辑，供 ~22 处机械替换用） ──────────────────
@@ -123,6 +128,40 @@ public partial class MainWindow
         {
             Close();
         }
+        else if (e.Key is Key.Back or Key.Delete)
+        {
+            DeleteSelectedCells();
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>
+    /// 删除所有选中单元格的内容（Backspace/Delete）。
+    /// </summary>
+    private void DeleteSelectedCells()
+    {
+        if (CurrentSheetState is not { } state)
+            return;
+        var grid = state.MainGrid;
+        if (grid.SelectedCells.Count == 0)
+            return;
+        var table = state.Table;
+        var savedFilter = table.DefaultView.RowFilter;
+        table.DefaultView.RowFilter = string.Empty;
+        foreach (var cell in grid.SelectedCells)
+        {
+            if (cell.Item is not DataRowView view || cell.Column is null)
+                continue;
+            var colIndex = cell.Column.DisplayIndex;
+            var rowIndex = table.Rows.IndexOf(view.Row);
+            var oldValue = view[colIndex];
+            state.UndoStack.Push(new CellEditRecord(rowIndex, colIndex, oldValue, string.Empty));
+            view[colIndex] = string.Empty;
+            MarkDirty(grid, view, colIndex);
+        }
+        state.RedoStack.Clear();
+        table.DefaultView.RowFilter = savedFilter;
+        MarkCurrentFileDirty();
     }
 
     private void OnOpenClick(object sender, RoutedEventArgs e)
@@ -178,8 +217,7 @@ public partial class MainWindow
 
             var sheetTab = new TabItem
             {
-                Header = name,
-                FontSize = 12,
+                Header = new TextBlock { Text = name, FontSize = 11 },
                 Content = panel,
             };
             var state = new SheetState(name, table, comments, path, totalRows, loadedRows)
@@ -202,6 +240,7 @@ public partial class MainWindow
             {
                 grid.FrozenColumnCount = fc;
                 state.FrozenColumns = fc;
+                ApplyFreezeColumnDivider(grid, fc);
             }
             if (fr > 0 && fr < table.Rows.Count)
             {
@@ -240,18 +279,39 @@ public partial class MainWindow
     private TabItem BuildWorkbookTab(string fileName, TabControl sheetTabs)
     {
         sheetTabs.Padding = new Thickness(4, 0, 4, 2);
+        sheetTabs.Background = new SolidColorBrush(Color.FromRgb(30, 30, 30));
         var sheetTabStyle = new Style(
             typeof(TabItem),
             Application.Current.TryFindResource(typeof(TabItem)) as Style
         );
-        sheetTabStyle.Setters.Add(new Setter(Control.FontSizeProperty, 12.0));
+        sheetTabStyle.Setters.Add(new Setter(Control.FontSizeProperty, 11.0));
+        sheetTabStyle.Setters.Add(new Setter(TextBlock.FontSizeProperty, 11.0));
+        // 选中 tab 亮色高亮（类似 Excel）
+        sheetTabStyle.Setters.Add(
+            new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(45, 45, 45)))
+        );
+        sheetTabStyle.Triggers.Add(
+            new Trigger
+            {
+                Property = Selector.IsSelectedProperty,
+                Value = true,
+                Setters =
+                {
+                    new Setter(
+                        Control.BackgroundProperty,
+                        new SolidColorBrush(Color.FromRgb(80, 80, 80))
+                    ),
+                },
+            }
+        );
         sheetTabs.ItemContainerStyle = sheetTabStyle;
+        // 文件 tab 和 sheet tab 之间用粗亮线分隔（Excel 风格的凹凸感）
         var sheetTabsBorder = new Border
         {
-            Margin = new Thickness(0, 6, 0, 0),
-            Padding = new Thickness(2),
-            BorderBrush = GridLineBrush,
-            BorderThickness = new Thickness(0, 2, 0, 0),
+            Margin = new Thickness(0, 10, 0, 0),
+            Padding = new Thickness(0),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(120, 120, 120)),
+            BorderThickness = new Thickness(0, 6, 0, 2),
             Background = new SolidColorBrush(Color.FromRgb(30, 30, 30)),
             Child = sheetTabs,
         };
@@ -274,6 +334,35 @@ public partial class MainWindow
         closeBtn.Click += OnWorkbookCloseClick;
         header.Children.Add(closeBtn);
         return wbTab;
+    }
+
+    /// <summary>
+    /// 给外层工作簿 TabControl 设选中高亮样式（与 sheet tab 同样的视觉风格）。
+    /// </summary>
+    private void ApplyWorkbookTabStyle()
+    {
+        var wbTabStyle = new Style(
+            typeof(TabItem),
+            Application.Current.TryFindResource(typeof(TabItem)) as Style
+        );
+        wbTabStyle.Setters.Add(
+            new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(50, 50, 50)))
+        );
+        wbTabStyle.Triggers.Add(
+            new Trigger
+            {
+                Property = Selector.IsSelectedProperty,
+                Value = true,
+                Setters =
+                {
+                    new Setter(
+                        Control.BackgroundProperty,
+                        new SolidColorBrush(Color.FromRgb(90, 90, 90))
+                    ),
+                },
+            }
+        );
+        Tabs.ItemContainerStyle = wbTabStyle;
     }
 
     /// <summary>
@@ -503,7 +592,7 @@ public partial class MainWindow
             AutoGenerateColumns = false,
             CanUserAddRows = false,
             CanUserDeleteRows = false,
-            CanUserSortColumns = true,
+            CanUserSortColumns = false,
             EnableRowVirtualization = true,
             EnableColumnVirtualization = true,
             SelectionUnit = DataGridSelectionUnit.Cell,
@@ -654,32 +743,13 @@ public partial class MainWindow
             FrameworkElement headerElement;
             if (withFilterBox)
             {
-                var headerPanel = new StackPanel { Orientation = Orientation.Vertical };
-                var headerText = new TextBlock
+                headerElement = new TextBlock
                 {
                     Text = columnName,
                     FontWeight = FontWeights.Bold,
                     HorizontalAlignment = HorizontalAlignment.Center,
-                };
-                var filterBox = new TextBox
-                {
-                    Tag = colIndex,
-                    Width = double.NaN, // 撑满列头
-                    MinWidth = 60,
                     Margin = new Thickness(1),
-                    ToolTip = $"筛选 {columnName}",
                 };
-                filterBox.PreviewKeyDown += (_, args) =>
-                {
-                    if (args.Key is not Key.Enter)
-                        return;
-
-                    ApplyFilter(table, filterBox);
-                    args.Handled = true;
-                };
-                headerPanel.Children.Add(headerText);
-                headerPanel.Children.Add(filterBox);
-                headerElement = headerPanel;
             }
             else
             {
@@ -698,26 +768,9 @@ public partial class MainWindow
                 Binding = new Binding($"[{colIndex}]"),
                 Width = new DataGridLength(160),
                 IsReadOnly = !withFilterBox,
+                CanUserResize = true,
             };
             grid.Columns.Add(column);
-        }
-    }
-
-    private static void ApplyFilter(DataTable table, TextBox filterBox)
-    {
-        if (filterBox.Tag is not int colIndex)
-            return;
-        var keyword = filterBox.Text.Replace("'", "''");
-        var columnName = table.Columns[colIndex].ColumnName;
-        try
-        {
-            table.DefaultView.RowFilter = string.IsNullOrWhiteSpace(keyword)
-                ? string.Empty
-                : $"[{columnName}] LIKE '%{keyword}%'";
-        }
-        catch
-        {
-            // RowFilter 语法异常时静默忽略，不阻塞输入
         }
     }
 
@@ -725,15 +778,58 @@ public partial class MainWindow
     {
         if (CurrentSheetState is not { } state)
             return;
-        foreach (var column in state.MainGrid.Columns)
-        {
-            if (column.Header is StackPanel panel)
-            {
-                foreach (var child in panel.Children.OfType<TextBox>())
-                    child.Text = string.Empty;
-            }
-        }
+        FilterText.Text = string.Empty;
         state.Table.DefaultView.RowFilter = string.Empty;
+    }
+
+    private void OnFilterKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Enter or Key.Return))
+            return;
+        if (CurrentSheetState is not { } state)
+            return;
+        var keyword = FilterText.Text;
+        var columnName =
+            FilterColumn.SelectedIndex >= 0
+                ? state.Table.Columns[FilterColumn.SelectedIndex].ColumnName
+                : string.Empty;
+
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            state.FilterColumnName = string.Empty;
+            state.FilterKeyword = string.Empty;
+            if (state.FrozenRows > 0)
+            {
+                // 冻结模式：刷新 LCV Filter
+                state.MainGrid.ItemsSource = MakeMainView(state);
+                state.FrozenGrid!.ItemsSource = MakeFrozenView(state);
+                SyncFrozenToMain(state);
+            }
+            else
+            {
+                state.Table.DefaultView.RowFilter = string.Empty;
+            }
+            e.Handled = true;
+            return;
+        }
+
+        if (state.FrozenRows > 0)
+        {
+            // 冻结模式：LCV Filter 同时按行号 + 列内容过滤
+            state.FilterColumnName = columnName;
+            state.FilterKeyword = keyword;
+            state.MainGrid.ItemsSource = MakeMainView(state);
+            state.FrozenGrid!.ItemsSource = MakeFrozenView(state);
+            SyncFrozenToMain(state);
+            StatusText.Text = $"冻结行模式下筛选 [{columnName}] 包含 '{keyword}'";
+        }
+        else
+        {
+            // 非冻结模式：走 DataView.RowFilter
+            state.Table.DefaultView.RowFilter =
+                $"[{columnName}] LIKE '%{keyword.Replace("'", "''")}%'";
+        }
+        e.Handled = true;
     }
 
     private void OnAddRowClick(object sender, RoutedEventArgs e)
@@ -1040,6 +1136,8 @@ public partial class MainWindow
             new CellEditRecord(record.Row, record.Col, current, current?.ToString() ?? string.Empty)
         );
         state.Table.DefaultView.RowFilter = savedFilter;
+        // 强制刷新 DataGrid 显示（撤销后 UI 可能还显示旧值）
+        state.MainGrid.Items.Refresh();
         MarkCurrentFileDirty();
     }
 
@@ -1058,6 +1156,8 @@ public partial class MainWindow
             new CellEditRecord(record.Row, record.Col, current, current?.ToString() ?? string.Empty)
         );
         state.Table.DefaultView.RowFilter = savedFilter;
+        // 强制刷新 DataGrid 显示
+        state.MainGrid.Items.Refresh();
         MarkCurrentFileDirty();
     }
 
@@ -1159,8 +1259,44 @@ public partial class MainWindow
         state.FrozenColumns = n;
         if (state.FrozenGrid is not null)
             state.FrozenGrid.FrozenColumnCount = n;
+        // 给分界列（第 n 列，第一个非冻结列）加粗左边框竖线
+        ApplyFreezeColumnDivider(grid, n);
+        if (state.FrozenGrid is not null)
+            ApplyFreezeColumnDivider(state.FrozenGrid, n);
         SaveFreeze(state);
         StatusText.Text = $"已冻结前 {n} 列";
+    }
+
+    /// <summary>
+    /// 给冻结列分界处加粗竖线：第 n 列（第一个非冻结列）的左边框设亮色粗线。
+    /// 只动分界列的 CellStyle，不清其他列（保留 BuildGrid 设的 ToolTip 等）。
+    /// </summary>
+    private static void ApplyFreezeColumnDivider(DataGrid grid, int n)
+    {
+        // 只清除之前设过分界线的列（含 BorderThickness 的 CellStyle），不动其他列
+        foreach (var col in grid.Columns)
+        {
+            if (
+                col.CellStyle?.Setters.OfType<Setter>()
+                    .Any(s => s.Property == Control.BorderThicknessProperty) == true
+            )
+                col.ClearValue(DataGridColumn.CellStyleProperty);
+        }
+
+        if (n <= 0 || n >= grid.Columns.Count)
+            return;
+
+        var dividerStyle = new Style(typeof(DataGridCell));
+        dividerStyle.Setters.Add(
+            new Setter(
+                Control.BorderBrushProperty,
+                new SolidColorBrush(Color.FromRgb(120, 120, 120))
+            )
+        );
+        dividerStyle.Setters.Add(
+            new Setter(Control.BorderThicknessProperty, new Thickness(2, 0, 0, 0))
+        );
+        grid.Columns[n].CellStyle = dividerStyle;
     }
 
     private void OnFreezeRowClick(object sender, RoutedEventArgs e)
@@ -1188,6 +1324,10 @@ public partial class MainWindow
         state.MainGrid.FrozenColumnCount = 0;
         state.FrozenColumns = 0;
         state.FrozenRows = 0;
+        // 清除冻结列分界线样式
+        ApplyFreezeColumnDivider(state.MainGrid, 0);
+        if (state.FrozenGrid is not null)
+            ApplyFreezeColumnDivider(state.FrozenGrid, 0);
         ApplyFreezeLayout(state); // 拆冻结行 grid，主 grid 回到全表 DefaultView
         if (state.FilePath is not null)
             FreezeConfig.ClearFreeze(Path.GetFileName(state.FilePath), state.SheetName);
@@ -1216,8 +1356,9 @@ public partial class MainWindow
                 state.FrozenGrid = null;
                 state.FrozenScroll = null;
             }
-            // 主 grid 回到全表（LCV→DefaultView）
+            // 主 grid 回到全表（LCV→DefaultView），恢复列头
             state.MainGrid.ItemsSource = table.DefaultView;
+            state.MainGrid.HeadersVisibility = DataGridHeadersVisibility.All;
             SetFilterBoxesReadOnly(state.MainGrid, isReadOnly: false);
             return;
         }
@@ -1232,12 +1373,10 @@ public partial class MainWindow
             WireFreezeSync(state);
         }
 
-        // 两个 grid 各自的 LCV：按行号谓词切分（IndexOf 是 O(log n)，60k 行约 1M 次操作，可接受）。
-        // 主 grid 继续包 table.DefaultView，故列头筛选 RowFilter 仍生效；冻结行 grid 包一个独立
-        // 的干净 DataView，不受列筛选影响（冻结行始终可见，符合"冻结"语义）。
-        state.MainGrid.ItemsSource = MakeMainView(table, n);
-        state.FrozenGrid.ItemsSource = MakeFrozenView(table, n);
-        SetFilterBoxesReadOnly(state.MainGrid, isReadOnly: true);
+        // 冻结时：冻结行 grid 显示列头（在顶部），主 grid 隐藏列头（避免重复）
+        state.MainGrid.HeadersVisibility = DataGridHeadersVisibility.Row; // 主 grid 不显示列头（冻结行 grid 已显示）
+        state.MainGrid.ItemsSource = MakeMainView(state);
+        state.FrozenGrid.ItemsSource = MakeFrozenView(state);
         SyncFrozenToMain(state);
     }
 
@@ -1256,19 +1395,46 @@ public partial class MainWindow
         }
     }
 
-    private static ListCollectionView MakeMainView(DataTable table, int n)
+    private static ListCollectionView MakeMainView(SheetState state)
     {
+        var table = state.Table;
+        var n = state.FrozenRows;
         var view = new ListCollectionView(table.DefaultView);
-        view.Filter = obj => table.Rows.IndexOf(((DataRowView)obj).Row) >= n;
+        view.Filter = obj =>
+        {
+            var row = table.Rows.IndexOf(((DataRowView)obj).Row);
+            if (row < n)
+                return false; // 主 grid 不显示冻结行
+            return MatchesFilter(state, (DataRowView)obj);
+        };
         return view;
     }
 
-    private static ListCollectionView MakeFrozenView(DataTable table, int n)
+    private static ListCollectionView MakeFrozenView(SheetState state)
     {
+        var table = state.Table;
+        var n = state.FrozenRows;
         var fresh = new DataView(table);
         var view = new ListCollectionView(fresh);
+        // 冻结行始终全部显示，不参与筛选
         view.Filter = obj => table.Rows.IndexOf(((DataRowView)obj).Row) < n;
         return view;
+    }
+
+    /// <summary>
+    /// 冻结行模式下 LCV 的筛选谓词：列内容包含关键字（空关键字=全显示）。
+    /// </summary>
+    private static bool MatchesFilter(SheetState state, DataRowView view)
+    {
+        if (string.IsNullOrEmpty(state.FilterKeyword))
+            return true;
+        if (string.IsNullOrEmpty(state.FilterColumnName))
+            return true;
+        var colIndex = state.Table.Columns.IndexOf(state.FilterColumnName);
+        if (colIndex < 0)
+            return true;
+        var val = view[colIndex]?.ToString() ?? string.Empty;
+        return val.Contains(state.FilterKeyword, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -1283,11 +1449,11 @@ public partial class MainWindow
             CanUserAddRows = false,
             CanUserDeleteRows = false,
             CanUserSortColumns = false,
-            CanUserResizeColumns = false,
+            CanUserResizeColumns = true,
             CanUserReorderColumns = false,
             EnableRowVirtualization = false, // 仅 N 行，关虚拟化避免行号头错位
             SelectionUnit = DataGridSelectionUnit.Cell,
-            HeadersVisibility = DataGridHeadersVisibility.All,
+            HeadersVisibility = DataGridHeadersVisibility.All, // 冻结行 grid 显示列头（始终置顶，可调列宽）
             GridLinesVisibility = DataGridGridLinesVisibility.All,
             HorizontalGridLinesBrush = GridLineBrush,
             VerticalGridLinesBrush = GridLineBrush,
@@ -1384,10 +1550,14 @@ public partial class MainWindow
         var main = state.MainGrid;
         if (state.FrozenGrid is not { } fg)
             return;
+        // 双向同步：谁变了就同步给对方
         for (var i = 0; i < main.Columns.Count && i < fg.Columns.Count; i++)
         {
             if (fg.Columns[i].Width != main.Columns[i].Width)
-                fg.Columns[i].Width = main.Columns[i].Width;
+            {
+                // 以较大变化方为准（避免来回设）
+                main.Columns[i].Width = fg.Columns[i].Width;
+            }
         }
         if (fg.FrozenColumnCount != main.FrozenColumnCount)
             fg.FrozenColumnCount = main.FrozenColumnCount;
@@ -1443,15 +1613,31 @@ public partial class MainWindow
     {
         // 先从旧 grid 卸载事件
         if (_spotlightGrid is not null)
+        {
             _spotlightGrid.SelectedCellsChanged -= OnSpotlightSelectionChanged;
+            _spotlightGrid.RemoveHandler(
+                ScrollViewer.ScrollChangedEvent,
+                (ScrollChangedEventHandler)OnSpotlightScrollChanged
+            );
+        }
         ClearSpotlight();
 
         _spotlightGrid = CurrentMainGrid;
         if (_spotlightGrid is not null)
         {
             _spotlightGrid.SelectedCellsChanged += OnSpotlightSelectionChanged;
+            _spotlightGrid.AddHandler(
+                ScrollViewer.ScrollChangedEvent,
+                (ScrollChangedEventHandler)OnSpotlightScrollChanged
+            );
             ApplySpotlight();
         }
+    }
+
+    private void OnSpotlightScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        // 滚动后重新触发聚光灯（虚拟化下可见行变了，要重新高亮）
+        ApplySpotlight();
     }
 
     private void OnSpotlightSelectionChanged(object sender, SelectedCellsChangedEventArgs e)
@@ -1484,6 +1670,7 @@ public partial class MainWindow
 
     /// <summary>
     /// 高亮选中行 + 选中列（只处理可见行，虚拟化安全）。
+    /// 冻结行模式下同时处理冻结行 grid 的列高亮。
     /// </summary>
     private void HighlightSpotlight(
         IReadOnlySet<int> selectedRows,
@@ -1493,23 +1680,69 @@ public partial class MainWindow
         if (_spotlightGrid is null)
             return;
 
-        for (var i = 0; i < _spotlightGrid.Items.Count; i++)
-        {
-            if (
-                _spotlightGrid.ItemContainerGenerator.ContainerFromIndex(i)
-                is not DataGridRow rowContainer
-            )
-                continue; // 虚拟化下不可见行返回 null，跳
+        // 主 grid 高亮
+        HighlightSpotlightInGrid(_spotlightGrid, selectedRows, selectedColumns);
 
-            foreach (var col in _spotlightGrid.Columns)
+        // 冻结行 grid 同步列高亮（行高亮不需要，冻结行不参与选中）
+        if (CurrentSheetState?.FrozenGrid is { } frozenGrid)
+            HighlightSpotlightInGrid(frozenGrid, new HashSet<int>(), selectedColumns);
+    }
+
+    private static void HighlightSpotlightInGrid(
+        DataGrid grid,
+        IReadOnlySet<int> selectedRows,
+        IReadOnlySet<int> selectedColumns
+    )
+    {
+        // 找选中区域的行列范围
+        if (selectedRows.Count is 0 || selectedColumns.Count is 0)
+            return;
+
+        var minRow = selectedRows.Min();
+        var maxRow = selectedRows.Max();
+        var minCol = selectedColumns.Min();
+        var maxCol = selectedColumns.Max();
+
+        for (var i = 0; i < grid.Items.Count; i++)
+        {
+            if (grid.ItemContainerGenerator.ContainerFromIndex(i) is not DataGridRow rowContainer)
+                continue;
+
+            foreach (var col in grid.Columns)
             {
                 if (col.GetCellContent(rowContainer)?.Parent is not DataGridCell cell)
                     continue;
-                if (
-                    (selectedRows.Contains(i) || selectedColumns.Contains(col.DisplayIndex))
-                    && cell.Background != DirtyCellBrush
-                )
-                    cell.Background = SpotlightBrush;
+
+                var isSelRow = selectedRows.Contains(i);
+                var isSelCol = selectedColumns.Contains(col.DisplayIndex);
+
+                // 选中行列的其他单元格：半透明背景色
+                if (!isSelRow || !isSelCol)
+                {
+                    if ((isSelRow || isSelCol) && cell.Background != DirtyCellBrush)
+                        cell.Background = SpotlightRowColBrush;
+                    continue;
+                }
+
+                // 选中区域内部单元格：只在边缘画亮黄色边框（外框效果）
+                var isTopEdge = i == minRow;
+                var isBottomEdge = i == maxRow;
+                var isLeftEdge = col.DisplayIndex == minCol;
+                var isRightEdge = col.DisplayIndex == maxCol;
+
+                var thickness = new Thickness(
+                    isLeftEdge ? 2 : 0,
+                    isTopEdge ? 2 : 0,
+                    isRightEdge ? 2 : 0,
+                    isBottomEdge ? 2 : 0
+                );
+
+                // 只在边缘画边框，避免每个单元格都框
+                if (isTopEdge || isBottomEdge || isLeftEdge || isRightEdge)
+                {
+                    cell.BorderBrush = SpotlightBorderBrush;
+                    cell.BorderThickness = thickness;
+                }
             }
         }
     }
@@ -1518,19 +1751,29 @@ public partial class MainWindow
     {
         if (_spotlightGrid is null)
             return;
-        for (var i = 0; i < _spotlightGrid.Items.Count; i++)
+        ClearSpotlightInGrid(_spotlightGrid);
+
+        // 冻结行 grid 也清除
+        if (CurrentSheetState?.FrozenGrid is { } frozenGrid)
+            ClearSpotlightInGrid(frozenGrid);
+    }
+
+    private static void ClearSpotlightInGrid(DataGrid grid)
+    {
+        for (var i = 0; i < grid.Items.Count; i++)
         {
-            if (
-                _spotlightGrid.ItemContainerGenerator.ContainerFromIndex(i)
-                is not DataGridRow rowContainer
-            )
+            if (grid.ItemContainerGenerator.ContainerFromIndex(i) is not DataGridRow rowContainer)
                 continue;
-            foreach (var col in _spotlightGrid.Columns)
+            foreach (var col in grid.Columns)
             {
-                if (
-                    col.GetCellContent(rowContainer)?.Parent is DataGridCell cell
-                    && cell.Background == SpotlightBrush
-                )
+                if (col.GetCellContent(rowContainer)?.Parent is not DataGridCell cell)
+                    continue;
+                if (cell.BorderBrush == SpotlightBorderBrush)
+                {
+                    cell.ClearValue(DataGridCell.BorderBrushProperty);
+                    cell.ClearValue(DataGridCell.BorderThicknessProperty);
+                }
+                if (cell.Background == SpotlightRowColBrush)
                     cell.ClearValue(DataGridCell.BackgroundProperty);
             }
         }
@@ -1784,6 +2027,16 @@ public partial class MainWindow
         if (SpotlightToggle.IsChecked == true)
             ApplySpotlightToCurrentGrid();
 
+        // 切 tab 时刷新列筛选下拉 + 清空筛选输入
+        FilterColumn.Items.Clear();
+        if (selectedState is { } st)
+        {
+            foreach (var col in st.Table.Columns)
+                FilterColumn.Items.Add(col.ToString());
+            FilterColumn.SelectedIndex = 0;
+            FilterText.Text = string.Empty;
+        }
+
         if (selectedState is not null)
         {
             StatusText.Text =
@@ -1870,5 +2123,9 @@ public partial class MainWindow
         public ScrollViewer? FrozenScroll { get; set; }
         public int FrozenRows { get; set; }
         public int FrozenColumns { get; set; }
+
+        // ── 筛选（冻结行模式下 LCV 用，非冻结走 DataView.RowFilter）──
+        public string FilterColumnName { get; set; } = string.Empty;
+        public string FilterKeyword { get; set; } = string.Empty;
     }
 }
