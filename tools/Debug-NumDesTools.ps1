@@ -50,6 +50,9 @@ if (-not $NoBuild) {
 
 # Release 只负责构建和打包，不启动 Excel。
 if ($Configuration -eq "Release") {
+    Write-Host "[2/2] Packing ..." -ForegroundColor Cyan
+    & $PackScript
+    if ($LASTEXITCODE -ne 0) { throw "Pack failed (ReNamePack.bat)" }
     Write-Host "Release build and pack completed. Excel was not started." -ForegroundColor Green
     exit 0
 }
