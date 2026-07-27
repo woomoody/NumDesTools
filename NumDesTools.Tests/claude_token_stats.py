@@ -3,7 +3,7 @@ Claude Code Token 使用统计 — 生成 HTML 报告并自动用浏览器打开
 按实际使用的模型分别计价（$/MTok）
 支持 --date 参数筛选日期范围
 """
-import os, json, sys, subprocess, webbrowser, argparse
+import os, json, sys, subprocess, webbrowser, argparse, sqlite3
 from collections import defaultdict
 from datetime import datetime, date, timedelta
 
@@ -30,13 +30,29 @@ else:
 
 # ── 模型价格（每天从 JSON 刷新一次）──
 _PRICE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model_prices.json')
+_SNAP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'token_stats_history.json')
 
 _DEFAULT_PRICES = [
-    {'prefix': 'claude-fable',   'input': 10.00, 'output': 50.00, 'cache_read': 1.00,  'cache_write': 12.50},
-    {'prefix': 'claude-mythos',  'input': 10.00, 'output': 50.00, 'cache_read': 1.00,  'cache_write': 12.50},
-    {'prefix': 'claude-opus-4',  'input':  5.00, 'output': 25.00, 'cache_read': 0.50,  'cache_write':  6.25},
-    {'prefix': 'claude-sonnet-4','input':  3.00, 'output': 15.00, 'cache_read': 0.30,  'cache_write':  3.75},
-    {'prefix': 'claude-haiku-4', 'input':  1.00, 'output':  5.00, 'cache_read': 0.10,  'cache_write':  1.25},
+    # Anthropic 官方价（$/MTok，prefix 顺序匹配——精确在前，避免 opus-4-1 被 opus-4 误匹配）
+    {'prefix': 'claude-fable',    'input': 10.00, 'output': 50.00, 'cache_read': 1.00,  'cache_write': 12.50},
+    {'prefix': 'claude-mythos',   'input': 10.00, 'output': 50.00, 'cache_read': 1.00,  'cache_write': 12.50},
+    {'prefix': 'claude-opus-4-1', 'input': 15.00, 'output': 75.00, 'cache_read': 1.50,  'cache_write': 18.75},  # 4.1 老版
+    {'prefix': 'claude-opus-4',   'input':  5.00, 'output': 25.00, 'cache_read': 0.50,  'cache_write':  6.25},  # 4.5+ (4-5/4-6/4-7/4-8)
+    {'prefix': 'claude-opus-5',   'input':  5.00, 'output': 25.00, 'cache_read': 0.50,  'cache_write':  6.25},
+    {'prefix': 'claude-sonnet-5', 'input':  2.00, 'output': 10.00, 'cache_read': 0.20,  'cache_write':  2.50},  # 9/1 前促销价
+    {'prefix': 'claude-sonnet-4', 'input':  3.00, 'output': 15.00, 'cache_read': 0.30,  'cache_write':  3.75},
+    {'prefix': 'claude-haiku-4',  'input':  1.00, 'output':  5.00, 'cache_read': 0.10,  'cache_write':  1.25},
+    {'prefix': 'claude-haiku-3',  'input':  0.80, 'output':  4.00, 'cache_read': 0.08,  'cache_write':  1.00},
+    # ── 以下价格：input/output 用户填实价；cache 按各家规则估（无官方数据）──
+    # DeepSeek/GLM/Kimi: cache_read≈0.1×input, cache_write≈1.25×input；GPT: cache_read≈0.5×input, cache_write≈1.25×input
+    {'prefix': 'glm-5.2',           'input': 0.74, 'output': 2.47,  'cache_read': 0.07, 'cache_write': 0.93},
+    {'prefix': 'glm-5.1',           'input': 0.57, 'output': 2.29,  'cache_read': 0.06, 'cache_write': 0.71},
+    {'prefix': 'deepseek-v4-pro',   'input': 1.06, 'output': 2.02, 'cache_read': 0.11, 'cache_write': 1.06},
+    {'prefix': 'deepseek-v4-flash', 'input': 0.09, 'output': 0.18, 'cache_read': 0.01, 'cache_write': 0.09},
+    {'prefix': 'gpt-5.6-sol',       'input': 5.00, 'output': 30.00,'cache_read': 2.50, 'cache_write': 6.25},
+    {'prefix': 'gpt-5.4-mini',      'input': 0.75, 'output': 4.50, 'cache_read': 0.38, 'cache_write': 0.94},
+    {'prefix': 'gpt-5.3-codex',     'input': 1.75, 'output': 14.00,'cache_read': 0.88, 'cache_write': 2.19},
+    {'prefix': 'kimi',              'input': 2.94, 'output': 14.71,'cache_read': 0.29, 'cache_write': 3.68},
 ]
 _DEFAULT_FALLBACK = {'input': 5.00, 'output': 25.00, 'cache_read': 0.50, 'cache_write': 6.25}
 
@@ -47,12 +63,17 @@ def _load_prices():
             with open(_PRICE_FILE, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             if data.get('date') == ts:
+                pu = data.get('price_updated') or data.get('date')
+                try:
+                    age = (today - date.fromisoformat(pu)).days
+                    if age >= 7: print(f"  [提醒] 价格表已 {age} 天未更新，考虑更新 _DEFAULT_PRICES（搜官方价后改此处）")
+                except: pass
                 return data['prices'], data['fallback']
         except: pass
     prices = _DEFAULT_PRICES[:]
     fallback = dict(_DEFAULT_FALLBACK)
     with open(_PRICE_FILE, 'w', encoding='utf-8') as f:
-        json.dump({'date': ts, 'prices': prices, 'fallback': fallback}, f, ensure_ascii=False, indent=2)
+        json.dump({'date': ts, 'price_updated': ts, 'prices': prices, 'fallback': fallback}, f, ensure_ascii=False, indent=2)
     print(f"  prices updated ({ts}), {len(prices)} models")
     return prices, fallback
 
@@ -70,6 +91,157 @@ def calc_cost(inp, out, cr, cw, model=''):
     pi, po, pcr, pcw = _model_price(model)
     return (inp * pi + out * po + cr * pcr + cw * pcw) / 1_000_000
 
+def _load_snap():
+    """读完整快照（含 frozen_date）。"""
+    if not os.path.exists(_SNAP_FILE): return None
+    try:
+        with open(_SNAP_FILE, 'r', encoding='utf-8') as f: return json.load(f)
+    except Exception: return None
+
+def _frozen_unix(frozen_str):
+    """frozen_date(YYYY-MM-DD) -> unix 秒（UTC 当天 00:00）。"""
+    from datetime import timezone
+    try: return datetime.fromisoformat(frozen_str).replace(tzinfo=timezone.utc).timestamp()
+    except: return 0
+
+def _collect_cc(frozen_str):
+    """CC: ~/.claude/projects jsonl（增量：mtime 筛 + 行 timestamp>frozen）。"""
+    records = []
+    mtime_cut = _frozen_unix(frozen_str) - 86400
+    for BASE, prefix in BASES:
+        if not os.path.isdir(BASE): continue
+        for proj in sorted(os.listdir(BASE)):
+            pp = os.path.join(BASE, proj)
+            if not os.path.isdir(pp): continue
+            proj_key = f"{prefix}{proj}"
+            for dp, _, files in os.walk(pp):
+                if os.sep + 'subagents' in dp or os.sep + 'workflows' in dp: continue
+                for f in sorted(files):
+                    if not f.endswith('.jsonl'): continue
+                    fp = os.path.join(dp, f)
+                    try:
+                        if os.path.getmtime(fp) < mtime_cut: continue
+                        with open(fp, 'r', encoding='utf-8') as fh:
+                            for line in fh:
+                                line = line.strip()
+                                if not line: continue
+                                try: obj = json.loads(line)
+                                except: continue
+                                ts = obj.get('timestamp') or obj.get('ts') or obj.get('created_at')
+                                if not ts:
+                                    msg = obj.get('message', {})
+                                    if isinstance(msg, dict): ts = msg.get('timestamp') or msg.get('created_at')
+                                if not ts: continue
+                                try:
+                                    date_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d') if isinstance(ts, (int, float)) else str(ts)[:10]
+                                except: continue
+                                if date_str <= frozen_str: continue
+                                usage = obj.get('usage') or (isinstance(obj.get('message'), dict) and obj['message'].get('usage'))
+                                if not isinstance(usage, dict): continue
+                                inp = usage.get('input_tokens',0) or 0
+                                out = usage.get('output_tokens',0) or 0
+                                cr  = usage.get('cache_read_input_tokens',0) or 0
+                                cw  = usage.get('cache_creation_input_tokens',0) or 0
+                                if inp+out+cr+cw == 0: continue
+                                if out < 200 and cr == 0 and cw == 0: continue
+                                model = (obj.get('model') or (obj.get('message') or {}).get('model') or '<empty>')
+                                records.append((date_str, model, inp, out, cr, cw, proj_key))
+                    except Exception as e:
+                        print(f'  [warn] {fp}: {e}')
+    return records
+
+def _collect_hermes(frozen_str):
+    """hermes: state.db sessions 表（started_at Unix 浮点秒，WHERE >frozen_unix）。"""
+    records = []
+    db = os.path.join(os.path.expanduser('~'), 'AppData', 'Local', 'hermes', 'state.db')
+    if not os.path.exists(db): return records
+    fu = _frozen_unix(frozen_str)
+    try:
+        c = sqlite3.connect(db)
+        for model, ts, inp, out, cr, cw, cwd in c.execute(
+            "SELECT model, started_at, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cwd FROM sessions WHERE started_at > ?", (fu,)):
+            if not model or not ts: continue
+            try: date_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+            except: continue
+            if date_str <= frozen_str: continue
+            inp, out, cr, cw = inp or 0, out or 0, cr or 0, cw or 0
+            if inp+out+cr+cw == 0: continue
+            records.append((date_str, model, inp, out, cr, cw, f'[hermes]{cwd or "None"}'))
+    except Exception as e: print(f'  [warn] hermes db: {e}')
+    return records
+
+def _collect_omp(frozen_str):
+    """omp: ~/.omp/agent/sessions jsonl（message.usage 简写 input/output/cacheRead/cacheWrite）。"""
+    records = []
+    base = os.path.expanduser('~/.omp/agent/sessions')
+    if not os.path.isdir(base): return records
+    mtime_cut = _frozen_unix(frozen_str) - 86400
+    for dp, _, files in os.walk(base):
+        for f in sorted(files):
+            if not f.endswith('.jsonl'): continue
+            fp = os.path.join(dp, f)
+            try:
+                if os.path.getmtime(fp) < mtime_cut: continue
+                with open(fp, 'r', encoding='utf-8') as fh:
+                    for line in fh:
+                        line = line.strip()
+                        if not line: continue
+                        try: obj = json.loads(line)
+                        except: continue
+                        msg = obj.get('message')
+                        if not isinstance(msg, dict): continue
+                        u = msg.get('usage')
+                        if not isinstance(u, dict): continue
+                        inp = u.get('input') or u.get('input_tokens') or u.get('prompt_tokens') or 0
+                        out = u.get('output') or u.get('output_tokens') or u.get('completion_tokens') or 0
+                        cr = u.get('cacheRead') or u.get('cache_read_input_tokens') or u.get('cache_read_tokens') or 0
+                        cw = u.get('cacheWrite') or u.get('cache_creation_input_tokens') or u.get('cache_write_tokens') or 0
+                        if inp+out+cr+cw == 0: continue
+                        model = msg.get('model') or obj.get('model') or '<empty>'
+                        ts = obj.get('timestamp')
+                        date_str = str(ts)[:10] if ts else ''
+                        if not date_str or date_str <= frozen_str: continue
+                        records.append((date_str, model, inp, out, cr, cw, '[omp]'))
+            except Exception as e: print(f'  [warn] {fp}: {e}')
+    return records
+
+def _collect_opencode(frozen_str):
+    """opencode: opencode.db session 表（time_created Unix 毫秒 /1000，model 是 JSON 字符串取 id）。"""
+    records = []
+    db = os.path.join(os.path.expanduser('~'), '.local', 'share', 'opencode', 'opencode.db')
+    if not os.path.exists(db): return records
+    fu = _frozen_unix(frozen_str)
+    try:
+        c = sqlite3.connect(db)
+        for m_json, tc, inp, out, cr, cw, d in c.execute(
+            "SELECT model, time_created, tokens_input, tokens_output, tokens_cache_read, tokens_cache_write, directory FROM session WHERE time_created/1000.0 > ?", (fu,)):
+            if not m_json or not tc: continue
+            try: model = json.loads(m_json).get('id', m_json) if m_json.startswith('{') else m_json
+            except: model = m_json
+            try: date_str = datetime.fromtimestamp(tc/1000.0).strftime('%Y-%m-%d')
+            except: continue
+            if date_str <= frozen_str: continue
+            inp, out, cr, cw = inp or 0, out or 0, cr or 0, cw or 0
+            if inp+out+cr+cw == 0: continue
+            records.append((date_str, model, inp, out, cr, cw, f'[opencode]{d or "None"}'))
+    except Exception as e: print(f'  [warn] opencode db: {e}')
+    return records
+
+def _save_snap(daily, model_daily, proj_daily, frozen_date):
+    tmp = _SNAP_FILE + '.tmp'
+    try:
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump({'daily': dict(daily), 'model_daily': {d: dict(md) for d, md in model_daily.items()},
+                       'proj_daily': {p: dict(pd) for p, pd in proj_daily.items() if pd},
+                       'frozen_date': frozen_date, 'updated': datetime.now().isoformat()},
+                      f, ensure_ascii=False)
+        os.replace(tmp, _SNAP_FILE)
+    except Exception as e:
+        print(f'  [warn] 快照保存失败: {e}')
+        if os.path.exists(tmp):
+            try: os.remove(tmp)
+            except OSError: pass
+
 def cn_num(n):
     if n >= 1_0000_0000: return f'{n/1_0000_0000:.2f}亿'
     if n >= 1_0000:      return f'{n/1_0000:.1f}万'
@@ -77,7 +249,7 @@ def cn_num(n):
 
 BASES = [(os.path.expanduser(r'~/.claude/projects'), '[local]')]
 
-# ── 数据采集 ──────────────────────────────────────────────────────────────────
+# ── 数据采集（4 源统一，按 model 不分 harness）+ 增量 frozen_date ────────────────
 _zero = lambda: {'input':0,'output':0,'cache_read':0,'cache_write':0,'cost':0.0}
 daily       = defaultdict(_zero)
 monthly     = defaultdict(_zero)
@@ -85,56 +257,55 @@ proj_daily  = defaultdict(lambda: defaultdict(_zero))
 model_daily = defaultdict(lambda: defaultdict(_zero))  # model_daily[date][model]
 total_msgs = skipped = 0
 
-for BASE, prefix in BASES:
-    if not os.path.isdir(BASE): continue
-    for proj in sorted(os.listdir(BASE)):
-        proj_path = os.path.join(BASE, proj)
-        if not os.path.isdir(proj_path): continue
-        proj_key = f"{prefix}{proj}"
-        for dirpath, _, files in os.walk(proj_path):
-            if os.sep + 'subagents' in dirpath or os.sep + 'workflows' in dirpath:
-                continue
-            for f in sorted(files):
-                if not f.endswith('.jsonl'): continue
-                fpath = os.path.join(dirpath, f)
-                try:
-                    with open(fpath, 'r', encoding='utf-8') as fp:
-                        for line in fp:
-                            line = line.strip()
-                            if not line: continue
-                            try: obj = json.loads(line)
-                            except: skipped += 1; continue
-                            ts = obj.get('timestamp') or obj.get('ts') or obj.get('created_at')
-                            if not ts:
-                                msg = obj.get('message', {})
-                                if isinstance(msg, dict): ts = msg.get('timestamp') or msg.get('created_at')
-                            if not ts: continue
-                            try:
-                                date_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d') if isinstance(ts, (int, float)) else str(ts)[:10]
-                            except: continue
-                            usage = obj.get('usage') or (isinstance(obj.get('message'), dict) and obj['message'].get('usage'))
-                            if not isinstance(usage, dict): continue
-                            inp = usage.get('input_tokens',0) or 0
-                            out = usage.get('output_tokens',0) or 0
-                            cr  = usage.get('cache_read_input_tokens',0) or 0
-                            cw  = usage.get('cache_creation_input_tokens',0) or 0
-                            if inp+out+cr+cw == 0: continue
-                            if out < 200 and cr == 0 and cw == 0:
-                                skipped += 1; continue
-                            model = (obj.get('model') or
-                                     (obj.get('message') or {}).get('model') or '<empty>')
-                            cost  = calc_cost(inp, out, cr, cw, model)
-                            total_msgs += 1
-                            for d in (daily[date_str], monthly[date_str[:7]],
-                                      proj_daily[proj_key][date_str],
-                                      model_daily[date_str][model]):
-                                d['input']      += inp
-                                d['output']     += out
-                                d['cache_read'] += cr
-                                d['cache_write']+= cw
-                                d['cost']       += cost
-                except Exception as e:
-                    print(f'  [warn] {fpath}: {e}')
+snap = _load_snap()
+# frozen_cc = CC 在快照里的最后日期（proj_daily [local] 项目 max），不用 frozen_date——防其他源拉高 daily max 导致 CC 漏扫边界
+if snap:
+    cc_dates = [d for p, pd in (snap.get('proj_daily') or {}).items() if p.startswith('[local]') for d in pd]
+    frozen_cc = max(cc_dates) if cc_dates else '1970-01-01'
+else:
+    frozen_cc = '1970-01-01'
+# 其他源：有 frozen_date 用(增量)，首次无则全量
+frozen_other = (snap.get('frozen_date') if snap else None) or '1970-01-01'
+print(f"  frozen: cc={frozen_cc} other={frozen_other}")
+
+for fn, fz in ((_collect_cc, frozen_cc), (_collect_hermes, frozen_other), (_collect_omp, frozen_other), (_collect_opencode, frozen_other)):
+    for date_str, model, inp, out, cr, cw, proj_key in fn(fz):
+        cost = calc_cost(inp, out, cr, cw, model)
+        total_msgs += 1
+        for d in (daily[date_str], monthly[date_str[:7]], proj_daily[proj_key][date_str], model_daily[date_str][model]):
+            d['input'] += inp; d['output'] += out; d['cache_read'] += cr; d['cache_write'] += cw; d['cost'] += cost
+
+# ── 合并历史快照（累加：snap 不同源 + fresh 不同源不重复；frozen 控制各源不重扫同日期）──
+if snap:
+    for d, sv in snap.get('daily', {}).items():
+        dv = daily[d]
+        for k in ('input','output','cache_read','cache_write','cost'): dv[k] += sv.get(k, 0)
+    for d, md in snap.get('model_daily', {}).items():
+        for m, v in md.items():
+            mv = model_daily[d][m]
+            for k in ('input','output','cache_read','cache_write','cost'): mv[k] += v.get(k, 0)
+    for proj, pd in snap.get('proj_daily', {}).items():
+        for d, v in pd.items():
+            pv = proj_daily[proj][d]
+            for k in ('input','output','cache_read','cache_write','cost'): pv[k] += v.get(k, 0)
+
+# monthly 从合并后 daily 重算（含历史）
+monthly.clear()
+for d, v in daily.items():
+    m = monthly[d[:7]]
+    m['input'] += v['input']; m['output'] += v['output']
+    m['cache_read'] += v['cache_read']; m['cache_write'] += v['cache_write']
+    m['cost'] += v['cost']
+
+# ── 固化：<today 的进快照（昨天及以前已稳定），frozen_date=today-1 ──
+today_iso = today.isoformat()
+frozen_new = (today - timedelta(days=1)).isoformat()
+new_daily = {d: v for d, v in daily.items() if d < today_iso}
+new_md = {d: dict(md) for d, md in model_daily.items() if d < today_iso}
+new_pd = {p: {d: v for d, v in pd.items() if d < today_iso} for p, pd in proj_daily.items()}
+new_pd = {p: pd for p, pd in new_pd.items() if pd}
+_save_snap(new_daily, new_md, new_pd, frozen_new)
+print(f"  固化到 {frozen_new}（{len(new_daily)} 天历史进快照）")
 
 # ── 汇总计算 ──────────────────────────────────────────────────────────────────
 grand_in = grand_out = grand_cr = grand_cw = grand_cost = 0
@@ -285,6 +456,9 @@ _model_daily_plain = {
     for d, md in model_daily.items()
 }
 model_daily_js = _json.dumps(_model_daily_plain)
+_daily_plain = {d: {'input': v['input'], 'output': v['output'], 'cache_read': v['cache_read'], 'cache_write': v['cache_write'], 'cost': round(v['cost'], 4)} for d, v in daily.items()}
+daily_js = _json.dumps(_daily_plain)
+_today_iso = today.isoformat()
 _model_price_map = {m: dict(zip(['in','out','cr','cw'], _model_price(m))) for m in {mm for _md in _model_daily_plain.values() for mm in _md}}
 model_price_js = _json.dumps(_model_price_map)
 _all_dates_sorted = sorted(_model_daily_plain.keys())
@@ -292,46 +466,62 @@ _date_min = _all_dates_sorted[0] if _all_dates_sorted else today.isoformat()
 _date_max = _all_dates_sorted[-1] if _all_dates_sorted else today.isoformat()
 model_date_js = r'''const MODEL_DAILY = ''' + model_daily_js + r''';
 const MODEL_PRICE = ''' + model_price_js + r''';
-let mdChart = null;
+const DAILY = ''' + daily_js + r''';
+const TODAY = "''' + _today_iso + r'''";
+const DATE_MIN = "''' + _date_min + r'''";
+const DATE_MAX = "''' + _date_max + r'''";
+let mdChart=null, barChart=null, crChart=null, costChart=null;
+const gridColor='rgba(255,255,255,0.06)', tickColor='#666';
 function fmtN(n){ if(n>=1e8) return (n/1e8).toFixed(2)+'亿'; if(n>=1e4) return (n/1e4).toFixed(1)+'万'; return n.toLocaleString(); }
+function offsetDate(d,n){ var dt=new Date(d+'T00:00:00Z'); dt.setUTCDate(dt.getUTCDate()+n); return dt.toISOString().substring(0,10); }
+function rangeKeys(start,end){ return Object.keys(DAILY).filter(function(d){return d>=start&&d<=end;}).sort(); }
 function renderMdTable(start, end, sortBy){
-  var agg = {};
-  Object.keys(MODEL_DAILY).forEach(function(d){
-    if (d < start || d > end) return;
-    Object.keys(MODEL_DAILY[d]).forEach(function(m){
-      var v = MODEL_DAILY[d][m];
-      if (!agg[m]) agg[m] = {input:0, output:0, cache_read:0, cache_write:0, cost:0};
-      agg[m].input += v.input; agg[m].output += v.output;
-      agg[m].cache_read += v.cache_read; agg[m].cache_write += v.cache_write; agg[m].cost += v.cost;
-    });
-  });
-  var arr = Object.keys(agg).map(function(m){ var x = agg[m]; x.m = m; x.quota = x.input+x.output+x.cache_read+x.cache_write; return x; });
-  arr = arr.filter(function(x){ return x.input+x.output+x.cache_read+x.cache_write > 0; });
-  arr.sort(function(a,b){ return (b[sortBy] || 0) - (a[sortBy] || 0); });
-  var tbody = document.getElementById('mdTbody');
-  if (arr.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#666;">该时间段无数据</td></tr>';
-  } else {
-    tbody.innerHTML = arr.map(function(x){
-      return '<tr><td>' + x.m + '</td><td title="in/out $/MTok">' + (MODEL_PRICE[x.m] ? (MODEL_PRICE[x.m].in.toFixed(2)+'/'+MODEL_PRICE[x.m].out.toFixed(2)) : '-') + '</td><td>' + fmtN(x.input) + '</td><td>' + fmtN(x.output) + '</td><td>' + fmtN(x.cache_read) + '</td><td>' + fmtN(x.cache_write) + '</td><td>' + fmtN(x.quota) + '</td><td>$' + x.cost.toFixed(2) + '</td></tr>';
-    }).join('');
-  }
-  document.getElementById('mdTitle').textContent = '📅 ' + start + ' ~ ' + end + ' · 按模型消耗 Token';
-  if (mdChart) mdChart.destroy();
-  var ctx = document.getElementById('mdChart').getContext('2d');
-  mdChart = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: arr.map(function(x){return x.m;}), datasets: [{ label: '费用 USD', data: arr.map(function(x){return +x.cost.toFixed(2);}), backgroundColor: 'rgba(245,166,35,0.7)' }] },
-    options: { responsive: true, plugins: { legend: { labels: { color: '#aaa' } } },
-      scales: { x: { ticks: { color: '#666', maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.06)' } },
-        y: { ticks: { color: '#666', callback: function(v){return '$'+v;} }, grid: { color: 'rgba(255,255,255,0.06)' } } } }
-  });
+  var agg={};
+  rangeKeys(start,end).forEach(function(d){ Object.keys(MODEL_DAILY[d]||{}).forEach(function(m){ var v=MODEL_DAILY[d][m]; if(!agg[m])agg[m]={input:0,output:0,cache_read:0,cache_write:0,cost:0}; agg[m].input+=v.input;agg[m].output+=v.output;agg[m].cache_read+=v.cache_read;agg[m].cache_write+=v.cache_write;agg[m].cost+=v.cost; }); });
+  var arr=Object.keys(agg).map(function(m){var x=agg[m];x.m=m;x.quota=x.input+x.output+x.cache_read+x.cache_write;return x;}).filter(function(x){return x.quota>0;});
+  arr.sort(function(a,b){return (b[sortBy]||0)-(a[sortBy]||0);});
+  var tbody=document.getElementById('mdTbody');
+  tbody.innerHTML = arr.length===0 ? '<tr><td colspan="8" style="text-align:center;color:#666;">该时间段无数据</td></tr>' : arr.map(function(x){ return '<tr><td>'+x.m+'</td><td>'+(MODEL_PRICE[x.m]?(MODEL_PRICE[x.m].in.toFixed(2)+'/'+MODEL_PRICE[x.m].out.toFixed(2)):'-')+'</td><td>'+fmtN(x.input)+'</td><td>'+fmtN(x.output)+'</td><td>'+fmtN(x.cache_read)+'</td><td>'+fmtN(x.cache_write)+'</td><td>'+fmtN(x.quota)+'</td><td>$'+x.cost.toFixed(2)+'</td></tr>'; }).join('');
+  document.getElementById('mdTitle').textContent='📅 '+start+' ~ '+end+' · 按模型消耗 Token';
+  if(mdChart)mdChart.destroy();
+  mdChart=new Chart(document.getElementById('mdChart'),{type:'bar',data:{labels:arr.map(function(x){return x.m;}),datasets:[{label:'费用 USD',data:arr.map(function(x){return +x.cost.toFixed(2);}),backgroundColor:'rgba(245,166,35,0.7)'}]},options:{responsive:true,plugins:{legend:{labels:{color:'#aaa'}}},scales:{x:{ticks:{color:tickColor,maxRotation:45},grid:{color:gridColor}},y:{ticks:{color:tickColor,callback:function(v){return '$'+v;}},grid:{color:gridColor}}}}});
 }
-function mdApply(){ renderMdTable(document.getElementById('mdStart').value, document.getElementById('mdEnd').value, document.getElementById('mdSort').value); }
-document.getElementById('mdStart').addEventListener('change', mdApply);
-document.getElementById('mdEnd').addEventListener('change', mdApply);
-document.getElementById('mdSort').addEventListener('change', mdApply);
-mdApply();
+function renderDetailBody(start,end){
+  var keys=rangeKeys(start,end).reverse();
+  var tbody=document.getElementById('detailBody');
+  if(keys.length===0){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:#666;">该时间段无数据</td></tr>'; return; }
+  tbody.innerHTML=keys.map(function(d){ var v=DAILY[d]; var sum=v.input+v.output, quota=sum+v.cache_read+v.cache_write; return '<tr><td>'+d+'</td><td>'+fmtN(v.input)+'</td><td>'+fmtN(v.output)+'</td><td>'+fmtN(v.cache_read)+'</td><td>'+fmtN(v.cache_write)+'</td><td>'+fmtN(sum)+'</td><td>'+fmtN(quota)+'</td><td>$'+v.cost.toFixed(2)+'</td></tr>'; }).join('');
+}
+function renderMainCharts(start,end){
+  var keys=rangeKeys(start,end), labels=keys;
+  var out=keys.map(function(d){return DAILY[d].output/1000;}), inp=keys.map(function(d){return DAILY[d].input/1000;}), cr=keys.map(function(d){return DAILY[d].cache_read/1000;}), cost=keys.map(function(d){return DAILY[d].cost;});
+  if(barChart)barChart.destroy();
+  barChart=new Chart(document.getElementById('barChart'),{type:'bar',data:{labels:labels,datasets:[{label:'output (K)',data:out,backgroundColor:'rgba(168,216,234,0.75)',order:1},{label:'input (K)',data:inp,backgroundColor:'rgba(100,149,237,0.55)',order:2}]},options:{responsive:true,plugins:{legend:{labels:{color:'#aaa'}}},scales:{x:{ticks:{color:tickColor,maxRotation:45},grid:{color:gridColor}},y:{ticks:{color:tickColor},grid:{color:gridColor}}}}});
+  if(crChart)crChart.destroy();
+  crChart=new Chart(document.getElementById('crChart'),{type:'bar',data:{labels:labels,datasets:[{label:'缓存读 (K)',data:cr,backgroundColor:'rgba(245,166,35,0.6)'}]},options:{responsive:true,plugins:{legend:{labels:{color:'#aaa'}}},scales:{x:{ticks:{color:tickColor,maxRotation:45},grid:{color:gridColor}},y:{ticks:{color:tickColor},grid:{color:gridColor}}}}});
+  if(costChart)costChart.destroy();
+  costChart=new Chart(document.getElementById('costChart'),{type:'line',data:{labels:labels,datasets:[{label:'费用 USD',data:cost,borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,0.15)',pointRadius:3,tension:0.3,fill:true}]},options:{responsive:true,plugins:{legend:{labels:{color:'#aaa'}}},scales:{x:{ticks:{color:tickColor,maxRotation:45},grid:{color:gridColor}},y:{ticks:{color:tickColor,callback:function(v){return '$'+v;}},grid:{color:gridColor}}}}});
+}
+function applyRange(start,end){
+  document.getElementById('rangeStart').value=start;
+  document.getElementById('rangeEnd').value=end;
+  document.getElementById('rangeLabel').textContent='📅 '+start+' ~ '+end;
+  renderMainCharts(start,end);
+  renderDetailBody(start,end);
+  renderMdTable(start,end,document.getElementById('mdSort').value);
+}
+function setPreset(preset){
+  var end=TODAY, start;
+  if(preset==='today') start=end;
+  else if(preset==='7d') start=offsetDate(end,-6);
+  else if(preset==='30d') start=offsetDate(end,-29);
+  else if(preset==='3m') start=offsetDate(end,-89);
+  else if(preset==='1y') start=offsetDate(end,-364);
+  else if(preset==='month') start=end.substring(0,8)+'01';
+  document.querySelectorAll('.range-pill').forEach(function(b){b.classList.toggle('active', b.dataset.preset===preset);});
+  applyRange(start,end);
+}
+applyRange(offsetDate(TODAY,-6), TODAY);
 '''
 
 html = f'''<!DOCTYPE html>
@@ -364,6 +554,16 @@ html = f'''<!DOCTYPE html>
   table.data td {{ padding: 5px 10px; text-align: right; border-bottom: 1px solid #222; white-space: nowrap; }}
   table.data td:first-child {{ text-align: left; color: #ccc; }}
   table.data tr:hover td {{ background: #1e2a4a; }}
+  .range-bar {{ background: #16213e; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }}
+  .range-label {{ color: #a8d8ea; font-size: .95em; font-weight: bold; min-width: 200px; }}
+  .range-pills {{ display: flex; gap: 6px; flex-wrap: wrap; }}
+  .range-pill {{ background: #0f3460; color: #a8d8ea; border: 1px solid #1e2a4a; border-radius: 16px; padding: 5px 14px; font-size: .82em; cursor: pointer; transition: all .15s; }}
+  .range-pill:hover {{ background: #1e2a4a; }}
+  .range-pill.active {{ background: #f5a623; color: #1a1a2e; border-color: #f5a623; font-weight: bold; }}
+  .range-custom {{ display: flex; gap: 6px; align-items: center; margin-left: auto; }}
+  .range-custom input[type=date], .section select {{ background: #0f3460; color: #e0e0e0; border: 1px solid #1e2a4a; border-radius: 6px; padding: 4px 10px; font-size: .82em; color-scheme: dark; cursor: pointer; }}
+  .section select:focus {{ outline: none; border-color: #f5a623; }}
+  .section select option {{ background: #0f3460; color: #e0e0e0; }}
   .note {{ font-size: .78em; color: #555; margin-top: 10px; line-height: 1.6; }}
 </style>
 </head>
@@ -372,6 +572,23 @@ html = f'''<!DOCTYPE html>
 <div class="meta">扫描消息: {total_msgs:,} 条 &nbsp;|&nbsp; 筛选: {date_label} &nbsp;|&nbsp; 生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
 
 <div class="cards">{cards}</div>
+
+<div class="range-bar">
+  <span class="range-label" id="rangeLabel"></span>
+  <div class="range-pills">
+    <button class="range-pill" data-preset="today" onclick="setPreset('today')">本日</button>
+    <button class="range-pill active" data-preset="7d" onclick="setPreset('7d')">最近7天</button>
+    <button class="range-pill" data-preset="month" onclick="setPreset('month')">本月</button>
+    <button class="range-pill" data-preset="30d" onclick="setPreset('30d')">最近30天</button>
+    <button class="range-pill" data-preset="3m" onclick="setPreset('3m')">最近3个月</button>
+    <button class="range-pill" data-preset="1y" onclick="setPreset('1y')">最近1年</button>
+  </div>
+  <div class="range-custom">
+    <input type="date" id="rangeStart" min="{_date_min}" max="{_date_max}" onchange="applyRange(this.value, document.getElementById('rangeEnd').value)">
+    <span>~</span>
+    <input type="date" id="rangeEnd" min="{_date_min}" max="{_date_max}" onchange="applyRange(document.getElementById('rangeStart').value, this.value)">
+  </div>
+</div>
 
 <div class="chart-box">
   <h2>每日 Output / Input tokens（K）</h2>
@@ -389,15 +606,13 @@ html = f'''<!DOCTYPE html>
 <div class="section">
   <h2 id="mdTitle">📅 {date_label} · 按模型消耗 Token</h2>
   <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-    <label>区间 <input type="date" id="mdStart" min="{_date_min}" max="{_date_max}" value="{date_start}"></label>
-    <span>~</span>
-    <input type="date" id="mdEnd" min="{_date_min}" max="{_date_max}" value="{date_end}">
-    <label>排序 <select id="mdSort">
+    <span style="color:#888;font-size:.85em;">区间用顶部选择器 · 排序</span>
+    <select id="mdSort" onchange="applyRange(document.getElementById('rangeStart').value, document.getElementById('rangeEnd').value)">
       <option value="cost">费用 USD ↓</option>
       <option value="input">input ↓</option>
       <option value="output">output ↓</option>
       <option value="quota">配额消耗 ↓</option>
-    </select></label>
+    </select>
   </div>
   <canvas id="mdChart" height="60"></canvas>
   <table class="data">
@@ -424,7 +639,7 @@ html = f'''<!DOCTYPE html>
       <th>日期</th><th>input</th><th>output</th><th>缓存读</th><th>缓存写</th>
       <th>实计(in+out)</th><th>配额消耗(全)</th><th>费用USD</th>
     </tr></thead>
-    <tbody>{detail_rows}</tbody>
+    <tbody id="detailBody"></tbody>
   </table>
 </div>
 
@@ -453,62 +668,6 @@ html = f'''<!DOCTYPE html>
 </div>
 
 <script>
-const labels = {labels_js};
-const outputData = {output_js};
-const inputData  = {input_js};
-const crData     = {cr_js};
-const costData   = {cost_js};
-
-const gridColor = 'rgba(255,255,255,0.06)';
-const tickColor = '#666';
-
-new Chart(document.getElementById('barChart'), {{
-  type: 'bar',
-  data: {{
-    labels,
-    datasets: [
-      {{ label: 'output (K)', data: outputData, backgroundColor: 'rgba(168,216,234,0.75)', order: 1 }},
-      {{ label: 'input (K)',  data: inputData,  backgroundColor: 'rgba(100,149,237,0.55)', order: 2 }},
-    ]
-  }},
-  options: {{
-    responsive: true,
-    plugins: {{ legend: {{ labels: {{ color: '#aaa' }} }} }},
-    scales: {{
-      x: {{ ticks: {{ color: tickColor, maxRotation: 45 }}, grid: {{ color: gridColor }} }},
-      y: {{ ticks: {{ color: tickColor }}, grid: {{ color: gridColor }} }}
-    }}
-  }}
-}});
-
-new Chart(document.getElementById('crChart'), {{
-  type: 'bar',
-  data: {{ labels, datasets: [{{ label: '缓存读 (K)', data: crData, backgroundColor: 'rgba(245,166,35,0.6)' }}] }},
-  options: {{
-    responsive: true,
-    plugins: {{ legend: {{ labels: {{ color: '#aaa' }} }} }},
-    scales: {{
-      x: {{ ticks: {{ color: tickColor, maxRotation: 45 }}, grid: {{ color: gridColor }} }},
-      y: {{ ticks: {{ color: tickColor }}, grid: {{ color: gridColor }} }}
-    }}
-  }}
-}});
-
-new Chart(document.getElementById('costChart'), {{
-  type: 'line',
-  data: {{ labels, datasets: [{{ label: '费用 USD', data: costData,
-    borderColor: '#f5a623', backgroundColor: 'rgba(245,166,35,0.15)',
-    pointRadius: 3, tension: 0.3, fill: true }}] }},
-  options: {{
-    responsive: true,
-    plugins: {{ legend: {{ labels: {{ color: '#aaa' }} }} }},
-    scales: {{
-      x: {{ ticks: {{ color: tickColor, maxRotation: 45 }}, grid: {{ color: gridColor }} }},
-      y: {{ ticks: {{ color: tickColor, callback: v => '$'+v }}, grid: {{ color: gridColor }} }}
-    }}
-  }}
-}});
-
 {model_date_js}
 </script>
 </body>
