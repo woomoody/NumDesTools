@@ -107,7 +107,7 @@ def _frozen_unix(frozen_str):
 def _collect_cc(frozen_str):
     """CC: ~/.claude/projects jsonl（增量：mtime 筛 + 行 timestamp>frozen）。"""
     records = []
-    mtime_cut = _frozen_unix(frozen_str) - 86400
+    mtime_cut = _frozen_unix(frozen_str) - 2 * 86400
     for BASE, prefix in BASES:
         if not os.path.isdir(BASE): continue
         for proj in sorted(os.listdir(BASE)):
@@ -175,7 +175,7 @@ def _collect_omp(frozen_str):
     records = []
     base = os.path.expanduser('~/.omp/agent/sessions')
     if not os.path.isdir(base): return records
-    mtime_cut = _frozen_unix(frozen_str) - 86400
+    mtime_cut = _frozen_unix(frozen_str) - 2 * 86400
     for dp, _, files in os.walk(base):
         for f in sorted(files):
             if not f.endswith('.jsonl'): continue
