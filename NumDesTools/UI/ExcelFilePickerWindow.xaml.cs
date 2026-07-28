@@ -2,8 +2,8 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using MahApps.Metro.Controls;
 using Newtonsoft.Json;
+using Wpf.Ui.Controls;
 using Key = System.Windows.Input.Key;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
@@ -13,7 +13,7 @@ using Window = System.Windows.Window;
 
 namespace NumDesTools.UI;
 
-public partial class ExcelFilePickerWindow : MetroWindow
+public partial class ExcelFilePickerWindow : FluentWindow
 {
     private record FileEntry(string FullPath, string RelPath)
     {
@@ -38,6 +38,7 @@ public partial class ExcelFilePickerWindow : MetroWindow
 
     public ExcelFilePickerWindow(string rootDir)
     {
+        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
         MahAppsHelper.EnsureInitialized();
         MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();

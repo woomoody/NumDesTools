@@ -1,9 +1,10 @@
+using System.Windows.Controls;
 using System.Windows.Input;
 using GraphX.Common.Enums;
 using GraphX.Controls;
 using GraphX.Logic.Algorithms.LayoutAlgorithms;
 using GraphX.Logic.Models;
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 using MessageBox = System.Windows.MessageBox;
 
 namespace NumDesTools.UI
@@ -11,10 +12,13 @@ namespace NumDesTools.UI
     /// <summary>
     /// SheetLinksWindow.xaml 的交互逻辑
     /// </summary>
-    public partial class SheetLinksWindow : MetroWindow
+    public partial class SheetLinksWindow : FluentWindow
     {
         public SheetLinksWindow()
         {
+            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
+                Wpf.Ui.Appearance.ApplicationTheme.Dark
+            );
             MahAppsHelper.EnsureInitialized();
             MahAppsHelper.SetExcelOwner(this);
             InitializeComponent();
@@ -101,7 +105,7 @@ namespace NumDesTools.UI
             // 创建一个ZoomControl并将GraphArea添加到其中
             ZoomControl zoomControl = new ZoomControl();
             zoomControl.Content = graphArea;
-
+            Grid.SetRow(zoomControl, 1);
             BaseGrid.Children.Add(zoomControl);
         }
 

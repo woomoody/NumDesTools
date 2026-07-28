@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>FileLockPreview</AssemblyName>
+    <RootNamespace>FileLockPreview</RootNamespace>
+    <!-- 输出到 NumDesTools 同目录，复用已 build 的 DLL -->
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="NumDesTools" HintPath="..\..\NumDesTools\bin\Debug\net9.0-windows\NumDesTools.dll" />
+    <Reference Include="Wpf.Ui" HintPath="..\..\NumDesTools\bin\Debug\net9.0-windows\Wpf.Ui.dll" />
+  </ItemGroup>
+</Project>

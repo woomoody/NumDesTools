@@ -2,14 +2,13 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 using Button = System.Windows.Controls.Button;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
-using Style = System.Windows.Style;
 
 namespace NumDesTools.UI;
 
-public partial class GitHistoryPickerWindow : MetroWindow
+public partial class GitHistoryPickerWindow : FluentWindow
 {
     public record CommitEntry(string Sha, string Display, string Author = "");
 
@@ -37,6 +36,7 @@ public partial class GitHistoryPickerWindow : MetroWindow
         int initialIndex = 0
     )
     {
+        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
         MahAppsHelper.EnsureInitialized();
         MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
@@ -80,25 +80,22 @@ public partial class GitHistoryPickerWindow : MetroWindow
         foreach (var mode in _modes)
         {
             var m = mode;
-            var btn = new Button
+            var btn = new Wpf.Ui.Controls.Button
             {
                 Content = ModeLabel(m),
                 Margin = new Thickness(0, 0, 8, 0),
                 Padding = new Thickness(14, 6, 14, 6),
             };
             if (m == _modes[0])
-                btn.Style = TryFindResource("MahApps.Styles.Button.Square.Accent") as Style;
-            else
-                btn.Style = TryFindResource("MahApps.Styles.Button.Square") as Style;
+                btn.Appearance = Wpf.Ui.Controls.ControlAppearance.Primary;
             btn.Click += (_, _) => Confirm(m);
             ButtonPanel.Children.Add(btn);
         }
 
-        var cancelBtn = new Button
+        var cancelBtn = new Wpf.Ui.Controls.Button
         {
             Content = "取消",
             Padding = new Thickness(14, 6, 14, 6),
-            Style = TryFindResource("MahApps.Styles.Button.Square") as Style,
         };
         cancelBtn.Click += (_, _) => Close();
         ButtonPanel.Children.Add(cancelBtn);

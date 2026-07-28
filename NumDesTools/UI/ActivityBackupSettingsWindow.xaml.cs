@@ -1,16 +1,17 @@
-using MahApps.Metro.Controls;
+using NumDesTools.Activity;
+using Wpf.Ui.Controls;
 using MessageBox = System.Windows.MessageBox;
 using WpfKey = System.Windows.Input.Key;
-using NumDesTools.Activity;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace NumDesTools.UI;
 
 // 大文件备份删除/还原功能的全部配置：备份根目录、正式表根目录。
-public partial class ActivityBackupSettingsWindow : MetroWindow
+public partial class ActivityBackupSettingsWindow : FluentWindow
 {
     internal ActivityBackupSettingsWindow()
     {
+        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
         MahAppsHelper.EnsureInitialized();
         MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();

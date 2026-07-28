@@ -1,16 +1,17 @@
 using System.Windows;
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 using Key = System.Windows.Input.Key;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace NumDesTools.UI;
 
-public partial class InputBoxDialog : MetroWindow
+public partial class InputBoxDialog : FluentWindow
 {
     public string Input { get; private set; } = string.Empty;
 
     public InputBoxDialog(string prompt, string title)
     {
+        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
         MahAppsHelper.EnsureInitialized();
         MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();

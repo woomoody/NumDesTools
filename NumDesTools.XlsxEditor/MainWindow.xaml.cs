@@ -7,6 +7,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using DataGridExtensions;
 using Microsoft.Win32;
 using OfficeOpenXml;
 
@@ -18,7 +19,7 @@ namespace NumDesTools.XlsxEditor;
 /// 冻结窗格：列 = 原生 FrozenColumnCount；行 = 双 DataGrid（顶部冻结行 grid + 主 grid，
 /// 共享同 DataTable 的两个 ListCollectionView 按行号谓词切分，横向滚 + 列宽 + 冻列数三同步）。
 /// </summary>
-public partial class MainWindow
+public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 {
     private static readonly Brush DirtyCellBrush = new SolidColorBrush(Color.FromRgb(43, 145, 76));
 
@@ -88,8 +89,25 @@ public partial class MainWindow
     /// </summary>
     private DataGrid? CurrentMainGrid => CurrentSheetState?.MainGrid;
 
+    /// <summary>
+    /// 焦点是否在文本输入控件里（筛选框 / 单元格编辑器 / 搜索框）。此时窗口级快捷键不应劫持
+    /// 文本编辑键（Delete/Backspace 等），否则用户在筛选框里删不了字（#7）。
+    /// 纯静态、可单测：只看焦点元素类型。
+    /// </summary>
+    internal static bool IsTextInputFocused(IInputElement? focused) =>
+        focused is TextBox or System.Windows.Controls.Primitives.TextBoxBase;
+
+    /// <summary>
+    /// 行号头文本（1-based 绝对 Excel 行号）。#4：优先用 <see cref="RowView.RowIndex"/>（真实 store 行号），
+    /// 冻结/主区/排序/筛选下都稳定对齐；拿不到 RowView 时回退到 grid 内的相对索引 +1。纯静态、可单测。
+    /// </summary>
+    internal static int RowHeaderNumber(object? rowItem, int fallbackIndex) =>
+        rowItem is RowView view ? view.RowIndex + 1 : fallbackIndex + 1;
+
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
+        var editingText = IsTextInputFocused(Keyboard.FocusedElement);
+
         if (Keyboard.Modifiers == ModifierKeys.Control)
         {
             switch (e.Key)
@@ -110,15 +128,15 @@ public partial class MainWindow
                     OnDeleteRowClick(sender, e);
                     e.Handled = true;
                     break;
-                case Key.Z:
+                case Key.Z when !editingText:
                     OnUndoClick(sender, e);
                     e.Handled = true;
                     break;
-                case Key.Y:
+                case Key.Y when !editingText:
                     OnRedoClick(sender, e);
                     e.Handled = true;
                     break;
-                case Key.V:
+                case Key.V when !editingText:
                     OnPaste(sender, e);
                     e.Handled = true;
                     break;
@@ -128,8 +146,10 @@ public partial class MainWindow
         {
             Close();
         }
-        else if (e.Key is Key.Back or Key.Delete)
+        else if (e.Key is Key.Back or Key.Delete && !editingText)
         {
+            // #7：焦点在筛选框/单元格编辑器/搜索框内时，不劫持 Delete/Backspace，
+            // 让 TextBox 正常删除字符。仅在焦点不在文本输入时才走"清空选中单元格"。
             DeleteSelectedCells();
             e.Handled = true;
         }
@@ -145,22 +165,24 @@ public partial class MainWindow
         var grid = state.MainGrid;
         if (grid.SelectedCells.Count == 0)
             return;
-        var table = state.Table;
-        var savedFilter = table.DefaultView.RowFilter;
-        table.DefaultView.RowFilter = string.Empty;
+        // #6：多格删除作为一个复合撤销单元（一次 Ctrl+Z 整体撤销这次删除）。
+        var batch = new List<CellEditRecord>();
         foreach (var cell in grid.SelectedCells)
         {
-            if (cell.Item is not DataRowView view || cell.Column is null)
+            if (cell.Item is not RowView view || cell.Column is null)
                 continue;
             var colIndex = cell.Column.DisplayIndex;
-            var rowIndex = table.Rows.IndexOf(view.Row);
+            var rowIndex = view.RowIndex;
             var oldValue = view[colIndex];
-            state.UndoStack.Push(new CellEditRecord(rowIndex, colIndex, oldValue, string.Empty));
-            view[colIndex] = string.Empty;
+            batch.Add(new CellEditRecord(rowIndex, colIndex, oldValue, string.Empty));
+            view[colIndex] = string.Empty; // RowView 索引器 → SetCell 标脏
             MarkDirty(grid, view, colIndex);
         }
-        state.RedoStack.Clear();
-        table.DefaultView.RowFilter = savedFilter;
+        if (batch.Count > 0)
+        {
+            state.UndoStack.Push(new CellBatchAction(batch));
+            state.RedoStack.Clear();
+        }
         MarkCurrentFileDirty();
     }
 
@@ -180,7 +202,8 @@ public partial class MainWindow
         StatusText.Text = $"正在加载：{Path.GetFileName(path)}…";
 
         var sw = Stopwatch.StartNew();
-        var built = await Task.Run(() => BuildAllSheetsLazy(path));
+        // P3.2: 一次性流式构建 ColumnStore（弃用旧的"首屏 200 行 + 后台逐行 Dispatcher.Invoke 灌 DataTable"路径）。
+        var built = await Task.Run(() => BuildStoresFromExcel(path));
 
         var fileName = Path.GetFileName(path);
 
@@ -202,11 +225,11 @@ public partial class MainWindow
         }
 
         TabItem? firstNewTab = null;
-        foreach (var (name, table, comments, totalRows, loadedRows) in built)
+        foreach (var (name, store, comments, totalRows) in built)
         {
             // 双 DataGrid 布局：外层 Grid(panel) 含两行——row0=冻结行 grid（按需出现），row1=主 grid。
             // 主 grid 永远在 row1，冻结行 grid 由 ApplyFreezeLayout 在冻结行时插入 row0。
-            var grid = BuildGrid(table, comments);
+            var grid = BuildGrid(store, comments);
             var panel = new Grid();
             panel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // 冻结行槽（空时 Auto=0 高度）
             panel.RowDefinitions.Add(
@@ -220,21 +243,54 @@ public partial class MainWindow
                 Header = new TextBlock { Text = name, FontSize = 11 },
                 Content = panel,
             };
-            var state = new SheetState(name, table, comments, path, totalRows, loadedRows)
+            var state = new SheetState(name, store, comments, path, totalRows)
             {
                 MainGrid = grid,
                 Panel = panel,
             };
-            // 行号头：冻结行模式下主 grid 偏移 FrozenRows；非冻结（FrozenRows=0）原样 1..N。
-            // 闭包读 state.FrozenRows，冻结/取消后自动正确。
+            grid.ItemsSource = state.View;
+            // P5：把 DataGridExtensions 的筛选路由到 ColumnStore（ICustomFilter 适配器设为 grid.DataContext）。
+            // 列类型一次性采样缓存，避免每次筛选变化都重新 DetectColumnType。
+            var typeCache = new Dictionary<int, ColumnType>();
+            ColumnType TypeResolver(int col)
+            {
+                if (!typeCache.TryGetValue(col, out var t))
+                {
+                    t = DetectColumnType(store, col);
+                    typeCache[col] = t;
+                }
+
+                return t;
+            }
+
+            var stateForStatus = state;
+            var filterAdapter = new ColumnStoreFilterAdapter(
+                store,
+                state.View,
+                TypeResolver,
+                filteredCount =>
+                {
+                    if (CurrentSheetState == stateForStatus)
+                    {
+                        StatusText.Text =
+                            filteredCount == store.RowCount
+                                ? $"已加载全部 {store.RowCount} 行"
+                                : $"筛选后 {filteredCount}/{store.RowCount} 行";
+                    }
+                }
+            );
+            state.Filter = filterAdapter;
+            grid.DataContext = filterAdapter;
+            // 行号头（#4）：直接用 RowView 的绝对 store 行号 +1，冻结/非冻结/排序/筛选下都对齐、连续。
+            // 冻结区 RowRangeView(0,n) → 行号 1..n；主区 RowRangeView(n,..) → 行号 n+1..，无缝衔接。
             grid.LoadingRow += (_, args) =>
-                args.Row.Header = state.FrozenRows + args.Row.GetIndex() + 1;
+                args.Row.Header = RowHeaderNumber(args.Row.Item, args.Row.GetIndex());
             sheetTabs.Items.Add(sheetTab);
             _sheets[sheetTab] = state;
             _workbookSheets[wbTab].Add(sheetTab);
             firstNewTab ??= sheetTab;
 
-            // 应用冻结配置（列 + 行）
+            // 应用冻结配置：列冻结（原生 FrozenColumnCount）+ 行冻结（P4 重做，RowRangeView 双 grid）
             var (fc, fr) = FreezeConfig.GetFreeze(fileName, name);
             if (fc > 0 && fc <= grid.Columns.Count)
             {
@@ -242,10 +298,10 @@ public partial class MainWindow
                 state.FrozenColumns = fc;
                 ApplyFreezeColumnDivider(grid, fc);
             }
-            if (fr > 0 && fr < table.Rows.Count)
+            if (fr > 0 && fr < store.RowCount)
             {
                 state.FrozenRows = fr;
-                ApplyFreezeLayout(state);
+                ApplyFreezeRows(state);
             }
         }
 
@@ -261,15 +317,7 @@ public partial class MainWindow
         if (CurrentSheetState is { } currentState)
         {
             StatusText.Text =
-                $"已加载首屏 {currentState.LoadedRows}/{currentState.TotalRows} 行（{currentState.SheetName}）";
-        }
-
-        foreach (var sheetTab in _workbookSheets[wbTab])
-        {
-            if (_sheets.TryGetValue(sheetTab, out var state) && state.LoadedRows < state.TotalRows)
-            {
-                StartBackgroundLoad(state);
-            }
+                $"已加载全部 {currentState.TotalRows} 行（{currentState.SheetName}），耗时 {sw.ElapsedMilliseconds} ms";
         }
     }
 
@@ -487,85 +535,39 @@ public partial class MainWindow
         }
     }
 
-    private void StartBackgroundLoad(SheetState state)
+    /// <summary>
+    /// P3.2 新加载路径：一次性流式把每个非 <c>#</c> 前缀、非空 sheet 读进 <see cref="ColumnStore"/>。
+    /// 用 <see cref="ColumnStoreExcelLoader.Load"/>（Sylvan 单趟前向扫描），不再首屏 200 行 + 后台逐行
+    /// Dispatcher.Invoke 灌 DataTable。批注（comment）当前不随流式加载读取（Sylvan 只读值），
+    /// 故 comments 为空字典——批注提示是已知降级，见 status.md。
+    /// </summary>
+    private static List<(
+        string Name,
+        ColumnStore Store,
+        Dictionary<(int Row, int Col), string> Comments,
+        int TotalRows
+    )> BuildStoresFromExcel(string path)
     {
-        var remainingRows = state.TotalRows - state.LoadedRows;
-        if (
-            remainingRows <= 0
-            || state.FilePath is null
-            || state.LoadCts is { IsCancellationRequested: false }
-        )
+        var result = new List<(string, ColumnStore, Dictionary<(int Row, int Col), string>, int)>();
+        foreach (var sheetName in OoxmlLazyReader.ReadSheetNames(path))
         {
-            return;
+            if (sheetName.StartsWith('#'))
+            {
+                continue;
+            }
+
+            var store = ColumnStoreExcelLoader.Load(path, sheetName);
+            if (store.RowCount is 0 || store.ColumnCount is 0)
+            {
+                continue;
+            }
+
+            result.Add(
+                (sheetName, store, new Dictionary<(int Row, int Col), string>(), store.RowCount)
+            );
         }
 
-        var cts = new CancellationTokenSource();
-        state.LoadCts = cts;
-        var skipRows = state.LoadedRows;
-        _ = Task.Run(() =>
-        {
-            try
-            {
-                foreach (
-                    var rawRow in OoxmlLazyReader.ReadRows(
-                        state.FilePath,
-                        state.SheetName,
-                        maxRows: remainingRows,
-                        skipRows: skipRows
-                    )
-                )
-                {
-                    if (cts.IsCancellationRequested)
-                    {
-                        return;
-                    }
-
-                    Dispatcher.Invoke(() =>
-                    {
-                        if (cts.IsCancellationRequested)
-                        {
-                            return;
-                        }
-
-                        AddRawRow(state.Table, state.Comments, rawRow);
-                        state.LoadedRows++;
-                        if (CurrentSheetState == state && state.LoadedRows % 50 is 0)
-                        {
-                            StatusText.Text = $"已加载 {state.LoadedRows}/{state.TotalRows} 行";
-                        }
-                    });
-                }
-
-                Dispatcher.Invoke(() =>
-                {
-                    if (cts.IsCancellationRequested)
-                    {
-                        return;
-                    }
-
-                    state.LoadedRows = state.TotalRows;
-                    if (CurrentSheetState == state)
-                    {
-                        StatusText.Text = $"已加载全部 {state.TotalRows} 行";
-                    }
-                });
-            }
-            catch (Exception exception)
-            {
-                if (cts.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                Dispatcher.Invoke(() =>
-                {
-                    if (CurrentSheetState == state)
-                    {
-                        StatusText.Text = $"后台加载失败：{exception.Message}";
-                    }
-                });
-            }
-        });
+        return result;
     }
 
     /// <summary>
@@ -584,11 +586,11 @@ public partial class MainWindow
         return name;
     }
 
-    private DataGrid BuildGrid(DataTable table, Dictionary<(int Row, int Col), string> commentMap)
+    private DataGrid BuildGrid(ColumnStore store, Dictionary<(int Row, int Col), string> commentMap)
     {
         var grid = new DataGrid
         {
-            ItemsSource = table.DefaultView,
+            // ItemsSource = state.View 在 LoadFile 里构建 state 后设置（虚拟化视图包装 ColumnStore）。
             AutoGenerateColumns = false,
             CanUserAddRows = false,
             CanUserDeleteRows = false,
@@ -644,8 +646,14 @@ public partial class MainWindow
         );
         grid.RowHeaderStyle = rowHeaderStyle;
 
+        // P5：必须在添加列之前开启 DataGridExtensions 浮动筛选行——DGX 通过 Columns.CollectionChanged
+        // 给"新加入且 HeaderTemplate==null 且 IsFilterVisible"的列套上筛选头模板；若在加列之后才开启，
+        // 既有列不会被回溯套模板，筛选行就不渲染（实测踩坑）。筛选执行由 grid.DataContext 上的
+        // ColumnStoreFilterAdapter(ICustomFilter) 路由到 VirtualizingSortableView.ApplyFilter（不整表物化）。
+        DataGridExtensions.DataGridFilter.SetIsAutoFilterEnabled(grid, true);
+
         // 数据列 + 列头筛选 TextBox
-        BuildDataColumns(grid, table, withFilterBox: true);
+        BuildDataColumns(grid, store, withFilterBox: true);
 
         // 单元格样式：深色主题边框 + 脏数据高亮 + 备注提示
         var cellStyle = new Style(typeof(DataGridCell));
@@ -657,9 +665,9 @@ public partial class MainWindow
                 new MouseEventHandler(
                     (s, _) =>
                     {
-                        if (s is not DataGridCell { DataContext: DataRowView view } cell)
+                        if (s is not DataGridCell { DataContext: RowView view } cell)
                             return;
-                        var rowIndex = table.Rows.IndexOf(view.Row);
+                        var rowIndex = view.RowIndex;
                         var colIndex = cell.Column.DisplayIndex;
                         ToolTipService.SetToolTip(
                             cell,
@@ -678,20 +686,25 @@ public partial class MainWindow
         {
             if (
                 args.EditAction != DataGridEditAction.Commit
-                || args.Column is not DataGridBoundColumn bound
-                || args.Row.Item is not DataRowView view
+                || args.Column is not DataGridBoundColumn
+                || args.Row.Item is not RowView view
             )
                 return;
-            var rowIndex = table.Rows.IndexOf(view.Row);
+            var rowIndex = view.RowIndex;
             var colIndex = args.Column.DisplayIndex;
             var oldValue = view[colIndex];
             var newValue = (args.EditingElement as TextBox)?.Text ?? string.Empty;
-            if (oldValue?.ToString() == newValue)
+            if (oldValue == newValue)
                 return;
             var state = CurrentSheetState;
             if (state is null)
                 return;
-            state.UndoStack.Push(new CellEditRecord(rowIndex, colIndex, oldValue, newValue));
+            // 写回 ColumnStore（RowView 索引器 set → SetCell 标脏）。DataGrid 提交时会自己写回，
+            // 这里显式写一次确保脏跟踪一致（等值早已 return，不会重复标脏）。
+            view[colIndex] = newValue;
+            state.UndoStack.Push(
+                new CellBatchAction([new CellEditRecord(rowIndex, colIndex, oldValue, newValue)])
+            );
             state.RedoStack.Clear();
             MarkDirty(grid, view, colIndex);
             MarkCurrentFileDirty();
@@ -729,116 +742,138 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 构造数据列（DataGridTextColumn + 列头）。withFilterBox=true 时列头带筛选 TextBox（主 grid）；
-    /// false 时只放纯列名 TextBlock（冻结行 grid，只读、不参与筛选）。
+    /// 构造数据列（DataGridTextColumn）。P5：列头筛选改由 DataGridExtensions 的浮动筛选行提供
+    /// （<c>DataGridFilter.IsAutoFilterEnabled</c> 在 BuildGrid 开启），本方法只建纯列名头 + 标记
+    /// 每列的 store 列号（SortMemberPath）+ 是否显示筛选框（withFilterBox → SetIsFilterVisible）。
+    /// 类型感知的匹配在 <see cref="ColumnStoreFilterAdapter"/> 里按列类型执行，下沉 ColumnStore。
+    /// withFilterBox=false（冻结行 grid）：仍可编辑，但不显示筛选框（冻结模式筛选禁用）。
     /// </summary>
-    private void BuildDataColumns(DataGrid grid, DataTable table, bool withFilterBox)
+    private void BuildDataColumns(DataGrid grid, ColumnStore store, bool withFilterBox)
     {
         grid.Columns.Clear();
-        for (var c = 0; c < table.Columns.Count; c++)
+        for (var c = 0; c < store.ColumnCount; c++)
         {
             var colIndex = c;
-            var columnName = table.Columns[c].ColumnName;
-
-            FrameworkElement headerElement;
-            if (withFilterBox)
-            {
-                headerElement = new TextBlock
-                {
-                    Text = columnName,
-                    FontWeight = FontWeights.Bold,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Margin = new Thickness(1),
-                };
-            }
-            else
-            {
-                headerElement = new TextBlock
-                {
-                    Text = columnName,
-                    FontWeight = FontWeights.Bold,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Margin = new Thickness(1),
-                };
-            }
+            var columnName = store.ColumnNames[c];
 
             var column = new DataGridTextColumn
             {
-                Header = headerElement,
+                Header = columnName,
+                // RowView 的 this[int col] 索引器 —— 与旧 DataRowView[int] 相同的索引器绑定语法。
                 Binding = new Binding($"[{colIndex}]"),
                 Width = new DataGridLength(160),
-                IsReadOnly = !withFilterBox,
+                IsReadOnly = false, // 两个 grid 都可编辑（冻结区也可编辑）
                 CanUserResize = true,
+                // 携带 store 列号，供 ColumnStoreFilterAdapter 从 DataGridColumn 反查列（列不可重排）。
+                SortMemberPath = colIndex.ToString(),
             };
+            // DataGridExtensions 浮动筛选行：主 grid 显示筛选框，冻结 grid 不显示。
+            column.SetIsFilterVisible(withFilterBox);
+            if (withFilterBox)
+            {
+                // #2：给筛选框套暗色主题模板（默认 DGX 筛选框是白底，与 Fluent 暗色皮肤不搭）。
+                column.SetTemplate(DarkFilterTemplate);
+            }
             grid.Columns.Add(column);
         }
     }
 
+    // #2：DataGridExtensions 暗色筛选框模板——TextBox 深底白字，双向绑定到列的 Filter 属性
+    // （DGX 约定：模板里控件绑 DataGridFilterColumnControl.Filter）。全列共享一个只读模板实例。
+    private static readonly ControlTemplate DarkFilterTemplate = BuildDarkFilterTemplate();
+
+    private static ControlTemplate BuildDarkFilterTemplate()
+    {
+        var tb = new FrameworkElementFactory(typeof(TextBox));
+        // P7-2：App.xaml 合并了 WPF-UI 的 ui:ControlsDictionary，它给 TextBox 挂了隐式样式，
+        // 其 Fluent 模板用自己的 ThemeResource 画背景（实测聚焦态内部 RGB 94~180 浅灰=发白），
+        // 会盖掉我们下面的 Background 设值。显式把 Style 置 null 退出隐式样式，回落到 WPF 基础
+        // TextBox 模板（其 Border Background="{TemplateBinding Background}"），这样 45,45,45 才真正生效。
+        tb.SetValue(FrameworkElement.StyleProperty, null);
+        tb.SetValue(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(45, 45, 45)));
+        tb.SetValue(Control.ForegroundProperty, Brushes.White);
+        tb.SetValue(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(90, 90, 90)));
+        tb.SetValue(Control.BorderThicknessProperty, new Thickness(1));
+        tb.SetValue(FrameworkElement.MarginProperty, new Thickness(1));
+        tb.SetValue(Control.PaddingProperty, new Thickness(2, 0, 2, 0));
+        tb.SetValue(TextBox.CaretBrushProperty, Brushes.White);
+        tb.SetValue(FrameworkElement.ToolTipProperty, "输入筛选值（回车/停顿后生效）");
+        // 绑定到 DataGridFilterColumnControl.Filter（DGX 把该控件作为模板承载者）
+        tb.SetBinding(
+            TextBox.TextProperty,
+            new Binding("Filter")
+            {
+                RelativeSource = new RelativeSource(
+                    RelativeSourceMode.FindAncestor,
+                    typeof(DataGridExtensions.DataGridFilterColumnControl),
+                    1
+                ),
+                UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged,
+                Mode = BindingMode.TwoWay,
+            }
+        );
+        return new ControlTemplate(typeof(DataGridExtensions.DataGridFilterColumnControl))
+        {
+            VisualTree = tb,
+        };
+    }
+
+    /// <summary>
+    /// 从 ColumnStore 采样前 100 行非空值推断列类型（等价旧 ColumnTypeDetector.Detect(DataTable,...) 的规则）。
+    /// </summary>
+    private static ColumnType DetectColumnType(ColumnStore store, int col, int sampleSize = 100)
+    {
+        if (store.RowCount is 0)
+            return ColumnType.Text;
+        var table = new DataTable();
+        var name = store.ColumnNames[col];
+        table.Columns.Add(name, typeof(string));
+        var maxRows = Math.Min(sampleSize, store.RowCount);
+        for (var r = 0; r < maxRows; r++)
+        {
+            var row = table.NewRow();
+            row[0] = store.GetCell(r, col) ?? string.Empty;
+            table.Rows.Add(row);
+        }
+
+        return ColumnTypeDetector.Detect(table, name, sampleSize);
+    }
+
+    /// <summary>
+    /// P5：清除当前 sheet 的所有列头筛选。清 DataGridExtensions 的浮动筛选行（会触发 ICustomFilter
+    /// 的 OnFilterChanged → View.ClearFilter），并兜底直接 ClearFilter 恢复全部行。
+    /// </summary>
     private void OnClearFilterClick(object sender, RoutedEventArgs e)
     {
         if (CurrentSheetState is not { } state)
             return;
-        FilterText.Text = string.Empty;
-        state.Table.DefaultView.RowFilter = string.Empty;
-    }
 
-    private void OnFilterKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key is not (Key.Enter or Key.Return))
-            return;
-        if (CurrentSheetState is not { } state)
-            return;
-        var keyword = FilterText.Text;
-        var columnName =
-            FilterColumn.SelectedIndex >= 0
-                ? state.Table.Columns[FilterColumn.SelectedIndex].ColumnName
-                : string.Empty;
-
-        if (string.IsNullOrWhiteSpace(keyword))
-        {
-            state.FilterColumnName = string.Empty;
-            state.FilterKeyword = string.Empty;
-            if (state.FrozenRows > 0)
-            {
-                // 冻结模式：刷新 LCV Filter
-                state.MainGrid.ItemsSource = MakeMainView(state);
-                state.FrozenGrid!.ItemsSource = MakeFrozenView(state);
-                SyncFrozenToMain(state);
-            }
-            else
-            {
-                state.Table.DefaultView.RowFilter = string.Empty;
-            }
-            e.Handled = true;
-            return;
-        }
-
+        // 冻结模式下筛选行本就禁用，只需确保视图无残留筛选
         if (state.FrozenRows > 0)
         {
-            // 冻结模式：LCV Filter 同时按行号 + 列内容过滤
-            state.FilterColumnName = columnName;
-            state.FilterKeyword = keyword;
-            state.MainGrid.ItemsSource = MakeMainView(state);
-            state.FrozenGrid!.ItemsSource = MakeFrozenView(state);
-            SyncFrozenToMain(state);
-            StatusText.Text = $"冻结行模式下筛选 [{columnName}] 包含 '{keyword}'";
+            StatusText.Text = "冻结模式下列筛选不可用";
+            return;
         }
-        else
-        {
-            // 非冻结模式：走 DataView.RowFilter
-            state.Table.DefaultView.RowFilter =
-                $"[{columnName}] LIKE '%{keyword.Replace("'", "''")}%'";
-        }
-        e.Handled = true;
+
+        // 清 DataGridExtensions 各列筛选框（触发 adapter.OnFilterChanged → View.ClearFilter）
+        DataGridExtensions.DataGridFilter.GetFilter(state.MainGrid)?.Clear();
+        // 兜底：直接清视图筛选（若无激活筛选，Clear 不回调 adapter）
+        state.View.ClearFilter();
+        StatusText.Text = $"筛选已清除（{state.Store.RowCount} 行）";
     }
 
     private void OnAddRowClick(object sender, RoutedEventArgs e)
     {
         if (CurrentSheetState is not { } state)
             return;
-        state.Table.DefaultView.RowFilter = string.Empty;
-        state.Table.Rows.Add(state.Table.NewRow());
-        ClearUndoRedo(state);
+        var at = state.Store.RowCount;
+        state.Store.AppendRow(); // ColumnStore 末尾追加空行（AppendRow 不标脏、不置 StructureChanged）
+        state.TotalRows = state.Store.RowCount;
+        state.LoadedRows = state.Store.RowCount;
+        RefreshMainViewAfterStructuralChange(state);
+        // #6：增行进撤销栈（撤销=删该行，重做=在同位再插空行），不再清空撤销栈。
+        state.UndoStack.Push(new InsertRowAction(at));
+        state.RedoStack.Clear();
         MarkCurrentFileDirty();
     }
 
@@ -850,146 +885,149 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 在当前选中行下方插入空行。
+    /// 在当前选中行下方插入空行。<see cref="ColumnStore.InsertRow"/> 现 remap 脏跟踪并置 StructureChanged（P4 WF1）。
     /// </summary>
     private void InsertRowBelow(DataGrid grid)
     {
         if (CurrentSheetState is not { } state)
             return;
-        var table = state.Table;
-        var savedFilter = table.DefaultView.RowFilter;
-        table.DefaultView.RowFilter = string.Empty;
-
-        var insertAt = GetCurrentRowIndex(grid, table);
+        var insertAt = GetCurrentRowIndex(grid);
         if (insertAt < 0)
-            insertAt = table.Rows.Count; // 没选中则追加到末尾
+            insertAt = state.Store.RowCount; // 没选中则追加到末尾
         else
             insertAt += 1; // 在下方
 
-        var newRow = table.NewRow();
-        table.Rows.InsertAt(newRow, insertAt);
-
-        table.DefaultView.RowFilter = savedFilter;
-        ClearUndoRedo(state);
+        state.Store.InsertRow(insertAt);
+        state.TotalRows = state.Store.RowCount;
+        state.LoadedRows = state.Store.RowCount;
+        RefreshMainViewAfterStructuralChange(state);
+        // #6：插行进撤销栈（撤销=删该行，重做=在同位再插空行）。
+        state.UndoStack.Push(new InsertRowAction(insertAt));
+        state.RedoStack.Clear();
         MarkCurrentFileDirty();
     }
 
     /// <summary>
-    /// 删除当前选中行（支持多选）。
+    /// 删除当前选中行（支持多选）。<see cref="ColumnStore.DeleteRow"/> 现 remap 脏跟踪并置 StructureChanged（P4 WF1）。
+    /// 多选时按行号降序删除，避免删除后行号移位。#6：删除前抓取每行完整内容快照，压 <see cref="DeleteRowsAction"/>
+    /// 供 Ctrl+Z 精确还原内容 + 位置。
     /// </summary>
     private void DeleteCurrentRow(DataGrid grid)
     {
         if (CurrentSheetState is not { } state)
             return;
-        var table = state.Table;
-        var savedFilter = table.DefaultView.RowFilter;
-        table.DefaultView.RowFilter = string.Empty;
-
-        foreach (var item in grid.SelectedItems.OfType<DataRowView>().ToList())
+        var rowIndices = grid
+            .SelectedItems.OfType<RowView>()
+            .Select(v => v.RowIndex)
+            .Distinct()
+            .OrderByDescending(i => i)
+            .ToList();
+        if (rowIndices.Count is 0)
         {
-            item.Row.Delete();
+            var cur = GetCurrentRowIndex(grid);
+            if (cur >= 0)
+                rowIndices.Add(cur);
         }
-        table.AcceptChanges();
 
-        table.DefaultView.RowFilter = savedFilter;
-        ClearUndoRedo(state);
+        var store = state.Store;
+        var cols = store.ColumnCount;
+        // #6：删除前抓取被删行的完整内容快照（行号 + 整行值），供撤销时按位置回填。
+        var snapshots = new List<(int Row, string?[] Values)>(rowIndices.Count);
+        foreach (var rowIndex in rowIndices)
+        {
+            if (rowIndex >= 0 && rowIndex < store.RowCount)
+            {
+                var values = new string?[cols];
+                for (var c = 0; c < cols; c++)
+                    values[c] = store.GetCell(rowIndex, c);
+                snapshots.Add((rowIndex, values));
+                store.DeleteRow(rowIndex);
+            }
+        }
+
+        state.TotalRows = store.RowCount;
+        state.LoadedRows = store.RowCount;
+        RefreshMainViewAfterStructuralChange(state);
+        if (snapshots.Count > 0)
+        {
+            state.UndoStack.Push(new DeleteRowsAction(snapshots));
+            state.RedoStack.Clear();
+        }
         MarkCurrentFileDirty();
     }
 
     /// <summary>
-    /// 在当前选中列右侧插入空列。
+    /// 结构变更（增删行）后刷新视图：冻结模式下重建两个 RowRangeView（行数变了），否则重建 SortableView 行序。
+    /// </summary>
+    private void RefreshMainViewAfterStructuralChange(SheetState state)
+    {
+        if (state.FrozenRows > 0 && state.FrozenRows < state.Store.RowCount)
+        {
+            ApplyFreezeRows(state);
+        }
+        else
+        {
+            state.View.ClearFilter(); // 重建 _rowOrder 到 [0..RowCount)（结构变更后同步视图 + Reset）
+        }
+    }
+
+    /// <summary>
+    /// 在当前选中列右侧插入空列。ColumnStore 仅支持在末尾扩列（<see cref="ColumnStore.EnsureColumnCount"/>），
+    /// 故新列固定加到最右，不支持任意位置插入（已知限制，见 status.md）。
     /// </summary>
     private void InsertColumnRight(DataGrid grid)
     {
         if (CurrentSheetState is not { } state)
             return;
-        var table = state.Table;
-        var insertAt = GetCurrentColumnIndex(grid);
-        if (insertAt < 0)
-            insertAt = table.Columns.Count;
-        else
-            insertAt += 1; // 在右侧
+        var store = state.Store;
+        var newCount = store.ColumnCount + 1;
+        // 列名工厂：与撤销后重做保持一致（同一 store 状态下生成相同列名）。
+        string NameFactory(int col) => NextColumnName(store, col);
+        store.EnsureColumnCount(newCount, NameFactory);
 
-        // 新列名：取原最大列序号+1 对应的 Excel 列名
-        var newColName = GetExcelColumnName(table.Columns.Count + 1);
-        // 确保列名不重复
-        while (table.Columns.Contains(newColName))
-            newColName += "_";
-        table.Columns.Add(newColName, typeof(string));
-        // 调整列顺序
-        table.Columns[newColName]!.SetOrdinal(insertAt);
-
-        // DataGrid 需要重建列（因为 AutoGenerateColumns=false）
-        RebuildGridColumns(grid, table);
-        if (state.FrozenGrid is not null)
-            RebuildFrozenColumns(state);
-
-        ClearUndoRedo(state);
+        RebuildGridColumns(grid, store);
+        // #6：插列进撤销栈（撤销=删最右列，重做=再加一列）。
+        state.UndoStack.Push(new InsertColumnAction(NameFactory));
+        state.RedoStack.Clear();
         MarkCurrentFileDirty();
     }
 
     /// <summary>
-    /// 删除当前选中列。
+    /// 删除当前选中列：ColumnStore 不支持删列（无 RemoveColumn API），当前作为已知限制提示用户。
     /// </summary>
     private void DeleteCurrentColumn(DataGrid grid)
     {
         if (CurrentSheetState is not { } state)
             return;
-        var table = state.Table;
-        var colIndex = GetCurrentColumnIndex(grid);
-        if (colIndex < 0 || colIndex >= table.Columns.Count)
-            return;
-
-        table.Columns.RemoveAt(colIndex);
-        RebuildGridColumns(grid, table);
-        if (state.FrozenGrid is not null)
-            RebuildFrozenColumns(state);
-
-        ClearUndoRedo(state);
-        MarkCurrentFileDirty();
+        _ = state;
+        StatusText.Text = "删除列在 P3.2 列式存储下暂不支持（已知限制）";
     }
 
-    /// <summary>
-    /// 增删行列后清空撤销/重做栈，避免索引错位还原到错误位置。
-    /// </summary>
-    private static void ClearUndoRedo(SheetState state)
+    /// <summary>为末尾新增列生成不重复的 Excel 列名。</summary>
+    private static string NextColumnName(ColumnStore store, int col)
     {
-        state.UndoStack.Clear();
-        state.RedoStack.Clear();
+        var name = GetExcelColumnName(col + 1);
+        var existing = store.ColumnNames.ToList();
+        while (existing.Contains(name))
+            name += "_";
+        return name;
     }
 
     /// <summary>
     /// 重建主 DataGrid 列（增删列后调用，因为 AutoGenerateColumns=false）。
     /// </summary>
-    private void RebuildGridColumns(DataGrid grid, DataTable table)
+    private void RebuildGridColumns(DataGrid grid, ColumnStore store)
     {
-        BuildDataColumns(grid, table, withFilterBox: true);
-        var hasFrozenRows = _sheets.Values.Any(state =>
-            state.MainGrid == grid && state.FrozenRows > 0
-        );
-        SetFilterBoxesReadOnly(grid, hasFrozenRows);
+        BuildDataColumns(grid, store, withFilterBox: true);
     }
 
     /// <summary>
-    /// 重建冻结行 grid 的列（镜像主 grid 的列结构，简单列头、只读）。
+    /// 获取当前选中单元格的行索引（ColumnStore 行号）。
     /// </summary>
-    private void RebuildFrozenColumns(SheetState state)
+    private static int GetCurrentRowIndex(DataGrid grid)
     {
-        var fg = state.FrozenGrid;
-        if (fg is null)
-            return;
-        BuildDataColumns(fg, state.Table, withFilterBox: false);
-        // 同步宽 + 冻结列数
-        SyncFrozenToMain(state);
-    }
-
-    /// <summary>
-    /// 获取当前选中单元格的行索引（底层 DataTable 行号）。
-    /// </summary>
-    private static int GetCurrentRowIndex(DataGrid grid, DataTable table)
-    {
-        if (grid.CurrentCell.Item is DataRowView view)
-            return table.Rows.IndexOf(view.Row);
+        if (grid.CurrentCell.Item is RowView view)
+            return view.RowIndex;
         return -1;
     }
 
@@ -1019,26 +1057,34 @@ public partial class MainWindow
             return false;
         var sw = Stopwatch.StartNew();
 
-        // ponytail: 必须在 UI 线程把 DataTable 拷贝成纯数据快照（string[,]），
-        // 不能把 DataTable/DataView 本身传进 Task.Run——它们正被 DataGrid 绑定消费，
-        // 后台线程 touch RowFilter/Rows 会触发跨线程 ListChanged → WPF 崩溃。
-        var snapshots = _sheets
-            .Values.Where(s => s.FilePath == filePath)
+        // P4: 在 UI 线程从 ColumnStore 组装写回计划（纯数据，不把 Store 传进后台线程）。
+        // 无结构变更(StructureChanged=false) → 只写 DirtyCells（增量）；有结构变更 → 整表全量写回。
+        var savedStores = _sheets.Values.Where(s => s.FilePath == filePath).ToList();
+        var plans = savedStores
             .Select(s =>
             {
-                var table = s.Table;
-                var savedFilter = table.DefaultView.RowFilter;
-                table.DefaultView.RowFilter = string.Empty;
-                var rows = table.Rows.Count;
-                var cols = table.Columns.Count;
-                var data = new string[rows, cols];
-                for (var r = 0; r < rows; r++)
-                for (var c = 0; c < cols; c++)
-                    data[r, c] = table.Rows[r][c]?.ToString() ?? string.Empty;
-                table.DefaultView.RowFilter = savedFilter;
-                return (s.SheetName, Data: data, Rows: rows, Cols: cols);
+                var store = s.Store;
+                var rows = store.RowCount;
+                var cols = store.ColumnCount;
+                if (store.StructureChanged)
+                {
+                    var data = new string[rows, cols];
+                    for (var r = 0; r < rows; r++)
+                    for (var c = 0; c < cols; c++)
+                        data[r, c] = store.GetCell(r, c) ?? string.Empty;
+                    return new SheetWritePlan(s.SheetName, Full: true, rows, cols, data, []);
+                }
+
+                var dirty = store
+                    .DirtyCells.Select(cell =>
+                        (cell.Row, cell.Col, (string?)store.GetCell(cell.Row, cell.Col))
+                    )
+                    .ToList();
+                return new SheetWritePlan(s.SheetName, Full: false, rows, cols, null, dirty);
             })
             .ToList();
+
+        var totalDirty = plans.Sum(p => p.Full ? p.RowCount * p.ColCount : p.DirtyCells.Count);
 
         Tabs.IsEnabled = false;
         Cursor = Cursors.Wait;
@@ -1050,27 +1096,14 @@ public partial class MainWindow
             {
                 try
                 {
-                    using var package = new ExcelPackage(new FileInfo(filePath));
-                    foreach (var (sheetName, data, rows, cols) in snapshots)
-                    {
-                        var sheet = package.Workbook.Worksheets[sheetName];
+                    // 原子写：ExcelWriteBack 以原文件为模板写到 tmp（保留格式+剥离图表公式+只写脏/全量），
+                    // 成功后 AtomicFileWriter 用 File.Replace(tmp, 原文件, .bak) 原子替换。P0 机制不变。
+                    var result = AtomicFileWriter.Write(
+                        filePath,
+                        tempPath => ExcelWriteBack.Write(filePath, tempPath, plans)
+                    );
 
-                        var existingRows = sheet.Dimension?.End.Row ?? 0;
-                        var existingCols = sheet.Dimension?.End.Column ?? 0;
-
-                        if (rows < existingRows)
-                            sheet.DeleteRow(rows + 1, existingRows - rows);
-
-                        if (cols < existingCols)
-                            sheet.DeleteColumn(cols + 1, existingCols - cols);
-
-                        // 批量写入：用 range 一次 SetValue，比逐格 sheet.Cells[r,c].Value 快几十倍
-                        if (rows > 0 && cols > 0)
-                            sheet.Cells[1, 1, rows, cols].Value = data;
-                    }
-
-                    package.Save();
-                    return (sw.ElapsedMilliseconds, (Exception?)null);
+                    return (sw.ElapsedMilliseconds, result.Error);
                 }
                 catch (Exception ex)
                 {
@@ -1082,9 +1115,13 @@ public partial class MainWindow
                 throw error;
 
             sw.Stop();
+            // 保存成功：清脏跟踪（下次无编辑即可秒过），移除文件脏标记。ColumnStore 单线程，UI 线程调。
+            foreach (var s in savedStores)
+                s.Store.ClearDirty();
             _dirtyFiles.Remove(filePath);
             UpdateTitle();
-            StatusText.Text = $"已保存：{Path.GetFileName(filePath)}（耗时 {elapsedMs} ms）";
+            StatusText.Text =
+                $"已保存：{Path.GetFileName(filePath)}（耗时 {elapsedMs} ms，写入 {totalDirty} 格）";
             return true;
         }
         catch (Exception ex)
@@ -1126,19 +1163,10 @@ public partial class MainWindow
             return;
         if (state.UndoStack.Count == 0)
             return;
-        var record = state.UndoStack.Pop();
-        // DataRowState 索引是底层行号；filtered view 下需要先清筛选
-        var savedFilter = state.Table.DefaultView.RowFilter;
-        state.Table.DefaultView.RowFilter = string.Empty;
-        var current = state.Table.Rows[record.Row][record.Col];
-        state.Table.Rows[record.Row][record.Col] = record.OldValue;
-        state.RedoStack.Push(
-            new CellEditRecord(record.Row, record.Col, current, current?.ToString() ?? string.Empty)
-        );
-        state.Table.DefaultView.RowFilter = savedFilter;
-        // 强制刷新 DataGrid 显示（撤销后 UI 可能还显示旧值）
-        state.MainGrid.Items.Refresh();
-        MarkCurrentFileDirty();
+        // #6：撤销单元是 IUndoableAction（单格/粘贴/增删行列统一）。结构性动作撤销后需刷新行序/列。
+        var isStructural = state.UndoStack.Peek().IsStructural;
+        UndoableStack.Undo(state.Store, state.UndoStack, state.RedoStack);
+        AfterUndoRedo(state, isStructural);
     }
 
     private void OnRedoClick(object sender, RoutedEventArgs e)
@@ -1147,17 +1175,27 @@ public partial class MainWindow
             return;
         if (state.RedoStack.Count == 0)
             return;
-        var record = state.RedoStack.Pop();
-        var savedFilter = state.Table.DefaultView.RowFilter;
-        state.Table.DefaultView.RowFilter = string.Empty;
-        var current = state.Table.Rows[record.Row][record.Col];
-        state.Table.Rows[record.Row][record.Col] = record.NewValue;
-        state.UndoStack.Push(
-            new CellEditRecord(record.Row, record.Col, current, current?.ToString() ?? string.Empty)
-        );
-        state.Table.DefaultView.RowFilter = savedFilter;
-        // 强制刷新 DataGrid 显示
+        var isStructural = state.RedoStack.Peek().IsStructural;
+        UndoableStack.Redo(state.Store, state.UndoStack, state.RedoStack);
+        AfterUndoRedo(state, isStructural);
+    }
+
+    /// <summary>
+    /// 撤销/重做后刷新 UI：结构性动作（增删行列）需重建行序/列并同步行数；非结构性只刷新单元格显示。
+    /// </summary>
+    private void AfterUndoRedo(SheetState state, bool isStructural)
+    {
+        if (isStructural)
+        {
+            // 列数可能变了（增删列）→ 重建主 grid 列；行数可能变了 → 重建行序 + 同步计数。
+            RebuildGridColumns(state.MainGrid, state.Store);
+            state.TotalRows = state.Store.RowCount;
+            state.LoadedRows = state.Store.RowCount;
+            RefreshMainViewAfterStructuralChange(state);
+        }
+
         state.MainGrid.Items.Refresh();
+        state.FrozenGrid?.Items.Refresh();
         MarkCurrentFileDirty();
     }
 
@@ -1176,12 +1214,12 @@ public partial class MainWindow
         if (grid.SelectedItem is null && grid.CurrentCell.Item is null)
             return;
         var startCell = grid.CurrentCell;
-        if (startCell.Column is null || startCell.Item is not DataRowView rowView)
+        if (startCell.Column is null || startCell.Item is not RowView rowView)
             return;
-        var table = rowView.DataView.Table;
-        if (table is null)
+        if (CurrentSheetState is not { } state)
             return;
-        // 用视图索引而非底层表索引：冻结行/筛选模式下连续粘贴进"可见的连续行"，正确且不越界。
+        var colCount = state.Store.ColumnCount;
+        // 用视图索引：筛选模式下连续粘贴进"可见的连续行"，正确且不越界。
         var startViewIndex = grid.Items.IndexOf(rowView);
         var startCol = startCell.Column.DisplayIndex;
 
@@ -1190,32 +1228,43 @@ public partial class MainWindow
             return;
 
         var lines = text.Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
+        // #6：把这次粘贴产生的所有格改动记为一个复合撤销单元（一次 Ctrl+Z 整体撤销这次粘贴）。
+        var batch = new List<CellEditRecord>();
         for (var i = 0; i < lines.Length; i++)
         {
             var targetView = startViewIndex + i;
             if (targetView < 0 || targetView >= grid.Items.Count)
                 break;
-            if (grid.Items[targetView] is not DataRowView tv)
+            if (grid.Items[targetView] is not RowView tv)
                 continue;
             var cells = lines[i].Split('\t');
             for (var j = 0; j < cells.Length; j++)
             {
                 var targetCol = startCol + j;
-                if (targetCol >= table.Columns.Count)
+                if (targetCol >= colCount)
                     break;
-                tv[targetCol] = cells[j];
+                var oldValue = tv[targetCol];
+                if (oldValue == cells[j])
+                    continue; // 值未变不记录
+                batch.Add(new CellEditRecord(tv.RowIndex, targetCol, oldValue, cells[j]));
+                tv[targetCol] = cells[j]; // RowView 索引器 → SetCell 标脏
                 // 粘贴的格子也要绿色高亮（和手动编辑一致）
                 MarkDirty(grid, tv, targetCol);
             }
         }
-        // 粘贴绕过 CellEditEnding，得手动标脏，否则关窗不提示保存=数据丢失
+        // 粘贴绕过 CellEditEnding，得手动记撤销 + 标脏，否则 Ctrl+Z 撤不掉、关窗不提示保存=数据丢失
+        if (batch.Count > 0)
+        {
+            state.UndoStack.Push(new CellBatchAction(batch));
+            state.RedoStack.Clear();
+        }
         MarkCurrentFileDirty();
     }
 
     /// <summary>
-    /// 标脏单元格绿色。按 DataRowView 定位容器，冻结行/筛选/虚拟化下都正确（越界/不可见静默跳过）。
+    /// 标脏单元格绿色。按 RowView 定位容器，筛选/虚拟化下都正确（越界/不可见静默跳过）。
     /// </summary>
-    private static void MarkDirty(DataGrid grid, DataRowView view, int col)
+    private static void MarkDirty(DataGrid grid, RowView view, int col)
     {
         grid.ScrollIntoView(view);
         grid.Dispatcher.BeginInvoke(
@@ -1268,7 +1317,9 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 给冻结列分界处加粗竖线：第 n 列（第一个非冻结列）的左边框设亮色粗线。
+    /// 给冻结列分界处加粗竖线。P7-1：竖线画在【最后一个冻结列】(第 n-1 列)的【右】边框，而不是
+    /// 第一个非冻结列(第 n 列)的左边框——因为冻结列被 FrozenColumnCount 钉住不随横向滚动移动，
+    /// 而第 n 列会随内容横滚（编辑超长文本时 TextBox 自动横滚 → 分界线跟着漂移，实测从 X1208 漂到 X928）。
     /// 只动分界列的 CellStyle，不清其他列（保留 BuildGrid 设的 ToolTip 等）。
     /// </summary>
     private static void ApplyFreezeColumnDivider(DataGrid grid, int n)
@@ -1293,73 +1344,54 @@ public partial class MainWindow
                 new SolidColorBrush(Color.FromRgb(120, 120, 120))
             )
         );
+        // 右边框加粗：钉在最后一个冻结列(第 n-1 列)右侧，横滚时不动。
         dividerStyle.Setters.Add(
-            new Setter(Control.BorderThicknessProperty, new Thickness(2, 0, 0, 0))
+            new Setter(Control.BorderThicknessProperty, new Thickness(0, 0, 2, 0))
         );
-        grid.Columns[n].CellStyle = dividerStyle;
+        grid.Columns[n - 1].CellStyle = dividerStyle;
     }
 
     private void OnFreezeRowClick(object sender, RoutedEventArgs e)
     {
         if (CurrentSheetState is not { } state)
             return;
-        var grid = state.MainGrid;
-        var tableRow = GetCurrentRowIndex(grid, state.Table);
-        if (tableRow < 0)
+        var rowIndex = GetCurrentRowIndex(state.MainGrid);
+        if (rowIndex < 0)
         {
-            StatusText.Text = "请先选中一行再冻结";
+            StatusText.Text = "请先选中一行再冻结到此行";
             return;
         }
-        // 冻结 row 0..当前行
-        state.FrozenRows = tableRow + 1;
-        ApplyFreezeLayout(state);
-        SaveFreeze(state);
-        StatusText.Text = $"已冻结前 {state.FrozenRows} 行；冻结行时筛选不可用";
-    }
 
-    private void OnUnfreezeClick(object sender, RoutedEventArgs e)
-    {
-        if (CurrentSheetState is not { } state)
+        // 冻结 row 0..当前行（含），即前 N 行固定
+        var n = rowIndex + 1;
+        if (n >= state.Store.RowCount)
+        {
+            StatusText.Text = "不能冻结全部行";
             return;
-        state.MainGrid.FrozenColumnCount = 0;
-        state.FrozenColumns = 0;
-        state.FrozenRows = 0;
-        // 清除冻结列分界线样式
-        ApplyFreezeColumnDivider(state.MainGrid, 0);
-        if (state.FrozenGrid is not null)
-            ApplyFreezeColumnDivider(state.FrozenGrid, 0);
-        ApplyFreezeLayout(state); // 拆冻结行 grid，主 grid 回到全表 DefaultView
-        if (state.FilePath is not null)
-            FreezeConfig.ClearFreeze(Path.GetFileName(state.FilePath), state.SheetName);
-        StatusText.Text = "已取消冻结";
+        }
+
+        state.FrozenRows = n;
+        ApplyFreezeRows(state);
+        SaveFreeze(state);
+        StatusText.Text = $"已冻结前 {n} 行（冻结区固定表头；筛选作用于下方数据区）";
     }
 
     /// <summary>
-    /// 根据 state.FrozenRows 搭建/拆除双 DataGrid 布局。
-    /// FrozenRows>0：建冻结行 grid（只读，关纵向滚，横滚由主 grid 驱动同步），主 grid 切到 LCV（row>=N）。
-    /// FrozenRows=0：拆冻结行 grid，主 grid 回到全表 DefaultView（零回归，筛选走原生 RowFilter）。
-    /// 列冻结（FrozenColumnCount）两 grid 始终一致，由 SyncFrozenToMain 兜底。
+    /// P4 冻结行重做 + #1 冻结与筛选共存：上下两个 DataGrid 共享同一 ColumnStore。
+    /// 冻结 grid（顶部 row0）绑 <see cref="RowRangeView"/>(0, N) 且承载列头+浮动筛选行；
+    /// 主 grid 绑可筛选的 <see cref="VirtualizingSortableView"/>，加基础谓词 row&gt;=N（只显示数据行区），
+    /// 冻结 grid 的筛选路由到主区 View（BasePredicate AND 列筛选）。横向滚 + 列宽双向同步。两区都经 RowView 写回。
     /// </summary>
-    private void ApplyFreezeLayout(SheetState state)
+    private void ApplyFreezeRows(SheetState state)
     {
         var panel = state.Panel;
         if (panel is null)
             return;
-        var table = state.Table;
         var n = state.FrozenRows;
-        if (n <= 0 || n >= table.Rows.Count)
+
+        if (n <= 0 || n >= state.Store.RowCount)
         {
-            // 拆冻结行 grid
-            if (state.FrozenGrid is { } fg)
-            {
-                panel.Children.Remove(fg);
-                state.FrozenGrid = null;
-                state.FrozenScroll = null;
-            }
-            // 主 grid 回到全表（LCV→DefaultView），恢复列头
-            state.MainGrid.ItemsSource = table.DefaultView;
-            state.MainGrid.HeadersVisibility = DataGridHeadersVisibility.All;
-            SetFilterBoxesReadOnly(state.MainGrid, isReadOnly: false);
+            RemoveFrozenRows(state);
             return;
         }
 
@@ -1370,100 +1402,95 @@ public partial class MainWindow
             panel.Children.Add(fg);
             Grid.SetRow(fg, 0);
             state.FrozenGrid = fg;
-            WireFreezeSync(state);
+            WireFreezeRowSync(state);
         }
 
-        // 冻结时：冻结行 grid 显示列头（在顶部），主 grid 隐藏列头（避免重复）
-        state.MainGrid.HeadersVisibility = DataGridHeadersVisibility.Row; // 主 grid 不显示列头（冻结行 grid 已显示）
-        state.MainGrid.ItemsSource = MakeMainView(state);
-        state.FrozenGrid.ItemsSource = MakeFrozenView(state);
-        SyncFrozenToMain(state);
-    }
+        // 冻结 grid = 前 N 行（固定表头，RowRangeView 不筛不排，常驻可见）。
+        state.FrozenGrid!.ItemsSource = new RowRangeView(state.Store, 0, n);
 
-    private static void SetFilterBoxesReadOnly(DataGrid grid, bool isReadOnly)
-    {
-        foreach (
-            var filterBox in grid.Columns.SelectMany(column =>
-                column.Header is StackPanel panel
-                    ? panel.Children.OfType<TextBox>()
-                    : Enumerable.Empty<TextBox>()
-            )
-        )
+        // #1：主区仍绑可筛选的 VirtualizingSortableView，加"只显示第 N 行之后数据行"的基础谓词
+        // （row>=n），与列头筛选 AND 组合——冻结与筛选共存。筛选框显示在冻结 grid 的浮动筛选行里
+        // （主 grid 冻结时隐藏列头/筛选行，避免与冻结 grid 顶部列头重复）；冻结 grid 的筛选路由到主区 View。
+        state.MainGrid.ItemsSource = state.View;
+        DataGridExtensions.DataGridFilter.SetIsAutoFilterEnabled(state.MainGrid, false);
+        if (state.Filter is { } filter)
         {
-            filterBox.IsReadOnly = isReadOnly;
-            filterBox.ToolTip = isReadOnly ? "冻结行时筛选不可用" : "输入筛选内容后按 Enter";
+            filter.BasePredicate = row => row >= n;
+            // 冻结 grid 的筛选行驱动主区筛选：其 DataContext 指向同一 adapter（filter 主区 View）。
+            state.FrozenGrid.DataContext = filter;
+            DataGridExtensions.DataGridFilter.SetIsAutoFilterEnabled(state.FrozenGrid, true);
+            filter.Reapply(GetFilteredColumns(state.FrozenGrid));
         }
-    }
-
-    private static ListCollectionView MakeMainView(SheetState state)
-    {
-        var table = state.Table;
-        var n = state.FrozenRows;
-        var view = new ListCollectionView(table.DefaultView);
-        view.Filter = obj =>
+        else
         {
-            var row = table.Rows.IndexOf(((DataRowView)obj).Row);
-            if (row < n)
-                return false; // 主 grid 不显示冻结行
-            return MatchesFilter(state, (DataRowView)obj);
-        };
-        return view;
+            state.View.ApplyFilter(row => row >= n);
+        }
+
+        // 主 grid 隐藏列头（冻结 grid 顶部已显示列头+筛选行，避免重复）
+        state.MainGrid.HeadersVisibility = DataGridHeadersVisibility.Row;
+        SyncFrozenColumnWidths(state, mainToFrozen: true);
     }
 
-    private static ListCollectionView MakeFrozenView(SheetState state)
+    /// <summary>取一个 DataGrid 当前带激活筛选值的列（供 ColumnStoreFilterAdapter.Reapply）。</summary>
+    private static IReadOnlyCollection<DataGridColumn> GetFilteredColumns(DataGrid grid) =>
+        grid.Columns.Where(c => !string.IsNullOrEmpty(c.GetFilter()?.ToString())).ToList();
+
+    /// <summary>拆冻结行：移除冻结 grid，主 grid 恢复全表 VirtualizingSortableView（清基础谓词，筛选/排序恢复）。</summary>
+    private void RemoveFrozenRows(SheetState state)
     {
-        var table = state.Table;
-        var n = state.FrozenRows;
-        var fresh = new DataView(table);
-        var view = new ListCollectionView(fresh);
-        // 冻结行始终全部显示，不参与筛选
-        view.Filter = obj => table.Rows.IndexOf(((DataRowView)obj).Row) < n;
-        return view;
+        if (state.Panel is { } panel && state.FrozenGrid is { } fg)
+        {
+            panel.Children.Remove(fg);
+        }
+        state.FrozenGrid = null;
+        state.FrozenScroll = null;
+        state.FrozenRows = 0;
+        state.MainGrid.ItemsSource = state.View;
+        state.MainGrid.HeadersVisibility = DataGridHeadersVisibility.All;
+        // #1：清掉"row>=n"基础谓词，恢复全表筛选。
+        if (state.Filter is { } filter)
+        {
+            filter.BasePredicate = null;
+            filter.Reapply(GetFilteredColumns(state.MainGrid));
+        }
+        else
+        {
+            state.View.ClearFilter();
+        }
+        DataGridExtensions.DataGridFilter.SetIsAutoFilterEnabled(state.MainGrid, true);
     }
 
     /// <summary>
-    /// 冻结行模式下 LCV 的筛选谓词：列内容包含关键字（空关键字=全显示）。
-    /// </summary>
-    private static bool MatchesFilter(SheetState state, DataRowView view)
-    {
-        if (string.IsNullOrEmpty(state.FilterKeyword))
-            return true;
-        if (string.IsNullOrEmpty(state.FilterColumnName))
-            return true;
-        var colIndex = state.Table.Columns.IndexOf(state.FilterColumnName);
-        if (colIndex < 0)
-            return true;
-        var val = view[colIndex]?.ToString() ?? string.Empty;
-        return val.Contains(state.FilterKeyword, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
-    /// 构造冻结行 DataGrid：与主 grid 同列结构、只读、关纵向滚、隐藏横向滚（程序控制）。
-    /// 行号头同主 grid（50 宽），保证横向 X 对齐。列头用纯 TextBlock（无筛选框，只读不筛）。
+    /// 构造冻结行 DataGrid：#8 视觉与主 grid 完全一致（同背景/字体/行高，无特殊装饰），
+    /// 只靠底部一条加粗分割线与主区分界（在 ApplyFreezeRows 后由 grid 的 BorderThickness 体现）。
+    /// 关纵向滚、隐藏横向滚（由主 grid 驱动），可编辑；显示列头（主 grid 冻结时隐藏列头）。
     /// </summary>
     private DataGrid BuildFrozenGrid(SheetState state)
     {
         var grid = new DataGrid
         {
-            IsReadOnly = true,
+            AutoGenerateColumns = false,
             CanUserAddRows = false,
             CanUserDeleteRows = false,
             CanUserSortColumns = false,
-            CanUserResizeColumns = true,
             CanUserReorderColumns = false,
-            EnableRowVirtualization = false, // 仅 N 行，关虚拟化避免行号头错位
+            EnableRowVirtualization = false, // 仅 N 行（典型 4），关虚拟化保证行号头稳定
             SelectionUnit = DataGridSelectionUnit.Cell,
-            HeadersVisibility = DataGridHeadersVisibility.All, // 冻结行 grid 显示列头（始终置顶，可调列宽）
+            HeadersVisibility = DataGridHeadersVisibility.All,
             GridLinesVisibility = DataGridGridLinesVisibility.All,
             HorizontalGridLinesBrush = GridLineBrush,
             VerticalGridLinesBrush = GridLineBrush,
-            BorderBrush = GridLineBrush,
-            BorderThickness = new Thickness(1, 0, 1, 1),
+            // #8：与主区分界处一条加粗亮线（底 3px 亮灰），其余边框与主 grid 一致（1px 暗灰）。
+            BorderThickness = new Thickness(1, 1, 1, 3),
             HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden,
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            RowHeaderWidth = 50,
         };
+        // #8：分界线——冻结 grid 底边框用加粗亮灰（与冻结列分界线同色 120,120,120），其余边框暗灰。
+        // 用 BorderBrush 单一色 + 底部加粗厚度即可呈现"一条分割线"效果，且四周细边与主 grid 融为一体。
+        grid.BorderBrush = new SolidColorBrush(Color.FromRgb(120, 120, 120));
 
-        // 行号列模板/样式（与主 grid 一致，确保行头宽度对齐）
+        // 行号头：与主 grid 一致（白字、居中、加粗），显示绝对 Excel 行号
         var rowHeaderTemplate = new DataTemplate();
         var factory = new FrameworkElementFactory(typeof(TextBlock));
         factory.SetBinding(
@@ -1485,13 +1512,7 @@ public partial class MainWindow
         rowHeaderTemplate.VisualTree = factory;
         grid.RowHeaderTemplate = rowHeaderTemplate;
 
-        var rowStyle = new Style(typeof(DataGridRow));
-        rowStyle.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
-        rowStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0.5)));
-        rowStyle.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
-        grid.RowStyle = rowStyle;
-        grid.RowHeaderWidth = 50;
-
+        // #8：行头样式与主 grid 完全一致（同背景 GridLineBrush、白字、居中）——去掉之前的差异化。
         var rowHeaderStyle = new Style(typeof(DataGridRowHeader));
         rowHeaderStyle.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
         rowHeaderStyle.Setters.Add(new Setter(Control.BackgroundProperty, GridLineBrush));
@@ -1502,70 +1523,151 @@ public partial class MainWindow
         );
         grid.RowHeaderStyle = rowHeaderStyle;
 
-        // 列：简单列头、只读，宽度/冻结列数由 SyncFrozenToMain 镜像主 grid
-        BuildDataColumns(grid, state.Table, withFilterBox: false);
-        // 冻结行 grid 的行号 = 视图行号+1（它显示的是 row 0..N-1，即真实行号 1..N，无偏移）
-        grid.LoadingRow += (_, args) => args.Row.Header = args.Row.GetIndex() + 1;
+        // #8：行样式与主 grid 一致（同边框、白字，无特殊深色背景）。
+        var rowStyle = new Style(typeof(DataGridRow));
+        rowStyle.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
+        rowStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0.5)));
+        rowStyle.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
+        grid.RowStyle = rowStyle;
+
+        // 单元格样式与主 grid 一致（同边框），保证行高/字体/网格线完全统一。
+        var cellStyle = new Style(typeof(DataGridCell));
+        cellStyle.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
+        cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0.5)));
+        grid.CellStyle = cellStyle;
+
+        // #1：冻结 grid 顶部承载列头 + DGX 浮动筛选行（主 grid 冻结时隐藏列头）。必须在加列前开启
+        // 自动筛选（DGX 靠 Columns.CollectionChanged 给新列套筛选头模板，加列后再开启不回溯——P5 踩坑）。
+        DataGridExtensions.DataGridFilter.SetIsAutoFilterEnabled(grid, true);
+        // 列：与主 grid 同结构，带筛选框（withFilterBox=true）。编辑经 RowView 写回；筛选路由到主区 View
+        // （在 ApplyFreezeRows 里把本 grid 的 DataContext 指向 state.Filter，带 BasePredicate=row>=n）。
+        BuildDataColumns(grid, state.Store, withFilterBox: true);
+        // #4：行号用绝对 store 行号 +1（冻结区 RowRangeView(0,n) → 1..n），与主区连续对齐。
+        grid.LoadingRow += (_, args) =>
+            args.Row.Header = RowHeaderNumber(args.Row.Item, args.Row.GetIndex());
+
+        // #5：用户在冻结 grid 里调列宽 → 同步到主 grid（冻结时列头显示在冻结 grid，用户主要在这里拖列宽）。
+        foreach (var col in grid.Columns)
+        {
+            System
+                .ComponentModel.DependencyPropertyDescriptor.FromProperty(
+                    DataGridColumn.ActualWidthProperty,
+                    typeof(DataGridColumn)
+                )
+                .AddValueChanged(
+                    col,
+                    (_, _) =>
+                    {
+                        if (!_syncingColumnWidths)
+                            SyncFrozenColumnWidths(state, mainToFrozen: false);
+                    }
+                );
+        }
+
+        // 编辑提交 → 写回 ColumnStore + 撤销栈（与主 grid 同一套逻辑）
+        grid.CellEditEnding += (_, args) =>
+        {
+            if (
+                args.EditAction != DataGridEditAction.Commit
+                || args.Column is not DataGridBoundColumn
+                || args.Row.Item is not RowView view
+            )
+                return;
+            var colIndex = args.Column.DisplayIndex;
+            var oldValue = view[colIndex];
+            var newValue = (args.EditingElement as TextBox)?.Text ?? string.Empty;
+            if (oldValue == newValue)
+                return;
+            view[colIndex] = newValue; // RowView → ColumnStore.SetCell（真实行号，标脏）
+            state.UndoStack.Push(
+                new CellBatchAction([
+                    new CellEditRecord(view.RowIndex, colIndex, oldValue, newValue),
+                ])
+            );
+            state.RedoStack.Clear();
+            MarkDirty(grid, view, colIndex);
+            MarkCurrentFileDirty();
+        };
+
         return grid;
     }
 
-    /// <summary>
-    /// 挂三同步：横向滚（主→冻）、列宽（主→冻）、冻结列数（主→冻）。全部走主 grid 的 LayoutUpdated，
-    /// 一个 handler 兜底，免逐列 DependencyPropertyDescriptor 的悬挂引用。
-    /// </summary>
-    private void WireFreezeSync(SheetState state)
+    /// <summary>横向滚动同步（主 grid 驱动 → 冻结 grid）：只转发横向偏移，不在滚动里同步列宽（#3：
+    /// 编辑超长文本拖选会触发滚动，若此时同步 ActualWidth 会把编辑态的瞬时宽度写进列宽导致分界线偏移）。</summary>
+    private void WireFreezeRowSync(SheetState state)
     {
-        var main = state.MainGrid;
-        // 主→冻 横向滚：ScrollViewer.ScrollChanged 是路由事件，从主 grid 内部 ScrollViewer 冒泡。
-        main.AddHandler(
+        state.MainGrid.AddHandler(
             ScrollViewer.ScrollChangedEvent,
             new ScrollChangedEventHandler(
                 (_, e) =>
                 {
                     if (state.FrozenGrid is not { } fg)
                         return;
-                    state.FrozenScroll ??= FindScrollViewer(fg);
-                    state.FrozenScroll?.ScrollToHorizontalOffset(e.HorizontalOffset);
+                    // 只在横向偏移真正变化时转发；不做列宽同步（列宽同步走 ActualWidth 变更事件，见 #3/#5）。
+                    if (Math.Abs(e.HorizontalChange) > 0.01)
+                    {
+                        state.FrozenScroll ??= FindScrollViewer(fg);
+                        state.FrozenScroll?.ScrollToHorizontalOffset(e.HorizontalOffset);
+                    }
                 }
             )
         );
 
-        // 列宽 + 冻结列数 + 列数（增删列）镜像：LayoutUpdated 高频但工作极轻（逐列比 width）。
-        // 自稳定——镜像完即相等，下一轮不再写。
-        main.LayoutUpdated += (_, _) =>
+        // #5：用户在主 grid 里调列宽 → 同步到冻结 grid。
+        foreach (var col in state.MainGrid.Columns)
         {
-            if (state.FrozenGrid is not { } fg)
-                return;
-            if (fg.Columns.Count != main.Columns.Count)
-                RebuildFrozenColumns(state);
-            SyncFrozenToMain(state);
-        };
+            System
+                .ComponentModel.DependencyPropertyDescriptor.FromProperty(
+                    DataGridColumn.ActualWidthProperty,
+                    typeof(DataGridColumn)
+                )
+                .AddValueChanged(
+                    col,
+                    (_, _) =>
+                    {
+                        if (!_syncingColumnWidths)
+                            SyncFrozenColumnWidths(state, mainToFrozen: true);
+                    }
+                );
+        }
     }
 
+    // #3/#5：列宽同步的重入保护——同步时设 true，避免"设 A 宽→触发 A 的 ActualWidth 变更→又同步"死循环。
+    private bool _syncingColumnWidths;
+
     /// <summary>
-    /// 把主 grid 的列宽 + FrozenColumnCount 镜像到冻结行 grid（调用方保证列数一致）。
+    /// #5：列宽双向同步。<paramref name="mainToFrozen"/>=true 时主→冻结，false 时冻结→主。
+    /// 用 <see cref="_syncingColumnWidths"/> 防重入；只在宽度确有差异时写，避免抖动。
     /// </summary>
-    private static void SyncFrozenToMain(SheetState state)
+    private void SyncFrozenColumnWidths(SheetState state, bool mainToFrozen)
     {
         var main = state.MainGrid;
         if (state.FrozenGrid is not { } fg)
             return;
-        // 双向同步：谁变了就同步给对方
-        for (var i = 0; i < main.Columns.Count && i < fg.Columns.Count; i++)
+        if (_syncingColumnWidths)
+            return;
+        _syncingColumnWidths = true;
+        try
         {
-            if (fg.Columns[i].Width != main.Columns[i].Width)
+            var (src, dst) = mainToFrozen ? (main, fg) : (fg, main);
+            for (var i = 0; i < src.Columns.Count && i < dst.Columns.Count; i++)
             {
-                // 以较大变化方为准（避免来回设）
-                main.Columns[i].Width = fg.Columns[i].Width;
+                var w = src.Columns[i].ActualWidth;
+                if (w > 0 && Math.Abs(dst.Columns[i].ActualWidth - w) > 0.5)
+                {
+                    dst.Columns[i].Width = new DataGridLength(w);
+                }
             }
+            if (fg.FrozenColumnCount != main.FrozenColumnCount)
+                fg.FrozenColumnCount = main.FrozenColumnCount;
         }
-        if (fg.FrozenColumnCount != main.FrozenColumnCount)
-            fg.FrozenColumnCount = main.FrozenColumnCount;
+        finally
+        {
+            _syncingColumnWidths = false;
+        }
     }
 
-    /// <summary>
-    /// 在 DataGrid 的可视树里找 ScrollViewer（冻结行 grid 的横滚驱动用）。深递归但只调一次（结果缓存到 state.FrozenScroll）。
-    /// </summary>
+    /// <summary>在 DataGrid 可视树里找内部 ScrollViewer（横滚同步用，结果缓存到 state.FrozenScroll）。</summary>
     private static ScrollViewer? FindScrollViewer(DependencyObject d)
     {
         if (d is ScrollViewer sv)
@@ -1577,6 +1679,19 @@ public partial class MainWindow
                 return found;
         }
         return null;
+    }
+
+    private void OnUnfreezeClick(object sender, RoutedEventArgs e)
+    {
+        if (CurrentSheetState is not { } state)
+            return;
+        state.MainGrid.FrozenColumnCount = 0;
+        state.FrozenColumns = 0;
+        ApplyFreezeColumnDivider(state.MainGrid, 0);
+        RemoveFrozenRows(state); // 拆冻结行 grid + 主 grid 恢复 VirtualizingSortableView
+        if (state.FilePath is not null)
+            FreezeConfig.ClearFreeze(Path.GetFileName(state.FilePath), state.SheetName);
+        StatusText.Text = "已取消冻结";
     }
 
     private static void SaveFreeze(SheetState state)
@@ -1786,14 +1901,14 @@ public partial class MainWindow
         if (CurrentSheetState is not { } state)
             return;
         var grid = state.MainGrid;
-        if (grid.CurrentCell.Column is null || grid.CurrentCell.Item is not DataRowView view)
+        // P3.2 后 grid 行项是 RowView（不再是 DataRowView）——旧的 DataRowView 判断恒失败使本功能失效，此处修正。
+        if (grid.CurrentCell.Column is null || grid.CurrentCell.Item is not RowView view)
             return;
         var colIndex = grid.CurrentCell.Column.DisplayIndex;
-        var value = view[colIndex]?.ToString() ?? string.Empty;
-        var header = grid.CurrentCell.Column.Header is StackPanel panel
-            ? panel.Children.OfType<TextBlock>().FirstOrDefault()?.Text ?? "?"
-            : "?";
-        var rowIdx = grid.Items.IndexOf(view);
+        var value = view[colIndex] ?? string.Empty;
+        // 列头现为纯列名字符串（BuildDataColumns 设 Header=columnName）。
+        var header = grid.CurrentCell.Column.Header?.ToString() ?? "?";
+        var rowIdx = view.RowIndex;
         var win = new Window
         {
             Title = $"完整值（可编辑，关窗写回）— {header} 行 {rowIdx + 1}",
@@ -1818,7 +1933,15 @@ public partial class MainWindow
         {
             if (tb.Text != value)
             {
-                view[colIndex] = tb.Text;
+                view[colIndex] = tb.Text; // RowView 索引器 → SetCell 标脏
+                // #6：关窗写回也进撤销栈（一次 Ctrl+Z 撤回这次编辑）。
+                state.UndoStack.Push(
+                    new CellBatchAction([
+                        new CellEditRecord(view.RowIndex, colIndex, value, tb.Text),
+                    ])
+                );
+                state.RedoStack.Clear();
+                MarkDirty(grid, view, colIndex);
                 MarkCurrentFileDirty();
             }
         };
@@ -1893,20 +2016,17 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// 在 UI 线程把 DataTable 拷成 string[,] 快照，供后台搜索。
+    /// 在 UI 线程从 ColumnStore 读出 string[,] 快照，供后台搜索（SearchSnapshots 保持纯 string[,] 逻辑不变）。
     /// </summary>
     private (string, string, string[,]) BuildSearchSnapshot(SheetState state)
     {
-        var table = state.Table;
-        var savedFilter = table.DefaultView.RowFilter;
-        table.DefaultView.RowFilter = string.Empty;
-        var rows = table.Rows.Count;
-        var cols = table.Columns.Count;
+        var store = state.Store;
+        var rows = store.RowCount;
+        var cols = store.ColumnCount;
         var data = new string[rows, cols];
         for (var r = 0; r < rows; r++)
         for (var c = 0; c < cols; c++)
-            data[r, c] = table.Rows[r][c]?.ToString() ?? string.Empty;
-        table.DefaultView.RowFilter = savedFilter;
+            data[r, c] = store.GetCell(r, c) ?? string.Empty;
         var fileName = state.FilePath is not null ? Path.GetFileName(state.FilePath) : "?";
         return (fileName, state.SheetName, data);
     }
@@ -2027,29 +2147,9 @@ public partial class MainWindow
         if (SpotlightToggle.IsChecked == true)
             ApplySpotlightToCurrentGrid();
 
-        // 切 tab 时刷新列筛选下拉 + 清空筛选输入
-        FilterColumn.Items.Clear();
-        if (selectedState is { } st)
-        {
-            foreach (var col in st.Table.Columns)
-                FilterColumn.Items.Add(col.ToString());
-            FilterColumn.SelectedIndex = 0;
-            FilterText.Text = string.Empty;
-        }
-
         if (selectedState is not null)
         {
-            StatusText.Text =
-                selectedState.LoadedRows >= selectedState.TotalRows
-                    ? $"已加载全部 {selectedState.TotalRows} 行"
-                    : $"已加载 {selectedState.LoadedRows}/{selectedState.TotalRows} 行";
-            if (
-                selectedState.LoadedRows < selectedState.TotalRows
-                && selectedState.LoadCts is not { IsCancellationRequested: false }
-            )
-            {
-                StartBackgroundLoad(selectedState);
-            }
+            StatusText.Text = $"已加载全部 {selectedState.TotalRows} 行";
         }
     }
 
@@ -2099,33 +2199,42 @@ public partial class MainWindow
 
     private sealed class SheetState(
         string sheetName,
-        DataTable table,
+        ColumnStore store,
         Dictionary<(int Row, int Col), string> comments,
         string? filePath,
-        int totalRows,
-        int loadedRows
+        int totalRows
     )
     {
         public string SheetName { get; } = sheetName;
-        public DataTable Table { get; } = table;
+
+        // P3.2: 列式存储 + 虚拟化视图取代 DataTable。整表一次性加载进 Store（无后台逐行灌数据），
+        // View 是 DataGrid 的 ItemsSource（按需物化 RowView，不预建整表对象树）。
+        // 用 VirtualizingSortableView：支持 ApplyFilter/ClearFilter（列头筛选），不整表复制。
+        public ColumnStore Store { get; } = store;
+        public VirtualizingSortableView View { get; } = new(store);
         public Dictionary<(int Row, int Col), string> Comments { get; } = comments;
         public string? FilePath { get; set; } = filePath;
-        public int TotalRows { get; } = totalRows;
-        public int LoadedRows { get; set; } = loadedRows;
-        public CancellationTokenSource? LoadCts { get; set; }
-        public Stack<CellEditRecord> UndoStack { get; } = new();
-        public Stack<CellEditRecord> RedoStack { get; } = new();
 
-        // ── 冻结窗格 ──
+        // #1：主 grid 的 DataGridExtensions 筛选适配器（冻结时设 BasePredicate=row>=n 让主区数据行仍可筛）。
+        public ColumnStoreFilterAdapter? Filter { get; set; }
+
+        // Store 一次性全量加载，TotalRows == LoadedRows == Store.RowCount（保留字段供状态栏/兼容显示）。
+        public int TotalRows { get; set; } = totalRows;
+        public int LoadedRows { get; set; } = totalRows;
+        public CancellationTokenSource? LoadCts { get; set; }
+
+        // #6：撤销/重做单元 = IUndoableAction，覆盖单格编辑、多格粘贴、增删行、增删列。
+        // 单格编辑/粘贴用 CellBatchAction（一批 CellEditRecord），结构操作用 InsertRow/DeleteRows/InsertColumn Action，
+        // 一次 Ctrl+Z 整体撤销一次动作。重放逻辑在 MainWindowUndo（IUndoableAction 重载）。
+        public Stack<IUndoableAction> UndoStack { get; } = new();
+        public Stack<IUndoableAction> RedoStack { get; } = new();
+
+        // ── 冻结窗格（P3.2 后 FrozenRows 双 grid 方案暂时退化，见 status.md；FrozenColumns 仍走原生 FrozenColumnCount）──
         public DataGrid MainGrid { get; set; } = null!;
         public Grid? Panel { get; set; }
         public DataGrid? FrozenGrid { get; set; }
         public ScrollViewer? FrozenScroll { get; set; }
         public int FrozenRows { get; set; }
         public int FrozenColumns { get; set; }
-
-        // ── 筛选（冻结行模式下 LCV 用，非冻结走 DataView.RowFilter）──
-        public string FilterColumnName { get; set; } = string.Empty;
-        public string FilterKeyword { get; set; } = string.Empty;
     }
 }

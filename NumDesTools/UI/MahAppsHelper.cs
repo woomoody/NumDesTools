@@ -21,22 +21,60 @@ internal static class MahAppsHelper
                 ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown,
             };
 
-        // 手动 merge MahApps 核心资源（无 App.xaml 时必须）
+        // 手动 merge 资源（无 App.xaml 时必须）
+        // 注意：迁移到 wpfui FluentWindow 后，不再需要 MahApps 主题——
+        // MahApps Dark.Steel 主题会和 wpfui Dark 冲突，导致 wpfui 控件文字黑底黑字。
+        // 只合并 wpfui 资源。MahApps 字典仅在个别遗留控件（如 AIAgentPanel 的 mah:NumericUpDown）需要，
+        // 但那些控件不在独立窗口里，不影响。
         var app = System.Windows.Application.Current;
-        foreach (
-            var uri in new[]
-            {
-                "pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml",
-                "pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml",
-                "pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Steel.xaml",
-            }
+
+        // wpfui 深色主题资源字典（wpfui 控件如 ui:Button/ui:TextBlock 渲染依赖此字典）
+        // 无 App.xaml 的插件宿主必须手动合并，否则深色 Mica 背景上文字不可见（黑框问题）
+        // 用 ThemesDictionary + ControlsDictionary 标记类（和 FileLockPreview 验证通过的方式一致）
+        if (
+            !app.Resources.MergedDictionaries.Any(d =>
+                d.Source?.OriginalString.Contains("Wpf.Ui") == true
+            )
         )
         {
-            var rd = new System.Windows.ResourceDictionary { Source = new Uri(uri) };
-            app.Resources.MergedDictionaries.Add(rd);
+            try
+            {
+                app.Resources.MergedDictionaries.Add(
+                    new Wpf.Ui.Markup.ThemesDictionary
+                    {
+                        Source = new Uri(
+                            "pack://application:,,,/Wpf.Ui;component/Resources/Theme/Dark.xaml"
+                        ),
+                    }
+                );
+                app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ControlsDictionary());
+                WriteDebugLog(
+                    "wpfui Dark + Controls resources merged OK (ThemesDictionary, no MahApps)"
+                );
+            }
+            catch (Exception ex)
+            {
+                WriteDebugLog($"wpfui resource merge FAILED: {ex}");
+            }
         }
+        else
+        {
+            WriteDebugLog("wpfui resources already merged, skip");
+        }
+    }
 
-        ThemeManager.Current.ChangeTheme(app, "Dark.Steel");
+    private static void WriteDebugLog(string msg)
+    {
+        try
+        {
+            var path = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "workspace",
+                "xlsx-editor-wpfui-init.log"
+            );
+            System.IO.File.AppendAllText(path, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}\n");
+        }
+        catch { }
     }
 
     internal static void SetExcelOwner(System.Windows.Window window)

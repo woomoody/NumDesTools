@@ -1,11 +1,12 @@
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 
 namespace NumDesTools.UI;
 
-public partial class DiffProgressWindow : MetroWindow
+public partial class DiffProgressWindow : FluentWindow
 {
     public DiffProgressWindow()
     {
+        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
         MahAppsHelper.EnsureInitialized();
         MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();

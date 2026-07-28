@@ -2,12 +2,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Windows.Controls;
-using MahApps.Metro.Controls;
 using Newtonsoft.Json.Linq;
+using Wpf.Ui.Controls;
+using TreeViewItem = System.Windows.Controls.TreeViewItem;
 
 namespace NumDesTools.UI
 {
-    public partial class HelpWindow : MetroWindow
+    public partial class HelpWindow : FluentWindow
     {
         // ── 数据模型 ─────────────────────────────────────────────────────────────
 
@@ -760,6 +761,9 @@ code {
 
         public HelpWindow()
         {
+            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
+                Wpf.Ui.Appearance.ApplicationTheme.Dark
+            );
             MahAppsHelper.EnsureInitialized();
             MahAppsHelper.SetExcelOwner(this);
             InitializeComponent();

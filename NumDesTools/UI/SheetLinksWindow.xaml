@@ -1,11 +1,19 @@
-<mah:MetroWindow
+<ui:FluentWindow
     x:Class="NumDesTools.UI.SheetLinksWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="Sheet链接关系"
     Width="1600" Height="900"
     WindowStartupLocation="CenterScreen"
+    WindowBackdropType="Mica"
+    ExtendsContentIntoTitleBar="True"
     KeyDown="Window_EscClose">
-    <Grid x:Name="BaseGrid" />
-</mah:MetroWindow>
+    <Grid x:Name="BaseGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="Sheet链接关系" />
+    </Grid>
+</ui:FluentWindow>
