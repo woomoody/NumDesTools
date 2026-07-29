@@ -120,6 +120,10 @@ def _collect_cc(frozen_str):
                     fp = os.path.join(dp, f)
                     try:
                         if os.path.getmtime(fp) < mtime_cut: continue
+                        # 同一条 message.id 在 jsonl 里可能出现多次（流式中间快照 + 最终快照都带 usage），
+                        # 直接逐行求和会重复计数——按 message.id 去重，同 id 只保留最后一次（最完整）的记录。
+                        file_records = {}
+                        no_id_seq = 0
                         with open(fp, 'r', encoding='utf-8') as fh:
                             for line in fh:
                                 line = line.strip()
@@ -135,7 +139,8 @@ def _collect_cc(frozen_str):
                                     date_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d') if isinstance(ts, (int, float)) else str(ts)[:10]
                                 except: continue
                                 if date_str <= frozen_str: continue
-                                usage = obj.get('usage') or (isinstance(obj.get('message'), dict) and obj['message'].get('usage'))
+                                msg_obj = obj.get('message') if isinstance(obj.get('message'), dict) else {}
+                                usage = obj.get('usage') or msg_obj.get('usage')
                                 if not isinstance(usage, dict): continue
                                 inp = usage.get('input_tokens',0) or 0
                                 out = usage.get('output_tokens',0) or 0
@@ -143,8 +148,13 @@ def _collect_cc(frozen_str):
                                 cw  = usage.get('cache_creation_input_tokens',0) or 0
                                 if inp+out+cr+cw == 0: continue
                                 if out < 200 and cr == 0 and cw == 0: continue
-                                model = (obj.get('model') or (obj.get('message') or {}).get('model') or '<empty>')
-                                records.append((date_str, model, inp, out, cr, cw, proj_key))
+                                model = (obj.get('model') or msg_obj.get('model') or '<empty>')
+                                msg_id = msg_obj.get('id')
+                                if not msg_id:
+                                    no_id_seq += 1
+                                    msg_id = f'__noid_{no_id_seq}'
+                                file_records[msg_id] = (date_str, model, inp, out, cr, cw, proj_key)
+                        records.extend(file_records.values())
                     except Exception as e:
                         print(f'  [warn] {fp}: {e}')
     return records
