@@ -7,6 +7,32 @@ namespace NumDesTools.UI;
 
 internal static class MahAppsHelper
 {
+    /// <summary>
+    /// 判断某个 URI 片段的资源字典是否已存在于 MergedDictionaries 中——
+    /// 抽出为纯函数，不依赖真实 Application/STA 线程，可单测覆盖
+    /// （见 NumDesOutput/analysis/wpfui-migration-optimization-report-2026-07-29.md P1）。
+    /// 接受 <see cref="Uri"/> 序列而非 <see cref="System.Windows.ResourceDictionary"/>——
+    /// ResourceDictionary.Source 的 setter 会触发真实资源加载（网络/pack 解析），
+    /// 单测里不应该构造会触发 IO 的对象，调用方在 EnsureInitialized 里传
+    /// mergedDictionaries.Select(d => d.Source) 即可复用同一份逻辑。
+    /// </summary>
+    /// <param name="exactMatch">
+    /// true：URI 的完整字符串必须与 <paramref name="uriOrFragment"/> 相等（MahApps 资源用此模式）。
+    /// false（默认）：URI 字符串只需包含 <paramref name="uriOrFragment"/> 子串（wpfui 资源用此模式）。
+    /// </param>
+    internal static bool IsResourceMerged(
+        IEnumerable<Uri?> mergedSources,
+        string uriOrFragment,
+        bool exactMatch = false
+    )
+    {
+        return mergedSources.Any(source =>
+            exactMatch
+                ? source?.OriginalString == uriOrFragment
+                : source?.OriginalString.Contains(uriOrFragment) == true
+        );
+    }
+
     internal static void EnsureInitialized()
     {
         if (System.Windows.Application.Current is null)
@@ -29,7 +55,11 @@ internal static class MahAppsHelper
         };
         foreach (
             var uri in mahappsUris.Where(u =>
-                !app.Resources.MergedDictionaries.Any(d => d.Source?.OriginalString == u)
+                !IsResourceMerged(
+                    app.Resources.MergedDictionaries.Select(d => d.Source),
+                    u,
+                    exactMatch: true
+                )
             )
         )
         {
@@ -56,11 +86,7 @@ internal static class MahAppsHelper
         // wpfui 深色主题资源字典（wpfui 控件如 ui:Button/ui:TextBlock 渲染依赖此字典）
         // 在 MahApps 之后合并——后合并的覆盖前面的，FluentWindow 的 ui: 控件用 wpfui 深色样式。
         // 用 ThemesDictionary + ControlsDictionary 标记类（和 FileLockPreview 验证通过的方式一致）
-        if (
-            !app.Resources.MergedDictionaries.Any(d =>
-                d.Source?.OriginalString.Contains("Wpf.Ui") == true
-            )
-        )
+        if (!IsResourceMerged(app.Resources.MergedDictionaries.Select(d => d.Source), "Wpf.Ui"))
         {
             try
             {
@@ -74,7 +100,7 @@ internal static class MahAppsHelper
                 );
                 app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ControlsDictionary());
                 WriteDebugLog(
-                    "wpfui Dark + Controls resources merged OK (ThemesDictionary, no MahApps)"
+                    "wpfui Dark + Controls merged OK (global, CTP overrides applied per-Control)"
                 );
             }
             catch (Exception ex)
@@ -87,25 +113,17 @@ internal static class MahAppsHelper
             WriteDebugLog("wpfui resources already merged, skip");
         }
 
-        // 每次调用都强制 Apply 深色主题——
-        // 第一次调用时 Application 刚建，wpfui 主题可能未真正生效（第一次窗口黑，第二次好的根因）。
-        // 每次窗口构造时重新 Apply，确保主题真正应用到当前 Dispatcher 状态。
+        // 主题跟随系统（不强制固定 Dark）——
+        // ApplySystemTheme 根据系统当前浅色/深色应用主题，系统切换时自动响应。
+        // 之前用 Apply(Dark) 强制 Dark 会压住系统主题跟随，导致 CTP 背景不随系统走。
         try
         {
-            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
-                Wpf.Ui.Appearance.ApplicationTheme.Dark
-            );
-            // 强制同步处理 Background 优先级的 Dispatcher 操作——
-            // wpfui Apply 内部可能用 Dispatcher 异步回调应用主题，ShowDialog 前不刷新则第一次窗口黑。
-            System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(
-                System.Windows.Threading.DispatcherPriority.Background,
-                new System.Action(() => { })
-            );
-            WriteDebugLog("ApplicationThemeManager.Apply(Dark) + Dispatcher flush called");
+            Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
+            WriteDebugLog("ApplicationThemeManager.ApplySystemTheme called (follow system)");
         }
         catch (Exception ex)
         {
-            WriteDebugLog($"ApplicationThemeManager.Apply FAILED: {ex}");
+            WriteDebugLog($"ApplicationThemeManager.ApplySystemTheme FAILED: {ex}");
         }
     }
 

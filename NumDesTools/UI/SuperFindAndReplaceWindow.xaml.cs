@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Media;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Rendering;
@@ -22,9 +22,6 @@ namespace NumDesTools.UI
 
         public SuperFindAndReplaceWindow(List<dynamic> initialTexts)
         {
-            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
-                Wpf.Ui.Appearance.ApplicationTheme.Dark
-            );
             MahAppsHelper.EnsureInitialized();
             MahAppsHelper.SetExcelOwner(this);
             InitializeComponent();

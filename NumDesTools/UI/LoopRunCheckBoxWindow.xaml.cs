@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using Wpf.Ui.Controls;
 using CheckBox = System.Windows.Controls.CheckBox;
 
@@ -11,9 +11,6 @@ namespace NumDesTools.UI
 
         public LoopRunCheckBoxWindow(List<object> inputCheckList)
         {
-            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
-                Wpf.Ui.Appearance.ApplicationTheme.Dark
-            );
             MahAppsHelper.EnsureInitialized();
             MahAppsHelper.SetExcelOwner(this);
             InitializeComponent();

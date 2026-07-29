@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Windows.Controls;
@@ -761,9 +761,6 @@ code {
 
         public HelpWindow()
         {
-            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
-                Wpf.Ui.Appearance.ApplicationTheme.Dark
-            );
             MahAppsHelper.EnsureInitialized();
             MahAppsHelper.SetExcelOwner(this);
             InitializeComponent();

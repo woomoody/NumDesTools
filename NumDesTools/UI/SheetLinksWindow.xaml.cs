@@ -1,4 +1,4 @@
-using System.Windows.Controls;
+﻿using System.Windows.Controls;
 using System.Windows.Input;
 using GraphX.Common.Enums;
 using GraphX.Controls;
@@ -16,9 +16,6 @@ namespace NumDesTools.UI
     {
         public SheetLinksWindow()
         {
-            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
-                Wpf.Ui.Appearance.ApplicationTheme.Dark
-            );
             MahAppsHelper.EnsureInitialized();
             MahAppsHelper.SetExcelOwner(this);
             InitializeComponent();

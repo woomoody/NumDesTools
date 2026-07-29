@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -82,9 +82,6 @@ namespace NumDesTools.UI
 
         private BatchReplaceWindow()
         {
-            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
-                Wpf.Ui.Appearance.ApplicationTheme.Dark
-            );
             MahAppsHelper.EnsureInitialized();
             InitializeComponent();
             RuleRows.ItemsSource = _rows;

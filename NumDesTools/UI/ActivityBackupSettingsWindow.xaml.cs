@@ -1,4 +1,4 @@
-using NumDesTools.Activity;
+﻿using NumDesTools.Activity;
 using Wpf.Ui.Controls;
 using MessageBox = System.Windows.MessageBox;
 using WpfKey = System.Windows.Input.Key;
@@ -11,7 +11,6 @@ public partial class ActivityBackupSettingsWindow : FluentWindow
 {
     internal ActivityBackupSettingsWindow()
     {
-        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
         MahAppsHelper.EnsureInitialized();
         MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();

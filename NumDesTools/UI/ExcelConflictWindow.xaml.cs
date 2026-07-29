@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -38,7 +38,6 @@ public partial class ExcelConflictWindow : FluentWindow
         string? headBranch = null
     )
     {
-        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
         MahAppsHelper.EnsureInitialized();
         MahAppsHelper.SetExcelOwner(this);
         _suppressRefresh = true;

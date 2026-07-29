@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using NumDesTools;
@@ -38,7 +38,6 @@ public partial class GitExportSelectWindow : FluentWindow
     /// <summary>测试用构造：skipExcelOwner=true 跳过 SetExcelOwner（无 ExcelDna.Integration 依赖）。</summary>
     public GitExportSelectWindow(string repoBasePath, string gitAuthor, bool skipExcelOwner)
     {
-        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
         MahAppsHelper.EnsureInitialized();
         if (!skipExcelOwner)
             MahAppsHelper.SetExcelOwner(this);

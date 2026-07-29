@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using Wpf.Ui.Controls;
 using Orientation = System.Windows.Controls.Orientation;
@@ -13,9 +13,6 @@ namespace NumDesTools.UI
 
         public InputFormularWindow(List<string> strings)
         {
-            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
-                Wpf.Ui.Appearance.ApplicationTheme.Dark
-            );
             MahAppsHelper.EnsureInitialized();
             MahAppsHelper.SetExcelOwner(this);
             InitializeComponent();

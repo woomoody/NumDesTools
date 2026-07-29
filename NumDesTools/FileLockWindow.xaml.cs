@@ -11,11 +11,7 @@ public partial class FileLockWindow : FluentWindow
 {
     public FileLockWindow(string filePath, List<(string ProcessName, uint Pid)> lockers)
     {
-        // 必须先合并 wpfui 资源字典（FileLockWindow 从独立 STA 线程弹出，
-        // 不走 EnsureInitialized 的话 ui:TextBlock/ui:TextBox 无样式 → 黑底黑字）
-        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
         UI.MahAppsHelper.EnsureInitialized();
-
         InitializeComponent();
         FilePathBox.Text = filePath;
 

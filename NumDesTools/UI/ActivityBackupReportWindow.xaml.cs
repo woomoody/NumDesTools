@@ -1,4 +1,4 @@
-using Wpf.Ui.Controls;
+﻿using Wpf.Ui.Controls;
 using WpfKey = System.Windows.Input.Key;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 using WpfVisibility = System.Windows.Visibility;
@@ -10,7 +10,6 @@ public partial class ActivityBackupReportWindow : FluentWindow
 {
     private ActivityBackupReportWindow(string title, string body, bool showCancel)
     {
-        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
         MahAppsHelper.EnsureInitialized();
         MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
