@@ -115,7 +115,6 @@ def _collect_cc(frozen_str):
             if not os.path.isdir(pp): continue
             proj_key = f"{prefix}{proj}"
             for dp, _, files in os.walk(pp):
-                if os.sep + 'subagents' in dp or os.sep + 'workflows' in dp: continue
                 for f in sorted(files):
                     if not f.endswith('.jsonl'): continue
                     fp = os.path.join(dp, f)
