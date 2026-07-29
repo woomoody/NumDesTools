@@ -122,6 +122,8 @@ def _collect_cc(frozen_str):
                         if os.path.getmtime(fp) < mtime_cut: continue
                         # 同一条 message.id 在 jsonl 里可能出现多次（流式中间快照 + 最终快照都带 usage），
                         # 直接逐行求和会重复计数——按 message.id 去重，同 id 只保留最后一次（最完整）的记录。
+                        # 注：排除 subagents/workflows 目录不是这个问题的解法——那些是独立真实消耗，
+                        # 排除只会漏计，且主会话文件本身也有同样的重复行问题（实测排除后仍有 164.8% 的膨胀）。
                         file_records = {}
                         no_id_seq = 0
                         with open(fp, 'r', encoding='utf-8') as fh:
