@@ -164,6 +164,10 @@ public partial class NumDesAddIn : ExcelRibbon, IExcelAddIn
         CustomRibbon = ribbon;
         CustomRibbon.ActivateTab("MainTab");
 
+        // 插件加载时一次性初始化 wpfui 主题资源——
+        // 确保第一个 FluentWindow 弹出前 wpfui Dark 主题已就绪，避免第一次窗口黑底黑字。
+        UI.MahAppsHelper.EnsureInitialized();
+
         // 迁移旧 label
         if (CellHistoryTipText == "单元格历史：开启")
         {

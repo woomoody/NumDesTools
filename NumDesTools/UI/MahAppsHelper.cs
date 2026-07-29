@@ -7,14 +7,8 @@ namespace NumDesTools.UI;
 
 internal static class MahAppsHelper
 {
-    private static bool _initialized;
-
     internal static void EnsureInitialized()
     {
-        if (_initialized)
-            return;
-        _initialized = true;
-
         if (System.Windows.Application.Current is null)
             _ = new System.Windows.Application
             {
@@ -22,14 +16,45 @@ internal static class MahAppsHelper
             };
 
         // 手动 merge 资源（无 App.xaml 时必须）
-        // 注意：迁移到 wpfui FluentWindow 后，不再需要 MahApps 主题——
-        // MahApps Dark.Steel 主题会和 wpfui Dark 冲突，导致 wpfui 控件文字黑底黑字。
-        // 只合并 wpfui 资源。MahApps 字典仅在个别遗留控件（如 AIAgentPanel 的 mah:NumericUpDown）需要，
-        // 但那些控件不在独立窗口里，不影响。
         var app = System.Windows.Application.Current;
 
+        // MahApps 核心资源——CTP（CustomTaskPane）里的 mah:NumericUpDown/mah:TextBoxHelper.Watermark 依赖这些。
+        // 去掉后 CTP 控件没样式 fallback 默认（黑块 + 大字体大间距）。
+        // FluentWindow 不受影响（wpfui 字典后合并覆盖 + Apply Dark 每次调用）。
+        var mahappsUris = new[]
+        {
+            "pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml",
+            "pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml",
+            "pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Steel.xaml",
+        };
+        foreach (
+            var uri in mahappsUris.Where(u =>
+                !app.Resources.MergedDictionaries.Any(d => d.Source?.OriginalString == u)
+            )
+        )
+        {
+            try
+            {
+                app.Resources.MergedDictionaries.Add(
+                    new System.Windows.ResourceDictionary { Source = new Uri(uri) }
+                );
+            }
+            catch (Exception ex)
+            {
+                WriteDebugLog($"MahApps merge FAILED ({uri}): {ex}");
+            }
+        }
+        try
+        {
+            ControlzEx.Theming.ThemeManager.Current.ChangeTheme(app, "Dark.Steel");
+        }
+        catch (Exception ex)
+        {
+            WriteDebugLog($"MahApps ThemeManager FAILED: {ex}");
+        }
+
         // wpfui 深色主题资源字典（wpfui 控件如 ui:Button/ui:TextBlock 渲染依赖此字典）
-        // 无 App.xaml 的插件宿主必须手动合并，否则深色 Mica 背景上文字不可见（黑框问题）
+        // 在 MahApps 之后合并——后合并的覆盖前面的，FluentWindow 的 ui: 控件用 wpfui 深色样式。
         // 用 ThemesDictionary + ControlsDictionary 标记类（和 FileLockPreview 验证通过的方式一致）
         if (
             !app.Resources.MergedDictionaries.Any(d =>
@@ -60,6 +85,27 @@ internal static class MahAppsHelper
         else
         {
             WriteDebugLog("wpfui resources already merged, skip");
+        }
+
+        // 每次调用都强制 Apply 深色主题——
+        // 第一次调用时 Application 刚建，wpfui 主题可能未真正生效（第一次窗口黑，第二次好的根因）。
+        // 每次窗口构造时重新 Apply，确保主题真正应用到当前 Dispatcher 状态。
+        try
+        {
+            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
+                Wpf.Ui.Appearance.ApplicationTheme.Dark
+            );
+            // 强制同步处理 Background 优先级的 Dispatcher 操作——
+            // wpfui Apply 内部可能用 Dispatcher 异步回调应用主题，ShowDialog 前不刷新则第一次窗口黑。
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.Invoke(
+                System.Windows.Threading.DispatcherPriority.Background,
+                new System.Action(() => { })
+            );
+            WriteDebugLog("ApplicationThemeManager.Apply(Dark) + Dispatcher flush called");
+        }
+        catch (Exception ex)
+        {
+            WriteDebugLog($"ApplicationThemeManager.Apply FAILED: {ex}");
         }
     }
 
