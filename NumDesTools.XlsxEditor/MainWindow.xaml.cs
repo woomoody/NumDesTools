@@ -26,6 +26,11 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     // 深色主题单元格边框颜色（比背景略亮）
     private static readonly Brush GridLineBrush = new SolidColorBrush(Color.FromRgb(60, 60, 60));
 
+    // #P8-1：列头（Excel 字母坐标 A/B/C 所在行）背景色——比数据区略深，与深色主题一致。
+    private static readonly Brush HeaderBackgroundBrush = new SolidColorBrush(
+        Color.FromRgb(45, 45, 45)
+    );
+
     // 聚光灯：选中区域外框（亮黄色），行列用半透明背景色指示
     private static readonly Brush SpotlightBorderBrush = new SolidColorBrush(
         Color.FromRgb(255, 220, 50)
@@ -296,7 +301,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             {
                 grid.FrozenColumnCount = fc;
                 state.FrozenColumns = fc;
-                ApplyFreezeColumnDivider(grid, fc);
+                ApplyFreezeColumnDivider(state, fc);
             }
             if (fr > 0 && fr < store.RowCount)
             {
@@ -586,6 +591,43 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         return name;
     }
 
+    /// <summary>
+    /// #P8-1：列头样式——强制 Excel 字母坐标（A/B/C，来自 <see cref="ColumnStore.ColumnNames"/>）在深色主题下
+    /// 以白色粗体可见。根因：DataGridExtensions 的列头模板（ColumnHeaderTemplateKey）用一个
+    /// <c>ContentPresenter Content="{Binding}"</c> 呈现列头对象（即字母字符串），其前景色继承自
+    /// <see cref="DataGridColumnHeader"/>；而 WPF-UI 深色皮肤未给该 ContentPresenter 明确前景，
+    /// 导致字母以近乎不可见的颜色绘制（UIA 仍能读到 HeaderItem.Name="A"，但视觉上看不见——这正是
+    /// "UIA 读到字母 vs 截图看不到字母"两组观察的调和点：内容模型有字母，只是没被painted出来）。
+    /// 显式设 Foreground=White + Background=深色 + 足够行高，字母才真正可见。两个 grid（主 + 冻结）
+    /// 共用同一套样式，保证冻结态/非冻结态下字母都可见。
+    /// </summary>
+    private static Style BuildColumnHeaderStyle()
+    {
+        var style = new Style(typeof(DataGridColumnHeader));
+        style.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
+        // #P9-1：DGX 列头模板里的 PART_Content 是 ContentPresenter，字母（"A"/"B"...）以 TextBlock 呈现；
+        // 其颜色靠 TextElement.Foreground 继承。WPF-UI 深色皮肤的 DataGridColumnHeader 模板可能自带内层
+        // ContentPresenter 前景，盖过 Control.Foreground（截图证实冻结后主区字母不可见）。同时显式设
+        // TextElement.Foreground + TextBlock.Foreground=White，让字母无论经哪层呈现都强制白色。
+        style.Setters.Add(
+            new Setter(System.Windows.Documents.TextElement.ForegroundProperty, Brushes.White)
+        );
+        style.Setters.Add(new Setter(TextBlock.ForegroundProperty, Brushes.White));
+        style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.Bold));
+        style.Setters.Add(new Setter(Control.BackgroundProperty, HeaderBackgroundBrush));
+        style.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
+        style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0, 0, 1, 1)));
+        style.Setters.Add(
+            new Setter(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Left)
+        );
+        style.Setters.Add(
+            new Setter(Control.VerticalContentAlignmentProperty, VerticalAlignment.Center)
+        );
+        style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(6, 2, 2, 2)));
+        style.Setters.Add(new Setter(FrameworkElement.MinHeightProperty, 24d));
+        return style;
+    }
+
     private DataGrid BuildGrid(ColumnStore store, Dictionary<(int Row, int Col), string> commentMap)
     {
         var grid = new DataGrid
@@ -605,6 +647,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             BorderBrush = GridLineBrush,
             BorderThickness = new Thickness(1),
         };
+
+        // #P8-1：列头样式（Excel 字母坐标白色粗体可见）
+        grid.ColumnHeaderStyle = BuildColumnHeaderStyle();
 
         // 行号列：用 RowHeaderTemplate 强制渲染 TextBlock，不依赖主题默认 RowHeader 可见性
         var rowHeaderTemplate = new DataTemplate();
@@ -650,6 +695,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         // 给"新加入且 HeaderTemplate==null 且 IsFilterVisible"的列套上筛选头模板；若在加列之后才开启，
         // 既有列不会被回溯套模板，筛选行就不渲染（实测踩坑）。筛选执行由 grid.DataContext 上的
         // ColumnStoreFilterAdapter(ICustomFilter) 路由到 VirtualizingSortableView.ApplyFilter（不整表物化）。
+        // #P9-2：先注入 DGX 筛选框深色样式资源（覆盖 ColumnHeaderSearchTextBoxStyleKey），保证筛选框深底白字。
+        ApplyDarkFilterResources(grid);
         DataGridExtensions.DataGridFilter.SetIsAutoFilterEnabled(grid, true);
 
         // 数据列 + 列头筛选 TextBox
@@ -778,24 +825,124 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         }
     }
 
-    // #2：DataGridExtensions 暗色筛选框模板——TextBox 深底白字，双向绑定到列的 Filter 属性
+    // #2/#P8-2：DataGridExtensions 暗色筛选框模板——TextBox 深底白字，双向绑定到列的 Filter 属性
     // （DGX 约定：模板里控件绑 DataGridFilterColumnControl.Filter）。全列共享一个只读模板实例。
     private static readonly ControlTemplate DarkFilterTemplate = BuildDarkFilterTemplate();
+
+    // #P8-2：筛选框 TextBox 自己的显式 ControlTemplate——用我们自己的 Border 画深色背景，
+    // 彻底绕开 WPF-UI 隐式 TextBox 样式和任何主题默认模板。全列共享一个只读实例。
+    private static readonly ControlTemplate DarkFilterTextBoxTemplate =
+        BuildDarkFilterTextBoxTemplate();
+
+    // #P8-2：筛选框 TextBox 的显式 Style（非 null）——WPF 只有在 Style 为"未设置"时才回落到隐式样式；
+    // 上一轮把 Style 设成 null 并不能可靠阻断 ControlsDictionary 里 {x:Type TextBox} 隐式样式的应用，
+    // 于是筛选框仍走 WPF-UI Fluent 模板（白底）。这里给一个显式非 null Style（自带深色 ControlTemplate），
+    // 显式 Style 会硬性阻断隐式样式查找，深色背景由我们的模板 Border 亲自绘制，白底不再有机会出现。
+    private static readonly Style DarkFilterTextBoxStyle = BuildDarkFilterTextBoxStyle();
+
+    /// <summary>
+    /// #P9-2：把 DGX 筛选框 TextBox 的暗色样式注入到 grid 自身的 Resources，键 = DGX 的
+    /// <c>DataGridFilter.ColumnHeaderSearchTextBoxStyleKey</c>。DGX 的默认列头模板（ColumnHeaderTemplateKey）
+    /// 内部的筛选 TextBox 用 <c>DynamicResource {ColumnHeaderSearchTextBoxStyleKey}</c> 取样式（见 DGX Generic.xaml），
+    /// 默认那份是浅色/透明（白底）。在 grid.Resources 里用同一个 key 覆盖成深色，命中的是 DGX 真正使用的那个
+    /// TextBox——不依赖 <c>column.SetTemplate</c> 是否成功替换整个筛选控件模板（P7/P8 靠 SetTemplate 在
+    /// 主 grid 生效但冻结 grid 仍白底，说明 SetTemplate 路径在两个 grid 上不稳定；grid 级 Resources 覆盖是
+    /// DGX 原生样式钩子，对该 grid 内所有筛选框稳定生效）。两个 grid（主 + 冻结）都注入同一份，保证一致。
+    /// </summary>
+    private static void ApplyDarkFilterResources(DataGrid grid)
+    {
+        grid.Resources[DataGridFilter.ColumnHeaderSearchTextBoxStyleKey] =
+            BuildDgxSearchTextBoxDarkStyle();
+    }
+
+    /// <summary>
+    /// 构造 DGX 筛选框 TextBox 的深色 Style：深底(45,45,45)白字 + 自带深色 Border 模板（含 PART_ContentHost），
+    /// 保留 DGX 默认的"无值时 Opacity=0、悬停/聚焦时 Opacity=1"触发器（否则空筛选框会一直占位可见）。
+    /// </summary>
+    private static Style BuildDgxSearchTextBoxDarkStyle()
+    {
+        var style = new Style(typeof(TextBox));
+        style.Setters.Add(new Setter(FrameworkElement.MinWidthProperty, 20d));
+        style.Setters.Add(new Setter(FrameworkElement.MarginProperty, new Thickness(4, 0, 2, 0)));
+        style.Setters.Add(
+            new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(45, 45, 45)))
+        );
+        style.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
+        style.Setters.Add(new Setter(TextBox.CaretBrushProperty, Brushes.White));
+        style.Setters.Add(
+            new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(90, 90, 90)))
+        );
+        style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(1)));
+        style.Setters.Add(new Setter(Control.TemplateProperty, DarkFilterTextBoxTemplate));
+
+        // DGX 默认：空值时隐藏筛选框（Opacity=0），悬停/聚焦时显示——保留该交互，否则每列都常驻一个深色框。
+        var emptyTrigger = new Trigger { Property = TextBox.TextProperty, Value = "" };
+        emptyTrigger.Setters.Add(new Setter(UIElement.OpacityProperty, 0d));
+        var hoverTrigger = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+        hoverTrigger.Setters.Add(new Setter(UIElement.OpacityProperty, 1d));
+        var focusTrigger = new Trigger { Property = UIElement.IsFocusedProperty, Value = true };
+        focusTrigger.Setters.Add(new Setter(UIElement.OpacityProperty, 1d));
+        style.Triggers.Add(emptyTrigger);
+        style.Triggers.Add(hoverTrigger);
+        style.Triggers.Add(focusTrigger);
+        return style;
+    }
+
+    private static ControlTemplate BuildDarkFilterTextBoxTemplate()
+    {
+        // Border { Background=45,45,45; BorderBrush=90,90,90 } > ScrollViewer x:Name=PART_ContentHost
+        var border = new FrameworkElementFactory(typeof(Border));
+        border.SetValue(Border.BackgroundProperty, new SolidColorBrush(Color.FromRgb(45, 45, 45)));
+        border.SetValue(Border.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(90, 90, 90)));
+        border.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+        border.SetValue(Border.SnapsToDevicePixelsProperty, true);
+
+        var host = new FrameworkElementFactory(typeof(ScrollViewer), "PART_ContentHost");
+        host.SetValue(ScrollViewer.FocusableProperty, false);
+        host.SetValue(
+            ScrollViewer.HorizontalScrollBarVisibilityProperty,
+            ScrollBarVisibility.Hidden
+        );
+        host.SetValue(ScrollViewer.VerticalScrollBarVisibilityProperty, ScrollBarVisibility.Hidden);
+        host.SetValue(FrameworkElement.MarginProperty, new Thickness(2, 0, 2, 0));
+        border.AppendChild(host);
+
+        return new ControlTemplate(typeof(TextBox)) { VisualTree = border };
+    }
+
+    private static Style BuildDarkFilterTextBoxStyle()
+    {
+        var style = new Style(typeof(TextBox));
+        style.Setters.Add(
+            new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(45, 45, 45)))
+        );
+        style.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
+        style.Setters.Add(new Setter(TextBox.CaretBrushProperty, Brushes.White));
+        style.Setters.Add(
+            new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(90, 90, 90)))
+        );
+        style.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(1)));
+        style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(2, 0, 2, 0)));
+        // 关键：显式 ControlTemplate（我们的深色 Border），彻底绕开任何主题默认/隐式模板。
+        style.Setters.Add(new Setter(Control.TemplateProperty, DarkFilterTextBoxTemplate));
+        return style;
+    }
 
     private static ControlTemplate BuildDarkFilterTemplate()
     {
         var tb = new FrameworkElementFactory(typeof(TextBox));
-        // P7-2：App.xaml 合并了 WPF-UI 的 ui:ControlsDictionary，它给 TextBox 挂了隐式样式，
-        // 其 Fluent 模板用自己的 ThemeResource 画背景（实测聚焦态内部 RGB 94~180 浅灰=发白），
-        // 会盖掉我们下面的 Background 设值。显式把 Style 置 null 退出隐式样式，回落到 WPF 基础
-        // TextBox 模板（其 Border Background="{TemplateBinding Background}"），这样 45,45,45 才真正生效。
-        tb.SetValue(FrameworkElement.StyleProperty, null);
+        // #P8-2：给 TextBox 一个显式非 null Style（自带深色 ControlTemplate）。上一轮（P7）把 Style
+        // 设为 null 试图退出 WPF-UI 隐式样式，实机证明无效（截图仍白底）——WPF 对 Style=null 与 Style
+        // 未设置在隐式样式回落上行为不可靠。显式 Style 会硬性阻断 {x:Type TextBox} 隐式样式，深色背景
+        // 由该 Style 里的 ControlTemplate Border 亲自绘制，45,45,45 真正落地。
+        tb.SetValue(FrameworkElement.StyleProperty, DarkFilterTextBoxStyle);
         tb.SetValue(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(45, 45, 45)));
         tb.SetValue(Control.ForegroundProperty, Brushes.White);
         tb.SetValue(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(90, 90, 90)));
         tb.SetValue(Control.BorderThicknessProperty, new Thickness(1));
         tb.SetValue(FrameworkElement.MarginProperty, new Thickness(1));
         tb.SetValue(Control.PaddingProperty, new Thickness(2, 0, 2, 0));
+        tb.SetValue(FrameworkElement.MinHeightProperty, 20d);
         tb.SetValue(TextBox.CaretBrushProperty, Brushes.White);
         tb.SetValue(FrameworkElement.ToolTipProperty, "输入筛选值（回车/停顿后生效）");
         // 绑定到 DataGridFilterColumnControl.Filter（DGX 把该控件作为模板承载者）
@@ -1308,47 +1455,81 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         state.FrozenColumns = n;
         if (state.FrozenGrid is not null)
             state.FrozenGrid.FrozenColumnCount = n;
-        // 给分界列（第 n 列，第一个非冻结列）加粗左边框竖线
-        ApplyFreezeColumnDivider(grid, n);
-        if (state.FrozenGrid is not null)
-            ApplyFreezeColumnDivider(state.FrozenGrid, n);
+        // #P9-3：一条独立贯穿 Border 画分界线（跨冻结行 grid + 主 grid），不再在两个 grid 各自列上画边框。
+        ApplyFreezeColumnDivider(state, n);
         SaveFreeze(state);
         StatusText.Text = $"已冻结前 {n} 列";
     }
 
-    /// <summary>
-    /// 给冻结列分界处加粗竖线。P7-1：竖线画在【最后一个冻结列】(第 n-1 列)的【右】边框，而不是
-    /// 第一个非冻结列(第 n 列)的左边框——因为冻结列被 FrozenColumnCount 钉住不随横向滚动移动，
-    /// 而第 n 列会随内容横滚（编辑超长文本时 TextBox 自动横滚 → 分界线跟着漂移，实测从 X1208 漂到 X928）。
-    /// 只动分界列的 CellStyle，不清其他列（保留 BuildGrid 设的 ToolTip 等）。
-    /// </summary>
-    private static void ApplyFreezeColumnDivider(DataGrid grid, int n)
-    {
-        // 只清除之前设过分界线的列（含 BorderThickness 的 CellStyle），不动其他列
-        foreach (var col in grid.Columns)
-        {
-            if (
-                col.CellStyle?.Setters.OfType<Setter>()
-                    .Any(s => s.Property == Control.BorderThicknessProperty) == true
-            )
-                col.ClearValue(DataGridColumn.CellStyleProperty);
-        }
+    // #P9-3：分界竖线颜色（亮灰），供独立贯穿 Border 使用。
+    private static readonly Brush FreezeDividerBrush = new SolidColorBrush(
+        Color.FromRgb(120, 120, 120)
+    );
 
-        if (n <= 0 || n >= grid.Columns.Count)
+    /// <summary>
+    /// #P9-3：冻结列分界竖线——彻底改用【一条独立 Border，跨 panel 两行（冻结行 grid + 主 grid）贯穿绘制】，
+    /// 取代 P7/P8 的"在两个 DataGrid 各自的列 CellStyle/HeaderStyle 里画右边框、再指望它们自然对齐"方案。
+    /// 旧方案根因：列头分界线画在【冻结行 grid】的列上，数据区分界线画在【主 grid】的列上——两个 grid 是
+    /// 不同控件，各自的冻结列实际宽度/行号头宽在布局时刻可能不一致（列宽同步是异步的 ActualWidth 事件驱动），
+    /// 于是上下两段线 X 坐标错位、交界断层（P7/P8/本轮截图三次证实）。
+    /// 现在只画一条 Border，X = 行号头宽 + 前 N 个冻结列实际宽之和，RowSpan 跨两行，物理上就是一条线，
+    /// 不存在跨 grid 对齐问题。X 随列宽变化在 LayoutUpdated 里重算（冻结列被 FrozenColumnCount 钉住不随横滚移动）。
+    /// n&lt;=0 或 n&gt;=列数时移除分界线。
+    /// </summary>
+    private void ApplyFreezeColumnDivider(SheetState state, int n)
+    {
+        var panel = state.Panel;
+        if (panel is null)
             return;
 
-        var dividerStyle = new Style(typeof(DataGridCell));
-        dividerStyle.Setters.Add(
-            new Setter(
-                Control.BorderBrushProperty,
-                new SolidColorBrush(Color.FromRgb(120, 120, 120))
-            )
-        );
-        // 右边框加粗：钉在最后一个冻结列(第 n-1 列)右侧，横滚时不动。
-        dividerStyle.Setters.Add(
-            new Setter(Control.BorderThicknessProperty, new Thickness(0, 0, 2, 0))
-        );
-        grid.Columns[n - 1].CellStyle = dividerStyle;
+        // 先移除旧分界线（含事件挂钩）
+        if (state.FrozenDivider is { } old)
+        {
+            panel.Children.Remove(old);
+            state.FrozenDivider = null;
+        }
+
+        if (n <= 0 || n >= state.MainGrid.Columns.Count)
+            return;
+
+        var divider = new Border
+        {
+            Width = 2,
+            Background = FreezeDividerBrush,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            IsHitTestVisible = false, // 纯装饰，不拦截鼠标（拖选/编辑不受影响）
+            SnapsToDevicePixels = true,
+        };
+        panel.Children.Add(divider);
+        Grid.SetRow(divider, 0);
+        Grid.SetRowSpan(divider, panel.RowDefinitions.Count); // 跨冻结行 grid + 主 grid 两行
+        Panel.SetZIndex(divider, 100); // 压在两个 grid 之上，保证可见
+        state.FrozenDivider = divider;
+
+        // X 位置随布局/列宽变化重算：行号头宽 + 前 N 个冻结列实际宽之和。
+        void Reposition()
+        {
+            if (state.FrozenDivider is not { } d)
+                return;
+            // 冻结列在冻结行 grid（若有）和主 grid 里宽度经 SyncFrozenColumnWidths 保持一致，取主 grid 为准。
+            var grid = state.MainGrid;
+            var x = grid.RowHeaderActualWidth;
+            var take = Math.Min(n, grid.Columns.Count);
+            for (var i = 0; i < take; i++)
+            {
+                var w = grid.Columns[i].ActualWidth;
+                x += w > 0 ? w : grid.Columns[i].Width.DisplayValue;
+            }
+            // Border 用左对齐 + 左 Margin 定位到 X（减去自身一半宽让线压在列边界上）。
+            d.Margin = new Thickness(x - 1, 0, 0, 0);
+        }
+
+        // 首次 + 后续布局变化时重算 X（列宽调整、字体等都会触发 LayoutUpdated）。
+        panel.LayoutUpdated -= state.DividerLayoutHandler;
+        state.DividerLayoutHandler = (_, _) => Reposition();
+        panel.LayoutUpdated += state.DividerLayoutHandler;
+        Reposition();
     }
 
     private void OnFreezeRowClick(object sender, RoutedEventArgs e)
@@ -1429,6 +1610,11 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         // 主 grid 隐藏列头（冻结 grid 顶部已显示列头+筛选行，避免重复）
         state.MainGrid.HeadersVisibility = DataGridHeadersVisibility.Row;
         SyncFrozenColumnWidths(state, mainToFrozen: true);
+
+        // #P9-3：冻结行 grid 建好后，冻结列分界线需要重建，让贯穿 Border 跨新增的冻结行 grid + 主 grid
+        // 两行（此前若只冻结了列，分界线只跨主 grid 一行；现在两行都要覆盖）。
+        if (state.FrozenColumns > 0)
+            ApplyFreezeColumnDivider(state, state.FrozenColumns);
     }
 
     /// <summary>取一个 DataGrid 当前带激活筛选值的列（供 ColumnStoreFilterAdapter.Reapply）。</summary>
@@ -1444,6 +1630,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         }
         state.FrozenGrid = null;
         state.FrozenScroll = null;
+        state.MainScroll = null;
         state.FrozenRows = 0;
         state.MainGrid.ItemsSource = state.View;
         state.MainGrid.HeadersVisibility = DataGridHeadersVisibility.All;
@@ -1458,6 +1645,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             state.View.ClearFilter();
         }
         DataGridExtensions.DataGridFilter.SetIsAutoFilterEnabled(state.MainGrid, true);
+
+        // #P9-3：冻结行 grid 已移除，若仍冻结着列，分界线需重建为只跨主 grid 一行（否则贯穿 Border 会
+        // 悬在已折叠的 row0 空槽里）。若列也没冻结，ApplyFreezeColumnDivider(state,0) 会移除分界线。
+        ApplyFreezeColumnDivider(state, state.FrozenColumns);
     }
 
     /// <summary>
@@ -1486,6 +1677,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
             RowHeaderWidth = 50,
         };
+        // #P8-1：冻结 grid 也用同一列头样式，保证冻结态下 Excel 字母坐标白色粗体可见。
+        grid.ColumnHeaderStyle = BuildColumnHeaderStyle();
         // #8：分界线——冻结 grid 底边框用加粗亮灰（与冻结列分界线同色 120,120,120），其余边框暗灰。
         // 用 BorderBrush 单一色 + 底部加粗厚度即可呈现"一条分割线"效果，且四周细边与主 grid 融为一体。
         grid.BorderBrush = new SolidColorBrush(Color.FromRgb(120, 120, 120));
@@ -1538,6 +1731,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         // #1：冻结 grid 顶部承载列头 + DGX 浮动筛选行（主 grid 冻结时隐藏列头）。必须在加列前开启
         // 自动筛选（DGX 靠 Columns.CollectionChanged 给新列套筛选头模板，加列后再开启不回溯——P5 踩坑）。
+        // #P9-2：先注入 DGX 筛选框深色样式资源（与主 grid 同一份），保证冻结 grid 的筛选框也深底白字
+        // （此前冻结 grid 筛选框白底 = SetTemplate 路径在冻结 grid 上未生效；grid 级 Resources 覆盖稳定）。
+        ApplyDarkFilterResources(grid);
         DataGridExtensions.DataGridFilter.SetIsAutoFilterEnabled(grid, true);
         // 列：与主 grid 同结构，带筛选框（withFilterBox=true）。编辑经 RowView 写回；筛选路由到主区 View
         // （在 ApplyFreezeRows 里把本 grid 的 DataContext 指向 state.Filter，带 BasePredicate=row>=n）。
@@ -1592,8 +1788,11 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         return grid;
     }
 
-    /// <summary>横向滚动同步（主 grid 驱动 → 冻结 grid）：只转发横向偏移，不在滚动里同步列宽（#3：
-    /// 编辑超长文本拖选会触发滚动，若此时同步 ActualWidth 会把编辑态的瞬时宽度写进列宽导致分界线偏移）。</summary>
+    /// <summary>横向滚动同步（主 grid ↔ 冻结 grid 双向）：只转发横向偏移，不在滚动里同步列宽（#3：
+    /// 编辑超长文本拖选会触发滚动，若此时同步 ActualWidth 会把编辑态的瞬时宽度写进列宽导致分界线偏移）。
+    /// #P10：必须双向——冻结 grid 承载列头/筛选行，用户在冻结 grid 里点表头/筛选框或 DataGrid 自动
+    /// BringIntoView 会让冻结 grid 独立横滚；旧的单向（主→冻结）不回传，导致冻结 grid 横滚偏移后
+    /// 主区所有未冻结列相对冻结区整体水平错开一个恒定距离（=两 grid 横滚偏移差）。</summary>
     private void WireFreezeRowSync(SheetState state)
     {
         state.MainGrid.AddHandler(
@@ -1603,11 +1802,53 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 {
                     if (state.FrozenGrid is not { } fg)
                         return;
+                    if (_syncingScroll)
+                        return;
                     // 只在横向偏移真正变化时转发；不做列宽同步（列宽同步走 ActualWidth 变更事件，见 #3/#5）。
                     if (Math.Abs(e.HorizontalChange) > 0.01)
                     {
                         state.FrozenScroll ??= FindScrollViewer(fg);
-                        state.FrozenScroll?.ScrollToHorizontalOffset(e.HorizontalOffset);
+                        if (state.FrozenScroll is { } fs)
+                        {
+                            _syncingScroll = true;
+                            try
+                            {
+                                fs.ScrollToHorizontalOffset(e.HorizontalOffset);
+                            }
+                            finally
+                            {
+                                _syncingScroll = false;
+                            }
+                        }
+                    }
+                }
+            )
+        );
+
+        // #P10：反向同步——冻结 grid 独立横滚（点表头/筛选框/自动 BringIntoView）时回传到主 grid，
+        // 保证两 grid 未冻结列横向偏移始终一致（否则出现恒定水平错位，见方法注释）。
+        state.FrozenGrid?.AddHandler(
+            ScrollViewer.ScrollChangedEvent,
+            new ScrollChangedEventHandler(
+                (_, e) =>
+                {
+                    if (_syncingScroll)
+                        return;
+                    if (Math.Abs(e.HorizontalChange) > 0.01)
+                    {
+                        state.MainScroll ??= FindScrollViewer(state.MainGrid);
+                        if (state.MainScroll is { } ms)
+                        {
+                            _syncingScroll = true;
+                            try
+                            {
+                                ms.ScrollToHorizontalOffset(e.HorizontalOffset);
+                            }
+                            finally
+                            {
+                                _syncingScroll = false;
+                            }
+                        }
                     }
                 }
             )
@@ -1634,6 +1875,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     // #3/#5：列宽同步的重入保护——同步时设 true，避免"设 A 宽→触发 A 的 ActualWidth 变更→又同步"死循环。
     private bool _syncingColumnWidths;
+
+    // #P10：横滚双向同步的重入保护——一侧滚动写另一侧偏移会再触发对方 ScrollChanged，设 true 阻断回环。
+    private bool _syncingScroll;
 
     /// <summary>
     /// #5：列宽双向同步。<paramref name="mainToFrozen"/>=true 时主→冻结，false 时冻结→主。
@@ -1687,7 +1931,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             return;
         state.MainGrid.FrozenColumnCount = 0;
         state.FrozenColumns = 0;
-        ApplyFreezeColumnDivider(state.MainGrid, 0);
+        ApplyFreezeColumnDivider(state, 0);
         RemoveFrozenRows(state); // 拆冻结行 grid + 主 grid 恢复 VirtualizingSortableView
         if (state.FilePath is not null)
             FreezeConfig.ClearFreeze(Path.GetFileName(state.FilePath), state.SheetName);
@@ -2234,7 +2478,16 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         public Grid? Panel { get; set; }
         public DataGrid? FrozenGrid { get; set; }
         public ScrollViewer? FrozenScroll { get; set; }
+        public ScrollViewer? MainScroll { get; set; }
         public int FrozenRows { get; set; }
         public int FrozenColumns { get; set; }
+
+        // #P9-3：冻结列分界竖线——一条独立的 Border，跨 panel 两行（冻结行 grid + 主 grid）绘制，
+        // X 位置 = 行号头宽 + 前 N 个冻结列实际宽之和。用单条贯穿线取代"在两个 grid 各自列上画边框
+        // 再指望自然对齐"的旧方案（P7/P8 两轮都因跨 grid 坐标不一致而断层）。
+        public Border? FrozenDivider { get; set; }
+
+        // #P9-3：分界线 X 重定位的 LayoutUpdated 处理器（存字段以便重挂时先解绑，避免重复订阅）。
+        public EventHandler? DividerLayoutHandler { get; set; }
     }
 }
