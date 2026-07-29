@@ -202,6 +202,15 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     internal async void LoadFile(string path)
     {
+        // P14：文件名带 #（如 #【A-LTE】配置模版【cent】.xlsx）的文件拒绝打开——这类文件
+        // 通常含隐藏 sheet / 外链表，Sylvan 枚举不到会崩溃。给友好提示而不是抛未捕获异常。
+        var fileNameForCheck = Path.GetFileName(path);
+        if (fileNameForCheck.StartsWith('#'))
+        {
+            StatusText.Text = $"跳过：{fileNameForCheck}（文件名以 # 开头，暂不支持打开）";
+            return;
+        }
+
         Tabs.IsEnabled = false;
         Cursor = Cursors.Wait;
         StatusText.Text = $"正在加载：{Path.GetFileName(path)}…";
@@ -339,10 +348,13 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         );
         sheetTabStyle.Setters.Add(new Setter(Control.FontSizeProperty, 11.0));
         sheetTabStyle.Setters.Add(new Setter(TextBlock.FontSizeProperty, 11.0));
-        // 选中 tab 亮色高亮（类似 Excel）
+        // P14：选中 tab 高亮——WPF-UI 模板触发器用 DynamicResource 盖 Background 导致颜色不变，
+        // 改用 Foreground（走 TextElement 继承到 TextBlock，模板盖不住）+ FontWeight 做视觉区分。
         sheetTabStyle.Setters.Add(
             new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(45, 45, 45)))
         );
+        sheetTabStyle.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.Gray));
+        sheetTabStyle.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.Normal));
         sheetTabStyle.Triggers.Add(
             new Trigger
             {
@@ -350,10 +362,11 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 Value = true,
                 Setters =
                 {
-                    new Setter(
-                        Control.BackgroundProperty,
-                        new SolidColorBrush(Color.FromRgb(80, 80, 80))
-                    ),
+                    new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(80, 80, 80))),
+                    new Setter(Control.ForegroundProperty, Brushes.White),
+                    new Setter(Control.FontWeightProperty, FontWeights.Bold),
+                    new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(86, 156, 214))),
+                    new Setter(Control.BorderThicknessProperty, new Thickness(3, 0, 0, 0)),
                 },
             }
         );
@@ -398,9 +411,11 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             typeof(TabItem),
             Application.Current.TryFindResource(typeof(TabItem)) as Style
         );
+        // P14：同 sheet tab，用 Foreground+FontWeight 做选中态视觉区分。
         wbTabStyle.Setters.Add(
             new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(50, 50, 50)))
         );
+        wbTabStyle.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.Gray));
         wbTabStyle.Triggers.Add(
             new Trigger
             {
@@ -408,10 +423,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 Value = true,
                 Setters =
                 {
-                    new Setter(
-                        Control.BackgroundProperty,
-                        new SolidColorBrush(Color.FromRgb(90, 90, 90))
-                    ),
+                    new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(90, 90, 90))),
+                    new Setter(Control.ForegroundProperty, Brushes.White),
+                    new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(86, 156, 214))),
+                    new Setter(Control.BorderThicknessProperty, new Thickness(3, 0, 0, 0)),
                 },
             }
         );
@@ -638,6 +653,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             CanUserDeleteRows = false,
             CanUserSortColumns = false,
             EnableRowVirtualization = true,
+            
             EnableColumnVirtualization = true,
             SelectionUnit = DataGridSelectionUnit.Cell,
             HeadersVisibility = DataGridHeadersVisibility.All,
@@ -646,10 +662,13 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             VerticalGridLinesBrush = GridLineBrush,
             BorderBrush = GridLineBrush,
             BorderThickness = new Thickness(1),
+            RowHeight = double.NaN,
         };
 
         // #P8-1：列头样式（Excel 字母坐标白色粗体可见）
         grid.ColumnHeaderStyle = BuildColumnHeaderStyle();
+        VirtualizingPanel.SetScrollUnit(grid, ScrollUnit.Pixel);
+
 
         // 行号列：用 RowHeaderTemplate 强制渲染 TextBlock，不依赖主题默认 RowHeader 可见性
         var rowHeaderTemplate = new DataTemplate();
@@ -706,6 +725,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var cellStyle = new Style(typeof(DataGridCell));
         cellStyle.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
         cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0.5)));
+        // P13-2：不再对单元格设 MaxHeight 限高——RowHeight=NaN 撑高整行后，被限高的单元格会悬空
+        // 居中在高行中间，自身四边框如实画出，视觉上呈现为行内部多余的横线。改为默认 Stretch，
+        // 单元格随行高拉伸铺满，消除悬空边框。
         cellStyle.Setters.Add(
             new EventSetter(
                 MouseEnterEvent,
@@ -737,6 +759,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 || args.Row.Item is not RowView view
             )
                 return;
+
             var rowIndex = view.RowIndex;
             var colIndex = args.Column.DisplayIndex;
             var oldValue = view[colIndex];
@@ -755,6 +778,12 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             state.RedoStack.Clear();
             MarkDirty(grid, view, colIndex);
             MarkCurrentFileDirty();
+
+            // P13：修复编辑态残留的 MaxHeight，强制重新测量行高
+            grid.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+            {
+                args.Row.InvalidateMeasure();
+            }));
         };
 
         // 右键菜单：增删行列
@@ -789,6 +818,23 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     /// <summary>
+    /// P12：单元格编辑态样式——超长文本自动换行显示（不再横向裁切/触发横向自动滚动），Enter 键
+    /// 提交编辑而不插入换行符（<see cref="TextBox.AcceptsReturn"/>=false）。行高由 <c>RowHeight=NaN</c>
+    /// 自适应换行后的实际高度（见 BuildGrid/BuildFrozenGrid）。
+    /// </summary>
+    private static readonly Style DataGridEditingTextBoxStyle = BuildDataGridEditingTextBoxStyle();
+
+    private static Style BuildDataGridEditingTextBoxStyle()
+    {
+        var style = new Style(typeof(TextBox));
+        style.Setters.Add(new Setter(TextBox.TextWrappingProperty, TextWrapping.Wrap));
+        style.Setters.Add(new Setter(TextBox.AcceptsReturnProperty, false));
+        style.Setters.Add(new Setter(TextBox.VerticalScrollBarVisibilityProperty, ScrollBarVisibility.Disabled));
+        style.Setters.Add(new Setter(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Stretch));
+        return style;
+    }
+
+    /// <summary>
     /// 构造数据列（DataGridTextColumn）。P5：列头筛选改由 DataGridExtensions 的浮动筛选行提供
     /// （<c>DataGridFilter.IsAutoFilterEnabled</c> 在 BuildGrid 开启），本方法只建纯列名头 + 标记
     /// 每列的 store 列号（SortMemberPath）+ 是否显示筛选框（withFilterBox → SetIsFilterVisible）。
@@ -813,6 +859,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 CanUserResize = true,
                 // 携带 store 列号，供 ColumnStoreFilterAdapter 从 DataGridColumn 反查列（列不可重排）。
                 SortMemberPath = colIndex.ToString(),
+                EditingElementStyle = DataGridEditingTextBoxStyle,
             };
             // DataGridExtensions 浮动筛选行：主 grid 显示筛选框，冻结 grid 不显示。
             column.SetIsFilterVisible(withFilterBox);
@@ -1665,6 +1712,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             CanUserDeleteRows = false,
             CanUserSortColumns = false,
             CanUserReorderColumns = false,
+            RowHeight = double.NaN,
             EnableRowVirtualization = false, // 仅 N 行（典型 4），关虚拟化保证行号头稳定
             SelectionUnit = DataGridSelectionUnit.Cell,
             HeadersVisibility = DataGridHeadersVisibility.All,
@@ -1679,6 +1727,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         };
         // #P8-1：冻结 grid 也用同一列头样式，保证冻结态下 Excel 字母坐标白色粗体可见。
         grid.ColumnHeaderStyle = BuildColumnHeaderStyle();
+        VirtualizingPanel.SetScrollUnit(grid, ScrollUnit.Pixel);
+
         // #8：分界线——冻结 grid 底边框用加粗亮灰（与冻结列分界线同色 120,120,120），其余边框暗灰。
         // 用 BorderBrush 单一色 + 底部加粗厚度即可呈现"一条分割线"效果，且四周细边与主 grid 融为一体。
         grid.BorderBrush = new SolidColorBrush(Color.FromRgb(120, 120, 120));
@@ -1727,6 +1777,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var cellStyle = new Style(typeof(DataGridCell));
         cellStyle.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
         cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0.5)));
+        // P13-2：同主 grid，不再限高，避免悬空单元格残留多余横线。
         grid.CellStyle = cellStyle;
 
         // #1：冻结 grid 顶部承载列头 + DGX 浮动筛选行（主 grid 冻结时隐藏列头）。必须在加列前开启
@@ -1769,6 +1820,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 || args.Row.Item is not RowView view
             )
                 return;
+
             var colIndex = args.Column.DisplayIndex;
             var oldValue = view[colIndex];
             var newValue = (args.EditingElement as TextBox)?.Text ?? string.Empty;
@@ -1783,6 +1835,12 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             state.RedoStack.Clear();
             MarkDirty(grid, view, colIndex);
             MarkCurrentFileDirty();
+
+            // P13：修复编辑态残留的 MaxHeight，强制重新测量行高
+            grid.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+            {
+                args.Row.InvalidateMeasure();
+            }));
         };
 
         return grid;
