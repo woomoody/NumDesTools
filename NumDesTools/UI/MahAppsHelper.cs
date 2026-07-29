@@ -33,6 +33,17 @@ internal static class MahAppsHelper
         );
     }
 
+    /// <summary>
+    /// 格式化资源合并/主题初始化失败的日志消息——纯函数，可单测覆盖
+    /// （见 NumDesOutput/analysis/wpfui-migration-optimization-report-2026-07-29.md P1 第 3 条）。
+    /// EnsureInitialized 里的 4 处失败全部是真正的故障（"资源已存在"的情况在进入 try
+    /// 之前已被 IsResourceMerged 过滤掉，不会走到 catch），所以这里不区分"可忽略"，
+    /// 统一格式化后由调用方同时写入调试日志文件 + PluginLog（应用内 PluginLogWindow 可见），
+    /// 不再让故障只静默进一个没人会去看的文件。
+    /// </summary>
+    internal static string FormatResourceMergeFailure(string context, Exception ex) =>
+        $"{context} FAILED [{ex.GetType().Name}]: {ex.Message}";
+
     internal static void EnsureInitialized()
     {
         if (System.Windows.Application.Current is null)
@@ -71,7 +82,9 @@ internal static class MahAppsHelper
             }
             catch (Exception ex)
             {
-                WriteDebugLog($"MahApps merge FAILED ({uri}): {ex}");
+                var msg = FormatResourceMergeFailure($"MahApps merge ({uri})", ex);
+                WriteDebugLog(msg);
+                PluginLog.Write(msg);
             }
         }
         try
@@ -80,7 +93,9 @@ internal static class MahAppsHelper
         }
         catch (Exception ex)
         {
-            WriteDebugLog($"MahApps ThemeManager FAILED: {ex}");
+            var msg = FormatResourceMergeFailure("MahApps ThemeManager", ex);
+            WriteDebugLog(msg);
+            PluginLog.Write(msg);
         }
 
         // wpfui 深色主题资源字典（wpfui 控件如 ui:Button/ui:TextBlock 渲染依赖此字典）
@@ -105,7 +120,9 @@ internal static class MahAppsHelper
             }
             catch (Exception ex)
             {
-                WriteDebugLog($"wpfui resource merge FAILED: {ex}");
+                var msg = FormatResourceMergeFailure("wpfui resource merge", ex);
+                WriteDebugLog(msg);
+                PluginLog.Write(msg);
             }
         }
         else
@@ -123,7 +140,9 @@ internal static class MahAppsHelper
         }
         catch (Exception ex)
         {
-            WriteDebugLog($"ApplicationThemeManager.ApplySystemTheme FAILED: {ex}");
+            var msg = FormatResourceMergeFailure("ApplicationThemeManager.ApplySystemTheme", ex);
+            WriteDebugLog(msg);
+            PluginLog.Write(msg);
         }
     }
 
