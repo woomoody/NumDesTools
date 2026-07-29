@@ -76,7 +76,7 @@ public sealed class AtomicFileWriterTests : IDisposable
     }
 
     [Fact]
-    public void Write_WhenSucceeds_CreatesBackupOfPreviousContent()
+    public void Write_WhenSucceeds_ReplacesContentWithoutBackup()
     {
         var target = Path.Combine(_dir, "data.xlsx");
         File.WriteAllText(target, "V1-CONTENT");
@@ -84,10 +84,10 @@ public sealed class AtomicFileWriterTests : IDisposable
         var result = AtomicFileWriter.Write(target, tmp => File.WriteAllText(tmp, "V2-CONTENT"));
 
         Assert.True(result.Succeeded);
-        Assert.NotNull(result.BackupPath);
-        Assert.True(File.Exists(result.BackupPath));
-        // .bak 保留替换前的旧内容
-        Assert.Equal("V1-CONTENT", File.ReadAllText(result.BackupPath!));
+        Assert.Null(result.BackupPath);
+        // 不生成 .bak（git 管备份）
+        Assert.False(File.Exists(target + ".bak"));
+        Assert.False(File.Exists(target + ".bak~"));
         Assert.Equal("V2-CONTENT", File.ReadAllText(target));
     }
 

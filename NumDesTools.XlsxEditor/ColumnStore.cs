@@ -16,6 +16,9 @@ public sealed class ColumnStore
     private int _rowCapacity;
     private readonly Dictionary<string, string> _internPool = new(StringComparer.Ordinal);
     private readonly HashSet<(int Row, int Col)> _dirty = [];
+    // 仅在首次编辑某格时记录原始值（加载后的值），供"改回原值"时取消脏标记。
+    // 字典只在编辑时增长，不为全表预分配；ClearDirty 时清空。
+    private readonly Dictionary<(int Row, int Col), string?> _originalValues = [];
     private bool _structureChanged;
 
     private ColumnStore(IReadOnlyList<string> columnNames, int initialRowCapacity)
@@ -73,11 +76,27 @@ public sealed class ColumnStore
 
     /// <summary>
     /// 写入单元格并标脏。写入值走字符串驻留池，等值内容复用同一引用以省内存。
+    /// 首次编辑某格时记录原始值；若新值等于原始值（改回原值），自动取消脏标记——绿框消失。
     /// </summary>
     public void SetCell(int row, int col, string? value)
     {
         ValidateRow(row);
         ValidateColumn(col);
+
+        // 首次编辑此格：记录原始值（加载后的当前值）
+        if (!_originalValues.ContainsKey((row, col)))
+        {
+            _originalValues[(row, col)] = _columns[col][row];
+        }
+
+        // 新值等于原始值 → 改回原值，取消脏标记
+        if (string.Equals(_originalValues[(row, col)], value, StringComparison.Ordinal))
+        {
+            _columns[col][row] = Intern(value);
+            _dirty.Remove((row, col));
+            return;
+        }
+
         _columns[col][row] = Intern(value);
         _dirty.Add((row, col));
     }
@@ -157,10 +176,12 @@ public sealed class ColumnStore
         _structureChanged = true;
     }
 
-    /// <summary>清空脏跟踪并重置 <see cref="StructureChanged"/>。保存成功后调用。</summary>
+    /// <summary>清空脏跟踪并重置 <see cref="StructureChanged"/>。保存成功后调用。
+    /// 同时清空原始值记录——保存后当前值即新基准，下次编辑重新记录。</summary>
     public void ClearDirty()
     {
         _dirty.Clear();
+        _originalValues.Clear();
         _structureChanged = false;
     }
 

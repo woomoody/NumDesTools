@@ -11,13 +11,23 @@ namespace NumDesTools.XlsxEditor;
 public sealed class RowView(ColumnStore store, int rowIndex) : INotifyPropertyChanged
 {
     private static readonly PropertyChangedEventArgs IndexerChangedArgs = new("Item[]");
+    private static readonly PropertyChangedEventArgs DirtyStateChangedArgs = new(
+        nameof(DirtyState)
+    );
 
     private readonly ColumnStore _store = store ?? throw new ArgumentNullException(nameof(store));
+    private int _dirtyState;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>该视图对应 ColumnStore 中的真实行号（0-based）。</summary>
     public int RowIndex { get; } = rowIndex;
+
+    /// <summary>
+    /// 脏状态版本。单元格样式绑定此值，以便某列编辑或保存清脏后重新查询
+    /// <see cref="IsColumnDirty"/>；值本身没有业务含义。
+    /// </summary>
+    public int DirtyState => _dirtyState;
 
     /// <summary>按列索引读写。写入走 <see cref="ColumnStore.SetCell"/>（驻留 + 标脏）。</summary>
     public string? this[int col]
@@ -27,6 +37,7 @@ public sealed class RowView(ColumnStore store, int rowIndex) : INotifyPropertyCh
         {
             _store.SetCell(RowIndex, col, value);
             RaiseIndexerChanged();
+            RefreshDirtyState();
         }
     }
 
@@ -50,6 +61,14 @@ public sealed class RowView(ColumnStore store, int rowIndex) : INotifyPropertyCh
         }
 
         throw new ArgumentException($"Column '{columnName}' not found", nameof(columnName));
+    }
+
+    public bool IsColumnDirty(int col) => _store.IsDirty(RowIndex, col);
+
+    public void RefreshDirtyState()
+    {
+        _dirtyState++;
+        PropertyChanged?.Invoke(this, DirtyStateChangedArgs);
     }
 
     private void RaiseIndexerChanged() => PropertyChanged?.Invoke(this, IndexerChangedArgs);

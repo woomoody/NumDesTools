@@ -1,6 +1,8 @@
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -22,6 +24,7 @@ namespace NumDesTools.XlsxEditor;
 public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 {
     private static readonly Brush DirtyCellBrush = new SolidColorBrush(Color.FromRgb(43, 145, 76));
+    private static readonly IMultiValueConverter DirtyCellConverter = new DirtyCellStateConverter();
 
     // 深色主题单元格边框颜色（比背景略亮）
     private static readonly Brush GridLineBrush = new SolidColorBrush(Color.FromRgb(60, 60, 60));
@@ -51,6 +54,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private readonly HashSet<string> _dirtyFiles = new();
     private SheetState? _activeSheetState;
+
+    // Shift 间隔多选的锚点：记录上次非 Shift 点击的单元格（grid, displayIndex, colIndex）。
+    // Shift+点击时从锚点到当前格之间所有单元格全部选中。
+    private (DataGrid Grid, int Row, int Col)? _selectionAnchor;
 
     public MainWindow()
     {
@@ -170,7 +177,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var grid = state.MainGrid;
         if (grid.SelectedCells.Count == 0)
             return;
-        // #6：多格删除作为一个复合撤销单元（一次 Ctrl+Z 整体撤销这次删除）。
         var batch = new List<CellEditRecord>();
         foreach (var cell in grid.SelectedCells)
         {
@@ -180,8 +186,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             var rowIndex = view.RowIndex;
             var oldValue = view[colIndex];
             batch.Add(new CellEditRecord(rowIndex, colIndex, oldValue, string.Empty));
-            view[colIndex] = string.Empty; // RowView 索引器 → SetCell 标脏
-            MarkDirty(grid, view, colIndex);
+            view[colIndex] = string.Empty;
         }
         if (batch.Count > 0)
         {
@@ -263,6 +268,19 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 Panel = panel,
             };
             grid.ItemsSource = state.View;
+            // 默认定位到 A1：加载完成后光标停在第一个单元格，方便立即编辑
+            grid.Dispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.Loaded,
+                new Action(() =>
+                {
+                    if (grid.Items.Count > 0 && grid.Columns.Count > 0)
+                    {
+                        grid.Focus();
+                        grid.CurrentCell = new DataGridCellInfo(grid.Items[0], grid.Columns[0]);
+                        grid.ScrollIntoView(grid.Items[0]);
+                    }
+                })
+            );
             // P5：把 DataGridExtensions 的筛选路由到 ColumnStore（ICustomFilter 适配器设为 grid.DataContext）。
             // 列类型一次性采样缓存，避免每次筛选变化都重新 DetectColumnType。
             var typeCache = new Dictionary<int, ColumnType>();
@@ -362,10 +380,16 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 Value = true,
                 Setters =
                 {
-                    new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(80, 80, 80))),
+                    new Setter(
+                        Control.BackgroundProperty,
+                        new SolidColorBrush(Color.FromRgb(80, 80, 80))
+                    ),
                     new Setter(Control.ForegroundProperty, Brushes.White),
                     new Setter(Control.FontWeightProperty, FontWeights.Bold),
-                    new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(86, 156, 214))),
+                    new Setter(
+                        Control.BorderBrushProperty,
+                        new SolidColorBrush(Color.FromRgb(86, 156, 214))
+                    ),
                     new Setter(Control.BorderThicknessProperty, new Thickness(3, 0, 0, 0)),
                 },
             }
@@ -423,9 +447,15 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 Value = true,
                 Setters =
                 {
-                    new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(90, 90, 90))),
+                    new Setter(
+                        Control.BackgroundProperty,
+                        new SolidColorBrush(Color.FromRgb(90, 90, 90))
+                    ),
                     new Setter(Control.ForegroundProperty, Brushes.White),
-                    new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(86, 156, 214))),
+                    new Setter(
+                        Control.BorderBrushProperty,
+                        new SolidColorBrush(Color.FromRgb(86, 156, 214))
+                    ),
                     new Setter(Control.BorderThicknessProperty, new Thickness(3, 0, 0, 0)),
                 },
             }
@@ -653,7 +683,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             CanUserDeleteRows = false,
             CanUserSortColumns = false,
             EnableRowVirtualization = true,
-            
+
             EnableColumnVirtualization = true,
             SelectionUnit = DataGridSelectionUnit.Cell,
             HeadersVisibility = DataGridHeadersVisibility.All,
@@ -668,7 +698,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         // #P8-1：列头样式（Excel 字母坐标白色粗体可见）
         grid.ColumnHeaderStyle = BuildColumnHeaderStyle();
         VirtualizingPanel.SetScrollUnit(grid, ScrollUnit.Pixel);
-
 
         // 行号列：用 RowHeaderTemplate 强制渲染 TextBlock，不依赖主题默认 RowHeader 可见性
         var rowHeaderTemplate = new DataTemplate();
@@ -725,6 +754,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var cellStyle = new Style(typeof(DataGridCell));
         cellStyle.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
         cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0.5)));
+        AddDirtyBackgroundTrigger(cellStyle);
         // P13-2：不再对单元格设 MaxHeight 限高——RowHeight=NaN 撑高整行后，被限高的单元格会悬空
         // 居中在高行中间，自身四边框如实画出，视觉上呈现为行内部多余的横线。改为默认 Stretch，
         // 单元格随行高拉伸铺满，消除悬空边框。
@@ -776,14 +806,16 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 new CellBatchAction([new CellEditRecord(rowIndex, colIndex, oldValue, newValue)])
             );
             state.RedoStack.Clear();
-            MarkDirty(grid, view, colIndex);
             MarkCurrentFileDirty();
 
             // P13：修复编辑态残留的 MaxHeight，强制重新测量行高
-            grid.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
-            {
-                args.Row.InvalidateMeasure();
-            }));
+            grid.Dispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.Loaded,
+                new Action(() =>
+                {
+                    args.Row.InvalidateMeasure();
+                })
+            );
         };
 
         // 右键菜单：增删行列
@@ -804,10 +836,114 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         ctxMenu.Items.Add(miDeleteCol);
         grid.ContextMenu = ctxMenu;
 
-        // Ctrl+V 粘贴
+        // 左键点击列头 → 全选此列；Shift+点击列头 → 范围选列
+        grid.PreviewMouseLeftButtonDown += (_, args) =>
+        {
+            if (args.OriginalSource is not DependencyObject d)
+                return;
+
+            // 点到筛选框/TextBox 时不拦截全选（让用户正常输入筛选条件）
+            if (FindVisualAncestor<TextBox>(d) is not null)
+                return;
+
+            // 列头点击？
+            var colHeader = FindVisualAncestor<DataGridColumnHeader>(d);
+            if (colHeader is not null)
+            {
+                var curCol = colHeader.Column?.DisplayIndex ?? -1;
+                if (curCol < 0)
+                    return;
+
+                if (Keyboard.Modifiers == ModifierKeys.Shift
+                    && _selectionAnchor is ({ } aGrid, _, int aCol)
+                    && aGrid == grid)
+                {
+                    var (c1, c2) = (Math.Min(aCol, curCol), Math.Max(aCol, curCol));
+                    grid.SelectedCells.Clear();
+                    var count = grid.Items.Count;
+                    for (var r = 0; r < count; r++)
+                    {
+                        if (grid.ItemContainerGenerator.ContainerFromIndex(r) is null)
+                            continue;
+                        var item = grid.Items[r];
+                        for (var c = c1; c <= c2; c++)
+                            grid.SelectedCells.Add(new DataGridCellInfo(item, grid.Columns[c]));
+                    }
+                    args.Handled = true;
+                }
+                else
+                {
+                    SelectEntireColumn(grid, curCol);
+                    _selectionAnchor = (grid, 0, curCol);
+                    args.Handled = true;
+                }
+                return;
+            }
+
+            // 行头点击？
+            var rowHeader = FindVisualAncestor<DataGridRowHeader>(d);
+            if (rowHeader is not null)
+            {
+                if (rowHeader.DataContext is not RowView rv)
+                    return;
+                var curRow = grid.Items.IndexOf(rv);
+
+                if (Keyboard.Modifiers == ModifierKeys.Shift
+                    && _selectionAnchor is ({ } aGrid, int aRow, _)
+                    && aGrid == grid)
+                {
+                    var (r1, r2) = (Math.Min(aRow, curRow), Math.Max(aRow, curRow));
+                    grid.SelectedCells.Clear();
+                    for (var r = r1; r <= r2; r++)
+                    {
+                        if (r < 0 || r >= grid.Items.Count)
+                            continue;
+                        if (grid.ItemContainerGenerator.ContainerFromIndex(r) is null)
+                            continue;
+                        var item = grid.Items[r];
+                        foreach (var col in grid.Columns)
+                            grid.SelectedCells.Add(new DataGridCellInfo(item, col));
+                    }
+                    args.Handled = true;
+                }
+                else
+                {
+                    SelectEntireRow(grid, curRow);
+                    _selectionAnchor = (grid, curRow, 0);
+                    args.Handled = true;
+                }
+                return;
+            }
+
+            // 单元格 Shift+点击 → 间隔范围多选；非 Shift 点击 → 更新锚点
+            var cell = FindVisualAncestor<DataGridCell>(d);
+            if (cell?.Column is null || cell.DataContext is not RowView cellRv)
+                return;
+            var cellRow = grid.Items.IndexOf(cellRv);
+            var cellCol = cell.Column.DisplayIndex;
+
+            if (Keyboard.Modifiers == ModifierKeys.Shift
+                && _selectionAnchor is ({ } aGrid2, int aRow2, int aCol2)
+                && aGrid2 == grid)
+            {
+                SelectRange(grid, aRow2, aCol2, cellRow, cellCol);
+                args.Handled = true;
+            }
+            else if (Keyboard.Modifiers != ModifierKeys.Control)
+            {
+                _selectionAnchor = (grid, cellRow, cellCol);
+            }
+        };
+
+        // Ctrl+C 复制 / Ctrl+V 粘贴
         grid.PreviewKeyDown += (_, args) =>
         {
-            if (args.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control)
+            if (args.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                CopySelectionToClipboard(grid);
+                args.Handled = true;
+            }
+            else if (args.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control)
             {
                 PasteFromClipboard(grid);
                 args.Handled = true;
@@ -829,8 +965,12 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var style = new Style(typeof(TextBox));
         style.Setters.Add(new Setter(TextBox.TextWrappingProperty, TextWrapping.Wrap));
         style.Setters.Add(new Setter(TextBox.AcceptsReturnProperty, false));
-        style.Setters.Add(new Setter(TextBox.VerticalScrollBarVisibilityProperty, ScrollBarVisibility.Disabled));
-        style.Setters.Add(new Setter(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Stretch));
+        style.Setters.Add(
+            new Setter(TextBox.VerticalScrollBarVisibilityProperty, ScrollBarVisibility.Disabled)
+        );
+        style.Setters.Add(
+            new Setter(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Stretch)
+        );
         return style;
     }
 
@@ -1291,7 +1431,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 try
                 {
                     // 原子写：ExcelWriteBack 以原文件为模板写到 tmp（保留格式+剥离图表公式+只写脏/全量），
-                    // 成功后 AtomicFileWriter 用 File.Replace(tmp, 原文件, .bak) 原子替换。P0 机制不变。
+                    // 成功后 AtomicFileWriter 用 File.Replace 原子替换到原文件，不生成 .bak（git 管备份）。
                     var result = AtomicFileWriter.Write(
                         filePath,
                         tempPath => ExcelWriteBack.Write(filePath, tempPath, plans)
@@ -1311,7 +1451,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             sw.Stop();
             // 保存成功：清脏跟踪（下次无编辑即可秒过），移除文件脏标记。ColumnStore 单线程，UI 线程调。
             foreach (var s in savedStores)
+            {
                 s.Store.ClearDirty();
+                RefreshDirtyCellBackgrounds(s);
+            }
             _dirtyFiles.Remove(filePath);
             UpdateTitle();
             StatusText.Text =
@@ -1403,6 +1546,50 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         PasteFromClipboard(state.MainGrid);
     }
 
+    /// <summary>
+    /// 复制选中单元格到剪贴板。多格按 Tab 分列、换行分行，可粘进 Excel。
+    /// </summary>
+    private void CopySelectionToClipboard(DataGrid grid)
+    {
+        if (grid.SelectedCells.Count == 0)
+            return;
+        var rows = new SortedDictionary<int, SortedDictionary<int, string?>>();
+        foreach (var info in grid.SelectedCells)
+        {
+            if (info.Item is not RowView rv || info.Column is null)
+                continue;
+            var r = rv.RowIndex;
+            var c = info.Column.DisplayIndex;
+            if (!rows.TryGetValue(r, out var cols))
+            {
+                cols = [];
+                rows[r] = cols;
+            }
+            cols[c] = rv[c];
+        }
+        if (rows.Count == 0)
+            return;
+        var sb = new StringBuilder();
+        foreach (var row in rows.Values)
+        {
+            sb.Append(string.Join('\t', row.Values));
+            sb.Append('\n');
+        }
+        var text = sb.ToString().TrimEnd('\n');
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            try
+            {
+                Clipboard.SetText(text);
+                return;
+            }
+            catch (System.Runtime.InteropServices.COMException)
+            {
+                System.Threading.Thread.Sleep(50);
+            }
+        }
+    }
+
     private void PasteFromClipboard(DataGrid grid)
     {
         if (grid.SelectedItem is null && grid.CurrentCell.Item is null)
@@ -1413,7 +1600,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         if (CurrentSheetState is not { } state)
             return;
         var colCount = state.Store.ColumnCount;
-        // 用视图索引：筛选模式下连续粘贴进"可见的连续行"，正确且不越界。
         var startViewIndex = grid.Items.IndexOf(rowView);
         var startCol = startCell.Column.DisplayIndex;
 
@@ -1442,8 +1628,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                     continue; // 值未变不记录
                 batch.Add(new CellEditRecord(tv.RowIndex, targetCol, oldValue, cells[j]));
                 tv[targetCol] = cells[j]; // RowView 索引器 → SetCell 标脏
-                // 粘贴的格子也要绿色高亮（和手动编辑一致）
-                MarkDirty(grid, tv, targetCol);
             }
         }
         // 粘贴绕过 CellEditEnding，得手动记撤销 + 标脏，否则 Ctrl+Z 撤不掉、关窗不提示保存=数据丢失
@@ -1455,32 +1639,63 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         MarkCurrentFileDirty();
     }
 
-    /// <summary>
-    /// 标脏单元格绿色。按 RowView 定位容器，筛选/虚拟化下都正确（越界/不可见静默跳过）。
-    /// </summary>
-    private static void MarkDirty(DataGrid grid, RowView view, int col)
+    private static void AddDirtyBackgroundTrigger(Style cellStyle)
     {
-        grid.ScrollIntoView(view);
-        grid.Dispatcher.BeginInvoke(
-            () =>
+        var binding = new MultiBinding { Converter = DirtyCellConverter };
+        binding.Bindings.Add(new Binding());
+        binding.Bindings.Add(
+            new Binding("Column.DisplayIndex")
             {
-                if (
-                    grid.ItemContainerGenerator.ContainerFromItem(view)
-                        is not DataGridRow rowContainer
-                    || col < 0
-                    || col >= grid.Columns.Count
-                    || grid.Columns[col].GetCellContent(rowContainer)?.Parent
-                        is not DataGridCell cell
-                )
-                {
-                    return;
-                }
-
-                cell.Background = DirtyCellBrush;
-                cell.InvalidateVisual();
-            },
-            System.Windows.Threading.DispatcherPriority.Loaded
+                RelativeSource = new RelativeSource(RelativeSourceMode.Self),
+            }
         );
+        binding.Bindings.Add(new Binding(nameof(RowView.DirtyState)));
+        binding.Bindings.Add(
+            new Binding(nameof(DataGridCell.IsSelected))
+            {
+                RelativeSource = new RelativeSource(RelativeSourceMode.Self),
+            }
+        );
+        cellStyle.Triggers.Add(
+            new DataTrigger
+            {
+                Binding = binding,
+                Value = true,
+                Setters = { new Setter(Control.BackgroundProperty, DirtyCellBrush) },
+            }
+        );
+    }
+
+    /// <summary>保存清脏后刷新可见容器的绑定；背景由数据触发器重新查询，不在容器上保留本地值。</summary>
+    private static void RefreshDirtyCellBackgrounds(SheetState state)
+    {
+        state.MainGrid.Items.Refresh();
+        state.FrozenGrid?.Items.Refresh();
+    }
+
+    private sealed class DirtyCellStateConverter : IMultiValueConverter
+    {
+        public object Convert(
+            object[] values,
+            Type targetType,
+            object parameter,
+            CultureInfo culture
+        )
+        {
+            return values.Length >= 4
+                && values[0] is RowView view
+                && values[1] is int col
+                && col >= 0
+                && values[3] is false
+                && view.IsColumnDirty(col);
+        }
+
+        public object[] ConvertBack(
+            object value,
+            Type[] targetTypes,
+            object parameter,
+            CultureInfo culture
+        ) => throw new NotSupportedException();
     }
 
     // ── 冻结窗格 ──────────────────────────────────────────────────────────
@@ -1777,6 +1992,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var cellStyle = new Style(typeof(DataGridCell));
         cellStyle.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
         cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0.5)));
+        AddDirtyBackgroundTrigger(cellStyle);
         // P13-2：同主 grid，不再限高，避免悬空单元格残留多余横线。
         grid.CellStyle = cellStyle;
 
@@ -1833,14 +2049,16 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 ])
             );
             state.RedoStack.Clear();
-            MarkDirty(grid, view, colIndex);
             MarkCurrentFileDirty();
 
             // P13：修复编辑态残留的 MaxHeight，强制重新测量行高
-            grid.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
-            {
-                args.Row.InvalidateMeasure();
-            }));
+            grid.Dispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.Loaded,
+                new Action(() =>
+                {
+                    args.Row.InvalidateMeasure();
+                })
+            );
         };
 
         return grid;
@@ -1983,6 +2201,70 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         return null;
     }
 
+    /// <summary>沿可视树向上找指定类型的祖先（DataGridCell/DataGridRow 等）。</summary>
+    private static T? FindVisualAncestor<T>(DependencyObject d)
+        where T : DependencyObject
+    {
+        var current = d;
+        while (current is not null)
+        {
+            if (current is T target)
+                return target;
+            current = VisualTreeHelper.GetParent(current);
+        }
+        return null;
+    }
+
+    /// <summary>全选指定列所有可见单元格。只遍历可见行，避免大数据量卡死。</summary>
+    private static void SelectEntireColumn(DataGrid grid, int colIndex)
+    {
+        if (colIndex < 0 || colIndex >= grid.Columns.Count)
+            return;
+        grid.SelectedCells.Clear();
+        var count = grid.Items.Count;
+        for (var i = 0; i < count; i++)
+        {
+            if (grid.ItemContainerGenerator.ContainerFromIndex(i) is null)
+                continue;
+            grid.SelectedCells.Add(new DataGridCellInfo(grid.Items[i], grid.Columns[colIndex]));
+        }
+    }
+
+    /// <summary>全选指定行所有列单元格。</summary>
+    private static void SelectEntireRow(DataGrid grid, int rowIndex)
+    {
+        if (rowIndex < 0 || rowIndex >= grid.Items.Count)
+            return;
+        var item = grid.Items[rowIndex];
+        grid.SelectedCells.Clear();
+        foreach (var col in grid.Columns)
+            grid.SelectedCells.Add(new DataGridCellInfo(item, col));
+    }
+
+    /// <summary>选中两个单元格之间的矩形范围（包含两端）。只选可见行，避免大数据量卡死。</summary>
+    private static void SelectRange(DataGrid grid, int row1, int col1, int row2, int col2)
+    {
+        var r1 = Math.Min(row1, row2);
+        var r2 = Math.Max(row1, row2);
+        var c1 = Math.Min(col1, col2);
+        var c2 = Math.Max(col1, col2);
+        grid.SelectedCells.Clear();
+        for (var r = r1; r <= r2; r++)
+        {
+            if (r < 0 || r >= grid.Items.Count)
+                continue;
+            if (grid.ItemContainerGenerator.ContainerFromIndex(r) is null)
+                continue;
+            var item = grid.Items[r];
+            for (var c = c1; c <= c2; c++)
+            {
+                if (c < 0 || c >= grid.Columns.Count)
+                    continue;
+                grid.SelectedCells.Add(new DataGridCellInfo(item, grid.Columns[c]));
+            }
+        }
+    }
+
     private void OnUnfreezeClick(object sender, RoutedEventArgs e)
     {
         if (CurrentSheetState is not { } state)
@@ -2028,7 +2310,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     /// </summary>
     private void ApplySpotlightToCurrentGrid()
     {
-        // 先从旧 grid 卸载事件
         if (_spotlightGrid is not null)
         {
             _spotlightGrid.SelectedCellsChanged -= OnSpotlightSelectionChanged;
@@ -2053,7 +2334,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private void OnSpotlightScrollChanged(object sender, ScrollChangedEventArgs e)
     {
-        // 滚动后重新触发聚光灯（虚拟化下可见行变了，要重新高亮）
         ApplySpotlight();
     }
 
@@ -2111,7 +2391,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         IReadOnlySet<int> selectedColumns
     )
     {
-        // 找选中区域的行列范围
         if (selectedRows.Count is 0 || selectedColumns.Count is 0)
             return;
 
@@ -2243,7 +2522,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                     ])
                 );
                 state.RedoStack.Clear();
-                MarkDirty(grid, view, colIndex);
                 MarkCurrentFileDirty();
             }
         };

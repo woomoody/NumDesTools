@@ -15,8 +15,8 @@ public readonly record struct AtomicWriteResult(
 /// <summary>
 /// 纯 BCL 原子文件写：不依赖 WPF/DataGrid/UI，可单测。
 /// 语义：先让 <paramref name="writeToTemp"/> 委托把内容写到同目录的 .tmp 文件，
-/// 成功后用 <see cref="File.Replace(string, string, string?)"/> 把 tmp 原子替换到目标路径，
-/// 并把被替换的旧内容留在 <c>目标路径.bak</c>。
+/// 成功后用 <see cref="File.Replace(string, string, string?)"/> 把 tmp 原子替换到目标路径。
+/// 不生成 .bak 备份——目标文件均由 git 管理，回滚走 git，不需要应用层备份。
 /// 任何环节失败（委托抛异常/替换失败）时，原文件保持不变——绝不会处于半写状态。
 /// tmp 文件在失败时保留在磁盘（不删），以便人工排查半成品；成功后 tmp 已被 File.Replace 消费。
 /// </summary>
@@ -36,7 +36,6 @@ public static class AtomicFileWriter
         ArgumentNullException.ThrowIfNull(writeToTemp);
 
         var tempPath = finalPath + ".tmp";
-        var backupPath = finalPath + ".bak";
 
         // 清掉可能残留的上次失败的 tmp，避免委托误以为是已有内容
         TryDelete(tempPath);
@@ -60,11 +59,11 @@ public static class AtomicFileWriter
         {
             if (File.Exists(finalPath))
             {
-                // 原文件存在：原子替换，旧内容进 .bak
-                File.Replace(tempPath, finalPath, backupPath);
+                // 原文件存在：原子替换，不生成 .bak（git 管备份）
+                File.Replace(tempPath, finalPath, destinationBackupFileName: null);
                 return new AtomicWriteResult(
                     Succeeded: true,
-                    BackupPath: backupPath,
+                    BackupPath: null,
                     LeftoverTempPath: null,
                     Error: null
                 );

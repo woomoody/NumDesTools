@@ -82,6 +82,37 @@ public sealed class RowViewTests
     }
 
     [Fact]
+    public void DirtyState_TracksSpecificColumn_AndRaisesWhenCellChanges()
+    {
+        var store = StoreWithRows(1);
+        var view = new RowView(store, 0);
+        var raised = new List<string?>();
+        view.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        view[1] = "x";
+
+        Assert.False(view.IsColumnDirty(0));
+        Assert.True(view.IsColumnDirty(1));
+        Assert.Contains(nameof(RowView.DirtyState), raised);
+    }
+
+    [Fact]
+    public void RefreshDirtyState_RaisesAfterStoreDirtyFlagsAreCleared()
+    {
+        var store = StoreWithRows(1);
+        var view = new RowView(store, 0);
+        view[1] = "x";
+        var raised = new List<string?>();
+        view.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        store.ClearDirty();
+        view.RefreshDirtyState();
+
+        Assert.False(view.IsColumnDirty(1));
+        Assert.Contains(nameof(RowView.DirtyState), raised);
+    }
+
+    [Fact]
     public void RowIndex_IsExposed()
     {
         var store = StoreWithRows(5);
