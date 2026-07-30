@@ -9,7 +9,7 @@
     FontFamily="微软雅黑"
     KeyDown="Window_EscClose"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="False">
+    ExtendsContentIntoTitleBar="True">
 
     <ui:FluentWindow.Resources>
         <!-- Group 节点 -->
@@ -98,13 +98,19 @@
     </ui:FluentWindow.Resources>
 
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="220"/>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="NumDesTools 帮助" />
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- 左侧导航 -->
+            <!-- 左侧导航 -->
         <Border Grid.Column="0"
                 Background="#1E1E1E">
             <DockPanel>
@@ -129,5 +135,6 @@
 
         <!-- 右侧 WebBrowser 内容区 -->
         <WebBrowser x:Name="HelpBrowser" Grid.Column="2"/>
+        </Grid>
     </Grid>
 </ui:FluentWindow>

@@ -10,9 +10,15 @@
     WindowStartupLocation="CenterScreen"
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="False">
+    ExtendsContentIntoTitleBar="True">
 
-    <Grid Margin="0,0,0,0">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="Git 冲突解决" />
+        <Grid Grid.Row="1" Margin="0,0,0,0">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
@@ -77,5 +83,6 @@
                         Click="Resolve_Click"/>
             </StackPanel>
         </Border>
+    </Grid>
     </Grid>
 </ui:FluentWindow>

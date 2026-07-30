@@ -11,9 +11,15 @@
     KeyDown="Window_KeyDown"
     Closing="Window_Closing"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="False">
+    ExtendsContentIntoTitleBar="True">
 
-    <DockPanel Margin="10">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="批量替换 (Ctrl+Alt+H)" />
+        <DockPanel Grid.Row="1" Margin="10">
 
         <!-- 底部按钮栏 -->
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
@@ -133,4 +139,5 @@
             </Grid>
         </Grid>
     </DockPanel>
+    </Grid>
 </ui:FluentWindow>

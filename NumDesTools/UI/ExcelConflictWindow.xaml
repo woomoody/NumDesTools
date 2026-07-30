@@ -10,7 +10,7 @@
     WindowStartupLocation="CenterScreen"
     KeyDown="Window_EscClose"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="False">
+    ExtendsContentIntoTitleBar="True">
 
     <ui:FluentWindow.Resources>
         <Style TargetType="Button" x:Key="ActionBtn">
@@ -34,25 +34,31 @@
             <Setter Property="Background" Value="#2A2A2A"/>
             <Setter Property="Padding"    Value="10,4"/>
         </Style>
-    </ui:FluentWindow.Resources>
+</ui:FluentWindow.Resources>
 
-    <!--
-        行布局:
-          0   顶部工具栏
-          1   Sheet Tabs + 列头
-          2   冲突行列表 (*)
-          3   冲突行横向滚动条          ← 仅冲突行，随隐藏列动态变化
-          4   加载更多工具栏
-          5   拖拽条
-          6   我的新增
-          7   拖拽条
-          8   他的新增
-          9   新增/删除横向滚动条       ← 仅新增/删除行，全列
-         10   拖拽条
-         11   详情面板
-         12   底部状态栏
-    -->
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="Excel 冲突解决" />
+        <!--
+            行布局:
+               0   顶部工具栏
+               1   Sheet Tabs + 列头
+               2   冲突行列表 (*)
+               3   冲突行横向滚动条          ← 仅冲突行，随隐藏列变化
+               4   加载更多工具栏
+               5   拖拽条
+               6   我的新增
+               7   拖拽条
+               8   他的新增
+               9   新增/删除横向滚动条       ← 仅新增/删除行，全列
+              10   拖拽条
+              11   详情面板
+              12   底部状态栏
+        -->
+        <Grid Grid.Row="1">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -559,5 +565,6 @@
             </Grid>
         </Border>
 
+    </Grid>
     </Grid>
 </ui:FluentWindow>

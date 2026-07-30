@@ -8,9 +8,15 @@
     SizeToContent="Manual"
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="False">
+    ExtendsContentIntoTitleBar="True">
 
-    <Grid Margin="10">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="选择 Excel 文件" />
+        <Grid Grid.Row="1" Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -110,5 +116,6 @@
                     Width="80" Height="28"
                     Click="Ok_Click"/>
         </Grid>
+    </Grid>
     </Grid>
 </ui:FluentWindow>

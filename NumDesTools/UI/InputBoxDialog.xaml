@@ -8,11 +8,18 @@
     WindowStartupLocation="CenterScreen"
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="False">
-    <StackPanel Margin="16">
-        <ui:TextBlock x:Name="PromptText" TextWrapping="Wrap" FontSize="13"
-                   Foreground="#FFFFFF"/>
-        <ui:TextBox x:Name="InputBox" MinWidth="320" Margin="0,10,0,0"/>
-        <ui:Button HorizontalAlignment="Right" IsDefault="True" Margin="0,10,0,0" Click="OkButton_Click" Content="确定"/>
-    </StackPanel>
+    ExtendsContentIntoTitleBar="True">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" />
+        <StackPanel Grid.Row="1" Margin="16">
+            <ui:TextBlock x:Name="PromptText" TextWrapping="Wrap" FontSize="13"
+                       Foreground="#FFFFFF"/>
+            <ui:TextBox x:Name="InputBox" MinWidth="320" Margin="0,10,0,0"/>
+            <ui:Button HorizontalAlignment="Right" IsDefault="True" Margin="0,10,0,0" Click="OkButton_Click" Content="确定"/>
+        </StackPanel>
+    </Grid>
 </ui:FluentWindow>

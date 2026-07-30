@@ -8,9 +8,15 @@
     WindowStartupLocation="CenterScreen"
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="False">
+    ExtendsContentIntoTitleBar="True">
 
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="选择历史版本" />
+        <Grid Grid.Row="1">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -74,5 +80,6 @@
                 Padding="10,8">
             <StackPanel x:Name="ButtonPanel" Orientation="Horizontal"/>
         </Border>
+    </Grid>
     </Grid>
 </ui:FluentWindow>

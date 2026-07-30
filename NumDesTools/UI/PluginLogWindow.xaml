@@ -12,7 +12,7 @@
     Closing="Window_Closing"
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="False">
+    ExtendsContentIntoTitleBar="True">
 
     <ui:FluentWindow.Resources>
         <Style x:Key="ToolBtn" TargetType="Button">
@@ -32,7 +32,13 @@
         </Style>
     </ui:FluentWindow.Resources>
 
-    <Grid Background="#1A1A1A">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="插件日志" />
+        <Grid Grid.Row="1" Background="#1A1A1A">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
@@ -118,5 +124,6 @@
                 </StackPanel>
             </DockPanel>
         </Border>
+    </Grid>
     </Grid>
 </ui:FluentWindow>

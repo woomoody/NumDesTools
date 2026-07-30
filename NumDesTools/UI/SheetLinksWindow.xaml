@@ -8,6 +8,13 @@
     WindowStartupLocation="CenterScreen"
     KeyDown="Window_EscClose"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="False">
-    <Grid x:Name="BaseGrid" />
+    ExtendsContentIntoTitleBar="True">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="Sheet链接关系" />
+        <Grid x:Name="BaseGrid" Grid.Row="1" />
+    </Grid>
 </ui:FluentWindow>

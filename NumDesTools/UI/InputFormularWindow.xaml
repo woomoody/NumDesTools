@@ -7,19 +7,26 @@
     Width="500" Height="400"
     KeyDown="Window_EscClose"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="False">
+    ExtendsContentIntoTitleBar="True">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-            <ItemsControl Name="ItemsControl" Margin="10" />
-        </ScrollViewer>
-        <ui:Button Grid.Row="1"
-                Width="100" Margin="10"
-                HorizontalAlignment="Right"
-                Click="ConfirmButton_Click"
-                Content="确认" />
+        <ui:TitleBar Grid.Row="0" Title="公式链接修复" />
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+                <ItemsControl Name="ItemsControl" Margin="10" />
+            </ScrollViewer>
+            <ui:Button Grid.Row="1"
+                    Width="100" Margin="10"
+                    HorizontalAlignment="Right"
+                    Click="ConfirmButton_Click"
+                    Content="确认" />
+        </Grid>
     </Grid>
 </ui:FluentWindow>

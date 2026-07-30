@@ -8,35 +8,42 @@
     WindowStartupLocation="CenterScreen"
     KeyDown="Window_EscClose"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="False">
+    ExtendsContentIntoTitleBar="True">
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-                <StackPanel Name="SpecialCheckBoxContainer" Margin="5">
-                    <CheckBox Margin="5"
-                              Checked="SelectAllCheckBox_Checked"
-                              Content="全选/取消"
-                              Tag="全选"
-                              Unchecked="SelectAllCheckBox_Unchecked" />
-                    <CheckBox Margin="5"
-                              Checked="InvertSelectionCheckBox_Checked"
-                              Content="反选"
-                              Tag="反选" />
+        <ui:TitleBar Grid.Row="0" Title="计算选项" />
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <StackPanel Name="SpecialCheckBoxContainer" Margin="5">
+                        <CheckBox Margin="5"
+                                  Checked="SelectAllCheckBox_Checked"
+                                  Content="全选/取消"
+                                  Tag="全选"
+                                  Unchecked="SelectAllCheckBox_Unchecked" />
+                        <CheckBox Margin="5"
+                                  Checked="InvertSelectionCheckBox_Checked"
+                                  Content="反选"
+                                  Tag="反选" />
+                    </StackPanel>
+                    <Separator Margin="5" />
+                    <StackPanel Name="CheckBoxContainer" Margin="5" />
                 </StackPanel>
-                <Separator Margin="5" />
-                <StackPanel Name="CheckBoxContainer" Margin="5" />
+            </ScrollViewer>
+            <StackPanel Grid.Row="1" Margin="5"
+                        HorizontalAlignment="Right"
+                        Orientation="Horizontal">
+                <ui:Button Width="100" Height="30" Margin="5"
+                        Click="GetCurrentCheckBox_Click"
+                        Content="计算随机数" />
             </StackPanel>
-        </ScrollViewer>
-        <StackPanel Grid.Row="1" Margin="5"
-                    HorizontalAlignment="Right"
-                    Orientation="Horizontal">
-            <ui:Button Width="100" Height="30" Margin="5"
-                    Click="GetCurrentCheckBox_Click"
-                    Content="计算随机数" />
-        </StackPanel>
+        </Grid>
     </Grid>
 </ui:FluentWindow>
