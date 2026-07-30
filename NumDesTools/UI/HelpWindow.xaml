@@ -1,4 +1,4 @@
-<ui:FluentWindow
+﻿<ui:FluentWindow
     x:Class="NumDesTools.UI.HelpWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -9,7 +9,7 @@
     FontFamily="微软雅黑"
     KeyDown="Window_EscClose"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="True">
+    ExtendsContentIntoTitleBar="False">
 
     <ui:FluentWindow.Resources>
         <!-- Group 节点 -->

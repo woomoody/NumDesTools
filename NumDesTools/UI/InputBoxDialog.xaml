@@ -8,7 +8,7 @@
     WindowStartupLocation="CenterScreen"
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="True">
+    ExtendsContentIntoTitleBar="False">
     <StackPanel Margin="16">
         <ui:TextBlock x:Name="PromptText" TextWrapping="Wrap" FontSize="13"
                    Foreground="#FFFFFF"/>

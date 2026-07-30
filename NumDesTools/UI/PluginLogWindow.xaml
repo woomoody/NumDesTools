@@ -1,4 +1,4 @@
-<ui:FluentWindow
+﻿<ui:FluentWindow
     x:Class="NumDesTools.UI.PluginLogWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -12,7 +12,7 @@
     Closing="Window_Closing"
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="True">
+    ExtendsContentIntoTitleBar="False">
 
     <ui:FluentWindow.Resources>
         <Style x:Key="ToolBtn" TargetType="Button">

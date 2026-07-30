@@ -1,4 +1,4 @@
-<ui:FluentWindow
+﻿<ui:FluentWindow
     x:Class="NumDesTools.UI.ExcelFilePickerWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -8,7 +8,7 @@
     SizeToContent="Manual"
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="True">
+    ExtendsContentIntoTitleBar="False">
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
