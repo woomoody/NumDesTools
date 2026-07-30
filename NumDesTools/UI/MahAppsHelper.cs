@@ -1,7 +1,5 @@
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
-using ControlzEx.Theming;
-using MahApps.Metro.Controls;
 
 namespace NumDesTools.UI;
 
@@ -23,40 +21,23 @@ internal static class MahAppsHelper
 
         // 手动 merge MahApps 核心资源（无 App.xaml 时必须）
         var app = System.Windows.Application.Current;
-        foreach (
-            var uri in new[]
-            {
-                "pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml",
-                "pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml",
-                "pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Steel.xaml",
-            }
-        )
-        {
-            var rd = new System.Windows.ResourceDictionary { Source = new Uri(uri) };
-            app.Resources.MergedDictionaries.Add(rd);
-        }
 
-        ThemeManager.Current.ChangeTheme(app, "Dark.Steel");
-
+        // wpfui 全局合并（替代 MahApps）
         if (
             !app.Resources.MergedDictionaries.Any(d =>
                 d.Source?.OriginalString.Contains("Wpf.Ui") == true
             )
         )
         {
-            try
-            {
-                app.Resources.MergedDictionaries.Add(
-                    new Wpf.Ui.Markup.ThemesDictionary
-                    {
-                        Source = new Uri(
-                            "pack://application:,,,/Wpf.Ui;component/Resources/Theme/Dark.xaml"
-                        ),
-                    }
-                );
-                app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ControlsDictionary());
-            }
-            catch (Exception ex) { }
+            app.Resources.MergedDictionaries.Add(
+                new Wpf.Ui.Markup.ThemesDictionary
+                {
+                    Source = new Uri(
+                        "pack://application:,,,/Wpf.Ui;component/Resources/Theme/Dark.xaml"
+                    ),
+                }
+            );
+            app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ControlsDictionary());
         }
 
         Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
@@ -67,7 +48,16 @@ internal static class MahAppsHelper
         var hwnd = (IntPtr)ExcelDnaUtil.WindowHandle;
         if (hwnd != IntPtr.Zero)
             new WindowInteropHelper(window).Owner = hwnd;
-        window.Loaded += (_, _) => AttachTitleBarDrag(window);
+        window.Loaded += (_, _) =>
+        {
+            // 每个窗口 Loaded 时强制 Apply Dark——
+            // Excel 宿主里 OnLoad 的 Apply 可能没生效（Application 生命周期不同），
+            // 在窗口真正创建后再 Apply 一次确保深色主题到位。
+            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
+                Wpf.Ui.Appearance.ApplicationTheme.Dark
+            );
+            AttachTitleBarDrag(window);
+        };
     }
 
     private static void AttachTitleBarDrag(System.Windows.Window window)
@@ -140,7 +130,7 @@ internal static class MahAppsHelper
         );
     }
 
-    internal static void ApplyDarkTitleBar(MetroWindow window)
+    internal static void ApplyDarkTitleBar(System.Windows.Window window)
     {
         window.Loaded += (_, _) =>
         {
