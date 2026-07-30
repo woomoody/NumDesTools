@@ -48,6 +48,11 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         Color.FromArgb(60, 0, 120, 215)
     );
 
+    // 复制态虚线边框(marquee): 闪烁的虚线边框, Excel 复制后选中区效果
+    private static readonly Brush MarqueeBorderBrush = new SolidColorBrush(Colors.DodgerBlue);
+    private static readonly DashStyle MarqueeDashStyle = new DashStyle([1.0, 1.0], 0);
+    private static readonly Thickness MarqueeThickness = new(2);
+
     // sheet tab -> state（扁平，所有打开工作簿的 sheet 都在这，便于机械替换）
     private readonly Dictionary<TabItem, SheetState> _sheets = new();
 
@@ -68,6 +73,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private int _anchorRow, _anchorCol; // Shift 锚点
     private bool _isDraggingHeader; // 列头/行号拖动中
     private int _dragStartIndex; // 拖动起始列号/行号
+    // 复制态: 记录复制时的选区范围, 渲染虚线边框(marquee selection), 下次选区变化时清除
+    private bool _hasCopiedSelection;
+    private SelectionKind _copiedKind;
+    private int _copiedR1, _copiedR2, _copiedC1, _copiedC2;
 
     private enum SelectionKind { None, SingleCell, Range, EntireColumn, EntireRow }
 
@@ -969,6 +978,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             {
                 _selectionKind = SelectionKind.SingleCell;
                 // 单格点击不清空 SelectedCells, 不 Handled — 让 DataGrid 正常进入编辑态
+                // 但确保 CurrentCell 跟随点击, 供粘贴起点
+                grid.CurrentCell = new DataGridCellInfo(cellRv, cell.Column);
                 _selRow1 = cellRow;
                 _selCol1 = cellCol;
                 _selRow2 = cellRow;
@@ -1724,6 +1735,12 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             try
             {
                 Clipboard.SetText(text);
+                // 记录复制态, 渲染虚线边框(marquee selection)
+                _hasCopiedSelection = true;
+                _copiedKind = _selectionKind;
+                _copiedR1 = _selRow1; _copiedR2 = _selRow2;
+                _copiedC1 = _selCol1; _copiedC2 = _selCol2;
+                ApplyMarqueeBorder();
                 return;
             }
             catch (System.Runtime.InteropServices.COMException)
@@ -1778,6 +1795,17 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         {
             state.UndoStack.Push(new CellBatchAction(batch));
             state.RedoStack.Clear();
+            // 强制刷新受影响行的 UI 显示（RaiseIndexerChanged 已触发但容器可能未重拉 Binding）
+            foreach (var rec in batch)
+            {
+                var viewIdx = -1;
+                for (var i = 0; i < grid.Items.Count; i++)
+                {
+                    if (grid.Items[i] is RowView rv && rv.RowIndex == rec.Row) { viewIdx = i; break; }
+                }
+                if (viewIdx >= 0 && grid.ItemContainerGenerator.ContainerFromIndex(viewIdx) is DataGridRow row)
+                    row.InvalidateVisual();
+            }
         }
         MarkCurrentFileDirty();
     }
@@ -2400,6 +2428,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         }
 
         ClearSelectionHighlight();
+        // 选区变化时清除复制态虚线边框
+        if (_hasCopiedSelection) { _hasCopiedSelection = false; ClearMarqueeBorder(); }
 
         // 单格选择由聚光灯负责扩展行列；选区高亮不参与，避免同色叠加
         if (_selectionKind == SelectionKind.SingleCell)
@@ -2517,6 +2547,53 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     /// <summary>计算 grid 可见行范围（视口），虚拟化下只覆盖已生成容器所在行。</summary>
+    /// <summary>渲染复制态虚线边框(marquee selection)。只作用于可见容器。</summary>
+    private void ApplyMarqueeBorder()
+    {
+        var grid = _selectionGrid ?? CurrentMainGrid;
+        if (grid is null) return;
+        var (r1, r2) = (_copiedR1 <= _copiedR2) ? (_copiedR1, _copiedR2) : (_copiedR2, _copiedR1);
+        var (c1, c2) = (_copiedC1 <= _copiedC2) ? (_copiedC1, _copiedC2) : (_copiedC2, _copiedC1);
+        var (vs, ve) = GetVisibleRowRange(grid);
+        for (var i = vs; i <= ve; i++)
+        {
+            var rowMatch = _copiedKind switch { SelectionKind.EntireColumn => true, SelectionKind.EntireRow => i >= r1 && i <= r2, SelectionKind.Range => i >= r1 && i <= r2, SelectionKind.SingleCell => i == r1, _ => false };
+            if (!rowMatch) continue;
+            if (grid.ItemContainerGenerator.ContainerFromIndex(i) is not DataGridRow rowContainer) continue;
+            foreach (var col in grid.Columns)
+            {
+                var colIdx = col.DisplayIndex;
+                var colMatch = _copiedKind switch { SelectionKind.EntireRow => true, SelectionKind.EntireColumn => colIdx >= c1 && colIdx <= c2, SelectionKind.Range => colIdx >= c1 && colIdx <= c2, SelectionKind.SingleCell => colIdx == c1, _ => false };
+                if (!colMatch) continue;
+                if (col.GetCellContent(rowContainer)?.Parent is DataGridCell cell)
+                {
+                    cell.BorderBrush = MarqueeBorderBrush;
+                    cell.BorderThickness = MarqueeThickness;
+                }
+            }
+        }
+    }
+
+    private void ClearMarqueeBorder()
+    {
+        var grid = _selectionGrid ?? CurrentMainGrid;
+        if (grid is null) return;
+        var (vs, ve) = GetVisibleRowRange(grid);
+        for (var i = vs; i <= ve; i++)
+        {
+            if (grid.ItemContainerGenerator.ContainerFromIndex(i) is not DataGridRow rowContainer) continue;
+            foreach (var col in grid.Columns)
+            {
+                if (col.GetCellContent(rowContainer)?.Parent is not DataGridCell cell) continue;
+                if (cell.BorderBrush == MarqueeBorderBrush)
+                {
+                    cell.ClearValue(DataGridCell.BorderBrushProperty);
+                    cell.ClearValue(DataGridCell.BorderThicknessProperty);
+                }
+            }
+        }
+    }
+
     private static (int Start, int End) GetVisibleRowRange(DataGrid grid)
     {
         if (grid.Items.Count is 0) return (0, -1);
