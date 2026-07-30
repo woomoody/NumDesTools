@@ -8,7 +8,8 @@
     WindowStartupLocation="CenterScreen"
     KeyDown="Window_EscClose"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="True">
+    ExtendsContentIntoTitleBar="True"
+    Foreground="#E0E0E0">
 
     <Grid Margin="12">
         <Grid.RowDefinitions>

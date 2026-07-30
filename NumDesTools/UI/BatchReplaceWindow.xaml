@@ -11,7 +11,8 @@
     KeyDown="Window_KeyDown"
     Closing="Window_Closing"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="True">
+    ExtendsContentIntoTitleBar="True"
+    Foreground="#E0E0E0">
 
     <Grid>
         <Grid.RowDefinitions>

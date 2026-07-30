@@ -12,7 +12,8 @@
     Closing="Window_Closing"
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="True">
+    ExtendsContentIntoTitleBar="True"
+    Foreground="#E0E0E0">
 
     <ui:FluentWindow.Resources>
         <Style x:Key="ToolBtn" TargetType="Button">

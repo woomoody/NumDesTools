@@ -10,7 +10,8 @@
     WindowStartupLocation="CenterScreen"
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="True">
+    ExtendsContentIntoTitleBar="True"
+    Foreground="#E0E0E0">
 
     <Grid>
         <Grid.RowDefinitions>

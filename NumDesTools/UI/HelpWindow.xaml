@@ -9,7 +9,8 @@
     FontFamily="微软雅黑"
     KeyDown="Window_EscClose"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="True">
+    ExtendsContentIntoTitleBar="True"
+    Foreground="#E0E0E0">
 
     <ui:FluentWindow.Resources>
         <!-- Group 节点 -->
