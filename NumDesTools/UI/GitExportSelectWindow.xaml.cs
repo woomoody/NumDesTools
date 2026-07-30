@@ -121,7 +121,7 @@ public partial class GitExportSelectWindow : FluentWindow
         return list;
     }
 
-    private static bool IsExportable(string path, bool skipHashFilter = false)
+    private static bool IsExportable(string path)
     {
         var name = System.IO.Path.GetFileName(path);
         // git 状态扫的是整个仓库，需限定在 Excels\ 目录下（严格按目录段匹配，
@@ -132,7 +132,6 @@ public partial class GitExportSelectWindow : FluentWindow
             )
             .Any(s => s.Equals("Excels", StringComparison.OrdinalIgnoreCase));
         return underExcels
-            && (skipHashFilter || !name.Contains('#'))
             && !name.Contains('~')
             && !path.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase)
             && !path.EndsWith(".xll", StringComparison.OrdinalIgnoreCase)
@@ -142,13 +141,19 @@ public partial class GitExportSelectWindow : FluentWindow
             );
     }
 
+    // 配置表(可导出)= 不含 # 前缀。# 前缀是 WIP/隐藏表,显示但不导出。
+    private static bool IsConfigTable(string path)
+        => !System.IO.Path.GetFileName(path).Contains('#');
+
     private static Border MakeFileRow(FileEntry entry)
     {
+        var isNonConfig = !IsConfigTable(entry.Path);
         var isAlreadyContained = entry.Source.EndsWith("(已含)");
 
         var cb = new CheckBox
         {
-            IsChecked = !isAlreadyContained,
+            IsChecked = isNonConfig ? false : !isAlreadyContained,
+            IsEnabled = !isNonConfig,
             Tag = entry.Path,
             Margin = new Thickness(0),
         };
@@ -186,7 +191,7 @@ public partial class GitExportSelectWindow : FluentWindow
         var nameText = new TextBlock
         {
             Text = System.IO.Path.GetFileName(entry.Path),
-            Foreground = isAlreadyContained
+            Foreground = isNonConfig || isAlreadyContained
                 ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x66, 0x66, 0x66))
                 : System.Windows.Media.Brushes.White,
             FontSize = 11,
@@ -205,6 +210,31 @@ public partial class GitExportSelectWindow : FluentWindow
         panel.Children.Add(cb);
         panel.Children.Add(nameText);
         panel.Children.Add(badge);
+
+        // # 前缀文件加"非配置表"标记
+        if (isNonConfig)
+        {
+            var nonConfigBadge = new Border
+            {
+                Background = new SolidColorBrush(
+                    (System.Windows.Media.Color)
+                        System.Windows.Media.ColorConverter.ConvertFromString("#3A3A3A")
+                ),
+                CornerRadius = new CornerRadius(3),
+                Padding = new Thickness(4, 1, 4, 1),
+                Margin = new Thickness(6, 0, 0, 0),
+            };
+            nonConfigBadge.Child = new TextBlock
+            {
+                Text = "非配置表",
+                Foreground = new SolidColorBrush(
+                    (System.Windows.Media.Color)
+                        System.Windows.Media.ColorConverter.ConvertFromString("#FF8888")
+                ),
+                FontSize = 9,
+            };
+            panel.Children.Add(nonConfigBadge);
+        }
 
         var border = new Border
         {
@@ -364,7 +394,7 @@ public partial class GitExportSelectWindow : FluentWindow
         {
             var files = SvnGitTools
                 .GetCommitFiles(_repoBasePath, item.Sha)
-                .Where(f => IsExportable(f, skipHashFilter: true))
+                .Where(IsExportable)
                 .ToList();
 
             FileListPanel.Children.Clear();

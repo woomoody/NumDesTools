@@ -88,11 +88,13 @@
                                    Margin="16,0,4,0"/>
                         <ComboBox x:Name="CommitAuthorBox" Width="140"
                                   FontFamily="Consolas" FontSize="11"
+                                  Foreground="#E0E0E0"
                                   SelectionChanged="CommitAuthorBox_SelectionChanged"/>
                     </StackPanel>
                     <ComboBox x:Name="CommitCombo"
                               MaxWidth="560" HorizontalAlignment="Left"
                               FontFamily="Consolas" FontSize="11"
+                              Foreground="#E0E0E0"
                               SelectionChanged="CommitCombo_SelectionChanged"
                               DisplayMemberPath="Display"/>
                 </StackPanel>
