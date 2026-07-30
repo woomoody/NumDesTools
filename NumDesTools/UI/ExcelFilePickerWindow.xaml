@@ -85,12 +85,23 @@
         <ListBox x:Name="FileList"
                  Grid.Row="2"
                  BorderThickness="1"
+                 Foreground="#E0E0E0"
                  FontSize="12" FontFamily="Consolas"
                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
                  MouseDoubleClick="FileList_DoubleClick"
                  KeyDown="FileList_KeyDown"
                  SelectionChanged="FileList_SelectionChanged"
                  PreviewMouseWheel="List_PreviewMouseWheel">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Foreground" Value="#E0E0E0"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Foreground" Value="#FFFFFF"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </ListBox.ItemContainerStyle>
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <ui:TextBlock Text="{Binding RelPath}" ToolTip="{Binding FullPath}"/>

@@ -60,6 +60,12 @@
                 <Style TargetType="ListBoxItem">
                     <Setter Property="Padding" Value="6,2"/>
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Foreground" Value="#E0E0E0"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Foreground" Value="#FFFFFF"/>
+                        </Trigger>
+                    </Style.Triggers>
                 </Style>
             </ListBox.ItemContainerStyle>
         </ListBox>

@@ -121,7 +121,7 @@ public partial class GitExportSelectWindow : FluentWindow
         return list;
     }
 
-    private static bool IsExportable(string path)
+    private static bool IsExportable(string path, bool skipHashFilter = false)
     {
         var name = System.IO.Path.GetFileName(path);
         // git 状态扫的是整个仓库，需限定在 Excels\ 目录下（严格按目录段匹配，
@@ -132,7 +132,7 @@ public partial class GitExportSelectWindow : FluentWindow
             )
             .Any(s => s.Equals("Excels", StringComparison.OrdinalIgnoreCase));
         return underExcels
-            && !name.Contains('#')
+            && (skipHashFilter || !name.Contains('#'))
             && !name.Contains('~')
             && !path.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase)
             && !path.EndsWith(".xll", StringComparison.OrdinalIgnoreCase)
@@ -364,7 +364,7 @@ public partial class GitExportSelectWindow : FluentWindow
         {
             var files = SvnGitTools
                 .GetCommitFiles(_repoBasePath, item.Sha)
-                .Where(IsExportable)
+                .Where(f => IsExportable(f, skipHashFilter: true))
                 .ToList();
 
             FileListPanel.Children.Clear();
