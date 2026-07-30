@@ -84,7 +84,7 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <ui:TextBlock Foreground="#888" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0">文件:</ui:TextBlock>
+                    <ui:TextBlock Foreground="#AAAAAA" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0">文件:</ui:TextBlock>
                     <ui:TextBlock x:Name="FileNameText" Foreground="White" FontSize="12"
                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                MaxWidth="300" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Text}"/>
@@ -294,7 +294,7 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
                         <ui:TextBlock x:Name="SectionOnlyOursChevron" Text="▶ " Foreground="#FF8888" FontSize="11"/>
                         <ui:TextBlock Text="我的新增" Foreground="#FF8888" FontSize="11" FontWeight="Bold"/>
-                        <ui:TextBlock x:Name="SectionOnlyOursCount" Foreground="#666" FontSize="10" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                        <ui:TextBlock x:Name="SectionOnlyOursCount" Foreground="#888888" FontSize="10" Margin="4,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
 
@@ -457,7 +457,7 @@
 
                     <Border Grid.Row="1" Background="#1A1A1A" Padding="6,4"
                             BorderBrush="#333" BorderThickness="0,0,0,1">
-                        <ui:TextBlock Foreground="#888" FontSize="10">变更导航（当前Sheet）</ui:TextBlock>
+                        <ui:TextBlock Foreground="#AAAACC" FontSize="10">变更导航（当前Sheet）</ui:TextBlock>
                     </Border>
 
                     <ListBox x:Name="ChangeNavList" Grid.Row="2"
@@ -504,9 +504,9 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
-                                <ui:TextBlock x:Name="DetailRowKey" Foreground="#A8C8FF" FontSize="11"/>
-                                <ui:TextBlock x:Name="DetailHint" Foreground="#555" FontSize="10"
-                                           Margin="12,0,0,0" Text="点击任意行查看完整值对比"/>
+                            <ui:TextBlock x:Name="DetailRowKey" Foreground="#A8C8FF" FontSize="11"/>
+                            <ui:TextBlock x:Name="DetailHint" Foreground="#888888" FontSize="10"
+                                       Margin="12,0,0,0" Text="点击任意行查看完整值对比"/>
                                 <ui:TextBlock x:Name="AiSuggestionText" Foreground="#FFD080" FontSize="10"
                                                                            Margin="12,0,0,0" TextWrapping="Wrap" MaxWidth="400"
                                                                            VerticalAlignment="Center"/>
@@ -538,23 +538,23 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <ui:TextBlock Foreground="#888" FontSize="12">冲突行: </ui:TextBlock>
+                    <ui:TextBlock Foreground="#AAAAAA" FontSize="12">冲突行: </ui:TextBlock>
                     <ui:TextBlock x:Name="StatRows"  Foreground="White" FontSize="12" Margin="0,0,16,0"/>
-                    <ui:TextBlock Foreground="#888"  FontSize="12">冲突格: </ui:TextBlock>
+                    <ui:TextBlock Foreground="#AAAAAA"  FontSize="12">冲突格: </ui:TextBlock>
                     <ui:TextBlock x:Name="StatCells" Foreground="White" FontSize="12"/>
                     <Separator x:Name="BranchInfoSep" Width="1" Background="#444" Margin="16,0" Visibility="Collapsed"/>
                     <!-- 当前工作区 -->
-                    <ui:TextBlock x:Name="HeadBranchText" Foreground="#888" FontSize="11"
+                    <ui:TextBlock x:Name="HeadBranchText" Foreground="#AAAAAA" FontSize="11"
                                VerticalAlignment="Center" Visibility="Collapsed"/>
                     <Separator x:Name="BranchInfoSep2" Width="1" Background="#444" Margin="12,0" Visibility="Collapsed"/>
                     <!-- 我的版本 -->
-                    <ui:TextBlock x:Name="OursInfoText" FontSize="11"
+                    <ui:TextBlock x:Name="OursInfoText" FontSize="11" Foreground="#A8C8FF"
                                VerticalAlignment="Center" Visibility="Collapsed"/>
-                    <ui:TextBlock Foreground="#555" FontSize="11" Margin="10,0"
+                    <ui:TextBlock Foreground="#888888" FontSize="11" Margin="10,0"
                                VerticalAlignment="Center" Text="vs"
                                x:Name="BranchVsText" Visibility="Collapsed"/>
                     <!-- 他的版本 -->
-                    <ui:TextBlock x:Name="TheirsInfoText" FontSize="11"
+                    <ui:TextBlock x:Name="TheirsInfoText" FontSize="11" Foreground="#A8FFCA"
                                VerticalAlignment="Center" Visibility="Collapsed"/>
                 </StackPanel>
 

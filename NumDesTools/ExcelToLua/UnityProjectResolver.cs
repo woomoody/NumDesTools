@@ -42,6 +42,10 @@ static class UnityProjectResolver
             return null;
         }
 
+        // 如果传的是文件路径，取其所在目录（验证活动传 workbookPath 是文件全路径）
+        if (File.Exists(basePath))
+            basePath = Path.GetDirectoryName(basePath);
+
         var key = Normalize(basePath);
         var map = LoadMap();
 
