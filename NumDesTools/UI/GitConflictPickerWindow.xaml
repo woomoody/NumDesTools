@@ -3,7 +3,6 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     Title="Git 冲突解决"
     MinWidth="420" MinHeight="260"
     SizeToContent="Height"
@@ -73,7 +72,6 @@
                         Click="BatchAuto_Click"/>
                 <ui:Button x:Name="ResolveBtn"
                         Content="解决选中文件"
-                        Style="{DynamicResource MahApps.Styles.Button.Square.Accent}"
                         HorizontalAlignment="Stretch"
                         Padding="0,8"
                         Click="Resolve_Click"/>

@@ -3,7 +3,6 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     SizeToContent="WidthAndHeight"
     ResizeMode="NoResize"
     WindowStartupLocation="CenterScreen"
@@ -14,7 +13,6 @@
         <ui:TextBlock x:Name="PromptText" TextWrapping="Wrap" FontSize="13"
                    Foreground="#FFFFFF"/>
         <ui:TextBox x:Name="InputBox" MinWidth="320" Margin="0,10,0,0"/>
-        <ui:Button HorizontalAlignment="Right" IsDefault="True" Style="{DynamicResource MahApps.Styles.Button.Square.Accent}"
-                Margin="0,10,0,0" Click="OkButton_Click" Content="确定"/>
+        <ui:Button HorizontalAlignment="Right" IsDefault="True" Margin="0,10,0,0" Click="OkButton_Click" Content="确定"/>
     </StackPanel>
 </ui:FluentWindow>

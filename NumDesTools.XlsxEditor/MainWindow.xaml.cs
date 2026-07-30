@@ -977,9 +977,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             else if (Keyboard.Modifiers != ModifierKeys.Control)
             {
                 _selectionKind = SelectionKind.SingleCell;
-                // 单格点击不清空 SelectedCells, 不 Handled — 让 DataGrid 正常进入编辑态
-                // 但确保 CurrentCell 跟随点击, 供粘贴起点
-                grid.CurrentCell = new DataGridCellInfo(cellRv, cell.Column);
+                // 单格点击不清空 SelectedCells, 不 Handled — 让 DataGrid 正常处理 CurrentCell + 编辑态
                 _selRow1 = cellRow;
                 _selCol1 = cellCol;
                 _selRow2 = cellRow;
@@ -1699,25 +1697,37 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         // 用 SortedDictionary 保持行/列顺序输出
         var rows = new SortedDictionary<int, SortedDictionary<int, string?>>();
 
-        // 从元状态枚举全部行×列，不经 grid.SelectedCells，不经 ResolveColumn 线性扫描
-        for (var r = r1; r <= r2 && r < grid.Items.Count; r++)
+        // 从元状态枚举全部行×列。整列复制不物化 RowView, 直接读 ColumnStore.GetCell(storeRow, col) O(1)
+        // 其他选择模式用 RowView[colIndex] (已物化的行直接用缓存, 不额外物化)
+        var view = grid.ItemsSource as VirtualizingSortableView;
+        var store = CurrentSheetState?.Store;
+        for (var r = r1; r <= r2 && r < rowCount; r++)
         {
-            if (grid.Items[r] is not RowView rv)
-                continue;
-
-            // 整列选全行; 整行选全列; 范围/单格按 c1/c2
             var colStart = _selectionKind is SelectionKind.EntireColumn or SelectionKind.EntireRow ? 0 : c1;
             var colEnd = _selectionKind is SelectionKind.EntireColumn or SelectionKind.EntireRow ? colCount - 1 : c2;
-
             var cols = new SortedDictionary<int, string?>();
-            for (var c = colStart; c <= colEnd; c++)
+
+            if (_selectionKind == SelectionKind.EntireColumn && view is not null && store is not null)
             {
-                if (c < 0 || c >= colCount)
-                    continue;
-                cols[c] = rv[c]; // RowView[int] 数字索引 O(1)
+                // 整列: 用 _rowOrder 反查 store 行号, 直接读 ColumnStore, 不物化 RowView
+                var storeRow = view.GetStoreRowIndex(r);
+                for (var c = colStart; c <= colEnd; c++)
+                {
+                    if (c < 0 || c >= colCount) continue;
+                    cols[c] = store.GetCell(storeRow, c);
+                }
             }
-            if (cols.Count > 0)
-                rows[r] = cols;
+            else
+            {
+                // 整行/范围/单格: 行数少, 物化 RowView 可接受
+                if (grid.Items[r] is not RowView rv) continue;
+                for (var c = colStart; c <= colEnd; c++)
+                {
+                    if (c < 0 || c >= colCount) continue;
+                    cols[c] = rv[c];
+                }
+            }
+            if (cols.Count > 0) rows[r] = cols;
         }
 
         if (rows.Count == 0)
@@ -1796,15 +1806,16 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             state.UndoStack.Push(new CellBatchAction(batch));
             state.RedoStack.Clear();
             // 强制刷新受影响行的 UI 显示（RaiseIndexerChanged 已触发但容器可能未重拉 Binding）
-            foreach (var rec in batch)
+            // 用 Dictionary 缓存 RowIndex→ViewIndex, 避免对每个 batch 项线性查找
+            var view = grid.ItemsSource as VirtualizingSortableView;
+            if (view is not null)
             {
-                var viewIdx = -1;
-                for (var i = 0; i < grid.Items.Count; i++)
+                foreach (var rec in batch)
                 {
-                    if (grid.Items[i] is RowView rv && rv.RowIndex == rec.Row) { viewIdx = i; break; }
+                    var viewIdx = view.GetViewIndex(rec.Row);
+                    if (viewIdx >= 0 && grid.ItemContainerGenerator.ContainerFromIndex(viewIdx) is DataGridRow row)
+                        row.InvalidateVisual();
                 }
-                if (viewIdx >= 0 && grid.ItemContainerGenerator.ContainerFromIndex(viewIdx) is DataGridRow row)
-                    row.InvalidateVisual();
             }
         }
         MarkCurrentFileDirty();

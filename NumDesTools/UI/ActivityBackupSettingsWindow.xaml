@@ -3,7 +3,6 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     Title="大文件备份设置"
     Width="620" Height="260" MinWidth="520" MinHeight="230"
     WindowStartupLocation="CenterScreen"
@@ -41,7 +40,6 @@
 
         <ui:Button x:Name="SaveButton" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
                 Content="保存" Height="34" IsDefault="True"
-                Style="{DynamicResource MahApps.Styles.Button.Square.Accent}"
                 Click="SaveRoots_Click"/>
     </Grid>
 </ui:FluentWindow>

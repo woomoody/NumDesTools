@@ -3,7 +3,6 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     Title="xlsx 瘦身（全量扫描）"
     Width="720" Height="600" MinWidth="560" MinHeight="420"
     WindowStartupLocation="CenterScreen"
@@ -90,13 +89,10 @@
                        FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <ui:Button Content="关闭" Margin="0,0,8,0"
-                        Style="{DynamicResource MahApps.Styles.Button.Square}"
                         Click="Close_Click"/>
                 <ui:Button x:Name="PreviewButton" Content="预览" Margin="0,0,8,0"
-                        Style="{DynamicResource MahApps.Styles.Button.Square}"
                         Click="Preview_Click"/>
                 <ui:Button x:Name="RunButton" Content="执行瘦身" IsDefault="True"
-                        Style="{DynamicResource MahApps.Styles.Button.Square.Accent}"
                         Click="Run_Click"/>
             </StackPanel>
         </Grid>

@@ -3,7 +3,6 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     Title="大文件备份"
     Width="700" Height="500" MinWidth="500" MinHeight="350"
     WindowStartupLocation="CenterScreen"
@@ -28,7 +27,6 @@
             <ui:Button x:Name="CancelButton" Content="取消" Width="90" Height="32" Margin="0,0,10,0"
                     Click="Cancel_Click"/>
             <ui:Button x:Name="OkButton" Content="确定" Width="90" Height="32" IsDefault="True"
-                    Style="{DynamicResource MahApps.Styles.Button.Square.Accent}"
                     Click="Ok_Click"/>
         </StackPanel>
     </Grid>

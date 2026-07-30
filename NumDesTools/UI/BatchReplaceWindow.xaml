@@ -3,7 +3,6 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-    xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     Title="批量替换 (Ctrl+Alt+H)"
     Width="560" Height="460"
     MinWidth="440" MinHeight="340"
@@ -24,10 +23,8 @@
                       Checked="TopmostCheck_Changed" Unchecked="TopmostCheck_Changed"/>
             <ui:Button x:Name="ExecuteBtn" Content="执行替换(Ctrl+Enter)"
                     Width="140" Margin="0,0,8,0" IsDefault="False"
-                    Style="{DynamicResource MahApps.Styles.Button.Square.Accent}"
                     Click="Execute_Click"/>
             <ui:Button Content="清空" Width="60"
-                    Style="{DynamicResource MahApps.Styles.Button.Square}"
                     Click="Clear_Click"/>
         </StackPanel>
 
@@ -89,7 +86,6 @@
                                              FontFamily="Consolas" Padding="3,2"/>
                                     <ui:Button Grid.Column="3" Content="✕" FontSize="10" Margin="2,0,0,0"
                                             Tag="{Binding}"
-                                            Style="{DynamicResource MahApps.Styles.Button.Square}"
                                             Click="RemoveRow_Click"
                                             ToolTip="删除此行"/>
                                 </Grid>
@@ -101,7 +97,6 @@
                 <!-- 添加行 -->
                 <ui:Button Grid.Row="2" Content="+ 添加一行" HorizontalAlignment="Left"
                         Margin="0,6,0,0" Padding="8,3"
-                        Style="{DynamicResource MahApps.Styles.Button.Square}"
                         Click="AddRow_Click"/>
             </Grid>
 
@@ -134,7 +129,6 @@
 
                 <ui:Button Grid.Row="2" Content="清空历史" Margin="0,4,0,0"
                         HorizontalAlignment="Stretch" Padding="4,3"
-                        Style="{DynamicResource MahApps.Styles.Button.Square}"
                         Click="ClearHistory_Click"/>
             </Grid>
         </Grid>
