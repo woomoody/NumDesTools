@@ -977,6 +977,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             else if (Keyboard.Modifiers != ModifierKeys.Control)
             {
                 _selectionKind = SelectionKind.SingleCell;
+                
                 // 单格点击不清空 SelectedCells, 不 Handled — 让 DataGrid 正常处理 CurrentCell + 编辑态
                 _selRow1 = cellRow;
                 _selCol1 = cellCol;
@@ -1042,12 +1043,16 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         // Ctrl+C 复制 / Ctrl+V 粘贴
         grid.PreviewKeyDown += (_, args) =>
         {
-            if (args.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
+            
+            var keyC = args.Key == Key.C || args.ImeProcessedKey == Key.C;
+            var keyV = args.Key == Key.V || args.ImeProcessedKey == Key.V;
+            var ctrlDown = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
+            if (keyC && ctrlDown)
             {
                 CopySelectionToClipboard(grid);
                 args.Handled = true;
             }
-            else if (args.Key == Key.V && Keyboard.Modifiers == ModifierKeys.Control)
+            else if (keyV && ctrlDown)
             {
                 PasteFromClipboard(grid);
                 args.Handled = true;
@@ -1684,6 +1689,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     /// </summary>
     private void CopySelectionToClipboard(DataGrid grid)
     {
+        
         if (_selectionKind == SelectionKind.None)
             return;
 
@@ -1740,11 +1746,15 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             sb.Append('\n');
         }
         var text = sb.ToString().TrimEnd('\n');
-        for (var attempt = 0; attempt < 5; attempt++)
+        // Clipboard.SetText 在 IME/其他进程锁剪贴板时易抛 COMException
+        // 改用 Clipboard.SetDataObject(DataObject, copy=true) 更可靠, 重试 10 次
+        var data = new System.Windows.DataObject();
+        data.SetText(text);
+        for (var attempt = 0; attempt < 10; attempt++)
         {
             try
             {
-                Clipboard.SetText(text);
+                Clipboard.SetDataObject(data, true);
                 // 记录复制态, 渲染虚线边框(marquee selection)
                 _hasCopiedSelection = true;
                 _copiedKind = _selectionKind;
@@ -1762,6 +1772,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private void PasteFromClipboard(DataGrid grid)
     {
+
         if (grid.SelectedItem is null && grid.CurrentCell.Item is null)
             return;
         var startCell = grid.CurrentCell;
@@ -1819,6 +1830,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             }
         }
         MarkCurrentFileDirty();
+        
     }
 
     private static void AddDirtyBackgroundTrigger(Style cellStyle)
@@ -2561,6 +2573,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     /// <summary>渲染复制态虚线边框(marquee selection)。只作用于可见容器。</summary>
     private void ApplyMarqueeBorder()
     {
+        try
+        {
+        
         var grid = _selectionGrid ?? CurrentMainGrid;
         if (grid is null) return;
         var (r1, r2) = (_copiedR1 <= _copiedR2) ? (_copiedR1, _copiedR2) : (_copiedR2, _copiedR1);
@@ -2583,6 +2598,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 }
             }
         }
+        }
+        catch (Exception ex) {  }
     }
 
     private void ClearMarqueeBorder()
