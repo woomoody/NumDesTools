@@ -70,7 +70,7 @@
 
         <!-- Item 子节点 -->
         <Style TargetType="TreeViewItem" x:Key="LeafItem">
-            <Setter Property="Foreground" Value="#2D2D2D"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Background" Value="Transparent"/>
