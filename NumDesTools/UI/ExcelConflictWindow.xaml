@@ -10,7 +10,8 @@
     WindowStartupLocation="CenterScreen"
     KeyDown="Window_EscClose"
     WindowBackdropType="Mica"
-    ExtendsContentIntoTitleBar="True">
+    ExtendsContentIntoTitleBar="True"
+    Foreground="#E0E0E0">
 
     <ui:FluentWindow.Resources>
         <Style TargetType="Button" x:Key="ActionBtn">
