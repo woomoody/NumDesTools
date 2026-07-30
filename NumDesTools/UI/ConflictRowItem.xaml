@@ -22,7 +22,7 @@
                             Padding="3,1" Margin="0,0,4,0" FontSize="10"
                             Background="#5A2A2A" Foreground="#FFAAAA" BorderThickness="0"
                             Cursor="Hand" Click="DeSelect_Click"/>
-                    <ui:TextBlock Text="ID: " Foreground="#888" FontSize="11"/>
+                    <ui:TextBlock Text="ID: " Foreground="#BBBBBB" FontSize="11"/>
                     <ui:TextBlock x:Name="RowKeyText" Foreground="White" FontWeight="Bold" FontSize="11"/>
                     <StackPanel x:Name="RowHashCols" Orientation="Horizontal"
                                 Margin="8,0,0,0" VerticalAlignment="Center"/>

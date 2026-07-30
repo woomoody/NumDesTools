@@ -107,7 +107,7 @@ public partial class ConflictRowItem : UserControl
     private static readonly SolidColorBrush FgOurs = Brush("#A8C8FF");
     private static readonly SolidColorBrush FgTheirs = Brush("#A8FFCA");
     private static readonly SolidColorBrush FgDiff = Brush("#FF8888");
-    private static readonly SolidColorBrush FgRejected = Brush("#555555");
+    private static readonly SolidColorBrush FgRejected = Brush("#888888");
 
     public static readonly RoutedEvent CellSelectedEvent = EventManager.RegisterRoutedEvent(
         "CellSelected",
@@ -295,7 +295,7 @@ public partial class ConflictRowItem : UserControl
                     new TextBlock
                     {
                         Text = " | ",
-                        Foreground = Brush("#555555"),
+                        Foreground = Brush("#888888"),
                         FontSize = 11,
                         VerticalAlignment = VerticalAlignment.Center,
                     }
