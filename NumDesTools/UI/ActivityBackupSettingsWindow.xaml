@@ -24,18 +24,18 @@
         </Grid.ColumnDefinitions>
 
         <ui:TextBlock Grid.Row="0" Grid.Column="0" Text="备份根目录" VerticalAlignment="Center"
-                   Foreground="#2D2D2D"/>
+                   Foreground="Gray"/>
         <ui:TextBox x:Name="BackupRootBox" Grid.Row="0" Grid.Column="1" Margin="0,4,6,4"/>
         <ui:Button Grid.Row="0" Grid.Column="2" Content="浏览…" Margin="0,4,0,4" Click="BrowseBackupRoot_Click"/>
 
         <ui:TextBlock Grid.Row="1" Grid.Column="0" Text="正式表根目录" VerticalAlignment="Center"
-                   Foreground="#2D2D2D"/>
+                   Foreground="Gray"/>
         <ui:TextBox x:Name="LiveRootBox" Grid.Row="1" Grid.Column="1" Margin="0,4,6,4"/>
         <ui:Button Grid.Row="1" Grid.Column="2" Content="浏览…" Margin="0,4,0,4" Click="BrowseLiveRoot_Click"/>
 
         <ui:TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,10,0,0"
                    TextWrapping="Wrap" VerticalAlignment="Top"
-                   Foreground="#2D2D2D" FontSize="11"
+                   Foreground="Gray" FontSize="11"
                    Text="删除只动正式表（Type.xlsx/Icon.xlsx/Item.xlsx，在正式表根目录下递归找）。还原会在备份根目录下按「表名_backup_日期」找最新一份备份，把对应 id 区间的数据同步回正式表。"/>
 
         <ui:Button x:Name="SaveButton" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"

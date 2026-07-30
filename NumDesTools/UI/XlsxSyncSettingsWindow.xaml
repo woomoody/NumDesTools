@@ -25,23 +25,23 @@
         </Grid.ColumnDefinitions>
 
         <ui:TextBlock Grid.Row="0" Grid.Column="0" Text="根目录 A" VerticalAlignment="Center"
-                   Foreground="#2D2D2D"/>
+                   Foreground="Gray"/>
         <ui:TextBox x:Name="RootABox" Grid.Row="0" Grid.Column="1" Margin="0,4,6,4"/>
         <ui:Button Grid.Row="0" Grid.Column="2" Content="浏览…" Margin="0,4,0,4" Click="BrowseRootA_Click"/>
 
         <ui:TextBlock Grid.Row="1" Grid.Column="0" Text="根目录 B" VerticalAlignment="Center"
-                   Foreground="#2D2D2D"/>
+                   Foreground="Gray"/>
         <ui:TextBox x:Name="RootBBox" Grid.Row="1" Grid.Column="1" Margin="0,4,6,4"/>
         <ui:Button Grid.Row="1" Grid.Column="2" Content="浏览…" Margin="0,4,0,4" Click="BrowseRootB_Click"/>
 
         <ui:TextBlock Grid.Row="2" Grid.Column="0" Text="a 侧后缀" VerticalAlignment="Center"
-                   Foreground="#2D2D2D"/>
+                   Foreground="Gray"/>
         <ui:TextBox x:Name="SuffixABox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,4,0,4"
                  Tag="留空则要求 a/b 文件名完全一致，比如填 _Update 表示 a 侧文件名 = b 侧文件名 + _Update"/>
 
         <ui:TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,10,0,0"
                    TextWrapping="Wrap" VerticalAlignment="Top"
-                   Foreground="#2D2D2D" FontSize="11"
+                   Foreground="Gray" FontSize="11"
                    Text="同步时按当前打开文件在哪侧根目录下，自动推出对侧文件（按上面的后缀规则换算文件名）；逐个同名 Sheet 比较表头（约定 id 列为 Key），交集列自动同步，不用再配 Sheet 名和列名单。"/>
 
         <ui:Button x:Name="SaveButton" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"

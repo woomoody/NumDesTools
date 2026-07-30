@@ -57,10 +57,10 @@
                         <ColumnDefinition Width="28"/>
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Column="0" Text="查找值" FontSize="11"
-                               Foreground="#2D2D2D"
+                               Foreground="Gray"
                                HorizontalAlignment="Center"/>
                     <ui:TextBlock Grid.Column="2" Text="替换值" FontSize="11"
-                               Foreground="#2D2D2D"
+                               Foreground="Gray"
                                HorizontalAlignment="Center"/>
                 </Grid>
 
@@ -81,7 +81,7 @@
                                              FontFamily="Consolas" Padding="3,2"/>
                                     <ui:TextBlock Grid.Column="1" Text="→" VerticalAlignment="Center"
                                                HorizontalAlignment="Center"
-                                               Foreground="#2D2D2D"/>
+                                               Foreground="Gray"/>
                                     <ui:TextBox Grid.Column="2" Text="{Binding To, UpdateSourceTrigger=PropertyChanged}"
                                              FontFamily="Consolas" Padding="3,2"/>
                                     <ui:Button Grid.Column="3" Content="✕" FontSize="10" Margin="2,0,0,0"
@@ -113,7 +113,7 @@
                 </Grid.RowDefinitions>
 
                 <ui:TextBlock Grid.Row="0" Text="历史记录" FontSize="11"
-                           Foreground="#2D2D2D" Margin="0,0,0,4"/>
+                           Foreground="Gray" Margin="0,0,0,4"/>
 
                 <ListBox x:Name="HistoryList" Grid.Row="1"
                          BorderThickness="1"

@@ -36,7 +36,7 @@
                                                     <Setter.Value>
                                                         <ControlTemplate TargetType="ToggleButton">
                                                             <ui:TextBlock x:Name="Arrow" Text="▶"
-                                                                       Foreground="#2D2D2D"
+                                                                       Foreground="Gray"
                                                                        FontSize="9" VerticalAlignment="Center"/>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsChecked" Value="True">
@@ -110,7 +110,7 @@
             <DockPanel>
                 <ui:TextBlock DockPanel.Dock="Top"
                            Text="功能导航"
-                           Foreground="#2D2D2D"
+                           Foreground="Gray"
                            FontSize="10"
                            Margin="8,8,8,4"/>
                 <TreeView x:Name="NavTreeView"

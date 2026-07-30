@@ -27,7 +27,7 @@
             </Grid.ColumnDefinitions>
             <ui:TextBlock Text="作者：" VerticalAlignment="Center" FontSize="11"
                        Margin="0,0,6,0"
-                       Foreground="#2D2D2D"/>
+                       Foreground="Gray"/>
             <ComboBox x:Name="AuthorFilterBox" Grid.Column="1"
                       FontFamily="Consolas" FontSize="11"
                       SelectionChanged="AuthorFilter_Changed"/>
@@ -63,7 +63,7 @@
                    Grid.Row="2"
                    Padding="10,4"
                    FontSize="11"
-                   Foreground="#2D2D2D"
+                   Foreground="Gray"
                    Background="#1E1E1E"
                    Text="加载中…"/>
 

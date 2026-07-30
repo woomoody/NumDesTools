@@ -27,7 +27,7 @@
             <StackPanel>
                 <ui:TextBlock Text="把纯数字被误存成字符串的单元格转回原生数字类型，并清掉空白行列尾部残留格式（判定见 CellValueNormalizer，往返校验保证 .Text 显示不变）。递归扫描指定根目录下所有 xlsx。"
                            TextWrapping="Wrap" FontSize="11"
-                           Foreground="#2D2D2D" Margin="0,0,0,10"/>
+                           Foreground="Gray" Margin="0,0,0,10"/>
 
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -46,10 +46,10 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Column="0" Text="只处理 ≥" VerticalAlignment="Center"
-                               Foreground="#2D2D2D" FontSize="11"/>
+                               Foreground="Gray" FontSize="11"/>
                     <ui:TextBox x:Name="MinSizeBox" Grid.Column="1" Text="5" Margin="6,0"/>
                     <ui:TextBlock Grid.Column="2" Text="MB 的文件（小文件收益微乎其微）" VerticalAlignment="Center"
-                               Foreground="#2D2D2D" FontSize="11"/>
+                               Foreground="Gray" FontSize="11"/>
                 </Grid>
             </StackPanel>
         </Border>
@@ -65,7 +65,7 @@
             <CheckBox x:Name="SelectAllBox" Grid.Column="0" Content="全选 / 取消全选"
                       Checked="SelectAll_Checked" Unchecked="SelectAll_Unchecked"/>
             <ui:TextBlock x:Name="SummaryText" Grid.Column="1"
-                       Foreground="#2D2D2D" FontSize="11"
+                       Foreground="Gray" FontSize="11"
                        HorizontalAlignment="Right" VerticalAlignment="Center"/>
         </Grid>
 
@@ -85,7 +85,7 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <ui:TextBlock x:Name="StatusText" Grid.Column="0"
-                       Foreground="#2D2D2D"
+                       Foreground="Gray"
                        FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <ui:Button Content="关闭" Margin="0,0,8,0"

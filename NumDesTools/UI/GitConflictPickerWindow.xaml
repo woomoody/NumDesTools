@@ -52,14 +52,14 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Text="当前分支（OURS）：" VerticalAlignment="Center"
-                               Foreground="#2D2D2D"
+                               Foreground="Gray"
                                FontSize="11" Margin="0,0,6,0"/>
                     <ComboBox x:Name="BranchBox" Grid.Column="1"
                               FontFamily="Consolas" FontSize="11"/>
                 </Grid>
                 <CheckBox x:Name="SkipHashBox"
                           Content="跳过 # 文件（以对方为准自动解决）"
-                          Foreground="#2D2D2D"
+                          Foreground="Gray"
                           FontSize="11"
                           Margin="0,0,0,8"
                           Checked="SkipHash_Changed"

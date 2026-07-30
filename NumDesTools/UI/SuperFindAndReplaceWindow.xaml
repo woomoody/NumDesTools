@@ -49,7 +49,7 @@
                     Text="替换为："
                     VerticalAlignment="Center"
                     Margin="0,0,6,0"
-                    Foreground="#2D2D2D"
+                    Foreground="Gray"
                     FontSize="13"/>
                 <ui:TextBox
                     x:Name="ReplaceTextBox"
@@ -84,7 +84,7 @@
             <ui:TextBlock
                 x:Name="MatchCountTextBlock"
                 Text="匹配项数量：0"
-                Foreground="#2D2D2D"
+                Foreground="Gray"
                 FontSize="12"/>
         </Border>
     </Grid>

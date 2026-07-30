@@ -33,9 +33,14 @@ public partial class GitExportSelectWindow : FluentWindow
     public bool IsFullExport { get; private set; }
 
     public GitExportSelectWindow(string repoBasePath, string gitAuthor)
+        : this(repoBasePath, gitAuthor, skipExcelOwner: false) { }
+
+    /// <summary>测试用构造：skipExcelOwner=true 跳过 SetExcelOwner（无 ExcelDna.Integration 依赖）</summary>
+    public GitExportSelectWindow(string repoBasePath, string gitAuthor, bool skipExcelOwner)
     {
         MahAppsHelper.EnsureInitialized();
-        MahAppsHelper.SetExcelOwner(this);
+        if (!skipExcelOwner)
+            MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
         _repoBasePath = repoBasePath;
         _gitAuthor = gitAuthor;

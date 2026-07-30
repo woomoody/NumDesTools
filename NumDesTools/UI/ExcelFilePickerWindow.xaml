@@ -33,7 +33,7 @@
                          LostFocus="SearchBox_LostFocus"/>
                 <ui:TextBlock x:Name="SearchPlaceholder"
                            Text="输入文件名过滤…"
-                           Foreground="#2D2D2D"
+                           Foreground="Gray"
                            FontSize="13"
                            IsHitTestVisible="False" VerticalAlignment="Center" Margin="8,0"
                            Visibility="Visible"/>
@@ -57,7 +57,7 @@
                 </Popup>
             </Grid>
             <ui:TextBlock Grid.Column="1" x:Name="CountLabel"
-                       Foreground="#2D2D2D"
+                       Foreground="Gray"
                        FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0"/>
         </Grid>
 
@@ -70,7 +70,7 @@
             <CheckBox x:Name="FilterXlsm" Content="过滤 .xlsm 文件" FontSize="11"
                       Checked="Filter_Changed" Unchecked="Filter_Changed"/>
             <ui:TextBlock x:Name="RootLabel"
-                       Foreground="#2D2D2D"
+                       Foreground="Gray"
                        FontSize="10"
                        VerticalAlignment="Center" Margin="20,0,0,0" TextTrimming="CharacterEllipsis"/>
         </StackPanel>
@@ -100,7 +100,7 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <ui:TextBlock x:Name="SelectedPathLabel" Grid.Column="0"
-                       Foreground="#2D2D2D"
+                       Foreground="Gray"
                        FontSize="10" VerticalAlignment="Center"
                        TextTrimming="CharacterEllipsis"/>
             <ui:Button x:Name="CancelBtn" Grid.Column="1" Content="取消"
