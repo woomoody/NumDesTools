@@ -137,6 +137,20 @@ public sealed class VirtualizingSortableView : IList, INotifyCollectionChanged
         return Array.IndexOf(_rowOrder, view.RowIndex);
     }
 
+    /// <summary>视图行号 → ColumnStore 真实行号。O(1)。</summary>
+    public int GetStoreRowIndex(int viewIndex)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(viewIndex);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(viewIndex, _rowOrder.Length);
+        return _rowOrder[viewIndex];
+    }
+
+    /// <summary>ColumnStore 真实行号 → 视图行号。线性查找 O(n)，仅小批量调用（如粘贴刷新）。</summary>
+    public int GetViewIndex(int storeRowIndex)
+    {
+        return Array.IndexOf(_rowOrder, storeRowIndex);
+    }
+
     public bool Contains(object? value) => IndexOf(value) >= 0;
 
     public IEnumerator GetEnumerator()
