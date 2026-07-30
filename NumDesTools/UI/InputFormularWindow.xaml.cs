@@ -1,13 +1,12 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
-using Wpf.Ui.Controls;
+using MahApps.Metro.Controls;
 using Orientation = System.Windows.Controls.Orientation;
-using TextBlock = System.Windows.Controls.TextBlock;
 using TextBox = System.Windows.Controls.TextBox;
 
 namespace NumDesTools.UI
 {
-    public partial class InputFormularWindow : FluentWindow
+    public partial class InputFormularWindow : MetroWindow
     {
         public List<string> UserInputs { get; private set; }
 

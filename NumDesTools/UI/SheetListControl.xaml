@@ -8,17 +8,7 @@
     d:DesignWidth="800"
     mc:Ignorable="d">
     <UserControl.Resources>
-        <!-- 紧凑样式覆盖 wpfui ControlsDictionary 的宽松默认（CTP 不需要 wpfui 宽松样式） -->
-        <Style TargetType="ListBoxItem">
-            <Setter Property="Padding" Value="6,2" />
-            <Setter Property="Margin" Value="0" />
-            <Setter Property="MinHeight" Value="20" />
-        </Style>
-        <Style TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Margin" Value="0" />
-        </Style>
-        <Style x:Key="SheetListBoxItemStyle" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+        <Style x:Key="SheetListBoxItemStyle" TargetType="ListBoxItem">
             <Setter Property="Background" Value="LightBlue" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsHidden}" Value="True">

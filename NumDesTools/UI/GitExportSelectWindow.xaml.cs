@@ -1,17 +1,16 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using NumDesTools;
+using MahApps.Metro.Controls;
 using NumDesTools.ExcelToLua;
-using Wpf.Ui.Controls;
+using NumDesTools;
 using Border = System.Windows.Controls.Border;
 using CheckBox = System.Windows.Controls.CheckBox;
-using TextBlock = System.Windows.Controls.TextBlock;
 using Window = System.Windows.Window;
 
 namespace NumDesTools.UI;
 
-public partial class GitExportSelectWindow : FluentWindow
+public partial class GitExportSelectWindow : MetroWindow
 {
     // 每个文件条目：路径 + 来源标签
     private record FileEntry(string Path, string Source);
@@ -33,14 +32,9 @@ public partial class GitExportSelectWindow : FluentWindow
     public bool IsFullExport { get; private set; }
 
     public GitExportSelectWindow(string repoBasePath, string gitAuthor)
-        : this(repoBasePath, gitAuthor, skipExcelOwner: false) { }
-
-    /// <summary>测试用构造：skipExcelOwner=true 跳过 SetExcelOwner（无 ExcelDna.Integration 依赖）。</summary>
-    public GitExportSelectWindow(string repoBasePath, string gitAuthor, bool skipExcelOwner)
     {
         MahAppsHelper.EnsureInitialized();
-        if (!skipExcelOwner)
-            MahAppsHelper.SetExcelOwner(this);
+        MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
         _repoBasePath = repoBasePath;
         _gitAuthor = gitAuthor;
@@ -75,17 +69,17 @@ public partial class GitExportSelectWindow : FluentWindow
         var list = new List<FileEntry>();
 
         // 工作区 + 暂存
-        List<string> gitFiles;
-        try
-        {
-            gitFiles = SvnGitTools.GitDiffAndStagedFiles(_repoBasePath);
-        }
-        catch (Exception ex)
-        {
-            PluginLog.Write($"[GitExport] GitDiff 失败: {ex.Message}");
-            gitFiles = new List<string>();
-        }
-        foreach (var f in gitFiles)
+                List<string> gitFiles;
+                try
+                {
+                    gitFiles = SvnGitTools.GitDiffAndStagedFiles(_repoBasePath);
+                }
+                catch (Exception ex)
+                {
+                    PluginLog.Write($"[GitExport] GitDiff 失败: {ex.Message}");
+                    gitFiles = new List<string>();
+                }
+                foreach (var f in gitFiles)
         {
             if (IsExportable(f) && seen.Add(f))
                 list.Add(new FileEntry(f, "变更/暂存"));
@@ -151,7 +145,6 @@ public partial class GitExportSelectWindow : FluentWindow
             IsChecked = !isAlreadyContained,
             Tag = entry.Path,
             Margin = new Thickness(0),
-            Foreground = System.Windows.Media.Brushes.White,
         };
 
         var sourceColor =
@@ -286,8 +279,7 @@ public partial class GitExportSelectWindow : FluentWindow
         if (fullOn)
         {
             FileListPanel.Children.Clear();
-            FileCountText.Text =
-                "全表导出：将清空 Tables 输出目录（保留 NonOutputTable）后导 Localizations/Tables/UIs 全部";
+            FileCountText.Text = "全表导出：将清空 Tables 输出目录（保留 NonOutputTable）后导 Localizations/Tables/UIs 全部";
             StatusText.Text = "全表导出模式";
         }
         else

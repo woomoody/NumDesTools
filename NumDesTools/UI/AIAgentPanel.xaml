@@ -8,28 +8,6 @@
     mc:Ignorable="d"
     Width="840"
     Background="#1c1c1c">
-    <UserControl.Resources>
-        <!-- 紧凑样式覆盖 wpfui ControlsDictionary 的宽松默认（CTP 不需要 wpfui 宽松样式） -->
-        <Style TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13" />
-        </Style>
-        <Style TargetType="Button">
-            <Setter Property="Padding" Value="8,3" />
-            <Setter Property="FontSize" Value="13" />
-        </Style>
-        <Style TargetType="TextBox">
-            <Setter Property="Padding" Value="4,2" />
-            <Setter Property="FontSize" Value="13" />
-        </Style>
-        <Style TargetType="CheckBox">
-            <Setter Property="Padding" Value="4,0" />
-            <Setter Property="FontSize" Value="13" />
-        </Style>
-        <Style TargetType="ListBoxItem">
-            <Setter Property="Padding" Value="6,2" />
-            <Setter Property="MinHeight" Value="20" />
-        </Style>
-    </UserControl.Resources>
     <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

@@ -7,157 +7,36 @@ namespace NumDesTools.UI;
 
 internal static class MahAppsHelper
 {
-    /// <summary>
-    /// 判断某个 URI 片段的资源字典是否已存在于 MergedDictionaries 中——
-    /// 抽出为纯函数，不依赖真实 Application/STA 线程，可单测覆盖
-    /// （见 NumDesOutput/analysis/wpfui-migration-optimization-report-2026-07-29.md P1）。
-    /// 接受 <see cref="Uri"/> 序列而非 <see cref="System.Windows.ResourceDictionary"/>——
-    /// ResourceDictionary.Source 的 setter 会触发真实资源加载（网络/pack 解析），
-    /// 单测里不应该构造会触发 IO 的对象，调用方在 EnsureInitialized 里传
-    /// mergedDictionaries.Select(d => d.Source) 即可复用同一份逻辑。
-    /// </summary>
-    /// <param name="exactMatch">
-    /// true：URI 的完整字符串必须与 <paramref name="uriOrFragment"/> 相等（MahApps 资源用此模式）。
-    /// false（默认）：URI 字符串只需包含 <paramref name="uriOrFragment"/> 子串（wpfui 资源用此模式）。
-    /// </param>
-    internal static bool IsResourceMerged(
-        IEnumerable<Uri?> mergedSources,
-        string uriOrFragment,
-        bool exactMatch = false
-    )
-    {
-        return mergedSources.Any(source =>
-            exactMatch
-                ? source?.OriginalString == uriOrFragment
-                : source?.OriginalString.Contains(uriOrFragment) == true
-        );
-    }
-
-    /// <summary>
-    /// 格式化资源合并/主题初始化失败的日志消息——纯函数，可单测覆盖
-    /// （见 NumDesOutput/analysis/wpfui-migration-optimization-report-2026-07-29.md P1 第 3 条）。
-    /// EnsureInitialized 里的 4 处失败全部是真正的故障（"资源已存在"的情况在进入 try
-    /// 之前已被 IsResourceMerged 过滤掉，不会走到 catch），所以这里不区分"可忽略"，
-    /// 统一格式化后由调用方同时写入调试日志文件 + PluginLog（应用内 PluginLogWindow 可见），
-    /// 不再让故障只静默进一个没人会去看的文件。
-    /// </summary>
-    internal static string FormatResourceMergeFailure(string context, Exception ex) =>
-        $"{context} FAILED [{ex.GetType().Name}]: {ex.Message}";
+    private static bool _initialized;
 
     internal static void EnsureInitialized()
     {
+        if (_initialized)
+            return;
+        _initialized = true;
+
         if (System.Windows.Application.Current is null)
             _ = new System.Windows.Application
             {
                 ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown,
             };
 
-        // 手动 merge 资源（无 App.xaml 时必须）
+        // 手动 merge MahApps 核心资源（无 App.xaml 时必须）
         var app = System.Windows.Application.Current;
-
-        // MahApps 核心资源——CTP（CustomTaskPane）里的 mah:NumericUpDown/mah:TextBoxHelper.Watermark 依赖这些。
-        // 去掉后 CTP 控件没样式 fallback 默认（黑块 + 大字体大间距）。
-        // FluentWindow 不受影响（wpfui 字典后合并覆盖 + Apply Dark 每次调用）。
-        var mahappsUris = new[]
-        {
-            "pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml",
-            "pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml",
-            "pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Steel.xaml",
-        };
         foreach (
-            var uri in mahappsUris.Where(u =>
-                !IsResourceMerged(
-                    app.Resources.MergedDictionaries.Select(d => d.Source),
-                    u,
-                    exactMatch: true
-                )
-            )
+            var uri in new[]
+            {
+                "pack://application:,,,/MahApps.Metro;component/Styles/Controls.xaml",
+                "pack://application:,,,/MahApps.Metro;component/Styles/Fonts.xaml",
+                "pack://application:,,,/MahApps.Metro;component/Styles/Themes/Dark.Steel.xaml",
+            }
         )
         {
-            try
-            {
-                app.Resources.MergedDictionaries.Add(
-                    new System.Windows.ResourceDictionary { Source = new Uri(uri) }
-                );
-            }
-            catch (Exception ex)
-            {
-                var msg = FormatResourceMergeFailure($"MahApps merge ({uri})", ex);
-                WriteDebugLog(msg);
-                PluginLog.Write(msg);
-            }
-        }
-        try
-        {
-            ControlzEx.Theming.ThemeManager.Current.ChangeTheme(app, "Dark.Steel");
-        }
-        catch (Exception ex)
-        {
-            var msg = FormatResourceMergeFailure("MahApps ThemeManager", ex);
-            WriteDebugLog(msg);
-            PluginLog.Write(msg);
+            var rd = new System.Windows.ResourceDictionary { Source = new Uri(uri) };
+            app.Resources.MergedDictionaries.Add(rd);
         }
 
-        // wpfui 深色主题资源字典（wpfui 控件如 ui:Button/ui:TextBlock 渲染依赖此字典）
-        // 在 MahApps 之后合并——后合并的覆盖前面的，FluentWindow 的 ui: 控件用 wpfui 深色样式。
-        // 用 ThemesDictionary + ControlsDictionary 标记类（和 FileLockPreview 验证通过的方式一致）
-        if (!IsResourceMerged(app.Resources.MergedDictionaries.Select(d => d.Source), "Wpf.Ui"))
-        {
-            try
-            {
-                app.Resources.MergedDictionaries.Add(
-                    new Wpf.Ui.Markup.ThemesDictionary
-                    {
-                        Source = new Uri(
-                            "pack://application:,,,/Wpf.Ui;component/Resources/Theme/Dark.xaml"
-                        ),
-                    }
-                );
-                app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ControlsDictionary());
-                WriteDebugLog(
-                    "wpfui Dark + Controls merged OK (global, CTP overrides applied per-Control)"
-                );
-            }
-            catch (Exception ex)
-            {
-                var msg = FormatResourceMergeFailure("wpfui resource merge", ex);
-                WriteDebugLog(msg);
-                PluginLog.Write(msg);
-            }
-        }
-        else
-        {
-            WriteDebugLog("wpfui resources already merged, skip");
-        }
-
-        // 主题跟随系统（不强制固定 Dark）——
-        // ApplySystemTheme 根据系统当前浅色/深色应用主题，系统切换时自动响应。
-        // 之前用 Apply(Dark) 强制 Dark 会压住系统主题跟随，导致 CTP 背景不随系统走。
-        try
-        {
-            Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
-            WriteDebugLog("ApplicationThemeManager.ApplySystemTheme called (follow system)");
-        }
-        catch (Exception ex)
-        {
-            var msg = FormatResourceMergeFailure("ApplicationThemeManager.ApplySystemTheme", ex);
-            WriteDebugLog(msg);
-            PluginLog.Write(msg);
-        }
-    }
-
-    private static void WriteDebugLog(string msg)
-    {
-        try
-        {
-            var path = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "workspace",
-                "xlsx-editor-wpfui-init.log"
-            );
-            System.IO.File.AppendAllText(path, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}\n");
-        }
-        catch { }
+        ThemeManager.Current.ChangeTheme(app, "Dark.Steel");
     }
 
     internal static void SetExcelOwner(System.Windows.Window window)

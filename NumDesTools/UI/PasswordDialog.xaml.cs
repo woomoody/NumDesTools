@@ -1,15 +1,14 @@
 using System.Windows;
-using Wpf.Ui.Controls;
+using MahApps.Metro.Controls;
 
 namespace NumDesTools.UI;
 
-public partial class PasswordDialog : FluentWindow
+public partial class PasswordDialog : MetroWindow
 {
     public string Password { get; private set; } = string.Empty;
 
     public PasswordDialog(string prompt)
     {
-        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
         MahAppsHelper.EnsureInitialized();
         MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();

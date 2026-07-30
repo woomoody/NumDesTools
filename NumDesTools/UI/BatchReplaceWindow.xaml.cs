@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -7,7 +7,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using ExcelDna.Integration;
-using Wpf.Ui.Controls;
+using MahApps.Metro.Controls;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MessageBox = System.Windows.MessageBox;
 using Window = System.Windows.Window;
@@ -55,7 +55,7 @@ namespace NumDesTools.UI
     }
 
     // ── 主窗口 ───────────────────────────────────────────
-    public partial class BatchReplaceWindow : FluentWindow
+    public partial class BatchReplaceWindow : MetroWindow
     {
         private static BatchReplaceWindow? _instance;
         private static readonly string HistoryFile = Path.Combine(

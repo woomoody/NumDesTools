@@ -1,14 +1,13 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Windows.Controls;
+using MahApps.Metro.Controls;
 using Newtonsoft.Json.Linq;
-using Wpf.Ui.Controls;
-using TreeViewItem = System.Windows.Controls.TreeViewItem;
 
 namespace NumDesTools.UI
 {
-    public partial class HelpWindow : FluentWindow
+    public partial class HelpWindow : MetroWindow
     {
         // ── 数据模型 ─────────────────────────────────────────────────────────────
 

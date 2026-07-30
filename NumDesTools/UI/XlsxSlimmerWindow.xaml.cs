@@ -1,22 +1,17 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using Wpf.Ui.Controls;
+using MahApps.Metro.Controls;
 using Border = System.Windows.Controls.Border;
 using CheckBox = System.Windows.Controls.CheckBox;
 using MessageBox = System.Windows.MessageBox;
-using MessageBoxButton = System.Windows.MessageBoxButton;
-using MessageBoxResult = System.Windows.MessageBoxResult;
-using Orientation = System.Windows.Controls.Orientation;
-using StackPanel = System.Windows.Controls.StackPanel;
-using TextBlock = System.Windows.Controls.TextBlock;
 using WpfKey = System.Windows.Input.Key;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace NumDesTools.UI;
 
 // xlsx 瘦身：全量扫描指定根目录，EPPlus 离线处理（无文件锁竞态）。
-public partial class XlsxSlimmerWindow : FluentWindow
+public partial class XlsxSlimmerWindow : MetroWindow
 {
     private List<string> _scanFiles = [];
 
@@ -87,7 +82,7 @@ public partial class XlsxSlimmerWindow : FluentWindow
         };
         var panel = new StackPanel
         {
-            Orientation = Orientation.Horizontal,
+            Orientation = System.Windows.Controls.Orientation.Horizontal,
             Margin = new Thickness(4, 2, 4, 2),
         };
         panel.Children.Add(cb);

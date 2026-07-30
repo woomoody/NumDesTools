@@ -1,9 +1,9 @@
-﻿using System.IO;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using MahApps.Metro.Controls;
 using Newtonsoft.Json;
-using Wpf.Ui.Controls;
 using Key = System.Windows.Input.Key;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
@@ -13,7 +13,7 @@ using Window = System.Windows.Window;
 
 namespace NumDesTools.UI;
 
-public partial class ExcelFilePickerWindow : FluentWindow
+public partial class ExcelFilePickerWindow : MetroWindow
 {
     private record FileEntry(string FullPath, string RelPath)
     {
