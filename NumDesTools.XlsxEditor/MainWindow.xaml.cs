@@ -191,7 +191,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         if (_selectionKind == SelectionKind.None)
             return;
 
-        var (r1, r2) = (_selRow1 <= _selRow2) ? (_selRow1, _selRow2) : (_selRow2, _selRow1);
+        var rowCount = grid.Items.Count;
+        // 整列选择删所有行; 整行/范围/单格按 _selRow 范围
+        var (r1, r2) = _selectionKind == SelectionKind.EntireColumn ? (0, rowCount - 1) : (_selRow1 <= _selRow2 ? (_selRow1, _selRow2) : (_selRow2, _selRow1));
         var (c1, c2) = (_selCol1 <= _selCol2) ? (_selCol1, _selCol2) : (_selCol2, _selCol1);
         var colCount = state.Store.ColumnCount;
 
@@ -203,8 +205,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 continue;
 
             // 整列选择时遍历所有列；整行/范围/单格时按列范围
-            var colStart = _selectionKind == SelectionKind.EntireColumn ? 0 : c1;
-            var colEnd = _selectionKind == SelectionKind.EntireColumn ? colCount - 1 : c2;
+            // 整列选全行; 整行选全列; 范围/单格按 c1/c2
+            var colStart = _selectionKind is SelectionKind.EntireColumn or SelectionKind.EntireRow ? 0 : c1;
+            var colEnd = _selectionKind is SelectionKind.EntireColumn or SelectionKind.EntireRow ? colCount - 1 : c2;
 
             for (var c = colStart; c <= colEnd; c++)
             {
@@ -965,7 +968,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             else if (Keyboard.Modifiers != ModifierKeys.Control)
             {
                 _selectionKind = SelectionKind.SingleCell;
-                grid.SelectedCells.Clear();
+                // 单格点击不清空 SelectedCells, 不 Handled — 让 DataGrid 正常进入编辑态
                 _selRow1 = cellRow;
                 _selCol1 = cellCol;
                 _selRow2 = cellRow;
@@ -974,8 +977,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 _anchorCol = cellCol;
             }
             ApplySelectionHighlight();
-            if (SpotlightToggle.IsChecked is true) ApplySpotlight();
-            // 单元格非 Shift 点击不 Handled，让 DataGrid 正常处理 CurrentCell
+            // 单格选择由聚光灯负责扩展行列, 但只在聚光灯开时触发
+            if (SpotlightToggle.IsChecked is true && _selectionKind == SelectionKind.SingleCell) ApplySpotlight();
+            // 单元格非 Shift 点击不 Handled, 让 DataGrid 正常处理 CurrentCell + 编辑，让 DataGrid 正常处理 CurrentCell
         };
 
         // 拖动列头/行号 → 实时扩展选区。用 hit-test 找行（不依赖行号头），支持拖到 grid 任意位置。
@@ -1674,9 +1678,12 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         if (_selectionKind == SelectionKind.None)
             return;
 
-        var (r1, r2) = (_selRow1 <= _selRow2) ? (_selRow1, _selRow2) : (_selRow2, _selRow1);
         var (c1, c2) = (_selCol1 <= _selCol2) ? (_selCol1, _selCol2) : (_selCol2, _selCol1);
         var colCount = grid.Columns.Count;
+        var rowCount = grid.Items.Count;
+
+        // 整列选择复制所有行; 整行/范围/单格按 _selRow 范围
+        var (r1, r2) = _selectionKind == SelectionKind.EntireColumn ? (0, rowCount - 1) : (_selRow1 <= _selRow2 ? (_selRow1, _selRow2) : (_selRow2, _selRow1));
 
         // 用 SortedDictionary 保持行/列顺序输出
         var rows = new SortedDictionary<int, SortedDictionary<int, string?>>();
@@ -1687,8 +1694,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             if (grid.Items[r] is not RowView rv)
                 continue;
 
-            var colStart = _selectionKind == SelectionKind.EntireColumn ? 0 : c1;
-            var colEnd = _selectionKind == SelectionKind.EntireColumn ? colCount - 1 : c2;
+            // 整列选全行; 整行选全列; 范围/单格按 c1/c2
+            var colStart = _selectionKind is SelectionKind.EntireColumn or SelectionKind.EntireRow ? 0 : c1;
+            var colEnd = _selectionKind is SelectionKind.EntireColumn or SelectionKind.EntireRow ? colCount - 1 : c2;
 
             var cols = new SortedDictionary<int, string?>();
             for (var c = colStart; c <= colEnd; c++)
