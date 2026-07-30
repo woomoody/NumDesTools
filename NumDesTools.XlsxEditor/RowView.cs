@@ -51,16 +51,13 @@ public sealed class RowView(ColumnStore store, int rowIndex) : INotifyPropertyCh
     private int ResolveColumn(string columnName)
     {
         ArgumentNullException.ThrowIfNull(columnName);
-        var names = _store.ColumnNames;
-        for (var col = 0; col < names.Count; col++)
+        var col = _store.IndexOfColumn(columnName);
+        if (col < 0)
         {
-            if (string.Equals(names[col], columnName, StringComparison.Ordinal))
-            {
-                return col;
-            }
+            throw new ArgumentException($"Column '{columnName}' not found", nameof(columnName));
         }
 
-        throw new ArgumentException($"Column '{columnName}' not found", nameof(columnName));
+        return col;
     }
 
     public bool IsColumnDirty(int col) => _store.IsDirty(RowIndex, col);

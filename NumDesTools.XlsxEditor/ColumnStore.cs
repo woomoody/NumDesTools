@@ -16,6 +16,8 @@ public sealed class ColumnStore
     private int _rowCapacity;
     private readonly Dictionary<string, string> _internPool = new(StringComparer.Ordinal);
     private readonly HashSet<(int Row, int Col)> _dirty = [];
+    // 列名 → 列索引 O(1) 查找。与 _columnNames 同步维护，供 RowView.ResolveColumn 等高频路径使用。
+    private readonly Dictionary<string, int> _columnNameIndex = new(StringComparer.Ordinal);
     // 仅在首次编辑某格时记录原始值（加载后的值），供"改回原值"时取消脏标记。
     // 字典只在编辑时增长，不为全表预分配；ClearDirty 时清空。
     private readonly Dictionary<(int Row, int Col), string?> _originalValues = [];
@@ -29,6 +31,7 @@ public sealed class ColumnStore
         for (var col = 0; col < _columns.Length; col++)
         {
             _columns[col] = _rowCapacity is 0 ? [] : new string?[_rowCapacity];
+            _columnNameIndex[_columnNames[col]] = col;
         }
     }
 
@@ -48,6 +51,16 @@ public sealed class ColumnStore
     public int ColumnCount => _columns.Length;
 
     public IReadOnlyList<string> ColumnNames => _columnNames;
+
+    /// <summary>
+    /// 按列名查列索引，O(1)。找不到返回 -1（调用方自行处理）。
+    /// 供 RowView.ResolveColumn 及整列复制/删除等高频路径使用，替代逐列线性扫描。
+    /// </summary>
+    public int IndexOfColumn(string columnName)
+    {
+        ArgumentNullException.ThrowIfNull(columnName);
+        return _columnNameIndex.TryGetValue(columnName, out var col) ? col : -1;
+    }
 
     public IReadOnlyCollection<(int Row, int Col)> DirtyCells => _dirty;
 
@@ -77,6 +90,7 @@ public sealed class ColumnStore
     /// <summary>
     /// 写入单元格并标脏。写入值走字符串驻留池，等值内容复用同一引用以省内存。
     /// 首次编辑某格时记录原始值；若新值等于原始值（改回原值），自动取消脏标记——绿框消失。
+    /// null 视为"清空"，始终标脏（与空表原值=null 区分：用户主动清空≠未编辑）。
     /// </summary>
     public void SetCell(int row, int col, string? value)
     {
@@ -89,8 +103,9 @@ public sealed class ColumnStore
             _originalValues[(row, col)] = _columns[col][row];
         }
 
-        // 新值等于原始值 → 改回原值，取消脏标记
-        if (string.Equals(_originalValues[(row, col)], value, StringComparison.Ordinal))
+        // null 视为"清空"，始终标脏（与空表原值=null 区分：用户主动清空≠未编辑）
+        if (value is not null
+            && string.Equals(_originalValues[(row, col)], value, StringComparison.Ordinal))
         {
             _columns[col][row] = Intern(value);
             _dirty.Remove((row, col));
@@ -202,7 +217,9 @@ public sealed class ColumnStore
         for (var col = _columns.Length; col < count; col++)
         {
             expanded[col] = _rowCapacity is 0 ? new string?[_rowCount] : new string?[_rowCapacity];
-            _columnNames.Add(nameFactory(col));
+            var name = nameFactory(col);
+            _columnNames.Add(name);
+            _columnNameIndex[name] = col;
         }
 
         _columns = expanded;
@@ -224,7 +241,9 @@ public sealed class ColumnStore
         var shrunk = new string?[lastCol][];
         Array.Copy(_columns, shrunk, lastCol);
         _columns = shrunk;
+        var lastName = _columnNames[lastCol];
         _columnNames.RemoveAt(lastCol);
+        _columnNameIndex.Remove(lastName);
 
         var affected = _dirty.Where(cell => cell.Col == lastCol).ToList();
         foreach (var cell in affected)

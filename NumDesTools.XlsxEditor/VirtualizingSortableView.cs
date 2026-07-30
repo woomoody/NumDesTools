@@ -17,12 +17,22 @@ namespace NumDesTools.XlsxEditor;
 /// DataGrid 的 ItemsSource。相比子类化 <see cref="System.Windows.Data.ListCollectionView"/> 重写
 /// RefreshOverride，本视图把排序键的产生完全下沉到 ColumnStore 列级读取，天然不触发 CollectionView 的整表遍历复制。
 /// </para>
+/// <para>
+/// LRU 缓存：RowView 物化后进入 <c>_cache</c>（链表+字典），命中时移到链表头，超 <c>MaxCacheRows</c>
+/// 淘汰尾部。滚动 6.5 万行后不会全部驻留，限制在 ~500 个 RowView。
+/// </para>
 /// </summary>
 public sealed class VirtualizingSortableView : IList, INotifyCollectionChanged
 {
+    /// <summary>LRU 缓存上限。实测虚拟化视口+预生成通常远低于此值，6.5 万行滚动不会全驻留。</summary>
+    private const int MaxCacheRows = 500;
+
     private readonly ColumnStore _store;
     private readonly Func<int, int, string?> _cellAccessor;
-    private readonly Dictionary<int, RowView> _cache = [];
+
+    // LRU：链表头=最近使用，尾=最久未用。Dictionary O(1) 查节点。
+    private readonly LinkedList<int> _lruKeys = new();
+    private readonly Dictionary<int, (LinkedListNode<int> Node, RowView View)> _cache = [];
 
     private int[] _rowOrder;
 
@@ -104,6 +114,7 @@ public sealed class VirtualizingSortableView : IList, INotifyCollectionChanged
 
         _rowOrder = [.. visible];
         _cache.Clear();
+        _lruKeys.Clear();
         RaiseReset();
     }
 
@@ -112,6 +123,7 @@ public sealed class VirtualizingSortableView : IList, INotifyCollectionChanged
     {
         _rowOrder = BuildNaturalOrder(_store.RowCount);
         _cache.Clear();
+        _lruKeys.Clear();
         RaiseReset();
     }
 
@@ -172,13 +184,25 @@ public sealed class VirtualizingSortableView : IList, INotifyCollectionChanged
 
     private RowView GetOrCreate(int row)
     {
-        if (_cache.TryGetValue(row, out var existing))
+        // LRU 命中：移到链表头（O(1)），返回已物化的 view。
+        if (_cache.TryGetValue(row, out var entry))
         {
-            return existing;
+            _lruKeys.Remove(entry.Node);
+            _lruKeys.AddFirst(entry.Node);
+            return entry.View;
         }
 
+        // 超限淘汰：链表尾=最久未用，从字典和链表同时移除。
+        while (_cache.Count >= MaxCacheRows)
+        {
+            var evictRow = _lruKeys.Last!.Value;
+            _cache.Remove(evictRow);
+            _lruKeys.RemoveLast();
+        }
+
+        var node = _lruKeys.AddFirst(row);
         var view = new RowView(_store, row);
-        _cache[row] = view;
+        _cache[row] = (node, view);
         return view;
     }
 
