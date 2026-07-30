@@ -2413,13 +2413,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             ? (_selCol1, _selCol2)
             : (_selCol2, _selCol1);
 
-        // 整列选择只遍历可见行范围（虚拟化视口），不遍历全表 6.5万行
-        int visStart = 0, visEnd = grid.Items.Count - 1;
-        if (_selectionKind == SelectionKind.EntireColumn && FindScrollViewer(grid) is { } sv)
-        {
-            visStart = (int)(sv.VerticalOffset / (grid.RowHeight > 0 ? grid.RowHeight : 20));
-            visEnd = Math.Min(visEnd, visStart + (int)(sv.ViewportHeight / (grid.RowHeight > 0 ? grid.RowHeight : 20)) + 5);
-        }
+        // 只遍历可见行范围（虚拟化视口），不遍历全表 6.5万行
+        var (visStart, visEnd) = GetVisibleRowRange(grid);
         for (var i = visStart; i <= visEnd; i++)
         {
             var rowMatch = _selectionKind switch
@@ -2497,7 +2492,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private static void ClearSelectionHighlightInGrid(DataGrid grid)
     {
-        for (var i = 0; i < grid.Items.Count; i++)
+        // 只遍历可见行范围（虚拟化视口），不遍历全表
+        var (vs, ve) = GetVisibleRowRange(grid);
+        for (var i = vs; i <= ve; i++)
         {
             if (grid.ItemContainerGenerator.ContainerFromIndex(i) is not DataGridRow rowContainer)
                 continue;
@@ -2509,6 +2506,21 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                     cell.ClearValue(DataGridCell.BackgroundProperty);
             }
         }
+    }
+
+    /// <summary>计算 grid 可见行范围（视口），虚拟化下只覆盖已生成容器所在行。</summary>
+    private static (int Start, int End) GetVisibleRowRange(DataGrid grid)
+    {
+        if (grid.Items.Count is 0) return (0, -1);
+        var start = 0;
+        var end = grid.Items.Count - 1;
+        if (FindScrollViewer(grid) is { } sv)
+        {
+            var rowH = grid.RowHeight is double.NaN or <= 0 ? 20.0 : grid.RowHeight;
+            start = Math.Max(0, (int)(sv.VerticalOffset / rowH));
+            end = Math.Min(end, start + (int)(sv.ViewportHeight / rowH) + 5);
+        }
+        return (start, end);
     }
 
     // ── 聚光灯 ────────────────────────────────────────────────────────────
@@ -2613,13 +2625,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var minCol = selectedColumns.Min();
         var maxCol = selectedColumns.Max();
 
-        // 只遍历可见行范围（虚拟化视口），不遍历全表 6.5万行
-        int visStart = 0, visEnd = grid.Items.Count - 1;
-        if (FindScrollViewer(grid) is { } sv)
-        {
-            visStart = (int)(sv.VerticalOffset / (grid.RowHeight > 0 ? grid.RowHeight : 20));
-            visEnd = Math.Min(visEnd, visStart + (int)(sv.ViewportHeight / (grid.RowHeight > 0 ? grid.RowHeight : 20)) + 5);
-        }
+        var (visStart, visEnd) = GetVisibleRowRange(grid);
         for (var i = visStart; i <= visEnd; i++)
         {
             if (grid.ItemContainerGenerator.ContainerFromIndex(i) is not DataGridRow rowContainer)
@@ -2677,7 +2683,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private static void ClearSpotlightInGrid(DataGrid grid)
     {
-        for (var i = 0; i < grid.Items.Count; i++)
+        var (vs, ve) = GetVisibleRowRange(grid);
+        for (var i = vs; i <= ve; i++)
         {
             if (grid.ItemContainerGenerator.ContainerFromIndex(i) is not DataGridRow rowContainer)
                 continue;
