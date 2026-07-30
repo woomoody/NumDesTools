@@ -1,17 +1,20 @@
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 using Border = System.Windows.Controls.Border;
 using CheckBox = System.Windows.Controls.CheckBox;
 using MessageBox = System.Windows.MessageBox;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using MessageBoxResult = System.Windows.MessageBoxResult;
+using TextBlock = System.Windows.Controls.TextBlock;
 using WpfKey = System.Windows.Input.Key;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace NumDesTools.UI;
 
 // xlsx 瘦身：全量扫描指定根目录，EPPlus 离线处理（无文件锁竞态）。
-public partial class XlsxSlimmerWindow : MetroWindow
+public partial class XlsxSlimmerWindow : FluentWindow
 {
     private List<string> _scanFiles = [];
 

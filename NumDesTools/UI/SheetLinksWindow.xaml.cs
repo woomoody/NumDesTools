@@ -3,7 +3,7 @@ using GraphX.Common.Enums;
 using GraphX.Controls;
 using GraphX.Logic.Algorithms.LayoutAlgorithms;
 using GraphX.Logic.Models;
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 using MessageBox = System.Windows.MessageBox;
 
 namespace NumDesTools.UI
@@ -11,7 +11,7 @@ namespace NumDesTools.UI
     /// <summary>
     /// SheetLinksWindow.xaml 的交互逻辑
     /// </summary>
-    public partial class SheetLinksWindow : MetroWindow
+    public partial class SheetLinksWindow : FluentWindow
     {
         public SheetLinksWindow()
         {

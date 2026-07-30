@@ -1,9 +1,9 @@
 using System.Windows;
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 
 namespace NumDesTools.UI;
 
-public partial class PasswordDialog : MetroWindow
+public partial class PasswordDialog : FluentWindow
 {
     public string Password { get; private set; } = string.Empty;
 

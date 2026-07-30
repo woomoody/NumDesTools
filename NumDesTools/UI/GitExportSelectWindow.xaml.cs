@@ -1,16 +1,17 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using MahApps.Metro.Controls;
-using NumDesTools.ExcelToLua;
 using NumDesTools;
+using NumDesTools.ExcelToLua;
+using Wpf.Ui.Controls;
 using Border = System.Windows.Controls.Border;
 using CheckBox = System.Windows.Controls.CheckBox;
+using TextBlock = System.Windows.Controls.TextBlock;
 using Window = System.Windows.Window;
 
 namespace NumDesTools.UI;
 
-public partial class GitExportSelectWindow : MetroWindow
+public partial class GitExportSelectWindow : FluentWindow
 {
     // 每个文件条目：路径 + 来源标签
     private record FileEntry(string Path, string Source);
@@ -69,17 +70,17 @@ public partial class GitExportSelectWindow : MetroWindow
         var list = new List<FileEntry>();
 
         // 工作区 + 暂存
-                List<string> gitFiles;
-                try
-                {
-                    gitFiles = SvnGitTools.GitDiffAndStagedFiles(_repoBasePath);
-                }
-                catch (Exception ex)
-                {
-                    PluginLog.Write($"[GitExport] GitDiff 失败: {ex.Message}");
-                    gitFiles = new List<string>();
-                }
-                foreach (var f in gitFiles)
+        List<string> gitFiles;
+        try
+        {
+            gitFiles = SvnGitTools.GitDiffAndStagedFiles(_repoBasePath);
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[GitExport] GitDiff 失败: {ex.Message}");
+            gitFiles = new List<string>();
+        }
+        foreach (var f in gitFiles)
         {
             if (IsExportable(f) && seen.Add(f))
                 list.Add(new FileEntry(f, "变更/暂存"));
@@ -279,7 +280,8 @@ public partial class GitExportSelectWindow : MetroWindow
         if (fullOn)
         {
             FileListPanel.Children.Clear();
-            FileCountText.Text = "全表导出：将清空 Tables 输出目录（保留 NonOutputTable）后导 Localizations/Tables/UIs 全部";
+            FileCountText.Text =
+                "全表导出：将清空 Tables 输出目录（保留 NonOutputTable）后导 Localizations/Tables/UIs 全部";
             StatusText.Text = "全表导出模式";
         }
         else

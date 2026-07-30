@@ -1,10 +1,10 @@
 using System.Windows;
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 using CheckBox = System.Windows.Controls.CheckBox;
 
 namespace NumDesTools.UI
 {
-    public partial class LoopRunCheckBoxWindow : MetroWindow
+    public partial class LoopRunCheckBoxWindow : FluentWindow
     {
         private readonly List<object> _checkList;
         public List<object> SelectedList { get; private set; }

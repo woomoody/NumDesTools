@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using Image = System.Windows.Controls.Image;
 using MessageBox = System.Windows.MessageBox;
+using TextBlock = System.Windows.Controls.TextBlock;
 
 namespace NumDesTools.UI
 {
@@ -28,7 +29,7 @@ namespace NumDesTools.UI
                     DataId = kv.Key,
                     ImageId = kv.Value[1],
                     ImagePath = kv.Value[2],
-                    ImageContent = kv.Value[0]
+                    ImageContent = kv.Value[0],
                 })
             );
             DataContext = this;
@@ -75,7 +76,7 @@ namespace NumDesTools.UI
                         new ProcessStartInfo
                         {
                             FileName = item.ImagePath,
-                            UseShellExecute = true // 使用系统关联程序打开[4,5](@ref)
+                            UseShellExecute = true, // 使用系统关联程序打开[4,5](@ref)
                         }
                     );
                 }

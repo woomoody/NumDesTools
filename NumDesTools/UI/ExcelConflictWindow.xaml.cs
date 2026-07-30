@@ -7,20 +7,24 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using MahApps.Metro.Controls;
 using NumDesTools.ConflictResolver;
+using Wpf.Ui.Controls;
 using Action = System.Action;
 using Border = System.Windows.Controls.Border;
 using Button = System.Windows.Controls.Button;
 using CheckBox = System.Windows.Controls.CheckBox;
+using ListBox = System.Windows.Controls.ListBox;
 using MessageBox = System.Windows.MessageBox;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using MessageBoxResult = System.Windows.MessageBoxResult;
+using TextBlock = System.Windows.Controls.TextBlock;
 using TextBox = System.Windows.Controls.TextBox;
 using Window = System.Windows.Window;
 using WpfColor = System.Windows.Media.Color;
 
 namespace NumDesTools.UI;
 
-public partial class ExcelConflictWindow : MetroWindow
+public partial class ExcelConflictWindow : FluentWindow
 {
     private FileDiff _diff;
     private readonly bool _autoGitAdd;
@@ -856,27 +860,27 @@ public partial class ExcelConflictWindow : MetroWindow
             };
             var cellCapture = cell;
             colBtnRow.Children.Add(
-                            MakeColBatchBtn(
-                                "全取我的",
-                                Color(0x1A, 0x3A, 0x6E),
-                                () =>
-                                {
-                                    cellCapture.Choice = ConflictChoice.Ours;
-                                    cellCapture.IsExplicit = true;
-                                }
-                            )
-                        );
-                        colBtnRow.Children.Add(
-                            MakeColBatchBtn(
-                                "全取他的",
-                                Color(0x1A, 0x5C, 0x3A),
-                                () =>
-                                {
-                                    cellCapture.Choice = ConflictChoice.Theirs;
-                                    cellCapture.IsExplicit = true;
-                                }
-                            )
-                        );
+                MakeColBatchBtn(
+                    "全取我的",
+                    Color(0x1A, 0x3A, 0x6E),
+                    () =>
+                    {
+                        cellCapture.Choice = ConflictChoice.Ours;
+                        cellCapture.IsExplicit = true;
+                    }
+                )
+            );
+            colBtnRow.Children.Add(
+                MakeColBatchBtn(
+                    "全取他的",
+                    Color(0x1A, 0x5C, 0x3A),
+                    () =>
+                    {
+                        cellCapture.Choice = ConflictChoice.Theirs;
+                        cellCapture.IsExplicit = true;
+                    }
+                )
+            );
             colPanel.Children.Add(colBtnRow);
             var colBorder = new Border { Child = colPanel };
             Grid.SetColumn(colBorder, 0);
@@ -1380,8 +1384,8 @@ public partial class ExcelConflictWindow : MetroWindow
         }
 
         AiSuggestBtn.IsEnabled = false;
-                AiSuggestionText.Text = "AI 思考中…";
-                DetailHint.Text = string.Empty;
+        AiSuggestionText.Text = "AI 思考中…";
+        DetailHint.Text = string.Empty;
 
         try
         {

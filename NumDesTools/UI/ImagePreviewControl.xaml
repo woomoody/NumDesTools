@@ -2,6 +2,7 @@
     x:Class="NumDesTools.UI.ImagePreviewControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="clr-namespace:NumDesTools.UI"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -67,20 +68,20 @@
                                     MouseLeftButtonDown="OpenPopup"
                                     Source="{Binding Thumbnail}"
                                     ToolTip="点击放大" />
-                                <TextBlock
+                                <ui:TextBlock
                                     HorizontalAlignment="Center"
                                     Foreground="White"
                                     Text="{Binding DataId, StringFormat='数据ID：{0}'}" />
-                                <TextBlock
+                                <ui:TextBlock
                                     HorizontalAlignment="Center"
                                     Foreground="White"
                                     Text="{Binding ImageContent}"
                                     ToolTip="{Binding ImageContent}" />
-                                <TextBlock
+                                <ui:TextBlock
                                     HorizontalAlignment="Center"
                                     Foreground="Gold"
                                     Text="{Binding ImageId, StringFormat='资源ID：{0}'}" />
-                                <TextBlock
+                                <ui:TextBlock
                                     Width="250"
                                     Cursor="Hand"
                                     FontSize="10"

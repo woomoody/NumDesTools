@@ -1,11 +1,11 @@
 using System.Windows;
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 using Key = System.Windows.Input.Key;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace NumDesTools.UI;
 
-public partial class InputBoxDialog : MetroWindow
+public partial class InputBoxDialog : FluentWindow
 {
     public string Input { get; private set; } = string.Empty;
 

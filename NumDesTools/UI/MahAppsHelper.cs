@@ -37,6 +37,29 @@ internal static class MahAppsHelper
         }
 
         ThemeManager.Current.ChangeTheme(app, "Dark.Steel");
+
+        if (
+            !app.Resources.MergedDictionaries.Any(d =>
+                d.Source?.OriginalString.Contains("Wpf.Ui") == true
+            )
+        )
+        {
+            try
+            {
+                app.Resources.MergedDictionaries.Add(
+                    new Wpf.Ui.Markup.ThemesDictionary
+                    {
+                        Source = new Uri(
+                            "pack://application:,,,/Wpf.Ui;component/Resources/Theme/Dark.xaml"
+                        ),
+                    }
+                );
+                app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ControlsDictionary());
+            }
+            catch (Exception ex) { }
+        }
+
+        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
     }
 
     internal static void SetExcelOwner(System.Windows.Window window)

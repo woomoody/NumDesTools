@@ -2,14 +2,14 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 using Button = System.Windows.Controls.Button;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using Style = System.Windows.Style;
 
 namespace NumDesTools.UI;
 
-public partial class GitHistoryPickerWindow : MetroWindow
+public partial class GitHistoryPickerWindow : FluentWindow
 {
     public record CommitEntry(string Sha, string Display, string Author = "");
 

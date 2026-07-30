@@ -1,4 +1,4 @@
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 using WpfKey = System.Windows.Input.Key;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 using WpfVisibility = System.Windows.Visibility;
@@ -6,7 +6,7 @@ using WpfVisibility = System.Windows.Visibility;
 namespace NumDesTools.UI;
 
 // 「大文件备份」删除/还原功能的预览确认框和结果框：只读多行文本 + 确定/取消，取代原来排版丑的 MessageBox。
-public partial class ActivityBackupReportWindow : MetroWindow
+public partial class ActivityBackupReportWindow : FluentWindow
 {
     private ActivityBackupReportWindow(string title, string body, bool showCancel)
     {

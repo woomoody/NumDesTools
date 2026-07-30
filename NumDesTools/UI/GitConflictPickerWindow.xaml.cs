@@ -3,14 +3,14 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using MahApps.Metro.Controls;
 using NumDesTools.ConflictResolver;
+using Wpf.Ui.Controls;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MessageBox = System.Windows.MessageBox;
 
 namespace NumDesTools.UI;
 
-public partial class GitConflictPickerWindow : MetroWindow
+public partial class GitConflictPickerWindow : FluentWindow
 {
     public string? SelectedFile { get; private set; }
     public bool SkipHash => SkipHashBox.IsChecked == true;

@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using TextBlock = System.Windows.Controls.TextBlock;
 using UserControl = System.Windows.Controls.UserControl;
 
 namespace NumDesTools.UI

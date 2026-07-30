@@ -2,12 +2,14 @@ using System.Windows;
 using System.Windows.Media;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Rendering;
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 using MessageBox = System.Windows.MessageBox;
+using MessageBoxButton = System.Windows.MessageBoxButton;
+using MessageBoxResult = System.Windows.MessageBoxResult;
 
 namespace NumDesTools.UI
 {
-    public partial class SuperFindAndReplaceWindow : MetroWindow
+    public partial class SuperFindAndReplaceWindow : FluentWindow
     {
         public System.Windows.Media.Color HighlightColor { get; private set; } =
             System.Windows.Media.Color.FromRgb(0xB8, 0x86, 0x00);

@@ -1,13 +1,14 @@
-using MahApps.Metro.Controls;
-using MessageBox = System.Windows.MessageBox;
-using WpfKey = System.Windows.Input.Key;
 using NumDesTools.Sync;
+using Wpf.Ui.Controls;
+using MessageBox = System.Windows.MessageBox;
+using TextBox = System.Windows.Controls.TextBox;
+using WpfKey = System.Windows.Input.Key;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace NumDesTools.UI;
 
 // 跨表同步的全部配置：根目录 A/B。Sheet 名和同步列都在同步时自动比对，不需要手配。
-public partial class XlsxSyncSettingsWindow : MetroWindow
+public partial class XlsxSyncSettingsWindow : FluentWindow
 {
     internal XlsxSyncSettingsWindow()
     {

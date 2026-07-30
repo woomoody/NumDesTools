@@ -2,6 +2,7 @@
     x:Class="NumDesTools.UI.AiChatTaskPanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -69,7 +70,7 @@
                                         VerticalAlignment="Center"
                                         Content="{TemplateBinding SelectionBoxItem}"
                                         ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" />
-                                    <TextBlock
+                                    <ui:TextBlock
                                         Grid.Column="1"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
@@ -96,7 +97,7 @@
                     </ControlTemplate>
                 </ComboBox.Template>
             </ComboBox>
-            <Button
+            <ui:Button
                 x:Name="ClearAllButton"
                 Grid.Column="1"
                 Width="68"
@@ -106,7 +107,7 @@
                 Foreground="White"
                 Click="ClearAllButton_Click"
                 Content="清空全部" />
-            <Button
+            <ui:Button
                 x:Name="CompressButton"
                 Grid.Column="2"
                 Width="72"
@@ -168,7 +169,7 @@
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Center"
                                         Content="{TemplateBinding SelectionBoxItem}" />
-                                    <TextBlock
+                                    <ui:TextBlock
                                         Grid.Column="1"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
@@ -195,7 +196,7 @@
                     </ControlTemplate>
                 </ComboBox.Template>
             </ComboBox>
-            <Button
+            <ui:Button
                 x:Name="RenameSessionButton"
                 Grid.Column="1"
                 Width="28"
@@ -206,7 +207,7 @@
                 Content="✏"
                 ToolTip="重命名会话"
                 Click="RenameSessionButton_Click" />
-            <Button
+            <ui:Button
                 x:Name="DeleteSessionButton"
                 Grid.Column="2"
                 Width="46"
@@ -216,7 +217,7 @@
                 Foreground="White"
                 Content="删除"
                 Click="DeleteSessionButton_Click" />
-            <Button
+            <ui:Button
                 x:Name="ImportButton"
                 Grid.Column="3"
                 Width="46"
@@ -226,7 +227,7 @@
                 Foreground="#ccc"
                 Content="导入"
                 Click="ImportButton_Click" />
-            <Button
+            <ui:Button
                 x:Name="NewChatButton"
                 Grid.Column="4"
                 Width="70"
@@ -280,7 +281,7 @@
                     ShowLineNumbers="False"
                     VerticalScrollBarVisibility="Hidden" />
             </Border>
-            <Button
+            <ui:Button
                 x:Name="AttachButton"
                 Grid.Column="1"
                 Width="30"
@@ -289,7 +290,7 @@
                 Click="AttachButton_Click"
                 Content="📎"
                 Foreground="#aaa" />
-            <Button
+            <ui:Button
                 x:Name="SendButton"
                 Grid.Column="2"
                 Width="64"

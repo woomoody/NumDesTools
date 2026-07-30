@@ -1,8 +1,8 @@
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 
 namespace NumDesTools.UI;
 
-public partial class DiffProgressWindow : MetroWindow
+public partial class DiffProgressWindow : FluentWindow
 {
     public DiffProgressWindow()
     {

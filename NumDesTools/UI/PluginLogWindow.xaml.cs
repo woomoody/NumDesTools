@@ -3,12 +3,12 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using ExcelDna.Integration;
-using MahApps.Metro.Controls;
+using Wpf.Ui.Controls;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace NumDesTools.UI;
 
-public partial class PluginLogWindow : MetroWindow
+public partial class PluginLogWindow : FluentWindow
 {
     private static PluginLogWindow? _instance;
     private bool _autoScroll = true;

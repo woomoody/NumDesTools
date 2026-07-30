@@ -1,18 +1,21 @@
-<mah:MetroWindow
+<ui:FluentWindow
     x:Class="NumDesTools.UI.HelpWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     Title="NumDesTools 帮助"
     Width="1100" Height="700"
     WindowStartupLocation="CenterScreen"
     FontFamily="微软雅黑"
-    KeyDown="Window_EscClose">
+    KeyDown="Window_EscClose"
+    WindowBackdropType="Mica"
+    ExtendsContentIntoTitleBar="True">
 
-    <mah:MetroWindow.Resources>
+    <ui:FluentWindow.Resources>
         <!-- Group 节点 -->
         <Style TargetType="TreeViewItem" x:Key="GroupItem">
-            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -33,8 +36,8 @@
                                                 <Setter Property="Template">
                                                     <Setter.Value>
                                                         <ControlTemplate TargetType="ToggleButton">
-                                                            <TextBlock x:Name="Arrow" Text="▶"
-                                                                       Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                                            <ui:TextBlock x:Name="Arrow" Text="▶"
+                                                                       Foreground="#2D2D2D"
                                                                        FontSize="9" VerticalAlignment="Center"/>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsChecked" Value="True">
@@ -58,7 +61,7 @@
                             </Trigger>
                             <Trigger SourceName="Bd" Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background"
-                                        Value="{DynamicResource MahApps.Brushes.Gray9}"/>
+                                        Value="#2D2D2D"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -68,7 +71,7 @@
 
         <!-- Item 子节点 -->
         <Style TargetType="TreeViewItem" x:Key="LeafItem">
-            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray3}"/>
+            <Setter Property="Foreground" Value="#2D2D2D"/>
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -82,18 +85,18 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Bd" Property="Background"
-                                        Value="{DynamicResource MahApps.Brushes.Accent4}"/>
+                                        Value="#2D2D2D"/>
                             </Trigger>
                             <Trigger SourceName="Bd" Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background"
-                                        Value="{DynamicResource MahApps.Brushes.Gray9}"/>
+                                        Value="#2D2D2D"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-    </mah:MetroWindow.Resources>
+    </ui:FluentWindow.Resources>
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -104,11 +107,11 @@
 
         <!-- 左侧导航 -->
         <Border Grid.Column="0"
-                Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
+                Background="#1E1E1E">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Top"
+                <ui:TextBlock DockPanel.Dock="Top"
                            Text="功能导航"
-                           Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                           Foreground="#2D2D2D"
                            FontSize="10"
                            Margin="8,8,8,4"/>
                 <TreeView x:Name="NavTreeView"
@@ -122,10 +125,10 @@
 
         <!-- 可拖拽分隔线 -->
         <GridSplitter Grid.Column="1" Width="4"
-                      Background="{DynamicResource MahApps.Brushes.Gray7}"
+                      Background="#2D2D2D"
                       HorizontalAlignment="Center" VerticalAlignment="Stretch"/>
 
         <!-- 右侧 WebBrowser 内容区 -->
         <WebBrowser x:Name="HelpBrowser" Grid.Column="2"/>
     </Grid>
-</mah:MetroWindow>
+</ui:FluentWindow>

@@ -2,6 +2,7 @@
     x:Class="NumDesTools.UI.AIAgentPanel"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -70,7 +71,7 @@
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Center"
                                         Content="{TemplateBinding SelectionBoxItem}" />
-                                    <TextBlock
+                                    <ui:TextBlock
                                         Grid.Column="1"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
@@ -97,14 +98,14 @@
                     </ControlTemplate>
                 </ComboBox.Template>
             </ComboBox>
-            <TextBlock
+            <ui:TextBlock
                 Grid.Column="1"
                 Margin="0,0,4,0"
                 VerticalAlignment="Center"
                 Foreground="#888"
                 FontSize="11"
                 Text="步骤上限：" />
-            <mah:NumericUpDown
+            <ui:NumberBox
                 x:Name="MaxStepsInput"
                 Grid.Column="2"
                 Height="26"
@@ -114,7 +115,7 @@
                 Background="#2d2d30"
                 Foreground="#e0e0e0"
                 BorderBrush="#555">
-                <mah:NumericUpDown.Resources>
+                <ui:NumberBox.Resources>
                     <Style TargetType="RepeatButton">
                         <Setter Property="Background" Value="#3e3e42" />
                         <Setter Property="Foreground" Value="#e0e0e0" />
@@ -128,8 +129,8 @@
                             </Trigger>
                         </Style.Triggers>
                     </Style>
-                </mah:NumericUpDown.Resources>
-            </mah:NumericUpDown>
+                </ui:NumberBox.Resources>
+            </ui:NumberBox>
         </Grid>
 
         <!--  会话管理：历史选择 + 重命名 + 删除 + 导入 + 压缩 + 新对话  -->
@@ -186,7 +187,7 @@
                                         HorizontalAlignment="Left"
                                         VerticalAlignment="Center"
                                         Content="{TemplateBinding SelectionBoxItem}" />
-                                    <TextBlock
+                                    <ui:TextBlock
                                         Grid.Column="1"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
@@ -213,7 +214,7 @@
                     </ControlTemplate>
                 </ComboBox.Template>
             </ComboBox>
-            <Button
+            <ui:Button
                 x:Name="RenameSessionButton"
                 Grid.Column="1"
                 Width="28"
@@ -224,7 +225,7 @@
                 Content="✏"
                 ToolTip="重命名会话"
                 Click="RenameSessionButton_Click" />
-            <Button
+            <ui:Button
                 x:Name="DeleteSessionButton"
                 Grid.Column="2"
                 Width="46"
@@ -234,7 +235,7 @@
                 Foreground="White"
                 Content="删除"
                 Click="DeleteSessionButton_Click" />
-            <Button
+            <ui:Button
                 x:Name="ImportButton"
                 Grid.Column="3"
                 Width="46"
@@ -244,7 +245,7 @@
                 Foreground="#ccc"
                 Content="导入"
                 Click="ImportButton_Click" />
-            <Button
+            <ui:Button
                 x:Name="CompressButton"
                 Grid.Column="4"
                 Width="72"
@@ -254,7 +255,7 @@
                 Foreground="#ccc"
                 Content="压缩上下文"
                 Click="CompressButton_Click" />
-            <Button
+            <ui:Button
                 x:Name="NewChatButton"
                 Grid.Column="5"
                 Width="70"
@@ -272,7 +273,7 @@
             Header="自定义指令（每次对话自动带入）"
             Foreground="#888"
             BorderBrush="#333">
-            <TextBox
+            <ui:TextBox
                 x:Name="CustomInstructionInput"
                 MinHeight="40"
                 MaxHeight="80"
@@ -285,7 +286,7 @@
                 Foreground="#ccc"
                 TextWrapping="Wrap"
                 VerticalScrollBarVisibility="Auto"
-                mah:TextBoxHelper.Watermark="例：翻译结果统一放到C列；输出中文；不要修改第一行…" />
+                PlaceholderText="例：翻译结果统一放到C列；输出中文；不要修改第一行…" />
         </Expander>
 
         <!--  对话区（上）+ 步骤面板（下，可折叠）  -->
@@ -323,7 +324,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <TextBlock
+                    <ui:TextBlock
                         Grid.Row="0"
                         Padding="6,4"
                         Background="#2d2d30"
@@ -338,7 +339,7 @@
                         <ItemsControl x:Name="StepsList" Margin="6,4">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock
+                                    <ui:TextBlock
                                         Margin="0,1"
                                         FontSize="11"
                                         Foreground="#aaa"
@@ -373,7 +374,7 @@
                 BorderBrush="#444"
                 BorderThickness="1"
                 CornerRadius="3">
-                <TextBox
+                <ui:TextBox
                     x:Name="TaskInput"
                     MinHeight="36"
                     MaxHeight="200"
@@ -389,9 +390,9 @@
                     TextWrapping="Wrap"
                     VerticalScrollBarVisibility="Hidden"
                     HorizontalScrollBarVisibility="Disabled"
-                    mah:TextBoxHelper.Watermark="描述任务，Enter 发送，Shift+Enter 换行…" />
+                    PlaceholderText="描述任务，Enter 发送，Shift+Enter 换行…" />
             </Border>
-            <Button
+            <ui:Button
                 x:Name="AttachButton"
                 Grid.Column="1"
                 Width="30"
@@ -401,7 +402,7 @@
                 Click="AttachButton_Click"
                 Content="📎"
                 Foreground="#aaa" />
-            <Button
+            <ui:Button
                 x:Name="StopButton"
                 Grid.Column="2"
                 Width="52"
@@ -412,7 +413,7 @@
                 Content="停止"
                 Foreground="#aaa"
                 IsEnabled="False" />
-            <Button
+            <ui:Button
                 x:Name="RunButton"
                 Grid.Column="3"
                 Width="64"
@@ -431,11 +432,11 @@
                         </Style.Triggers>
                     </Style>
                 </Button.Style>
-            </Button>
+            </ui:Button>
         </Grid>
 
         <!--  状态栏  -->
-        <TextBlock
+        <ui:TextBlock
             x:Name="StatusText"
             Grid.Row="6"
             FontSize="10"

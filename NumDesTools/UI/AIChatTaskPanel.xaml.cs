@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Markdig;
 using Brushes = System.Windows.Media.Brushes;
+using Button = System.Windows.Controls.Button;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace NumDesTools.UI;
@@ -95,10 +96,13 @@ public partial class AiChatTaskPanel
 
         // 优先恢复上次 Chat 选的模型（含「🤖 自动」）
         AppServices.GlobalValue.Value.TryGetValue("ChatSelectedModel", out var savedChat);
-        var target = !string.IsNullOrEmpty(savedChat) && ModelComboBox.Items.Contains(savedChat)
-            ? savedChat
-            : AppServices.Config.Llm.Model;
-        ModelComboBox.SelectedItem = ModelComboBox.Items.Contains(target) ? target : ModelComboBox.Items[0];
+        var target =
+            !string.IsNullOrEmpty(savedChat) && ModelComboBox.Items.Contains(savedChat)
+                ? savedChat
+                : AppServices.Config.Llm.Model;
+        ModelComboBox.SelectedItem = ModelComboBox.Items.Contains(target)
+            ? target
+            : ModelComboBox.Items[0];
     }
 
     private void InitializeHtmlTemplate()
