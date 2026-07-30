@@ -2393,6 +2393,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         ClearSelectionHighlight();
 
+        // 单格选择由聚光灯负责扩展行列；选区高亮不参与，避免同色叠加
+        if (_selectionKind == SelectionKind.SingleCell)
+            return;
+
         // 当前格所在位置（选区高亮跳过它，让 DataGrid 原生焦点边框可见）
         var currentRow = -1;
         var currentCol = -1;
@@ -2409,9 +2413,15 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             ? (_selCol1, _selCol2)
             : (_selCol2, _selCol1);
 
-        for (var i = 0; i < grid.Items.Count; i++)
+        // 整列选择只遍历可见行范围（虚拟化视口），不遍历全表 6.5万行
+        int visStart = 0, visEnd = grid.Items.Count - 1;
+        if (_selectionKind == SelectionKind.EntireColumn && FindScrollViewer(grid) is { } sv)
         {
-            // 整列选择时高亮所有行的对应列；整行选择时高亮该行所有列
+            visStart = (int)(sv.VerticalOffset / (grid.RowHeight > 0 ? grid.RowHeight : 20));
+            visEnd = Math.Min(visEnd, visStart + (int)(sv.ViewportHeight / (grid.RowHeight > 0 ? grid.RowHeight : 20)) + 5);
+        }
+        for (var i = visStart; i <= visEnd; i++)
+        {
             var rowMatch = _selectionKind switch
             {
                 SelectionKind.EntireColumn => true,
@@ -2440,8 +2450,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 if (!colMatch)
                     continue;
 
-                // 当前格跳过：让 DataGrid 原生焦点边框可见，不被选中色淹没
-                if (i == currentRow && colIdx == currentCol)
+                // 单格选择时跳过当前格让原生焦点边框可见；整行/整列/范围选择时当前格也高亮
+                if (_selectionKind == SelectionKind.SingleCell && i == currentRow && colIdx == currentCol)
                     continue;
 
                 if (col.GetCellContent(rowContainer)?.Parent is DataGridCell cell
@@ -2603,7 +2613,14 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var minCol = selectedColumns.Min();
         var maxCol = selectedColumns.Max();
 
-        for (var i = 0; i < grid.Items.Count; i++)
+        // 只遍历可见行范围（虚拟化视口），不遍历全表 6.5万行
+        int visStart = 0, visEnd = grid.Items.Count - 1;
+        if (FindScrollViewer(grid) is { } sv)
+        {
+            visStart = (int)(sv.VerticalOffset / (grid.RowHeight > 0 ? grid.RowHeight : 20));
+            visEnd = Math.Min(visEnd, visStart + (int)(sv.ViewportHeight / (grid.RowHeight > 0 ? grid.RowHeight : 20)) + 5);
+        }
+        for (var i = visStart; i <= visEnd; i++)
         {
             if (grid.ItemContainerGenerator.ContainerFromIndex(i) is not DataGridRow rowContainer)
                 continue;
