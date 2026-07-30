@@ -227,6 +227,13 @@ pub fn get_key_target_files(home_root: &Path) -> Vec<PathBuf> {
             .join("Local")
             .join("hermes")
             .join("config.yaml"),
+        // hermes 的 .env（OPENAI_API_KEY）——跟 config.yaml 是两个独立的 key 存放点，
+        // 只切 config.yaml 会漏掉这份，导致 hermes 换 key 后仍用旧 key 报错。
+        home_root
+            .join("AppData")
+            .join("Local")
+            .join("hermes")
+            .join(".env"),
     ];
 
     if let Ok(entries) = fs::read_dir(home_root) {
@@ -240,6 +247,12 @@ pub fn get_key_target_files(home_root: &Path) -> Vec<PathBuf> {
                     let settings = path.join(".claude").join("settings.json");
                     if settings.exists() {
                         files.push(settings);
+                    }
+                    // 项目级 opencode 配置（每个 CC* 项目可以有自己的 opencode.jsonc apiKey，
+                    // 独立于 ~/.config/opencode/opencode.jsonc 那份全局配置）。
+                    let opencode = path.join("opencode.jsonc");
+                    if opencode.exists() {
+                        files.push(opencode);
                     }
                 }
             }
@@ -349,9 +362,26 @@ pub fn label_for_path(path: &Path) -> String {
     } else if s.ends_with("\\ai_commit.ps1") {
         "LazyGit提交".to_string()
     } else if s.ends_with("\\opencode.jsonc") {
-        "opencode".to_string()
+        // .config\opencode\opencode.jsonc 是全局，其余（CC*\opencode.jsonc）是项目级
+        let home = std::env::var("USERPROFILE").unwrap_or_default();
+        let global = PathBuf::from(&home)
+            .join(".config")
+            .join("opencode")
+            .join("opencode.jsonc");
+        if path == global {
+            "opencode全局".to_string()
+        } else {
+            let name = path
+                .parent()
+                .and_then(|p| p.file_name())
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default();
+            format!("opencode-{}", name)
+        }
     } else if s.ends_with("\\hermes\\config.yaml") {
-        "hermes".to_string()
+        "hermes(config.yaml)".to_string()
+    } else if s.ends_with("\\hermes\\.env") {
+        "hermes(.env)".to_string()
     } else {
         path.file_name()
             .map(|n| n.to_string_lossy().to_string())
