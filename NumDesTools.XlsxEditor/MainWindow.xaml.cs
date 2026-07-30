@@ -901,9 +901,11 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 }
                 _isDraggingHeader = true;
                 _dragStartIndex = curCol;
-                // 设 CurrentCell 到选区第一个可见格（焦点框）
+                grid.SelectedCells.Clear();
                 SetCurrentCellToSelectionStart(grid);
                 ApplySelectionHighlight();
+                if (SpotlightToggle.IsChecked is true) ApplySpotlight();
+                try { grid.CaptureMouse(); } catch { }
                 args.Handled = true;
                 return;
             }
@@ -933,8 +935,11 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 }
                 _isDraggingHeader = true;
                 _dragStartIndex = curRow;
+                grid.SelectedCells.Clear();
                 SetCurrentCellToSelectionStart(grid);
                 ApplySelectionHighlight();
+                if (SpotlightToggle.IsChecked is true) ApplySpotlight();
+                try { grid.CaptureMouse(); } catch { }
                 args.Handled = true;
                 return;
             }
@@ -954,10 +959,13 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 _selRow2 = cellRow;
                 _selCol2 = cellCol;
                 _selectionKind = SelectionKind.Range;
+                grid.SelectedCells.Clear();
+                args.Handled = true;
             }
             else if (Keyboard.Modifiers != ModifierKeys.Control)
             {
                 _selectionKind = SelectionKind.SingleCell;
+                grid.SelectedCells.Clear();
                 _selRow1 = cellRow;
                 _selCol1 = cellCol;
                 _selRow2 = cellRow;
@@ -966,13 +974,19 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 _anchorCol = cellCol;
             }
             ApplySelectionHighlight();
-            // 单元格点击不 Handled，让 DataGrid 正常处理 CurrentCell
+            if (SpotlightToggle.IsChecked is true) ApplySpotlight();
+            // 单元格非 Shift 点击不 Handled，让 DataGrid 正常处理 CurrentCell
         };
 
-        // 拖动列头/行号 → 实时扩展选区
+        // 拖动列头/行号 → 实时扩展选区。用 hit-test 找行（不依赖行号头），支持拖到 grid 任意位置。
         grid.PreviewMouseMove += (_, args) =>
         {
-            if (!_isDraggingHeader || args.OriginalSource is not DependencyObject d)
+            if (!_isDraggingHeader)
+                return;
+
+            var pos = Mouse.GetPosition(grid);
+            var hitResult = VisualTreeHelper.HitTest(grid, pos);
+            if (hitResult?.VisualHit is not DependencyObject d)
                 return;
 
             if (_selectionKind == SelectionKind.EntireColumn)
@@ -990,11 +1004,11 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             }
             else if (_selectionKind == SelectionKind.EntireRow)
             {
-                var rowHeader = FindVisualAncestor<DataGridRowHeader>(d);
-                if (rowHeader?.DataContext is not RowView rv)
+                var dataRow = FindVisualAncestor<DataGridRow>(d);
+                if (dataRow?.DataContext is not RowView rv)
                     return;
                 var curRow = grid.Items.IndexOf(rv);
-                if (curRow != _selRow2)
+                if (curRow >= 0 && curRow != _selRow2)
                 {
                     _selRow1 = Math.Min(_dragStartIndex, curRow);
                     _selRow2 = Math.Max(_dragStartIndex, curRow);
@@ -1005,7 +1019,11 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         grid.PreviewMouseLeftButtonUp += (_, _) =>
         {
-            _isDraggingHeader = false;
+            if (_isDraggingHeader)
+            {
+                _isDraggingHeader = false;
+                try { grid.ReleaseMouseCapture(); } catch { }
+            }
         };
 
         // Ctrl+C 复制 / Ctrl+V 粘贴
@@ -2375,6 +2393,15 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         ClearSelectionHighlight();
 
+        // 当前格所在位置（选区高亮跳过它，让 DataGrid 原生焦点边框可见）
+        var currentRow = -1;
+        var currentCol = -1;
+        if (grid.CurrentCell.Item is RowView curRv && grid.CurrentCell.Column is { } curCol)
+        {
+            currentRow = grid.Items.IndexOf(curRv);
+            currentCol = curCol.DisplayIndex;
+        }
+
         var (r1, r2) = (_selRow1 <= _selRow2)
             ? (_selRow1, _selRow2)
             : (_selRow2, _selRow1);
@@ -2413,6 +2440,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 if (!colMatch)
                     continue;
 
+                // 当前格跳过：让 DataGrid 原生焦点边框可见，不被选中色淹没
+                if (i == currentRow && colIdx == currentCol)
+                    continue;
+
                 if (col.GetCellContent(rowContainer)?.Parent is DataGridCell cell
                     && cell.Background != DirtyCellBrush)
                 {
@@ -2421,8 +2452,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             }
         }
 
-        // 冻结行 grid 同步高亮（行不参与，只同步列）
-        if (CurrentSheetState?.FrozenGrid is { } frozenGrid)
+        // 冻结行 grid：只在整列/范围选择时同步列高亮，不同步行高亮（行索引不对应）
+        if (CurrentSheetState?.FrozenGrid is { } frozenGrid
+            && _selectionKind is SelectionKind.EntireColumn or SelectionKind.Range)
         {
             for (var i = 0; i < frozenGrid.Items.Count; i++)
             {
@@ -2431,15 +2463,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 foreach (var col in frozenGrid.Columns)
                 {
                     var colIdx = col.DisplayIndex;
-                    var colMatch = _selectionKind switch
-                    {
-                        SelectionKind.EntireRow => true,
-                        SelectionKind.EntireColumn => colIdx >= c1 && colIdx <= c2,
-                        SelectionKind.Range => colIdx >= c1 && colIdx <= c2,
-                        SelectionKind.SingleCell => colIdx == _selCol1,
-                        _ => false,
-                    };
-                    if (!colMatch)
+                    if (colIdx < c1 || colIdx > c2)
                         continue;
                     if (col.GetCellContent(fRow)?.Parent is DataGridCell fCell
                         && fCell.Background != DirtyCellBrush)
@@ -2538,19 +2562,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             return;
         ClearSpotlight();
 
-        var selectedRows = new HashSet<int>();
-        var selectedColumns = new HashSet<int>();
-        foreach (var selectedCell in _spotlightGrid.SelectedCells)
-        {
-            var rowIndex = _spotlightGrid.Items.IndexOf(selectedCell.Item);
-            if (rowIndex >= 0)
-                selectedRows.Add(rowIndex);
-            if (selectedCell.Column is not null)
-                selectedColumns.Add(selectedCell.Column.DisplayIndex);
-        }
-
-        if (selectedRows.Count is 0 || selectedColumns.Count is 0)
-            return;
+        // 从元状态取当前格行列（不再依赖 grid.SelectedCells，彻底解耦）
+        var selectedRows = new HashSet<int> { _selRow1 };
+        var selectedColumns = new HashSet<int> { _selCol1 };
 
         HighlightSpotlight(selectedRows, selectedColumns);
     }
