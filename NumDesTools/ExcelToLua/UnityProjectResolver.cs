@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Windows.Forms;
 using NumDesTools;
@@ -46,27 +47,35 @@ static class UnityProjectResolver
         if (File.Exists(basePath))
             basePath = Path.GetDirectoryName(basePath);
 
-        var key = Normalize(basePath);
+        var normalized = Normalize(basePath);
         var map = LoadMap();
 
-        // 缓存命中且仍是 Unity 项目 → 直接用
-        if (map.TryGetValue(key, out var cached) && IsUnityProject(cached))
+        // 清理旧版坏 key（文件路径做 key 的：含 . 的大概率是扩展名）
+        var dirty = map.Keys.Where(k => k.Contains('.')).ToList();
+        foreach (var k in dirty)
+            map.Remove(k);
+
+        // 1. 精确命中：key 直接对应已缓存的 Unity 根
+        if (map.TryGetValue(normalized, out var cachedExact) && IsUnityProject(cachedExact))
+            return cachedExact;
+
+        // 2. 路径前缀命中：basePath 是某个已缓存 Unity 根的子目录
+        foreach (var kv in map)
         {
-            return cached;
+            if (normalized.StartsWith(kv.Key + "/", StringComparison.Ordinal)
+                && IsUnityProject(kv.Value))
+                return kv.Value;
         }
 
-        // 推断候选：从 BasePath 往上逐层，在父目录的兄弟里找 Unity 项目
+        // 3. miss → 推断候选 + 弹窗
         var candidates = FindUnityProjectCandidates(basePath);
-
-        // 弹窗让用户确认（预填候选或 BasePath 父目录）
         var chosen = PromptForUnityRoot(candidates, basePath);
         if (chosen is null || !IsUnityProject(chosen))
-        {
-            // 用户取消或选了非 Unity 目录：不缓存、返回失败，EnsureUnityRoot 会中止导表
             return null;
-        }
 
-        map[key] = chosen;
+        // 存缓存：key 用 Unity 项目根（这样该项目的所有子目录都命中）
+        var unityKey = Normalize(chosen);
+        map[unityKey] = chosen;
         SaveMap(map);
         return chosen;
     }
