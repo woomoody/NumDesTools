@@ -1567,11 +1567,17 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             {
                 try
                 {
-                    // 原子写：ExcelWriteBack 以原文件为模板写到 tmp（保留格式+剥离图表公式+只写脏/全量），
+                    // 原子写：先尝试增量OOXML写回（只patch脏格的sheet XML entry，2.4x提速），
+                    // 失败（结构变更/稀疏格不存在）fallback 到 EPPlus 全量写回（保留格式+剥离图表公式）。
                     // 成功后 AtomicFileWriter 用 File.Replace 原子替换到原文件，不生成 .bak（git 管备份）。
                     var result = AtomicFileWriter.Write(
                         filePath,
-                        tempPath => ExcelWriteBack.Write(filePath, tempPath, plans)
+                        tempPath =>
+                        {
+                            if (IncrementalOoxmlWriteBack.TryWrite(filePath, tempPath, plans))
+                                return;
+                            ExcelWriteBack.Write(filePath, tempPath, plans);
+                        }
                     );
 
                     return (sw.ElapsedMilliseconds, result.Error);
