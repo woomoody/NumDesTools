@@ -979,25 +979,43 @@ public partial class ExcelConflictWindow : FluentWindow
         SolidColorBrush bg
     )
     {
-        // 用 TextBox（IsReadOnly）替代 TextBlock：支持选中文本、拖动选择、Ctrl+C 复制。
-        // 放弃字符级高亮（Inlines），直接显示完整值。
-        var tb = new System.Windows.Controls.TextBox
+        var diffTb = MakeInlineDiffBlock(text, other, fg);
+        var para = new System.Windows.Documents.Paragraph { Margin = new Thickness(0) };
+        foreach (var inline in diffTb.Inlines.ToList())
         {
-            Text = string.IsNullOrEmpty(text) && string.IsNullOrEmpty(other) ? "(空)" : text,
-            Foreground = fg,
-            Background = bg,
-            BorderThickness = new Thickness(0),
+            diffTb.Inlines.Remove(inline);
+            para.Inlines.Add(inline);
+        }
+        if (!para.Inlines.Any() && !string.IsNullOrEmpty(diffTb.Text))
+            para.Inlines.Add(new System.Windows.Documents.Run(diffTb.Text) { Foreground = fg });
+
+        var doc = new System.Windows.Documents.FlowDocument(para)
+        {
+            PagePadding = new Thickness(0),
+            LineHeight = 16,
+            PageWidth = 10000,
+        };
+
+        var rtb = new System.Windows.Controls.RichTextBox(doc)
+        {
             IsReadOnly = true,
-            IsReadOnlyCaretVisible = true,
+            Background = bg,
+            Foreground = fg,
             FontSize = 11,
-            FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+            BorderThickness = new Thickness(0),
             Padding = new Thickness(6, 4, 6, 4),
+            MaxHeight = 36,
+            VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled,
+            HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled,
             Cursor = System.Windows.Input.Cursors.IBeam,
             ToolTip = string.IsNullOrEmpty(text) ? null : text,
-            AcceptsReturn = false,
-            TextWrapping = System.Windows.TextWrapping.NoWrap,
         };
-        return tb;
+        // wpfui 的 DefaultRichTextBoxStyle（OverridesDefaultStyle=True）覆盖了 Foreground，
+        // 导致文字看不见。设一个空 Style（不 BasedOn wpfui 样式）阻止隐式样式应用，
+        // RichTextBox 回退到 WPF 原生默认样式，Foreground 正常生效。
+        rtb.Style = new System.Windows.Style(typeof(System.Windows.Controls.RichTextBox));
+        rtb.SetValue(System.Windows.Documents.TextElement.ForegroundProperty, fg);
+        return rtb;
     }
 
     // 构建带字符级高亮的 TextBlock：公共前缀/后缀正常色，差异段黄色加粗
