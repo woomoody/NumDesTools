@@ -979,22 +979,25 @@ public partial class ExcelConflictWindow : FluentWindow
         SolidColorBrush bg
     )
     {
-        var diffTb = MakeInlineDiffBlock(text, other, fg);
-        diffTb.Foreground = fg;
-        diffTb.Background = bg;
-
-        // TextBlock + Border：不用 ScrollViewer，超出的用省略号截断。
-        // OURS/THEIRS 两个 TextBlock 在相同宽度的 Grid 列里从左对齐，
-        // 共同前缀自然对齐，diff 段也对齐。
-        var border = new System.Windows.Controls.Border
+        // 用 TextBox（IsReadOnly）替代 TextBlock：支持选中文本、拖动选择、Ctrl+C 复制。
+        // 放弃字符级高亮（Inlines），直接显示完整值。
+        var tb = new System.Windows.Controls.TextBox
         {
+            Text = string.IsNullOrEmpty(text) && string.IsNullOrEmpty(other) ? "(空)" : text,
+            Foreground = fg,
             Background = bg,
+            BorderThickness = new Thickness(0),
+            IsReadOnly = true,
+            IsReadOnlyCaretVisible = true,
+            FontSize = 11,
+            FontFamily = new System.Windows.Media.FontFamily("Consolas"),
             Padding = new Thickness(6, 4, 6, 4),
-            Child = diffTb,
             Cursor = System.Windows.Input.Cursors.IBeam,
             ToolTip = string.IsNullOrEmpty(text) ? null : text,
+            AcceptsReturn = false,
+            TextWrapping = System.Windows.TextWrapping.NoWrap,
         };
-        return border;
+        return tb;
     }
 
     // 构建带字符级高亮的 TextBlock：公共前缀/后缀正常色，差异段黄色加粗
