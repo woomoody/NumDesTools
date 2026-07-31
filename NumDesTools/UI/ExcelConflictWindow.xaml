@@ -523,7 +523,7 @@
                     </Border>
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Auto">
+                                  HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="DetailPanel" Margin="4"/>
                     </ScrollViewer>
                 </Grid>
