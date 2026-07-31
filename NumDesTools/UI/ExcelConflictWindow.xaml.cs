@@ -972,7 +972,7 @@ public partial class ExcelConflictWindow : FluentWindow
     }
 
     // 字符级高亮 RichTextBox（只读可选中），差异段黄色加粗直接显示
-    private System.Windows.Controls.Control MakeDetailValueBox(
+    private System.Windows.FrameworkElement MakeDetailValueBox(
         string text,
         string other,
         SolidColorBrush fg,
@@ -983,20 +983,18 @@ public partial class ExcelConflictWindow : FluentWindow
         diffTb.Foreground = fg;
         diffTb.Background = bg;
 
-        // TextBlock + ScrollViewer：绕开 wpfui 对 RichTextBox 的 Foreground 覆盖。
-        // ScrollViewer 限制在 Grid 列宽内（不撑开布局），TextBlock 横向滚动看全值。
-        var sv = new System.Windows.Controls.ScrollViewer
+        // TextBlock + Border：不用 ScrollViewer，超出的用省略号截断。
+        // OURS/THEIRS 两个 TextBlock 在相同宽度的 Grid 列里从左对齐，
+        // 共同前缀自然对齐，diff 段也对齐。
+        var border = new System.Windows.Controls.Border
         {
-            Content = diffTb,
             Background = bg,
-            VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled,
-            HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
             Padding = new Thickness(6, 4, 6, 4),
-            MaxHeight = 36,
+            Child = diffTb,
             Cursor = System.Windows.Input.Cursors.IBeam,
             ToolTip = string.IsNullOrEmpty(text) ? null : text,
         };
-        return sv;
+        return border;
     }
 
     // 构建带字符级高亮的 TextBlock：公共前缀/后缀正常色，差异段黄色加粗
