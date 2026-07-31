@@ -754,7 +754,7 @@ public partial class ExcelConflictWindow : FluentWindow
     // 字符级差异用黄色，与主列表红色背景区分
     private static readonly SolidColorBrush DetailFgDiff = new(Color(0xFF, 0xD0, 0x40));
     private static readonly SolidColorBrush DetailBgDiff = new(Color(0x35, 0x2A, 0x00));
-    private static readonly SolidColorBrush DetailFgMuted = new(Color(0x55, 0x55, 0x55));
+    private static readonly SolidColorBrush DetailFgMuted = new(Color(0x88, 0x88, 0x88));
     private static readonly SolidColorBrush DetailBgOurs = new(Color(0x0A, 0x15, 0x25));
     private static readonly SolidColorBrush DetailBgTheirs = new(Color(0x0A, 0x1A, 0x0F));
     private static readonly SolidColorBrush DetailBgCol = new(Color(0x1A, 0x2A, 0x1A));
@@ -995,6 +995,7 @@ public partial class ExcelConflictWindow : FluentWindow
             PagePadding = new Thickness(0),
             LineHeight = 16,
             PageWidth = 10000, // 禁止自动换行
+            Foreground = fg,
         };
 
         var rtb = new System.Windows.Controls.RichTextBox(doc)
