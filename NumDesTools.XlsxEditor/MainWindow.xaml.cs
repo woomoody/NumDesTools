@@ -48,10 +48,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         Color.FromArgb(60, 0, 120, 215)
     );
 
-    // 复制态虚线边框(marquee): 闪烁的虚线边框, Excel 复制后选中区效果
-    private static readonly Brush MarqueeBorderBrush = new SolidColorBrush(Colors.DodgerBlue);
-    private static readonly DashStyle MarqueeDashStyle = new DashStyle([1.0, 1.0], 0);
-    private static readonly Thickness MarqueeThickness = new(2);
+    // 复制态标识：复制后的格子用红色前景色（不改 Background 避免触发布局重排导致单元格变大）
+    private static readonly Brush MarqueeForegroundBrush = new SolidColorBrush(
+        Color.FromRgb(220, 50, 50)
+    );
 
     // sheet tab -> state（扁平，所有打开工作簿的 sheet 都在这，便于机械替换）
     private readonly Dictionary<TabItem, SheetState> _sheets = new();
@@ -173,6 +173,12 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                     OnPaste(sender, e);
                     e.Handled = true;
                     break;
+                case Key.C when !editingText:
+                    // 窗口级拦截 Ctrl+C（在 grid PreviewKeyDown 之前，避免 IME 拦截 C 键 keydown）
+                    if (CurrentSheetState is { } state)
+                        CopySelectionToClipboard(state.MainGrid);
+                    e.Handled = true;
+                    break;
             }
         }
         else if (e.Key == Key.Escape)
@@ -213,10 +219,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             if (grid.Items[r] is not RowView view)
                 continue;
 
-            // 整列选择时遍历所有列；整行/范围/单格时按列范围
-            // 整列选全行; 整行选全列; 范围/单格按 c1/c2
-            var colStart = _selectionKind is SelectionKind.EntireColumn or SelectionKind.EntireRow ? 0 : c1;
-            var colEnd = _selectionKind is SelectionKind.EntireColumn or SelectionKind.EntireRow ? colCount - 1 : c2;
+            // 整行选择删全部列; 整列选择只删选中列范围; 范围/单格按 c1/c2
+            var colStart = _selectionKind == SelectionKind.EntireRow ? 0 : c1;
+            var colEnd = _selectionKind == SelectionKind.EntireRow ? colCount - 1 : c2;
 
             for (var c = colStart; c <= colEnd; c++)
             {
@@ -794,6 +799,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var cellStyle = new Style(typeof(DataGridCell));
         cellStyle.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
         cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0.5)));
+        // NoWrap/Trimming 不挂 cellStyle（属性继承优先级低，粘贴时旧 TextBlock 压不住）
+        // 改为挂 ElementStyle（直接作用于 TextBlock 本地值），见 BuildDataColumns
         AddDirtyBackgroundTrigger(cellStyle);
         // P13-2：不再对单元格设 MaxHeight 限高——RowHeight=NaN 撑高整行后，被限高的单元格会悬空
         // 居中在高行中间，自身四边框如实画出，视觉上呈现为行内部多余的横线。改为默认 Stretch，
@@ -971,8 +978,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 _selRow2 = cellRow;
                 _selCol2 = cellCol;
                 _selectionKind = SelectionKind.Range;
-                grid.SelectedCells.Clear();
-                args.Handled = true;
+                // 不清空 grid.SelectedCells — 让 DataGrid 原生 Shift+点击多选生效，复制时从 SelectedCells 读
+                args.Handled = false;
             }
             else if (Keyboard.Modifiers != ModifierKeys.Control)
             {
@@ -1043,7 +1050,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         // Ctrl+C 复制 / Ctrl+V 粘贴
         grid.PreviewKeyDown += (_, args) =>
         {
-            
             var keyC = args.Key == Key.C || args.ImeProcessedKey == Key.C;
             var keyV = args.Key == Key.V || args.ImeProcessedKey == Key.V;
             var ctrlDown = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
@@ -1088,6 +1094,20 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 grid.Columns[col1]
             );
         }
+    }
+
+    /// <summary>
+    /// 显示态 TextBlock 样式：NoWrap + CharacterEllipsis。挂在 DataGridTextColumn.ElementStyle
+    /// （直接作用于 TextBlock 本地值，不靠 cellStyle 属性继承），强制单行，杜绝粘贴/编辑后行高变化。
+    /// </summary>
+    private static readonly Style DataGridElementTextBlockStyle = BuildElementTextBlockStyle();
+
+    private static Style BuildElementTextBlockStyle()
+    {
+        var style = new Style(typeof(TextBlock));
+        style.Setters.Add(new Setter(TextBlock.TextWrappingProperty, TextWrapping.NoWrap));
+        style.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
+        return style;
     }
 
     /// <summary>
@@ -1136,6 +1156,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 CanUserResize = true,
                 // 携带 store 列号，供 ColumnStoreFilterAdapter 从 DataGridColumn 反查列（列不可重排）。
                 SortMemberPath = colIndex.ToString(),
+                ElementStyle = DataGridElementTextBlockStyle,
                 EditingElementStyle = DataGridEditingTextBoxStyle,
             };
             // DataGridExtensions 浮动筛选行：主 grid 显示筛选框，冻结 grid 不显示。
@@ -1695,7 +1716,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     /// </summary>
     private void CopySelectionToClipboard(DataGrid grid)
     {
-        
+        var copyTimer = Stopwatch.StartNew();
         if (_selectionKind == SelectionKind.None)
             return;
 
@@ -1709,37 +1730,59 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         // 用 SortedDictionary 保持行/列顺序输出
         var rows = new SortedDictionary<int, SortedDictionary<int, string?>>();
 
-        // 从元状态枚举全部行×列。整列复制不物化 RowView, 直接读 ColumnStore.GetCell(storeRow, col) O(1)
-        // 其他选择模式用 RowView[colIndex] (已物化的行直接用缓存, 不额外物化)
-        var view = grid.ItemsSource as VirtualizingSortableView;
-        var store = CurrentSheetState?.Store;
-        for (var r = r1; r <= r2 && r < rowCount; r++)
+        // 整行/整列从元状态枚举（大范围不逐格加入 SelectedCells）
+        // 单格/范围/拖选从 grid.SelectedCells 读（DataGrid 原生多选管理）
+        if (_selectionKind is SelectionKind.SingleCell or SelectionKind.Range
+            && grid.SelectedCells.Count > 1)
         {
-            var colStart = _selectionKind is SelectionKind.EntireColumn or SelectionKind.EntireRow ? 0 : c1;
-            var colEnd = _selectionKind is SelectionKind.EntireColumn or SelectionKind.EntireRow ? colCount - 1 : c2;
-            var cols = new SortedDictionary<int, string?>();
+            // DataGrid 原生多选：从 SelectedCells 读
+            foreach (var info in grid.SelectedCells)
+            {
+                if (info.Item is not RowView rv || info.Column is null)
+                    continue;
+                var r = rv.RowIndex;
+                var c = info.Column.DisplayIndex;
+                if (!rows.TryGetValue(r, out var cols))
+                {
+                    cols = [];
+                    rows[r] = cols;
+                }
+                cols[c] = rv[c] ?? string.Empty;
+            }
+        }
+        else
+        {
+            var view = grid.ItemsSource as VirtualizingSortableView;
+            var store = CurrentSheetState?.Store;
+            for (var r = r1; r <= r2 && r < rowCount; r++)
+            {
+                // 整行选择复制全部列; 整列选择只复制选中列范围; 范围/单格按 c1/c2
+                var colStart = _selectionKind == SelectionKind.EntireRow ? 0 : c1;
+                var colEnd = _selectionKind == SelectionKind.EntireRow ? colCount - 1 : c2;
+                var cols = new SortedDictionary<int, string?>();
 
-            if (_selectionKind == SelectionKind.EntireColumn && view is not null && store is not null)
-            {
-                // 整列: 用 _rowOrder 反查 store 行号, 直接读 ColumnStore, 不物化 RowView
-                var storeRow = view.GetStoreRowIndex(r);
-                for (var c = colStart; c <= colEnd; c++)
+                if (_selectionKind == SelectionKind.EntireColumn && view is not null && store is not null)
                 {
-                    if (c < 0 || c >= colCount) continue;
-                    cols[c] = store.GetCell(storeRow, c);
+                    // 整列: 用 _rowOrder 反查 store 行号, 直接读 ColumnStore, 不物化 RowView
+                    var storeRow = view.GetStoreRowIndex(r);
+                    for (var c = colStart; c <= colEnd; c++)
+                    {
+                        if (c < 0 || c >= colCount) continue;
+                        cols[c] = store.GetCell(storeRow, c) ?? string.Empty;
+                    }
                 }
-            }
-            else
-            {
-                // 整行/范围/单格: 行数少, 物化 RowView 可接受
-                if (grid.Items[r] is not RowView rv) continue;
-                for (var c = colStart; c <= colEnd; c++)
+                else
                 {
-                    if (c < 0 || c >= colCount) continue;
-                    cols[c] = rv[c];
+                    // 整行/范围/单格: 行数少, 物化 RowView 可接受
+                    if (grid.Items[r] is not RowView rv) continue;
+                    for (var c = colStart; c <= colEnd; c++)
+                    {
+                        if (c < 0 || c >= colCount) continue;
+                        cols[c] = rv[c] ?? string.Empty;
+                    }
                 }
+                if (cols.Count > 0) rows[r] = cols;
             }
-            if (cols.Count > 0) rows[r] = cols;
         }
 
         if (rows.Count == 0)
@@ -1749,36 +1792,28 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         foreach (var row in rows.Values)
         {
             sb.Append(string.Join('\t', row.Values));
+            sb.Append('\r');
             sb.Append('\n');
         }
-        var text = sb.ToString().TrimEnd('\n');
-        // Clipboard.SetText 在 IME/其他进程锁剪贴板时易抛 COMException
-        // 改用 Clipboard.SetDataObject(DataObject, copy=true) 更可靠, 重试 10 次
-        var data = new System.Windows.DataObject();
-        data.SetText(text);
-        for (var attempt = 0; attempt < 10; attempt++)
+        var text = sb.ToString().TrimEnd('\r', '\n');
+        // WPF Clipboard.SetText/SetDataObject 在飞书等剪贴板监控进程存在时 COMException 每次约 1 秒
+        // 直接用 Win32 API（OpenClipboard/SetClipboardData），PowerShell 测试瞬间成功
+        try
         {
-            try
-            {
-                Clipboard.SetDataObject(data, true);
-                // 记录复制态, 渲染虚线边框(marquee selection)
-                _hasCopiedSelection = true;
-                _copiedKind = _selectionKind;
-                _copiedR1 = _selRow1; _copiedR2 = _selRow2;
-                _copiedC1 = _selCol1; _copiedC2 = _selCol2;
-                ApplyMarqueeBorder();
-                return;
-            }
-            catch (System.Runtime.InteropServices.COMException)
-            {
-                System.Threading.Thread.Sleep(50);
-            }
+            Win32Clipboard.SetText(text);
+            _hasCopiedSelection = true;
+            _copiedKind = _selectionKind;
+            _copiedR1 = _selRow1; _copiedR2 = _selRow2;
+            _copiedC1 = _selCol1; _copiedC2 = _selCol2;
+            ApplyMarqueeBorder();
+        }
+        catch (Exception ex)
+        {
         }
     }
 
     private void PasteFromClipboard(DataGrid grid)
     {
-
         if (grid.SelectedItem is null && grid.CurrentCell.Item is null)
             return;
         var startCell = grid.CurrentCell;
@@ -1791,10 +1826,16 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var startCol = startCell.Column.DisplayIndex;
 
         var text = Clipboard.GetText();
-        if (string.IsNullOrEmpty(text))
-            return;
+        if (text is null)
+            return; // 空字符串 "" 是合法的空值粘贴，不拦截
 
-        var lines = text.Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
+        // 按 \r\n 分行，不移除空行（空行=空值）。先按 \r\n split，再按 \n split 兼容
+        var lines = text.Split(["\r\n"], StringSplitOptions.None);
+        if (lines.Length == 1 && lines[0].Contains('\n'))
+            lines = lines[0].Split(['\n'], StringSplitOptions.None);
+        // 过滤末尾空行（复制时 TrimEnd('\n') 可能留一个空行）
+        if (lines.Length > 1 && lines[^1] == "")
+            lines = lines[..^1];
         // #6：把这次粘贴产生的所有格改动记为一个复合撤销单元（一次 Ctrl+Z 整体撤销这次粘贴）。
         var batch = new List<CellEditRecord>();
         for (var i = 0; i < lines.Length; i++)
@@ -1822,21 +1863,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         {
             state.UndoStack.Push(new CellBatchAction(batch));
             state.RedoStack.Clear();
-            // 强制刷新受影响行的 UI 显示（RaiseIndexerChanged 已触发但容器可能未重拉 Binding）
-            // 用 Dictionary 缓存 RowIndex→ViewIndex, 避免对每个 batch 项线性查找
-            var view = grid.ItemsSource as VirtualizingSortableView;
-            if (view is not null)
-            {
-                foreach (var rec in batch)
-                {
-                    var viewIdx = view.GetViewIndex(rec.Row);
-                    if (viewIdx >= 0 && grid.ItemContainerGenerator.ContainerFromIndex(viewIdx) is DataGridRow row)
-                        row.InvalidateVisual();
-                }
-            }
+            // RaiseIndexerChanged 已触发 PropertyChanged，WPF Binding 自动刷新 TextBlock.Text + 脏标
+            // 不调 RefreshDirtyCellBackgrounds/InvalidateMeasure/RefreshDirtyState（任何重排都会导致行高变化）
         }
         MarkCurrentFileDirty();
-        
     }
 
     private static void AddDirtyBackgroundTrigger(Style cellStyle)
@@ -2581,12 +2611,36 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
         try
         {
-        
         var grid = _selectionGrid ?? CurrentMainGrid;
-        if (grid is null) return;
+        if (grid is null) { return; }
         var (r1, r2) = (_copiedR1 <= _copiedR2) ? (_copiedR1, _copiedR2) : (_copiedR2, _copiedR1);
         var (c1, c2) = (_copiedC1 <= _copiedC2) ? (_copiedC1, _copiedC2) : (_copiedC2, _copiedC1);
         var (vs, ve) = GetVisibleRowRange(grid);
+        var applied = 0;
+
+        // 多选（grid.SelectedCells > 1）时从 SelectedCells 渲染 marquee，不用元状态
+        if (_copiedKind is SelectionKind.SingleCell or SelectionKind.Range
+            && grid.SelectedCells.Count > 1)
+        {
+            foreach (var info in grid.SelectedCells)
+            {
+                if (info.Item is not RowView rv || info.Column is null)
+                    continue;
+                var viewIdx = grid.Items.IndexOf(rv);
+                if (viewIdx < vs || viewIdx > ve)
+                    continue;
+                if (grid.ItemContainerGenerator.ContainerFromIndex(viewIdx) is not DataGridRow rowContainer)
+                    continue;
+                if (info.Column.GetCellContent(rowContainer)?.Parent is DataGridCell cell)
+                {
+                    cell.Foreground = MarqueeForegroundBrush;
+                    applied++;
+                }
+            }
+            return;
+        }
+
+        // 整行/整列/单格从元状态渲染
         for (var i = vs; i <= ve; i++)
         {
             var rowMatch = _copiedKind switch { SelectionKind.EntireColumn => true, SelectionKind.EntireRow => i >= r1 && i <= r2, SelectionKind.Range => i >= r1 && i <= r2, SelectionKind.SingleCell => i == r1, _ => false };
@@ -2599,13 +2653,13 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 if (!colMatch) continue;
                 if (col.GetCellContent(rowContainer)?.Parent is DataGridCell cell)
                 {
-                    cell.BorderBrush = MarqueeBorderBrush;
-                    cell.BorderThickness = MarqueeThickness;
+                    cell.Foreground = MarqueeForegroundBrush;
+                    applied++;
                 }
             }
         }
         }
-        catch (Exception ex) {  }
+        catch { /* marquee render failed, non-fatal */ }
     }
 
     private void ClearMarqueeBorder()
@@ -2619,10 +2673,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             foreach (var col in grid.Columns)
             {
                 if (col.GetCellContent(rowContainer)?.Parent is not DataGridCell cell) continue;
-                if (cell.BorderBrush == MarqueeBorderBrush)
+                if (cell.Foreground == MarqueeForegroundBrush)
                 {
-                    cell.ClearValue(DataGridCell.BorderBrushProperty);
-                    cell.ClearValue(DataGridCell.BorderThicknessProperty);
+                    cell.ClearValue(DataGridCell.ForegroundProperty);
                 }
             }
         }
@@ -3172,5 +3225,97 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         // #P9-3：分界线 X 重定位的 LayoutUpdated 处理器（存字段以便重挂时先解绑，避免重复订阅）。
         public EventHandler? DividerLayoutHandler { get; set; }
+    }
+
+    /// <summary>
+    /// Win32 剪贴板 API 兜底：WPF Clipboard.SetDataObject 在 IME 锁剪贴板时 COMException 10 秒，
+    /// 直接调 OpenClipboard/SetClipboardData 绕过 WPF 的 COM 封装层。
+    /// </summary>
+    internal static class Win32Clipboard
+    {
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool OpenClipboard(IntPtr hWndNewOwner);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool CloseClipboard();
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool EmptyClipboard();
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SetClipboardData(uint uFormat, IntPtr hMem);
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GlobalAlloc(uint uFlags, UIntPtr dwBytes);
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GlobalLock(IntPtr hMem);
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool GlobalUnlock(IntPtr hMem);
+
+        private const uint CF_UNICODETEXT = 13;
+        private const uint GMEM_MOVEABLE = 0x0002;
+
+        public static void SetText(string text)
+        {
+            // 分配全局内存 + 写入 UTF-16 文本
+            var bytes = System.Text.Encoding.Unicode.GetBytes(text + "\0");
+            var hGlobal = GlobalAlloc(GMEM_MOVEABLE, (UIntPtr)bytes.Length);
+            if (hGlobal == IntPtr.Zero)
+                throw new System.ComponentModel.Win32Exception();
+            try
+            {
+                var pLock = GlobalLock(hGlobal);
+                if (pLock == IntPtr.Zero)
+                    throw new System.ComponentModel.Win32Exception();
+                try
+                {
+                    System.Runtime.InteropServices.Marshal.Copy(bytes, 0, pLock, bytes.Length);
+                }
+                finally
+                {
+                    GlobalUnlock(hGlobal);
+                }
+            }
+            catch
+            {
+                System.Runtime.InteropServices.Marshal.FreeHGlobal(hGlobal);
+                throw;
+            }
+
+            // OpenClipboard → EmptyClipboard → SetClipboardData → CloseClipboard
+            // 重试 5 次（飞书等剪贴板监控进程可能短暂占用锁）
+            for (var attempt = 0; attempt < 5; attempt++)
+            {
+                if (!OpenClipboard(IntPtr.Zero))
+                {
+                    System.Threading.Thread.Sleep(10);
+                    continue;
+                }
+                try
+                {
+                    EmptyClipboard();
+                    var result = SetClipboardData(CF_UNICODETEXT, hGlobal);
+                    if (result != IntPtr.Zero)
+                    {
+                        // 成功：hGlobal 所有权转给系统，不需要 FreeHGlobal
+                        return;
+                    }
+                }
+                finally
+                {
+                    CloseClipboard();
+                }
+                System.Threading.Thread.Sleep(10);
+            }
+            // 全部失败：释放内存
+            System.Runtime.InteropServices.Marshal.FreeHGlobal(hGlobal);
+            throw new System.ComponentModel.Win32Exception("Win32 OpenClipboard/SetClipboardData failed after 3 attempts");
+        }
     }
 }
