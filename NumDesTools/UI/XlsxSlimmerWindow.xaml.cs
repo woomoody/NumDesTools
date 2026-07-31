@@ -71,6 +71,7 @@ public partial class XlsxSlimmerWindow : FluentWindow
         var text = new TextBlock
         {
             Text = Path.GetFileName(path),
+            Foreground = System.Windows.Media.Brushes.White,
             ToolTip = path,
             Margin = new Thickness(6, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center,
