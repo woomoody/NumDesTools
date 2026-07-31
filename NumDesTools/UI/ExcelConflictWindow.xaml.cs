@@ -972,7 +972,7 @@ public partial class ExcelConflictWindow : FluentWindow
     }
 
     // 字符级高亮 RichTextBox（只读可选中），差异段黄色加粗直接显示
-    private System.Windows.Controls.RichTextBox MakeDetailValueBox(
+    private System.Windows.Controls.Control MakeDetailValueBox(
         string text,
         string other,
         SolidColorBrush fg,
@@ -980,43 +980,23 @@ public partial class ExcelConflictWindow : FluentWindow
     )
     {
         var diffTb = MakeInlineDiffBlock(text, other, fg);
-        var para = new System.Windows.Documents.Paragraph { Margin = new Thickness(0) };
-        foreach (var inline in diffTb.Inlines.ToList())
-        {
-            diffTb.Inlines.Remove(inline);
-            para.Inlines.Add(inline);
-        }
-        // 如果 MakeInlineDiffBlock 走了纯文本路径（tb.Text 非空）
-        if (!para.Inlines.Any() && !string.IsNullOrEmpty(diffTb.Text))
-            para.Inlines.Add(new System.Windows.Documents.Run(diffTb.Text) { Foreground = fg });
+        diffTb.Foreground = fg;
+        diffTb.Background = bg;
 
-        var doc = new System.Windows.Documents.FlowDocument(para)
+        // TextBlock + ScrollViewer：绕开 wpfui 对 RichTextBox 的 Foreground 覆盖。
+        // ScrollViewer 限制在 Grid 列宽内（不撑开布局），TextBlock 横向滚动看全值。
+        var sv = new System.Windows.Controls.ScrollViewer
         {
-            PagePadding = new Thickness(0),
-            LineHeight = 16,
-            PageWidth = 10000, // 禁止自动换行
-        };
-
-        var rtb = new System.Windows.Controls.RichTextBox(doc)
-        {
-            IsReadOnly = true,
+            Content = diffTb,
             Background = bg,
-            Foreground = fg,
-            FontSize = 11,
-            BorderThickness = new Thickness(0),
-            Padding = new Thickness(0),
-            MaxHeight = 36,
             VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Disabled,
             HorizontalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto,
+            Padding = new Thickness(6, 4, 6, 4),
+            MaxHeight = 36,
             Cursor = System.Windows.Input.Cursors.IBeam,
             ToolTip = string.IsNullOrEmpty(text) ? null : text,
         };
-        // wpfui 的 DefaultRichTextBoxStyle 用 OverridesDefaultStyle+TemplateBinding 覆盖了 Foreground，
-        // 导致本地设的 Foreground 没传播到 FlowDocument。
-        // 用 TextElement.Foreground 附加属性强制覆盖，绕开 TemplateBinding 的限制。
-        rtb.SetValue(System.Windows.Documents.TextElement.ForegroundProperty, fg);
-        doc.SetValue(System.Windows.Documents.TextElement.ForegroundProperty, fg);
-        return rtb;
+        return sv;
     }
 
     // 构建带字符级高亮的 TextBlock：公共前缀/后缀正常色，差异段黄色加粗
