@@ -217,23 +217,35 @@ def _collect_omp(frozen_str):
     return records
 
 def _collect_opencode(frozen_str):
-    """opencode: opencode.db session 表（time_created Unix 毫秒 /1000，model 是 JSON 字符串取 id）。"""
+    """opencode: opencode.db message 表（每条assistant消息独立记录 modelID+tokens+time_created）。
+    不用 session 表——那是树状会话结构，父会话(UI选的模型)+子agent会话(Task工具派生,各自
+    独立model)共享一行、且行是UPDATE不是INSERT：time_created只是会话首次创建的时间，
+    之后每天的增量消耗全被错误归到创建当天。message表按消息粒度记录，时间戳才是真实发生时间。"""
     records = []
     db = os.path.join(os.path.expanduser('~'), '.local', 'share', 'opencode', 'opencode.db')
     if not os.path.exists(db): return records
     fu = _frozen_unix(frozen_str)
     try:
         c = sqlite3.connect(db)
-        for m_json, tc, inp, out, cr, cw, d in c.execute(
-            "SELECT model, time_created, tokens_input, tokens_output, tokens_cache_read, tokens_cache_write, directory FROM session WHERE time_created/1000.0 > ?", (fu,)):
-            if not m_json or not tc: continue
-            try: model = json.loads(m_json).get('id', m_json) if m_json.startswith('{') else m_json
-            except: model = m_json
+        rows = c.execute(
+            "SELECT m.data, m.time_created, s.directory FROM message m "
+            "JOIN session s ON s.id = m.session_id WHERE m.time_created/1000.0 > ?", (fu,))
+        for data_json, tc, d in rows:
+            try: obj = json.loads(data_json)
+            except: continue
+            if obj.get('role') != 'assistant': continue
+            tok = obj.get('tokens')
+            if not isinstance(tok, dict): continue
+            inp = tok.get('input', 0) or 0
+            out = tok.get('output', 0) or 0
+            cache = tok.get('cache') or {}
+            cr = cache.get('read', 0) or 0
+            cw = cache.get('write', 0) or 0
+            if inp+out+cr+cw == 0: continue
             try: date_str = datetime.fromtimestamp(tc/1000.0).strftime('%Y-%m-%d')
             except: continue
             if date_str <= frozen_str: continue
-            inp, out, cr, cw = inp or 0, out or 0, cr or 0, cw or 0
-            if inp+out+cr+cw == 0: continue
+            model = obj.get('modelID') or '<empty>'
             records.append((date_str, model, inp, out, cr, cw, f'[opencode]{d or "None"}'))
     except Exception as e: print(f'  [warn] opencode db: {e}')
     return records
@@ -244,7 +256,8 @@ def _save_snap(daily, model_daily, proj_daily, frozen_date):
         with open(tmp, 'w', encoding='utf-8') as f:
             json.dump({'daily': dict(daily), 'model_daily': {d: dict(md) for d, md in model_daily.items()},
                        'proj_daily': {p: dict(pd) for p, pd in proj_daily.items() if pd},
-                       'frozen_date': frozen_date, 'updated': datetime.now().isoformat()},
+                       'frozen_date': frozen_date, 'opencode_v2_fixed': True,
+                       'updated': datetime.now().isoformat()},
                       f, ensure_ascii=False)
         os.replace(tmp, _SNAP_FILE)
     except Exception as e:
@@ -277,9 +290,29 @@ else:
     frozen_cc = '1970-01-01'
 # 其他源：有 frozen_date 用(增量)，首次无则全量
 frozen_other = (snap.get('frozen_date') if snap else None) or '1970-01-01'
-print(f"  frozen: cc={frozen_cc} other={frozen_other}")
 
-for fn, fz in ((_collect_cc, frozen_cc), (_collect_hermes, frozen_other), (_collect_omp, frozen_other), (_collect_opencode, frozen_other)):
+# opencode 一次性历史修复：旧版按 session 表(累计值+created按会话首次创建时间)算出来的历史数据
+# 是错的，清掉重来。proj_daily['[opencode]...'] 是当年旧逻辑按1:1加进 daily 的同一份数据，
+# 减掉它就等于把 daily 里旧版 opencode 的错误贡献抠出来；model_daily 里非 claude-* 的模型只可能
+# 来自 opencode（CC/hermes/omp 都是纯 Claude 用量），直接整段丢弃重算。
+_repair_opencode = bool(snap) and not snap.get('opencode_v2_fixed')
+if _repair_opencode:
+    print('  [repair] 清理旧版 session 表口径的 opencode 历史数据，用 message 表全量重扫替换')
+    old_oc = defaultdict(_zero)
+    for proj in [p for p in snap.get('proj_daily', {}) if p.startswith('[opencode]')]:
+        for d, v in snap['proj_daily'].pop(proj).items():
+            for k in ('input','output','cache_read','cache_write','cost'): old_oc[d][k] += v.get(k, 0)
+    for d, v in old_oc.items():
+        dv = snap.get('daily', {}).get(d)
+        if dv:
+            for k in ('input','output','cache_read','cache_write','cost'): dv[k] -= v.get(k, 0)
+    for md in snap.get('model_daily', {}).values():
+        for m in [m for m in md if not m.lower().startswith('claude')]:
+            del md[m]
+frozen_opencode = '1970-01-01' if _repair_opencode else frozen_other
+print(f"  frozen: cc={frozen_cc} other={frozen_other} opencode={frozen_opencode}")
+
+for fn, fz in ((_collect_cc, frozen_cc), (_collect_hermes, frozen_other), (_collect_omp, frozen_other), (_collect_opencode, frozen_opencode)):
     for date_str, model, inp, out, cr, cw, proj_key in fn(fz):
         cost = calc_cost(inp, out, cr, cw, model)
         total_msgs += 1
