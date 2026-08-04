@@ -36,10 +36,10 @@
                             Margin="0,2,8,2" VerticalAlignment="Center">
                     <ui:Button Content="全取我的"  Tag="Ours"   Click="BatchChoice_Click"
                             Padding="6,2" Margin="0,0,4,0"
-                        Background="{DynamicResource OursActionBackgroundBrush}" Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" BorderThickness="0" Cursor="Hand"/>
+                        Background="{DynamicResource OursActionBackgroundBrush}" Foreground="{DynamicResource SemanticButtonTextBrush}" BorderThickness="0" Cursor="Hand"/>
                     <ui:Button Content="全取他的" Tag="Theirs" Click="BatchChoice_Click"
                             Padding="6,2"
-                        Background="{DynamicResource TheirsBackgroundBrush}" Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" BorderThickness="0" Cursor="Hand"/>
+                        Background="{DynamicResource TheirsBackgroundBrush}" Foreground="{DynamicResource SemanticButtonTextBrush}" BorderThickness="0" Cursor="Hand"/>
                 </StackPanel>
 
                 <!-- OnlyOurs / OnlyTheirs 行：行级选择（RadioButton 强制互斥，避免两者都不选） -->

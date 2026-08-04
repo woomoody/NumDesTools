@@ -50,7 +50,7 @@
                        Placement="Bottom"
                        StaysOpen="False"
                        AllowsTransparency="True">
-                    <Border Background="{DynamicResource LayerFillColorDefaultBrush}"
+                    <Border Background="{DynamicResource ApplicationBackgroundBrush}"
                             BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                             BorderThickness="1" CornerRadius="3"
                             MinWidth="{Binding ActualWidth, ElementName=SearchBox}"

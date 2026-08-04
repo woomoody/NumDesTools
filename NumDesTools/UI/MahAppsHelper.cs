@@ -135,6 +135,9 @@ internal static class MahAppsHelper
             "#554400",
             "#DDAA55"
         );
+        // 语义色按钮文字：固定黑色。语义背景深浅已自动切换（深色主题=深色背景，浅色主题=浅色背景），
+        // 黑字在两种背景上都能看清（深色背景如 #5A2A2A 足够深，浅色背景如 #FFCCCC 足够浅）。
+        app.Resources["SemanticButtonTextBrush"] = new SolidColorBrush(Colors.Black);
     }
 
     private static SolidColorBrush SemanticBrush(bool isDark, string dark, string light) =>
