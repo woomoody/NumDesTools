@@ -9,7 +9,7 @@
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
     ExtendsContentIntoTitleBar="True"
-    Foreground="#E0E0E0">
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -18,7 +18,7 @@
         <ui:TitleBar Grid.Row="0" />
         <StackPanel Grid.Row="1" Margin="16">
             <ui:TextBlock x:Name="PromptText" TextWrapping="Wrap" FontSize="13"
-                       Foreground="#FFFFFF"/>
+                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
             <ui:TextBox x:Name="InputBox" MinWidth="320" Margin="0,10,0,0"/>
             <ui:Button HorizontalAlignment="Right" IsDefault="True" Margin="0,10,0,0" Click="OkButton_Click" Content="确定"/>
         </StackPanel>

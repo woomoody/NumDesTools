@@ -11,28 +11,28 @@
     KeyDown="Window_EscClose"
     WindowBackdropType="Mica"
     ExtendsContentIntoTitleBar="True"
-    Foreground="#E0E0E0">
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
     <ui:FluentWindow.Resources>
         <Style TargetType="Button" x:Key="ActionBtn">
             <Setter Property="Padding"          Value="10,4"/>
             <Setter Property="Margin"           Value="4,0"/>
-            <Setter Property="Background"       Value="#333"/>
-            <Setter Property="Foreground"       Value="White"/>
+        <Setter Property="Background"       Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
+        <Setter Property="Foreground"       Value="{DynamicResource TextFillColorPrimaryBrush}"/>
             <Setter Property="BorderThickness"  Value="0"/>
             <Setter Property="Cursor"           Value="Hand"/>
         </Style>
         <Style TargetType="Button" x:Key="ApplyBtn">
             <Setter Property="Padding"          Value="14,6"/>
-            <Setter Property="Background"       Value="#1A5C3A"/>
-            <Setter Property="Foreground"       Value="White"/>
+        <Setter Property="Background"       Value="{DynamicResource TheirsBackgroundBrush}"/>
+        <Setter Property="Foreground"       Value="{DynamicResource TextFillColorPrimaryBrush}"/>
             <Setter Property="FontWeight"       Value="Bold"/>
             <Setter Property="BorderThickness"  Value="0"/>
             <Setter Property="Cursor"           Value="Hand"/>
         </Style>
         <Style TargetType="TabItem">
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Background" Value="#2A2A2A"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
             <Setter Property="Padding"    Value="10,4"/>
         </Style>
 </ui:FluentWindow.Resources>
@@ -77,7 +77,7 @@
         </Grid.RowDefinitions>
 
         <!-- ══ 顶部工具栏 ══ -->
-        <Border Grid.Row="0" Background="#252525" Padding="10,6">
+        <Border Grid.Row="0" Background="{DynamicResource LayerFillColorDefaultBrush}" Padding="10,6">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -85,15 +85,15 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <ui:TextBlock Foreground="#AAAAAA" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0">文件:</ui:TextBlock>
-                    <ui:TextBlock x:Name="FileNameText" Foreground="White" FontSize="12"
+                <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0">文件:</ui:TextBlock>
+                <ui:TextBlock x:Name="FileNameText" Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="12"
                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                MaxWidth="300" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Text}"/>
-                    <Separator Width="1" Background="#555" Margin="10,0"/>
+                <Separator Width="1" Background="{DynamicResource SeparatorBorderBrush}" Margin="10,0"/>
                     <ui:TextBox x:Name="FilterBox"
                              Width="180" Height="22" VerticalContentAlignment="Center"
-                             Background="#2A2A2A" Foreground="White" BorderBrush="#555"
-                             CaretBrush="White" FontSize="11" Padding="4,0"
+                         Background="{DynamicResource ControlFillColorSecondaryBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}" BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                         CaretBrush="{DynamicResource TextFillColorPrimaryBrush}" FontSize="11" Padding="4,0"
                              ToolTip="输入文本或数字，筛选 ID / 备注列包含该值的冲突行"
                              KeyDown="FilterBox_KeyDown"
                              Tag="搜索 ID / 备注列…">
@@ -105,7 +105,7 @@
                                             <Setter.Value>
                                                 <VisualBrush Stretch="None" AlignmentX="Left">
                                                     <VisualBrush.Visual>
-                                                        <ui:TextBlock Text="搜索 ID / 备注列…" Foreground="#AAAAAA" FontSize="11" Margin="5,0"/>
+                    <ui:TextBlock Text="搜索 ID / 备注列…" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="11" Margin="5,0"/>
                                                     </VisualBrush.Visual>
                                                 </VisualBrush>
                                             </Setter.Value>
@@ -116,61 +116,61 @@
                         </TextBox.Style>
                     </ui:TextBox>
                     <ui:Button Content="筛选选中" Margin="4,0,0,0" Padding="8,3"
-                            Background="#3A3A5A" Foreground="White" BorderThickness="0"
+                            Background="{DynamicResource ConflictBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}" BorderThickness="0"
                             Cursor="Hand" FontSize="11"
                             Click="FilterSelect_Click"/>
                     <ui:Button x:Name="FilterClearBtn" Content="清除筛选" Margin="2,0,0,0" Padding="8,3"
-                            Background="#3A2A2A" Foreground="#FFAAAA" BorderThickness="0"
+                            Background="{DynamicResource OursBackgroundBrush}" Foreground="{DynamicResource OursTextBrush}" BorderThickness="0"
                             Cursor="Hand" FontSize="11" Visibility="Collapsed"
                             Click="FilterClear_Click"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="#1A1A1A" CornerRadius="3" Margin="0,0,8,0"
-                            BorderBrush="#444" BorderThickness="1">
+                <Border Background="{DynamicResource LayerFillColorDefaultBrush}" CornerRadius="3" Margin="0,0,8,0"
+                        BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1">
                         <StackPanel Orientation="Vertical">
                             <ToggleButton x:Name="ViewConflictOnly" Content="仅冲突"
                                           IsChecked="True"
-                                          Foreground="White" Background="#1A3A6E" BorderThickness="0"
+                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" Background="{DynamicResource HistoryBackgroundBrush}" BorderThickness="0"
                                           Padding="10,3" Cursor="Hand" FontSize="11"
                                           Checked="ViewMode_Changed" Unchecked="ViewMode_Changed"/>
-                            <Separator Height="1" Background="#333" Margin="0"/>
+                    <Separator Height="1" Background="{DynamicResource SeparatorBorderBrush}" Margin="0"/>
                             <ToggleButton x:Name="ViewContext" Content="冲突±5行"
-                                          Foreground="#AAAAAA" Background="Transparent" BorderThickness="0"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" Background="Transparent" BorderThickness="0"
                                           Padding="10,3" Cursor="Hand" FontSize="11"
                                           Checked="ViewMode_Changed" Unchecked="ViewMode_Changed"/>
-                            <Separator Height="1" Background="#333" Margin="0"/>
+                    <Separator Height="1" Background="{DynamicResource SeparatorBorderBrush}" Margin="0"/>
                             <ToggleButton x:Name="ViewAll" Content="加载全部"
-                                          Foreground="#AAAAAA" Background="Transparent" BorderThickness="0"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" Background="Transparent" BorderThickness="0"
                                           Padding="10,3" Cursor="Hand" FontSize="11"
                                           Checked="ViewMode_Changed" Unchecked="ViewMode_Changed"/>
                         </StackPanel>
                     </Border>
-                    <Separator Width="1" Background="#555" Margin="0,0,8,0"/>
+                <Separator Width="1" Background="{DynamicResource SeparatorBorderBrush}" Margin="0,0,8,0"/>
                     <ToggleButton x:Name="HideNoConflictCols" Content="隐藏无冲突列"
                                   IsChecked="True"
-                                  Foreground="White" Background="#2A4A2A" BorderThickness="1"
-                                  BorderBrush="#4A6A4A" Padding="10,3" Cursor="Hand" FontSize="11"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" Background="{DynamicResource TheirsBackgroundBrush}" BorderThickness="1"
+                           BorderBrush="{DynamicResource ControlElevationBorderBrush}" Padding="10,3" Cursor="Hand" FontSize="11"
                                   Margin="0,0,8,0"
                                   Checked="HideNoConflictCols_Changed" Unchecked="HideNoConflictCols_Changed"/>
-                    <Separator Width="1" Background="#555" Margin="0,0,8,0"/>
+                <Separator Width="1" Background="{DynamicResource SeparatorBorderBrush}" Margin="0,0,8,0"/>
                     <ui:Button Content="全文件取我的"  Style="{StaticResource ActionBtn}" Click="AllOurs_Click"/>
                     <ui:Button Content="全文件取他的"  Style="{StaticResource ActionBtn}" Click="AllTheirs_Click"/>
-                    <Separator Width="1" Background="#555" Margin="4,0"/>
+                <Separator Width="1" Background="{DynamicResource SeparatorBorderBrush}" Margin="4,0"/>
                     <!-- 拖拽多选操作条，有选中行时才显示 -->
                     <Border x:Name="SelectionActionBar" Visibility="Collapsed"
-                            Background="#2A2A3A" CornerRadius="3" Padding="4,0">
+                        Background="{DynamicResource ConflictBackgroundBrush}" CornerRadius="3" Padding="4,0">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <ui:TextBlock x:Name="SelectionCountText" Foreground="#AAAAFF"
+                    <ui:TextBlock x:Name="SelectionCountText" Foreground="{DynamicResource ConflictTextBrush}"
                                        FontSize="11" VerticalAlignment="Center" Margin="4,0,8,0"/>
                             <ui:Button Content="选中取我的"
-                                    Style="{StaticResource ActionBtn}" Background="#1A3A6E"
+                           Style="{StaticResource ActionBtn}" Background="{DynamicResource OursActionBackgroundBrush}"
                                     Click="SelectedOurs_Click"/>
                             <ui:Button Content="选中取他的"
-                                    Style="{StaticResource ActionBtn}" Background="#1A5C3A"
+                           Style="{StaticResource ActionBtn}" Background="{DynamicResource TheirsBackgroundBrush}"
                                     Click="SelectedTheirs_Click"/>
                             <ui:Button Content="✕" ToolTip="清除选中"
-                                    Style="{StaticResource ActionBtn}" Background="#3A2A2A"
+                           Style="{StaticResource ActionBtn}" Background="{DynamicResource OursBackgroundBrush}"
                                     Padding="6,4" Click="SelectedClear_Click"/>
                         </StackPanel>
                     </Border>
@@ -186,11 +186,11 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <TabControl x:Name="SheetTabs" Grid.Row="0" Background="#1E1E1E" BorderThickness="0"
+            <TabControl x:Name="SheetTabs" Grid.Row="0" Background="{DynamicResource ApplicationBackgroundBrush}" BorderThickness="0"
                         SelectionChanged="SheetTabs_SelectionChanged"/>
 
-            <Border Grid.Row="1" x:Name="ColBatchBar" Background="#1A1A2A"
-                    BorderBrush="#333" BorderThickness="0,0,0,1" Visibility="Collapsed">
+            <Border Grid.Row="1" x:Name="ColBatchBar" Background="{DynamicResource ConflictBackgroundBrush}"
+                    BorderBrush="{DynamicResource SeparatorBorderBrush}" BorderThickness="0,0,0,1" Visibility="Collapsed">
                 <ScrollViewer x:Name="BatchScroll"
                               HorizontalScrollBarVisibility="Hidden"
                               VerticalScrollBarVisibility="Disabled">
@@ -198,7 +198,7 @@
                 </ScrollViewer>
             </Border>
 
-            <Border Grid.Row="2" Background="#111" BorderBrush="#333" BorderThickness="0,0,0,1">
+            <Border Grid.Row="2" Background="{DynamicResource LayerFillColorDefaultBrush}" BorderBrush="{DynamicResource SeparatorBorderBrush}" BorderThickness="0,0,0,1">
                 <ScrollViewer x:Name="MetaScroll"
                               HorizontalScrollBarVisibility="Hidden"
                               VerticalScrollBarVisibility="Disabled">
@@ -212,7 +212,7 @@
 
         <!-- ══ 冲突行列表（Grid Row=* → 虚拟化正常） ══ -->
         <ListBox x:Name="ConflictList" Grid.Row="2"
-                 Background="#1E1E1E" BorderThickness="0"
+                             Background="{DynamicResource ApplicationBackgroundBrush}" BorderThickness="0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  VirtualizingPanel.IsVirtualizing="True"
@@ -247,28 +247,28 @@
         <ScrollBar x:Name="SharedHScrollBar" Grid.Row="3"
                    Orientation="Horizontal" Height="12"
                    Minimum="0" Maximum="0" ViewportSize="100"
-                   Background="#1A1A1A"
+                   Background="{DynamicResource LayerFillColorDefaultBrush}"
                    Scroll="SharedHScrollBar_Scroll"/>
 
         <!-- 全量模式分批加载工具栏 -->
         <Border x:Name="LoadMoreBar" Grid.Row="4" Visibility="Collapsed"
-                Background="#1E1E2E" BorderBrush="#333" BorderThickness="0,1,0,0" Padding="6,4">
+                Background="{DynamicResource LayerFillColorAltBrush}" BorderBrush="{DynamicResource SeparatorBorderBrush}" BorderThickness="0,1,0,0" Padding="6,4">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <ui:TextBlock x:Name="LoadMoreStatus" Grid.Column="0"
-                           Foreground="#AAAACC" FontSize="11" VerticalAlignment="Center" Margin="4,0"/>
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="11" VerticalAlignment="Center" Margin="4,0"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <ui:Button x:Name="LoadMoreBtn" Content="加载更多(200行)"
                             Click="LoadMore_Click"
-                            Background="#2A2A3A" Foreground="#AAAACC"
+                            Background="{DynamicResource ConflictBackgroundBrush}" Foreground="{DynamicResource ConflictTextBrush}"
                             BorderThickness="0" Padding="10,4" Margin="0,0,4,0"
                             Cursor="Hand" FontSize="11"/>
                     <ui:Button x:Name="LoadAllBtn" Content="加载全部"
                             Click="LoadAll_Click"
-                            Background="#3A2A2A" Foreground="#FFAAAA"
+                            Background="{DynamicResource OursBackgroundBrush}" Foreground="{DynamicResource OursTextBrush}"
                             BorderThickness="0" Padding="10,4"
                             Cursor="Hand" FontSize="11"/>
                 </StackPanel>
@@ -277,11 +277,11 @@
 
         <!-- 冲突 / 新增 之间的拖拽条 -->
         <GridSplitter Grid.Row="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                      Background="#3A3A3A" Cursor="SizeNS" ResizeDirection="Rows"
+                      Background="{DynamicResource SeparatorBorderBrush}" Cursor="SizeNS" ResizeDirection="Rows"
                       ResizeBehavior="PreviousAndNext"/>
 
         <!-- ══ 我的新增 section ══ -->
-        <Border Grid.Row="6" BorderBrush="#3A3A3A" BorderThickness="0,1,0,0">
+        <Border Grid.Row="6" BorderBrush="{DynamicResource SeparatorBorderBrush}" BorderThickness="0,1,0,0">
             <Grid ClipToBounds="True">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="28"/>   <!-- 标题栏，始终可见 -->
@@ -290,18 +290,18 @@
                 </Grid.RowDefinitions>
 
                 <!-- 标题栏 -->
-                <Border Grid.Row="0" x:Name="SectionOnlyOursHeader" Background="#2A1010"
+                <Border Grid.Row="0" x:Name="SectionOnlyOursHeader" Background="{DynamicResource OursBackgroundBrush}"
                         Cursor="Hand" MouseLeftButtonDown="SectionHeader_Click">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
-                        <ui:TextBlock x:Name="SectionOnlyOursChevron" Text="▶ " Foreground="#FF8888" FontSize="11"/>
-                        <ui:TextBlock Text="我的新增" Foreground="#FF8888" FontSize="11" FontWeight="Bold"/>
-                        <ui:TextBlock x:Name="SectionOnlyOursCount" Foreground="#888888" FontSize="10" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                        <ui:TextBlock x:Name="SectionOnlyOursChevron" Text="▶ " Foreground="{DynamicResource OursTextBrush}" FontSize="11"/>
+                        <ui:TextBlock Text="我的新增" Foreground="{DynamicResource OursTextBrush}" FontSize="11" FontWeight="Bold"/>
+                        <ui:TextBlock x:Name="SectionOnlyOursCount" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="10" Margin="4,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
 
                 <!-- 列头（展开时） -->
                 <Border Grid.Row="1" x:Name="OursHeaderBorder" Visibility="Collapsed"
-                        Background="#111" BorderBrush="#333" BorderThickness="0,0,0,1">
+                        Background="{DynamicResource LayerFillColorDefaultBrush}" BorderBrush="{DynamicResource SeparatorBorderBrush}" BorderThickness="0,0,0,1">
                     <ScrollViewer x:Name="OursMetaScroll"
                                   HorizontalScrollBarVisibility="Hidden"
                                   VerticalScrollBarVisibility="Disabled">
@@ -314,7 +314,7 @@
 
                 <!-- 列表（展开时，虚拟化正常） -->
                 <ListBox x:Name="OnlyOursList" Grid.Row="2"
-                         Background="#1A0808" BorderThickness="0"
+                         Background="{DynamicResource OursBackgroundBrush}" BorderThickness="0"
                          Visibility="Collapsed"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -349,11 +349,11 @@
 
         <!-- 新增 / 删除 之间的拖拽条 -->
         <GridSplitter Grid.Row="7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                      Background="#3A3A3A" Cursor="SizeNS" ResizeDirection="Rows"
+                      Background="{DynamicResource SeparatorBorderBrush}" Cursor="SizeNS" ResizeDirection="Rows"
                       ResizeBehavior="PreviousAndNext"/>
 
         <!-- ══ 他的新增 section ══ -->
-        <Border Grid.Row="8" BorderBrush="#3A3A3A" BorderThickness="0,1,0,0">
+        <Border Grid.Row="8" BorderBrush="{DynamicResource SeparatorBorderBrush}" BorderThickness="0,1,0,0">
             <Grid ClipToBounds="True">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="28"/>
@@ -361,17 +361,17 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" x:Name="SectionOnlyTheirsHeader" Background="#0A2010"
+                <Border Grid.Row="0" x:Name="SectionOnlyTheirsHeader" Background="{DynamicResource TheirsBackgroundBrush}"
                         Cursor="Hand" MouseLeftButtonDown="SectionHeader_Click">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
-                        <ui:TextBlock x:Name="SectionOnlyTheirsChevron" Text="▶ " Foreground="#88FF88" FontSize="11"/>
-                        <ui:TextBlock Text="他的新增" Foreground="#88FF88" FontSize="11" FontWeight="Bold"/>
-                        <ui:TextBlock x:Name="SectionOnlyTheirsCount" Foreground="#AAAAAA" FontSize="10" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                        <ui:TextBlock x:Name="SectionOnlyTheirsChevron" Text="▶ " Foreground="{DynamicResource TheirsTextBrush}" FontSize="11"/>
+                        <ui:TextBlock Text="他的新增" Foreground="{DynamicResource TheirsTextBrush}" FontSize="11" FontWeight="Bold"/>
+                        <ui:TextBlock x:Name="SectionOnlyTheirsCount" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10" Margin="4,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
 
                 <Border Grid.Row="1" x:Name="TheirsHeaderBorder" Visibility="Collapsed"
-                        Background="#111" BorderBrush="#333" BorderThickness="0,0,0,1">
+                        Background="{DynamicResource LayerFillColorDefaultBrush}" BorderBrush="{DynamicResource SeparatorBorderBrush}" BorderThickness="0,0,0,1">
                     <ScrollViewer x:Name="TheirsMetaScroll"
                                   HorizontalScrollBarVisibility="Hidden"
                                   VerticalScrollBarVisibility="Disabled">
@@ -383,7 +383,7 @@
                 </Border>
 
                 <ListBox x:Name="OnlyTheirsList" Grid.Row="2"
-                         Background="#080A08" BorderThickness="0"
+                         Background="{DynamicResource TheirsBackgroundBrush}" BorderThickness="0"
                          Visibility="Collapsed"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -420,16 +420,16 @@
         <ScrollBar x:Name="RowsHScrollBar" Grid.Row="9"
                    Orientation="Horizontal" Height="12"
                    Minimum="0" Maximum="0" ViewportSize="100"
-                   Background="#1A1A1A"
+                   Background="{DynamicResource LayerFillColorDefaultBrush}"
                    Scroll="RowsHScrollBar_Scroll"/>
 
         <!-- 滚动条 / 详情 之间的拖拽条 -->
         <GridSplitter Grid.Row="10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                      Background="#3A3A3A" Cursor="SizeNS" ResizeDirection="Rows"
+                      Background="{DynamicResource SeparatorBorderBrush}" Cursor="SizeNS" ResizeDirection="Rows"
                       ResizeBehavior="PreviousAndNext"/>
 
         <!-- ══ 详情面板 ══ -->
-        <Border Grid.Row="11" Background="#161616" BorderBrush="#3A3A3A" BorderThickness="0,1,0,0">
+        <Border Grid.Row="11" Background="{DynamicResource LayerFillColorDefaultBrush}" BorderBrush="{DynamicResource SeparatorBorderBrush}" BorderThickness="0,1,0,0">
             <!-- 左右两栏：左=可折叠导航列，右=字段对比（始终可见） -->
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -439,7 +439,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- 左侧：标题栏 + 导航列表 -->
-                <Grid Grid.Column="0" Background="#111" ClipToBounds="True">
+                <Grid Grid.Column="0" Background="{DynamicResource LayerFillColorDefaultBrush}" ClipToBounds="True">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="28"/>
                         <RowDefinition Height="Auto"/>
@@ -447,18 +447,18 @@
                     </Grid.RowDefinitions>
 
                     <!-- 标题栏（点击折叠/展开导航列） -->
-                    <Border Grid.Row="0" x:Name="DetailHeaderBar" Background="#1A2A1A"
+                    <Border Grid.Row="0" x:Name="DetailHeaderBar" Background="{DynamicResource TheirsBackgroundBrush}"
                             Cursor="Hand" MouseLeftButtonDown="DetailHeader_Click"
-                            BorderBrush="#333" BorderThickness="0,0,0,1">
+                            BorderBrush="{DynamicResource SeparatorBorderBrush}" BorderThickness="0,0,0,1">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
-                            <ui:TextBlock x:Name="DetailChevron" Text="◀ " Foreground="#88FF88" FontSize="11" FontWeight="Bold"/>
-                            <ui:TextBlock Text="导航" Foreground="#88FF88" FontSize="11" FontWeight="Bold"/>
+                            <ui:TextBlock x:Name="DetailChevron" Text="◀ " Foreground="{DynamicResource TheirsTextBrush}" FontSize="11" FontWeight="Bold"/>
+                            <ui:TextBlock Text="导航" Foreground="{DynamicResource TheirsTextBrush}" FontSize="11" FontWeight="Bold"/>
                         </StackPanel>
                     </Border>
 
-                    <Border Grid.Row="1" Background="#1A1A1A" Padding="6,4"
-                            BorderBrush="#333" BorderThickness="0,0,0,1">
-                        <ui:TextBlock Foreground="#AAAACC" FontSize="10">变更导航（当前Sheet）</ui:TextBlock>
+                    <Border Grid.Row="1" Background="{DynamicResource LayerFillColorDefaultBrush}" Padding="6,4"
+                            BorderBrush="{DynamicResource SeparatorBorderBrush}" BorderThickness="0,0,0,1">
+                        <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="10">变更导航（当前Sheet）</ui:TextBlock>
                     </Border>
 
                     <ListBox x:Name="ChangeNavList" Grid.Row="2"
@@ -472,14 +472,14 @@
                                 <Setter Property="Background"  Value="Transparent"/>
                                 <Setter Property="BorderThickness" Value="0"/>
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="Foreground" Value="#E0E0E0"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#1A3A6E"/>
-                                        <Setter Property="Foreground" Value="#FFFFFF"/>
+                                        <Setter Property="Background" Value="{DynamicResource HistoryBackgroundBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                                     </Trigger>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#252535"/>
+                                        <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -488,35 +488,35 @@
                 </Grid>
 
                 <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch"
-                              Background="#2A2A2A" Cursor="SizeWE" ResizeDirection="Columns"/>
+                              Background="{DynamicResource SeparatorBorderBrush}" Cursor="SizeWE" ResizeDirection="Columns"/>
 
                 <!-- 右侧：标题栏 + 字段对比（始终可见） -->
-                <Grid Grid.Column="2" Background="#161616">
+                <Grid Grid.Column="2" Background="{DynamicResource LayerFillColorDefaultBrush}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" MinHeight="28"/>
                                         <RowDefinition Height="*"/>
                                     </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0" Background="#1A1A2A"
-                            BorderBrush="#333" BorderThickness="0,0,0,1">
+                    <Border Grid.Row="0" Background="{DynamicResource ConflictBackgroundBrush}"
+                            BorderBrush="{DynamicResource SeparatorBorderBrush}" BorderThickness="0,0,0,1">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
-                            <ui:TextBlock x:Name="DetailRowKey" Foreground="#A8C8FF" FontSize="11"/>
-                            <ui:TextBlock x:Name="DetailHint" Foreground="#888888" FontSize="10"
+                            <ui:TextBlock x:Name="DetailRowKey" Foreground="{DynamicResource ConflictTextBrush}" FontSize="11"/>
+                            <ui:TextBlock x:Name="DetailHint" Foreground="{DynamicResource TextFillColorTertiaryBrush}" FontSize="10"
                                        Margin="12,0,0,0" Text="点击任意行查看完整值对比"/>
-                                <ui:TextBlock x:Name="AiSuggestionText" Foreground="#FFD080" FontSize="10"
+                                <ui:TextBlock x:Name="AiSuggestionText" Foreground="{DynamicResource AiSuggestionTextBrush}" FontSize="10"
                                                                            Margin="12,0,0,0" TextWrapping="Wrap" MaxWidth="400"
                                                                            VerticalAlignment="Center"/>
                             </StackPanel>
                             <ui:Button x:Name="AiSuggestBtn" Grid.Column="1"
                                     Content="AI建议" Margin="4,2"
                                     Padding="8,3" FontSize="10"
-                                    Background="#2A2A1A" Foreground="#FFD080"
-                                    BorderBrush="#554400" BorderThickness="1"
+                                    Background="{DynamicResource AiSuggestionBackgroundBrush}" Foreground="{DynamicResource AiSuggestionTextBrush}"
+                                    BorderBrush="{DynamicResource AiSuggestionBorderBrush}" BorderThickness="1"
                                     Cursor="Hand" Visibility="Collapsed"
                                     Click="AiSuggest_Click"/>
                         </Grid>
@@ -531,7 +531,7 @@
         </Border>
 
         <!-- ══ 底部状态栏 ══ -->
-        <Border Grid.Row="12" Background="#252525" Padding="10,6">
+        <Border Grid.Row="12" Background="{DynamicResource LayerFillColorDefaultBrush}" Padding="10,6">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -539,23 +539,23 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <ui:TextBlock Foreground="#AAAAAA" FontSize="12">冲突行: </ui:TextBlock>
-                    <ui:TextBlock x:Name="StatRows"  Foreground="White" FontSize="12" Margin="0,0,16,0"/>
-                    <ui:TextBlock Foreground="#AAAAAA"  FontSize="12">冲突格: </ui:TextBlock>
-                    <ui:TextBlock x:Name="StatCells" Foreground="White" FontSize="12"/>
-                    <Separator x:Name="BranchInfoSep" Width="1" Background="#444" Margin="16,0" Visibility="Collapsed"/>
+                    <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12">冲突行: </ui:TextBlock>
+                    <ui:TextBlock x:Name="StatRows"  Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="12" Margin="0,0,16,0"/>
+                    <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"  FontSize="12">冲突格: </ui:TextBlock>
+                    <ui:TextBlock x:Name="StatCells" Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="12"/>
+                    <Separator x:Name="BranchInfoSep" Width="1" Background="{DynamicResource SeparatorBorderBrush}" Margin="16,0" Visibility="Collapsed"/>
                     <!-- 当前工作区 -->
-                    <ui:TextBlock x:Name="HeadBranchText" Foreground="#AAAAAA" FontSize="11"
+                    <ui:TextBlock x:Name="HeadBranchText" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="11"
                                VerticalAlignment="Center" Visibility="Collapsed"/>
-                    <Separator x:Name="BranchInfoSep2" Width="1" Background="#444" Margin="12,0" Visibility="Collapsed"/>
+                    <Separator x:Name="BranchInfoSep2" Width="1" Background="{DynamicResource SeparatorBorderBrush}" Margin="12,0" Visibility="Collapsed"/>
                     <!-- 我的版本 -->
-                    <ui:TextBlock x:Name="OursInfoText" FontSize="11" Foreground="#A8C8FF"
+                    <ui:TextBlock x:Name="OursInfoText" FontSize="11" Foreground="{DynamicResource OursTextBrush}"
                                VerticalAlignment="Center" Visibility="Collapsed"/>
-                    <ui:TextBlock Foreground="#AAAAAA" FontSize="11" Margin="10,0"
+                    <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="11" Margin="10,0"
                                VerticalAlignment="Center" Text="vs"
                                x:Name="BranchVsText" Visibility="Collapsed"/>
                     <!-- 他的版本 -->
-                    <ui:TextBlock x:Name="TheirsInfoText" FontSize="11" Foreground="#A8FFCA"
+                    <ui:TextBlock x:Name="TheirsInfoText" FontSize="11" Foreground="{DynamicResource TheirsTextBrush}"
                                VerticalAlignment="Center" Visibility="Collapsed"/>
                 </StackPanel>
 

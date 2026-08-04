@@ -12,8 +12,8 @@
     <Grid>
         <ListBox
             x:Name="ListBoxCellData"
-            Background="Black"
-            Foreground="White"
+            Background="{DynamicResource ApplicationBackgroundBrush}"
+            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
             SelectionChanged="ListBoxCellData_SelectionChanged">
             <ListBox.ItemTemplate>
                 <DataTemplate>
@@ -25,7 +25,7 @@
                             <Run Text=", " />
                             <Run Text="{Binding Column, StringFormat='Col: {0}'}" />
                         </ui:TextBlock>
-                        <Separator Margin="0,5,0,5" Background="Gray" />
+                        <Separator Margin="0,5,0,5" Background="{DynamicResource SeparatorBorderBrush}" />
                     </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>

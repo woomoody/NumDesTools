@@ -15,7 +15,7 @@
             <Setter Property="TextDecorations" Value="Underline" />
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Foreground" Value="Blue" />
+                <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -32,7 +32,7 @@
             Placement="Center"
             StaysOpen="False">
             <Border
-                Background="Black"
+                Background="{DynamicResource ApplicationBackgroundBrush}"
                 MouseDown="ClosePopup"
                 Opacity="0.8">
                 <Image
@@ -57,7 +57,7 @@
                         <Border
                             Margin="5"
                             Padding="3"
-                            BorderBrush="LightGray"
+                    BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                             BorderThickness="1">
                             <StackPanel>
                                 <!--  图片  -->
@@ -70,22 +70,22 @@
                                     ToolTip="点击放大" />
                                 <ui:TextBlock
                                     HorizontalAlignment="Center"
-                                    Foreground="White"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                     Text="{Binding DataId, StringFormat='数据ID：{0}'}" />
                                 <ui:TextBlock
                                     HorizontalAlignment="Center"
-                                    Foreground="White"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                     Text="{Binding ImageContent}"
                                     ToolTip="{Binding ImageContent}" />
                                 <ui:TextBlock
                                     HorizontalAlignment="Center"
-                                    Foreground="Gold"
+                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                     Text="{Binding ImageId, StringFormat='资源ID：{0}'}" />
                                 <ui:TextBlock
                                     Width="250"
                                     Cursor="Hand"
                                     FontSize="10"
-                                    Foreground="White"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                     MouseLeftButtonDown="TextBlock_MouseLeftButtonDown"
                                     Style="{StaticResource PathTextBlockStyle}"
                                     Text="{Binding ImagePath}"

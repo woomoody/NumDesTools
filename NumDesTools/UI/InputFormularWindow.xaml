@@ -8,7 +8,7 @@
     KeyDown="Window_EscClose"
     WindowBackdropType="Mica"
     ExtendsContentIntoTitleBar="True"
-    Foreground="#E0E0E0">
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

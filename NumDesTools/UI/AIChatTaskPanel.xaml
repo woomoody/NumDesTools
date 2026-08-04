@@ -9,7 +9,7 @@
     Width="870"
     Height="500"
     mc:Ignorable="d">
-    <Grid Margin="0" Background="#1c1c1c">
+    <Grid Margin="0" Background="{DynamicResource ApplicationBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -30,21 +30,20 @@
                 Grid.Column="0"
                 Height="26"
                 Margin="0,0,6,0"
-                Background="#2d2d30"
-                Foreground="#e0e0e0"
-                BorderBrush="#555"
+                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                 SelectionChanged="ModelComboBox_SelectionChanged">
                 <ComboBox.ItemContainerStyle>
                     <Style TargetType="ComboBoxItem">
-                        <Setter Property="Background" Value="#2d2d30" />
-                        <Setter Property="Foreground" Value="#e0e0e0" />
+                        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
                         <Setter Property="Padding" Value="8,4" />
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#094771" />
+                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#094771" />
+                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -74,7 +73,7 @@
                                         Grid.Column="1"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        Foreground="#aaa"
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                         Text="▾" />
                                 </Grid>
                             </ToggleButton>
@@ -85,8 +84,8 @@
                                 PopupAnimation="Slide">
                                 <Border
                                     MaxHeight="320"
-                                    Background="#2d2d30"
-                                    BorderBrush="#555"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                    BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                                     BorderThickness="1">
                                     <ScrollViewer>
                                         <ItemsPresenter />
@@ -103,8 +102,7 @@
                 Width="68"
                 Height="26"
                 Margin="0,0,6,0"
-                Background="#5a2727"
-                Foreground="White"
+                Appearance="Primary"
                 Click="ClearAllButton_Click"
                 Content="清空全部" />
             <ui:Button
@@ -130,21 +128,20 @@
                 Grid.Column="0"
                 Height="26"
                 Margin="0,0,6,0"
-                Background="#2d2d30"
-                Foreground="#e0e0e0"
-                BorderBrush="#555"
+                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                 SelectionChanged="SessionComboBox_SelectionChanged">
                 <ComboBox.ItemContainerStyle>
                     <Style TargetType="ComboBoxItem">
-                        <Setter Property="Background" Value="#2d2d30" />
-                        <Setter Property="Foreground" Value="#e0e0e0" />
+                        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
                         <Setter Property="Padding" Value="6,3" />
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#094771" />
+                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#094771" />
+                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -173,7 +170,7 @@
                                         Grid.Column="1"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        Foreground="#aaa"
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                         Text="▾" />
                                 </Grid>
                             </ToggleButton>
@@ -184,8 +181,8 @@
                                 PopupAnimation="Slide">
                                 <Border
                                     MaxHeight="300"
-                                    Background="#2d2d30"
-                                    BorderBrush="#555"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                    BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                                     BorderThickness="1">
                                     <ScrollViewer>
                                         <ItemsPresenter />
@@ -202,8 +199,7 @@
                 Width="28"
                 Height="26"
                 Margin="0,0,4,0"
-                Background="#3e3e42"
-                Foreground="#ccc"
+                Appearance="Secondary"
                 Content="✏"
                 ToolTip="重命名会话"
                 Click="RenameSessionButton_Click" />
@@ -213,8 +209,7 @@
                 Width="46"
                 Height="26"
                 Margin="0,0,4,0"
-                Background="#5a2727"
-                Foreground="White"
+                Appearance="Primary"
                 Content="删除"
                 Click="DeleteSessionButton_Click" />
             <ui:Button
@@ -223,8 +218,7 @@
                 Width="46"
                 Height="26"
                 Margin="0,0,4,0"
-                Background="#3e3e42"
-                Foreground="#ccc"
+                Appearance="Secondary"
                 Content="导入"
                 Click="ImportButton_Click" />
             <ui:Button
@@ -232,8 +226,7 @@
                 Grid.Column="4"
                 Width="70"
                 Height="26"
-                Background="#2d5a27"
-                Foreground="White"
+                Appearance="Primary"
                 Content="＋ 新对话"
                 Click="NewChatButton_Click" />
         </Grid>
@@ -261,7 +254,7 @@
             <Border
                 Grid.Column="0"
                 Margin="0,0,6,0"
-                BorderBrush="Gray"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                 BorderThickness="1">
                 <avalonEdit:TextEditor
                     x:Name="PromptInput"
@@ -270,10 +263,10 @@
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
                     AllowDrop="True"
-                    Background="#1c1c1c"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
                     Drop="OnInputDrop"
                     FontSize="10pt"
-                    Foreground="Gray"
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                     GotFocus="PromptInput_GotFocus"
                     HorizontalScrollBarVisibility="Disabled"
                     LostFocus="PromptInput_LostFocus"
@@ -286,18 +279,17 @@
                 Grid.Column="1"
                 Width="30"
                 Margin="0,0,4,0"
-                Background="#3e3e42"
+                Appearance="Secondary"
                 Click="AttachButton_Click"
                 Content="📎"
-                Foreground="#aaa" />
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             <ui:Button
                 x:Name="SendButton"
                 Grid.Column="2"
                 Width="64"
-                Background="#0078d4"
+                Appearance="Primary"
                 Click="SendButton_Click"
-                Content="发送"
-                Foreground="White" />
+                Content="发送" />
         </Grid>
     </Grid>
 </UserControl>

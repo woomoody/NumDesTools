@@ -41,8 +41,8 @@ public partial class AIAgentPanel
         .UseAdvancedExtensions()
         .Build();
 
-    private static readonly string HtmlTemplate =
-        @"<html><head><meta charset='utf-8'><style>
+    private const string DarkCss =
+        @"<style>
 body{background:#1c1c1c;color:#d4d4d4;font-family:'微软雅黑',sans-serif;font-size:10pt;line-height:1.5;margin:0;padding:8px 10px;overflow-y:auto}
 .msg{margin:5px 0;max-width:98%}
 .msg.user{margin-left:auto;text-align:right}
@@ -64,7 +64,43 @@ ul,ol{margin:3px 0;padding-left:18px}
 li{margin:1px 0}
 a[href^='excel://']{color:#4ec9b0;text-decoration:none;border-bottom:1px dashed #4ec9b0}
 a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
-</style></head><body></body></html>";
+.attachment{background:#1a2a3a;padding:3px 8px;border-radius:3px;margin:2px 0;font-size:.85em}
+</style>";
+
+    private const string LightCss =
+        @"<style>
+body{background:#ffffff;color:#333333;font-family:'微软雅黑',sans-serif;font-size:10pt;line-height:1.5;margin:0;padding:8px 10px;overflow-y:auto}
+.msg{margin:5px 0;max-width:98%}
+.msg.user{margin-left:auto;text-align:right}
+.msg.assistant{margin-left:0}
+.role{font-size:.72em;color:#777;margin-bottom:2px}
+.role .ts{color:#999}
+.content{display:inline-block;padding:6px 10px;border-radius:7px;word-wrap:break-word;text-align:left;max-width:100%}
+.user .content{background:#d6e8ff;color:#1f1f1f}
+.assistant .content{background:#f0f0f0;color:#1f1f1f}
+.content p{margin:3px 0}
+.content h1,.content h2,.content h3{font-size:1em;font-weight:bold;margin:4px 0 2px}
+pre{background:#f0f0f0;color:#333;padding:7px;border-radius:5px;overflow-x:auto;font-size:10pt;margin:4px 0}
+code{font-family:Consolas,monospace;background:#f0f0f0;padding:1px 3px;border-radius:3px;font-size:10pt}
+table{border-collapse:collapse;font-size:.88em;margin:4px 0;width:auto}
+th,td{border:1px solid #ccc;padding:3px 8px;text-align:left;white-space:nowrap}
+th{background:#e6e6e6;color:#333;font-weight:bold}
+tr:nth-child(even) td{background:#f7f7f7}
+ul,ol{margin:3px 0;padding-left:18px}
+li{margin:1px 0}
+a[href^='excel://']{color:#147d6f;text-decoration:none;border-bottom:1px dashed #147d6f}
+a[href^='excel://']:hover{background:#ddf5ef;border-radius:2px}
+.attachment{background:#e8f2ff;padding:3px 8px;border-radius:3px;margin:2px 0;font-size:.85em}
+</style>";
+
+    private static string Css =>
+        Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()
+        == Wpf.Ui.Appearance.ApplicationTheme.Dark
+            ? DarkCss
+            : LightCss;
+
+    private static string HtmlTemplate =>
+        "<html><head><meta charset='utf-8'>" + Css + "</head><body></body></html>";
 
     private static readonly object[] ToolDefinitions =
     [
@@ -1110,15 +1146,16 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         // TextBox 也需要拦截，防止 Excel 截走 Ctrl+C/A/X/Z/Y
         AttachClipboardKeys(TaskInput);
         AttachClipboardKeys(CustomInstructionInput);
-        // 深色主题：输入框默认背景
-        var darkBg = new System.Windows.Media.SolidColorBrush(
-            System.Windows.Media.Color.FromRgb(0x1e, 0x1e, 0x1e)
-        );
-        TaskInput.Background = darkBg;
-        CustomInstructionInput.Background = darkBg;
-        TaskInput.CaretBrush = new System.Windows.Media.SolidColorBrush(
-            System.Windows.Media.Colors.White
-        );
+        var inputBackground =
+            (System.Windows.Media.Brush)
+                System.Windows.Application.Current.TryFindResource("ApplicationBackgroundBrush")
+            ?? System.Windows.Media.Brushes.White;
+        TaskInput.Background = inputBackground;
+        CustomInstructionInput.Background = inputBackground;
+        TaskInput.CaretBrush =
+            (System.Windows.Media.Brush)
+                System.Windows.Application.Current.TryFindResource("TextFillColorPrimaryBrush")
+            ?? System.Windows.Media.Brushes.Black;
         CustomInstructionInput.Text = AppServices.Config.Agent.CustomInstruction;
         CustomInstructionInput.LostFocus += (_, _) =>
         {
@@ -1619,16 +1656,25 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
     {
         var useStream = onChunk is not null;
         var bodyObj = useStream
-            ? (object)new
-            {
-                model, messages, tools = ToolDefinitions, tool_choice = "auto",
-                max_tokens = 4000, stream = true,
-                stream_options = new { include_usage = true },  // 让最后一帧带 usage 字段
-            }
+            ? (object)
+                new
+                {
+                    model,
+                    messages,
+                    tools = ToolDefinitions,
+                    tool_choice = "auto",
+                    max_tokens = 4000,
+                    stream = true,
+                    stream_options = new { include_usage = true }, // 让最后一帧带 usage 字段
+                }
             : new
             {
-                model, messages, tools = ToolDefinitions, tool_choice = "auto",
-                max_tokens = 4000, stream = false,
+                model,
+                messages,
+                tools = ToolDefinitions,
+                tool_choice = "auto",
+                max_tokens = 4000,
+                stream = false,
             };
         using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(3) };
         using var req = new System.Net.Http.HttpRequestMessage(
@@ -2963,7 +3009,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
                 var cell = m.Groups[2].Value;
                 var address = string.IsNullOrEmpty(sheet) ? cell : $"{sheet}!{cell}";
                 var encoded = Uri.EscapeDataString(address);
-                return $"<a href='excel://cell/{encoded}' style='color:#4ec9b0;text-decoration:none' title='定位到 {address}'>{m.Value}</a>";
+                return $"<a href='excel://cell/{encoded}' title='定位到 {address}'>{m.Value}</a>";
             }
         );
 
@@ -3066,7 +3112,7 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             else
             {
                 sb.Append(
-                    $"<div style='background:#1a2a3a;padding:3px 8px;border-radius:3px;margin:2px 0;font-size:.85em'>📄 {System.Web.HttpUtility.HtmlEncode(att.DisplayName)}</div>"
+                    $"<div class='attachment'>📄 {System.Web.HttpUtility.HtmlEncode(att.DisplayName)}</div>"
                 );
             }
         }
@@ -3565,14 +3611,15 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
         AttachmentStrip.Children.Clear();
         foreach (var att in _attachments)
         {
-            var bg = att.IsImage ? "#2d4a2d" : "#2d3a4a";
             var chip = new System.Windows.Controls.Border
             {
                 CornerRadius = new CornerRadius(3),
-                Background = new System.Windows.Media.SolidColorBrush(
-                    (System.Windows.Media.Color)
-                        System.Windows.Media.ColorConverter.ConvertFromString(bg)
-                ),
+                Background =
+                    (System.Windows.Media.Brush)
+                        System.Windows.Application.Current.TryFindResource(
+                            "ControlFillColorSecondaryBrush"
+                        )
+                    ?? System.Windows.Media.Brushes.LightGray,
                 Margin = new Thickness(2),
                 Padding = new Thickness(4),
             };
@@ -3584,9 +3631,12 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             var label = new System.Windows.Controls.TextBlock
             {
                 Text = icon + att.DisplayName,
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Colors.LightGray
-                ),
+                Foreground =
+                    (System.Windows.Media.Brush)
+                        System.Windows.Application.Current.TryFindResource(
+                            "TextFillColorPrimaryBrush"
+                        )
+                    ?? System.Windows.Media.Brushes.Black,
                 FontSize = 11,
                 VerticalAlignment = VerticalAlignment.Center,
             };
@@ -3595,9 +3645,12 @@ a[href^='excel://']:hover{background:#1a3a35;border-radius:2px}
             {
                 Content = "×",
                 Background = System.Windows.Media.Brushes.Transparent,
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Colors.Gray
-                ),
+                Foreground =
+                    (System.Windows.Media.Brush)
+                        System.Windows.Application.Current.TryFindResource(
+                            "TextFillColorSecondaryBrush"
+                        )
+                    ?? System.Windows.Media.Brushes.Gray,
                 BorderThickness = new Thickness(0),
                 Padding = new Thickness(3, 0, 0, 0),
                 FontSize = 12,

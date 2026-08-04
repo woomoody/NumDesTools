@@ -16,8 +16,8 @@
     <Grid>
         <ListBox
             x:Name="ListBoxWorkBook"
-            Background="Black"
-            Foreground="White"
+            Background="{DynamicResource ApplicationBackgroundBrush}"
+            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
             ItemsSource="{Binding TargetSheetList}"
             SelectionChanged="ListBoxWorkBook_SelectionChanged">
             <ListBox.ItemTemplate>

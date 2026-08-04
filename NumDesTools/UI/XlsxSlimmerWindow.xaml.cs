@@ -71,7 +71,10 @@ public partial class XlsxSlimmerWindow : FluentWindow
         var text = new TextBlock
         {
             Text = Path.GetFileName(path),
-            Foreground = System.Windows.Media.Brushes.White,
+            Foreground =
+                (System.Windows.Media.Brush)
+                    System.Windows.Application.Current.TryFindResource("TextFillColorPrimaryBrush")
+                ?? System.Windows.Media.Brushes.Black,
             ToolTip = path,
             Margin = new Thickness(6, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center,
@@ -79,7 +82,12 @@ public partial class XlsxSlimmerWindow : FluentWindow
         var detail = new TextBlock
         {
             Name = "Detail",
-            Foreground = System.Windows.Media.Brushes.Gray,
+            Foreground =
+                (System.Windows.Media.Brush)
+                    System.Windows.Application.Current.TryFindResource(
+                        "TextFillColorSecondaryBrush"
+                    )
+                ?? System.Windows.Media.Brushes.Gray,
             FontSize = 10,
             Margin = new Thickness(10, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Center,
@@ -96,7 +104,10 @@ public partial class XlsxSlimmerWindow : FluentWindow
         cb.Unchecked += (_, _) => UpdateSummary();
         return new Border
         {
-            BorderBrush = System.Windows.Media.Brushes.DimGray,
+            BorderBrush =
+                (System.Windows.Media.Brush)
+                    System.Windows.Application.Current.TryFindResource("SeparatorBorderBrush")
+                ?? System.Windows.Media.Brushes.Gray,
             BorderThickness = new Thickness(0, 0, 0, 1),
             Child = panel,
             Tag = path,

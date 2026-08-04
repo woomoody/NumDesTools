@@ -12,7 +12,7 @@
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
     ExtendsContentIntoTitleBar="True"
-    Foreground="#E0E0E0">
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -29,7 +29,7 @@
         <!-- 编辑器区域 -->
         <Border
             Grid.Row="0"
-            BorderBrush="#2D2D2D"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}"
             BorderThickness="1"
             CornerRadius="6"
             Margin="0,0,0,10">
@@ -39,8 +39,8 @@
                 FontSize="14"
                 ShowLineNumbers="True"
                 WordWrap="True"
-                Background="#1E1E1E"
-                Foreground="#FFFFFF"
+                Background="{DynamicResource LayerFillColorDefaultBrush}"
+                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                 HorizontalScrollBarVisibility="Auto"
                 VerticalScrollBarVisibility="Auto"/>
         </Border>
@@ -56,7 +56,7 @@
                     Text="替换为："
                     VerticalAlignment="Center"
                     Margin="0,0,6,0"
-                    Foreground="Gray"
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                     FontSize="13"/>
                 <ui:TextBox
                     x:Name="ReplaceTextBox"
@@ -85,13 +85,13 @@
         <!-- 状态栏 -->
         <Border
             Grid.Row="2"
-            Background="#1E1E1E"
+            Background="{DynamicResource LayerFillColorDefaultBrush}"
             CornerRadius="4"
             Padding="10,5">
             <ui:TextBlock
                 x:Name="MatchCountTextBlock"
                 Text="匹配项数量：0"
-                Foreground="Gray"
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                 FontSize="12"/>
         </Border>
     </Grid>

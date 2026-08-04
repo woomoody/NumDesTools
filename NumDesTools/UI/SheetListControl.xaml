@@ -10,11 +10,12 @@
     mc:Ignorable="d">
     <UserControl.Resources>
         <Style x:Key="SheetListBoxItemStyle" TargetType="ListBoxItem">
-            <Setter Property="Background" Value="LightBlue" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsHidden}" Value="True">
                     <Setter Property="FontStyle" Value="Italic" />
-                    <Setter Property="Foreground" Value="PapayaWhip" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -28,10 +29,10 @@
             x:Name="ListBoxSheet"
             Grid.Row="0"
             Margin="10,10,0,10"
-            Background="#FF1C1A1A"
-            BorderBrush="#FFA3B0D6"
+            Background="{DynamicResource ApplicationBackgroundBrush}"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}"
             Cursor="Pen"
-            Foreground="#FFFFFEFE"
+            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
             ItemContainerStyle="{StaticResource SheetListBoxItemStyle}"
             PreviewMouseRightButtonDown="ListBoxSheet_PreviewMouseRightButtonDown"
             SelectionChanged="ListBoxSheet_SelectionChanged"
@@ -42,7 +43,7 @@
             Height="22"
             Margin="10,0,0,0"
             VerticalAlignment="Bottom"
-            Background="Black"
-            Foreground="White" />
+            Background="{DynamicResource ApplicationBackgroundBrush}"
+            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
     </Grid>
 </UserControl>

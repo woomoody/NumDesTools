@@ -158,24 +158,28 @@ public partial class GitExportSelectWindow : FluentWindow
             Margin = new Thickness(0),
         };
 
+        // 语义色：来源标签文字色（历史/指定提交/变更）——深浅色各一套
+        var isDark = Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()
+            == Wpf.Ui.Appearance.ApplicationTheme.Dark;
         var sourceColor =
-            entry.Source.StartsWith("历史") ? "#88CCFF"
-            : entry.Source == "指定提交" ? "#FFD080"
-            : "#88FF88";
+            entry.Source.StartsWith("历史") ? (isDark ? "#88CCFF" : "#1A6BB8")
+            : entry.Source == "指定提交" ? (isDark ? "#FFD080" : "#B87400")
+            : (isDark ? "#88FF88" : "#2A8A2A");
         var sourceBrush = new SolidColorBrush(
             (System.Windows.Media.Color)
                 System.Windows.Media.ColorConverter.ConvertFromString(sourceColor)
         );
 
+        // 语义色：badge 背景色——深浅色各一套
+        var badgeBgHex =
+            entry.Source.StartsWith("历史") ? (isDark ? "#1A3A6E" : "#D6E8FF")
+            : entry.Source == "指定提交" ? (isDark ? "#3A2800" : "#FFF0CC")
+            : (isDark ? "#1A3A1A" : "#D6FFD6");
         var badge = new Border
         {
             Background = new SolidColorBrush(
                 (System.Windows.Media.Color)
-                    System.Windows.Media.ColorConverter.ConvertFromString(
-                        entry.Source.StartsWith("历史") ? "#1A3A6E"
-                        : entry.Source == "指定提交" ? "#3A2800"
-                        : "#1A3A1A"
-                    )
+                    System.Windows.Media.ColorConverter.ConvertFromString(badgeBgHex)
             ),
             CornerRadius = new CornerRadius(3),
             Padding = new Thickness(4, 1, 4, 1),
@@ -188,12 +192,21 @@ public partial class GitExportSelectWindow : FluentWindow
             FontSize = 9,
         };
 
+        // 装饰色：文件名前景——用主题画刷，语义化（非配置表/已含=次要色，正常=主色）
+        var primaryBrush =
+            (System.Windows.Media.Brush)
+                System.Windows.Application.Current.TryFindResource(
+                    "TextFillColorPrimaryBrush"
+                ) ?? System.Windows.Media.Brushes.White;
+        var secondaryBrush =
+            (System.Windows.Media.Brush)
+                System.Windows.Application.Current.TryFindResource(
+                    "TextFillColorTertiaryBrush"
+                ) ?? System.Windows.Media.Brushes.Gray;
         var nameText = new TextBlock
         {
             Text = System.IO.Path.GetFileName(entry.Path),
-            Foreground = isNonConfig || isAlreadyContained
-                ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x66, 0x66, 0x66))
-                : System.Windows.Media.Brushes.White,
+            Foreground = isNonConfig || isAlreadyContained ? secondaryBrush : primaryBrush,
             FontSize = 11,
             VerticalAlignment = VerticalAlignment.Center,
             ToolTip = entry.Path,
@@ -214,31 +227,41 @@ public partial class GitExportSelectWindow : FluentWindow
         // # 前缀文件加"非配置表"标记
         if (isNonConfig)
         {
+            // 装饰色：非配置表 badge 背景——用主题画刷
+            var nonConfigBgBrush =
+                (System.Windows.Media.Brush)
+                    System.Windows.Application.Current.TryFindResource(
+                        "SubtleFillColorTertiaryBrush"
+                    ) ?? System.Windows.Media.Brushes.Gray;
             var nonConfigBadge = new Border
             {
-                Background = new SolidColorBrush(
-                    (System.Windows.Media.Color)
-                        System.Windows.Media.ColorConverter.ConvertFromString("#3A3A3A")
-                ),
+                Background = nonConfigBgBrush,
                 CornerRadius = new CornerRadius(3),
                 Padding = new Thickness(4, 1, 4, 1),
                 Margin = new Thickness(6, 0, 0, 0),
             };
+            // 语义色：非配置表文字——深浅色各一套（红/暗红）
+            var nonConfigFgHex = isDark ? "#FF8888" : "#B33A3A";
             nonConfigBadge.Child = new TextBlock
             {
                 Text = "非配置表",
                 Foreground = new SolidColorBrush(
                     (System.Windows.Media.Color)
-                        System.Windows.Media.ColorConverter.ConvertFromString("#FF8888")
+                        System.Windows.Media.ColorConverter.ConvertFromString(nonConfigFgHex)
                 ),
                 FontSize = 9,
             };
             panel.Children.Add(nonConfigBadge);
         }
 
+        // 装饰色：行底分隔线——用主题画刷
+        var dividerBrush =
+            (System.Windows.Media.Brush)
+                System.Windows.Application.Current.TryFindResource("SeparatorBorderBrush")
+            ?? System.Windows.Media.Brushes.Gray;
         var border = new Border
         {
-            BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2A, 0x2A, 0x2A)),
+            BorderBrush = dividerBrush,
             BorderThickness = new Thickness(0, 0, 0, 1),
             Child = panel,
         };

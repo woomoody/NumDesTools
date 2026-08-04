@@ -7,7 +7,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     mc:Ignorable="d"
     Width="840"
-    Background="#1c1c1c">
+    Background="{DynamicResource ApplicationBackgroundBrush}">
     <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -32,20 +32,19 @@
                 SelectionChanged="ModelComboBox_SelectionChanged"
                 Height="26"
                 Margin="0,0,6,0"
-                Background="#2d2d30"
-                Foreground="#e0e0e0"
-                BorderBrush="#555">
+                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}">
                 <ComboBox.ItemContainerStyle>
                     <Style TargetType="ComboBoxItem">
-                        <Setter Property="Background" Value="#2d2d30" />
-                        <Setter Property="Foreground" Value="#e0e0e0" />
+                        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
                         <Setter Property="Padding" Value="8,4" />
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#094771" />
+                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#094771" />
+                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -74,7 +73,7 @@
                                         Grid.Column="1"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        Foreground="#aaa"
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                         Text="▾" />
                                 </Grid>
                             </ToggleButton>
@@ -85,8 +84,8 @@
                                 PopupAnimation="Slide">
                                 <Border
                                     MaxHeight="300"
-                                    Background="#2d2d30"
-                                    BorderBrush="#555"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                    BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                                     BorderThickness="1">
                                     <ScrollViewer>
                                         <ItemsPresenter />
@@ -101,7 +100,7 @@
                 Grid.Column="1"
                 Margin="0,0,4,0"
                 VerticalAlignment="Center"
-                Foreground="#888"
+                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                 FontSize="11"
                 Text="步骤上限：" />
             <ui:NumberBox
@@ -111,20 +110,19 @@
                 Maximum="200"
                 Minimum="1"
                 Value="100"
-                Background="#2d2d30"
-                Foreground="#e0e0e0"
-                BorderBrush="#555">
+                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}">
                 <ui:NumberBox.Resources>
                     <Style TargetType="RepeatButton">
-                        <Setter Property="Background" Value="#3e3e42" />
-                        <Setter Property="Foreground" Value="#e0e0e0" />
+                        <Setter Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}" />
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
                         <Setter Property="BorderThickness" Value="0" />
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#094771" />
+                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#0e5a8a" />
+                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -147,21 +145,20 @@
                 Grid.Column="0"
                 Height="26"
                 Margin="0,0,6,0"
-                Background="#2d2d30"
-                Foreground="#e0e0e0"
-                BorderBrush="#555"
+                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                 SelectionChanged="SessionComboBox_SelectionChanged">
                 <ComboBox.ItemContainerStyle>
                     <Style TargetType="ComboBoxItem">
-                        <Setter Property="Background" Value="#2d2d30" />
-                        <Setter Property="Foreground" Value="#e0e0e0" />
+                        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
                         <Setter Property="Padding" Value="6,3" />
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#094771" />
+                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#094771" />
+                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -190,7 +187,7 @@
                                         Grid.Column="1"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        Foreground="#aaa"
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                         Text="▾" />
                                 </Grid>
                             </ToggleButton>
@@ -201,8 +198,8 @@
                                 PopupAnimation="Slide">
                                 <Border
                                     MaxHeight="300"
-                                    Background="#2d2d30"
-                                    BorderBrush="#555"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                    BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                                     BorderThickness="1">
                                     <ScrollViewer>
                                         <ItemsPresenter />
@@ -219,8 +216,7 @@
                 Width="28"
                 Height="26"
                 Margin="0,0,4,0"
-                Background="#3e3e42"
-                Foreground="#ccc"
+                Appearance="Secondary"
                 Content="✏"
                 ToolTip="重命名会话"
                 Click="RenameSessionButton_Click" />
@@ -230,8 +226,7 @@
                 Width="46"
                 Height="26"
                 Margin="0,0,4,0"
-                Background="#5a2727"
-                Foreground="White"
+                Appearance="Primary"
                 Content="删除"
                 Click="DeleteSessionButton_Click" />
             <ui:Button
@@ -240,8 +235,7 @@
                 Width="46"
                 Height="26"
                 Margin="0,0,4,0"
-                Background="#3e3e42"
-                Foreground="#ccc"
+                Appearance="Secondary"
                 Content="导入"
                 Click="ImportButton_Click" />
             <ui:Button
@@ -250,8 +244,7 @@
                 Width="72"
                 Height="26"
                 Margin="0,0,4,0"
-                Background="#3e3e42"
-                Foreground="#ccc"
+                Appearance="Secondary"
                 Content="压缩上下文"
                 Click="CompressButton_Click" />
             <ui:Button
@@ -259,8 +252,7 @@
                 Grid.Column="5"
                 Width="70"
                 Height="26"
-                Background="#2d5a27"
-                Foreground="White"
+                Appearance="Primary"
                 Content="＋ 新对话"
                 Click="NewChatButton_Click" />
         </Grid>
@@ -270,19 +262,18 @@
             Grid.Row="2"
             Margin="0,0,0,6"
             Header="自定义指令（每次对话自动带入）"
-            Foreground="#888"
-            BorderBrush="#333">
+            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+            BorderBrush="{DynamicResource ControlElevationBorderBrush}">
             <ui:TextBox
                 x:Name="CustomInstructionInput"
                 MinHeight="40"
                 MaxHeight="80"
                 Padding="6,5"
                 AcceptsReturn="True"
-                Background="#2d2d30"
-                BorderBrush="#444"
+                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                 BorderThickness="1"
                 FontSize="12"
-                Foreground="#ccc"
                 TextWrapping="Wrap"
                 VerticalScrollBarVisibility="Auto"
                 PlaceholderText="例：翻译结果统一放到C列；输出中文；不要修改第一行…" />
@@ -299,7 +290,7 @@
             <!--  对话输出  -->
             <Border
                 Grid.Row="0"
-                BorderBrush="#333"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="4">
                 <WebBrowser x:Name="ChatOutput" />
@@ -315,7 +306,7 @@
             <!--  步骤面板  -->
             <Border
                 Grid.Row="2"
-                BorderBrush="#333"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="4">
                 <Grid>
@@ -326,10 +317,10 @@
                     <ui:TextBlock
                         Grid.Row="0"
                         Padding="6,4"
-                        Background="#2d2d30"
+                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
                         FontSize="11"
                         FontWeight="Bold"
-                        Foreground="#888"
+                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                         Text="执行步骤" />
                     <ScrollViewer
                         x:Name="StepsScroll"
@@ -341,7 +332,7 @@
                                     <ui:TextBlock
                                         Margin="0,1"
                                         FontSize="11"
-                                        Foreground="#aaa"
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                         Text="{Binding}"
                                         TextWrapping="Wrap" />
                                 </DataTemplate>
@@ -370,7 +361,7 @@
             <Border
                 Grid.Column="0"
                 Margin="0,0,6,0"
-                BorderBrush="#444"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="3">
                 <ui:TextBox
@@ -380,11 +371,10 @@
                     Padding="6,5"
                     AcceptsReturn="True"
                     AllowDrop="True"
-                    Background="#1c1c1c"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
                     BorderThickness="0"
                     Drop="OnInputDrop"
                     FontSize="10pt"
-                    Foreground="#e0e0e0"
                     PreviewKeyDown="TaskInput_PreviewKeyDown"
                     TextWrapping="Wrap"
                     VerticalScrollBarVisibility="Hidden"
@@ -397,35 +387,34 @@
                 Width="30"
                 Height="32"
                 Margin="0,0,4,0"
-                Background="#3e3e42"
+                Appearance="Secondary"
                 Click="AttachButton_Click"
                 Content="📎"
-                Foreground="#aaa" />
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             <ui:Button
                 x:Name="StopButton"
                 Grid.Column="2"
                 Width="52"
                 Height="32"
                 Margin="0,0,4,0"
-                Background="#3e3e42"
+                Appearance="Secondary"
                 Click="StopButton_Click"
                 Content="停止"
-                Foreground="#aaa"
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                 IsEnabled="False" />
             <ui:Button
                 x:Name="RunButton"
                 Grid.Column="3"
                 Width="64"
                 Height="32"
-                Background="#0078d4"
+                Appearance="Primary"
                 Click="RunButton_Click"
-                Content="执行"
-                Foreground="White">
+                Content="执行">
                 <Button.Style>
                     <Style BasedOn="{StaticResource {x:Type Button}}" TargetType="Button">
                         <Style.Triggers>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground" Value="White" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
                                 <Setter Property="Opacity" Value="0.5" />
                             </Trigger>
                         </Style.Triggers>
@@ -439,7 +428,7 @@
             x:Name="StatusText"
             Grid.Row="6"
             FontSize="10"
-            Foreground="#555"
+            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
             Text="就绪" />
     </Grid>
 </UserControl>

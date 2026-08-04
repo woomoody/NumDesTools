@@ -11,7 +11,7 @@
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
     ExtendsContentIntoTitleBar="True"
-    Foreground="#E0E0E0">
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
     <Grid>
         <Grid.RowDefinitions>
@@ -31,8 +31,8 @@
                  MinHeight="80"
                  FontFamily="Consolas" FontSize="11"
                  BorderThickness="0"
-                 Background="#1E1E1E"
-                 Foreground="#FFFFFF"
+                         Background="{DynamicResource LayerFillColorDefaultBrush}"
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  SelectionMode="Single"
@@ -42,10 +42,10 @@
                 <Style TargetType="ListBoxItem">
                     <Setter Property="Padding" Value="8,3"/>
                     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                    <Setter Property="Foreground" Value="#E0E0E0"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                     <Style.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Foreground" Value="#FFFFFF"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>
@@ -54,7 +54,7 @@
 
         <!-- 底部操作区 -->
         <Border Grid.Row="1"
-                BorderBrush="#2D2D2D"
+                         BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                 BorderThickness="0,1,0,0"
                 Padding="10,8">
             <StackPanel>
@@ -65,14 +65,14 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Text="当前分支（OURS）：" VerticalAlignment="Center"
-                               Foreground="Gray"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                FontSize="11" Margin="0,0,6,0"/>
                     <ComboBox x:Name="BranchBox" Grid.Column="1"
                               FontFamily="Consolas" FontSize="11"/>
                 </Grid>
                 <CheckBox x:Name="SkipHashBox"
                           Content="跳过 # 文件（以对方为准自动解决）"
-                          Foreground="Gray"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                           FontSize="11"
                           Margin="0,0,0,8"
                           Checked="SkipHash_Changed"

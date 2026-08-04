@@ -682,9 +682,9 @@ namespace NumDesTools.UI
             ),
         };
 
-        // ── CSS ───────────────────────────────────────────────────────────────────
+        // ── CSS（根据当前主题动态选深色/浅色）──────────────────────────────────
 
-        private const string Css =
+        private const string DarkCss =
             @"<style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -750,7 +750,79 @@ code {
 }
 </style>";
 
-        private const string PlaceholderHtml =
+        private const string LightCss =
+            @"<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: '微软雅黑', 'Segoe UI', sans-serif;
+    background: #ffffff;
+    color: #333333;
+    padding: 28px 36px;
+    font-size: 20px;
+    line-height: 1.8;
+}
+h2 {
+    font-size: 30px;
+    color: #1f1f1f;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #cccccc;
+}
+h3 {
+    font-size: 20px;
+    color: #0a5a9c;
+    margin: 22px 0 10px;
+    letter-spacing: 0.05em;
+}
+p.summary {
+    color: #5a5a5a;
+    font-size: 20px;
+    margin-bottom: 12px;
+    line-height: 1.8;
+}
+ol, ul {
+    padding-left: 28px;
+    margin-bottom: 14px;
+}
+li {
+    margin-bottom: 7px;
+    color: #444444;
+    font-size: 20px;
+}
+code {
+    background: #f0f0f0;
+    color: #b8541c;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-family: Consolas, monospace;
+    font-size: 18px;
+}
+.tip {
+    margin-top: 20px;
+    padding: 12px 18px;
+    background: #f0f0ff;
+    border-left: 4px solid #5a5aaa;
+    border-radius: 4px;
+    color: #555588;
+    font-size: 18px;
+}
+#placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 80vh;
+    color: #999;
+    font-size: 20px;
+}
+</style>";
+
+        private static string Css =>
+            Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()
+                == Wpf.Ui.Appearance.ApplicationTheme.Dark
+                ? DarkCss
+                : LightCss;
+
+        private static readonly string PlaceholderHtml =
             "<!DOCTYPE html><html><head><meta charset='utf-8'>"
             + Css
             + "</head><body>"

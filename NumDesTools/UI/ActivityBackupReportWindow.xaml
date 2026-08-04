@@ -9,7 +9,7 @@
     KeyDown="Window_KeyDown"
     WindowBackdropType="Mica"
     ExtendsContentIntoTitleBar="True"
-    Foreground="#E0E0E0">
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
     <Grid>
         <Grid.RowDefinitions>

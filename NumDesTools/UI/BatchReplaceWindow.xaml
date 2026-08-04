@@ -12,7 +12,7 @@
     Closing="Window_Closing"
     WindowBackdropType="Mica"
     ExtendsContentIntoTitleBar="True"
-    Foreground="#E0E0E0">
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
     <Grid>
         <Grid.RowDefinitions>
@@ -37,7 +37,7 @@
 
         <!-- 状态条 -->
         <ui:TextBlock x:Name="StatusText" DockPanel.Dock="Bottom"
-                   Foreground="Green" FontSize="11" Margin="0,4,0,0"/>
+                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" FontSize="11" Margin="0,4,0,0"/>
 
         <!-- 主体：左=规则列表  右=历史 -->
         <Grid>
@@ -64,10 +64,10 @@
                         <ColumnDefinition Width="28"/>
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Column="0" Text="查找值" FontSize="11"
-                               Foreground="Gray"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Center"/>
                     <ui:TextBlock Grid.Column="2" Text="替换值" FontSize="11"
-                               Foreground="Gray"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Center"/>
                 </Grid>
 
@@ -88,7 +88,7 @@
                                              FontFamily="Consolas" Padding="3,2"/>
                                     <ui:TextBlock Grid.Column="1" Text="→" VerticalAlignment="Center"
                                                HorizontalAlignment="Center"
-                                               Foreground="Gray"/>
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                     <ui:TextBox Grid.Column="2" Text="{Binding To, UpdateSourceTrigger=PropertyChanged}"
                                              FontFamily="Consolas" Padding="3,2"/>
                                     <ui:Button Grid.Column="3" Content="✕" FontSize="10" Margin="2,0,0,0"
@@ -120,7 +120,7 @@
                 </Grid.RowDefinitions>
 
                 <ui:TextBlock Grid.Row="0" Text="历史记录" FontSize="11"
-                           Foreground="Gray" Margin="0,0,0,4"/>
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,4"/>
 
                 <ListBox x:Name="HistoryList" Grid.Row="1"
                          BorderThickness="1"
@@ -128,10 +128,10 @@
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
-                            <Setter Property="Foreground" Value="#E0E0E0"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                             <Style.Triggers>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>

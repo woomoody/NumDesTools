@@ -10,6 +10,7 @@ using RadioButton = System.Windows.Controls.RadioButton;
 using TextBlock = System.Windows.Controls.TextBlock;
 using UserControl = System.Windows.Controls.UserControl;
 using VAlign = System.Windows.VerticalAlignment;
+using WpfBrush = System.Windows.Media.Brush;
 using WpfBrushes = System.Windows.Media.Brushes;
 using WpfColor = System.Windows.Media.Color;
 using WpfColorConverter = System.Windows.Media.ColorConverter;
@@ -96,18 +97,19 @@ public partial class ConflictRowItem : UserControl
         }
     }
 
-    private static readonly SolidColorBrush BgOursNormal = Brush("#0A1525");
-    private static readonly SolidColorBrush BgTheirsNormal = Brush("#0A1A0F");
-    private static readonly SolidColorBrush BgDiff = Brush("#5A1A1A");
-    private static readonly SolidColorBrush BgOnlyOurs = Brush("#3A1A1A");
-    private static readonly SolidColorBrush BgOnlyTheirs = Brush("#1A3A1A");
-    private static readonly SolidColorBrush BgChosenOurs = Brush("#0A3A6E");
-    private static readonly SolidColorBrush BgChosenTheirs = Brush("#0A4A2A");
-    private static readonly SolidColorBrush BgRejected = Brush("#2A2A2A");
-    private static readonly SolidColorBrush FgOurs = Brush("#A8C8FF");
-    private static readonly SolidColorBrush FgTheirs = Brush("#A8FFCA");
-    private static readonly SolidColorBrush FgDiff = Brush("#FF8888");
-    private static readonly SolidColorBrush FgRejected = Brush("#888888");
+    private static SolidColorBrush BgOursNormal => SemanticBrush("#3A2A2A", "#FFDDDD");
+    private static SolidColorBrush BgTheirsNormal => SemanticBrush("#1A3A1A", "#DDFFDD");
+    private static SolidColorBrush BgDiff => SemanticBrush("#5A1A1A", "#FFCCCC");
+    private static SolidColorBrush BgOnlyOurs => SemanticBrush("#3A1A1A", "#FFDDDD");
+    private static SolidColorBrush BgOnlyTheirs => SemanticBrush("#1A3A1A", "#DDFFDD");
+    private static SolidColorBrush BgChosenOurs => SemanticBrush("#5A2A2A", "#FFCCCC");
+    private static SolidColorBrush BgChosenTheirs => SemanticBrush("#1A5C3A", "#CCFFCC");
+    private static WpfBrush BgRejected =>
+        ThemeBrush("ControlFillColorSecondaryBrush", WpfBrushes.LightGray);
+    private static SolidColorBrush FgOurs => SemanticBrush("#FFAAAA", "#B33A3A");
+    private static SolidColorBrush FgTheirs => SemanticBrush("#A8FFCA", "#2A8A2A");
+    private static SolidColorBrush FgDiff => SemanticBrush("#FF8888", "#B33A3A");
+    private static WpfBrush FgRejected => ThemeBrush("TextFillColorTertiaryBrush", WpfBrushes.Gray);
 
     public static readonly RoutedEvent CellSelectedEvent = EventManager.RegisterRoutedEvent(
         "CellSelected",
@@ -147,6 +149,7 @@ public partial class ConflictRowItem : UserControl
     public ConflictRowItem()
     {
         InitializeComponent();
+        AddSemanticResources();
         DataContextChanged += OnDataContextChanged;
         Loaded += (_, _) =>
         {
@@ -295,7 +298,7 @@ public partial class ConflictRowItem : UserControl
                     new TextBlock
                     {
                         Text = " | ",
-                        Foreground = Brush("#888888"),
+                        Foreground = ThemeBrush("TextFillColorTertiaryBrush", WpfBrushes.Gray),
                         FontSize = 11,
                         VerticalAlignment = VerticalAlignment.Center,
                     }
@@ -305,7 +308,7 @@ public partial class ConflictRowItem : UserControl
                 {
                     Text = hashVals[hi].Val,
                     ToolTip = $"{hashVals[hi].Col}: {hashVals[hi].Val}",
-                    Foreground = Brush("#AACCFF"),
+                    Foreground = SemanticBrush("#A8C8FF", "#4A6AC8"),
                     FontSize = 11,
                     MaxWidth = 200,
                     TextWrapping = TextWrapping.NoWrap,
@@ -323,13 +326,13 @@ public partial class ConflictRowItem : UserControl
         DeSelectBtn.Visibility = rc.IsSelected ? Visibility.Visible : Visibility.Collapsed;
 
         BadgeBorder.Background =
-            isModified ? Brush("#5A4A00")
-            : isOnlyOurs ? Brush("#5A1A1A")
-            : Brush("#1A5A2A");
+            isModified ? SemanticBrush("#5A4A00", "#FFF0CC")
+            : isOnlyOurs ? SemanticBrush("#5A1A1A", "#FFDDDD")
+            : SemanticBrush("#1A5A2A", "#DDFFDD");
         DiffTypeBadge.Foreground =
-            isModified ? Brush("#FFD080")
-            : isOnlyOurs ? Brush("#FF8888")
-            : Brush("#88FF88");
+            isModified ? SemanticBrush("#FFD080", "#B87400")
+            : isOnlyOurs ? SemanticBrush("#FF8888", "#B33A3A")
+            : SemanticBrush("#88FF88", "#2A8A2A");
 
         BatchButtons.Visibility = isModified ? Visibility.Visible : Visibility.Collapsed;
         RowChoicePanel.Visibility =
@@ -521,7 +524,7 @@ public partial class ConflictRowItem : UserControl
                 System.Windows.FlowDirection.LeftToRight,
                 tf,
                 fs,
-                WpfBrushes.White,
+                ThemeBrush("TextFillColorPrimaryBrush", WpfBrushes.Black),
                 1.0
             );
             return Math.Max(min, Math.Min(max, ft.Width + pad));
@@ -545,12 +548,7 @@ public partial class ConflictRowItem : UserControl
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(w) });
     }
 
-    private static TextBlock MakeCell(
-        string text,
-        SolidColorBrush fg,
-        SolidColorBrush bg,
-        double colWidth
-    ) =>
+    private static TextBlock MakeCell(string text, WpfBrush fg, WpfBrush bg, double colWidth) =>
         new()
         {
             Text = text,
@@ -645,7 +643,7 @@ public partial class ConflictRowItem : UserControl
                 var xBtn = new Button
                 {
                     Content = "×",
-                    Foreground = WpfBrushes.White,
+                    Foreground = ThemeBrush("TextFillColorPrimaryBrush", WpfBrushes.Black),
                     FontSize = 9,
                     HorizontalAlignment = HAlign.Right,
                     VerticalAlignment = VAlign.Top,
@@ -693,9 +691,7 @@ public partial class ConflictRowItem : UserControl
         return set.ToList();
     }
 
-    private static readonly SolidColorBrush BgSelected = new(
-        WpfColor.FromArgb(180, 0x3A, 0x60, 0xA0)
-    );
+    private static SolidColorBrush BgSelected => SemanticBrush("#3A3A5A", "#EEDDFF");
 
     private void UpdateSelectionHighlight(RowConflict rc)
     {
@@ -708,7 +704,10 @@ public partial class ConflictRowItem : UserControl
             HeaderGrid.Background =
                 rc.DiffType == RowDiffType.OnlyOurs ? BgOnlyOurs
                 : rc.DiffType == RowDiffType.OnlyTheirs ? BgOnlyTheirs
-                : Brush("#2A2A2A");
+                : (SolidColorBrush)ThemeBrush(
+                    "ControlFillColorSecondaryBrush",
+                    WpfBrushes.LightGray
+                );
         }
     }
 
@@ -726,6 +725,26 @@ public partial class ConflictRowItem : UserControl
     {
         var c = (WpfColor)WpfColorConverter.ConvertFromString(hex);
         return new SolidColorBrush(c);
+    }
+
+    private static SolidColorBrush SemanticBrush(string dark, string light) =>
+        Brush(
+            Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()
+            == Wpf.Ui.Appearance.ApplicationTheme.Dark
+                ? dark
+                : light
+        );
+
+    private static WpfBrush ThemeBrush(string key, WpfBrush fallback) =>
+        (WpfBrush)System.Windows.Application.Current.TryFindResource(key) ?? fallback;
+
+    private void AddSemanticResources()
+    {
+        Resources["OursTextBrush"] = SemanticBrush("#FFAAAA", "#B33A3A");
+        Resources["OursBackgroundBrush"] = SemanticBrush("#3A2A2A", "#FFDDDD");
+        Resources["OursActionBackgroundBrush"] = SemanticBrush("#5A2A2A", "#FFCCCC");
+        Resources["TheirsTextBrush"] = SemanticBrush("#A8FFCA", "#2A8A2A");
+        Resources["TheirsBackgroundBrush"] = SemanticBrush("#1A5C3A", "#DDFFDD");
     }
 }
 

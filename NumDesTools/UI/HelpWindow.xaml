@@ -10,12 +10,12 @@
     KeyDown="Window_EscClose"
     WindowBackdropType="Mica"
     ExtendsContentIntoTitleBar="True"
-    Foreground="#E0E0E0">
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
     <ui:FluentWindow.Resources>
         <!-- Group 节点 -->
         <Style TargetType="TreeViewItem" x:Key="GroupItem">
-            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -37,8 +37,8 @@
                                                     <Setter.Value>
                                                         <ControlTemplate TargetType="ToggleButton">
                                                             <ui:TextBlock x:Name="Arrow" Text="▶"
-                                                                       Foreground="Gray"
-                                                                       FontSize="9" VerticalAlignment="Center"/>
+                                                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                        FontSize="9" VerticalAlignment="Center"/>
                                                             <ControlTemplate.Triggers>
                                                                 <Trigger Property="IsChecked" Value="True">
                                                                     <Setter TargetName="Arrow" Property="Text" Value="▼"/>
@@ -61,7 +61,7 @@
                             </Trigger>
                             <Trigger SourceName="Bd" Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background"
-                                        Value="#2D2D2D"/>
+                                        Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -71,7 +71,7 @@
 
         <!-- Item 子节点 -->
         <Style TargetType="TreeViewItem" x:Key="LeafItem">
-            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -85,11 +85,11 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Bd" Property="Background"
-                                        Value="#2D2D2D"/>
+                                        Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
                             </Trigger>
                             <Trigger SourceName="Bd" Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background"
-                                        Value="#2D2D2D"/>
+                                        Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -113,11 +113,11 @@
 
             <!-- 左侧导航 -->
         <Border Grid.Column="0"
-                Background="#1E1E1E">
+                Background="{DynamicResource LayerFillColorDefaultBrush}">
             <DockPanel>
                 <ui:TextBlock DockPanel.Dock="Top"
                            Text="功能导航"
-                           Foreground="Gray"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            FontSize="10"
                            Margin="8,8,8,4"/>
                 <TreeView x:Name="NavTreeView"
@@ -131,7 +131,7 @@
 
         <!-- 可拖拽分隔线 -->
         <GridSplitter Grid.Column="1" Width="4"
-                      Background="#2D2D2D"
+                      Background="{DynamicResource SeparatorBorderBrush}"
                       HorizontalAlignment="Center" VerticalAlignment="Stretch"/>
 
         <!-- 右侧 WebBrowser 内容区 -->

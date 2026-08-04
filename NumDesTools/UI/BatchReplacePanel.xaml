@@ -38,7 +38,7 @@
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter Property="Background" Value="{Binding AccentCol, ElementName=Root}"/>
-                                <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -182,7 +182,7 @@
                 <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
                     <ui:Button Content="执行替换 (Ctrl+Enter)"
                             Background="{Binding AccentCol, ElementName=Root}"
-                            Foreground="White"
+                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                             BorderBrush="{Binding AccentCol, ElementName=Root}"
                             BorderThickness="1" Padding="10,4"
                             Width="150" Margin="0,0,8,0" Click="Execute_Click"/>

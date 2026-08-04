@@ -9,7 +9,7 @@
     KeyDown="Window_EscClose"
     WindowBackdropType="Mica"
     ExtendsContentIntoTitleBar="True"
-    Foreground="#E0E0E0">
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
     <Grid Margin="12">
         <Grid.RowDefinitions>
@@ -25,13 +25,13 @@
 
         <!-- 模式选择区 -->
         <Border Grid.Row="1"
-                Background="#1E1E1E"
-                BorderBrush="#2D2D2D"
+                Background="{DynamicResource LayerFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="4" Padding="12,10">
             <StackPanel>
                 <ui:TextBlock Text="导出范围"
-                           Foreground="Gray"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            FontSize="10" FontWeight="SemiBold" Margin="0,0,0,8"/>
 
                 <RadioButton x:Name="ModeGitStaged" Content="Git 变更 + 暂存区"
@@ -42,25 +42,25 @@
                 <StackPanel x:Name="HistoryAuthorRow" IsEnabled="False" Margin="22,3,0,0">
                     <StackPanel Orientation="Horizontal">
                         <ui:TextBlock Text="作者："
-                                   Foreground="Gray"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    FontSize="10" VerticalAlignment="Center"/>
                         <ui:TextBlock x:Name="AuthorText"
-                                   Foreground="#4FC3F7"
+                                   Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                                    FontSize="10" VerticalAlignment="Center"/>
                     </StackPanel>
                 </StackPanel>
                 <StackPanel x:Name="HistoryPanel" IsEnabled="False" Orientation="Horizontal"
                             Margin="22,4,0,0">
                     <ui:TextBlock Text="最近"
-                               Foreground="Gray"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                FontSize="11" VerticalAlignment="Center"/>
-                    <Border BorderBrush="#2D2D2D"
+                    <Border BorderBrush="{DynamicResource ControlElevationBorderBrush}"
                             BorderThickness="1" CornerRadius="3" Margin="6,0">
                         <StackPanel Orientation="Horizontal">
                             <ui:Button Content="−" Width="22" Height="22" Padding="0"
                                     Click="DecCommitCount_Click"/>
                             <ui:TextBlock x:Name="CommitCountText" Text="3"
-                                       Foreground="#FFFFFF"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                        FontSize="12" Width="28"
                                        TextAlignment="Center" VerticalAlignment="Center"/>
                             <ui:Button Content="+" Width="22" Height="22" Padding="0"
@@ -68,7 +68,7 @@
                         </StackPanel>
                     </Border>
                     <ui:TextBlock Text="次我的提交"
-                               Foreground="Gray"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                FontSize="11" VerticalAlignment="Center"/>
                     <ui:Button Content="刷新" Margin="10,0,0,0" Padding="8,2"
                             Click="Refresh_Click"/>
@@ -80,22 +80,22 @@
                 <StackPanel x:Name="CommitPickPanel" IsEnabled="False" Margin="22,6,0,0">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                         <ui:TextBlock Text="选择提交："
-                                   Foreground="Gray"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <ui:Button Content="加载列表" Padding="8,2"
                                 Click="LoadCommitList_Click"/>
                         <ui:TextBlock Text="作者：" VerticalAlignment="Center" FontSize="11"
-                                   Foreground="Gray"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="16,0,4,0"/>
                         <ComboBox x:Name="CommitAuthorBox" Width="140"
                                   FontFamily="Consolas" FontSize="11"
-                                  Foreground="#E0E0E0"
+                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                   SelectionChanged="CommitAuthorBox_SelectionChanged"/>
                     </StackPanel>
                     <ComboBox x:Name="CommitCombo"
                               MaxWidth="560" HorizontalAlignment="Left"
                               FontFamily="Consolas" FontSize="11"
-                              Foreground="#E0E0E0"
+                              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                               SelectionChanged="CommitCombo_SelectionChanged"
                               DisplayMemberPath="Display"/>
                 </StackPanel>
@@ -117,13 +117,13 @@
             <CheckBox x:Name="SelectAllBox" Grid.Column="0" Content="全选 / 取消全选"
                       Checked="SelectAll_Checked" Unchecked="SelectAll_Unchecked"/>
             <ui:TextBlock x:Name="FileCountText" Grid.Column="1"
-                       Foreground="Gray" FontSize="11"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="11"
                        HorizontalAlignment="Right" VerticalAlignment="Center"/>
         </Grid>
 
         <!-- 文件列表 -->
         <Border Grid.Row="4"
-                BorderBrush="#2D2D2D" BorderThickness="1"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}" BorderThickness="1"
                 CornerRadius="4">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel x:Name="FileListPanel" Margin="4"/>
@@ -137,7 +137,7 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <ui:TextBlock x:Name="StatusText" Grid.Column="0"
-                       Foreground="Gray"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        FontSize="11" VerticalAlignment="Center"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <ui:Button Content="取消" Margin="0,0,8,0"

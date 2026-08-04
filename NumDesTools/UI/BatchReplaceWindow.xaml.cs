@@ -147,7 +147,7 @@ namespace NumDesTools.UI
             if (rules.Count == 0)
             {
                 StatusText.Text = "请至少填写一条规则（查找值不能为空）";
-                StatusText.Foreground = System.Windows.Media.Brushes.OrangeRed;
+                StatusText.Foreground = SemanticBrush("#FF8888", "#B33A3A");
                 return;
             }
 
@@ -159,9 +159,20 @@ namespace NumDesTools.UI
         {
             StatusText.Text = msg;
             StatusText.Foreground = ok
-                ? System.Windows.Media.Brushes.Green
-                : System.Windows.Media.Brushes.OrangeRed;
+                ? SemanticBrush("#88FF88", "#2A8A2A")
+                : SemanticBrush("#FF8888", "#B33A3A");
         }
+
+        private static System.Windows.Media.Brush SemanticBrush(string dark, string light) =>
+            new System.Windows.Media.SolidColorBrush(
+                (System.Windows.Media.Color)
+                    System.Windows.Media.ColorConverter.ConvertFromString(
+                        Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()
+                        == Wpf.Ui.Appearance.ApplicationTheme.Dark
+                            ? dark
+                            : light
+                    )
+            );
 
         public static void SetStatusStatic(string msg, bool ok) =>
             _instance?.Dispatcher.BeginInvoke(() => _instance?.SetStatus(msg, ok));

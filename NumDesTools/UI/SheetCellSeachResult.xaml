@@ -16,8 +16,8 @@
     <Grid>
         <ListBox
             x:Name="ListBoxCellData"
-            Background="Black"
-            Foreground="White"
+            Background="{DynamicResource ApplicationBackgroundBrush}"
+            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
             SelectionChanged="ListBoxCellData_SelectionChanged">
             <ListBox.ItemTemplate>
                 <DataTemplate>
@@ -25,7 +25,7 @@
                         <ui:TextBlock Loaded="TextBlock_Loaded" TextWrapping="Wrap">
                             <!--  Inlines will be set in the Loaded event  -->
                         </ui:TextBlock>
-                        <Separator Margin="0,5,0,5" Background="Gray" />
+                        <Separator Margin="0,5,0,5" Background="{DynamicResource SeparatorBorderBrush}" />
                     </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>

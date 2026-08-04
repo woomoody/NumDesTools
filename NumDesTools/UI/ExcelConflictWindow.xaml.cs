@@ -20,6 +20,7 @@ using MessageBoxResult = System.Windows.MessageBoxResult;
 using TextBlock = System.Windows.Controls.TextBlock;
 using TextBox = System.Windows.Controls.TextBox;
 using Window = System.Windows.Window;
+using WpfBrush = System.Windows.Media.Brush;
 using WpfColor = System.Windows.Media.Color;
 
 namespace NumDesTools.UI;
@@ -43,6 +44,7 @@ public partial class ExcelConflictWindow : FluentWindow
         MahAppsHelper.SetExcelOwner(this);
         _suppressRefresh = true;
         InitializeComponent();
+        AddSemanticResources();
         _diff = diff;
         _autoGitAdd = autoGitAdd;
         _outPath = outPath ?? diff.OursPath;
@@ -166,8 +168,8 @@ public partial class ExcelConflictWindow : FluentWindow
                 Header = header,
                 Tag = sheet.SheetName,
                 Foreground = sheet.HasConflict
-                    ? System.Windows.Media.Brushes.OrangeRed
-                    : System.Windows.Media.Brushes.Gray,
+                    ? SemanticBrush("#FFD080", "#B87400")
+                    : ThemeBrush("TextFillColorSecondaryBrush", System.Windows.Media.Brushes.Gray),
             };
             SheetTabs.Items.Add(tab);
         }
@@ -579,10 +581,12 @@ public partial class ExcelConflictWindow : FluentWindow
 
     // ── Meta 列头 ────────────────────────────────────────────────────────────
 
-    private static readonly SolidColorBrush MetaFieldFg = new(Color(0x5A, 0x9F, 0xDF));
-    private static readonly SolidColorBrush MetaFieldBg = new(Color(0x0D, 0x1A, 0x2A));
-    private static readonly SolidColorBrush MetaLabelFg = new(Color(0x99, 0x99, 0x99));
-    private static readonly SolidColorBrush MetaLabelBg = new(Color(0x0A, 0x0A, 0x0A));
+    private static WpfBrush MetaFieldFg => SemanticBrush("#88CCFF", "#1A6BB8");
+    private static WpfBrush MetaFieldBg => SemanticBrush("#1A3A6E", "#D6E8FF");
+    private static WpfBrush MetaLabelFg =>
+        ThemeBrush("TextFillColorSecondaryBrush", System.Windows.Media.Brushes.Gray);
+    private static WpfBrush MetaLabelBg =>
+        ThemeBrush("LayerFillColorDefaultBrush", System.Windows.Media.Brushes.White);
 
     private void BuildMetaHeader(SheetDiff sheet)
     {
@@ -710,12 +714,7 @@ public partial class ExcelConflictWindow : FluentWindow
         return widths;
     }
 
-    private static TextBlock MakeMetaCell(
-        string text,
-        SolidColorBrush fg,
-        SolidColorBrush bg,
-        bool bold
-    ) =>
+    private static TextBlock MakeMetaCell(string text, WpfBrush fg, WpfBrush bg, bool bold) =>
         new()
         {
             Text = text,
@@ -748,20 +747,53 @@ public partial class ExcelConflictWindow : FluentWindow
         }
     }
 
-    private static readonly SolidColorBrush DetailFgOurs = new(Color(0xA8, 0xC8, 0xFF));
-    private static readonly SolidColorBrush DetailFgTheirs = new(Color(0xA8, 0xFF, 0xCA));
+    private static SolidColorBrush DetailFgOurs => SemanticBrush("#FFAAAA", "#B33A3A");
+    private static SolidColorBrush DetailFgTheirs => SemanticBrush("#A8FFCA", "#2A8A2A");
 
     // 字符级差异用黄色，与主列表红色背景区分
-    private static readonly SolidColorBrush DetailFgDiff = new(Color(0xFF, 0xD0, 0x40));
-    private static readonly SolidColorBrush DetailBgDiff = new(Color(0x35, 0x2A, 0x00));
-    private static readonly SolidColorBrush DetailFgMuted = new(Color(0x88, 0x88, 0x88));
-    private static readonly SolidColorBrush DetailBgOurs = new(Color(0x0A, 0x15, 0x25));
-    private static readonly SolidColorBrush DetailBgTheirs = new(Color(0x0A, 0x1A, 0x0F));
-    private static readonly SolidColorBrush DetailBgCol = new(Color(0x1A, 0x2A, 0x1A));
-    private static readonly SolidColorBrush DetailBorder = new(Color(0x33, 0x33, 0x33));
-    private static readonly SolidColorBrush DetailBg = new(Color(0x1A, 0x1A, 0x1A));
+    private static SolidColorBrush DetailFgDiff => SemanticBrush("#FFD080", "#B87400");
+    private static SolidColorBrush DetailBgDiff => SemanticBrush("#3A2800", "#FFF0CC");
+    private static WpfBrush DetailFgMuted =>
+        ThemeBrush("TextFillColorTertiaryBrush", System.Windows.Media.Brushes.Gray);
+    private static SolidColorBrush DetailBgOurs => SemanticBrush("#3A2A2A", "#FFDDDD");
+    private static SolidColorBrush DetailBgTheirs => SemanticBrush("#1A3A1A", "#DDFFDD");
+    private static SolidColorBrush DetailBgCol => SemanticBrush("#2A4A2A", "#CCFFCC");
+    private static WpfBrush DetailBorder =>
+        ThemeBrush("ControlElevationBorderBrush", System.Windows.Media.Brushes.Gray);
+    private static WpfBrush DetailBg =>
+        ThemeBrush("LayerFillColorDefaultBrush", System.Windows.Media.Brushes.White);
 
     private static WpfColor Color(byte r, byte g, byte b) => WpfColor.FromRgb(r, g, b);
+
+    private static string SemanticHex(string dark, string light) =>
+        Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()
+        == Wpf.Ui.Appearance.ApplicationTheme.Dark
+            ? dark
+            : light;
+
+    private static SolidColorBrush SemanticBrush(string dark, string light) =>
+        new(
+            (WpfColor)
+                System.Windows.Media.ColorConverter.ConvertFromString(SemanticHex(dark, light))
+        );
+
+    private static WpfBrush ThemeBrush(string key, WpfBrush fallback) =>
+        (WpfBrush)System.Windows.Application.Current.TryFindResource(key) ?? fallback;
+
+    private void AddSemanticResources()
+    {
+        Resources["OursTextBrush"] = SemanticBrush("#FFAAAA", "#B33A3A");
+        Resources["OursBackgroundBrush"] = SemanticBrush("#3A2A2A", "#FFDDDD");
+        Resources["OursActionBackgroundBrush"] = SemanticBrush("#5A2A2A", "#FFCCCC");
+        Resources["TheirsTextBrush"] = SemanticBrush("#A8FFCA", "#2A8A2A");
+        Resources["TheirsBackgroundBrush"] = SemanticBrush("#1A5C3A", "#DDFFDD");
+        Resources["ConflictTextBrush"] = SemanticBrush("#AAAAFF", "#5555AA");
+        Resources["ConflictBackgroundBrush"] = SemanticBrush("#3A3A5A", "#EEDDFF");
+        Resources["HistoryBackgroundBrush"] = SemanticBrush("#1A3A6E", "#D6E8FF");
+        Resources["AiSuggestionTextBrush"] = SemanticBrush("#FFD080", "#B87400");
+        Resources["AiSuggestionBackgroundBrush"] = SemanticBrush("#2A2A1A", "#FFF8E0");
+        Resources["AiSuggestionBorderBrush"] = SemanticBrush("#554400", "#DDAA55");
+    }
 
     private void BuildColBatchBar(SheetDiff sheet)
     {
@@ -846,7 +878,7 @@ public partial class ExcelConflictWindow : FluentWindow
                 new TextBlock
                 {
                     Text = cell.ColName,
-                    Foreground = new SolidColorBrush(Color(0x88, 0xFF, 0x88)),
+                    Foreground = SemanticBrush("#88FF88", "#2A8A2A"),
                     FontSize = 11,
                     FontWeight = FontWeights.Bold,
                     TextWrapping = TextWrapping.Wrap,
@@ -891,7 +923,10 @@ public partial class ExcelConflictWindow : FluentWindow
             {
                 Background = DetailBgOurs,
                 Padding = new Thickness(6, 4, 6, 4),
-                BorderBrush = new SolidColorBrush(Color(0x22, 0x22, 0x22)),
+                BorderBrush = ThemeBrush(
+                    "ControlElevationBorderBrush",
+                    System.Windows.Media.Brushes.Gray
+                ),
                 BorderThickness = new Thickness(1, 0, 1, 0),
             };
             var oursPanel = new StackPanel();
@@ -953,7 +988,10 @@ public partial class ExcelConflictWindow : FluentWindow
             Padding = new Thickness(5, 2, 5, 2),
             Margin = new Thickness(0, 0, 4, 0),
             Background = new SolidColorBrush(bg),
-            Foreground = System.Windows.Media.Brushes.White,
+            Foreground = ThemeBrush(
+                "TextFillColorPrimaryBrush",
+                System.Windows.Media.Brushes.Black
+            ),
             BorderThickness = new Thickness(0),
             Cursor = System.Windows.Input.Cursors.Hand,
         };
@@ -975,8 +1013,8 @@ public partial class ExcelConflictWindow : FluentWindow
     private System.Windows.FrameworkElement MakeDetailValueBox(
         string text,
         string other,
-        SolidColorBrush fg,
-        SolidColorBrush bg
+        WpfBrush fg,
+        WpfBrush bg
     )
     {
         var diffTb = MakeInlineDiffBlock(text, other, fg);
@@ -1019,7 +1057,7 @@ public partial class ExcelConflictWindow : FluentWindow
     }
 
     // 构建带字符级高亮的 TextBlock：公共前缀/后缀正常色，差异段黄色加粗
-    private TextBlock MakeInlineDiffBlock(string text, string other, SolidColorBrush normalFg)
+    private TextBlock MakeInlineDiffBlock(string text, string other, WpfBrush normalFg)
     {
         var tb = new TextBlock
         {
@@ -1103,8 +1141,8 @@ public partial class ExcelConflictWindow : FluentWindow
         if (modified.Count > 0)
             AddNavGroup(
                 "冲突列",
-                "#FFD080",
-                "#3A2A00",
+                SemanticHex("#FFD080", "#B87400"),
+                SemanticHex("#3A2800", "#FFF0CC"),
                 modified,
                 RowDiffType.Modified,
                 ConflictChoice.Ours
@@ -1112,8 +1150,8 @@ public partial class ExcelConflictWindow : FluentWindow
         if (onlyOurs.Count > 0)
             AddNavGroup(
                 "仅我有",
-                "#FF8888",
-                "#3A1A1A",
+                SemanticHex("#FF8888", "#B33A3A"),
+                SemanticHex("#3A1A1A", "#FFDDDD"),
                 onlyOurs,
                 RowDiffType.OnlyOurs,
                 ConflictChoice.Ours
@@ -1121,8 +1159,8 @@ public partial class ExcelConflictWindow : FluentWindow
         if (onlyTheirs.Count > 0)
             AddNavGroup(
                 "仅他有",
-                "#88FF88",
-                "#1A3A1A",
+                SemanticHex("#88FF88", "#2A8A2A"),
+                SemanticHex("#1A3A1A", "#DDFFDD"),
                 onlyTheirs,
                 RowDiffType.OnlyTheirs,
                 ConflictChoice.Theirs
@@ -1188,7 +1226,10 @@ public partial class ExcelConflictWindow : FluentWindow
             new TextBlock
             {
                 Text = $" ({rows.Count})",
-                Foreground = new SolidColorBrush(WpfColor.FromRgb(0x88, 0x88, 0x88)),
+                Foreground = ThemeBrush(
+                    "TextFillColorTertiaryBrush",
+                    System.Windows.Media.Brushes.Gray
+                ),
                 FontSize = 10,
                 VerticalAlignment = VerticalAlignment.Center,
             }
@@ -1257,7 +1298,10 @@ public partial class ExcelConflictWindow : FluentWindow
                 new TextBlock
                 {
                     Text = rc.RowKey,
-                    Foreground = System.Windows.Media.Brushes.White,
+                    Foreground = ThemeBrush(
+                        "TextFillColorPrimaryBrush",
+                        System.Windows.Media.Brushes.Black
+                    ),
                     FontSize = 11,
                     TextTrimming = TextTrimming.CharacterEllipsis,
                     MaxWidth = 80,
@@ -1270,7 +1314,7 @@ public partial class ExcelConflictWindow : FluentWindow
                     new TextBlock
                     {
                         Text = $"  {rc.DisplayName}",
-                        Foreground = new SolidColorBrush(WpfColor.FromRgb(0xAA, 0xCC, 0xFF)),
+                        Foreground = SemanticBrush("#A8C8FF", "#4A6AC8"),
                         FontSize = 10,
                         VerticalAlignment = VerticalAlignment.Center,
                         TextTrimming = TextTrimming.CharacterEllipsis,
@@ -1284,7 +1328,7 @@ public partial class ExcelConflictWindow : FluentWindow
                     new TextBlock
                     {
                         Text = $" +{rc.Cells.Count}",
-                        Foreground = new SolidColorBrush(WpfColor.FromRgb(0xFF, 0xD0, 0x80)),
+                        Foreground = SemanticBrush("#FFD080", "#B87400"),
                         FontSize = 9,
                         VerticalAlignment = VerticalAlignment.Center,
                     }
@@ -1478,8 +1522,8 @@ public partial class ExcelConflictWindow : FluentWindow
             ? new SolidColorBrush(activeColor)
             : System.Windows.Media.Brushes.Transparent;
         btn.Foreground = active
-            ? System.Windows.Media.Brushes.White
-            : new SolidColorBrush(Color(0xAA, 0xAA, 0xAA));
+            ? ThemeBrush("TextFillColorPrimaryBrush", System.Windows.Media.Brushes.Black)
+            : ThemeBrush("TextFillColorSecondaryBrush", System.Windows.Media.Brushes.Gray);
     }
 
     private void HideNoConflictCols_Changed(object sender, RoutedEventArgs e)

@@ -11,18 +11,18 @@
     WindowBackdropType="None"
     Background="Transparent"
     ExtendsContentIntoTitleBar="True"
-    Foreground="#E0E0E0">
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
     <Border CornerRadius="8" Padding="20,14">
         <Border.Background>
-            <SolidColorBrush Color="#2A2A2A" Opacity="0.85"/>
+                <DynamicResource ResourceKey="ControlFillColorSecondaryBrush"/>
         </Border.Background>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
             <ui:ProgressRing IsIndeterminate="True" Width="22" Height="22"
-                              Foreground="#4FC3F7"
+                       Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
                               VerticalAlignment="Center"/>
             <ui:TextBlock x:Name="MsgText" Text="正在比较文件，请稍候…"
-                       Foreground="#E0E0E0"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                        FontSize="12" Margin="14,0,0,0"
                        VerticalAlignment="Center"/>
         </StackPanel>

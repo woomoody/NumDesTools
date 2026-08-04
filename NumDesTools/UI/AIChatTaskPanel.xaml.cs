@@ -11,6 +11,7 @@ using Markdig;
 using Brushes = System.Windows.Media.Brushes;
 using Button = System.Windows.Controls.Button;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using WpfBrush = System.Windows.Media.Brush;
 
 namespace NumDesTools.UI;
 
@@ -63,7 +64,10 @@ public partial class AiChatTaskPanel
             PromptInput.TextArea.DefaultInputHandler.CommandBindings.Remove(enterBinding);
 
         PromptInput.Text = DefaultPromptText;
-        PromptInput.Foreground = Brushes.Gray;
+        PromptInput.Foreground =
+            (WpfBrush)
+                System.Windows.Application.Current.TryFindResource("TextFillColorSecondaryBrush")
+            ?? Brushes.Gray;
 
         // 动态高度：根据内容行数自动扩展（无滚动条）
         PromptInput.Document.Changed += (_, _) =>
@@ -105,13 +109,8 @@ public partial class AiChatTaskPanel
             : ModelComboBox.Items[0];
     }
 
-    private void InitializeHtmlTemplate()
-    {
-        ResponseOutput.NavigateToString(
-            @"<html>
-<head>
-<meta charset='utf-8'>
-<style>
+    private const string DarkCss =
+        @"<style>
 body{background:#1c1c1c;color:#d4d4d4;font-family:'微软雅黑',sans-serif;font-size:10pt;line-height:1.5;margin:0;padding:8px 10px;overflow-y:auto}
 .message-container{display:flex;flex-direction:column;align-items:flex-start;margin:5px 0}
 .message{padding:6px 10px;border-radius:7px;max-width:92%;word-wrap:break-word}
@@ -130,7 +129,49 @@ tr:nth-child(even) td{background:#2a2a2a}
 ul,ol{margin:3px 0;padding-left:18px}
 li{margin:1px 0}
 h1,h2,h3{font-size:1em;font-weight:bold;margin:4px 0 2px}
-</style>
+.auto-reason{color:#888;font-size:.75em}
+.attachment{background:#1a2a3a;padding:3px 8px;border-radius:3px;margin:2px 0;font-size:.85em}
+</style>";
+
+    private const string LightCss =
+        @"<style>
+body{background:#ffffff;color:#333333;font-family:'微软雅黑',sans-serif;font-size:10pt;line-height:1.5;margin:0;padding:8px 10px;overflow-y:auto}
+.message-container{display:flex;flex-direction:column;align-items:flex-start;margin:5px 0}
+.message{padding:6px 10px;border-radius:7px;max-width:92%;word-wrap:break-word}
+.message p{margin:3px 0}
+.user{background:#d6e8ff;border:1px solid #9fc5ef;margin-left:auto;margin-right:6px;color:#1f1f1f}
+.system{background:#f0f0f0;border:1px solid #ccc;margin-left:6px;color:#1f1f1f}
+.role{font-weight:bold;margin-bottom:3px;font-size:.72em;color:#666}
+.timestamp{font-size:.72em;color:#888;margin-top:3px;margin-left:8px;margin-right:8px}
+.user+.timestamp{text-align:right;margin-left:auto;margin-right:8px}
+pre{background:#f0f0f0;color:#333;padding:7px;border-radius:5px;overflow-x:auto;font-size:10pt;margin:4px 0}
+code{font-family:Consolas,monospace;background:#f0f0f0;color:#333;padding:1px 3px;border-radius:3px;font-size:10pt}
+table{border-collapse:collapse;font-size:.88em;margin:4px 0;width:auto}
+th,td{border:1px solid #ccc;padding:3px 8px;text-align:left;white-space:nowrap}
+th{background:#e6e6e6;color:#333;font-weight:bold}
+tr:nth-child(even) td{background:#f7f7f7}
+ul,ol{margin:3px 0;padding-left:18px}
+li{margin:1px 0}
+h1,h2,h3{font-size:1em;font-weight:bold;margin:4px 0 2px}
+.auto-reason{color:#666;font-size:.75em}
+.attachment{background:#e8f2ff;padding:3px 8px;border-radius:3px;margin:2px 0;font-size:.85em}
+</style>";
+
+    private static string Css =>
+        Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()
+        == Wpf.Ui.Appearance.ApplicationTheme.Dark
+            ? DarkCss
+            : LightCss;
+
+    private void InitializeHtmlTemplate()
+    {
+        ResponseOutput.NavigateToString(
+            @"<html>
+<head>
+<meta charset='utf-8'>
+"
+                + Css
+                + @"
 <script>
 function scrollToBottom(){window.scrollTo(0,document.body.scrollHeight)}
 function replaceContent(id,html){
@@ -336,7 +377,10 @@ function clearAll(){document.body.innerHTML=''}
         if (PromptInput.Text != DefaultPromptText)
             return;
         PromptInput.Text = string.Empty;
-        PromptInput.Foreground = Brushes.White;
+        PromptInput.Foreground =
+            (WpfBrush)
+                System.Windows.Application.Current.TryFindResource("TextFillColorPrimaryBrush")
+            ?? Brushes.Black;
     }
 
     private void PromptInput_LostFocus(object sender, RoutedEventArgs e)
@@ -344,7 +388,10 @@ function clearAll(){document.body.innerHTML=''}
         if (!string.IsNullOrWhiteSpace(PromptInput.Text))
             return;
         PromptInput.Text = DefaultPromptText;
-        PromptInput.Foreground = Brushes.Gray;
+        PromptInput.Foreground =
+            (WpfBrush)
+                System.Windows.Application.Current.TryFindResource("TextFillColorSecondaryBrush")
+            ?? Brushes.Gray;
     }
 
     // ── 核心发送逻辑 ──────────────────────────────────────────────────────────
@@ -498,7 +545,7 @@ function clearAll(){document.body.innerHTML=''}
                     (_currentActualModel ?? "")
                     + (
                         _currentAutoReason != null
-                            ? $" <span style='color:#888;font-size:.75em'>← 自动·{_currentAutoReason}</span>"
+                            ? $" <span class='auto-reason'>← 自动·{_currentAutoReason}</span>"
                             : ""
                     );
                 AppendRawHtml(
@@ -562,7 +609,7 @@ function clearAll(){document.body.innerHTML=''}
             else
             {
                 sb.Append(
-                    $"<div style='background:#1a2a3a;padding:3px 8px;border-radius:3px;margin:2px 0;font-size:.85em'>📄 {System.Web.HttpUtility.HtmlEncode(att.DisplayName)}</div>"
+                    $"<div class='attachment'>📄 {System.Web.HttpUtility.HtmlEncode(att.DisplayName)}</div>"
                 );
             }
         }
@@ -788,14 +835,15 @@ function clearAll(){document.body.innerHTML=''}
         AttachmentStrip.Children.Clear();
         foreach (var att in _attachments)
         {
-            var bgHex = att.IsImage ? "#2d4a2d" : "#2d3a4a";
             var chip = new System.Windows.Controls.Border
             {
                 CornerRadius = new CornerRadius(3),
-                Background = new System.Windows.Media.SolidColorBrush(
-                    (System.Windows.Media.Color)
-                        System.Windows.Media.ColorConverter.ConvertFromString(bgHex)
-                ),
+                Background =
+                    (WpfBrush)
+                        System.Windows.Application.Current.TryFindResource(
+                            "ControlFillColorSecondaryBrush"
+                        )
+                    ?? Brushes.LightGray,
                 Margin = new Thickness(2),
                 Padding = new Thickness(4, 2, 4, 2),
             };
@@ -807,9 +855,12 @@ function clearAll(){document.body.innerHTML=''}
             var label = new TextBlock
             {
                 Text = icon + att.DisplayName,
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Colors.LightGray
-                ),
+                Foreground =
+                    (WpfBrush)
+                        System.Windows.Application.Current.TryFindResource(
+                            "TextFillColorPrimaryBrush"
+                        )
+                    ?? Brushes.Black,
                 FontSize = 9,
                 VerticalAlignment = VerticalAlignment.Center,
             };
@@ -818,9 +869,12 @@ function clearAll(){document.body.innerHTML=''}
             {
                 Content = "×",
                 Background = System.Windows.Media.Brushes.Transparent,
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Colors.Gray
-                ),
+                Foreground =
+                    (WpfBrush)
+                        System.Windows.Application.Current.TryFindResource(
+                            "TextFillColorSecondaryBrush"
+                        )
+                    ?? Brushes.Gray,
                 BorderThickness = new Thickness(0),
                 Padding = new Thickness(3, 0, 0, 0),
                 FontSize = 9,

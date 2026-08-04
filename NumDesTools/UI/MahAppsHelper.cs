@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
+using System.Windows.Media;
 
 namespace NumDesTools.UI;
 
@@ -23,6 +24,9 @@ internal static class MahAppsHelper
         var app = System.Windows.Application.Current;
 
         // wpfui 全局合并（替代 MahApps）
+        // 用 Theme setter 而非直接设 Source：ThemesDictionary 内部据此维护
+        // IsSourcedFromThemeDictionary 状态，ApplicationThemeManager.UpdateDictionary
+        // swap Light.xaml <-> Dark.xaml 时才能正确识别并替换这个字典槽位。
         if (
             !app.Resources.MergedDictionaries.Any(d =>
                 d.Source?.OriginalString.Contains("Wpf.Ui") == true
@@ -32,16 +36,112 @@ internal static class MahAppsHelper
             app.Resources.MergedDictionaries.Add(
                 new Wpf.Ui.Markup.ThemesDictionary
                 {
-                    Source = new Uri(
-                        "pack://application:,,,/Wpf.Ui;component/Resources/Theme/Dark.xaml"
-                    ),
+                    Theme = Wpf.Ui.Appearance.ApplicationTheme.Dark,
                 }
             );
             app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ControlsDictionary());
         }
 
-        Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Dark);
+        // 自适应系统主题：读取 Windows 当前亮/暗状态并应用。
+        // SystemThemeWatcher.Watch(window) 在每个窗口 Loaded 里挂上，
+        // 之后系统主题切换时 wpf-ui 自动 swap Light.xaml <-> Dark.xaml。
+        Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
+
+        // 全局注入语义画刷（Ours/Theirs/Conflict/History/AiSuggestion）。
+        // 这些画刷在 ConflictRowItem.xaml 和 ExcelConflictWindow.xaml 里被 DynamicResource 引用，
+        // 必须放在 app.Resources 才能被所有窗口/控件找到。
+        // 订阅 Changed 事件：主题切换时重新注入（深浅色各一套值）。
+        ApplySemanticBrushes();
+        Wpf.Ui.Appearance.ApplicationThemeManager.Changed += (_, _) =>
+            ApplySemanticBrushes();
+
+        // 诊断日志：确认主题切换是否成功
+        PluginLog.Verbose(
+            $"[Theme] Init: appTheme={Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()} "
+                + $"systemTheme={Wpf.Ui.Appearance.ApplicationThemeManager.GetSystemTheme()}"
+        );
     }
+
+    /// <summary>
+    /// 全局注入语义画刷到 app.Resources。
+    /// 深色/浅色各一套值，由当前 ApplicationTheme 决定。
+    /// </summary>
+    private static void ApplySemanticBrushes()
+    {
+        var app = System.Windows.Application.Current;
+        if (app is null)
+            return;
+
+        var isDark = Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme()
+            == Wpf.Ui.Appearance.ApplicationTheme.Dark;
+
+        app.Resources["OursTextBrush"] = SemanticBrush(
+            isDark,
+            "#FFAAAA",
+            "#B33A3A"
+        );
+        app.Resources["OursBackgroundBrush"] = SemanticBrush(
+            isDark,
+            "#3A2A2A",
+            "#FFDDDD"
+        );
+        app.Resources["OursActionBackgroundBrush"] = SemanticBrush(
+            isDark,
+            "#5A2A2A",
+            "#FFCCCC"
+        );
+        app.Resources["TheirsTextBrush"] = SemanticBrush(
+            isDark,
+            "#A8FFCA",
+            "#2A8A2A"
+        );
+        app.Resources["TheirsBackgroundBrush"] = SemanticBrush(
+            isDark,
+            "#1A5C3A",
+            "#DDFFDD"
+        );
+        app.Resources["ConflictTextBrush"] = SemanticBrush(
+            isDark,
+            "#AAAAFF",
+            "#5555AA"
+        );
+        app.Resources["ConflictBackgroundBrush"] = SemanticBrush(
+            isDark,
+            "#3A3A5A",
+            "#EEDDFF"
+        );
+        app.Resources["HistoryTextBrush"] = SemanticBrush(
+            isDark,
+            "#88CCFF",
+            "#1A6BB8"
+        );
+        app.Resources["HistoryBackgroundBrush"] = SemanticBrush(
+            isDark,
+            "#1A3A6E",
+            "#D6E8FF"
+        );
+        app.Resources["AiSuggestionTextBrush"] = SemanticBrush(
+            isDark,
+            "#FFD080",
+            "#B87400"
+        );
+        app.Resources["AiSuggestionBackgroundBrush"] = SemanticBrush(
+            isDark,
+            "#2A2A1A",
+            "#FFF8E0"
+        );
+        app.Resources["AiSuggestionBorderBrush"] = SemanticBrush(
+            isDark,
+            "#554400",
+            "#DDAA55"
+        );
+    }
+
+    private static SolidColorBrush SemanticBrush(bool isDark, string dark, string light) =>
+        new(
+            (System.Windows.Media.Color)
+                System.Windows.Media.ColorConverter.ConvertFromString(isDark ? dark : light)
+        );
 
     internal static void SetExcelOwner(System.Windows.Window window)
     {
@@ -50,12 +150,9 @@ internal static class MahAppsHelper
             new WindowInteropHelper(window).Owner = hwnd;
         window.Loaded += (_, _) =>
         {
-            // 每个窗口 Loaded 时强制 Apply Dark——
-            // Excel 宿主里 OnLoad 的 Apply 可能没生效（Application 生命周期不同），
-            // 在窗口真正创建后再 Apply 一次确保深色主题到位。
-            Wpf.Ui.Appearance.ApplicationThemeManager.Apply(
-                Wpf.Ui.Appearance.ApplicationTheme.Dark
-            );
+            // SystemThemeWatcher 挂 Win32 消息钩子（WM_THEMECHANGED 等），
+            // 系统亮/暗切换时自动 Apply 新主题到这个窗口 + 全局资源字典。
+            Wpf.Ui.Appearance.SystemThemeWatcher.Watch(window);
             AttachTitleBarDrag(window);
         };
     }
