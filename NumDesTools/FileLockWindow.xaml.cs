@@ -1,15 +1,17 @@
 using System.Windows;
 using System.Windows.Input;
-using WpfWindow = System.Windows.Window;
+using NumDesTools.UI;
 using WpfKey = System.Windows.Input.Key;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace NumDesTools;
 
-public partial class FileLockWindow : WpfWindow
+public partial class FileLockWindow : Wpf.Ui.Controls.FluentWindow
 {
     public FileLockWindow(string filePath, List<(string ProcessName, uint Pid)> lockers)
     {
+        MahAppsHelper.EnsureInitialized();
+        MahAppsHelper.SetExcelOwner(this);
         InitializeComponent();
         FilePathBox.Text = filePath;
 

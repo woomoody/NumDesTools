@@ -5,6 +5,8 @@ using NumDesTools;
 using NumDesTools.ExcelToLua;
 using Wpf.Ui.Controls;
 using Border = System.Windows.Controls.Border;
+using Brush = System.Windows.Media.Brush;
+using Brushes = System.Windows.Media.Brushes;
 using CheckBox = System.Windows.Controls.CheckBox;
 using TextBlock = System.Windows.Controls.TextBlock;
 using Window = System.Windows.Window;
