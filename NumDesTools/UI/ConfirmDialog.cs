@@ -12,13 +12,13 @@ public static class ConfirmDialog
     public static bool Confirm(string title, string body) =>
         new ActivityBackupReportWindow(title, body, showCancel: true).ShowDialog() == true;
 
-    /// <summary>显示信息对话框（只有确定）</summary>
+    /// <summary>显示信息对话框（只有确定，非模态，不阻塞 Ribbon）</summary>
     public static void Info(string title, string body) =>
-        new ActivityBackupReportWindow(title, body, showCancel: false).ShowDialog();
+        new ActivityBackupReportWindow(title, body, showCancel: false).Show();
 
-    /// <summary>显示错误对话框（只有确定，红色标题风格）</summary>
+    /// <summary>显示错误对话框（只有确定，红色标题风格，非模态，不阻塞 Ribbon）</summary>
     public static void Error(string title, string body) =>
-        new ActivityBackupReportWindow(title, body, showCancel: false).ShowDialog();
+        new ActivityBackupReportWindow(title, body, showCancel: false).Show();
 
     /// <summary>显示警告对话框（确定/取消）</summary>
     public static bool Warn(string title, string body) =>

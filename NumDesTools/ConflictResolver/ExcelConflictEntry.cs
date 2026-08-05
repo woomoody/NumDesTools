@@ -36,7 +36,9 @@ public static class ExcelConflictEntry
     {
         string? lastSelected = null;
 
-        while (true)
+        // 用递归回调替代 while(true)，使 ExtractAndOpen 的异步回调能驱动下一轮循环
+        System.Action? processNext = null;
+        processNext = () =>
         {
             // 每次循环重新读取最新冲突列表（上一次 git add 后列表会缩短）
             List<string> allXlsx;
@@ -72,7 +74,7 @@ public static class ExcelConflictEntry
             catch (Exception ex)
             {
                 System.Windows.MessageBox.Show($"读取 Git 状态失败：{ex.Message}", "错误");
-                break;
+                return;
             }
 
             List<string> conflictedFiles;
@@ -90,34 +92,41 @@ public static class ExcelConflictEntry
             if (conflictedFiles.Count == 0)
             {
                 System.Windows.MessageBox.Show("所有 xlsx 冲突已全部解决。", "完成");
-                break;
+                return;
             }
 
-            // 每次都 new，避免 ShowDialog 在已关闭窗口上重复调用；始终显示 picker 确保用户可返回上层
+            // 每次都 new，避免窗口在已关闭窗口上重复调用；始终显示 picker 确保用户可返回上层
             var picker = new GitConflictPickerWindow(conflictedFiles, skipHash, gitRoot);
             picker.RefreshList(conflictedFiles, lastSelected);
-            skipHash = picker.SkipHash;
-            if (picker.ShowDialog() != true)
-                break;
-            var chosen = picker.SelectedFile!;
-            lastSelected = chosen;
-            skipHash = picker.SkipHash;
-            var oursBranch = picker.SelectedBranch;
+            picker.Closed += (_, _) =>
+            {
+                if (picker.DialogResult != true)
+                    return;
+                var chosen = picker.SelectedFile!;
+                lastSelected = chosen;
+                skipHash = picker.SkipHash;
 
-            var workingFilePath = Path.Combine(
-                gitRoot,
-                chosen.Replace('/', Path.DirectorySeparatorChar)
-            );
-            var applied = ExtractAndOpen(
-                gitRoot,
-                chosen,
-                workingFilePath,
-                autoGitAdd: true,
-                oursBranchHint: oursBranch
-            );
-            if (!applied)
-                continue;
-        }
+                var workingFilePath = Path.Combine(
+                    gitRoot,
+                    chosen.Replace('/', Path.DirectorySeparatorChar)
+                );
+                ExtractAndOpen(
+                    gitRoot,
+                    chosen,
+                    workingFilePath,
+                    autoGitAdd: true,
+                    oursBranchHint: picker.SelectedBranch,
+                    onComplete: applied =>
+                    {
+                        if (applied)
+                            processNext?.Invoke();
+                    }
+                );
+            };
+            picker.Show();
+        };
+
+        processNext();
     }
 
     /// 从当前活动工作簿路径或 GitRootPath 推算 Excel 文件扫描根目录。
@@ -748,15 +757,16 @@ public static class ExcelConflictEntry
         catch { }
     }
 
-    // 返回 true=已应用/完成，false=用户取消
-    private static bool ExtractAndOpen(
+    /// <summary>提取冲突 blob 并打开对比窗口（非模态，不阻塞 Ribbon）。</summary>
+    private static void ExtractAndOpen(
         string gitRoot,
         string relativePath,
         string workingFilePath,
         bool autoGitAdd,
         string? knownTheirsSha = null,
         string? oursBranchHint = null,
-        string? theirsBranchHint = null
+        string? theirsBranchHint = null,
+        System.Action<bool>? onComplete = null
     )
     {
         ConflictBlobResult? blobs;
@@ -773,16 +783,18 @@ public static class ExcelConflictEntry
         catch (Exception ex)
         {
             System.Windows.MessageBox.Show($"提取冲突版本失败：{ex.Message}", "错误");
-            return false;
+            onComplete?.Invoke(false);
+            return;
         }
 
         if (blobs == null)
         {
             System.Windows.MessageBox.Show($"在 Index 中找不到冲突条目：{relativePath}", "错误");
-            return false;
+            onComplete?.Invoke(false);
+            return;
         }
 
-        var result = OpenWindow(
+        OpenWindow(
             blobs.Value.OursPath,
             blobs.Value.TheirsPath,
             outPath: workingFilePath,
@@ -790,14 +802,15 @@ public static class ExcelConflictEntry
             basePath: blobs.Value.BasePath,
             oursLabel: blobs.Value.OursLabel,
             theirsLabel: blobs.Value.TheirsLabel,
-            headBranch: blobs.Value.HeadBranch
+            headBranch: blobs.Value.HeadBranch,
+            onComplete: result =>
+            {
+                // "无差异"时 OpenWindow 返回 true 但不做 git add，冲突仍在 Index → 补做
+                if (result && autoGitAdd)
+                    FinishGitAdd(gitRoot, relativePath);
+                onComplete?.Invoke(result);
+            }
         );
-
-        // "无差异"时 OpenWindow 返回 true 但不做 git add，冲突仍在 Index → 补做
-        if (result && autoGitAdd)
-            FinishGitAdd(gitRoot, relativePath);
-
-        return result;
     }
 
     // 直接读 gitDir（.git/ 路径）下的 HEAD 文件
@@ -977,7 +990,8 @@ public static class ExcelConflictEntry
     }
 
     // 返回 true=已应用，false=用户取消
-    private static bool OpenWindow(
+    /// <summary>打开冲突对比窗口（非模态，不阻塞 Ribbon），diff 完成后自动显示。</summary>
+    private static void OpenWindow(
         string oursPath,
         string theirsPath,
         string? outPath,
@@ -985,7 +999,8 @@ public static class ExcelConflictEntry
         string? basePath = null,
         string? oursLabel = null,
         string? theirsLabel = null,
-        string? headBranch = null
+        string? headBranch = null,
+        System.Action<bool>? onComplete = null
     )
     {
         FileDiff? diff = null;
@@ -1011,29 +1026,37 @@ public static class ExcelConflictEntry
             IsBackground = true,
         };
         waitWin.Loaded += (_, _) => thread.Start();
-        waitWin.ShowDialog();
-
-        if (diffEx != null)
+        waitWin.Closed += (_, _) =>
         {
-            System.Windows.MessageBox.Show($"解析文件失败：{diffEx.Message}", "错误");
-            return false;
-        }
+            if (diffEx != null)
+            {
+                System.Windows.MessageBox.Show($"解析文件失败：{diffEx.Message}", "错误");
+                onComplete?.Invoke(false);
+                return;
+            }
 
-        if (diff!.TotalConflictRows == 0)
-        {
-            System.Windows.MessageBox.Show("两个文件内容完全一致，没有需要解决的冲突。", "无差异");
-            return true;
-        }
+            if (diff!.TotalConflictRows == 0)
+            {
+                System.Windows.MessageBox.Show(
+                    "两个文件内容完全一致，没有需要解决的冲突。",
+                    "无差异"
+                );
+                onComplete?.Invoke(true);
+                return;
+            }
 
-        var win = new ExcelConflictWindow(
-            diff,
-            outPath,
-            autoGitAdd,
-            oursLabel,
-            theirsLabel,
-            headBranch
-        );
-        return win.ShowDialog() == true;
+            var win = new ExcelConflictWindow(
+                diff,
+                outPath,
+                autoGitAdd,
+                oursLabel,
+                theirsLabel,
+                headBranch
+            );
+            win.Closed += (_, _) => onComplete?.Invoke(win.DialogResult == true);
+            win.Show();
+        };
+        waitWin.Show();
     }
 
     // 安全派发：Dispatcher 已关闭时静默忽略，catch 内异常不逃逸到后台线程

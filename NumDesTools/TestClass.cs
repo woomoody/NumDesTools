@@ -1,5 +1,108 @@
 ﻿namespace NumDesTools;
 
+using ExcelDna.Integration.CustomUI;
+using NumDesTools.UI;
+
+/// <summary>主题调试命令（临时）：通过 Application.Run 后台触发，无需点击 Ribbon。</summary>
+public static class ThemeDebugCommands
+{
+    [ExcelCommand]
+    public static void DebugOpenSheetCTP()
+    {
+        var ctpName = "表格目录";
+        NumDesCTP.DeleteCTP(true, ctpName);
+        NumDesCTP.ShowCTP(
+            400,
+            ctpName,
+            true,
+            ctpName,
+            new SheetListControl(),
+            MsoCTPDockPosition.msoCTPDockPositionLeft
+        );
+    }
+
+    [ExcelCommand]
+    public static void DebugThemeDark() => ThemeService.SetMode(ThemeService.ThemeMode.Dark);
+
+    [ExcelCommand]
+    public static void DebugThemeLight() => ThemeService.SetMode(ThemeService.ThemeMode.Light);
+
+    [ExcelCommand]
+    public static void DebugOpenChatCTP()
+    {
+        var name = "AI对话-Excel";
+        NumDesCTP.DeleteCTP(true, name);
+        NumDesCTP.ShowCTP(
+            1500,
+            name,
+            true,
+            name,
+            new AiChatTaskPanel(),
+            MsoCTPDockPosition.msoCTPDockPositionRight
+        );
+    }
+
+    [ExcelCommand]
+    public static void DebugOpenAgentCTP()
+    {
+        var name = "AI Agent-Excel";
+        NumDesCTP.DeleteCTP(true, name);
+        NumDesCTP.ShowCTP(
+            1500,
+            name,
+            true,
+            name,
+            new AIAgentPanel(),
+            MsoCTPDockPosition.msoCTPDockPositionRight
+        );
+    }
+
+    [ExcelCommand]
+    public static void DebugOpenSearchCTP()
+    {
+        var name = "搜索结果";
+        NumDesCTP.DeleteCTP(true, name);
+        NumDesCTP.ShowCTP(
+            400,
+            name,
+            true,
+            name,
+            new SheetSeachResult([]),
+            MsoCTPDockPosition.msoCTPDockPositionRight
+        );
+    }
+
+    [ExcelCommand]
+    public static void DebugOpenImageCTP()
+    {
+        var name = "图片预览";
+        NumDesCTP.DeleteCTP(true, name);
+        NumDesCTP.ShowCTP(
+            400,
+            name,
+            true,
+            name,
+            new ImagePreviewControl(new Dictionary<string, List<string>>()),
+            MsoCTPDockPosition.msoCTPDockPositionRight
+        );
+    }
+
+    [ExcelCommand]
+    public static void DebugOpenBatchReplaceCTP()
+    {
+        var name = "批量替换";
+        NumDesCTP.DeleteCTP(true, name);
+        NumDesCTP.ShowCTP(
+            400,
+            name,
+            true,
+            name,
+            new BatchReplacePanel(),
+            MsoCTPDockPosition.msoCTPDockPositionRight
+        );
+    }
+}
+
 public class ScreenCoordinateFix
 {
     // Windows API

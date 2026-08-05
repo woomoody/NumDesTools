@@ -1,3 +1,5 @@
+using System.Windows;
+using System.Windows.Media;
 using Wpf.Ui.Appearance;
 
 namespace NumDesTools.UI;
@@ -62,6 +64,21 @@ internal static class ThemeService
         }
         ForceRefreshDynamicResources();
         ModeChanged?.Invoke();
+        LogResolvedThemeState();
+    }
+
+    /// <summary>输出主题切换后字典内关键资源实际值，用于定位 ElementHost 树不刷新问题。</summary>
+    private static void LogResolvedThemeState()
+    {
+        var app = System.Windows.Application.Current;
+        if (app is null)
+            return;
+        var bg = app.Resources["ApplicationBackgroundBrush"] as SolidColorBrush;
+        var fg = app.Resources["TextFillColorPrimaryBrush"] as SolidColorBrush;
+        PluginLog.Verbose(
+            $"[Theme] Apply done: appTheme={ApplicationThemeManager.GetAppTheme()} "
+                + $"AppBg={bg?.Color} TextPrimary={fg?.Color}"
+        );
     }
 
     /// <summary>

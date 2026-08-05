@@ -15,6 +15,7 @@ namespace NumDesTools.UI
         public CellSeachResult(List<(string, int, int)> list)
         {
             InitializeComponent();
+            ThemeRefreshHelper.Subscribe(this);
             DataContext = this;
             CellDataList = new ObservableCollection<SelfCellData>(
                 list.Select(t => new SelfCellData(t))

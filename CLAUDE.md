@@ -15,6 +15,11 @@ git -C "C:\Users\cent\Documents\NumDesOutput" add -A
 git -C "C:\Users\cent\Documents\NumDesOutput" diff --cached --quiet || git -C "C:\Users\cent\Documents\NumDesOutput" commit -m "[描述] 说明内容"
 ```
 
+### 测试习惯
+
+- **Ribbon 相关测试必须用 Debug(F5) 启动 Excel 测试**，不要用 create_excel.vbs + RegisterXLL 手工加载 xll 的管线（那条管线不加载 Ribbon 且无法调试）。
+- 主题切换/CTP 面板验证可用 `[ExcelCommand]` Debug 宏（如 DebugThemeDark/DebugThemeLight/DebugOpenSheetCTP）配合 `C:\Users\cent\Documents\workspace\plugin.log` 日志与 PrintWindow 像素采样。
+
 ### 与 Codex 协作
 
 - 实时交接协议见 `docs/agent-handoff.md`

@@ -56,6 +56,7 @@ public partial class AiChatTaskPanel
     public AiChatTaskPanel()
     {
         InitializeComponent();
+        ThemeRefreshHelper.Subscribe(this);
 
         var enterBinding = PromptInput.TextArea.DefaultInputHandler.CommandBindings.FirstOrDefault(
             b => b.Command == EditingCommands.EnterParagraphBreak
@@ -857,10 +858,7 @@ function clearAll(){document.body.innerHTML=''}
                 FontSize = 9,
                 VerticalAlignment = VerticalAlignment.Center,
             };
-            label.SetResourceReference(
-                TextBlock.ForegroundProperty,
-                "TextFillColorPrimaryBrush"
-            );
+            label.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorPrimaryBrush");
             var captured = att;
             var removeBtn = new System.Windows.Controls.Button
             {

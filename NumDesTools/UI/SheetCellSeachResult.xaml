@@ -13,7 +13,7 @@
         <!--  ReSharper disable once Xaml.RedundantResource  -->
         <local:TextHighlighterConverter x:Key="TextHighlighterConverter" />
     </UserControl.Resources>
-    <Grid>
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <ListBox
             x:Name="ListBoxCellData"
             Background="{DynamicResource ApplicationBackgroundBrush}"

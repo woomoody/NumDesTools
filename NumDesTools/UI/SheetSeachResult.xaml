@@ -13,7 +13,7 @@
     <UserControl.Resources>
         <numDesTools:SelfStringRegexConverter x:Key="StringRegexConverter" RegexPattern="[^\\/:*?&quot;&lt;&gt;|\r\n]+$" />
     </UserControl.Resources>
-    <Grid>
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
         <ListBox
             x:Name="ListBoxWorkBook"
             Background="{DynamicResource ApplicationBackgroundBrush}"

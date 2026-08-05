@@ -5,15 +5,14 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
+using Microsoft.Win32;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
-using Microsoft.Win32;
 using WinInput = System.Windows.Input;
 
 namespace NumDesTools.UI
 {
-    public partial class BatchReplacePanel
-        : System.Windows.Controls.UserControl
+    public partial class BatchReplacePanel : System.Windows.Controls.UserControl
     {
         private static readonly string HistoryFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -29,6 +28,7 @@ namespace NumDesTools.UI
         public BatchReplacePanel()
         {
             InitializeComponent();
+            ThemeRefreshHelper.Subscribe(this);
             RuleRows.ItemsSource = _rows;
             HistoryList.ItemsSource = _history;
             LoadHistory();
