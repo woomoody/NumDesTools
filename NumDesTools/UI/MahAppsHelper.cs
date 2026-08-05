@@ -39,8 +39,8 @@ internal static class MahAppsHelper
             app.Resources.MergedDictionaries.Add(new Wpf.Ui.Markup.ControlsDictionary());
         }
 
-        // 自适应系统主题
-        Wpf.Ui.Appearance.ApplicationThemeManager.ApplySystemTheme();
+        // 应用持久化的主题模式（System 走 ApplySystemTheme，亮/暗走 Apply）
+        ThemeService.LoadMode();
 
         // 加载自定义语义色资源字典（NumDesTools.ThemeDictionaries.xaml）。
         // 该字典在 XAML 中定义了 13 个 SolidColorBrush，通过 DynamicResource

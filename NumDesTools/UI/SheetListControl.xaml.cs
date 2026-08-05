@@ -133,7 +133,13 @@ namespace NumDesTools.UI
             };
 
             trigger.Setters.Add(new Setter(FontStyleProperty, FontStyles.Italic));
-            trigger.Setters.Add(new Setter(ForegroundProperty, Brushes.PapayaWhip));
+            // 动态资源引用，主题切换时自动跟随（静态 Brush 不会刷新）
+            trigger.Setters.Add(
+                new Setter(
+                    ForegroundProperty,
+                    new DynamicResourceExtension("TextFillColorSecondaryBrush")
+                )
+            );
 
             itemContainerStyle.Triggers.Add(trigger);
 
