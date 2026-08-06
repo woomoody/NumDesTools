@@ -649,29 +649,30 @@ internal static class CellGitHistoryService
             }
 
             // MiniExcel 流式读：row 2 找列字母，row 3+ 找 rowKey，找到即 break
+            // 注意：行是 ExpandoObject，只实现 IDictionary<string,object>，不能用非泛型 IDictionary
             string? keyLetter = null, targetLetter = null;
             int rowIdx = 0;
             string? result = null;
 
-            foreach (System.Collections.IDictionary row in MiniExcelLibs.MiniExcel.Query(
-                tmpFile,
-                sheetName: sheetName,
-                useHeaderRow: false
-            ))
+            foreach (
+                IDictionary<string, object> row in MiniExcelLibs.MiniExcel.Query(
+                    tmpFile,
+                    sheetName: sheetName,
+                    useHeaderRow: false
+                )
+            )
             {
                 rowIdx++;
                 if (rowIdx == 2)
                 {
                     // row 2 = 列名行，按列字母排序找 key 列和目标列
-                    var keys = new List<string>(row.Keys.Cast<string>());
-                    keys.Sort((a, b) => a.Length != b.Length ? a.Length - b.Length : string.Compare(a, b, StringComparison.Ordinal));
-                    foreach (var k in keys)
+                    foreach (var kv in row.OrderBy(k => k.Key.Length).ThenBy(k => k.Key))
                     {
-                        var h = row[k]?.ToString() ?? "";
+                        var h = kv.Value?.ToString() ?? "";
                         if (keyLetter == null && !string.IsNullOrEmpty(h) && !h.StartsWith('#'))
-                            keyLetter = k;
+                            keyLetter = kv.Key;
                         if (h == colName)
-                            targetLetter = k;
+                            targetLetter = kv.Key;
                     }
                     if (keyLetter == null)
                         break;
@@ -683,10 +684,10 @@ internal static class CellGitHistoryService
                 }
                 else if (rowIdx >= 3 && keyLetter != null && targetLetter != null)
                 {
-                    var kv = row[keyLetter]?.ToString() ?? "";
-                    if (kv == rowKey)
+                    var kv2 = row.TryGetValue(keyLetter, out var kv) ? kv?.ToString() ?? "" : "";
+                    if (kv2 == rowKey)
                     {
-                        var val = row[targetLetter]?.ToString() ?? "";
+                        var val = row.TryGetValue(targetLetter, out var tv) ? tv?.ToString() ?? "" : "";
                         result = string.IsNullOrEmpty(val) ? "（空）" : val;
                         break;
                     }
