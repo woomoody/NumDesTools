@@ -321,9 +321,8 @@ internal static class CellGitHistoryService
     }
 
     /// <summary>
-    /// 并行分块流式查询：10 个线程同时处理不同 commit 段，每段内顺序提取单元格值，
-    /// 全部完成后合并结果再跑 diff 算法，最后汇总输出。
-    /// 每找到一条变更就调用 onPartial 刷新气泡，全部找完后调用 onFinal 缓存。
+    /// 混合流式查询：阶段1 顺序流式处理前 N 个 commit，立即出结果；
+    /// 阶段2 并行处理剩余 commit，merge 后补充 diff。兼顾首条速度与全量覆盖。
     /// </summary>
     private static void QueryHistoryStreaming(
         string absFilePath,
@@ -350,38 +349,44 @@ internal static class CellGitHistoryService
 
         const int MaxChanges = 50;
         const int MaxCommits = 500;
-        const int ParallelChunks = 10;
+        const int StreamingPhaseCount = 25; // 前 25 个 commit 顺序流式，快速出首条
+        const int ParallelChunks = 6;
 
-        // 只取前 MaxCommits 个 commit
         var takeCount = Math.Min(commits.Count, MaxCommits);
         var limitedCommits = commits.GetRange(0, takeCount);
 
-        // ── 阶段1：分块并行提取每个 commit 的单元格值 ──────────────────────
-        // 每个元素: (val, sha, date, author, msg) 保持 commit 顺序
-        var results = new (string? val, string sha, string date, string author, string msg)[takeCount];
+        // 共享的 accumulated 列表，两阶段共用
+        var accumulated = new List<(string date, string author, string msg, string oldVal, string newVal)>();
 
-        // 分块：每块大小 = ceil(takeCount / ParallelChunks)
-        int chunkSize = (takeCount + ParallelChunks - 1) / ParallelChunks;
-        var chunkCount = (takeCount + chunkSize - 1) / chunkSize;
+        // ── 阶段1：顺序流式（前 StreamingPhaseCount 个 commit）─────────────
+        // 实时出结果，用户立刻看到
+        int streamingEnd = Math.Min(StreamingPhaseCount, takeCount);
+        string? prevVal = null;
+        (string date, string author, string msg)? prevMeta = null;
+        bool hadNonNull = false;
 
-        Parallel.For(0, chunkCount, new ParallelOptions { MaxDegreeOfParallelism = ParallelChunks, CancellationToken = ct }, chunkIdx =>
+        // 供阶段2用的边界值（阶段1最后的 prevVal / prevMeta）
+        string? phase1LastVal = null;
+        (string date, string author, string msg)? phase1LastMeta = null;
+
+        using (var streamRepo = new Repository(gitRoot))
         {
-            int start = chunkIdx * chunkSize;
-            int end = Math.Min(start + chunkSize, takeCount);
-
-            // 每个线程独立创建 Repository（LibGit2Sharp 非线程安全）
-            using var threadRepo = new Repository(gitRoot);
             string? prevBlobOid = null;
 
-            for (int i = start; i < end; i++)
+            for (int i = 0; i < streamingEnd; i++)
             {
                 if (ct.IsCancellationRequested)
+                {
+                    onFinal(null);
                     return;
+                }
+                if (accumulated.Count >= MaxChanges)
+                    break;
 
                 var (sha, date, author, msg) = limitedCommits[i];
 
-                // blob OID 预过滤：文件内容未变直接跳过（块内连续）
-                var commit = threadRepo.Lookup<Commit>(sha);
+                // blob OID 预过滤
+                var commit = streamRepo.Lookup<Commit>(sha);
                 var blobEntry = commit?.Tree[relativePath];
                 var blobOid = blobEntry?.Target.Sha;
                 if (blobOid != null && blobOid == prevBlobOid)
@@ -391,67 +396,133 @@ internal static class CellGitHistoryService
                 }
                 prevBlobOid = blobOid;
 
-                // 提取单元格值
+                // 提取值
                 string? val = null;
-                var sheetData = LoadSheetData(threadRepo, gitRoot, sha, relativePath, sheetName, tmpDir);
+                var sheetData = LoadSheetData(streamRepo, gitRoot, sha, relativePath, sheetName, tmpDir);
                 if (sheetData != null && sheetData.TryGetValue(rowKey, out var rowData))
                     rowData.TryGetValue(colName, out val);
 
-                results[i] = (val, sha, date, author, msg);
-            }
-        });
+                PluginLog.Verbose($"[谁的锅] phase1 commit {sha[..8]} val={val ?? "null"}");
 
-        // ── 阶段2：合并结果，顺序跑 diff ──────────────────────────────────
-        if (ct.IsCancellationRequested)
-        {
-            onFinal(null);
-            return;
-        }
-
-        // 结果 now: (new value, sha, date, author, msg) 按 commit 顺序排列
-        // 用 accumulated 存 (date, author, msg, oldVal, newVal) 展示"谁改了什么值"
-        var accumulated = new List<(string date, string author, string msg, string oldVal, string newVal)>();
-
-        string? prevVal = null;
-        (string date, string author, string msg)? prevMeta = null;
-        bool hadNonNull = false;
-
-        foreach (var (val, sha, date, author, msg) in results)
-        {
-            if (accumulated.Count >= MaxChanges)
-                break;
-
-            if (val == null)
-            {
-                if (hadNonNull)
+                if (val == null)
                 {
-                    // 找到创建边界：更老的 commit 不存在此行
-                    break;
+                    if (hadNonNull)
+                        break;
+                    continue;
                 }
-                continue;
+
+                hadNonNull = true;
+
+                if (prevVal != null && prevMeta.HasValue && val != prevVal)
+                {
+                    accumulated.Add((prevMeta.Value.date, prevMeta.Value.author, prevMeta.Value.msg, val, prevVal));
+                    onPartial(BuildText(accumulated));
+                }
+
+                prevVal = val;
+                prevMeta = (date, author, msg);
             }
 
-            hadNonNull = true;
-
-            if (prevVal != null && prevMeta.HasValue && val != prevVal)
-            {
-                // prevMeta 的 commit 把值从 val 改成了 prevVal
-                accumulated.Add((prevMeta.Value.date, prevMeta.Value.author, prevMeta.Value.msg, val, prevVal));
-                onPartial(BuildText(accumulated));
-            }
-
-            prevVal = val;
-            prevMeta = (date, author, msg);
+            phase1LastVal = prevVal;
+            phase1LastMeta = prevMeta;
         }
 
-        // 若找到值但无任何变更，展示最老一条作为"最早可查记录"
+        // ── 阶段2：并行处理剩余 commit ─────────────────────────────────────
+        if (streamingEnd < takeCount && accumulated.Count < MaxChanges && !ct.IsCancellationRequested)
+        {
+            int remaining = takeCount - streamingEnd;
+            int chunkSize = Math.Max(1, (remaining + ParallelChunks - 1) / ParallelChunks);
+            int chunkCount = (remaining + chunkSize - 1) / chunkSize;
+            var chunkResults = new (string? val, string sha, string date, string author, string msg)[chunkCount][];
+
+            Parallel.For(0, chunkCount,
+                new ParallelOptions { MaxDegreeOfParallelism = ParallelChunks, CancellationToken = ct }, chunkIdx =>
+            {
+                int start = streamingEnd + chunkIdx * chunkSize;
+                int end = Math.Min(start + chunkSize, takeCount);
+
+                using var threadRepo = new Repository(gitRoot);
+                string? prevBlobOid = null;
+                var local = new (string? val, string sha, string date, string author, string msg)[end - start];
+
+                for (int i = start; i < end; i++)
+                {
+                    if (ct.IsCancellationRequested)
+                        return;
+
+                    var (sha, date, author, msg) = limitedCommits[i];
+
+                    var commit = threadRepo.Lookup<Commit>(sha);
+                    var blobEntry = commit?.Tree[relativePath];
+                    var blobOid = blobEntry?.Target.Sha;
+                    if (blobOid != null && blobOid == prevBlobOid)
+                    {
+                        PluginLog.Verbose($"[谁的锅] commit {sha[..8]} blob unchanged, skip");
+                        continue;
+                    }
+                    prevBlobOid = blobOid;
+
+                    string? val = null;
+                    var sheetData = LoadSheetData(threadRepo, gitRoot, sha, relativePath, sheetName, tmpDir);
+                    if (sheetData != null && sheetData.TryGetValue(rowKey, out var rowData))
+                        rowData.TryGetValue(colName, out val);
+
+                    local[i - start] = (val, sha, date, author, msg);
+                }
+                chunkResults[chunkIdx] = local;
+            });
+
+            // 合并阶段2结果（保持 commit 顺序）
+            // 先用阶段1的边界值作为 prevVal/prevMeta
+            prevVal = phase1LastVal;
+            prevMeta = phase1LastMeta;
+
+            for (int chunkIdx = 0; chunkIdx < chunkResults.Length; chunkIdx++)
+            {
+                if (ct.IsCancellationRequested)
+                {
+                    onFinal(null);
+                    return;
+                }
+                var chunk = chunkResults[chunkIdx];
+                if (chunk == null)
+                    continue;
+
+                foreach (var (val, sha, date, author, msg) in chunk)
+                {
+                    if (accumulated.Count >= MaxChanges)
+                        break;
+
+                    if (val == null)
+                    {
+                        if (hadNonNull)
+                            goto Phase2Done; // 创建边界，跳出双层循环
+                        continue;
+                    }
+
+                    hadNonNull = true;
+
+                    if (prevVal != null && prevMeta.HasValue && val != prevVal)
+                    {
+                        accumulated.Add((prevMeta.Value.date, prevMeta.Value.author, prevMeta.Value.msg, val, prevVal));
+                        onPartial(BuildText(accumulated));
+                    }
+
+                    prevVal = val;
+                    prevMeta = (date, author, msg);
+                }
+            }
+            Phase2Done:;
+        }
+
+        // 若找到值但无任何变更，展示最老一条
         if (accumulated.Count == 0 && prevMeta.HasValue && prevVal != null)
         {
             accumulated.Add((prevMeta.Value.date, prevMeta.Value.author, prevMeta.Value.msg + "（最早可查，值未改变）", prevVal, prevVal));
             onPartial(BuildText(accumulated));
         }
 
-        PluginLog.Write($"[谁的锅] parallel done: changes={accumulated.Count}");
+        PluginLog.Write($"[谁的锅] hybrid done: changes={accumulated.Count}");
         var finalText = accumulated.Count > 0 ? BuildText(accumulated) : null;
         onFinal(finalText);
     }
