@@ -36,12 +36,12 @@ internal static class ThemeBrushes
     public static readonly SolidColorBrush FilterBorder = new(Color.FromRgb(90, 90, 90));
 
     /// <summary>根据当前主题模式更新所有 brush 颜色。</summary>
-    internal static void ApplyTheme(ThemeMode mode)
+    internal static void ApplyTheme(AppThemeMode mode)
     {
         var isDark = mode switch
         {
-            ThemeMode.Light => false,
-            ThemeMode.Dark => true,
+            AppThemeMode.Light => false,
+            AppThemeMode.Dark => true,
             _ => ApplicationThemeIsDark(),
         };
 

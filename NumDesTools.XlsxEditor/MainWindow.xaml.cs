@@ -80,6 +80,60 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
         InitializeComponent();
         ApplyWorkbookTabStyle();
+        InitThemeSelector();
+        ThemeService.ModeChanged += OnAppThemeModeChanged;
+    }
+
+    private void InitThemeSelector()
+    {
+        ThemeSelector.Items.Clear();
+        foreach (var mode in new[] { AppThemeMode.System, AppThemeMode.Light, AppThemeMode.Dark })
+        {
+            ThemeSelector.Items.Add(ThemeService.ModeLabel(mode));
+        }
+        ThemeSelector.SelectedIndex = ThemeService.CurrentMode switch
+        {
+            AppThemeMode.Light => 1,
+            AppThemeMode.Dark => 2,
+            _ => 0,
+        };
+    }
+
+    private void OnAppThemeModeChanged()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.Invoke(OnAppThemeModeChanged);
+            return;
+        }
+        ThemeBrushes.ApplyTheme(ThemeService.CurrentMode);
+        // 刷新所有 DataGrid UI
+        foreach (var state in _sheets.Values)
+        {
+            state.MainGrid?.Items.Refresh();
+            state.FrozenGrid?.Items.Refresh();
+        }
+        // 重建 tab 样式（颜色已变，样式需重新应用）
+        ApplyWorkbookTabStyle();
+        // 重建各工作簿内嵌 sheet tab 样式
+        foreach (var wbTab in Tabs.Items.OfType<TabItem>())
+        {
+            if (GetSheetTabs(wbTab) is { } sheetTabs)
+                RebuildSheetTabStyle(sheetTabs);
+        }
+    }
+
+    private void OnThemeSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ThemeSelector.SelectedIndex < 0)
+            return;
+        var mode = ThemeSelector.SelectedIndex switch
+        {
+            1 => AppThemeMode.Light,
+            2 => AppThemeMode.Dark,
+            _ => AppThemeMode.System,
+        };
+        ThemeService.SetMode(mode);
     }
 
     // ── 当前选中定位（集中逻辑，供 ~22 处机械替换用） ──────────────────
@@ -401,49 +455,15 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     {
         sheetTabs.Padding = new Thickness(4, 0, 4, 2);
         sheetTabs.Background = ThemeBrushes.SheetPanelBg;
-        var sheetTabStyle = new Style(
-            typeof(TabItem),
-            Application.Current.TryFindResource(typeof(TabItem)) as Style
-        );
-        sheetTabStyle.Setters.Add(new Setter(Control.FontSizeProperty, 11.0));
-        sheetTabStyle.Setters.Add(new Setter(TextBlock.FontSizeProperty, 11.0));
-        // P14：选中 tab 高亮——WPF-UI 模板触发器用 DynamicResource 盖 Background 导致颜色不变，
-        // 改用 Foreground（走 TextElement 继承到 TextBlock，模板盖不住）+ FontWeight 做视觉区分。
-        sheetTabStyle.Setters.Add(
-            new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(45, 45, 45)))
-        );
-        sheetTabStyle.Setters.Add(new Setter(Control.ForegroundProperty, ThemeBrushes.TextSecondary));
-        sheetTabStyle.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.Normal));
-        sheetTabStyle.Triggers.Add(
-            new Trigger
-            {
-                Property = Selector.IsSelectedProperty,
-                Value = true,
-                Setters =
-                {
-                    new Setter(
-                        Control.BackgroundProperty,
-                        new SolidColorBrush(Color.FromRgb(80, 80, 80))
-                    ),
-                    new Setter(Control.ForegroundProperty, ThemeBrushes.TextForeground),
-                    new Setter(Control.FontWeightProperty, FontWeights.Bold),
-                    new Setter(
-                        Control.BorderBrushProperty,
-                        new SolidColorBrush(Color.FromRgb(86, 156, 214))
-                    ),
-                    new Setter(Control.BorderThicknessProperty, new Thickness(3, 0, 0, 0)),
-                },
-            }
-        );
-        sheetTabs.ItemContainerStyle = sheetTabStyle;
+        BuildSheetTabStyle(sheetTabs);
         // 文件 tab 和 sheet tab 之间用粗亮线分隔（Excel 风格的凹凸感）
         var sheetTabsBorder = new Border
         {
             Margin = new Thickness(0, 10, 0, 0),
             Padding = new Thickness(0),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(120, 120, 120)),
+            BorderBrush = ThemeBrushes.SheetBorderSeparator,
             BorderThickness = new Thickness(0, 6, 0, 2),
-            Background = new SolidColorBrush(Color.FromRgb(30, 30, 30)),
+            Background = ThemeBrushes.SheetPanelBg,
             Child = sheetTabs,
         };
         var header = new StackPanel { Orientation = Orientation.Horizontal };
@@ -472,36 +492,67 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     /// </summary>
     private void ApplyWorkbookTabStyle()
     {
-        var wbTabStyle = new Style(
+        Tabs.ItemContainerStyle = BuildWorkbookTabItemStyle();
+    }
+
+    private static Style BuildWorkbookTabItemStyle()
+    {
+        var style = new Style(
             typeof(TabItem),
             Application.Current.TryFindResource(typeof(TabItem)) as Style
         );
-        // P14：同 sheet tab，用 Foreground+FontWeight 做选中态视觉区分。
-        wbTabStyle.Setters.Add(
-            new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(50, 50, 50)))
-        );
-        wbTabStyle.Setters.Add(new Setter(Control.ForegroundProperty, ThemeBrushes.TextSecondary));
-        wbTabStyle.Triggers.Add(
+        style.Setters.Add(new Setter(Control.BackgroundProperty, ThemeBrushes.WbTabUnselectedBg));
+        style.Setters.Add(new Setter(Control.ForegroundProperty, ThemeBrushes.TextSecondary));
+        style.Triggers.Add(
             new Trigger
             {
                 Property = Selector.IsSelectedProperty,
                 Value = true,
                 Setters =
                 {
-                    new Setter(
-                        Control.BackgroundProperty,
-                        new SolidColorBrush(Color.FromRgb(90, 90, 90))
-                    ),
+                    new Setter(Control.BackgroundProperty, ThemeBrushes.WbTabSelectedBg),
                     new Setter(Control.ForegroundProperty, ThemeBrushes.TextForeground),
-                    new Setter(
-                        Control.BorderBrushProperty,
-                        new SolidColorBrush(Color.FromRgb(86, 156, 214))
-                    ),
+                    new Setter(Control.BorderBrushProperty, ThemeBrushes.SheetTabBorder),
                     new Setter(Control.BorderThicknessProperty, new Thickness(3, 0, 0, 0)),
                 },
             }
         );
-        Tabs.ItemContainerStyle = wbTabStyle;
+        return style;
+    }
+
+    private static void BuildSheetTabStyle(TabControl sheetTabs)
+    {
+        var style = new Style(
+            typeof(TabItem),
+            Application.Current.TryFindResource(typeof(TabItem)) as Style
+        );
+        style.Setters.Add(new Setter(Control.FontSizeProperty, 11.0));
+        style.Setters.Add(new Setter(TextBlock.FontSizeProperty, 11.0));
+        style.Setters.Add(new Setter(Control.BackgroundProperty, ThemeBrushes.SheetTabUnselectedBg));
+        style.Setters.Add(new Setter(Control.ForegroundProperty, ThemeBrushes.TextSecondary));
+        style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.Normal));
+        style.Triggers.Add(
+            new Trigger
+            {
+                Property = Selector.IsSelectedProperty,
+                Value = true,
+                Setters =
+                {
+                    new Setter(Control.BackgroundProperty, ThemeBrushes.SheetTabSelectedBg),
+                    new Setter(Control.ForegroundProperty, ThemeBrushes.TextForeground),
+                    new Setter(Control.FontWeightProperty, FontWeights.Bold),
+                    new Setter(Control.BorderBrushProperty, ThemeBrushes.SheetTabBorder),
+                    new Setter(Control.BorderThicknessProperty, new Thickness(3, 0, 0, 0)),
+                },
+            }
+        );
+        sheetTabs.ItemContainerStyle = style;
+    }
+
+    private static void RebuildSheetTabStyle(TabControl sheetTabs)
+    {
+        // 主题切换时重建 sheet tab 样式（颜色已变，样式需重新应用）
+        BuildSheetTabStyle(sheetTabs);
     }
 
     /// <summary>

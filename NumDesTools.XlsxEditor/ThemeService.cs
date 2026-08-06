@@ -4,7 +4,8 @@ using Wpf.Ui.Appearance;
 
 namespace NumDesTools.XlsxEditor;
 
-internal enum ThemeMode
+// 注意：不能叫 ThemeMode——WPF 内置的 Window.ThemeMode 属性会冲突
+internal enum AppThemeMode
 {
     System,
     Light,
@@ -17,7 +18,7 @@ internal enum ThemeMode
 /// </summary>
 internal static class ThemeService
 {
-    internal static ThemeMode CurrentMode { get; private set; } = ThemeMode.System;
+    internal static AppThemeMode CurrentMode { get; private set; } = AppThemeMode.System;
 
     internal static event Action? ModeChanged;
 
@@ -36,7 +37,7 @@ internal static class ThemeService
         ApplyTheme(mode);
     }
 
-    internal static void SetMode(ThemeMode mode)
+    internal static void SetMode(AppThemeMode mode)
     {
         if (mode == CurrentMode)
             return;
@@ -45,54 +46,54 @@ internal static class ThemeService
         ApplyTheme(mode);
     }
 
-    internal static string ModeLabel(ThemeMode mode) =>
+    internal static string ModeLabel(AppThemeMode mode) =>
         mode switch
         {
-            ThemeMode.System => "跟随系统",
-            ThemeMode.Light => "亮色",
-            ThemeMode.Dark => "暗色",
+            AppThemeMode.System => "跟随系统",
+            AppThemeMode.Light => "亮色",
+            AppThemeMode.Dark => "暗色",
             _ => "跟随系统",
         };
 
-    private static void ApplyTheme(ThemeMode mode)
+    private static void ApplyTheme(AppThemeMode mode)
     {
         switch (mode)
         {
-            case ThemeMode.System:
+            case AppThemeMode.System:
                 ApplicationThemeManager.ApplySystemTheme();
                 break;
-            case ThemeMode.Light:
+            case AppThemeMode.Light:
                 ApplicationThemeManager.Apply(ApplicationTheme.Light);
                 break;
-            case ThemeMode.Dark:
+            case AppThemeMode.Dark:
                 ApplicationThemeManager.Apply(ApplicationTheme.Dark);
                 break;
         }
         ModeChanged?.Invoke();
     }
 
-    private static ThemeMode ReadConfig()
+    private static AppThemeMode ReadConfig()
     {
         try
         {
             if (!File.Exists(ConfigPath))
-                return ThemeMode.System;
+                return AppThemeMode.System;
             var json = File.ReadAllText(ConfigPath);
             var data = JsonSerializer.Deserialize<ThemeConfig>(json);
             return data?.Mode switch
             {
-                "Light" => ThemeMode.Light,
-                "Dark" => ThemeMode.Dark,
-                _ => ThemeMode.System,
+                "Light" => AppThemeMode.Light,
+                "Dark" => AppThemeMode.Dark,
+                _ => AppThemeMode.System,
             };
         }
         catch
         {
-            return ThemeMode.System;
+            return AppThemeMode.System;
         }
     }
 
-    private static void SaveConfig(ThemeMode mode)
+    private static void SaveConfig(AppThemeMode mode)
     {
         try
         {
