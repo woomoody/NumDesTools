@@ -321,8 +321,9 @@ internal static class CellGitHistoryService
     }
 
     /// <summary>
-    /// 流式查询：每找到一条真实变更立刻调用 onPartial 刷新气泡，全部找完后调用 onFinal 缓存。
-    /// 修正对比逻辑：commit[i].val ≠ commit[i+1].val 才说明 commit[i] 真的改了这格。
+    /// 并行分块流式查询：10 个线程同时处理不同 commit 段，每段内顺序提取单元格值，
+    /// 全部完成后合并结果再跑 diff 算法，最后汇总输出。
+    /// 每找到一条变更就调用 onPartial 刷新气泡，全部找完后调用 onFinal 缓存。
     /// </summary>
     private static void QueryHistoryStreaming(
         string absFilePath,
@@ -347,71 +348,95 @@ internal static class CellGitHistoryService
         var tmpDir = Path.Combine(Path.GetTempPath(), "NumDesCellHistory");
         Directory.CreateDirectory(tmpDir);
 
-        // 滑动窗口流式：读完 commit[i+1] 就能判断 commit[i] 是否是真实改动者，无需等全部收集
-        const int MaxChanges = 10;
-        const int MaxLoop = 100; // 100 commit 覆盖足够历史，大型表也能找到多条 diff
-        var accumulated = new List<(string date, string author, string msg, string val)>();
+        const int MaxChanges = 50;
+        const int MaxCommits = 500;
+        const int ParallelChunks = 10;
+
+        // 只取前 MaxCommits 个 commit
+        var takeCount = Math.Min(commits.Count, MaxCommits);
+        var limitedCommits = commits.GetRange(0, takeCount);
+
+        // ── 阶段1：分块并行提取每个 commit 的单元格值 ──────────────────────
+        // 每个元素: (val, sha, date, author, msg) 保持 commit 顺序
+        var results = new (string? val, string sha, string date, string author, string msg)[takeCount];
+
+        // 分块：每块大小 = ceil(takeCount / ParallelChunks)
+        int chunkSize = (takeCount + ParallelChunks - 1) / ParallelChunks;
+        var chunkCount = (takeCount + chunkSize - 1) / chunkSize;
+
+        Parallel.For(0, chunkCount, new ParallelOptions { MaxDegreeOfParallelism = ParallelChunks, CancellationToken = ct }, chunkIdx =>
+        {
+            int start = chunkIdx * chunkSize;
+            int end = Math.Min(start + chunkSize, takeCount);
+
+            // 每个线程独立创建 Repository（LibGit2Sharp 非线程安全）
+            using var threadRepo = new Repository(gitRoot);
+            string? prevBlobOid = null;
+
+            for (int i = start; i < end; i++)
+            {
+                if (ct.IsCancellationRequested)
+                    return;
+
+                var (sha, date, author, msg) = limitedCommits[i];
+
+                // blob OID 预过滤：文件内容未变直接跳过（块内连续）
+                var commit = threadRepo.Lookup<Commit>(sha);
+                var blobEntry = commit?.Tree[relativePath];
+                var blobOid = blobEntry?.Target.Sha;
+                if (blobOid != null && blobOid == prevBlobOid)
+                {
+                    PluginLog.Verbose($"[谁的锅] commit {sha[..8]} blob unchanged, skip");
+                    continue;
+                }
+                prevBlobOid = blobOid;
+
+                // 提取单元格值
+                string? val = null;
+                var sheetData = LoadSheetData(threadRepo, gitRoot, sha, relativePath, sheetName, tmpDir);
+                if (sheetData != null && sheetData.TryGetValue(rowKey, out var rowData))
+                    rowData.TryGetValue(colName, out val);
+
+                results[i] = (val, sha, date, author, msg);
+            }
+        });
+
+        // ── 阶段2：合并结果，顺序跑 diff ──────────────────────────────────
+        if (ct.IsCancellationRequested)
+        {
+            onFinal(null);
+            return;
+        }
+
+        // 结果 now: (new value, sha, date, author, msg) 按 commit 顺序排列
+        // 用 accumulated 存 (date, author, msg, oldVal, newVal) 展示"谁改了什么值"
+        var accumulated = new List<(string date, string author, string msg, string oldVal, string newVal)>();
 
         string? prevVal = null;
         (string date, string author, string msg)? prevMeta = null;
+        bool hadNonNull = false;
 
-        // P0 优化：Repository 实例提升到循环外，50 commits 只初始化一次
-        using var repo = new Repository(gitRoot);
-        string? prevBlobOid = null; // blob OID 预过滤：OID 相同 = 文件内容未变 = 单元格值一定未变
-        int loopCount = 0;
-        bool hadNonNull = false; // 是否曾经找到过值（用于检测"此行首次出现"边界）
-
-        foreach (var (sha, date, author, msg) in commits)
+        foreach (var (val, sha, date, author, msg) in results)
         {
-            if (ct.IsCancellationRequested)
-            {
-                onFinal(null);
-                return;
-            }
-            if (accumulated.Count >= MaxChanges || loopCount++ >= MaxLoop)
+            if (accumulated.Count >= MaxChanges)
                 break;
-
-            // blob OID 预过滤：纳秒级内存操作，文件内容未变直接跳过
-            var commit = repo.Lookup<Commit>(sha);
-            var blobEntry = commit?.Tree[relativePath];
-            var blobOid = blobEntry?.Target.Sha;
-            if (blobOid != null && blobOid == prevBlobOid)
-            {
-                // 文件内容与上一个 commit 完全相同，单元格值一定未变，跳过昂贵的解析
-                PluginLog.Verbose($"[谁的锅] commit {sha[..8]} blob unchanged, skip");
-                continue;
-            }
-            prevBlobOid = blobOid;
-
-            // 改用 LoadSheetData（全表解析+字典缓存）取代 MiniExcel 逐行扫描。
-            // 大型表（item 类）下 MiniExcel 需逐行扫描到目标行，O(N) per commit；
-            // 全表解析一次后字典查 O(1)，且同一 sheet 多格查询命中缓存，整体快 5-10x。
-            string? val = null;
-            var sheetData = LoadSheetData(repo, gitRoot, sha, relativePath, sheetName, tmpDir);
-            if (sheetData != null && sheetData.TryGetValue(rowKey, out var rowData))
-                rowData.TryGetValue(colName, out val);
-
-            PluginLog.Verbose($"[谁的锅] commit {sha[..8]} val={val ?? "null"}");
 
             if (val == null)
             {
                 if (hadNonNull)
                 {
-                    // 找到创建边界：更老的 commit 不存在此行，说明 prevMeta 是"首次添加此行"的 commit
-                    // 直接跳出，后续处理会将 prevMeta 作为"最早可查记录"显示
+                    // 找到创建边界：更老的 commit 不存在此行
                     break;
                 }
-                continue; // 此行在这个 commit 里不存在，继续向更老的 commit 找
+                continue;
             }
 
             hadNonNull = true;
 
             if (prevVal != null && prevMeta.HasValue && val != prevVal)
             {
-                // prevMeta 对应的 commit 是真实改动者（它的值与再早一个 commit 不同）
-                accumulated.Add(
-                    (prevMeta.Value.date, prevMeta.Value.author, prevMeta.Value.msg, prevVal)
-                );
+                // prevMeta 的 commit 把值从 val 改成了 prevVal
+                accumulated.Add((prevMeta.Value.date, prevMeta.Value.author, prevMeta.Value.msg, val, prevVal));
                 onPartial(BuildText(accumulated));
             }
 
@@ -419,42 +444,36 @@ internal static class CellGitHistoryService
             prevMeta = (date, author, msg);
         }
 
-        // 若找到值但无任何变更（值在所有可查提交中从未改变），
-        // 则展示最老一条提交作为"最早可查记录"，告诉用户是谁最早放入了这个值
+        // 若找到值但无任何变更，展示最老一条作为"最早可查记录"
         if (accumulated.Count == 0 && prevMeta.HasValue && prevVal != null)
         {
-            var stableEntry = (
-                prevMeta.Value.date,
-                prevMeta.Value.author,
-                prevMeta.Value.msg + "（最早可查，值未改变）",
-                prevVal
-            );
-            accumulated.Add(stableEntry);
+            accumulated.Add((prevMeta.Value.date, prevMeta.Value.author, prevMeta.Value.msg + "（最早可查，值未改变）", prevVal, prevVal));
             onPartial(BuildText(accumulated));
         }
 
-        PluginLog.Write($"[谁的锅] streaming done: changes={accumulated.Count}");
+        PluginLog.Write($"[谁的锅] parallel done: changes={accumulated.Count}");
         var finalText = accumulated.Count > 0 ? BuildText(accumulated) : null;
         onFinal(finalText);
     }
 
     private static string BuildText(
-        List<(string date, string author, string msg, string val)> results
+        List<(string date, string author, string msg, string oldVal, string newVal)> results
     )
     {
         var sb = new StringBuilder();
         for (int i = 0; i < results.Count; i++)
         {
-            var (date, author, msg, val) = results[i];
+            var (date, author, msg, oldVal, newVal) = results[i];
             var datePart = date.Length >= 10 ? date[..10] : date;
             sb.AppendLine($"[{i + 1}] {datePart}  {author}");
             var shortMsg = msg.Length > 40 ? msg[..40] + "…" : msg;
             sb.AppendLine($"    {shortMsg}");
-            var shortVal = val.Length > 60 ? val[..60] + "…" : val;
+            var shortOld = oldVal.Length > 60 ? oldVal[..60] + "…" : oldVal;
+            var shortNew = newVal.Length > 60 ? newVal[..60] + "…" : newVal;
             if (i < results.Count - 1)
-                sb.AppendLine($"    值: {shortVal}");
+                sb.AppendLine($"    旧值: {shortOld}  →  新值: {shortNew}");
             else
-                sb.Append($"    值: {shortVal}");
+                sb.Append($"    旧值: {shortOld}  →  新值: {shortNew}");
         }
         return sb.ToString().TrimEnd('\n');
     }
@@ -471,8 +490,8 @@ internal static class CellGitHistoryService
 
         try
         {
-            // --all 搜索所有分支；-n 120 配合 MaxLoop=100 留 20 条余量（blob OID 跳过)
-            var args = $"log --all -n 120 --format=\"%H|%ai|%an|%s\" -- \"{relativePath}\"";
+            // --all 搜索所有分支；-n 500 配合 MaxCommits=500 覆盖全部历史
+            var args = $"log --all -n 500 --format=\"%H|%ai|%an|%s\" -- \"{relativePath}\"";
             var output = RunGit(gitRoot, args);
 
             var result = new List<(string, string, string, string)>();
