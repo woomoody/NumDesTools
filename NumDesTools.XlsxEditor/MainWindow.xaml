@@ -39,6 +39,9 @@
             <Button Content="取消冻结" Click="OnUnfreezeClick" />
             <Separator />
             <Button Content="查看完整值" Click="OnViewFullValueClick" ToolTip="弹窗显示当前单元格完整内容" />
+            <Separator />
+            <Label Content="主题：" VerticalAlignment="Center" />
+            <ComboBox x:Name="ThemeSelector" Width="90" SelectionChanged="OnThemeSelectionChanged" />
         </ToolBar>
 
         <Grid Grid.Row="2" Margin="4,2">

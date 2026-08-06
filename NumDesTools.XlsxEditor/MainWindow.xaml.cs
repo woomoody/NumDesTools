@@ -26,13 +26,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private static readonly Brush DirtyCellBrush = new SolidColorBrush(Color.FromRgb(43, 145, 76));
     private static readonly IMultiValueConverter DirtyCellConverter = new DirtyCellStateConverter();
 
-    // 深色主题单元格边框颜色（比背景略亮）
-    private static readonly Brush GridLineBrush = new SolidColorBrush(Color.FromRgb(60, 60, 60));
-
-    // #P8-1：列头（Excel 字母坐标 A/B/C 所在行）背景色——比数据区略深，与深色主题一致。
-    private static readonly Brush HeaderBackgroundBrush = new SolidColorBrush(
-        Color.FromRgb(45, 45, 45)
-    );
+    // 主题色刷（引用 ThemeBrushes 可变实例，主题切换时自动更新颜色）
+    private static readonly Brush GridLineBrush = ThemeBrushes.GridLine;
+    private static readonly Brush HeaderBackgroundBrush = ThemeBrushes.HeaderBackground;
 
     // 聚光灯：选中区域外框（亮黄色），行列用半透明背景色指示
     private static readonly Brush SpotlightBorderBrush = new SolidColorBrush(
@@ -404,7 +400,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private TabItem BuildWorkbookTab(string fileName, TabControl sheetTabs)
     {
         sheetTabs.Padding = new Thickness(4, 0, 4, 2);
-        sheetTabs.Background = new SolidColorBrush(Color.FromRgb(30, 30, 30));
+        sheetTabs.Background = ThemeBrushes.SheetPanelBg;
         var sheetTabStyle = new Style(
             typeof(TabItem),
             Application.Current.TryFindResource(typeof(TabItem)) as Style
@@ -416,7 +412,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         sheetTabStyle.Setters.Add(
             new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(45, 45, 45)))
         );
-        sheetTabStyle.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.Gray));
+        sheetTabStyle.Setters.Add(new Setter(Control.ForegroundProperty, ThemeBrushes.TextSecondary));
         sheetTabStyle.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.Normal));
         sheetTabStyle.Triggers.Add(
             new Trigger
@@ -429,7 +425,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                         Control.BackgroundProperty,
                         new SolidColorBrush(Color.FromRgb(80, 80, 80))
                     ),
-                    new Setter(Control.ForegroundProperty, Brushes.White),
+                    new Setter(Control.ForegroundProperty, ThemeBrushes.TextForeground),
                     new Setter(Control.FontWeightProperty, FontWeights.Bold),
                     new Setter(
                         Control.BorderBrushProperty,
@@ -461,7 +457,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             Padding = new Thickness(2),
             BorderThickness = new Thickness(0),
             Background = Brushes.Transparent,
-            Foreground = Brushes.White,
+            Foreground = ThemeBrushes.TextForeground,
             Cursor = Cursors.Hand,
         };
         var wbTab = new TabItem { Header = header, Content = sheetTabsBorder };
@@ -484,7 +480,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         wbTabStyle.Setters.Add(
             new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(50, 50, 50)))
         );
-        wbTabStyle.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.Gray));
+        wbTabStyle.Setters.Add(new Setter(Control.ForegroundProperty, ThemeBrushes.TextSecondary));
         wbTabStyle.Triggers.Add(
             new Trigger
             {
@@ -496,7 +492,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                         Control.BackgroundProperty,
                         new SolidColorBrush(Color.FromRgb(90, 90, 90))
                     ),
-                    new Setter(Control.ForegroundProperty, Brushes.White),
+                    new Setter(Control.ForegroundProperty, ThemeBrushes.TextForeground),
                     new Setter(
                         Control.BorderBrushProperty,
                         new SolidColorBrush(Color.FromRgb(86, 156, 214))
@@ -694,15 +690,15 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private static Style BuildColumnHeaderStyle()
     {
         var style = new Style(typeof(DataGridColumnHeader));
-        style.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
+        style.Setters.Add(new Setter(Control.ForegroundProperty, ThemeBrushes.TextForeground));
         // #P9-1：DGX 列头模板里的 PART_Content 是 ContentPresenter，字母（"A"/"B"...）以 TextBlock 呈现；
         // 其颜色靠 TextElement.Foreground 继承。WPF-UI 深色皮肤的 DataGridColumnHeader 模板可能自带内层
         // ContentPresenter 前景，盖过 Control.Foreground（截图证实冻结后主区字母不可见）。同时显式设
         // TextElement.Foreground + TextBlock.Foreground=White，让字母无论经哪层呈现都强制白色。
         style.Setters.Add(
-            new Setter(System.Windows.Documents.TextElement.ForegroundProperty, Brushes.White)
+            new Setter(System.Windows.Documents.TextElement.ForegroundProperty, ThemeBrushes.TextForeground)
         );
-        style.Setters.Add(new Setter(TextBlock.ForegroundProperty, Brushes.White));
+        style.Setters.Add(new Setter(TextBlock.ForegroundProperty, ThemeBrushes.TextForeground));
         style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.Bold));
         style.Setters.Add(new Setter(Control.BackgroundProperty, HeaderBackgroundBrush));
         style.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
@@ -758,7 +754,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 ),
             }
         );
-        factory.SetValue(TextBlock.ForegroundProperty, Brushes.White);
+        factory.SetValue(TextBlock.ForegroundProperty, ThemeBrushes.TextForeground);
         factory.SetValue(TextBlock.FontWeightProperty, FontWeights.Bold);
         factory.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
         factory.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
@@ -769,13 +765,13 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var rowStyle = new Style(typeof(DataGridRow));
         rowStyle.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
         rowStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0.5)));
-        rowStyle.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
+        rowStyle.Setters.Add(new Setter(Control.ForegroundProperty, ThemeBrushes.TextForeground));
         grid.RowStyle = rowStyle;
         grid.RowHeaderWidth = 50;
 
         // 行头样式：显式设背景+前景，确保深色主题下可见
         var rowHeaderStyle = new Style(typeof(DataGridRowHeader));
-        rowHeaderStyle.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
+        rowHeaderStyle.Setters.Add(new Setter(Control.ForegroundProperty, ThemeBrushes.TextForeground));
         rowHeaderStyle.Setters.Add(new Setter(Control.BackgroundProperty, GridLineBrush));
         rowHeaderStyle.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
         rowHeaderStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0.5)));
@@ -1212,8 +1208,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         style.Setters.Add(
             new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(45, 45, 45)))
         );
-        style.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
-        style.Setters.Add(new Setter(TextBox.CaretBrushProperty, Brushes.White));
+        style.Setters.Add(new Setter(Control.ForegroundProperty, ThemeBrushes.TextForeground));
+        style.Setters.Add(new Setter(TextBox.CaretBrushProperty, ThemeBrushes.TextForeground));
         style.Setters.Add(
             new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(90, 90, 90)))
         );
@@ -1261,8 +1257,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         style.Setters.Add(
             new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(45, 45, 45)))
         );
-        style.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
-        style.Setters.Add(new Setter(TextBox.CaretBrushProperty, Brushes.White));
+        style.Setters.Add(new Setter(Control.ForegroundProperty, ThemeBrushes.TextForeground));
+        style.Setters.Add(new Setter(TextBox.CaretBrushProperty, ThemeBrushes.TextForeground));
         style.Setters.Add(
             new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(90, 90, 90)))
         );
@@ -1282,13 +1278,13 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         // 由该 Style 里的 ControlTemplate Border 亲自绘制，45,45,45 真正落地。
         tb.SetValue(FrameworkElement.StyleProperty, DarkFilterTextBoxStyle);
         tb.SetValue(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(45, 45, 45)));
-        tb.SetValue(Control.ForegroundProperty, Brushes.White);
+        tb.SetValue(Control.ForegroundProperty, ThemeBrushes.TextForeground);
         tb.SetValue(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(90, 90, 90)));
         tb.SetValue(Control.BorderThicknessProperty, new Thickness(1));
         tb.SetValue(FrameworkElement.MarginProperty, new Thickness(1));
         tb.SetValue(Control.PaddingProperty, new Thickness(2, 0, 2, 0));
         tb.SetValue(FrameworkElement.MinHeightProperty, 20d);
-        tb.SetValue(TextBox.CaretBrushProperty, Brushes.White);
+        tb.SetValue(TextBox.CaretBrushProperty, ThemeBrushes.TextForeground);
         tb.SetValue(FrameworkElement.ToolTipProperty, "输入筛选值（回车/停顿后生效）");
         // 绑定到 DataGridFilterColumnControl.Filter（DGX 把该控件作为模板承载者）
         tb.SetBinding(
@@ -1954,9 +1950,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     }
 
     // #P9-3：分界竖线颜色（亮灰），供独立贯穿 Border 使用。
-    private static readonly Brush FreezeDividerBrush = new SolidColorBrush(
-        Color.FromRgb(120, 120, 120)
-    );
+    private static readonly Brush FreezeDividerBrush = ThemeBrushes.FreezeDivider;
 
     /// <summary>
     /// #P9-3：冻结列分界竖线——彻底改用【一条独立 Border，跨 panel 两行（冻结行 grid + 主 grid）贯穿绘制】，
@@ -2192,7 +2186,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 ),
             }
         );
-        factory.SetValue(TextBlock.ForegroundProperty, Brushes.White);
+        factory.SetValue(TextBlock.ForegroundProperty, ThemeBrushes.TextForeground);
         factory.SetValue(TextBlock.FontWeightProperty, FontWeights.Bold);
         factory.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center);
         factory.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
@@ -2202,7 +2196,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
         // #8：行头样式与主 grid 完全一致（同背景 GridLineBrush、白字、居中）——去掉之前的差异化。
         var rowHeaderStyle = new Style(typeof(DataGridRowHeader));
-        rowHeaderStyle.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
+        rowHeaderStyle.Setters.Add(new Setter(Control.ForegroundProperty, ThemeBrushes.TextForeground));
         rowHeaderStyle.Setters.Add(new Setter(Control.BackgroundProperty, GridLineBrush));
         rowHeaderStyle.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
         rowHeaderStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0.5)));
@@ -2215,7 +2209,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var rowStyle = new Style(typeof(DataGridRow));
         rowStyle.Setters.Add(new Setter(Control.BorderBrushProperty, GridLineBrush));
         rowStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0.5)));
-        rowStyle.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White));
+        rowStyle.Setters.Add(new Setter(Control.ForegroundProperty, ThemeBrushes.TextForeground));
         grid.RowStyle = rowStyle;
 
         // 单元格样式与主 grid 一致（同边框），保证行高/字体/网格线完全统一。
