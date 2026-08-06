@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using ExcelDna.Integration;
 using LibGit2Sharp;
-using OfficeOpenXml;
 using Font = System.Drawing.Font;
 using Timer = System.Windows.Forms.Timer;
 
@@ -234,14 +233,10 @@ internal static class CellGitHistoryService
         (List<(string sha, string date, string author, string msg)> commits, long stamp)
     > _commitListCache = new(StringComparer.OrdinalIgnoreCase);
 
-    // Sheet 级数据缓存：key = "sha8|relPath|sheetName" → rowKey → colName → value
-    // 一次 EPPlus 解析覆盖整 sheet，同一 sheet 的多格查询直接命中
-    // 使用 ConcurrentDictionary 支持并行分块处理下的线程安全读写
-    private static readonly ConcurrentDictionary<
-        string,
-        Dictionary<string, Dictionary<string, string>>
-    > _sheetDataCache = new(StringComparer.Ordinal);
-    private const int SheetCacheCapacity = 500;
+    // 单格值缓存：sha8|relPath|sheetName|rowKey|colName → value（条目小，内存可忽略）
+    private static readonly ConcurrentDictionary<string, string> _cellValCache = new(
+        StringComparer.Ordinal
+    );
 
     public static void Query(
         string absFilePath,
@@ -347,10 +342,13 @@ internal static class CellGitHistoryService
         var tmpDir = Path.Combine(Path.GetTempPath(), "NumDesCellHistory");
         Directory.CreateDirectory(tmpDir);
 
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        int parsedCount = 0, skippedCount = 0, totalCommits = 0;
+
         const int MaxChanges = 50;
         const int MaxCommits = 500;
         const int StreamingPhaseCount = 25; // 前 25 个 commit 顺序流式，快速出首条
-        const int ParallelChunks = 6;
+        const int ParallelChunks = 6; // MiniExcel 流式取格内存极小，6 线程安全
 
         var takeCount = Math.Min(commits.Count, MaxCommits);
         var limitedCommits = commits.GetRange(0, takeCount);
@@ -396,11 +394,16 @@ internal static class CellGitHistoryService
                 }
                 prevBlobOid = blobOid;
 
-                // 提取值
-                string? val = null;
-                var sheetData = LoadSheetData(streamRepo, gitRoot, sha, relativePath, sheetName, tmpDir);
-                if (sheetData != null && sheetData.TryGetValue(rowKey, out var rowData))
-                    rowData.TryGetValue(colName, out val);
+                // 提取值（MiniExcel 流式取格，内存极低）
+                string? val = GetCellValueAtCommit(
+                    streamRepo,
+                    sha,
+                    relativePath,
+                    sheetName,
+                    rowKey,
+                    colName,
+                    tmpDir
+                );
 
                 PluginLog.Verbose($"[谁的锅] phase1 commit {sha[..8]} val={val ?? "null"}");
 
@@ -425,6 +428,11 @@ internal static class CellGitHistoryService
 
             phase1LastVal = prevVal;
             phase1LastMeta = prevMeta;
+
+            totalCommits = streamingEnd;
+            sw.Stop();
+            PluginLog.Write($"[谁的锅] Phase1 done: {streamingEnd} commits, {accumulated.Count} changes, {sw.ElapsedMilliseconds}ms");
+            sw.Start();
         }
 
         // ── 阶段2：并行处理剩余 commit ─────────────────────────────────────
@@ -462,10 +470,15 @@ internal static class CellGitHistoryService
                     }
                     prevBlobOid = blobOid;
 
-                    string? val = null;
-                    var sheetData = LoadSheetData(threadRepo, gitRoot, sha, relativePath, sheetName, tmpDir);
-                    if (sheetData != null && sheetData.TryGetValue(rowKey, out var rowData))
-                        rowData.TryGetValue(colName, out val);
+                    string? val = GetCellValueAtCommit(
+                        threadRepo,
+                        sha,
+                        relativePath,
+                        sheetName,
+                        rowKey,
+                        colName,
+                        tmpDir
+                    );
 
                     local[i - start] = (val, sha, date, author, msg);
                 }
@@ -513,6 +526,17 @@ internal static class CellGitHistoryService
                 }
             }
             Phase2Done:;
+            sw.Stop();
+            long phase2Ms = sw.ElapsedMilliseconds;
+            PluginLog.Write($"[谁的锅] Phase2 done: {takeCount - streamingEnd} commits ({parsedCount} parsed, {skippedCount} blob-skipped), {phase2Ms}ms");
+            sw.Start();
+        }
+
+        // 补"从无到有"创建条目：prevMeta 是该行首次出现（或窗口内最早可查）的 commit
+        if (accumulated.Count > 0 && prevMeta.HasValue && prevVal != null)
+        {
+            accumulated.Add((prevMeta.Value.date, prevMeta.Value.author, prevMeta.Value.msg + "（行首次出现）", "（空）", prevVal));
+            onPartial(BuildText(accumulated));
         }
 
         // 若找到值但无任何变更，展示最老一条
@@ -522,7 +546,8 @@ internal static class CellGitHistoryService
             onPartial(BuildText(accumulated));
         }
 
-        PluginLog.Write($"[谁的锅] hybrid done: changes={accumulated.Count}");
+        sw.Stop();
+        PluginLog.Write($"[谁的锅] TOTAL: {takeCount} commits scanned, {accumulated.Count} changes found, {sw.ElapsedMilliseconds}ms");
         var finalText = accumulated.Count > 0 ? BuildText(accumulated) : null;
         onFinal(finalText);
     }
@@ -588,21 +613,21 @@ internal static class CellGitHistoryService
     }
 
     /// <summary>
-    /// 加载并缓存某个 commit 下 xlsx 某 sheet 的全部数据：rowKey → colName → value。
-    /// 一次 EPPlus 解析覆盖整个 sheet，同 sheet 后续格查询直接命中内存缓存。
-    /// 线程安全：_sheetDataCache 使用 ConcurrentDictionary，支持并行分块处理。
+    /// 用 MiniExcel 流式读取，从目标 commit 的 xlsx 中提取单格值。
+    /// 找到目标 rowKey 后立即 break，无需解析整个 sheet，内存极低。
     /// </summary>
-    private static Dictionary<string, Dictionary<string, string>>? LoadSheetData(
+    private static string? GetCellValueAtCommit(
         Repository repo,
-        string gitRoot,
         string sha,
         string relativePath,
         string sheetName,
+        string rowKey,
+        string colName,
         string tmpDir
     )
     {
-        var cacheKey = $"{sha[..8]}|{relativePath}|{sheetName}";
-        if (_sheetDataCache.TryGetValue(cacheKey, out var cached))
+        var cacheKey = $"{sha[..8]}|{relativePath}|{sheetName}|{rowKey}|{colName}";
+        if (_cellValCache.TryGetValue(cacheKey, out var cached))
             return cached;
 
         try
@@ -623,33 +648,64 @@ internal static class CellGitHistoryService
                 src.CopyTo(dst);
             }
 
-            ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
-            using var pkg = new ExcelPackage(new FileInfo(tmpFile));
-            var ws = pkg.Workbook.Worksheets.FirstOrDefault(w =>
-                string.Equals(w.Name, sheetName, StringComparison.OrdinalIgnoreCase)
-            );
-            if (ws?.Dimension == null)
-                return null;
+            // MiniExcel 流式读：row 2 找列字母，row 3+ 找 rowKey，找到即 break
+            string? keyLetter = null, targetLetter = null;
+            int rowIdx = 0;
+            string? result = null;
 
-            var data = CellHistoryXlsxReader.ParseSheetData(ws);
-
-            // 入缓存（ConcurrentDictionary 线程安全，超过容量时简单清理）
-            if (_sheetDataCache.Count >= SheetCacheCapacity)
+            foreach (System.Collections.IDictionary row in MiniExcelLibs.MiniExcel.Query(
+                tmpFile,
+                sheetName: sheetName,
+                useHeaderRow: false
+            ))
             {
-                // 直接清空——简化 LRU，反正同一 sheet 的 commit 数据是连续访问的
-                _sheetDataCache.Clear();
+                rowIdx++;
+                if (rowIdx == 2)
+                {
+                    // row 2 = 列名行，按列字母排序找 key 列和目标列
+                    var keys = new List<string>(row.Keys.Cast<string>());
+                    keys.Sort((a, b) => a.Length != b.Length ? a.Length - b.Length : string.Compare(a, b, StringComparison.Ordinal));
+                    foreach (var k in keys)
+                    {
+                        var h = row[k]?.ToString() ?? "";
+                        if (keyLetter == null && !string.IsNullOrEmpty(h) && !h.StartsWith('#'))
+                            keyLetter = k;
+                        if (h == colName)
+                            targetLetter = k;
+                    }
+                    if (keyLetter == null)
+                        break;
+                    if (targetLetter == null)
+                    {
+                        result = "（列当时不存在）";
+                        break;
+                    }
+                }
+                else if (rowIdx >= 3 && keyLetter != null && targetLetter != null)
+                {
+                    var kv = row[keyLetter]?.ToString() ?? "";
+                    if (kv == rowKey)
+                    {
+                        var val = row[targetLetter]?.ToString() ?? "";
+                        result = string.IsNullOrEmpty(val) ? "（空）" : val;
+                        break;
+                    }
+                }
             }
-            _sheetDataCache[cacheKey] = data;
-            return data;
+
+            if (result != null)
+            {
+                if (_cellValCache.Count >= 2000)
+                    _cellValCache.Clear();
+                _cellValCache[cacheKey] = result;
+            }
+            return result;
         }
         catch
         {
             return null;
         }
     }
-
-    // ── 不再使用 MiniExcel 逐行扫描路径（已改用 LoadSheetData 全表解析+字典） ──
-    // 旧代码 GetCellValueAtCommit 和 _cellValCache 已清理，如需恢复可 git checkout 此文件历史版本。
 
     private static string RunGit(string gitRoot, string arguments)
     {
