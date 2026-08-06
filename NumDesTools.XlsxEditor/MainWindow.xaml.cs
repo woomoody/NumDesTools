@@ -84,17 +84,19 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private void InitThemeSelector()
     {
-        ThemeSelector.Items.Clear();
-        foreach (var mode in new[] { AppThemeMode.System, AppThemeMode.Light, AppThemeMode.Dark })
+        ThemeButton.Content = ThemeService.ModeLabel(ThemeService.CurrentMode);
+    }
+
+    private void OnThemeButtonClick(object sender, RoutedEventArgs e)
+    {
+        var next = ThemeService.CurrentMode switch
         {
-            ThemeSelector.Items.Add(ThemeService.ModeLabel(mode));
-        }
-        ThemeSelector.SelectedIndex = ThemeService.CurrentMode switch
-        {
-            AppThemeMode.Light => 1,
-            AppThemeMode.Dark => 2,
-            _ => 0,
+            AppThemeMode.System => AppThemeMode.Light,
+            AppThemeMode.Light => AppThemeMode.Dark,
+            AppThemeMode.Dark => AppThemeMode.System,
+            _ => AppThemeMode.System,
         };
+        ThemeService.SetMode(next);
     }
 
     private void OnAppThemeModeChanged()
@@ -107,6 +109,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         try
         {
             ThemeBrushes.ApplyTheme(ThemeService.CurrentMode);
+            ThemeButton.Content = ThemeService.ModeLabel(ThemeService.CurrentMode);
             // 刷新所有 DataGrid UI
             foreach (var state in _sheets.Values)
             {
@@ -126,19 +129,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         {
             System.Diagnostics.Debug.WriteLine($"[Theme] OnAppThemeModeChanged error: {ex.Message}");
         }
-    }
-
-    private void OnThemeSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (ThemeSelector.SelectedIndex < 0)
-            return;
-        var mode = ThemeSelector.SelectedIndex switch
-        {
-            1 => AppThemeMode.Light,
-            2 => AppThemeMode.Dark,
-            _ => AppThemeMode.System,
-        };
-        ThemeService.SetMode(mode);
     }
 
     // ── 当前选中定位（集中逻辑，供 ~22 处机械替换用） ──────────────────

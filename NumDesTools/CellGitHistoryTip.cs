@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -235,12 +236,12 @@ internal static class CellGitHistoryService
 
     // Sheet 级数据缓存：key = "sha8|relPath|sheetName" → rowKey → colName → value
     // 一次 EPPlus 解析覆盖整 sheet，同一 sheet 的多格查询直接命中
-    private static readonly Dictionary<
+    // 使用 ConcurrentDictionary 支持并行分块处理下的线程安全读写
+    private static readonly ConcurrentDictionary<
         string,
         Dictionary<string, Dictionary<string, string>>
     > _sheetDataCache = new(StringComparer.Ordinal);
-    private static readonly Queue<string> _sheetCacheOrder = new();
-    private const int SheetCacheCapacity = 100;
+    private const int SheetCacheCapacity = 500;
 
     public static void Query(
         string absFilePath,
@@ -499,22 +500,7 @@ internal static class CellGitHistoryService
     /// <summary>
     /// 加载并缓存某个 commit 下 xlsx 某 sheet 的全部数据：rowKey → colName → value。
     /// 一次 EPPlus 解析覆盖整个 sheet，同 sheet 后续格查询直接命中内存缓存。
-    /// </summary>
-    private static Dictionary<string, Dictionary<string, string>>? LoadSheetData(
-        string gitRoot,
-        string sha,
-        string relativePath,
-        string sheetName,
-        string tmpDir
-    )
-    {
-        using var repo = new Repository(gitRoot);
-        return LoadSheetData(repo, gitRoot, sha, relativePath, sheetName, tmpDir);
-    }
-
-    /// <summary>
-    /// LoadSheetData 的 Repository 复用重载——由 QueryHistoryStreaming 传入外层 repo 实例，
-    /// 避免每个 commit 重复初始化 Repository（LibGit2Sharp 初始化约 50-100ms）。
+    /// 线程安全：_sheetDataCache 使用 ConcurrentDictionary，支持并行分块处理。
     /// </summary>
     private static Dictionary<string, Dictionary<string, string>>? LoadSheetData(
         Repository repo,
@@ -557,14 +543,13 @@ internal static class CellGitHistoryService
 
             var data = CellHistoryXlsxReader.ParseSheetData(ws);
 
-            // 入缓存（LRU 淘汰）
+            // 入缓存（ConcurrentDictionary 线程安全，超过容量时简单清理）
             if (_sheetDataCache.Count >= SheetCacheCapacity)
             {
-                var old = _sheetCacheOrder.Dequeue();
-                _sheetDataCache.Remove(old);
+                // 直接清空——简化 LRU，反正同一 sheet 的 commit 数据是连续访问的
+                _sheetDataCache.Clear();
             }
             _sheetDataCache[cacheKey] = data;
-            _sheetCacheOrder.Enqueue(cacheKey);
             return data;
         }
         catch
