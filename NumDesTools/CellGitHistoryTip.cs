@@ -240,7 +240,7 @@ internal static class CellGitHistoryService
         Dictionary<string, Dictionary<string, string>>
     > _sheetDataCache = new(StringComparer.Ordinal);
     private static readonly Queue<string> _sheetCacheOrder = new();
-    private const int SheetCacheCapacity = 50;
+    private const int SheetCacheCapacity = 100;
 
     public static void Query(
         string absFilePath,
@@ -347,8 +347,8 @@ internal static class CellGitHistoryService
         Directory.CreateDirectory(tmpDir);
 
         // 滑动窗口流式：读完 commit[i+1] 就能判断 commit[i] 是否是真实改动者，无需等全部收集
-        const int MaxChanges = 5;
-        const int MaxLoop = 50; // 大型表（如 item）50 commit 足够覆盖最近改动，减少扫描开销
+        const int MaxChanges = 10;
+        const int MaxLoop = 100; // 100 commit 覆盖足够历史，大型表也能找到多条 diff
         var accumulated = new List<(string date, string author, string msg, string val)>();
 
         string? prevVal = null;
@@ -470,8 +470,8 @@ internal static class CellGitHistoryService
 
         try
         {
-            // --all 搜索所有分支；-n 200 防止极大仓库无限返回（QueryHistoryStreaming 有 MaxLoop=200 兜底）
-            var args = $"log --all -n 200 --format=\"%H|%ai|%an|%s\" -- \"{relativePath}\"";
+            // --all 搜索所有分支；-n 120 配合 MaxLoop=100 留 20 条余量（blob OID 跳过)
+            var args = $"log --all -n 120 --format=\"%H|%ai|%an|%s\" -- \"{relativePath}\"";
             var output = RunGit(gitRoot, args);
 
             var result = new List<(string, string, string, string)>();

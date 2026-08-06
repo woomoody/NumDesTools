@@ -28,6 +28,8 @@ public static class CellHistoryXlsxReader
     /// 解析 worksheet 数据，返回 rowKey → colName → value 映射。
     /// 从 row 3 开始扫描（兼容标准 config 表 row5 起和 type 表 row3 起）。
     /// 优化：批量读取整个 range 为 2D 数组，避免逐格创建 ExcelCell 对象。
+    /// 注意：必须从 row 1 开始读 range，因为 values 索引是 0-based 相对 range 偏移，
+    /// 如果 startRow != 1 则 values[1,c] 不是 row 2 导致列名映射全错。
     /// </summary>
     public static Dictionary<string, Dictionary<string, string>> ParseSheetData(
         ExcelWorksheet ws
@@ -38,38 +40,39 @@ public static class CellHistoryXlsxReader
             return data;
 
         var dim = ws.Dimension;
-        int startRow = dim.Start.Row;
         int endRow = dim.End.Row;
-        int startCol = dim.Start.Column;
         int endCol = dim.End.Column;
 
-        // 批量读取整张表为 2D object 数组（0-based: values[0,0] = ws.Cells[startRow,startCol]）
-        var range = ws.Cells[startRow, startCol, endRow, endCol];
+        // 始终从 row 1, col 1 开始读，保证 values[0,0] = ws.Cells[1,1]
+        // 这样 values[1, c] 一定是 row 2（列名行），values[2, *] 是 row 3（数据开始）
+        int rangeStartRow = 1;
+        int rangeStartCol = 1;
+        var range = ws.Cells[rangeStartRow, rangeStartCol, endRow, endCol];
         var values = range.Value as object[,];
         if (values == null)
             return data;
 
-        int rows = values.GetLength(0); // 0-based 行数
-        int cols = values.GetLength(1); // 0-based 列数
+        int rows = values.GetLength(0); // 0-based: values[0..rows-1, *]
+        int cols = values.GetLength(1); // 0-based: values[*, 0..cols-1]
 
-        // 0-based 索引 → 实际列号（1-based Excel）
-        int ColAt(int relCol) => relCol + startCol;
+        // 0-based col → 实际 Excel 列号（1-based）
+        int ColAt(int relCol) => relCol + rangeStartCol;
 
-        // 找 key 列：row 2 在 values 中索引 = 1（0-based）
+        // 列名行在 row 2（values[1, *]），找 key 列
         int keyColIdx = -1;
         for (int c = 0; c < cols && c < 30; c++)
         {
             var h = values[1, c]?.ToString() ?? "";
             if (!string.IsNullOrEmpty(h) && !h.StartsWith('#'))
             {
-                keyColIdx = ColAt(c); // 实际列号
+                keyColIdx = ColAt(c);
                 break;
             }
         }
         if (keyColIdx < 0)
-            keyColIdx = startCol;
+            keyColIdx = rangeStartCol;
 
-        // 建列名 → 实际列号映射（0-based row=1 即 Excel row 2）
+        // 建列名 → 实际列号映射
         var colNameToCol = new Dictionary<string, int>(StringComparer.Ordinal);
         for (int c = 0; c < cols; c++)
         {
@@ -78,11 +81,10 @@ public static class CellHistoryXlsxReader
                 colNameToCol[h] = ColAt(c);
         }
 
-        // 从 row 3（0-based row=2）开始扫描
+        // 从 row 3（values[2, *]）开始扫描
+        int keyRelCol = keyColIdx - rangeStartCol;
         for (int r = 2; r < rows; r++)
         {
-            // keyColIdx 是实际列号，找到它在 values 中的 0-based 列索引
-            int keyRelCol = keyColIdx - startCol;
             var key = keyRelCol >= 0 && keyRelCol < cols ? values[r, keyRelCol]?.ToString() ?? "" : "";
             if (string.IsNullOrEmpty(key))
                 continue;
@@ -90,7 +92,7 @@ public static class CellHistoryXlsxReader
             var row = new Dictionary<string, string>(colNameToCol.Count, StringComparer.Ordinal);
             foreach (var (colName, actualCol) in colNameToCol)
             {
-                int relCol = actualCol - startCol;
+                int relCol = actualCol - rangeStartCol;
                 row[colName] = relCol >= 0 && relCol < cols ? values[r, relCol]?.ToString() ?? "" : "";
             }
 
