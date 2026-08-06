@@ -343,18 +343,22 @@ internal static class CellGitHistoryService
         Directory.CreateDirectory(tmpDir);
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        int parsedCount = 0, skippedCount = 0, totalCommits = 0;
+        int parsedCount = 0,
+            skippedCount = 0,
+            totalCommits = 0;
 
         const int MaxChanges = 50;
         const int MaxCommits = 500;
         const int StreamingPhaseCount = 25; // 前 25 个 commit 顺序流式，快速出首条
-        const int ParallelChunks = 6; // MiniExcel 流式取格内存极小，6 线程安全
+        const int ParallelChunks = 6; // XmlReader 流式取格内存极小，6 线程安全
 
         var takeCount = Math.Min(commits.Count, MaxCommits);
         var limitedCommits = commits.GetRange(0, takeCount);
 
         // 共享的 accumulated 列表，两阶段共用
-        var accumulated = new List<(string date, string author, string msg, string oldVal, string newVal)>();
+        var accumulated =
+            new List<(string date, string author, string msg, string oldVal, string newVal)>();
+        bool usedLua = false; // 阶段2 是否走了 lua 反推快路径
 
         // ── 阶段1：顺序流式（前 StreamingPhaseCount 个 commit）─────────────
         // 实时出结果，用户立刻看到
@@ -418,7 +422,15 @@ internal static class CellGitHistoryService
 
                 if (prevVal != null && prevMeta.HasValue && val != prevVal)
                 {
-                    accumulated.Add((prevMeta.Value.date, prevMeta.Value.author, prevMeta.Value.msg, val, prevVal));
+                    accumulated.Add(
+                        (
+                            prevMeta.Value.date,
+                            prevMeta.Value.author,
+                            prevMeta.Value.msg,
+                            val,
+                            prevVal
+                        )
+                    );
                     onPartial(BuildText(accumulated));
                 }
 
@@ -431,125 +443,242 @@ internal static class CellGitHistoryService
 
             totalCommits = streamingEnd;
             sw.Stop();
-            PluginLog.Write($"[谁的锅] Phase1 done: {streamingEnd} commits, {accumulated.Count} changes, {sw.ElapsedMilliseconds}ms");
+            PluginLog.Write(
+                $"[谁的锅] Phase1 done: {streamingEnd} commits, {accumulated.Count} changes, {sw.ElapsedMilliseconds}ms"
+            );
             sw.Start();
         }
 
-        // ── 阶段2：并行处理剩余 commit ─────────────────────────────────────
-        if (streamingEnd < takeCount && accumulated.Count < MaxChanges && !ct.IsCancellationRequested)
+        // ── 阶段2：处理剩余 commit ───────────────────────────────────────
+        if (
+            streamingEnd < takeCount
+            && accumulated.Count < MaxChanges
+            && !ct.IsCancellationRequested
+        )
         {
-            int remaining = takeCount - streamingEnd;
-            int chunkSize = Math.Max(1, (remaining + ParallelChunks - 1) / ParallelChunks);
-            int chunkCount = (remaining + chunkSize - 1) / chunkSize;
-            var chunkResults = new (string? val, string sha, string date, string author, string msg)[chunkCount][];
+            // ── 阶段2a：lua 反推快路径 ─────────────────────────────────────
+            // xlsx 是二进制，剩余几百个提交逐个解包扫描要几分钟；lua.txt 是导出产物（纯文本），
+            // git pickaxe 原生行级追踪，~10s 覆盖全部历史。阶段1（xlsx）已兜住"未导表的最近改动"，
+            // 这里只补更早的历史；按（旧值,新值）对去重，避免与阶段1已找到的变更重复计数。
+            var luaEvents = CellGitHistoryLuaIndex.TryQueryHistory(
+                absFilePath,
+                rowKey,
+                colName,
+                out var luaReason
+            );
+            PluginLog.Write($"[谁的锅] lua 反推: {luaReason}");
 
-            Parallel.For(0, chunkCount,
-                new ParallelOptions { MaxDegreeOfParallelism = ParallelChunks, CancellationToken = ct }, chunkIdx =>
+            if (luaEvents != null)
             {
-                int start = streamingEnd + chunkIdx * chunkSize;
-                int end = Math.Min(start + chunkSize, takeCount);
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var (d, a, m, ov, nv) in accumulated)
+                    seen.Add(NormVal(ov) + '\u0001' + NormVal(nv));
 
-                using var threadRepo = new Repository(gitRoot);
-                string? prevBlobOid = null;
-                var local = new (string? val, string sha, string date, string author, string msg)[end - start];
+                int added = 0;
+                foreach (var e in luaEvents)
+                {
+                    if (accumulated.Count >= MaxChanges || ct.IsCancellationRequested)
+                        break;
+                    var key = NormVal(e.OldVal) + '\u0001' + NormVal(e.NewVal);
+                    if (!seen.Add(key))
+                        continue;
+                    accumulated.Add(
+                        (e.Date, e.Author, e.Msg, e.OldVal ?? "（空）", e.NewVal ?? "（行被删除）")
+                    );
+                    onPartial(BuildText(accumulated));
+                    added++;
+                }
+                sw.Stop();
+                PluginLog.Write(
+                    $"[谁的锅] Phase2 lua 反推完成: 命中 {luaEvents.Count} 条，新增 {added} 条更早变更，{sw.ElapsedMilliseconds}ms"
+                );
+                sw.Start();
+                usedLua = true;
+            }
+            else
+            {
+                // ── 阶段2b 回退：并行 xlsx 扫描（原有逻辑）──────────────────
+                int remaining = takeCount - streamingEnd;
+                int chunkSize = Math.Max(1, (remaining + ParallelChunks - 1) / ParallelChunks);
+                int chunkCount = (remaining + chunkSize - 1) / chunkSize;
+                var chunkResults = new (
+                    string? val,
+                    string sha,
+                    string date,
+                    string author,
+                    string msg
+                )[chunkCount][];
 
-                for (int i = start; i < end; i++)
+                Parallel.For(
+                    0,
+                    chunkCount,
+                    new ParallelOptions
+                    {
+                        MaxDegreeOfParallelism = ParallelChunks,
+                        CancellationToken = ct,
+                    },
+                    chunkIdx =>
+                    {
+                        int start = streamingEnd + chunkIdx * chunkSize;
+                        int end = Math.Min(start + chunkSize, takeCount);
+
+                        using var threadRepo = new Repository(gitRoot);
+                        string? prevBlobOid = null;
+                        var local = new (
+                            string? val,
+                            string sha,
+                            string date,
+                            string author,
+                            string msg
+                        )[end - start];
+
+                        for (int i = start; i < end; i++)
+                        {
+                            if (ct.IsCancellationRequested)
+                                return;
+
+                            var (sha, date, author, msg) = limitedCommits[i];
+
+                            var commit = threadRepo.Lookup<Commit>(sha);
+                            var blobEntry = commit?.Tree[relativePath];
+                            var blobOid = blobEntry?.Target.Sha;
+                            if (blobOid != null && blobOid == prevBlobOid)
+                            {
+                                PluginLog.Verbose(
+                                    $"[谁的锅] commit {sha[..8]} blob unchanged, skip"
+                                );
+                                continue;
+                            }
+                            prevBlobOid = blobOid;
+
+                            string? val = GetCellValueAtCommit(
+                                threadRepo,
+                                sha,
+                                relativePath,
+                                sheetName,
+                                rowKey,
+                                colName,
+                                tmpDir
+                            );
+
+                            local[i - start] = (val, sha, date, author, msg);
+                        }
+                        chunkResults[chunkIdx] = local;
+                    }
+                );
+
+                // 合并阶段2结果（保持 commit 顺序）
+                // 先用阶段1的边界值作为 prevVal/prevMeta
+                prevVal = phase1LastVal;
+                prevMeta = phase1LastMeta;
+
+                for (int chunkIdx = 0; chunkIdx < chunkResults.Length; chunkIdx++)
                 {
                     if (ct.IsCancellationRequested)
+                    {
+                        onFinal(null);
                         return;
-
-                    var (sha, date, author, msg) = limitedCommits[i];
-
-                    var commit = threadRepo.Lookup<Commit>(sha);
-                    var blobEntry = commit?.Tree[relativePath];
-                    var blobOid = blobEntry?.Target.Sha;
-                    if (blobOid != null && blobOid == prevBlobOid)
-                    {
-                        PluginLog.Verbose($"[谁的锅] commit {sha[..8]} blob unchanged, skip");
+                    }
+                    var chunk = chunkResults[chunkIdx];
+                    if (chunk == null)
                         continue;
-                    }
-                    prevBlobOid = blobOid;
 
-                    string? val = GetCellValueAtCommit(
-                        threadRepo,
-                        sha,
-                        relativePath,
-                        sheetName,
-                        rowKey,
-                        colName,
-                        tmpDir
-                    );
-
-                    local[i - start] = (val, sha, date, author, msg);
-                }
-                chunkResults[chunkIdx] = local;
-            });
-
-            // 合并阶段2结果（保持 commit 顺序）
-            // 先用阶段1的边界值作为 prevVal/prevMeta
-            prevVal = phase1LastVal;
-            prevMeta = phase1LastMeta;
-
-            for (int chunkIdx = 0; chunkIdx < chunkResults.Length; chunkIdx++)
-            {
-                if (ct.IsCancellationRequested)
-                {
-                    onFinal(null);
-                    return;
-                }
-                var chunk = chunkResults[chunkIdx];
-                if (chunk == null)
-                    continue;
-
-                foreach (var (val, sha, date, author, msg) in chunk)
-                {
-                    if (accumulated.Count >= MaxChanges)
-                        break;
-
-                    if (val == null)
+                    foreach (var (val, sha, date, author, msg) in chunk)
                     {
-                        if (hadNonNull)
-                            goto Phase2Done; // 创建边界，跳出双层循环
-                        continue;
+                        if (accumulated.Count >= MaxChanges)
+                            break;
+
+                        if (val == null)
+                        {
+                            if (hadNonNull)
+                                goto Phase2Done; // 创建边界，跳出双层循环
+                            continue;
+                        }
+
+                        hadNonNull = true;
+
+                        if (prevVal != null && prevMeta.HasValue && val != prevVal)
+                        {
+                            accumulated.Add(
+                                (
+                                    prevMeta.Value.date,
+                                    prevMeta.Value.author,
+                                    prevMeta.Value.msg,
+                                    val,
+                                    prevVal
+                                )
+                            );
+                            onPartial(BuildText(accumulated));
+                        }
+
+                        prevVal = val;
+                        prevMeta = (date, author, msg);
                     }
-
-                    hadNonNull = true;
-
-                    if (prevVal != null && prevMeta.HasValue && val != prevVal)
-                    {
-                        accumulated.Add((prevMeta.Value.date, prevMeta.Value.author, prevMeta.Value.msg, val, prevVal));
-                        onPartial(BuildText(accumulated));
-                    }
-
-                    prevVal = val;
-                    prevMeta = (date, author, msg);
                 }
+                Phase2Done:
+                ;
+                sw.Stop();
+                long phase2Ms = sw.ElapsedMilliseconds;
+                PluginLog.Write(
+                    $"[谁的锅] Phase2 done: {takeCount - streamingEnd} commits ({parsedCount} parsed, {skippedCount} blob-skipped), {phase2Ms}ms"
+                );
+                sw.Start();
             }
-            Phase2Done:;
-            sw.Stop();
-            long phase2Ms = sw.ElapsedMilliseconds;
-            PluginLog.Write($"[谁的锅] Phase2 done: {takeCount - streamingEnd} commits ({parsedCount} parsed, {skippedCount} blob-skipped), {phase2Ms}ms");
-            sw.Start();
         }
 
         // 补"从无到有"创建条目：prevMeta 是该行首次出现（或窗口内最早可查）的 commit
-        if (accumulated.Count > 0 && prevMeta.HasValue && prevVal != null)
+        // lua 反推路径自带创建事件（首条 diff 即行新增），避免重复
+        if (!usedLua && accumulated.Count > 0 && prevMeta.HasValue && prevVal != null)
         {
-            accumulated.Add((prevMeta.Value.date, prevMeta.Value.author, prevMeta.Value.msg + "（行首次出现）", "（空）", prevVal));
+            accumulated.Add(
+                (
+                    prevMeta.Value.date,
+                    prevMeta.Value.author,
+                    prevMeta.Value.msg + "（行首次出现）",
+                    "（空）",
+                    prevVal
+                )
+            );
             onPartial(BuildText(accumulated));
         }
 
         // 若找到值但无任何变更，展示最老一条
         if (accumulated.Count == 0 && prevMeta.HasValue && prevVal != null)
         {
-            accumulated.Add((prevMeta.Value.date, prevMeta.Value.author, prevMeta.Value.msg + "（最早可查，值未改变）", prevVal, prevVal));
+            accumulated.Add(
+                (
+                    prevMeta.Value.date,
+                    prevMeta.Value.author,
+                    prevMeta.Value.msg + "（最早可查，值未改变）",
+                    prevVal,
+                    prevVal
+                )
+            );
             onPartial(BuildText(accumulated));
         }
 
         sw.Stop();
-        PluginLog.Write($"[谁的锅] TOTAL: {takeCount} commits scanned, {accumulated.Count} changes found, {sw.ElapsedMilliseconds}ms");
+        PluginLog.Write(
+            $"[谁的锅] TOTAL: {takeCount} commits scanned, {accumulated.Count} changes found, {sw.ElapsedMilliseconds}ms"
+        );
         var finalText = accumulated.Count > 0 ? BuildText(accumulated) : null;
         onFinal(finalText);
+    }
+
+    /// <summary>
+    /// 归一化列值用于跨路径去重（xlsx 读出的值 vs lua 反推的值）：
+    /// 空/「（空）」→ 空串；简单字符串去掉首尾引号。
+    /// </summary>
+    private static string NormVal(string? v)
+    {
+        if (string.IsNullOrWhiteSpace(v))
+            return "";
+        v = v.Trim();
+        if (v == "（空）")
+            return "";
+        if (v.Length >= 2 && v[0] == '"' && v[^1] == '"')
+            v = v[1..^1];
+        return v;
     }
 
     private static string BuildText(
@@ -613,8 +742,10 @@ internal static class CellGitHistoryService
     }
 
     /// <summary>
-    /// 用 MiniExcel 流式读取，从目标 commit 的 xlsx 中提取单格值。
-    /// 找到目标 rowKey 后立即 break，无需解析整个 sheet，内存极低。
+    /// <summary>
+    /// 从目标 commit 的 xlsx 中提取单格值（裸 OOXML 流式）。
+    /// XmlReader 每行只看 key 列/目标列两个 cell 的开始标签，跳过其余上百万 cell：
+    /// 5.5 万行表约 300ms/commit（MiniExcel 逐行建行对象约 5s；EPPlus 全表 DOM 内存太大）。
     /// </summary>
     private static string? GetCellValueAtCommit(
         Repository repo,
@@ -648,48 +779,73 @@ internal static class CellGitHistoryService
                 src.CopyTo(dst);
             }
 
-            // MiniExcel 流式读：row 2 找列字母，row 3+ 找 rowKey，找到即 break
-            // 注意：行是 ExpandoObject，只实现 IDictionary<string,object>，不能用非泛型 IDictionary
-            string? keyLetter = null, targetLetter = null;
-            int rowIdx = 0;
+            // 裸 OOXML 流式：row 2 定列号，row 3+ 只读 key/目标两列，找到即 break
             string? result = null;
-
-            foreach (
-                IDictionary<string, object> row in MiniExcelLibs.MiniExcel.Query(
-                    tmpFile,
-                    sheetName: sheetName,
-                    useHeaderRow: false
-                )
-            )
+            using (var za = System.IO.Compression.ZipFile.OpenRead(tmpFile))
             {
-                rowIdx++;
-                if (rowIdx == 2)
+                var sharedStrings = LoadSharedStrings(za);
+                var sheetEntry = za.GetEntry(ResolveSheetPath(za, sheetName) ?? "");
+                if (sheetEntry == null)
+                    return null;
+
+                int keyCol = -1,
+                    targetCol = -1;
+                bool headerDone = false;
+                int curRow = 0;
+                string? curKey = null;
+
+                using var sh = sheetEntry.Open();
+                using var xr = System.Xml.XmlReader.Create(sh);
+                while (xr.Read())
                 {
-                    // row 2 = 列名行，按列字母排序找 key 列和目标列
-                    foreach (var kv in row.OrderBy(k => k.Key.Length).ThenBy(k => k.Key))
+                    if (xr.NodeType != System.Xml.XmlNodeType.Element)
+                        continue;
+                    if (xr.LocalName == "row")
                     {
-                        var h = kv.Value?.ToString() ?? "";
-                        if (keyLetter == null && !string.IsNullOrEmpty(h) && !h.StartsWith('#'))
-                            keyLetter = kv.Key;
+                        curRow = int.TryParse(xr.GetAttribute("r"), out var rr) ? rr : curRow + 1;
+                        curKey = null;
+                        continue;
+                    }
+                    if (xr.LocalName != "c")
+                        continue;
+
+                    var col = ColIndexOf(xr.GetAttribute("r"));
+
+                    if (curRow == 2)
+                    {
+                        // row 2 = 列名行：找 key 列（第一个非 #）和目标列
+                        var h = ReadCellValue(xr, sharedStrings) ?? "";
+                        if (keyCol < 0 && !string.IsNullOrEmpty(h) && !h.StartsWith('#'))
+                            keyCol = col;
                         if (h == colName)
-                            targetLetter = kv.Key;
+                            targetCol = col;
+                        continue;
                     }
-                    if (keyLetter == null)
-                        break;
-                    if (targetLetter == null)
+                    if (!headerDone && curRow > 2)
                     {
-                        result = "（列当时不存在）";
-                        break;
+                        headerDone = true;
+                        if (keyCol < 0)
+                            break;
+                        if (targetCol < 0)
+                        {
+                            result = "（列当时不存在）";
+                            break;
+                        }
                     }
-                }
-                else if (rowIdx >= 3 && keyLetter != null && targetLetter != null)
-                {
-                    var kv2 = row.TryGetValue(keyLetter, out var kv) ? kv?.ToString() ?? "" : "";
-                    if (kv2 == rowKey)
+                    if (curRow < 3)
+                        continue;
+                    // 不匹配的 cell 直接放过：子节点 <v>/<t> 会被 LocalName 过滤自然跳过。
+                    // 不能用 xr.Skip()——Skip 后停在下一兄弟节点，循环顶部 Read() 会再吞一个 cell。
+                    if (col == keyCol || col == targetCol)
                     {
-                        var val = row.TryGetValue(targetLetter, out var tv) ? tv?.ToString() ?? "" : "";
-                        result = string.IsNullOrEmpty(val) ? "（空）" : val;
-                        break;
+                        var v = ReadCellValue(xr, sharedStrings);
+                        if (col == keyCol)
+                            curKey = v;
+                        else if (curKey == rowKey)
+                        {
+                            result = string.IsNullOrEmpty(v) ? "（空）" : v;
+                            break;
+                        }
                     }
                 }
             }
@@ -706,6 +862,116 @@ internal static class CellGitHistoryService
         {
             return null;
         }
+    }
+
+    /// <summary>单元格引用 "AG55883" → 列号 33。</summary>
+    private static int ColIndexOf(string? cellRef)
+    {
+        int c = 0;
+        if (cellRef == null)
+            return 0;
+        foreach (var ch in cellRef)
+        {
+            if (char.IsLetter(ch))
+                c = c * 26 + (char.ToUpper(ch) - 'A' + 1);
+            else
+                break;
+        }
+        return c;
+    }
+
+    /// <summary>读取当前 &lt;c&gt; 节点的值（处理共享字符串/内联字符串/数字）。</summary>
+    private static string? ReadCellValue(System.Xml.XmlReader xr, List<string> sharedStrings)
+    {
+        var t = xr.GetAttribute("t");
+        if (xr.IsEmptyElement)
+            return null;
+        string? v = null;
+        using var sub = xr.ReadSubtree();
+        while (sub.Read())
+        {
+            if (sub.NodeType == System.Xml.XmlNodeType.Element && (sub.LocalName == "v" || sub.LocalName == "t"))
+                v = sub.ReadElementContentAsString();
+        }
+        if (t == "s" && v != null && int.TryParse(v, out var si) && si >= 0 && si < sharedStrings.Count)
+            return sharedStrings[si];
+        return v;
+    }
+
+    /// <summary>sharedStrings.xml → 字符串表（无此文件返回空表）。</summary>
+    private static List<string> LoadSharedStrings(System.IO.Compression.ZipArchive za)
+    {
+        var ss = new List<string>();
+        var entry = za.GetEntry("xl/sharedStrings.xml");
+        if (entry == null)
+            return ss;
+        using var s = entry.Open();
+        using var xr = System.Xml.XmlReader.Create(s);
+        while (xr.Read())
+        {
+            if (xr.NodeType != System.Xml.XmlNodeType.Element || xr.LocalName != "si")
+                continue;
+            // 整个 <si> 用 subtree 读：ReadElementContentAsString 会吞掉 </si> 事件，不能靠 EndElement 收尾
+            var sb = new StringBuilder();
+            using var sub = xr.ReadSubtree();
+            while (sub.Read())
+            {
+                if (sub.NodeType == System.Xml.XmlNodeType.Element && sub.LocalName == "t")
+                    sb.Append(sub.ReadElementContentAsString());
+            }
+            ss.Add(sb.ToString());
+        }
+        return ss;
+    }
+
+    /// <summary>sheet 名 → zip 内 worksheet 路径（workbook.xml + rels 解析）。</summary>
+    private static string? ResolveSheetPath(System.IO.Compression.ZipArchive za, string sheetName)
+    {
+        string? rid = null;
+        var wbEntry = za.GetEntry("xl/workbook.xml");
+        if (wbEntry == null)
+            return null;
+        using (var wb = wbEntry.Open())
+        using (var xr = System.Xml.XmlReader.Create(wb))
+        {
+            while (xr.Read())
+            {
+                if (
+                    xr.NodeType == System.Xml.XmlNodeType.Element
+                    && xr.LocalName == "sheet"
+                    && string.Equals(xr.GetAttribute("name"), sheetName, StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    rid = xr.GetAttribute(
+                        "id",
+                        "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                    );
+                    break;
+                }
+            }
+        }
+        if (rid == null)
+            return null;
+        var relsEntry = za.GetEntry("xl/_rels/workbook.xml.rels");
+        if (relsEntry == null)
+            return null;
+        using var rels = relsEntry.Open();
+        using var xr2 = System.Xml.XmlReader.Create(rels);
+        while (xr2.Read())
+        {
+            if (
+                xr2.NodeType == System.Xml.XmlNodeType.Element
+                && xr2.LocalName == "Relationship"
+                && xr2.GetAttribute("Id") == rid
+            )
+            {
+                var target = xr2.GetAttribute("Target");
+                if (string.IsNullOrEmpty(target))
+                    return null;
+                return target.StartsWith("/") ? target.TrimStart('/') : "xl/" + target;
+            }
+        }
+        return null;
     }
 
     private static string RunGit(string gitRoot, string arguments)
@@ -866,7 +1132,9 @@ internal static class CellGitHistoryController
                 return;
             }
 
-            PluginLog.Write($"[谁的锅] querying: file={System.IO.Path.GetFileName(absFilePath)} sheet={sheetName} row={row} col={colName} key={rowKey} gitRoot={gitRoot}");
+            PluginLog.Write(
+                $"[谁的锅] querying: file={System.IO.Path.GetFileName(absFilePath)} sheet={sheetName} row={row} col={colName} key={rowKey} gitRoot={gitRoot}"
+            );
 
             // QueueAsMacro：把 ShowBubble 排入 Excel 主线程执行（与放大镜气泡做法一致）
             Action<string> onResult = text =>

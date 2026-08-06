@@ -35,6 +35,33 @@ static class UnityProjectResolver
         && Directory.Exists(Path.Combine(dir, "Assets"))
         && Directory.Exists(Path.Combine(dir, "ProjectSettings"));
 
+    /// <summary>
+    /// 只读缓存解析：命中已缓存的 Unity 根则返回，miss 返回 null。
+    /// 绝不弹窗——供后台功能（如"谁的锅"lua 反推）安全调用；miss 时由调用方走降级。
+    /// </summary>
+    public static string TryResolveCached(string basePath = null)
+    {
+        basePath ??= NumDesAddIn.BasePath;
+        if (string.IsNullOrWhiteSpace(basePath))
+            return null;
+        if (File.Exists(basePath))
+            basePath = Path.GetDirectoryName(basePath);
+
+        var normalized = Normalize(basePath);
+        var map = LoadMap();
+        if (map.TryGetValue(normalized, out var exact) && IsUnityProject(exact))
+            return exact;
+        foreach (var kv in map)
+        {
+            if (
+                normalized.StartsWith(kv.Key + "/", StringComparison.Ordinal)
+                && IsUnityProject(kv.Value)
+            )
+                return kv.Value;
+        }
+        return null;
+    }
+
     public static string Resolve(string basePath = null)
     {
         basePath ??= NumDesAddIn.BasePath;
@@ -62,8 +89,10 @@ static class UnityProjectResolver
         // 2. 路径前缀命中：basePath 是某个已缓存 Unity 根的子目录
         foreach (var kv in map)
         {
-            if (normalized.StartsWith(kv.Key + "/", StringComparison.Ordinal)
-                && IsUnityProject(kv.Value))
+            if (
+                normalized.StartsWith(kv.Key + "/", StringComparison.Ordinal)
+                && IsUnityProject(kv.Value)
+            )
                 return kv.Value;
         }
 
