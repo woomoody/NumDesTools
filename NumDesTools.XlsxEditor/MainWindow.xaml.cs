@@ -31,10 +31,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private static readonly Brush HeaderBackgroundBrush = ThemeBrushes.HeaderBackground;
 
     // 聚光灯：选中区域外框（亮黄色），行列用半透明背景色指示
-    private static readonly Brush SpotlightBorderBrush = new SolidColorBrush(
-        Color.FromRgb(255, 220, 50)
-    );
-    private static readonly Thickness SpotlightBorderThickness = new(2);
     private static readonly Brush SpotlightRowColBrush = new SolidColorBrush(
         Color.FromArgb(40, 0, 120, 215)
     );
@@ -79,6 +75,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     public MainWindow()
     {
         InitializeComponent();
+        // 注册系统主题监听（System 模式时随系统深浅色自动切换）
+        Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this);
         ApplyWorkbookTabStyle();
         InitThemeSelector();
         ThemeService.ModeChanged += OnAppThemeModeChanged;
@@ -106,20 +104,27 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             Dispatcher.Invoke(OnAppThemeModeChanged);
             return;
         }
-        ThemeBrushes.ApplyTheme(ThemeService.CurrentMode);
-        // 刷新所有 DataGrid UI
-        foreach (var state in _sheets.Values)
+        try
         {
-            state.MainGrid?.Items.Refresh();
-            state.FrozenGrid?.Items.Refresh();
+            ThemeBrushes.ApplyTheme(ThemeService.CurrentMode);
+            // 刷新所有 DataGrid UI
+            foreach (var state in _sheets.Values)
+            {
+                state.MainGrid?.Items.Refresh();
+                state.FrozenGrid?.Items.Refresh();
+            }
+            // 重建 tab 样式（颜色已变，样式需重新应用）
+            ApplyWorkbookTabStyle();
+            // 重建各工作簿内嵌 sheet tab 样式
+            foreach (var wbTab in Tabs.Items.OfType<TabItem>())
+            {
+                if (GetSheetTabs(wbTab) is { } sheetTabs)
+                    RebuildSheetTabStyle(sheetTabs);
+            }
         }
-        // 重建 tab 样式（颜色已变，样式需重新应用）
-        ApplyWorkbookTabStyle();
-        // 重建各工作簿内嵌 sheet tab 样式
-        foreach (var wbTab in Tabs.Items.OfType<TabItem>())
+        catch (Exception ex)
         {
-            if (GetSheetTabs(wbTab) is { } sheetTabs)
-                RebuildSheetTabStyle(sheetTabs);
+            System.Diagnostics.Debug.WriteLine($"[Theme] OnAppThemeModeChanged error: {ex.Message}");
         }
     }
 
@@ -1872,7 +1877,17 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var startViewIndex = grid.Items.IndexOf(rowView);
         var startCol = startCell.Column.DisplayIndex;
 
-        var text = Clipboard.GetText();
+        string text;
+        try
+        {
+            text = Clipboard.GetText() ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Paste] Clipboard.GetText failed: {ex.Message}");
+            StatusText.Text = "粘贴失败：无法读取剪贴板";
+            return;
+        }
         if (text is null)
             return; // 空字符串 "" 是合法的空值粘贴，不拦截
 
@@ -2837,11 +2852,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         if (selectedRows.Count is 0 || selectedColumns.Count is 0)
             return;
 
-        var minRow = selectedRows.Min();
-        var maxRow = selectedRows.Max();
-        var minCol = selectedColumns.Min();
-        var maxCol = selectedColumns.Max();
-
         var (visStart, visEnd) = GetVisibleRowRange(grid);
         for (var i = visStart; i <= visEnd; i++)
         {
@@ -2856,33 +2866,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
                 var isSelRow = selectedRows.Contains(i);
                 var isSelCol = selectedColumns.Contains(col.DisplayIndex);
 
-                // 选中行列的其他单元格：半透明背景色
-                if (!isSelRow || !isSelCol)
-                {
-                    if ((isSelRow || isSelCol) && cell.Background != DirtyCellBrush)
-                        cell.Background = SpotlightRowColBrush;
-                    continue;
-                }
-
-                // 选中区域内部单元格：只在边缘画亮黄色边框（外框效果）
-                var isTopEdge = i == minRow;
-                var isBottomEdge = i == maxRow;
-                var isLeftEdge = col.DisplayIndex == minCol;
-                var isRightEdge = col.DisplayIndex == maxCol;
-
-                var thickness = new Thickness(
-                    isLeftEdge ? 2 : 0,
-                    isTopEdge ? 2 : 0,
-                    isRightEdge ? 2 : 0,
-                    isBottomEdge ? 2 : 0
-                );
-
-                // 只在边缘画边框，避免每个单元格都框
-                if (isTopEdge || isBottomEdge || isLeftEdge || isRightEdge)
-                {
-                    cell.BorderBrush = SpotlightBorderBrush;
-                    cell.BorderThickness = thickness;
-                }
+                // 选中行/列的非选中格：半透明背景色（去掉边框效果，避免干扰编辑）
+                if ((isSelRow || isSelCol) && cell.Background != DirtyCellBrush)
+                    cell.Background = SpotlightRowColBrush;
             }
         }
     }
@@ -2909,11 +2895,6 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             {
                 if (col.GetCellContent(rowContainer)?.Parent is not DataGridCell cell)
                     continue;
-                if (cell.BorderBrush == SpotlightBorderBrush)
-                {
-                    cell.ClearValue(DataGridCell.BorderBrushProperty);
-                    cell.ClearValue(DataGridCell.BorderThicknessProperty);
-                }
                 if (cell.Background == SpotlightRowColBrush)
                     cell.ClearValue(DataGridCell.BackgroundProperty);
             }
