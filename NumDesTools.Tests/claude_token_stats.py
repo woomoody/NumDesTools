@@ -6,11 +6,13 @@ Claude Code Token 使用统计 — 生成 HTML 报告并自动用浏览器打开
 import os, json, sys, subprocess, webbrowser, argparse, sqlite3
 from collections import defaultdict
 from datetime import datetime, date, timedelta
+from token_model_catalog import load_api_key_from_hermes_config, sync_daily_catalog
 
 sys.stdout.reconfigure(encoding='utf-8')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--date', default='today', help='today / 2026-07-20 / 2026-07-15..2026-07-20')
+parser.add_argument('--rebuild-history', action='store_true', help='re-scan all raw sources and rebuild historical snapshot')
 args = parser.parse_args()
 
 today = date.today()
@@ -31,6 +33,17 @@ else:
 # ── 模型价格（每天从 JSON 刷新一次）──
 _PRICE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model_prices.json')
 _SNAP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'token_stats_history.json')
+_MODEL_CATALOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'litellm_model_catalog.json')
+
+def _sync_litellm_model_catalog():
+    """Refresh the gateway model list once per day before calculating prices."""
+    api_key = load_api_key_from_hermes_config(os.path.expanduser(r'~/AppData/Local/hermes/config.yaml'))
+    models, refreshed, warning = sync_daily_catalog(_MODEL_CATALOG_FILE, api_key)
+    if refreshed:
+        print(f'  LiteLLM models refreshed: {len(models)} models')
+    if warning:
+        print(f'  [warn] {warning}')
+    return models
 
 _DEFAULT_PRICES = [
     # Anthropic 官方价（$/MTok，prefix 顺序匹配——精确在前，避免 opus-4-1 被 opus-4 误匹配）
@@ -78,6 +91,12 @@ def _load_prices():
     return prices, fallback
 
 MODEL_PRICES, _PRICE_FALLBACK = _load_prices()
+_LITELLM_MODELS = _sync_litellm_model_catalog()
+if _LITELLM_MODELS:
+    known_prefixes = {p['prefix'].lower() for p in MODEL_PRICES}
+    for model_id in _LITELLM_MODELS:
+        if model_id.lower() not in known_prefixes:
+            MODEL_PRICES.append({'prefix': model_id, **_PRICE_FALLBACK})
 
 def _model_price(model: str):
     m = (model or '').lower()
@@ -281,7 +300,9 @@ proj_daily  = defaultdict(lambda: defaultdict(_zero))
 model_daily = defaultdict(lambda: defaultdict(_zero))  # model_daily[date][model]
 total_msgs = skipped = 0
 
-snap = _load_snap()
+snap = None if args.rebuild_history else _load_snap()
+if args.rebuild_history:
+    print('  [rebuild] 忽略旧快照，从原始数据全量重建历史统计')
 # frozen_cc = CC 在快照里的最后日期（proj_daily [local] 项目 max），不用 frozen_date——防其他源拉高 daily max 导致 CC 漏扫边界
 if snap:
     cc_dates = [d for p, pd in (snap.get('proj_daily') or {}).items() if p.startswith('[local]') for d in pd]
