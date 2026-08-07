@@ -26,6 +26,9 @@ public partial class App : Application
 
         // StartupUri 在 OnStartup 之后才建窗口，那时 MainWindow 还是 null，CLI 文件传不进来。
         // 改成手动建窗口：先 Show，再按需 LoadFile，保证 -arg 立即生效。
+        // 加载持久化主题模式（必须在窗口创建前，避免 WPF-UI 默认主题闪一下）
+        ThemeService.LoadMode();
+
         var win = new MainWindow();
         MainWindow = win;
         win.Show();

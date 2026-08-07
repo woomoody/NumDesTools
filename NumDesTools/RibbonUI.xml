@@ -93,6 +93,11 @@
                                 <!-- ══ 帮助 ══ -->
                                 <group id='GroupHelp' label='帮助'>
                                         <button id='HelpButton' size='large' label='功能说明书' imageMso='Help' onAction='OnButtonClick' screentip='打开 NumDesTools 图文帮助，查看各功能说明与使用步骤' tag='帮助' />
+                                        <menu id='ThemeMenu' getLabel='GetLableText' image='nd_主题' size='large'>
+                                                <button id='ThemeSystem' getLabel='GetLableText' onAction='OnButtonClick' screentip='主题跟随 Windows 系统深浅色自动切换' tag='主题：跟随系统' />
+                                                <button id='ThemeLight' getLabel='GetLableText' onAction='OnButtonClick' screentip='固定使用亮色主题' tag='主题：亮色' />
+                                                <button id='ThemeDark' getLabel='GetLableText' onAction='OnButtonClick' screentip='固定使用暗色主题' tag='主题：暗色' />
+                                        </menu>
                                 </group>
                         </tab>
                         <tab id='SecondTab' label='NumDesToolsPlus' insertBeforeMso='TabHome'>

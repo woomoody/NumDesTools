@@ -23,6 +23,7 @@ namespace NumDesTools.UI
         public ImagePreviewControl(Dictionary<string, List<string>> imageDict)
         {
             InitializeComponent();
+            ThemeRefreshHelper.Subscribe(this);
             ImageItems = new ObservableCollection<ImageItemViewModel>(
                 imageDict.Select(kv => new ImageItemViewModel
                 {

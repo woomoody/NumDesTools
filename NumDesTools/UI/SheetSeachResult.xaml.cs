@@ -16,6 +16,7 @@ namespace NumDesTools.UI
         public SheetSeachResult(List<(string, string, int, string)> list)
         {
             InitializeComponent();
+            ThemeRefreshHelper.Subscribe(this);
             DataContext = this;
             TargetSheetList = new ObservableCollection<SelfWorkBookSearchCollect>(
                 list.Select(t => new SelfWorkBookSearchCollect(t))

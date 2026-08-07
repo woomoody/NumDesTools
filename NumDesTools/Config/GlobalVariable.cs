@@ -44,6 +44,7 @@ namespace NumDesTools.Config
             { "GitRootPath", "" },
             { "ConflictSkipHashFiles", "true" },
             { "CellHistoryTipText", "谁的锅：关闭" },
+            { "ThemeMode", "System" }, // System/Light/Dark，主题切换持久化
             { "SpotlightMode", "overlay" },
             { "HighlightColor", "16776960" }, // 0xFFFF00 黄色
             { "HighlightMatchCase", "false" },

@@ -26,6 +26,16 @@ namespace NumDesTools.UI
         public SheetListControl()
         {
             InitializeComponent();
+            LogResolvedColors("ctor");
+            // ElementHost 树内 DynamicResource 不随 Application.Resources 变更自动重求值，
+            // 主题切换时手动重新解析各动态资源（见 ReapplyThemeResources）。
+            ThemeService.ModeChanged += () =>
+            {
+                if (Dispatcher.CheckAccess())
+                    ReapplyThemeResources();
+                else
+                    Dispatcher.Invoke(ReapplyThemeResources);
+            };
             var worksheets = ExcelApp
                 .ActiveWorkbook.Sheets.Cast<Worksheet>()
                 .Select(x => new SelfComSheetCollect
@@ -36,7 +46,7 @@ namespace NumDesTools.UI
                     UsedRangeSize = new Tuple<int, int>(
                         x.UsedRange.Rows.Count,
                         x.UsedRange.Columns.Count
-                    )
+                    ),
                 });
 
             foreach (var worksheet in worksheets)
@@ -129,11 +139,17 @@ namespace NumDesTools.UI
             DataTrigger trigger = new DataTrigger
             {
                 Binding = new Binding("IsHidden"),
-                Value = true
+                Value = true,
             };
 
             trigger.Setters.Add(new Setter(FontStyleProperty, FontStyles.Italic));
-            trigger.Setters.Add(new Setter(ForegroundProperty, Brushes.PapayaWhip));
+            // 动态资源引用，主题切换时自动跟随（静态 Brush 不会刷新）
+            trigger.Setters.Add(
+                new Setter(
+                    ForegroundProperty,
+                    new DynamicResourceExtension("TextFillColorSecondaryBrush")
+                )
+            );
 
             itemContainerStyle.Triggers.Add(trigger);
 
@@ -149,10 +165,60 @@ namespace NumDesTools.UI
             StatusBar.Items.Clear();
             var statusBarItem = new StatusBarItem
             {
-                Content = "区域：" + item.UsedRangeSize.Item1 + "行 ," + item.UsedRangeSize.Item2 + "列"
+                Content =
+                    "区域：" + item.UsedRangeSize.Item1 + "行 ," + item.UsedRangeSize.Item2 + "列",
             };
             statusBarItem.ToolTip = statusBarItem.Content; // 设置 ToolTip
             StatusBar.Items.Add(statusBarItem);
+        }
+
+        /// <summary>输出 ListBox/StatusBar 实际解析的背景色，定位 ElementHost 树主题刷新问题。</summary>
+        private void LogResolvedColors(string where)
+        {
+            var appBg = (
+                System.Windows.Application.Current?.Resources["ApplicationBackgroundBrush"]
+                as SolidColorBrush
+            )?.Color;
+            var listBg = (ListBoxSheet.Background as SolidColorBrush)?.Color;
+            var statusBg = (StatusBar.Background as SolidColorBrush)?.Color;
+            PluginLog.Verbose(
+                $"[SheetList] {where}: listBg={listBg} statusBg={statusBg} appDictBg={appBg}"
+            );
+        }
+
+        /// <summary>
+        /// ElementHost 树内 DynamicResource 不随 Application.Resources 变更自动重求值，
+        /// 主题切换后手动 SetResourceReference 重新解析各动态资源并重建 ItemContainerStyle。
+        /// </summary>
+        private void ReapplyThemeResources()
+        {
+            // RootGrid 是 Panel，需用 Panel.BackgroundProperty（Control.BackgroundProperty 对 Grid 无效）
+            RootGrid.SetResourceReference(
+                System.Windows.Controls.Panel.BackgroundProperty,
+                "ApplicationBackgroundBrush"
+            );
+            ListBoxSheet.SetResourceReference(
+                System.Windows.Controls.Control.BackgroundProperty,
+                "ApplicationBackgroundBrush"
+            );
+            ListBoxSheet.SetResourceReference(
+                System.Windows.Controls.Control.BorderBrushProperty,
+                "ControlElevationBorderBrush"
+            );
+            ListBoxSheet.SetResourceReference(
+                System.Windows.Controls.Control.ForegroundProperty,
+                "TextFillColorPrimaryBrush"
+            );
+            StatusBar.SetResourceReference(
+                System.Windows.Controls.Control.BackgroundProperty,
+                "ApplicationBackgroundBrush"
+            );
+            StatusBar.SetResourceReference(
+                System.Windows.Controls.Control.ForegroundProperty,
+                "TextFillColorPrimaryBrush"
+            );
+            SetListBoxItemStyle(ListBoxSheet);
+            LogResolvedColors("ModeChanged");
         }
     }
 }

@@ -198,6 +198,7 @@ public partial class NumDesAddIn : ExcelRibbon, IExcelAddIn
         try
         {
             ribbonXml = GetRibbonXml("RibbonUI.xml");
+            PluginLog.Verbose($"[Ribbon] GetCustomUI called, ribbonId={ribbonId}, len={ribbonXml.Length}, hasThemeMenu={ribbonXml.Contains("ThemeMenu")}");
 #if DEBUG
             ribbonXml = ribbonXml.Replace(
                 "<tab id='MainTab' label='NumDesTools' insertBeforeMso='TabHome'>",
@@ -211,6 +212,7 @@ public partial class NumDesAddIn : ExcelRibbon, IExcelAddIn
         }
         catch (Exception ex)
         {
+            PluginLog.Write($"[Ribbon] GetCustomUI 异常: {ex}");
             MessageBox.Show(ex.Message);
         }
 
@@ -261,9 +263,21 @@ public partial class NumDesAddIn : ExcelRibbon, IExcelAddIn
             "ShowDnaLog" => ShowDnaLogText,
             "ShowAI" => ShowAiText,
             "ShowAIAgent" => AgentText,
+            "ThemeMenu" => $"外观主题：{NumDesTools.UI.ThemeService.ModeLabel(NumDesTools.UI.ThemeService.CurrentMode)}",
+            // 主题菜单子项：当前模式前加 ✓（Excel 环境 getPressed 会导致 ribbon 加载失败，改用 label 打钩）
+            "ThemeSystem" => ThemeMenuLabel(NumDesTools.UI.ThemeService.ThemeMode.System),
+            "ThemeLight" => ThemeMenuLabel(NumDesTools.UI.ThemeService.ThemeMode.Light),
+            "ThemeDark" => ThemeMenuLabel(NumDesTools.UI.ThemeService.ThemeMode.Dark),
             _ => "",
         };
         return latext;
+    }
+
+    // 主题菜单子项 label：当前模式打 ✓
+    private static string ThemeMenuLabel(NumDesTools.UI.ThemeService.ThemeMode mode)
+    {
+        var label = NumDesTools.UI.ThemeService.ModeLabel(mode);
+        return NumDesTools.UI.ThemeService.CurrentMode == mode ? $"✓ {label}" : label;
     }
 
     // 动态获取按钮点击事件，防止短时间内多次点击
@@ -342,7 +356,16 @@ public partial class NumDesAddIn : ExcelRibbon, IExcelAddIn
             ["ExcelConflictHistory"] = _ => ExcelConflictEntry.OpenGitHistory(),
             ["HelpButton"] = _ => new NumDesTools.UI.HelpWindow().Show(),
             ["CellHistoryTipButton"] = _ => CellHistoryTip_Toggle(),
+            ["ThemeSystem"] = _ => SetTheme(NumDesTools.UI.ThemeService.ThemeMode.System),
+            ["ThemeLight"] = _ => SetTheme(NumDesTools.UI.ThemeService.ThemeMode.Light),
+            ["ThemeDark"] = _ => SetTheme(NumDesTools.UI.ThemeService.ThemeMode.Dark),
         };
+    }
+
+    private void SetTheme(NumDesTools.UI.ThemeService.ThemeMode mode)
+    {
+        NumDesTools.UI.ThemeService.SetMode(mode);
+        CustomRibbon?.Invalidate();
     }
 
     private readonly Dictionary<string, DateTime> _lastClickTimes = new();

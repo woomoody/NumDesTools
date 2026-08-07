@@ -1,11 +1,10 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Collections.Concurrent;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ExcelDna.Integration;
 using LibGit2Sharp;
-using OfficeOpenXml;
-using Font = System.Drawing.Font;
+using NumDesTools.UI;
 using Timer = System.Windows.Forms.Timer;
 
 #pragma warning disable CA1416
@@ -13,123 +12,58 @@ using Timer = System.Windows.Forms.Timer;
 namespace NumDesTools;
 
 /// <summary>
-/// 悬浮气泡：选中单元格后显示该格最近 2 次 git 提交的历史值。
-/// 不抢焦点，鼠标透传；滚动或 Excel 失焦时自动隐藏。
+/// "谁的锅"气泡的一条历史变更记录（供 FillRichText 着色渲染）。
+/// sha 可为空（lua 反推路径无 sha）。
+/// NewBranch/OldBranch：diff 两端所在分支（init-only，不改主构造参数以兼容 lua 路径调用）。
 /// </summary>
-public sealed class CellGitHistoryTip : Form
+internal sealed record CellHistoryEntry(
+    string Sha,
+    string Date,
+    string Author,
+    string Msg,
+    string OldVal,
+    string NewVal
+)
 {
-    private string[]? _lines;
+    public string NewBranch { get; init; } = "";
+    public string OldBranch { get; init; } = "";
+};
 
-    private static readonly Font _headerFont = new("微软雅黑", 9.5f, FontStyle.Bold);
-    private static readonly Font _bodyFont = new("微软雅黑", 9f);
-    private const int Pad = 10;
-    private const int LineGap = 3;
-
+/// <summary>
+/// "谁的锅"气泡薄适配类：持有 WPF 气泡窗口 + Excel 滚动检测 timer。
+/// 对外 API 不变（Instance/ShowBubble/ClearBubble/DisposeInstance），
+/// 实际渲染交给 CellHistoryBubbleWindow（WPF + WPF-UI，零 Excel 依赖，可独立编译）。
+/// </summary>
+public sealed class CellGitHistoryTip
+{
+    private readonly CellHistoryBubbleWindow _window;
     private readonly Timer _scrollTimer;
-    private readonly Timer _focusTimer;
     private int _lastScrollRow;
     private int _lastScrollCol;
+    private bool _hasAnchor;
 
     private static CellGitHistoryTip? _instance;
     public static CellGitHistoryTip Instance => _instance ??= new CellGitHistoryTip();
 
     private CellGitHistoryTip()
     {
-        FormBorderStyle = FormBorderStyle.None;
-        ShowInTaskbar = false;
-        TopMost = true;
-        BackColor = Color.FromArgb(22, 27, 34);
-        ForeColor = Color.FromArgb(220, 220, 220);
-        AutoScaleMode = AutoScaleMode.None;
-        StartPosition = FormStartPosition.Manual;
-        SetStyle(
-            ControlStyles.OptimizedDoubleBuffer
-                | ControlStyles.AllPaintingInWmPaint
-                | ControlStyles.UserPaint,
-            true
-        );
-
-        var ex = GetWindowLong(Handle, GWL_EXSTYLE);
-        SetWindowLong(Handle, GWL_EXSTYLE, ex | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
-
+        _window = new CellHistoryBubbleWindow();
         _scrollTimer = new Timer { Interval = 150 };
         _scrollTimer.Tick += OnScrollCheck;
-
-        _focusTimer = new Timer { Interval = 300 };
-        _focusTimer.Tick += OnFocusCheck;
-        _focusTimer.Start();
     }
 
-    protected override CreateParams CreateParams
+    /// <summary>显示带历史记录的富文本气泡（着色渲染）。锁定时跳过，保持钉住的内容。</summary>
+    internal void ShowBubble(List<CellHistoryEntry> results)
     {
-        get
+        CellHistoryBubbleWindow.EnsureWpfInitialized();
+        _window.SetEntries(results);
+        if (!_window.IsVisible)
+            _window.Show();
+        if (!_hasAnchor)
         {
-            var cp = base.CreateParams;
-            cp.ExStyle |= WS_EX_TRANSPARENT | WS_EX_NOACTIVATE;
-            return cp;
+            _window.PlaceAtCursor();
+            _hasAnchor = true;
         }
-    }
-
-    protected override void OnPaint(PaintEventArgs e)
-    {
-        e.Graphics.Clear(BackColor);
-        if (_lines == null)
-            return;
-
-        // 绘制左侧竖线装饰
-        using (var lineBrush = new SolidBrush(Color.FromArgb(80, 130, 200)))
-            e.Graphics.FillRectangle(lineBrush, 0, 0, 3, ClientSize.Height);
-
-        float y = Pad;
-        foreach (var line in _lines)
-        {
-            var isHeader = line.StartsWith('[');
-            var font = isHeader ? _headerFont : _bodyFont;
-            var color = isHeader ? Color.FromArgb(100, 180, 255) : ForeColor;
-            using var brush = new SolidBrush(color);
-            e.Graphics.DrawString(line, font, brush, new PointF(Pad + 4, y));
-            y += font.GetHeight(e.Graphics) + LineGap;
-        }
-    }
-
-    public void ShowBubble(string text)
-    {
-        _lines = text.Split('\n');
-
-        // 计算气泡尺寸
-        float maxW = 0;
-        float totalH = Pad * 2;
-        using var g = CreateGraphics();
-        foreach (var line in _lines)
-        {
-            var font = line.StartsWith('[') ? _headerFont : _bodyFont;
-            var sz = g.MeasureString(line, font);
-            if (sz.Width > maxW)
-                maxW = sz.Width;
-            totalH += font.GetHeight(g) + LineGap;
-        }
-
-        int w = (int)maxW + Pad * 2 + 8;
-        int h = (int)totalH;
-
-        var cursor = Cursor.Position;
-        int x = cursor.X + 16;
-        int y = cursor.Y + 16;
-        var wa = Screen.FromPoint(cursor).WorkingArea;
-        if (x + w > wa.Right)
-            x = cursor.X - w - 4;
-        if (y + h > wa.Bottom)
-            y = cursor.Y - h - 4;
-        if (x < wa.Left)
-            x = wa.Left;
-        if (y < wa.Top)
-            y = wa.Top;
-
-        ClientSize = new Size(w, h);
-        Location = new Point(x, y);
-        ShowWindow(Handle, SW_SHOWNOACTIVATE);
-        Invalidate();
-
         try
         {
             var win = AppServices.App.ActiveWindow;
@@ -140,17 +74,43 @@ public sealed class CellGitHistoryTip : Form
         _scrollTimer.Start();
     }
 
+    /// <summary>显示纯文本提示气泡（如"搜索中"）。锁定时跳过。</summary>
+    internal void ShowBubble(string text)
+    {
+        CellHistoryBubbleWindow.EnsureWpfInitialized();
+        _window.SetMessage(text);
+        if (!_window.IsVisible)
+            _window.Show();
+        if (!_hasAnchor)
+        {
+            _window.PlaceAtCursor();
+            _hasAnchor = true;
+        }
+        _scrollTimer.Start();
+    }
+
+    internal void ResetAnchor()
+    {
+        _hasAnchor = false;
+    }
+
     public void ClearBubble()
     {
         _scrollTimer.Stop();
-        _lines = null;
-        if (!IsHandleCreated || IsDisposed)
-            return;
-        if (InvokeRequired)
-            BeginInvoke((System.Action)Hide);
-        else
-            Hide();
+        _window.Hide();
+        _hasAnchor = false;
     }
+
+    /// <summary>强制关闭气泡（无视锁定，停 timer + 隐藏并清空）。不受 IsLocked 拦截。</summary>
+    internal void ForceCloseBubble()
+    {
+        _scrollTimer.Stop();
+        _window.ForceClose();
+        _hasAnchor = false;
+    }
+
+    /// <summary>气泡窗口是否激活（控制器 deactivate 据此跳过 Clear，保留气泡供选文本复制）。</summary>
+    public bool IsBubbleActive => _window.IsActiveBubble;
 
     private void OnScrollCheck(object? sender, EventArgs e)
     {
@@ -166,54 +126,14 @@ public sealed class CellGitHistoryTip : Form
         }
     }
 
-    private void OnFocusCheck(object? sender, EventArgs e)
-    {
-        if (!Visible)
-            return;
-        try
-        {
-            var fg = GetForegroundWindow();
-            if (fg == Handle)
-                return;
-            GetWindowThreadProcessId(fg, out uint fgPid);
-            GetWindowThreadProcessId((IntPtr)AppServices.App.Hwnd, out uint excelPid);
-            if (fgPid != excelPid)
-                ClearBubble();
-        }
-        catch { }
-    }
-
     public static void DisposeInstance()
     {
-        if (_instance is { IsDisposed: false })
-        {
-            _instance._scrollTimer.Dispose();
-            _instance._focusTimer.Dispose();
-            _instance.Close();
-            _instance.Dispose();
-        }
+        if (_instance is null)
+            return;
+        _instance._scrollTimer.Dispose();
+        _instance._window.Close();
         _instance = null;
     }
-
-    private const int GWL_EXSTYLE = -20;
-    private const int WS_EX_TRANSPARENT = 0x20;
-    private const int WS_EX_NOACTIVATE = 0x8000000;
-    private const int SW_SHOWNOACTIVATE = 4;
-
-    [DllImport("user32.dll")]
-    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-    [DllImport("user32.dll")]
-    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 }
 
 // ── 后台查询服务 ─────────────────────────────────────────────────────────────
@@ -222,8 +142,10 @@ internal static class CellGitHistoryService
 {
     private static CancellationTokenSource? _cts;
 
-    // LRU 缓存：key = "absFile|sheet|rowKey|colName"
-    private static readonly Dictionary<string, string> _cache = new(StringComparer.Ordinal);
+    // LRU 缓存：key = "absFile|sheet|rowKey|colName" → 历史记录列表（着色渲染用）
+    private static readonly Dictionary<string, List<CellHistoryEntry>> _cache = new(
+        StringComparer.Ordinal
+    );
     private static readonly Queue<string> _cacheOrder = new();
     private const int CacheCapacity = 100;
 
@@ -233,14 +155,10 @@ internal static class CellGitHistoryService
         (List<(string sha, string date, string author, string msg)> commits, long stamp)
     > _commitListCache = new(StringComparer.OrdinalIgnoreCase);
 
-    // Sheet 级数据缓存：key = "sha8|relPath|sheetName" → rowKey → colName → value
-    // 一次 EPPlus 解析覆盖整 sheet，同一 sheet 的多格查询直接命中
-    private static readonly Dictionary<
-        string,
-        Dictionary<string, Dictionary<string, string>>
-    > _sheetDataCache = new(StringComparer.Ordinal);
-    private static readonly Queue<string> _sheetCacheOrder = new();
-    private const int SheetCacheCapacity = 30;
+    // 单格值缓存：sha8|relPath|sheetName|rowKey|colName → value（条目小，内存可忽略）
+    private static readonly ConcurrentDictionary<string, string> _cellValCache = new(
+        StringComparer.Ordinal
+    );
 
     public static void Query(
         string absFilePath,
@@ -248,7 +166,7 @@ internal static class CellGitHistoryService
         string sheetName,
         string rowKey,
         string colName,
-        Action<string> onResult
+        Action<List<CellHistoryEntry>> onResult
     )
     {
         _cts?.Cancel();
@@ -284,16 +202,16 @@ internal static class CellGitHistoryService
                         rowKey,
                         colName,
                         ct,
-                        partialText =>
+                        partialResults =>
                         {
                             if (ct.IsCancellationRequested)
                                 return;
-                            onResult(partialText); // 每找到一条就刷新气泡
+                            onResult(partialResults); // 每找到一条就刷新气泡
                         },
-                        finalText =>
+                        finalResults =>
                         {
-                            if (!ct.IsCancellationRequested && finalText != null)
-                                PutCache(cacheKey, finalText); // 全部找完后缓存最终结果
+                            if (!ct.IsCancellationRequested && finalResults != null)
+                                PutCache(cacheKey, finalResults); // 全部找完后缓存最终结果
                         }
                     );
                 }
@@ -306,7 +224,7 @@ internal static class CellGitHistoryService
 
     public static void CancelPending() => _cts?.Cancel();
 
-    private static void PutCache(string key, string value)
+    private static void PutCache(string key, List<CellHistoryEntry> value)
     {
         if (_cache.ContainsKey(key))
             return;
@@ -320,8 +238,8 @@ internal static class CellGitHistoryService
     }
 
     /// <summary>
-    /// 流式查询：每找到一条真实变更立刻调用 onPartial 刷新气泡，全部找完后调用 onFinal 缓存。
-    /// 修正对比逻辑：commit[i].val ≠ commit[i+1].val 才说明 commit[i] 真的改了这格。
+    /// 混合流式查询：阶段1 顺序流式处理前 N 个 commit，立即出结果；
+    /// 阶段2 并行处理剩余 commit，merge 后补充 diff。兼顾首条速度与全量覆盖。
     /// </summary>
     private static void QueryHistoryStreaming(
         string absFilePath,
@@ -330,8 +248,8 @@ internal static class CellGitHistoryService
         string rowKey,
         string colName,
         CancellationToken ct,
-        System.Action<string> onPartial,
-        System.Action<string?> onFinal
+        System.Action<List<CellHistoryEntry>> onPartial,
+        System.Action<List<CellHistoryEntry>?> onFinal
     )
     {
         var relativePath = Path.GetRelativePath(gitRoot, absFilePath).Replace('\\', '/');
@@ -346,118 +264,378 @@ internal static class CellGitHistoryService
         var tmpDir = Path.Combine(Path.GetTempPath(), "NumDesCellHistory");
         Directory.CreateDirectory(tmpDir);
 
-        // 滑动窗口流式：读完 commit[i+1] 就能判断 commit[i] 是否是真实改动者，无需等全部收集
-        const int MaxChanges = 5;
-        const int MaxLoop = 200; // 兜底上限，防止极大文件历史无限扫描
-        var accumulated = new List<(string date, string author, string msg, string val)>();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        int parsedCount = 0,
+            skippedCount = 0,
+            totalCommits = 0;
 
+        const int MaxChanges = 50;
+        const int MaxCommits = 500;
+        // 前 3 个 commit 用 xlsx 兜住"未导表的最近改动"：lua 是导表快照，滞后于 xlsx 的最近改动，
+        // 只扫最近几个提交就能覆盖到"lua 还没导"的部分；更早的历史交给 lua 反推（10s 覆盖全量）。
+        const int StreamingPhaseCount = 3;
+        const int ParallelChunks = 6; // XmlReader 流式取格内存极小，6 线程安全
+
+        var takeCount = Math.Min(commits.Count, MaxCommits);
+        var limitedCommits = commits.GetRange(0, takeCount);
+
+        // 共享的 accumulated 列表，两阶段共用（含 sha 用于头部显示短 sha8）
+        var accumulated = new List<CellHistoryEntry>();
+        bool usedLua = false; // 阶段2 是否走了 lua 反推快路径
+
+        // ── 阶段1：顺序流式（前 StreamingPhaseCount 个 commit）─────────────
+        // 实时出结果，用户立刻看到
+        int streamingEnd = Math.Min(StreamingPhaseCount, takeCount);
         string? prevVal = null;
-        (string date, string author, string msg)? prevMeta = null;
+        (string sha, string date, string author, string msg)? prevMeta = null;
+        bool hadNonNull = false;
 
-        // P0 优化：Repository 实例提升到循环外，50 commits 只初始化一次
-        using var repo = new Repository(gitRoot);
-        string? prevBlobOid = null; // blob OID 预过滤：OID 相同 = 文件内容未变 = 单元格值一定未变
-        int loopCount = 0;
-        bool hadNonNull = false; // 是否曾经找到过值（用于检测"此行首次出现"边界）
+        // 供阶段2用的边界值（阶段1最后的 prevVal / prevMeta）
+        string? phase1LastVal = null;
+        (string sha, string date, string author, string msg)? phase1LastMeta = null;
 
-        foreach (var (sha, date, author, msg) in commits)
+        using (var streamRepo = new Repository(gitRoot))
         {
-            if (ct.IsCancellationRequested)
-            {
-                onFinal(null);
-                return;
-            }
-            if (accumulated.Count >= MaxChanges || loopCount++ >= MaxLoop)
-                break;
+            string? prevBlobOid = null;
 
-            // blob OID 预过滤：纳秒级内存操作，文件内容未变直接跳过
-            var commit = repo.Lookup<Commit>(sha);
-            var blobEntry = commit?.Tree[relativePath];
-            var blobOid = blobEntry?.Target.Sha;
-            if (blobOid != null && blobOid == prevBlobOid)
+            for (int i = 0; i < streamingEnd; i++)
             {
-                // 文件内容与上一个 commit 完全相同，单元格值一定未变，跳过昂贵的 MiniExcel 解析
-                PluginLog.Verbose($"[谁的锅] commit {sha[..8]} blob unchanged, skip");
-                continue;
-            }
-            prevBlobOid = blobOid;
+                if (ct.IsCancellationRequested)
+                {
+                    onFinal(null);
+                    return;
+                }
+                if (accumulated.Count >= MaxChanges)
+                    break;
 
-            var val = GetCellValueAtCommit(
-                repo,
-                sha,
-                relativePath,
-                sheetName,
+                var (sha, date, author, msg) = limitedCommits[i];
+
+                // blob OID 预过滤
+                var commit = streamRepo.Lookup<Commit>(sha);
+                var blobEntry = commit?.Tree[relativePath];
+                var blobOid = blobEntry?.Target.Sha;
+                if (blobOid != null && blobOid == prevBlobOid)
+                {
+                    PluginLog.Verbose($"[谁的锅] commit {sha[..8]} blob unchanged, skip");
+                    continue;
+                }
+                prevBlobOid = blobOid;
+
+                // 提取值（MiniExcel 流式取格，内存极低）
+                string? val = GetCellValueAtCommit(
+                    streamRepo,
+                    sha,
+                    relativePath,
+                    sheetName,
+                    rowKey,
+                    colName,
+                    tmpDir
+                );
+
+                PluginLog.Verbose($"[谁的锅] phase1 commit {sha[..8]} val={val ?? "null"}");
+
+                if (val == null)
+                {
+                    if (hadNonNull)
+                        break;
+                    continue;
+                }
+
+                hadNonNull = true;
+
+                if (prevVal != null && prevMeta.HasValue && val != prevVal)
+                {
+                    // diff：较新=prevMeta.Value.sha，较旧=当前循环变量 sha
+                    accumulated.Add(
+                        new CellHistoryEntry(
+                            prevMeta.Value.sha,
+                            prevMeta.Value.date,
+                            prevMeta.Value.author,
+                            prevMeta.Value.msg,
+                            val,
+                            prevVal
+                        )
+                        {
+                            NewBranch = GetBranch(gitRoot, prevMeta.Value.sha),
+                            OldBranch = GetBranch(gitRoot, sha),
+                        }
+                    );
+                    onPartial(accumulated);
+                }
+
+                prevVal = val;
+                prevMeta = (sha, date, author, msg);
+            }
+
+            phase1LastVal = prevVal;
+            phase1LastMeta = prevMeta;
+
+            totalCommits = streamingEnd;
+            sw.Stop();
+            PluginLog.Write(
+                $"[谁的锅] Phase1 done: {streamingEnd} commits, {accumulated.Count} changes, {sw.ElapsedMilliseconds}ms"
+            );
+            sw.Start();
+        }
+
+        // ── 阶段2：处理剩余 commit ───────────────────────────────────────
+        if (
+            streamingEnd < takeCount
+            && accumulated.Count < MaxChanges
+            && !ct.IsCancellationRequested
+        )
+        {
+            // ── 阶段2a：lua 反推快路径 ─────────────────────────────────────
+            // xlsx 是二进制，剩余几百个提交逐个解包扫描要几分钟；lua.txt 是导出产物（纯文本），
+            // git pickaxe 原生行级追踪，~10s 覆盖全部历史。阶段1（xlsx）已兜住"未导表的最近改动"，
+            // 这里只补更早的历史；按（旧值,新值）对去重，避免与阶段1已找到的变更重复计数。
+            var luaEvents = CellGitHistoryLuaIndex.TryQueryHistory(
+                absFilePath,
                 rowKey,
                 colName,
-                tmpDir
+                out var luaReason
             );
-            PluginLog.Verbose($"[谁的锅] commit {sha[..8]} val={val ?? "null"}");
+            PluginLog.Write($"[谁的锅] lua 反推: {luaReason}");
 
-            if (val == null)
+            if (luaEvents != null)
             {
-                if (hadNonNull)
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var e in accumulated)
+                    seen.Add(EventKey(e.Sha, e.Date, e.Author, e.Msg, e.OldVal, e.NewVal));
+
+                int added = 0;
+                foreach (var e in luaEvents)
                 {
-                    // 找到创建边界：更老的 commit 不存在此行，说明 prevMeta 是"首次添加此行"的 commit
-                    // 直接跳出，后续处理会将 prevMeta 作为"最早可查记录"显示
-                    break;
+                    if (accumulated.Count >= MaxChanges || ct.IsCancellationRequested)
+                        break;
+                    var key = EventKey(e.Sha, e.Date, e.Author, e.Msg, e.OldVal, e.NewVal);
+                    if (!seen.Add(key))
+                        continue;
+                    // lua 反推路径无 sha（pickaxe 行级追踪，sha 在索引内部未暴露），留空显示
+                    accumulated.Add(
+                        new CellHistoryEntry(
+                            e.Sha,
+                            e.Date,
+                            e.Author,
+                            e.Msg,
+                            e.OldVal ?? "（空）",
+                            e.NewVal ?? "（行被删除）"
+                        )
+                    );
+                    onPartial(accumulated);
+                    added++;
                 }
-                continue; // 此行在这个 commit 里不存在，继续向更老的 commit 找
-            }
-
-            hadNonNull = true;
-
-            if (prevVal != null && prevMeta.HasValue && val != prevVal)
-            {
-                // prevMeta 对应的 commit 是真实改动者（它的值与再早一个 commit 不同）
-                accumulated.Add(
-                    (prevMeta.Value.date, prevMeta.Value.author, prevMeta.Value.msg, prevVal)
+                sw.Stop();
+                PluginLog.Write(
+                    $"[谁的锅] Phase2 lua 反推完成: 命中 {luaEvents.Count} 条，新增 {added} 条更早变更，{sw.ElapsedMilliseconds}ms"
                 );
-                onPartial(BuildText(accumulated));
+                sw.Start();
+                usedLua = true;
             }
+            else
+            {
+                // ── 阶段2b 回退：并行 xlsx 扫描（原有逻辑）──────────────────
+                int remaining = takeCount - streamingEnd;
+                int chunkSize = Math.Max(1, (remaining + ParallelChunks - 1) / ParallelChunks);
+                int chunkCount = (remaining + chunkSize - 1) / chunkSize;
+                var chunkResults = new (
+                    string? val,
+                    string sha,
+                    string date,
+                    string author,
+                    string msg
+                )[chunkCount][];
 
-            prevVal = val;
-            prevMeta = (date, author, msg);
+                Parallel.For(
+                    0,
+                    chunkCount,
+                    new ParallelOptions
+                    {
+                        MaxDegreeOfParallelism = ParallelChunks,
+                        CancellationToken = ct,
+                    },
+                    chunkIdx =>
+                    {
+                        int start = streamingEnd + chunkIdx * chunkSize;
+                        int end = Math.Min(start + chunkSize, takeCount);
+
+                        using var threadRepo = new Repository(gitRoot);
+                        string? prevBlobOid = null;
+                        var local = new (
+                            string? val,
+                            string sha,
+                            string date,
+                            string author,
+                            string msg
+                        )[end - start];
+
+                        for (int i = start; i < end; i++)
+                        {
+                            if (ct.IsCancellationRequested)
+                                return;
+
+                            var (sha, date, author, msg) = limitedCommits[i];
+
+                            var commit = threadRepo.Lookup<Commit>(sha);
+                            var blobEntry = commit?.Tree[relativePath];
+                            var blobOid = blobEntry?.Target.Sha;
+                            if (blobOid != null && blobOid == prevBlobOid)
+                            {
+                                PluginLog.Verbose(
+                                    $"[谁的锅] commit {sha[..8]} blob unchanged, skip"
+                                );
+                                continue;
+                            }
+                            prevBlobOid = blobOid;
+
+                            string? val = GetCellValueAtCommit(
+                                threadRepo,
+                                sha,
+                                relativePath,
+                                sheetName,
+                                rowKey,
+                                colName,
+                                tmpDir
+                            );
+
+                            local[i - start] = (val, sha, date, author, msg);
+                        }
+                        chunkResults[chunkIdx] = local;
+                    }
+                );
+
+                // 合并阶段2结果（保持 commit 顺序）
+                // 先用阶段1的边界值作为 prevVal/prevMeta
+                prevVal = phase1LastVal;
+                prevMeta = phase1LastMeta;
+
+                for (int chunkIdx = 0; chunkIdx < chunkResults.Length; chunkIdx++)
+                {
+                    if (ct.IsCancellationRequested)
+                    {
+                        onFinal(null);
+                        return;
+                    }
+                    var chunk = chunkResults[chunkIdx];
+                    if (chunk == null)
+                        continue;
+
+                    foreach (var (val, sha, date, author, msg) in chunk)
+                    {
+                        if (accumulated.Count >= MaxChanges)
+                            break;
+
+                        if (val == null)
+                        {
+                            if (hadNonNull)
+                                goto Phase2Done; // 创建边界，跳出双层循环
+                            continue;
+                        }
+
+                        hadNonNull = true;
+
+                        if (prevVal != null && prevMeta.HasValue && val != prevVal)
+                        {
+                            // diff：较新=prevMeta.Value.sha，较旧=当前循环变量 sha
+                            accumulated.Add(
+                                new CellHistoryEntry(
+                                    prevMeta.Value.sha,
+                                    prevMeta.Value.date,
+                                    prevMeta.Value.author,
+                                    prevMeta.Value.msg,
+                                    val,
+                                    prevVal
+                                )
+                                {
+                                    NewBranch = GetBranch(gitRoot, prevMeta.Value.sha),
+                                    OldBranch = GetBranch(gitRoot, sha),
+                                }
+                            );
+                            onPartial(accumulated);
+                        }
+
+                        prevVal = val;
+                        prevMeta = (sha, date, author, msg);
+                    }
+                }
+                Phase2Done:
+                ;
+                sw.Stop();
+                long phase2Ms = sw.ElapsedMilliseconds;
+                PluginLog.Write(
+                    $"[谁的锅] Phase2 done: {takeCount - streamingEnd} commits ({parsedCount} parsed, {skippedCount} blob-skipped), {phase2Ms}ms"
+                );
+                sw.Start();
+            }
         }
 
-        // 若找到值但无任何变更（值在所有可查提交中从未改变），
-        // 则展示最老一条提交作为"最早可查记录"，告诉用户是谁最早放入了这个值
+        // 补"从无到有"创建条目：prevMeta 是该行首次出现（或窗口内最早可查）的 commit
+        // lua 反推路径自带创建事件（首条 diff 即行新增），避免重复
+        if (!usedLua && accumulated.Count > 0 && prevMeta.HasValue && prevVal != null)
+        {
+            accumulated.Add(
+                new CellHistoryEntry(
+                    prevMeta.Value.sha,
+                    prevMeta.Value.date,
+                    prevMeta.Value.author,
+                    prevMeta.Value.msg + "（行首次出现）",
+                    "（空）",
+                    prevVal
+                )
+            );
+            onPartial(accumulated);
+        }
+
+        // 若找到值但无任何变更，展示最老一条
         if (accumulated.Count == 0 && prevMeta.HasValue && prevVal != null)
         {
-            var stableEntry = (
-                prevMeta.Value.date,
-                prevMeta.Value.author,
-                prevMeta.Value.msg + "（最早可查，值未改变）",
-                prevVal
+            accumulated.Add(
+                new CellHistoryEntry(
+                    prevMeta.Value.sha,
+                    prevMeta.Value.date,
+                    prevMeta.Value.author,
+                    prevMeta.Value.msg + "（最早可查，值未改变）",
+                    prevVal,
+                    prevVal
+                )
             );
-            accumulated.Add(stableEntry);
-            onPartial(BuildText(accumulated));
+            onPartial(accumulated);
         }
 
-        PluginLog.Write($"[谁的锅] streaming done: changes={accumulated.Count}");
-        var finalText = accumulated.Count > 0 ? BuildText(accumulated) : null;
-        onFinal(finalText);
+        sw.Stop();
+        PluginLog.Write(
+            $"[谁的锅] TOTAL: {takeCount} commits scanned, {accumulated.Count} changes found, {sw.ElapsedMilliseconds}ms"
+        );
+        var finalResults = accumulated.Count > 0 ? accumulated : null;
+        onFinal(finalResults);
     }
 
-    private static string BuildText(
-        List<(string date, string author, string msg, string val)> results
-    )
+    /// <summary>
+    /// 归一化列值用于跨路径去重（xlsx 读出的值 vs lua 反推的值）：
+    /// 空/「（空）」→ 空串；简单字符串去掉首尾引号。
+    /// </summary>
+    private static string NormVal(string? v)
     {
-        var sb = new StringBuilder();
-        for (int i = 0; i < results.Count; i++)
-        {
-            var (date, author, msg, val) = results[i];
-            var datePart = date.Length >= 10 ? date[..10] : date;
-            sb.AppendLine($"[{i + 1}] {datePart}  {author}");
-            var shortMsg = msg.Length > 40 ? msg[..40] + "…" : msg;
-            sb.AppendLine($"    {shortMsg}");
-            var shortVal = val.Length > 60 ? val[..60] + "…" : val;
-            if (i < results.Count - 1)
-                sb.AppendLine($"    值: {shortVal}");
-            else
-                sb.Append($"    值: {shortVal}");
-        }
-        return sb.ToString().TrimEnd('\n');
+        if (string.IsNullOrWhiteSpace(v))
+            return "";
+        v = v.Trim();
+        if (v == "（空）")
+            return "";
+        if (v.Length >= 2 && v[0] == '"' && v[^1] == '"')
+            v = v[1..^1];
+        return v;
     }
+
+    private static string EventKey(
+        string sha,
+        string date,
+        string author,
+        string msg,
+        string? oldVal,
+        string? newVal
+    ) => !string.IsNullOrEmpty(sha)
+        ? sha
+        : string.Join('\u0001', date, author, msg, NormVal(oldVal), NormVal(newVal));
 
     private static List<(string sha, string date, string author, string msg)> GetRecentCommits(
         string absFilePath,
@@ -471,8 +649,8 @@ internal static class CellGitHistoryService
 
         try
         {
-            // --all 搜索所有分支；-n 200 防止极大仓库无限返回（QueryHistoryStreaming 有 MaxLoop=200 兜底）
-            var args = $"log --all -n 200 --format=\"%H|%ai|%an|%s\" -- \"{relativePath}\"";
+            // --all 搜索所有分支；-n 500 配合 MaxCommits=500 覆盖全部历史
+            var args = $"log --all -n 500 --format=\"%H|%ai|%an|%s\" -- \"{relativePath}\"";
             var output = RunGit(gitRoot, args);
 
             var result = new List<(string, string, string, string)>();
@@ -484,7 +662,8 @@ internal static class CellGitHistoryService
                 var sha = parts[0].Trim();
                 if (sha.Length < 8)
                     continue;
-                var date = parts[1].Trim().Length >= 10 ? parts[1].Trim()[..10] : parts[1].Trim();
+                var dt = parts[1].Trim();
+                var date = dt.Length >= 16 ? dt[..16] : dt; // git %ai = "2026-08-06 11:05:50 +0800"，[..16] 留到分钟
                 result.Add((sha, date, parts[2].Trim(), parts[3].Trim()));
             }
 
@@ -498,73 +677,10 @@ internal static class CellGitHistoryService
     }
 
     /// <summary>
-    /// 加载并缓存某个 commit 下 xlsx 某 sheet 的全部数据：rowKey → colName → value。
-    /// 一次 EPPlus 解析覆盖整个 sheet，同 sheet 后续格查询直接命中内存缓存。
-    /// </summary>
-    private static Dictionary<string, Dictionary<string, string>>? LoadSheetData(
-        string gitRoot,
-        string sha,
-        string relativePath,
-        string sheetName,
-        string tmpDir
-    )
-    {
-        var cacheKey = $"{sha[..8]}|{relativePath}|{sheetName}";
-        if (_sheetDataCache.TryGetValue(cacheKey, out var cached))
-            return cached;
-
-        try
-        {
-            // 提取 blob 到临时文件（已存在则复用）
-            var tmpFile = Path.Combine(tmpDir, $"{sha[..8]}_{Path.GetFileName(relativePath)}");
-            if (!File.Exists(tmpFile))
-            {
-                using var repo = new Repository(gitRoot);
-                var commit = repo.Lookup<Commit>(sha);
-                if (commit == null)
-                    return null;
-                var entry = commit[relativePath];
-                if (entry == null)
-                    return null;
-                var blob = (Blob)entry.Target;
-                using var src = blob.GetContentStream();
-                using var dst = new FileStream(tmpFile, FileMode.Create, FileAccess.Write);
-                src.CopyTo(dst);
-            }
-
-            ExcelPackage.License.SetNonCommercialPersonal("NumDesTools");
-            using var pkg = new ExcelPackage(new FileInfo(tmpFile));
-            var ws = pkg.Workbook.Worksheets.FirstOrDefault(w =>
-                string.Equals(w.Name, sheetName, StringComparison.OrdinalIgnoreCase)
-            );
-            if (ws?.Dimension == null)
-                return null;
-
-            var data = CellHistoryXlsxReader.ParseSheetData(ws);
-
-            // 入缓存（LRU 淘汰）
-            if (_sheetDataCache.Count >= SheetCacheCapacity)
-            {
-                var old = _sheetCacheOrder.Dequeue();
-                _sheetDataCache.Remove(old);
-            }
-            _sheetDataCache[cacheKey] = data;
-            _sheetCacheOrder.Enqueue(cacheKey);
-            return data;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    // 单格值缓存：sha8|relPath|sheetName|rowKey|colName → value
-    private static readonly Dictionary<string, string> _cellValCache =
-        new(StringComparer.Ordinal);
-
     /// <summary>
-    /// 用 MiniExcel 流式读取，找到目标 rowKey 立即 break，无需解析整个 sheet。
-    /// 比 EPPlus 全量加载快 10-20x（20-50ms vs 200-500ms per commit）。
+    /// 从目标 commit 的 xlsx 中提取单格值（裸 OOXML 流式）。
+    /// XmlReader 每行只看 key 列/目标列两个 cell 的开始标签，跳过其余上百万 cell：
+    /// 5.5 万行表约 300ms/commit（MiniExcel 逐行建行对象约 5s；EPPlus 全表 DOM 内存太大）。
     /// </summary>
     private static string? GetCellValueAtCommit(
         Repository repo,
@@ -582,69 +698,215 @@ internal static class CellGitHistoryService
 
         try
         {
+            // 提取 blob 到临时文件（已存在则复用）
             var tmpFile = Path.Combine(tmpDir, $"{sha[..8]}_{Path.GetFileName(relativePath)}");
             if (!File.Exists(tmpFile))
             {
-                // 使用调用方传入的 repo 实例，不再重复初始化
                 var commit = repo.Lookup<Commit>(sha);
-                if (commit == null) return null;
+                if (commit == null)
+                    return null;
                 var entry = commit[relativePath];
-                if (entry == null) return null;
+                if (entry == null)
+                    return null;
                 var blob = (Blob)entry.Target;
                 using var src = blob.GetContentStream();
                 using var dst = new FileStream(tmpFile, FileMode.Create, FileAccess.Write);
                 src.CopyTo(dst);
             }
 
-            // MiniExcel 流式读，row 2 找列字母，row 3+ 找 rowKey，找到即 break
-            string? keyLetter = null, targetLetter = null;
-            int rowIdx = 0;
+            // 裸 OOXML 流式：row 2 定列号，row 3+ 只读 key/目标两列，找到即 break
             string? result = null;
-
-            foreach (IDictionary<string, object> row in
-                MiniExcelLibs.MiniExcel.Query(tmpFile, sheetName: sheetName, useHeaderRow: false)
-                    .Cast<IDictionary<string, object>>())
+            using (var za = System.IO.Compression.ZipFile.OpenRead(tmpFile))
             {
-                rowIdx++;
-                if (rowIdx == 2)
+                var sharedStrings = LoadSharedStrings(za);
+                var sheetEntry = za.GetEntry(ResolveSheetPath(za, sheetName) ?? "");
+                if (sheetEntry == null)
+                    return null;
+
+                int keyCol = -1,
+                    targetCol = -1;
+                bool headerDone = false;
+                int curRow = 0;
+                string? curKey = null;
+
+                using var sh = sheetEntry.Open();
+                using var xr = System.Xml.XmlReader.Create(sh);
+                while (xr.Read())
                 {
-                    // 行2 = 列名行，按列字母排序找 key 列和目标列
-                    foreach (var kv in row.OrderBy(k => k.Key.Length).ThenBy(k => k.Key))
+                    if (xr.NodeType != System.Xml.XmlNodeType.Element)
+                        continue;
+                    if (xr.LocalName == "row")
                     {
-                        var h = kv.Value?.ToString() ?? "";
-                        if (keyLetter == null && !string.IsNullOrEmpty(h) && !h.StartsWith('#'))
-                            keyLetter = kv.Key;
+                        curRow = int.TryParse(xr.GetAttribute("r"), out var rr) ? rr : curRow + 1;
+                        curKey = null;
+                        continue;
+                    }
+                    if (xr.LocalName != "c")
+                        continue;
+
+                    var col = ColIndexOf(xr.GetAttribute("r"));
+
+                    if (curRow == 2)
+                    {
+                        // row 2 = 列名行：找 key 列（第一个非 #）和目标列
+                        var h = ReadCellValue(xr, sharedStrings) ?? "";
+                        if (keyCol < 0 && !string.IsNullOrEmpty(h) && !h.StartsWith('#'))
+                            keyCol = col;
                         if (h == colName)
-                            targetLetter = kv.Key;
+                            targetCol = col;
+                        continue;
                     }
-                    if (keyLetter == null) break; // 找不到 key 列，放弃
-                    if (targetLetter == null)
+                    if (!headerDone && curRow > 2)
                     {
-                        // 该列不存在于此 commit
-                        result = "(列当时不存在)";
-                        break;
+                        headerDone = true;
+                        if (keyCol < 0)
+                            break;
+                        if (targetCol < 0)
+                        {
+                            result = "（列当时不存在）";
+                            break;
+                        }
                     }
-                }
-                else if (rowIdx >= 3 && keyLetter != null && targetLetter != null)
-                {
-                    var kv2 = row.TryGetValue(keyLetter, out var kv) ? kv?.ToString() ?? "" : "";
-                    if (kv2 == rowKey)
+                    if (curRow < 3)
+                        continue;
+                    // 不匹配的 cell 直接放过：子节点 <v>/<t> 会被 LocalName 过滤自然跳过。
+                    // 不能用 xr.Skip()——Skip 后停在下一兄弟节点，循环顶部 Read() 会再吞一个 cell。
+                    if (col == keyCol || col == targetCol)
                     {
-                        var val = row.TryGetValue(targetLetter, out var tv) ? tv?.ToString() ?? "" : "";
-                        result = string.IsNullOrEmpty(val) ? "(空)" : val;
-                        break; // 找到目标行，立即停止
+                        var v = ReadCellValue(xr, sharedStrings);
+                        if (col == keyCol)
+                            curKey = v;
+                        else if (curKey == rowKey)
+                        {
+                            result = string.IsNullOrEmpty(v) ? "（空）" : v;
+                            break;
+                        }
                     }
                 }
             }
 
             if (result != null)
+            {
+                if (_cellValCache.Count >= 2000)
+                    _cellValCache.Clear();
                 _cellValCache[cacheKey] = result;
+            }
             return result;
         }
         catch
         {
             return null;
         }
+    }
+
+    /// <summary>单元格引用 "AG55883" → 列号 33。</summary>
+    private static int ColIndexOf(string? cellRef)
+    {
+        int c = 0;
+        if (cellRef == null)
+            return 0;
+        foreach (var ch in cellRef)
+        {
+            if (char.IsLetter(ch))
+                c = c * 26 + (char.ToUpper(ch) - 'A' + 1);
+            else
+                break;
+        }
+        return c;
+    }
+
+    /// <summary>读取当前 &lt;c&gt; 节点的值（处理共享字符串/内联字符串/数字）。</summary>
+    private static string? ReadCellValue(System.Xml.XmlReader xr, List<string> sharedStrings)
+    {
+        var t = xr.GetAttribute("t");
+        if (xr.IsEmptyElement)
+            return null;
+        string? v = null;
+        using var sub = xr.ReadSubtree();
+        while (sub.Read())
+        {
+            if (sub.NodeType == System.Xml.XmlNodeType.Element && (sub.LocalName == "v" || sub.LocalName == "t"))
+                v = sub.ReadElementContentAsString();
+        }
+        if (t == "s" && v != null && int.TryParse(v, out var si) && si >= 0 && si < sharedStrings.Count)
+            return sharedStrings[si];
+        return v;
+    }
+
+    /// <summary>sharedStrings.xml → 字符串表（无此文件返回空表）。</summary>
+    private static List<string> LoadSharedStrings(System.IO.Compression.ZipArchive za)
+    {
+        var ss = new List<string>();
+        var entry = za.GetEntry("xl/sharedStrings.xml");
+        if (entry == null)
+            return ss;
+        using var s = entry.Open();
+        using var xr = System.Xml.XmlReader.Create(s);
+        while (xr.Read())
+        {
+            if (xr.NodeType != System.Xml.XmlNodeType.Element || xr.LocalName != "si")
+                continue;
+            // 整个 <si> 用 subtree 读：ReadElementContentAsString 会吞掉 </si> 事件，不能靠 EndElement 收尾
+            var sb = new StringBuilder();
+            using var sub = xr.ReadSubtree();
+            while (sub.Read())
+            {
+                if (sub.NodeType == System.Xml.XmlNodeType.Element && sub.LocalName == "t")
+                    sb.Append(sub.ReadElementContentAsString());
+            }
+            ss.Add(sb.ToString());
+        }
+        return ss;
+    }
+
+    /// <summary>sheet 名 → zip 内 worksheet 路径（workbook.xml + rels 解析）。</summary>
+    private static string? ResolveSheetPath(System.IO.Compression.ZipArchive za, string sheetName)
+    {
+        string? rid = null;
+        var wbEntry = za.GetEntry("xl/workbook.xml");
+        if (wbEntry == null)
+            return null;
+        using (var wb = wbEntry.Open())
+        using (var xr = System.Xml.XmlReader.Create(wb))
+        {
+            while (xr.Read())
+            {
+                if (
+                    xr.NodeType == System.Xml.XmlNodeType.Element
+                    && xr.LocalName == "sheet"
+                    && string.Equals(xr.GetAttribute("name"), sheetName, StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    rid = xr.GetAttribute(
+                        "id",
+                        "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                    );
+                    break;
+                }
+            }
+        }
+        if (rid == null)
+            return null;
+        var relsEntry = za.GetEntry("xl/_rels/workbook.xml.rels");
+        if (relsEntry == null)
+            return null;
+        using var rels = relsEntry.Open();
+        using var xr2 = System.Xml.XmlReader.Create(rels);
+        while (xr2.Read())
+        {
+            if (
+                xr2.NodeType == System.Xml.XmlNodeType.Element
+                && xr2.LocalName == "Relationship"
+                && xr2.GetAttribute("Id") == rid
+            )
+            {
+                var target = xr2.GetAttribute("Target");
+                if (string.IsNullOrEmpty(target))
+                    return null;
+                return target.StartsWith("/") ? target.TrimStart('/') : "xl/" + target;
+            }
+        }
+        return null;
     }
 
     private static string RunGit(string gitRoot, string arguments)
@@ -669,6 +931,43 @@ internal static class CellGitHistoryService
         proc.StandardError.ReadToEnd();
         proc.WaitForExit(15_000);
         return stdout;
+    }
+
+    // sha → 所在分支（首个非 HEAD 的 refname:short）。失败/无返回空串。
+    private static readonly Dictionary<string, string> _branchCache = new(
+        StringComparer.Ordinal
+    );
+
+    /// <summary>
+    /// 查询某 commit 所在分支（取首个不含 HEAD 的短引用名）。
+    /// 只在产生 diff 条目时调用（次数少），带进程内缓存。
+    /// </summary>
+    private static string GetBranch(string gitRoot, string sha)
+    {
+        if (string.IsNullOrEmpty(sha))
+            return "";
+        if (_branchCache.TryGetValue(sha, out var cached))
+            return cached;
+        var branch = "";
+        try
+        {
+            var args =
+                $"-C \"{gitRoot}\" branch -a --contains {sha} --format=%(refname:short)";
+            var output = RunGit(gitRoot, args);
+            foreach (var line in output.Split('\n'))
+            {
+                var t = line.Trim();
+                if (t.Length == 0 || t.Contains("HEAD"))
+                    continue;
+                branch = t;
+                break;
+            }
+        }
+        catch { }
+        if (_branchCache.Count >= 500)
+            _branchCache.Clear();
+        _branchCache[sha] = branch;
+        return branch;
     }
 
     private static string? _gitExe;
@@ -735,6 +1034,7 @@ internal static class CellGitHistoryController
     private static void OnSelectionChange(object sh, Microsoft.Office.Interop.Excel.Range target)
     {
         CellGitHistoryTip.Instance.ClearBubble();
+        CellGitHistoryTip.Instance.ResetAnchor();
         CellGitHistoryService.CancelPending();
         ExcelAsyncUtil.QueueAsMacro(() => TryQuery(sh, target));
     }
@@ -805,14 +1105,16 @@ internal static class CellGitHistoryController
                 return;
             }
 
-            PluginLog.Write($"[谁的锅] querying: file={System.IO.Path.GetFileName(absFilePath)} sheet={sheetName} row={row} col={colName} key={rowKey} gitRoot={gitRoot}");
+            PluginLog.Write(
+                $"[谁的锅] querying: file={System.IO.Path.GetFileName(absFilePath)} sheet={sheetName} row={row} col={colName} key={rowKey} gitRoot={gitRoot}"
+            );
 
             // QueueAsMacro：把 ShowBubble 排入 Excel 主线程执行（与放大镜气泡做法一致）
-            Action<string> onResult = text =>
+            Action<List<CellHistoryEntry>> onResult = results =>
                 ExcelAsyncUtil.QueueAsMacro(() =>
                 {
-                    PluginLog.Verbose($"[谁的锅] ShowBubble text.len={text?.Length}");
-                    CellGitHistoryTip.Instance.ShowBubble(text!);
+                    PluginLog.Verbose($"[谁的锅] ShowBubble count={results.Count}");
+                    CellGitHistoryTip.Instance.ShowBubble(results);
                 });
             CellGitHistoryService.Query(absFilePath, gitRoot, sheetName, rowKey, colName, onResult);
         }
@@ -822,10 +1124,20 @@ internal static class CellGitHistoryController
         }
     }
 
-    private static void OnWindowDeactivate(object wb, object wn) =>
+    private static void OnWindowDeactivate(object wb, object wn)
+    {
+        // 用户点击气泡后气泡激活→Excel 触发 WindowDeactivate；此时不清，保留气泡供选文本复制。
+        if (CellGitHistoryTip.Instance.IsBubbleActive)
+            return;
         CellGitHistoryTip.Instance.ClearBubble();
+    }
 
-    private static void OnWorkbookDeactivate(object wb) => CellGitHistoryTip.Instance.ClearBubble();
+    private static void OnWorkbookDeactivate(object wb)
+    {
+        if (CellGitHistoryTip.Instance.IsBubbleActive)
+            return;
+        CellGitHistoryTip.Instance.ClearBubble();
+    }
 
     private static void OnWorkbookBeforeClose(
         Microsoft.Office.Interop.Excel.Workbook wb,

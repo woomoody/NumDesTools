@@ -39,6 +39,8 @@
             <Button Content="取消冻结" Click="OnUnfreezeClick" />
             <Separator />
             <Button Content="查看完整值" Click="OnViewFullValueClick" ToolTip="弹窗显示当前单元格完整内容" />
+            <Separator />
+            <Button x:Name="ThemeButton" Width="90" Click="OnThemeButtonClick" ToolTip="点击切换主题（跟随系统/亮色/暗色）" />
         </ToolBar>
 
         <Grid Grid.Row="2" Margin="4,2">

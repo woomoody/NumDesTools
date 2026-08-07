@@ -56,6 +56,7 @@ public partial class AiChatTaskPanel
     public AiChatTaskPanel()
     {
         InitializeComponent();
+        ThemeRefreshHelper.Subscribe(this);
 
         var enterBinding = PromptInput.TextArea.DefaultInputHandler.CommandBindings.FirstOrDefault(
             b => b.Command == EditingCommands.EnterParagraphBreak
@@ -64,10 +65,11 @@ public partial class AiChatTaskPanel
             PromptInput.TextArea.DefaultInputHandler.CommandBindings.Remove(enterBinding);
 
         PromptInput.Text = DefaultPromptText;
-        PromptInput.Foreground =
-            (WpfBrush)
-                System.Windows.Application.Current.TryFindResource("TextFillColorSecondaryBrush")
-            ?? Brushes.Gray;
+        // 动态资源引用：主题切换时自动刷新（TryFindResource 是快照，不会跟随）
+        PromptInput.SetResourceReference(
+            TextElement.ForegroundProperty,
+            "TextFillColorSecondaryBrush"
+        );
 
         // 动态高度：根据内容行数自动扩展（无滚动条）
         PromptInput.Document.Changed += (_, _) =>
@@ -377,10 +379,10 @@ function clearAll(){document.body.innerHTML=''}
         if (PromptInput.Text != DefaultPromptText)
             return;
         PromptInput.Text = string.Empty;
-        PromptInput.Foreground =
-            (WpfBrush)
-                System.Windows.Application.Current.TryFindResource("TextFillColorPrimaryBrush")
-            ?? Brushes.Black;
+        PromptInput.SetResourceReference(
+            TextElement.ForegroundProperty,
+            "TextFillColorPrimaryBrush"
+        );
     }
 
     private void PromptInput_LostFocus(object sender, RoutedEventArgs e)
@@ -388,10 +390,10 @@ function clearAll(){document.body.innerHTML=''}
         if (!string.IsNullOrWhiteSpace(PromptInput.Text))
             return;
         PromptInput.Text = DefaultPromptText;
-        PromptInput.Foreground =
-            (WpfBrush)
-                System.Windows.Application.Current.TryFindResource("TextFillColorSecondaryBrush")
-            ?? Brushes.Gray;
+        PromptInput.SetResourceReference(
+            TextElement.ForegroundProperty,
+            "TextFillColorSecondaryBrush"
+        );
     }
 
     // ── 核心发送逻辑 ──────────────────────────────────────────────────────────
@@ -838,15 +840,13 @@ function clearAll(){document.body.innerHTML=''}
             var chip = new System.Windows.Controls.Border
             {
                 CornerRadius = new CornerRadius(3),
-                Background =
-                    (WpfBrush)
-                        System.Windows.Application.Current.TryFindResource(
-                            "ControlFillColorSecondaryBrush"
-                        )
-                    ?? Brushes.LightGray,
                 Margin = new Thickness(2),
                 Padding = new Thickness(4, 2, 4, 2),
             };
+            chip.SetResourceReference(
+                System.Windows.Controls.Border.BackgroundProperty,
+                "ControlFillColorSecondaryBrush"
+            );
             var icon = att.IsImage ? "🖼 " : "📄 ";
             var inner = new System.Windows.Controls.StackPanel
             {
@@ -855,31 +855,24 @@ function clearAll(){document.body.innerHTML=''}
             var label = new TextBlock
             {
                 Text = icon + att.DisplayName,
-                Foreground =
-                    (WpfBrush)
-                        System.Windows.Application.Current.TryFindResource(
-                            "TextFillColorPrimaryBrush"
-                        )
-                    ?? Brushes.Black,
                 FontSize = 9,
                 VerticalAlignment = VerticalAlignment.Center,
             };
+            label.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorPrimaryBrush");
             var captured = att;
             var removeBtn = new System.Windows.Controls.Button
             {
                 Content = "×",
                 Background = System.Windows.Media.Brushes.Transparent,
-                Foreground =
-                    (WpfBrush)
-                        System.Windows.Application.Current.TryFindResource(
-                            "TextFillColorSecondaryBrush"
-                        )
-                    ?? Brushes.Gray,
                 BorderThickness = new Thickness(0),
                 Padding = new Thickness(3, 0, 0, 0),
                 FontSize = 9,
                 VerticalAlignment = VerticalAlignment.Center,
             };
+            removeBtn.SetResourceReference(
+                System.Windows.Controls.Button.ForegroundProperty,
+                "TextFillColorSecondaryBrush"
+            );
             removeBtn.Click += (_, _) =>
             {
                 _attachments.Remove(captured);

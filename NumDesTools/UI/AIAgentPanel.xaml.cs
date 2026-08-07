@@ -1110,6 +1110,7 @@ a[href^='excel://']:hover{background:#ddf5ef;border-radius:2px}
     public AIAgentPanel()
     {
         InitializeComponent();
+        ThemeRefreshHelper.Subscribe(this);
         PopulateModelList();
         ChatOutput.NavigateToString(HtmlTemplate);
         ChatOutput.Navigating += ChatOutput_Navigating;

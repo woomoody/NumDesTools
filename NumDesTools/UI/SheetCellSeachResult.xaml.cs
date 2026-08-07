@@ -18,6 +18,7 @@ namespace NumDesTools.UI
         public SheetCellSeachResult(List<(string, int, int, string, string)> list)
         {
             InitializeComponent();
+            ThemeRefreshHelper.Subscribe(this);
             DataContext = this;
             CellDataList = new ObservableCollection<SelfSheetCellData>(
                 list.Select(t => new SelfSheetCellData(t))
@@ -28,6 +29,7 @@ namespace NumDesTools.UI
         public SheetCellSeachResult(List<(string, int, int, string, string, string)> list)
         {
             InitializeComponent();
+            ThemeRefreshHelper.Subscribe(this);
             DataContext = this;
             CellDataList = new ObservableCollection<SelfSheetCellData>(
                 list.Select(t => new SelfSheetCellData(t))
