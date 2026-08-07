@@ -10,6 +10,7 @@ namespace NumDesTools;
 /// OldVal 为 null = 该提交创建了行；NewVal 为 null = 该提交删除了行。
 /// </summary>
 internal sealed record LuaHistoryEvent(
+    string Sha,
     string Date,
     string Author,
     string Msg,
@@ -121,7 +122,7 @@ internal static class CellGitHistoryLuaIndex
 
                 // 只记录本列真实变化（含创建/删除）；其它列改动导致的行 diff 在此被滤掉
                 if (!string.Equals(oldVal, newVal, StringComparison.Ordinal))
-                    events.Add(new LuaHistoryEvent(date, author, msg, oldVal, newVal));
+                    events.Add(new LuaHistoryEvent(sha, date, author, msg, oldVal, newVal));
             }
 
             reason = $"命中 {commits.Count} 个行级提交，本列变更 {events.Count} 次";
