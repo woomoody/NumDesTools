@@ -14,6 +14,19 @@ fn main() -> io::Result<()> {
     }
 
     let args: Vec<String> = env::args().skip(1).collect();
+
+    if args
+        .first()
+        .is_some_and(|arg| arg == "files" || arg == "list-files")
+    {
+        for path in engine::get_key_target_files(&PathBuf::from(
+            env::var("USERPROFILE").unwrap_or_else(|_| ".".to_string()),
+        )) {
+            println!("{}\t{}", engine::label_for_path(&path), path.display());
+        }
+        return Ok(());
+    }
+
     let key_name = args.first().filter(|a| !a.starts_with('-'));
 
     if let Some(name) = key_name {

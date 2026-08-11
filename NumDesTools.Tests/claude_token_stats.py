@@ -269,6 +269,46 @@ def _collect_opencode(frozen_str):
     except Exception as e: print(f'  [warn] opencode db: {e}')
     return records
 
+
+def _collect_workbuddy(frozen_str):
+    """WorkBuddy LiteLLM usage only; uses the same usage/cost tuple as other sources."""
+    records = []
+    base = os.path.expanduser('~/.workbuddy/projects')
+    if not os.path.isdir(base): return records
+    catalog_path = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools', 'lazymodel', 'litellm_model_catalog.json'))
+    try:
+        with open(catalog_path, 'r', encoding='utf-8') as f: known = set(json.load(f).get('models', []))
+    except Exception: known = set()
+    for dp, _, files in os.walk(base):
+        for name in files:
+            if not name.endswith('.jsonl'): continue
+            fp = os.path.join(dp, name)
+            try:
+                with open(fp, 'r', encoding='utf-8') as fh:
+                    for line in fh:
+                        try: obj = json.loads(line)
+                        except Exception: continue
+                        pd = obj.get('providerData') or {}
+                        model = pd.get('model') or obj.get('model') or ''
+                        if not model or (known and model not in known): continue
+                        msg = obj.get('message') if isinstance(obj.get('message'), dict) else {}
+                        u = obj.get('usage') or msg.get('usage') or pd.get('rawUsage') or pd.get('usage')
+                        if not isinstance(u, dict): continue
+                        inp = u.get('input_tokens') or u.get('prompt_tokens') or 0
+                        out = u.get('output_tokens') or u.get('completion_tokens') or 0
+                        cr = u.get('cache_read_input_tokens') or u.get('cache_read_tokens') or u.get('cached_tokens') or 0
+                        cw = u.get('cache_creation_input_tokens') or u.get('cache_write_tokens') or 0
+                        if inp + out + cr + cw == 0: continue
+                        ts = obj.get('timestamp') or obj.get('ts') or obj.get('created_at')
+                        if not ts: continue
+                        if isinstance(ts, (int, float)): date_str = datetime.fromtimestamp(ts / 1000 if ts > 10_000_000_000 else ts).strftime('%Y-%m-%d')
+                        else: date_str = str(ts)[:10]
+                        if date_str <= frozen_str: continue
+                        cwd = obj.get('cwd') or obj.get('sessionCwd') or os.path.basename(dp)
+                        records.append((date_str, model, inp, out, cr, cw, f'[workbuddy]{cwd}'))
+            except Exception as e: print(f'  [warn] workbuddy {fp}: {e}')
+    return records
+
 def _save_snap(daily, model_daily, proj_daily, frozen_date):
     tmp = _SNAP_FILE + '.tmp'
     try:
@@ -333,7 +373,7 @@ if _repair_opencode:
 frozen_opencode = '1970-01-01' if _repair_opencode else frozen_other
 print(f"  frozen: cc={frozen_cc} other={frozen_other} opencode={frozen_opencode}")
 
-for fn, fz in ((_collect_cc, frozen_cc), (_collect_hermes, frozen_other), (_collect_omp, frozen_other), (_collect_opencode, frozen_opencode)):
+for fn, fz in ((_collect_cc, frozen_cc), (_collect_hermes, frozen_other), (_collect_omp, frozen_other), (_collect_opencode, frozen_opencode), (_collect_workbuddy, frozen_other)):
     for date_str, model, inp, out, cr, cw, proj_key in fn(fz):
         cost = calc_cost(inp, out, cr, cw, model)
         total_msgs += 1
@@ -742,5 +782,16 @@ out_path = os.path.join(os.path.expanduser('~'), 'Documents', 'claude_token_stat
 with open(out_path, 'w', encoding='utf-8') as f:
     f.write(html)
 
+# Rust lazytoken TUI consumes the exact same canonical aggregates; no second calculation engine.
+tui_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lazytoken_stats.json')
+with open(tui_path, 'w', encoding='utf-8') as f:
+    json.dump({'generated': datetime.now().isoformat(), 'frozen_date': frozen_new,
+               'daily': {d: dict(v) for d, v in daily.items()},
+               'monthly': {d: dict(v) for d, v in monthly.items()},
+               'model_daily': {d: {m: dict(v) for m, v in md.items()} for d, md in model_daily.items()},
+               'proj_daily': {p: {d: dict(v) for d, v in pd.items()} for p, pd in proj_daily.items()},
+               'workbuddy_enabled': True}, f, ensure_ascii=False)
+
 print(f'  报告已生成: {out_path}')
-webbrowser.open(f'file:///{out_path}')
+if os.environ.get('LAZYTOKEN_NO_BROWSER') != '1':
+    webbrowser.open(f'file:///{out_path}')

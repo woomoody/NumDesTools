@@ -1,271 +1,261 @@
-mod engine;
-mod proxy;
-mod tui;
+use chrono::{Datelike, Local};
+use crossterm::{
+    event::{self, Event, KeyCode, KeyEventKind},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use ratatui::{
+    backend::CrosstermBackend,
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Modifier, Style},
+    widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState},
+    Terminal,
+};
+use serde_json::Value;
+use std::{fs, io, path::PathBuf, process::Command};
 
-use std::env;
-use std::io;
+fn canonical_json() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(r"..\..\NumDesTools.Tests\lazytoken_stats.json")
+}
+
+fn run_canonical() -> io::Result<()> {
+    let script = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join(r"..\..\NumDesTools.Tests\claude_token_stats.py");
+    let python = std::env::var("PYTHON").unwrap_or_else(|_| "python".into());
+    let mut command = Command::new(python);
+    command.env("LAZYTOKEN_NO_BROWSER", "1");
+    if command
+        .arg(script)
+        .arg("--date")
+        .arg("today")
+        .status()?
+        .success()
+    {
+        Ok(())
+    } else {
+        Err(io::Error::other("claude_token_stats.py failed"))
+    }
+}
+
+fn n(v: &Value, key: &str) -> u64 {
+    v.get(key).and_then(Value::as_u64).unwrap_or(0)
+}
+fn money(v: &Value) -> f64 {
+    v.get("cost").and_then(Value::as_f64).unwrap_or(0.0)
+}
+fn fmt(n: u64) -> String {
+    let mut s = n.to_string();
+    let mut i = s.len() as i32 - 3;
+    while i > 0 {
+        s.insert(i as usize, ',');
+        i -= 3;
+    }
+    s
+}
+
+#[derive(Default, Clone)]
+struct Metric {
+    input: u64,
+    output: u64,
+    cache: u64,
+    cost: f64,
+}
+impl Metric {
+    fn add(&mut self, v: &Value) {
+        self.input += n(v, "input");
+        self.output += n(v, "output");
+        self.cache += n(v, "cache_read") + n(v, "cache_write");
+        self.cost += money(v)
+    }
+    fn total(&self) -> u64 {
+        self.input + self.output + self.cache
+    }
+}
+
+fn range(daily: &serde_json::Map<String, Value>, start: Option<String>, end: String) -> Metric {
+    let mut m = Metric::default();
+    for (date, v) in daily {
+        if start.as_ref().map_or(true, |x| date >= x) && date <= &end {
+            m.add(v)
+        }
+    }
+    m
+}
+fn recent(daily: &serde_json::Map<String, Value>, days: i64) -> Metric {
+    let today = Local::now().date_naive();
+    range(
+        daily,
+        Some((today - chrono::Duration::days(days - 1)).to_string()),
+        today.to_string(),
+    )
+}
+fn month_now(daily: &serde_json::Map<String, Value>) -> Metric {
+    let t = Local::now().date_naive();
+    range(
+        daily,
+        Some(format!("{}-{:02}-01", t.year(), t.month())),
+        t.to_string(),
+    )
+}
+fn metric_row(label: &str, m: &Metric, selected: bool) -> Row<'static> {
+    Row::new(vec![
+        Cell::from(if selected { "▶" } else { " " }),
+        Cell::from(label.to_string()),
+        Cell::from(fmt(m.input)),
+        Cell::from(fmt(m.output)),
+        Cell::from(fmt(m.cache)),
+        Cell::from(format!("${:.4}", m.cost)),
+    ])
+}
+fn render_table(
+    f: &mut ratatui::Frame,
+    area: ratatui::layout::Rect,
+    title: &str,
+    rows: Vec<Row<'static>>,
+    selected: usize,
+) {
+    let mut state = TableState::default();
+    state.select(Some(selected.min(rows.len().saturating_sub(1))));
+    let table = Table::new(
+        rows,
+        [
+            Constraint::Length(2),
+            Constraint::Min(24),
+            Constraint::Length(16),
+            Constraint::Length(16),
+            Constraint::Length(16),
+            Constraint::Length(16),
+        ],
+    )
+    .header(
+        Row::new(["", "项目", "输入", "输出", "缓存", "美元"]).style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
+    )
+    .block(Block::default().borders(Borders::ALL).title(title));
+    f.render_stateful_widget(table, area, &mut state)
+}
 
 fn main() -> io::Result<()> {
-    let mut tokens = engine::load_tokens();
-
-    let args: Vec<String> = env::args().skip(1).collect();
-
-    if let Some(cmd) = args.first() {
-        match cmd.as_str() {
-            "list" | "ls" => cmd_list(&tokens),
-            "copy" | "cp" => cmd_copy(&tokens, args.get(1)),
-            "test" => cmd_test(&tokens, args.get(1)),
-            "add" => cmd_add(&mut tokens, args.get(1), args.get(2), args.get(3)),
-            "rm" | "delete" => cmd_delete(&mut tokens, args.get(1)),
-            "token" | "get" => cmd_token(&tokens, args.get(1)),
-            "api" => cmd_api(
-                &tokens,
-                args.get(1),
-                args.get(2),
-                args.get(3).map(|s| s.as_str()),
-            ),
-            "serve" => cmd_serve(&tokens),
-            "help" | "--help" | "-h" => cmd_help(),
-            _ => {
-                // Try to use as label to copy
-                if let Some(_) = tokens.iter().find(|t| t.label == *cmd) {
-                    cmd_copy(&tokens, Some(cmd))
-                } else {
-                    eprintln!("未知命令: {} （使用 lazytoken help 查看帮助）", cmd);
-                    std::process::exit(1);
-                }
-            }
-        }
-    } else {
-        tui::run_interactive(&mut tokens)
-    }
-}
-
-fn cmd_list(tokens: &[engine::TokenDef]) -> io::Result<()> {
-    if tokens.is_empty() {
-        println!("暂无 token。使用 lazytoken add 添加。");
+    if std::env::args().any(|a| a == "--help" || a == "-h") {
+        println!("lazytoken - bat canonical stats TUI\n仅保留：总览、自然月汇总\nTab/←→ 切换 · ↑↓ 浏览 · Q/Esc 退出");
         return Ok(());
     }
+    run_canonical()?;
+    let data: Value =
+        serde_json::from_str(&fs::read_to_string(canonical_json())?).map_err(io::Error::other)?;
+    enable_raw_mode()?;
+    let mut out = io::stdout();
+    execute!(out, EnterAlternateScreen)?;
+    let mut terminal = Terminal::new(CrosstermBackend::new(out))?;
+    let mut tab = 0usize;
+    let mut selected = 0usize;
+    let result = loop {
+        terminal.draw(|f| draw(f, &data, tab, selected))?;
+        if let Event::Key(key) = event::read()? {
+            if key.kind != KeyEventKind::Press {
+                continue;
+            }
+            match key.code {
+                KeyCode::Char('q') | KeyCode::Esc => break Ok(()),
+                KeyCode::Tab | KeyCode::Right => {
+                    tab = (tab + 1) % 2;
+                    selected = 0
+                }
+                KeyCode::BackTab | KeyCode::Left => {
+                    tab = (tab + 1) % 2;
+                    selected = 0
+                }
+                KeyCode::Down => selected = selected.saturating_add(1),
+                KeyCode::Up => selected = selected.saturating_sub(1),
+                _ => {}
+            }
+        }
+    };
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    terminal.show_cursor()?;
+    result
+}
 
-    println!("{:─^80}", " lazytoken 列表 ");
-    println!(
-        "{:<4} {:<12} {:<8} {:<30} {:<18} {:<10}",
-        "#", "名称", "用户", "Token", "过期时间", "剩余"
+fn draw(f: &mut ratatui::Frame, data: &Value, tab: usize, selected: usize) {
+    let areas = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(4),
+            Constraint::Length(3),
+            Constraint::Min(5),
+            Constraint::Length(2),
+        ])
+        .split(f.size());
+    let daily = data.get("daily").and_then(Value::as_object);
+    let all = daily
+        .map(|x| range(x, None, Local::now().date_naive().to_string()))
+        .unwrap_or_default();
+    let top = Table::new(
+        vec![Row::new(vec![
+            Cell::from("总 Token"),
+            Cell::from(fmt(all.total())),
+            Cell::from("美元估算"),
+            Cell::from(format!("${:.4}", all.cost)),
+        ])],
+        [
+            Constraint::Length(14),
+            Constraint::Length(20),
+            Constraint::Length(14),
+            Constraint::Min(20),
+        ],
+    )
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("bat canonical · lazytoken"),
     );
-    println!("{}", "─".repeat(80));
-
-    for (i, t) in tokens.iter().enumerate() {
-        let info = engine::parse_jwt(&t.token);
-        let status = match &info {
-            Some(i) if i.expired => "❌",
-            Some(_) => "✅",
-            None => "⚠️",
-        };
-        let uid = info.as_ref().map(|i| i.user_id.as_str()).unwrap_or("?");
-        let exp = info.as_ref().map(|i| i.exp_str.as_str()).unwrap_or("?");
-        let remain = info.as_ref().map(|i| i.expires_in.as_str()).unwrap_or("?");
-        println!(
-            "{:<4} {:<12} {:<8} {:<30} {:<18} {:<10}",
-            format!("{}{}", status, i + 1),
-            t.label,
-            format!("#{}", uid),
-            engine::mask_token(&t.token),
-            exp,
-            remain
-        );
-    }
-    println!("{}", "─".repeat(80));
-    Ok(())
-}
-
-fn cmd_copy(tokens: &[engine::TokenDef], name: Option<&String>) -> io::Result<()> {
-    let token = match name {
-        Some(n) => tokens.iter().find(|t| t.label == *n).map(|t| &t.token),
-        None => tokens.first().map(|t| &t.token),
-    };
-
-    match token {
-        Some(t) => {
-            engine::copy_to_clipboard(t)?;
-            let label = tokens
-                .iter()
-                .find(|x| x.token == *t)
-                .map(|x| x.label.as_str())
-                .unwrap_or("(未命名)");
-            println!("✅ 已复制 token 到剪贴板: {}", label);
-            Ok(())
-        }
-        None => {
-            eprintln!("没找到 token。使用 lazytoken add 添加。");
-            std::process::exit(1);
-        }
-    }
-}
-
-fn cmd_test(tokens: &[engine::TokenDef], name: Option<&String>) -> io::Result<()> {
-    let token = match name {
-        Some(n) => tokens.iter().find(|t| t.label == *n).map(|t| &t.token),
-        None => tokens.first().map(|t| &t.token),
-    };
-
-    match token {
-        Some(t) => {
-            println!("正在测试 token...");
-            match engine::test_token(t) {
-                Ok(msg) => println!("{}", msg),
-                Err(msg) => println!("{}", msg),
-            }
-            Ok(())
-        }
-        None => {
-            eprintln!("没找到 token。使用 lazytoken add 添加。");
-            std::process::exit(1);
-        }
-    }
-}
-
-fn cmd_add(
-    tokens: &mut Vec<engine::TokenDef>,
-    label: Option<&String>,
-    token: Option<&String>,
-    notes: Option<&String>,
-) -> io::Result<()> {
-    let label = label.map(|s| s.as_str()).unwrap_or("");
-    let token = token.map(|s| s.as_str()).unwrap_or("");
-
-    if label.is_empty() || token.is_empty() {
-        eprintln!("用法: lazytoken add <名称> <token> [备注]");
-        eprintln!("示例: lazytoken add 平台主账号 eyJhbG...");
-        std::process::exit(1);
-    }
-
-    tokens.push(engine::TokenDef {
-        label: label.to_string(),
-        token: token.to_string(),
-        notes: notes.map(|s| s.to_string()).unwrap_or_default(),
-    });
-    engine::save_tokens(tokens)?;
-    println!("✅ 已添加 token: {}", label);
-    Ok(())
-}
-
-fn cmd_delete(tokens: &mut Vec<engine::TokenDef>, name: Option<&String>) -> io::Result<()> {
-    let name = match name {
-        Some(n) => n,
-        None => {
-            eprintln!("用法: lazytoken rm <名称>");
-            std::process::exit(1);
-        }
-    };
-
-    let idx = tokens.iter().position(|t| t.label == *name);
-    match idx {
-        Some(i) => {
-            let removed = tokens.remove(i);
-            engine::save_tokens(tokens)?;
-            println!("✅ 已删除: {}", removed.label);
-            Ok(())
-        }
-        None => {
-            eprintln!("没找到 token: {}", name);
-            std::process::exit(1);
-        }
-    }
-}
-
-/// 输出纯 token 字符串（供其他工具/脚本使用）
-fn cmd_token(tokens: &[engine::TokenDef], name: Option<&String>) -> io::Result<()> {
-    let token = match name {
-        Some(n) => tokens.iter().find(|t| t.label == *n).map(|t| &t.token),
-        None => tokens.first().map(|t| &t.token),
-    };
-    match token {
-        Some(t) => {
-            print!("{}", t);
-            Ok(())
-        }
-        None => {
-            eprintln!("没找到 token。使用 lazytoken add 添加。");
-            std::process::exit(1);
-        }
-    }
-}
-
-/// 代理 API 调用：lazytoken api <方法> <路径> [请求体]
-/// 示例: lazytoken api POST /api/chat '{"session_id":1047,"model":"gpt-5.4",...}'
-fn cmd_api(
-    tokens: &[engine::TokenDef],
-    method: Option<&String>,
-    path: Option<&String>,
-    body: Option<&str>,
-) -> io::Result<()> {
-    let method = match method {
-        Some(m) => m.to_uppercase(),
-        None => {
-            eprintln!("用法: lazytoken api <GET|POST|PUT|DELETE> <路径> [请求体]");
-            std::process::exit(1);
-        }
-    };
-    let path = match path {
-        Some(p) => {
-            if !p.starts_with('/') {
-                format!("/api/{}", p)
-            } else {
-                p.clone()
+    f.render_widget(top, areas[0]);
+    f.render_widget(
+        ratatui::widgets::Tabs::new(vec!["总览", "自然月汇总"])
+            .select(tab)
+            .highlight_style(Style::default().fg(Color::Black).bg(Color::Cyan))
+            .block(Block::default().borders(Borders::ALL)),
+        areas[1],
+    );
+    if tab == 0 {
+        let empty = serde_json::Map::new();
+        let ds = daily.unwrap_or(&empty);
+        let rows = [
+            ("本日", recent(ds, 1)),
+            ("近 3 日", recent(ds, 3)),
+            ("近 7 日", recent(ds, 7)),
+            ("近 30 日", recent(ds, 30)),
+            ("本月", month_now(ds)),
+        ]
+        .iter()
+        .enumerate()
+        .map(|(i, (k, m))| metric_row(k, m, i == selected))
+        .collect();
+        render_table(f, areas[2], "总览 · 时间窗口", rows, selected)
+    } else {
+        let mut rows = Vec::new();
+        if let Some(months) = data.get("monthly").and_then(Value::as_object) {
+            let mut keys: Vec<_> = months.keys().collect();
+            keys.sort_by(|a, b| b.cmp(a));
+            for (i, key) in keys.iter().enumerate() {
+                let m = &months[*key];
+                let metric = Metric {
+                    input: n(m, "input"),
+                    output: n(m, "output"),
+                    cache: n(m, "cache_read") + n(m, "cache_write"),
+                    cost: money(m),
+                };
+                rows.push(metric_row(key, &metric, i == selected))
             }
         }
-        None => {
-            eprintln!("用法: lazytoken api <GET|POST|PUT|DELETE> <路径> [请求体]");
-            std::process::exit(1);
-        }
-    };
-
-    let token = match engine::get_token(tokens, None) {
-        Some(t) => t,
-        None => {
-            eprintln!("没找到 token。使用 lazytoken add 添加。");
-            std::process::exit(1);
-        }
-    };
-
-    let body_ref = body.filter(|s| !s.is_empty());
-
-    match engine::proxy_api(token, &method, &path, body_ref) {
-        Ok(resp) => {
-            println!("{}", resp);
-            Ok(())
-        }
-        Err(e) => {
-            eprintln!("{}", e);
-            std::process::exit(1);
-        }
+        render_table(f, areas[2], "自然月汇总 · 每月一行", rows, selected)
     }
-}
-
-fn cmd_help() -> io::Result<()> {
-    println!("lazytoken - 平台 JWT token 管理工具");
-    println!("");
-    println!("用法:");
-    println!("  lazytoken              TUI 交互模式");
-    println!("  lazytoken list         列出所有 token");
-    println!("  lazytoken copy [名称]   复制 token 到剪贴板");
-    println!("  lazytoken test [名称]   测试 token 有效性");
-    println!("  lazytoken add <名称> <token> [备注]  添加 token");
-    println!("  lazytoken rm <名称>     删除 token");
-    println!("  lazytoken <名称>        快捷复制（省略命令）");
-    println!("  lazytoken token [名称]   输出 token 到 stdout（供脚本/工具使用）");
-    println!("  lazytoken api <方法> <路径> [请求体]  代理 API 调用");
-    println!("  lazytoken serve         启动本地 OpenAI 兼容文本代理");
-    println!("");
-    println!("API 代理示例:");
-    println!("  lazytoken api GET /api/menus");
-    println!("  lazytoken api GET /api/chat/sessions?user_id=149");
-    println!("  lazytoken api POST /api/chat \"{{\\\"session_id\\\":1047,\\\"model\\\":\\\"gpt-5.4\\\"}}\"");
-    println!("");
-    println!("配置文件: %USERPROFILE%\\lazytoken.tokens.json");
-    Ok(())
-}
-
-fn cmd_serve(tokens: &[engine::TokenDef]) -> io::Result<()> {
-    proxy::serve(tokens)
+    f.render_widget(
+        Paragraph::new("仅保留 HTML 对应的总览与自然月汇总 · Tab/←→ 切换 · ↑↓ 浏览 · Q/Esc 退出"),
+        areas[3],
+    );
 }
