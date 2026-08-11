@@ -1,0 +1,389 @@
+{
+  "version": 2,
+  "routes": [
+    {
+      "harness": "opencode",
+      "scope": "global",
+      "role": "primary",
+      "kind": "general",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "harness": "opencode",
+      "scope": "global",
+      "role": "small_model",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "opencode",
+      "scope": "CCDS",
+      "role": "primary",
+      "kind": "general",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "harness": "opencode",
+      "scope": "CCDS",
+      "role": "small_model",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "opencode",
+      "scope": "CCglm",
+      "role": "primary",
+      "kind": "general",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "harness": "opencode",
+      "scope": "CCglm",
+      "role": "small_model",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "opencode",
+      "scope": "CCKimi",
+      "role": "primary",
+      "kind": "general",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "harness": "opencode",
+      "scope": "CCKimi",
+      "role": "small_model",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "opencode",
+      "scope": "CCGame",
+      "role": "primary",
+      "kind": "general",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "harness": "opencode",
+      "scope": "CCGame",
+      "role": "small_model",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "agents.hephaestus",
+      "kind": "general",
+      "model": "gpt-5.6-terra",
+      "effort": "low"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "agents.oracle",
+      "kind": "general",
+      "model": "gpt-5.6-sol",
+      "effort": "low"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "agents.librarian",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "agents.explore",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "agents.multimodal-looker",
+      "kind": "visual",
+      "model": "gemini-3.1-pro-preview",
+      "effort": "default"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "agents.prometheus",
+      "kind": "general",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "agents.metis",
+      "kind": "general",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "agents.momus",
+      "kind": "general",
+      "model": "gpt-5.6-sol",
+      "effort": "low"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "agents.atlas",
+      "kind": "general",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "agents.sisyphus-junior",
+      "kind": "general",
+      "model": "gpt-5.6-terra",
+      "effort": "low"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "categories.visual-engineering",
+      "kind": "visual",
+      "model": "gemini-3.1-pro-preview",
+      "effort": "default"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "categories.ultrabrain",
+      "kind": "general",
+      "model": "gpt-5.6-sol",
+      "effort": "low"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "categories.deep",
+      "kind": "general",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "categories.artistry",
+      "kind": "visual",
+      "model": "gpt-image-2",
+      "effort": "default"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "categories.quick",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "categories.unspecified-low",
+      "kind": "general",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "categories.unspecified-high",
+      "kind": "general",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "global",
+      "role": "categories.writing",
+      "kind": "general",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "CCGame",
+      "role": "agents.oracle",
+      "kind": "general",
+      "model": "gpt-5.6-sol",
+      "effort": "low"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "CCGame",
+      "role": "agents.metis",
+      "kind": "general",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "CCGame",
+      "role": "agents.hephaestus",
+      "kind": "general",
+      "model": "gpt-5.6-luna",
+      "effort": "high"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "CCGame",
+      "role": "agents.sisyphus",
+      "kind": "general",
+      "model": "gpt-5.6-luna",
+      "effort": "xhigh"
+    },
+    {
+      "harness": "oh-my-openagent",
+      "scope": "CCGame",
+      "role": "agents.verifier",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "hermes",
+      "scope": "global",
+      "role": "model.default",
+      "kind": "general",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "hermes",
+      "scope": "global",
+      "role": "auxiliary.vision",
+      "kind": "visual",
+      "model": "gemini-3-pro-image-preview",
+      "effort": "default"
+    },
+    {
+      "harness": "hermes",
+      "scope": "global",
+      "role": "auxiliary.web_extract",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "hermes",
+      "scope": "global",
+      "role": "auxiliary.compression",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "hermes",
+      "scope": "global",
+      "role": "auxiliary.title_generation",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "hermes",
+      "scope": "global",
+      "role": "auxiliary.curator",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "hermes",
+      "scope": "global",
+      "role": "auxiliary.session_search",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "hermes",
+      "scope": "global",
+      "role": "delegation.model",
+      "kind": "general",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "harness": "hermes",
+      "scope": "global",
+      "role": "image_gen.model",
+      "kind": "visual",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "harness": "claude-code",
+      "scope": "global",
+      "role": "architect",
+      "kind": "general",
+      "model": "claude-opus-4-8-v1",
+      "effort": "default"
+    },
+    {
+      "harness": "claude-code",
+      "scope": "global",
+      "role": "code-explorer",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    },
+    {
+      "harness": "claude-code",
+      "scope": "global",
+      "role": "code-implementer",
+      "kind": "general",
+      "model": "deepseek-v4-pro",
+      "effort": "default"
+    },
+    {
+      "harness": "claude-code",
+      "scope": "global",
+      "role": "code-reviewer",
+      "kind": "general",
+      "model": "claude-sonnet-5",
+      "effort": "default"
+    },
+    {
+      "harness": "claude-code",
+      "scope": "global",
+      "role": "debugger",
+      "kind": "general",
+      "model": "deepseek-v4-pro",
+      "effort": "default"
+    },
+    {
+      "harness": "claude-code",
+      "scope": "global",
+      "role": "translator",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
+    }
+  ]
+}

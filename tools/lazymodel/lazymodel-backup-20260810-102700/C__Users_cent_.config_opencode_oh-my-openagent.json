@@ -1,0 +1,61 @@
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
+  "agents": {
+    "hephaestus": {
+      "model": "litellm/gpt-5.3-codex"
+    },
+    "oracle": {
+      "model": "litellm/gpt-5.6-sol"
+    },
+    "librarian": {
+      "model": "litellm/deepseek-v4-flash"
+    },
+    "explore": {
+      "model": "litellm/deepseek-v4-flash"
+    },
+    "multimodal-looker": {
+      "model": "litellm/gemini-3.1-pro-preview"
+    },
+    "prometheus": {
+      "model": "litellm/qwen3.8-max"
+    },
+    "metis": {
+      "model": "litellm/qwen3.8-max"
+    },
+    "momus": {
+      "model": "litellm/gpt-5.5"
+    },
+    "atlas": {
+      "model": "litellm/qwen3.8-max"
+    },
+    "sisyphus-junior": {
+      "model": "litellm/gpt-5.6-terra"
+    }
+  },
+  "categories": {
+    "visual-engineering": {
+      "model": "litellm/gemini-3.1-pro-preview"
+    },
+    "ultrabrain": {
+      "model": "litellm/gpt-5.6-sol"
+    },
+    "deep": {
+      "model": "litellm/gpt-5.3-codex"
+    },
+    "artistry": {
+      "model": "litellm/gemini-3.1-pro-preview"
+    },
+    "quick": {
+      "model": "litellm/deepseek-v4-flash"
+    },
+    "unspecified-low": {
+      "model": "litellm/qwen3.8-max"
+    },
+    "unspecified-high": {
+      "model": "litellm/gpt-5.3-codex"
+    },
+    "writing": {
+      "model": "litellm/qwen3.8-max"
+    }
+  }
+}
