@@ -992,6 +992,29 @@ public static class ExcelDataAutoInsertLanguage
             roleSheetValueAll[modelName] = modelValue;
         }
 
+        var missingFixTables = new[]
+        {
+            "GuideDialogGroup.xlsx",
+            "GuideDialogDetail.xlsx",
+            "Localizations.xlsx",
+            "GuideDialogBranch.xlsx",
+        }.Where(name => !fixSheetValueAll.ContainsKey(name)).ToList();
+        if (missingFixTables.Count > 0)
+        {
+            ErrorLogCtp.CreateCtpNormal(
+                $"数据修改 sheet 缺少 ListObject：{string.Join("、", missingFixTables)}，请检查表格是否已创建为 Excel 表格。\n"
+            );
+            return;
+        }
+
+        if (!roleSheetValueAll.ContainsKey("角色皮肤"))
+        {
+            ErrorLogCtp.CreateCtpNormal(
+                "角色数据 sheet 缺少 ListObject：角色皮肤，请检查表格是否已创建为 Excel 表格。\n"
+            );
+            return;
+        }
+
         ErrorLogCtp.DisposeCtp();
 
         var errorExcelList = new List<List<(int, string, string)>>();
