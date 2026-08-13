@@ -1,11 +1,11 @@
 using System.Text;
 using MiniExcelLibs;
+using NumDesTools;
+using NumDesTools.Activity;
+using NumDesTools.AutoInsert;
+using NumDesTools.Export;
 using OfficeOpenXml;
 using MessageBox = System.Windows.MessageBox;
-using NumDesTools;
-using NumDesTools.AutoInsert;
-using NumDesTools.Activity;
-using NumDesTools.Export;
 
 #pragma warning disable CA1416
 
@@ -170,6 +170,17 @@ public static class ExcelDataAutoInsertActivityServer
                 "生成活动"
             );
             return;
+        }
+
+        var duplicateGroupPrefixWarning = "";
+        if (isNames)
+        {
+            duplicateGroupPrefixWarning =
+                ActivityServerGenerationHelper.BuildNumericCombinationDuplicateWarning(
+                    sourceData
+                        .Select(activity => new ActivityNameParts(activity.Item1, activity.Item7))
+                        .ToList()
+                );
         }
 
         // 构建本次批量处理的活动ID集合（用于续开链路检测）
@@ -384,6 +395,9 @@ public static class ExcelDataAutoInsertActivityServer
                 targetLifeValue,
             ]);
         }
+
+        if (duplicateGroupPrefixWarning.Length > 0)
+            errorLog.Append(duplicateGroupPrefixWarning);
 
         if (errorLog.Length > 0)
         {
@@ -741,5 +755,67 @@ public static class ExcelDataAutoInsertActivityServer
             )
                 return c;
         return -1;
+    }
+}
+
+internal readonly record struct ActivityNameParts(string LookupName, string ActivityCondition)
+{
+    internal string OutputName =>
+        ActivityCondition == "" ? LookupName : $"{ActivityCondition}：{LookupName}";
+}
+
+internal static class ActivityServerGenerationHelper
+{
+    internal static ActivityNameParts ParseActivityName(string activityName)
+    {
+        var parts = activityName.Split("：");
+        return parts.Length > 1
+            ? new ActivityNameParts(parts[1], parts[0])
+            : new ActivityNameParts(activityName, "");
+    }
+
+    internal static string BuildNumericCombinationDuplicateWarning(
+        IReadOnlyList<ActivityNameParts> activities
+    )
+    {
+        var fullTextCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+        var fullTextOrder = new List<string>();
+        foreach (var activity in activities)
+        {
+            if (!IsNumericCombination(activity.ActivityCondition))
+                continue;
+
+            var fullText = activity.OutputName;
+            if (!fullTextCounts.TryAdd(fullText, 1))
+                fullTextCounts[fullText]++;
+            else
+                fullTextOrder.Add(fullText);
+        }
+
+        var warning = new StringBuilder();
+        foreach (var fullText in fullTextOrder)
+        {
+            if (fullTextCounts[fullText] > 1)
+            {
+                warning.Append(
+                    $"运营排期-活动名数字组重复：完整活动名【{fullText}】出现 {fullTextCounts[fullText]} 次，请检查\r\n"
+                );
+            }
+        }
+        return warning.ToString();
+    }
+
+    private static bool IsNumericCombination(string activityCondition)
+    {
+        if (string.IsNullOrEmpty(activityCondition))
+            return false;
+
+        var items = activityCondition.Split(['、', '，', ','], StringSplitOptions.None);
+        return items.Length > 0
+            && items.All(item =>
+            {
+                var trimmed = item.Trim();
+                return trimmed.Length > 0 && trimmed.All(c => c is >= '0' and <= '9');
+            });
     }
 }
