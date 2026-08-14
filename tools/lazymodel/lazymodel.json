@@ -384,6 +384,22 @@
       "kind": "cheap",
       "model": "deepseek-v4-flash",
       "effort": "default"
+    },
+    {
+      "harness": "kilo",
+      "scope": "global",
+      "role": "primary",
+      "kind": "general",
+      "model": "kilo-auto/free",
+      "effort": "default"
+    },
+    {
+      "harness": "kilo",
+      "scope": "global",
+      "role": "small_model",
+      "kind": "cheap",
+      "model": "kilo-auto/small",
+      "effort": "default"
     }
   ]
 }

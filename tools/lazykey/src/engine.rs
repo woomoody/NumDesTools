@@ -236,6 +236,8 @@ pub fn get_key_target_files(home_root: &Path) -> Vec<PathBuf> {
             .join(".env"),
         // WorkBuddy 自定义模型配置（.workbuddy/models.json 的 apiKey）
         home_root.join(".workbuddy").join("models.json"),
+        // Kilo 配置（模型/权限等；Kilo 当前不在此处保存 API key）
+        home_root.join(".config").join("kilo").join("kilo.jsonc"),
     ];
 
     if let Ok(entries) = fs::read_dir(home_root) {
@@ -386,6 +388,10 @@ pub fn label_for_path(path: &Path) -> String {
         "hermes(.env)".to_string()
     } else if s.ends_with("\\.workbuddy\\models.json") {
         "WorkBuddy(models.json)".to_string()
+    } else if s.ends_with("\\kilo\\kilo.db") {
+        "Kilo(kilo.db)".to_string()
+    } else if s.ends_with("\\kilo\\kilo.jsonc") {
+        "Kilo(kilo.jsonc)".to_string()
     } else {
         path.file_name()
             .map(|n| n.to_string_lossy().to_string())

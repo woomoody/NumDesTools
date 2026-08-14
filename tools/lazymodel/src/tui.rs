@@ -40,6 +40,9 @@ fn target(scope: &str, harness: &str) -> String {
         }
         ("hermes", _) => "%LOCALAPPDATA%\\hermes\\config.yaml".into(),
         ("claude-code", _) => "%USERPROFILE%\\.claude\\agents\\*.md".into(),
+        ("kilo", _) => {
+            "%USERPROFILE%\\.config\\kilo\\kilo.jsonc（用量：.local\\share\\kilo\\kilo.db）".into()
+        }
         _ => "(由 scope 决定)".into(),
     }
 }
@@ -72,10 +75,13 @@ fn cost_label(tier: &str) -> String {
 }
 
 fn strength(model: &str) -> String {
-    if model.starts_with("deepseek-v4-flash") {
-        return "快速探索/资料/廉价辅助".into();
+    if model.starts_with("kilo-auto/free") {
+        return "Kilo 自动免费路由".into();
     }
-    if model.starts_with("deepseek-v4-pro") {
+    if model.starts_with("kilo-auto/small") {
+        return "Kilo 快速小模型".into();
+    }
+    if model.starts_with("deepseek-v4-flash") {
         return "复杂分析/调试/长链路推理".into();
     }
     if model == "gpt-5.6-luna" {
@@ -120,6 +126,8 @@ fn info(c: &Catalog, m: &str) -> (String, String, String) {
         return (i.tier.clone(), i.csharp, cost_label(&i.tier));
     }
     let tier = if m.starts_with("deepseek") || m.contains("flash-lite") || m.contains("mini") {
+        "便宜"
+    } else if m.starts_with("kilo-auto") {
         "便宜"
     } else if m.starts_with("gemini") {
         "中"
@@ -303,7 +311,15 @@ fn loop_ui(
                             .iter()
                             .position(|m| m == &data.routes[selected].model)
                             .unwrap_or(0),
-                        models: catalog.models.clone(),
+                        models: {
+                            let mut models = catalog.models.clone();
+                            for route in &data.routes {
+                                if route.harness == "kilo" && !models.contains(&route.model) {
+                                    models.push(route.model.clone());
+                                }
+                            }
+                            models
+                        },
                     })
                 }
                 _ => {}

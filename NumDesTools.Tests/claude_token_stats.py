@@ -235,6 +235,39 @@ def _collect_omp(frozen_str):
             except Exception as e: print(f'  [warn] {fp}: {e}')
     return records
 
+def _collect_kilo(frozen_str):
+    """Kilo CLI: ~/.local/share/kilo/kilo.db message 表。
+    Kilo 使用 OpenCode schema；assistant message.data.tokens 中记录真实用量。
+    这是独立 harness，不能混入 OpenCode 的 opencode.db。
+    """
+    records = []
+    db = os.path.join(os.path.expanduser('~'), '.local', 'share', 'kilo', 'kilo.db')
+    if not os.path.exists(db): return records
+    fu = _frozen_unix(frozen_str)
+    try:
+        c = sqlite3.connect(db)
+        rows = c.execute("SELECT data, time_created, session_id FROM message WHERE time_created/1000.0 > ?", (fu,))
+        for data_json, tc, session_id in rows:
+            try: obj = json.loads(data_json)
+            except Exception: continue
+            if obj.get('role') != 'assistant': continue
+            tok = obj.get('tokens')
+            if not isinstance(tok, dict): continue
+            inp = tok.get('input', 0) or 0
+            out = tok.get('output', 0) or 0
+            reasoning = tok.get('reasoning', 0) or 0
+            cache = tok.get('cache') or {}
+            cr = cache.get('read', 0) or 0
+            cw = cache.get('write', 0) or 0
+            if inp + out + reasoning + cr + cw == 0: continue
+            try: date_str = datetime.fromtimestamp(tc / 1000.0).strftime('%Y-%m-%d')
+            except Exception: continue
+            if date_str <= frozen_str: continue
+            model = obj.get('modelID') or (obj.get('model') or {}).get('modelID') or '<empty>'
+            records.append((date_str, model, inp, out + reasoning, cr, cw, f'[kilo]{session_id}'))
+    except Exception as e: print(f'  [warn] kilo db: {e}')
+    return records
+
 def _collect_opencode(frozen_str):
     """opencode: opencode.db message 表（每条assistant消息独立记录 modelID+tokens+time_created）。
     不用 session 表——那是树状会话结构，父会话(UI选的模型)+子agent会话(Task工具派生,各自
@@ -332,7 +365,7 @@ def cn_num(n):
 
 BASES = [(os.path.expanduser(r'~/.claude/projects'), '[local]')]
 
-# ── 数据采集（4 源统一，按 model 不分 harness）+ 增量 frozen_date ────────────────
+# ── 数据采集（5 源统一，按 model 不分 harness）+ 增量 frozen_date ────────────────
 _zero = lambda: {'input':0,'output':0,'cache_read':0,'cache_write':0,'cost':0.0}
 daily       = defaultdict(_zero)
 monthly     = defaultdict(_zero)
@@ -373,7 +406,7 @@ if _repair_opencode:
 frozen_opencode = '1970-01-01' if _repair_opencode else frozen_other
 print(f"  frozen: cc={frozen_cc} other={frozen_other} opencode={frozen_opencode}")
 
-for fn, fz in ((_collect_cc, frozen_cc), (_collect_hermes, frozen_other), (_collect_omp, frozen_other), (_collect_opencode, frozen_opencode), (_collect_workbuddy, frozen_other)):
+for fn, fz in ((_collect_cc, frozen_cc), (_collect_hermes, frozen_other), (_collect_omp, frozen_other), (_collect_opencode, frozen_opencode), (_collect_kilo, frozen_other), (_collect_workbuddy, frozen_other)):
     for date_str, model, inp, out, cr, cw, proj_key in fn(fz):
         cost = calc_cost(inp, out, cr, cw, model)
         total_msgs += 1
