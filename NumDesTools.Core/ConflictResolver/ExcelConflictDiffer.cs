@@ -231,8 +231,8 @@ public static class ExcelConflictDiffer
         var oursColIdxMap = BuildColIndexMap(allCols, oursColumns);
         var theirsColIdxMap = BuildColIndexMap(allCols, theirsColumns);
 
-        var oursDict = BuildKeyIndex(ours.Rows, oursKeyIdx);
-        var theirsDict = BuildKeyIndex(theirs.Rows, theirsKeyIdx);
+        var oursDict = BuildKeyIndex(ours.Rows, oursKeyIdx, out var oursDuplicates);
+        var theirsDict = BuildKeyIndex(theirs.Rows, theirsKeyIdx, out var theirsDuplicates);
 
         // base 数据（三方对比用）
         Dictionary<string, int>? baseDict = null;
@@ -241,11 +241,12 @@ public static class ExcelConflictDiffer
         {
             var baseCols = bd.Columns ?? [];
             var baseKeyIdx = baseCols.IndexOf(keyCol);
-            baseDict = BuildKeyIndex(bd.Rows, baseKeyIdx);
+            baseDict = BuildKeyIndex(bd.Rows, baseKeyIdx, out _);
             baseColIdxMap = BuildColIndexMap(allCols, baseCols);
         }
 
         var rows = new List<RowConflict>(oursDict.Count + theirsDict.Count / 4);
+        var duplicateKeys = oursDuplicates.Concat(theirsDuplicates).Distinct(StringComparer.Ordinal).OrderBy(x => x).ToList();
 
         foreach (var (key, oursRowIdx) in oursDict)
         {
@@ -389,6 +390,7 @@ public static class ExcelConflictDiffer
             TypeRow = mergedType,
             LabelRow = mergedLabel,
             AllColumns = allCols,
+            DuplicateKeys = duplicateKeys,
         };
     }
 
@@ -443,17 +445,26 @@ public static class ExcelConflictDiffer
         }
     }
 
-    private static Dictionary<string, int> BuildKeyIndex(List<string[]> rows, int keyColIdx)
+    private static Dictionary<string, int> BuildKeyIndex(
+        List<string[]> rows,
+        int keyColIdx,
+        out List<string> duplicates
+    )
     {
         var dict = new Dictionary<string, int>(rows.Count, StringComparer.Ordinal);
+        var duplicateSet = new HashSet<string>(StringComparer.Ordinal);
         if (keyColIdx < 0)
+        {
+            duplicates = [];
             return dict;
+        }
         for (int i = 0; i < rows.Count; i++)
         {
             var key = keyColIdx < rows[i].Length ? rows[i][keyColIdx] : string.Empty;
-            if (!string.IsNullOrEmpty(key) && !dict.ContainsKey(key))
-                dict[key] = i;
+            if (string.IsNullOrEmpty(key)) continue;
+            if (!dict.TryAdd(key, i)) duplicateSet.Add(key);
         }
+        duplicates = duplicateSet.ToList();
         return dict;
     }
 

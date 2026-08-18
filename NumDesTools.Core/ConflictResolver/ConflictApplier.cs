@@ -294,13 +294,16 @@ public static class ConflictApplier
     private static Dictionary<string, int> BuildKeyRowMap(ExcelWorksheet sheet, int keyCol)
     {
         var map = new Dictionary<string, int>(StringComparer.Ordinal);
-        // 与 ExcelConflictDiffer.dataStartRow 保持一致：行2=header，行3=type，行4=label，行5起=数据
+        var duplicates = new HashSet<string>(StringComparer.Ordinal);
+        // 与 Differ.dataStartRow 保持一致：行2=header，行3=type，行4=label，行5起=数据
         for (int row = 5; row <= sheet.Dimension.End.Row; row++)
         {
             var key = sheet.Cells[row, keyCol].Value?.ToString();
-            if (!string.IsNullOrEmpty(key) && !map.ContainsKey(key))
-                map[key] = row;
+            if (string.IsNullOrEmpty(key)) continue;
+            if (!map.TryAdd(key, row)) duplicates.Add(key);
         }
+        if (duplicates.Count > 0)
+            throw new InvalidOperationException($"冲突文件存在重复 key，禁止自动写回：{string.Join(", ", duplicates.Take(20))}");
         return map;
     }
 

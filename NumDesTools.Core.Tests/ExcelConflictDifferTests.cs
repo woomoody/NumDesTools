@@ -70,7 +70,20 @@ public class ExcelConflictDifferTests : IDisposable
         Assert.Equal(0, diff.TotalConflictRows);
     }
 
-    // ── Modified 行 ──────────────────────────────────────────────────────────
+    [Fact]
+    public void Diff_DuplicateKeys_AreReportedAsUnsafe()
+    {
+        var ours = MakeXlsx(("1001", "A"), ("1001", "A重复"));
+        var theirs = MakeXlsx(("1001", "A"));
+
+        var diff = ExcelConflictDiffer.Diff(ours, theirs);
+        var sheet = diff.Sheets.Single();
+
+        Assert.True(sheet.HasUnsafeKeyConflicts);
+        Assert.Contains("1001", sheet.DuplicateKeys);
+    }
+
+
 
     [Fact]
     public void Diff_ModifiedCell_DetectsChange()

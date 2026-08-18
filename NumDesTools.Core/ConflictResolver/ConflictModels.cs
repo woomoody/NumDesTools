@@ -18,6 +18,11 @@ public enum RowDiffType
     Same,
 }
 
+public enum KeyConflictType
+{
+    Duplicate,
+}
+
 /// <summary>
 /// 三方推断的行来源（需要 merge-base 才能区分，无 base 时为 Unknown）。
 /// </summary>
@@ -289,7 +294,10 @@ public class RowConflict : INotifyPropertyChanged
 /// <summary>一个 Sheet 的所有行差异</summary>
 public record SheetDiff(string SheetName, List<RowConflict> Rows)
 {
+    public List<string> DuplicateKeys { get; init; } = new();
+
     public bool HasConflict => Rows.Any(r => r.DiffType != RowDiffType.Same);
+    public bool HasUnsafeKeyConflicts => DuplicateKeys.Count > 0;
 
     /// <summary>列名 → type 行值（第3行，如 "int", "string"）</summary>
     public Dictionary<string, string> TypeRow { get; init; } = new();
