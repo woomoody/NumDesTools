@@ -2988,45 +2988,35 @@ public partial class NumDesAddIn
 
     #endregion
 
-    public void ActivityTestAll_Click(IRibbonControl control)
+    public async void ActivityTestAll_Click(IRibbonControl control)
     {
         var excelPath = App.ActiveWorkbook.FullName;
-        Task.Run(() =>
+        try
         {
-            try
-            {
-                ActivityConfigValidator.TestAll(excelPath);
-            }
-            catch (Exception ex)
-            {
-                PluginLog.Write($"[ActivityTestAll CRASH] {ex}");
-                ExcelAsyncUtil.QueueAsMacro(() =>
-                    MessageBox.Show(ex.Message, "验证活动（全量）出错")
-                );
-            }
-        });
+            await Task.Run(() => ActivityConfigValidator.TestAll(excelPath));
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[ActivityTestAll CRASH] {ex}");
+            MessageBox.Show(ex.Message, "验证活动（全量）出错");
+        }
     }
 
-    public void ActivityTestById_Click(IRibbonControl control)
+    public async void ActivityTestById_Click(IRibbonControl control)
     {
         var input = WpfInputBox("请输入活动ID（多个用英文逗号分隔）：", "验证指定活动");
         if (string.IsNullOrWhiteSpace(input))
             return;
         var excelPath = App.ActiveWorkbook.FullName;
-        Task.Run(() =>
+        try
         {
-            try
-            {
-                ActivityConfigValidator.TestByIds(excelPath, input);
-            }
-            catch (Exception ex)
-            {
-                PluginLog.Write($"[ActivityTestById CRASH] {ex}");
-                ExcelAsyncUtil.QueueAsMacro(() =>
-                    MessageBox.Show(ex.Message, "验证活动（指定ID）出错")
-                );
-            }
-        });
+            await Task.Run(() => ActivityConfigValidator.TestByIds(excelPath, input));
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[ActivityTestById CRASH] {ex}");
+            MessageBox.Show(ex.Message, "验证活动（指定ID）出错");
+        }
     }
 
     private static string WpfInputBox(string prompt, string title)
@@ -3043,39 +3033,31 @@ public partial class NumDesAddIn
         }
     }
 
-    public void ActivityTestGitChanged_Click(IRibbonControl control)
+    public async void ActivityTestGitChanged_Click(IRibbonControl control)
     {
         var excelPath = App.ActiveWorkbook.FullName;
-        Task.Run(() =>
+        try
         {
-            try
-            {
-                ActivityConfigValidator.TestGitChanged(excelPath);
-            }
-            catch (Exception ex)
-            {
-                PluginLog.Write($"[ActivityTestGitChanged CRASH] {ex}");
-                ExcelAsyncUtil.QueueAsMacro(() =>
-                    MessageBox.Show(ex.Message, "验证活动（Git改动）出错")
-                );
-            }
-        });
+            await Task.Run(() => ActivityConfigValidator.TestGitChanged(excelPath));
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[ActivityTestGitChanged CRASH] {ex}");
+            MessageBox.Show(ex.Message, "验证活动（Git改动）出错");
+        }
     }
 
-    public void ActivityRulesUpdate_Click(IRibbonControl control)
+    public async void ActivityRulesUpdate_Click(IRibbonControl control)
     {
         var excelPath = App.ActiveWorkbook.FullName;
-        Task.Run(() =>
+        try
         {
-            try
-            {
-                ActivityRulesUpdater.Run(excelPath);
-            }
-            catch (Exception ex)
-            {
-                PluginLog.Write($"[ActivityRulesUpdate CRASH] {ex}");
-                ExcelAsyncUtil.QueueAsMacro(() => MessageBox.Show(ex.Message, "更新活动规则出错"));
-            }
-        });
+            await Task.Run(() => ActivityRulesUpdater.Run(excelPath));
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[ActivityRulesUpdate CRASH] {ex}");
+            MessageBox.Show(ex.Message, "更新活动规则出错");
+        }
     }
 }
