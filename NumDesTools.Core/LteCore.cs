@@ -468,7 +468,7 @@ internal static class LteCore
             {
                 string temp;
 
-                if (funDy2 != "")
+                if (funDy2 != "" && funDy2 != funDy1)
                 {
                     temp =
                         $"[{funDependsValueSplit[i]},{funDy1ValueSplit[i]},{funDependsValueSplit[i]}]";
