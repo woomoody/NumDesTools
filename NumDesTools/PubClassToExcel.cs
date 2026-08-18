@@ -161,10 +161,8 @@ public class SelfStringRegexConverter : IValueConverter
         return null;
     }
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        throw new NotImplementedException();
-    }
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        System.Windows.Data.Binding.DoNothing;
 }
 
 //自定义GraphX顶点数据类
