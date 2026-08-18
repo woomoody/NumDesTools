@@ -59,6 +59,34 @@ namespace NumDesTools;
 [ComVisible(true)]
 public partial class NumDesAddIn : ExcelRibbon, IExcelAddIn
 {
+    private sealed class ExcelStateScope : IDisposable
+    {
+        private readonly Application _app;
+        private readonly XlCalculation _calculation;
+        private readonly bool _screenUpdating;
+        private readonly bool _enableEvents;
+        private bool _disposed;
+
+        public ExcelStateScope(Application app)
+        {
+            _app = app;
+            _calculation = app.Calculation;
+            _screenUpdating = app.ScreenUpdating;
+            _enableEvents = app.EnableEvents;
+            app.Calculation = XlCalculation.xlCalculationManual;
+            app.ScreenUpdating = false;
+            app.EnableEvents = false;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            try { _app.Calculation = _calculation; } catch (Exception ex) { PluginLog.Write($"[excel-state] restore Calculation failed: {ex.Message}"); }
+            try { _app.ScreenUpdating = _screenUpdating; } catch (Exception ex) { PluginLog.Write($"[excel-state] restore ScreenUpdating failed: {ex.Message}"); }
+            try { _app.EnableEvents = _enableEvents; } catch (Exception ex) { PluginLog.Write($"[excel-state] restore EnableEvents failed: {ex.Message}"); }
+        }
+    }
     public const int LongTextThreshold = 50;
     public const int MaxLineLength = 50;
     public const int ClickDelayMs = 500;
@@ -396,11 +424,10 @@ public partial class NumDesAddIn : ExcelRibbon, IExcelAddIn
         _lastClickTimes[control.Id] = DateTime.Now;
 
         App.StatusBar = false;
+        ExcelStateScope? excelState = null;
         try
         {
-            App.Calculation = XlCalculation.xlCalculationManual;
-            App.ScreenUpdating = false;
-            App.EnableEvents = false;
+            excelState = new ExcelStateScope(App);
         }
         catch (System.Runtime.InteropServices.COMException ex)
             when (unchecked((uint)ex.HResult) == 0x800A03EC)
@@ -446,12 +473,10 @@ public partial class NumDesAddIn : ExcelRibbon, IExcelAddIn
         {
             sw.Stop();
             var ts2 = sw.ElapsedMilliseconds;
-            App.Calculation = XlCalculation.xlCalculationAutomatic;
-            App.EnableEvents = true;
+            excelState?.Dispose();
             // 克隆活动自己管理 ScreenUpdating 和 StatusBar，外层不再覆盖
             if (control.Id != "ActivityClone")
             {
-                App.ScreenUpdating = true;
                 App.StatusBar = $"[执行完成] {control.Tag} 耗时： {(double)ts2 / 1000}s";
             }
             PluginLog.Write($"[执行完成] {control.Tag} 耗时： {ts2}ms");
@@ -587,6 +612,15 @@ public partial class NumDesAddIn : ExcelRibbon, IExcelAddIn
 
     void IExcelAddIn.AutoClose()
     {
+        try
+        {
+            ExcelIndex.ExcelIndexManager.Instance.Stop();
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Write($"[lifecycle] stop Excel index failed: {ex.Message}");
+        }
+        NumDesCTP.DisposeAll();
         IntelliSenseServer.Uninstall();
 
         //新的右键管理器

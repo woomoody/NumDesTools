@@ -25,6 +25,10 @@ internal sealed class ExcelIndexManager
     );
     private System.Threading.Timer? _debounceTimer;
     private CancellationTokenSource _cts = new();
+    private readonly object _stateLock = new();
+    private readonly object _pendingLock = new();
+    private readonly SemaphoreSlim _buildGate = new(1, 1);
+    private int _generation;
 
     public bool IsReady => _index != null;
     public ExcelSearchIndex? Index => _index;
@@ -32,6 +36,29 @@ internal sealed class ExcelIndexManager
 
     /// <summary>FileSystemWatcher 检测到变化但新索引尚未建完，搜索结果可能来自旧索引。</summary>
     public bool IsOutdated => _pendingRebuild.Count > 0;
+
+    public bool IsCurrentProject(string workbookPath)
+    {
+        var root = FindExcelsRoot(workbookPath);
+        return root != null
+            && string.Equals(root, _excelsRoot, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public void Stop()
+    {
+        lock (_stateLock)
+        {
+            _generation++;
+            _cts.Cancel();
+            _watcher?.Dispose();
+            _watcher = null;
+            _debounceTimer?.Dispose();
+            _debounceTimer = null;
+            lock (_pendingLock) _pendingRebuild.Clear();
+            _index = null;
+            _excelsRoot = null;
+        }
+    }
 
     /// <summary>按 sheet 名搜索，返回 (absPath, sheetName, row=1, col=1) 列表。</summary>
     public static List<(string file, string sheet, int row, int col)> SearchSheetNameFromIndex(
@@ -69,20 +96,22 @@ internal sealed class ExcelIndexManager
         if (root == null)
             return;
 
-        // 同一个项目无需重复启动
-        if (string.Equals(root, _excelsRoot, StringComparison.OrdinalIgnoreCase))
-            return;
-
-        // 切换项目：取消旧任务，重置状态
-        _cts.Cancel();
-        _cts = new CancellationTokenSource();
-        _index = null;
-        _excelsRoot = root;
+        int generation;
+        CancellationToken ct;
+        lock (_stateLock)
+        {
+            if (string.Equals(root, _excelsRoot, StringComparison.OrdinalIgnoreCase))
+                return;
+            _cts.Cancel();
+            _cts = new CancellationTokenSource();
+            _index = null;
+            _excelsRoot = root;
+            generation = ++_generation;
+            ct = _cts.Token;
+        }
 
         SetupWatcher(root);
-
-        var ct = _cts.Token;
-        Task.Run(() => BuildIndex(ct), ct);
+        Task.Run(() => BuildIndex(ct, generation, root), ct);
     }
 
     // ── 搜索 ────────────────────────────────────────────────────────────────
@@ -225,11 +254,10 @@ internal sealed class ExcelIndexManager
 
     // ── 构建 ────────────────────────────────────────────────────────────────
 
-    private void BuildIndex(CancellationToken ct)
+    private void BuildIndex(CancellationToken ct, int generation, string root)
     {
         try
         {
-            var root = _excelsRoot!;
             var jsonPath = ExcelSearchIndex.GetIndexPath(root);
             var existing = ExcelSearchIndex.LoadFromDisk(jsonPath);
 
@@ -247,7 +275,12 @@ internal sealed class ExcelIndexManager
 
             built.BuildSortedKeys();
             built.SaveToDisk(jsonPath);
-            _index = built;
+            lock (_stateLock)
+            {
+                if (generation != _generation || !string.Equals(root, _excelsRoot, StringComparison.OrdinalIgnoreCase))
+                    return;
+                _index = built;
+            }
             PluginLog.Verbose(
                 $"[ExcelIndex] ready  keys={built.Exact.Count}  files={built.Files.Count}"
             );
@@ -292,7 +325,7 @@ internal sealed class ExcelIndexManager
 
     private void OnFileChanged(object? _, FileSystemEventArgs e)
     {
-        _pendingRebuild[e.FullPath] = 0;
+        lock (_pendingLock) _pendingRebuild[e.FullPath] = 0;
         // Debounce 5秒：Excel 保存时会连续触发多次事件
         _debounceTimer?.Change(5000, Timeout.Infinite);
         _debounceTimer ??= new System.Threading.Timer(
@@ -305,28 +338,46 @@ internal sealed class ExcelIndexManager
 
     private void IncrementalRebuild()
     {
-        var files = _pendingRebuild.Keys.ToArray();
-        _pendingRebuild.Clear();
+        string[] files;
+        lock (_pendingLock)
+        {
+            files = _pendingRebuild.Keys.ToArray();
+            _pendingRebuild.Clear();
+        }
         if (files.Length == 0 || _excelsRoot == null)
             return;
 
-        Task.Run(() =>
+        Task.Run(async () =>
         {
+            await _buildGate.WaitAsync().ConfigureAwait(false);
             try
             {
-                PluginLog.Verbose($"[ExcelIndex] incremental rebuild  changed={files.Length}");
+                PluginLog.Verbose($"[ExcelIndex] incremental rebuild changed={files.Length}");
                 var root = _excelsRoot!;
                 var jsonPath = ExcelSearchIndex.GetIndexPath(root);
                 var existing = _index ?? ExcelSearchIndex.LoadFromDisk(jsonPath);
-                var built = new ExcelIndexBuilder(root).Build(existing);
+                var built = new ExcelIndexBuilder(root).Build(existing, ct: _cts.Token);
+                _cts.Token.ThrowIfCancellationRequested();
                 built.BuildSortedKeys();
                 built.SaveToDisk(jsonPath);
-                _index = built;
-                PluginLog.Verbose($"[ExcelIndex] incremental done");
+                lock (_stateLock)
+                {
+                    if (string.Equals(root, _excelsRoot, StringComparison.OrdinalIgnoreCase))
+                        _index = built;
+                }
+                PluginLog.Verbose("[ExcelIndex] incremental done");
             }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
                 PluginLog.Write($"[ExcelIndex] incremental error: {ex.Message}");
+            }
+            finally
+            {
+                _buildGate.Release();
+                bool pending;
+                lock (_pendingLock) pending = _pendingRebuild.Count > 0;
+                if (pending) _debounceTimer?.Change(1000, Timeout.Infinite);
             }
         });
     }

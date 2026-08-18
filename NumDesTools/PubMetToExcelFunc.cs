@@ -2124,7 +2124,10 @@ public static class PubMetToExcelFunc
         var idx = ExcelIndex.ExcelIndexManager.Instance.Index;
 
         // 内存索引重建中但磁盘有旧索引时，* 搜索用磁盘缓存，避免回落全文件扫描
-        if (idx == null && excelsRoot != null && findValue.Contains('*'))
+        if (idx == null
+            && excelsRoot != null
+            && ExcelIndex.ExcelIndexManager.Instance.IsCurrentProject(rootPath)
+            && findValue.Contains('*'))
         {
             var jsonPath = ExcelIndex.ExcelSearchIndex.GetIndexPath(excelsRoot);
             var diskIdx = ExcelIndex.ExcelSearchIndex.LoadFromDisk(jsonPath);
@@ -2137,7 +2140,7 @@ public static class PubMetToExcelFunc
             }
         }
 
-        if (idx != null && excelsRoot != null)
+        if (idx != null && excelsRoot != null && ExcelIndex.ExcelIndexManager.Instance.IsCurrentProject(rootPath))
         {
             if (!findValue.Contains('*'))
             {
