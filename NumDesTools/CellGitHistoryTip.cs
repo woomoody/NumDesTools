@@ -146,7 +146,7 @@ internal static class CellGitHistoryService
     private static readonly Dictionary<string, List<CellHistoryEntry>> _cache = new(
         StringComparer.Ordinal
     );
-    private static readonly Queue<string> _cacheOrder = new();
+    private static readonly object _cacheLock = new();
     private const int CacheCapacity = 100;
 
     // 文件级 commit 列表缓存：key = absFilePath → (list, fileLastWriteStamp)
@@ -174,10 +174,13 @@ internal static class CellGitHistoryService
         var ct = _cts.Token;
 
         var cacheKey = $"{absFilePath}|{sheetName}|{rowKey}|{colName}";
-        if (_cache.TryGetValue(cacheKey, out var cached))
+        lock (_cacheLock)
         {
-            onResult(cached); // 缓存命中：直接返回，不触发 ribbon 状态变化
-            return;
+            if (_cache.TryGetValue(cacheKey, out var cached))
+            {
+                onResult(cached);
+                return;
+            }
         }
 
         _ = Task.Run(
@@ -226,15 +229,17 @@ internal static class CellGitHistoryService
 
     private static void PutCache(string key, List<CellHistoryEntry> value)
     {
-        if (_cache.ContainsKey(key))
-            return;
-        if (_cache.Count >= CacheCapacity)
+        lock (_cacheLock)
         {
-            var old = _cacheOrder.Dequeue();
-            _cache.Remove(old);
+            if (_cache.ContainsKey(key))
+                return;
+            if (_cache.Count >= CacheCapacity)
+            {
+                var old = _cache.Keys.First();
+                _cache.Remove(old);
+            }
+            _cache[key] = value;
         }
-        _cache[key] = value;
-        _cacheOrder.Enqueue(key);
     }
 
     /// <summary>
