@@ -131,25 +131,28 @@ namespace NumDesTools.UI
         }
 
         private CancellationTokenSource _thumbnailCts;
+        private int _thumbnailRequestId;
 
         private async void LoadImageThumbnail()
         {
             _thumbnailCts?.Cancel();
             _thumbnailCts = new CancellationTokenSource();
+            var requestId = Interlocked.Increment(ref _thumbnailRequestId);
+            var imagePath = ImagePath;
 
             try
             {
                 var bitmap = await Task.Run(
                     () =>
                     {
-                        if (!File.Exists(ImagePath))
+                        if (!File.Exists(imagePath))
                         {
-                            var sourcePath = Path.GetDirectoryName(ImagePath);
-                            ImagePath = Path.Combine(sourcePath, "默认.gif");
+                            var sourcePath = Path.GetDirectoryName(imagePath);
+                            imagePath = Path.Combine(sourcePath, "默认.gif");
                         }
                         var bitmap = new BitmapImage();
                         bitmap.BeginInit();
-                        bitmap.UriSource = new Uri(ImagePath);
+                        bitmap.UriSource = new Uri(imagePath);
                         bitmap.DecodePixelWidth = 200;
                         bitmap.CacheOption = BitmapCacheOption.OnLoad;
                         bitmap.EndInit();
@@ -159,6 +162,8 @@ namespace NumDesTools.UI
                     _thumbnailCts.Token
                 );
 
+                if (requestId != Volatile.Read(ref _thumbnailRequestId))
+                    return;
                 Thumbnail = bitmap;
                 OnPropertyChanged(nameof(Thumbnail));
             }
