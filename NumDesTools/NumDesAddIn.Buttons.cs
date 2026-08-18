@@ -1650,9 +1650,10 @@ public partial class NumDesAddIn
         });
     }
 
-    public void ModelDataCreat2_Click(IRibbonControl control)
+    public async void ModelDataCreat2_Click(IRibbonControl control)
     {
         var wk = App.ActiveWorkbook;
+        var workbookFullName = wk.FullName;
         var path = wk.Path;
         var ws = wk.ActiveSheet;
         var wsSheetName = ws.Name;
@@ -1676,21 +1677,19 @@ public partial class NumDesAddIn
             .ToArray();
 
         App.StatusBar = $"正在扫描 {files.Length} 个文件...";
-        Task.Run(() => PubMetToExcelFunc.SearchModelKeyMiniExcel(seachValue, files, false, false))
-            .ContinueWith(t =>
-            {
-                ExcelAsyncUtil.QueueAsMacro(() =>
-                {
-                    var targetList = t.Result;
-                    var rows = targetList.Values.Sum(list => list.Count);
+        var targetList = await Task.Run(() => PubMetToExcelFunc.SearchModelKeyMiniExcel(seachValue, files, false, false));
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            if (App.ActiveWorkbook?.FullName != workbookFullName)
+                return;
+            var rows = targetList.Values.Sum(list => list.Count);
                     var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, 3);
                     var maxRow = targetValue.GetLength(0);
                     var maxCol = targetValue.GetLength(1);
                     ws.Range[ws.Cells[3, 17], ws.Cells[3 + maxRow - 1, 17 + maxCol - 1]].Value2 =
                         targetValue;
-                    App.StatusBar = false;
-                });
-            });
+            App.StatusBar = false;
+        });
     }
 
     public void CheckHiddenCellVsto_Click(IRibbonControl control)
