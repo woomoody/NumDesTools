@@ -19,7 +19,7 @@ public static class ExcelReader
     // ponytail: process-lifetime cache，CLI 单次运行，无 TTL 需求
     private static readonly Dictionary<
         (string Path, string? Sheet),
-        (List<string> Fields, List<(int Row, Dictionary<string, string> Data)> Rows)
+        (DateTime LastWriteUtc, long Length, (List<string> Fields, List<(int Row, Dictionary<string, string> Data)> Rows) Value)
     > _cache = new();
 
     public static void ClearCache() => _cache.Clear();
@@ -32,8 +32,11 @@ public static class ExcelReader
         Read(string excelPath, string? sheetName = null)
     {
         var key = (Path.GetFullPath(excelPath), sheetName);
-        if (_cache.TryGetValue(key, out var cached))
-            return cached;
+        var info = new FileInfo(key.Item1);
+        if (_cache.TryGetValue(key, out var cached)
+            && cached.LastWriteUtc == info.LastWriteTimeUtc
+            && cached.Length == info.Length)
+            return cached.Value;
 
         using var pkg = new ExcelPackage(new FileInfo(excelPath));
         var ws = sheetName != null
@@ -74,7 +77,7 @@ public static class ExcelReader
         }
 
         var result = (fields, rows);
-        _cache[key] = result;
+        _cache[key] = (info.LastWriteTimeUtc, info.Length, result);
         return result;
     }
 
