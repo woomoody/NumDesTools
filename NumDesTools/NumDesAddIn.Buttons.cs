@@ -1595,9 +1595,10 @@ public partial class NumDesAddIn
         PubMetToExcelFunc.UpdatePowerQueryLinks();
     }
 
-    public void ModelDataCreat_Click(IRibbonControl control)
+    public async void ModelDataCreat_Click(IRibbonControl control)
     {
         var wk = App.ActiveWorkbook;
+        var workbookFullName = wk.FullName;
         var path = wk.Path;
         var ws = wk.ActiveSheet;
         var sheetName = ws.Name;
@@ -1617,13 +1618,12 @@ public partial class NumDesAddIn
             .ToList();
 
         App.StatusBar = $"正在扫描 {files.Length} 个文件...";
-        Task.Run(() => PubMetToExcelFunc.SearchModelKeyMiniExcelMulti(ids, files, true))
-            .ContinueWith(t =>
-            {
-                ExcelAsyncUtil.QueueAsMacro(() =>
-                {
-                    var merged = t.Result;
-                    var targetList = merged
+        var merged = await Task.Run(() => PubMetToExcelFunc.SearchModelKeyMiniExcelMulti(ids, files, true));
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            if (App.ActiveWorkbook?.FullName != workbookFullName)
+                return;
+            var targetList = merged
                         .ToDictionary(
                             kv => kv.Key,
                             kv =>
@@ -1646,9 +1646,8 @@ public partial class NumDesAddIn
                     var maxCol = targetValue.GetLength(1);
                     ws.Range[ws.Cells[2, 3], ws.Cells[2 + maxRow - 1, 3 + maxCol - 1]].Value2 =
                         targetValue;
-                    App.StatusBar = false;
-                });
-            });
+            App.StatusBar = false;
+        });
     }
 
     public void ModelDataCreat2_Click(IRibbonControl control)
