@@ -22,8 +22,10 @@ public class SelfControl : UserControl, ISelfControl;
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 public class NumDesCTP
 {
-    private static Dictionary<string, CustomTaskPane> ctpsWF = new();
-    private static Dictionary<string, CustomTaskPane> ctpsWPF = new();
+    private static readonly Dictionary<string, CustomTaskPane> ctpsWF = new();
+    private static readonly Dictionary<string, CustomTaskPane> ctpsWPF = new();
+    private static readonly object _ctpLock = new();
+    private static readonly HashSet<string> _creatingWF = new(StringComparer.Ordinal);
 
     // 每个 WPF CTP 独立持有自己的 SelfControl 宿主，不再共享静态单字段
     private static readonly Dictionary<string, SelfControl> _wpfHosts = new();
@@ -43,10 +45,18 @@ public class NumDesCTP
         if (!isWPF)
         {
             var excelApp = AppServices.App;
-            if (!ctpsWF.TryGetValue(name, out ctpWF))
+            var shouldCreate = false;
+            lock (_ctpLock)
+            {
+                if (!ctpsWF.ContainsKey(name) && _creatingWF.Add(name))
+                    shouldCreate = true;
+            }
+            if (shouldCreate)
             {
                 ExcelAsyncUtil.QueueAsMacro(() =>
                 {
+                    try
+                    {
                     LableControlWF = new SelfControl();
                     var listBoxSheet = new ListBox();
 
@@ -124,10 +134,20 @@ public class NumDesCTP
                     ctpWF.Width = width;
                     ctpWF.Visible = true;
                     listBoxSheet.Dock = DockStyle.Fill;
+                    lock (_ctpLock)
+                    {
+                        ctpsWF[name] = ctpWF;
+                        _creatingWF.Remove(name);
+                    }
+                    }
+                    catch (Exception ex)
+                    {
+                        lock (_ctpLock) _creatingWF.Remove(name);
+                        PluginLog.Write($"[CTP] create {name} failed: {ex.Message}");
+                    }
                 });
-                ctpsWF[name] = ctpWF;
             }
-            else
+            else if (ctpsWF.TryGetValue(name, out ctpWF))
             {
                 ctpWF.Visible = true;
             }
