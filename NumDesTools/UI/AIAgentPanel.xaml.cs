@@ -1430,9 +1430,7 @@ a[href^='excel://']:hover{background:#ddf5ef;border-radius:2px}
 
     private async Task RunAgentLoopAsync(string userTask, CancellationToken ct)
     {
-        var selectedModel =
-            Dispatcher.Invoke(() => ModelComboBox.SelectedItem as string)
-            ?? AppServices.Config.Llm.Model;
+        var selectedModel = ModelComboBox.SelectedItem as string ?? AppServices.Config.Llm.Model;
         string model;
         string? autoReason = null;
         if (selectedModel == NumDesTools.AI.AutoModelRouter.AutoModelName)
@@ -1440,7 +1438,7 @@ a[href^='excel://']:hover{background:#ddf5ef;border-radius:2px}
             var (am, ar) = NumDesTools.AI.AutoModelRouter.Route(userTask);
             model = am;
             autoReason = ar;
-            Dispatcher.Invoke(() => AddStep($"🤖 自动选模型: {model}（{ar}）"));
+            _ = Dispatcher.BeginInvoke(() => AddStep($"🤖 自动选模型: {model}（{ar}）"));
         }
         else
         {
@@ -1453,7 +1451,7 @@ a[href^='excel://']:hover{background:#ddf5ef;border-radius:2px}
 
         if (_history.Count == 0)
         {
-            var customInstruction = Dispatcher.Invoke(() => CustomInstructionInput.Text.Trim());
+            var customInstruction = CustomInstructionInput.Text.Trim();
             var systemContent =
                 "你是一个专业的 Excel 数据助手兼游戏数值策划助手，可以对当前工作簿进行全面操作和分析。\n"
                 + "工作流程：1) 先用 get_workbook_structure 或 list_sheets 了解所有打开工作簿的结构；"
@@ -1474,9 +1472,9 @@ a[href^='excel://']:hover{background:#ddf5ef;border-radius:2px}
                 systemContent += $"\n\n用户自定义指令（始终遵守）：{customInstruction}";
             _history.Add(new { role = "system", content = systemContent });
         }
-        var userMsgContent = Dispatcher.Invoke(() => BuildMessageContent(userTask));
+        var userMsgContent = BuildMessageContent(userTask);
         _history.Add(new { role = "user", content = userMsgContent });
-        Dispatcher.Invoke(() =>
+        _ = Dispatcher.BeginInvoke(() =>
         {
             _attachments.Clear();
             RefreshAttachmentStrip();
@@ -1605,7 +1603,7 @@ a[href^='excel://']:hover{background:#ddf5ef;border-radius:2px}
                 var db = new ChatHistoryManager();
                 var model2 =
                     _lastUsedModel
-                    ?? (Dispatcher.Invoke(() => ModelComboBox.SelectedItem as string) ?? "Agent");
+                    ?? AppServices.Config.Llm.Model;
                 var sid = _sessionId;
                 _ = db.SaveChatMessageAsync(
                     new ChatMessage
