@@ -43,6 +43,7 @@ fn target(scope: &str, harness: &str) -> String {
         ("kilo", _) => {
             "%USERPROFILE%\\.config\\kilo\\kilo.jsonc（用量：.local\\share\\kilo\\kilo.db）".into()
         }
+        ("dsh", _) => "%USERPROFILE%\\.dsh\\settings.yaml（CCGame DSH profile）".into(),
         _ => "(由 scope 决定)".into(),
     }
 }
@@ -314,7 +315,9 @@ fn loop_ui(
                         models: {
                             let mut models = catalog.models.clone();
                             for route in &data.routes {
-                                if route.harness == "kilo" && !models.contains(&route.model) {
+                                if (route.harness == "kilo" || route.harness == "dsh")
+                                    && !models.contains(&route.model)
+                                {
                                     models.push(route.model.clone());
                                 }
                             }

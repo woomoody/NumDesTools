@@ -1,5 +1,5 @@
 use std::{
-    io::{self, Read, Write},
+    io::{self, Read},
     path::{Path, PathBuf},
     process::{Command, Stdio},
 };
@@ -38,12 +38,21 @@ pub(super) fn resolve_file(file: &Path) -> io::Result<(PathBuf, PathBuf)> {
 }
 
 pub(super) fn load_commits(repo_root: &Path, file: &Path, author: &str) -> io::Result<Vec<Commit>> {
-    let recent = run_git_log(repo_root, file, author, Some("1 month ago"), None)?;
+    let recent = run_git_log(repo_root, file, author, Some("1 month ago"), Some(30), None)?;
     if recent.is_empty() {
-        run_git_log(repo_root, file, author, None, Some(30))
+        run_git_log(repo_root, file, author, None, Some(30), None)
     } else {
         Ok(recent)
     }
+}
+
+pub(super) fn load_more_commits(
+    repo_root: &Path,
+    file: &Path,
+    author: &str,
+    offset: usize,
+) -> io::Result<Vec<Commit>> {
+    run_git_log(repo_root, file, author, None, Some(30), Some(offset))
 }
 
 fn run_git_log(
@@ -52,6 +61,7 @@ fn run_git_log(
     author: &str,
     since: Option<&str>,
     limit: Option<usize>,
+    skip: Option<usize>,
 ) -> io::Result<Vec<Commit>> {
     let mut command = Command::new("git");
     command.current_dir(repo_root).args([
@@ -65,6 +75,9 @@ fn run_git_log(
     }
     if let Some(value) = limit {
         command.arg(format!("-{value}"));
+    }
+    if let Some(value) = skip {
+        command.arg(format!("--skip={value}"));
     }
     if !author.is_empty() {
         command.arg(format!("--author={author}"));

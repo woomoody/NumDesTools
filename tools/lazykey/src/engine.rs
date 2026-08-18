@@ -236,8 +236,6 @@ pub fn get_key_target_files(home_root: &Path) -> Vec<PathBuf> {
             .join(".env"),
         // WorkBuddy 自定义模型配置（.workbuddy/models.json 的 apiKey）
         home_root.join(".workbuddy").join("models.json"),
-        // Kilo 配置（模型/权限等；Kilo 当前不在此处保存 API key）
-        home_root.join(".config").join("kilo").join("kilo.jsonc"),
     ];
 
     if let Ok(entries) = fs::read_dir(home_root) {
@@ -302,9 +300,15 @@ pub fn switch_files_to_key(
         let old_key = match find_file_key(f, key_values) {
             Some(k) => k,
             None => {
+                let reason = if f.to_string_lossy().ends_with("\\.dsh\\settings.yaml") {
+                    "DSH 使用 LITELLM_API_KEY 环境变量（已由专用步骤处理）"
+                } else {
+                    "无已知 key"
+                };
                 skipped.push(format!(
-                    "{} (无已知 key)  {}",
+                    "{} ({})  {}",
                     label_for_path(f),
+                    reason,
                     f.display()
                 ));
                 continue;
@@ -316,6 +320,55 @@ pub fn switch_files_to_key(
         }
     }
     (changed, skipped)
+}
+
+pub fn dsh_env_target() -> PathBuf {
+    PathBuf::from("<DSH:LITELLM_API_KEY>")
+}
+
+pub fn is_dsh_env_target(path: &Path) -> bool {
+    path == dsh_env_target()
+}
+
+pub fn dsh_env_label(keys: &[KeyDef]) -> String {
+    std::env::var("LITELLM_API_KEY")
+        .ok()
+        .and_then(|value| {
+            keys.iter()
+                .find(|key| key.key == value)
+                .map(|key| key.label.clone())
+        })
+        .unwrap_or_else(|| "(环境变量未设置或不是已知 key)".to_string())
+}
+
+/// DSH 通过用户环境变量引用 LiteLLM key，不把 key 写入 settings.yaml。
+pub fn switch_dsh_env_to_key(new_key: &str, keys: &[KeyDef]) -> (bool, String) {
+    let _ = keys;
+    #[cfg(windows)]
+    {
+        let status = std::process::Command::new("setx")
+            .args(["LITELLM_API_KEY", new_key])
+            .status();
+        if status.is_ok_and(|s| s.success()) {
+            std::env::set_var("LITELLM_API_KEY", new_key);
+            return (
+                true,
+                "DSH(LITELLM_API_KEY)（已更新用户环境变量；新终端生效）".to_string(),
+            );
+        }
+        return (
+            false,
+            "DSH(LITELLM_API_KEY)（用户环境变量更新失败）".to_string(),
+        );
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = new_key;
+        (
+            false,
+            "DSH(LITELLM_API_KEY)（仅支持 Windows 用户环境变量）".to_string(),
+        )
+    }
 }
 
 /// 直切命令行别名 → key；未知名返回 None，完整 sk- 透传
@@ -388,10 +441,6 @@ pub fn label_for_path(path: &Path) -> String {
         "hermes(.env)".to_string()
     } else if s.ends_with("\\.workbuddy\\models.json") {
         "WorkBuddy(models.json)".to_string()
-    } else if s.ends_with("\\kilo\\kilo.db") {
-        "Kilo(kilo.db)".to_string()
-    } else if s.ends_with("\\kilo\\kilo.jsonc") {
-        "Kilo(kilo.jsonc)".to_string()
     } else {
         path.file_name()
             .map(|n| n.to_string_lossy().to_string())

@@ -54,6 +54,7 @@ struct App {
     table_area: Rect,
     error: Option<String>,
     first_compare_sha: Option<String>,
+    loading_more: bool,
 }
 
 pub fn run(file: &Path) -> io::Result<()> {
@@ -78,6 +79,7 @@ pub fn run(file: &Path) -> io::Result<()> {
         table_area: Rect::default(),
         error: None,
         first_compare_sha: None,
+        loading_more: false,
     };
 
     let previous_hook = terminal::install_panic_hook();
@@ -122,7 +124,16 @@ fn handle_key(app: &mut App, key: KeyEvent) -> io::Result<DiffAction> {
     match app.stage {
         Stage::CommitList => match key.code {
             KeyCode::Up => move_selection(app, false),
-            KeyCode::Down => move_selection(app, true),
+            KeyCode::Down => {
+                move_selection(app, true);
+                if app
+                    .table_state
+                    .selected()
+                    .is_some_and(|i| i + 1 >= app.visible.len())
+                {
+                    load_more_if_needed(app)?;
+                }
+            }
             KeyCode::Enter => {
                 if let Some(commit) = selected_commit(app) {
                     return Ok(DiffAction::Workspace(commit.sha.clone()));
@@ -192,6 +203,29 @@ fn handle_paste(app: &mut App, text: &str) -> io::Result<()> {
     }
 }
 
+fn load_more_if_needed(app: &mut App) -> io::Result<()> {
+    if app.loading_more || app.commits.len() < 30 {
+        return Ok(());
+    }
+    app.loading_more = true;
+    let result = git::load_more_commits(
+        &app.repo_root,
+        &app.file,
+        &app.author_filter,
+        app.commits.len(),
+    );
+    app.loading_more = false;
+    match result {
+        Ok(more) => {
+            let start = app.commits.len();
+            app.commits.extend(more);
+            app.visible.extend(start..app.commits.len());
+        }
+        Err(error) => app.error = Some(error.to_string()),
+    }
+    Ok(())
+}
+
 fn reload_author(app: &mut App) -> io::Result<()> {
     match load_commits(&app.repo_root, &app.file, &app.author_filter) {
         Ok(commits) => {
@@ -218,7 +252,7 @@ fn move_selection(app: &mut App, forward: bool) {
     }
     let current = app.table_state.selected().unwrap_or(0);
     let next = if forward {
-        (current + 1) % len
+        (current + 1).min(len - 1)
     } else {
         current.checked_sub(1).unwrap_or(len - 1)
     };

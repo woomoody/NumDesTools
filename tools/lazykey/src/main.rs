@@ -64,6 +64,13 @@ fn run_direct(name: &str, keys: &[engine::KeyDef]) -> io::Result<()> {
     let files = engine::get_key_target_files(&home);
     let all = engine::all_key_values(keys);
     let (changed, skipped) = engine::switch_files_to_key(&new_key, &files, &all);
+    let (dsh_changed, dsh_message) = engine::switch_dsh_env_to_key(&new_key, &keys);
+
+    if dsh_changed {
+        println!("✓ 已切：{}", dsh_message);
+    } else {
+        println!("- 跳过：{}", dsh_message);
+    }
 
     for f in &changed {
         println!("✓ 已切：{}  {}", engine::label_for_path(f), f.display());

@@ -342,6 +342,50 @@ def _collect_workbuddy(frozen_str):
             except Exception as e: print(f'  [warn] workbuddy {fp}: {e}')
     return records
 
+def _collect_dsh(frozen_str):
+    """DSH (DeepSeek Harness): CCGame session JSONL，独立于其它 harness。"""
+    records = []
+    base = os.path.expanduser('~/.dsh/sessions/--C-Users-cent-CCGame--')
+    if not os.path.isdir(base): return records
+    try:
+        import zstandard as zstd
+    except Exception as e:
+        print(f'  [warn] dsh zstandard unavailable: {e}')
+        return records
+    for dp, _, files in os.walk(base):
+        for name in files:
+            if name != 'session.jsonl.zstd': continue
+            fp = os.path.join(dp, name)
+            try:
+                with open(fp, 'rb') as fh:
+                    text = zstd.ZstdDecompressor().stream_reader(fh).read().decode('utf-8', 'replace')
+                model = 'deepseek-v4-flash'
+                for line in text.splitlines():
+                    try: obj = json.loads(line)
+                    except Exception: continue
+                    event_data = obj.get('data') if isinstance(obj.get('data'), dict) else {}
+                    if obj.get('type') == 'request/header':
+                        header = event_data.get('header') if isinstance(event_data.get('header'), dict) else {}
+                        config = header.get('config') if isinstance(header.get('config'), dict) else {}
+                        model = config.get('model') or model
+                    chunk = event_data.get('chunk') if isinstance(event_data.get('chunk'), dict) else {}
+                    u = chunk.get('usage') if obj.get('type') == 'assistant/chunk' else None
+                    if not isinstance(u, dict): continue
+                    inp = u.get('inputTokens') or 0
+                    out = u.get('outputTokens') or 0
+                    cr = u.get('cacheReadTokens') or 0
+                    cw = u.get('cacheWriteTokens') or 0
+                    if inp + out + cr + cw == 0: continue
+                    ts = obj.get('time')
+                    if isinstance(ts, (int, float)) and ts > 1_000_000_000_000: ts = ts / 1000
+                    if not isinstance(ts, (int, float)): continue
+                    date_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+                    if date_str <= frozen_str: continue
+                    records.append((date_str, model, inp, out, cr, cw, f'[dsh]{os.path.expanduser("~/CCGame")}/{os.path.basename(dp)}'))
+            except Exception as e: print(f'  [warn] dsh {fp}: {e}')
+    return records
+
+
 def _save_snap(daily, model_daily, proj_daily, frozen_date):
     tmp = _SNAP_FILE + '.tmp'
     try:
@@ -406,7 +450,7 @@ if _repair_opencode:
 frozen_opencode = '1970-01-01' if _repair_opencode else frozen_other
 print(f"  frozen: cc={frozen_cc} other={frozen_other} opencode={frozen_opencode}")
 
-for fn, fz in ((_collect_cc, frozen_cc), (_collect_hermes, frozen_other), (_collect_omp, frozen_other), (_collect_opencode, frozen_opencode), (_collect_kilo, frozen_other), (_collect_workbuddy, frozen_other)):
+for fn, fz in ((_collect_cc, frozen_cc), (_collect_hermes, frozen_other), (_collect_omp, frozen_other), (_collect_opencode, frozen_opencode), (_collect_kilo, frozen_other), (_collect_workbuddy, frozen_other), (_collect_dsh, frozen_other)):
     for date_str, model, inp, out, cr, cw, proj_key in fn(fz):
         cost = calc_cost(inp, out, cr, cw, model)
         total_msgs += 1

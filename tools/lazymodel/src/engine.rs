@@ -271,6 +271,32 @@ pub fn apply_routes(d: &RoutesFile) -> io::Result<PathBuf> {
             fs::write(p, s)?;
         }
     }
+    // DSH 当前由 CCGame 使用共享 ~/.dsh/settings.yaml；替换 YAML models 列表第一项。
+    if let Some(r) = find(d, "dsh", "CCGame", "primary") {
+        let p = home.join(".dsh/settings.yaml");
+        if p.exists() {
+            let s = fs::read_to_string(&p)?;
+            let mut lines: Vec<String> = s.lines().map(str::to_string).collect();
+            let mut in_models = false;
+            let mut replaced = false;
+            for line in &mut lines {
+                if line.trim() == "models:" {
+                    in_models = true;
+                    continue;
+                }
+                if in_models && line.starts_with("        - id:") && !replaced {
+                    *line = format!("        - id: {}", r.model);
+                    replaced = true;
+                } else if in_models && !line.starts_with(' ') && !line.trim().is_empty() {
+                    in_models = false;
+                }
+            }
+            if replaced {
+                backup(&p, &backup_dir)?;
+                fs::write(p, lines.join("\n") + "\n")?;
+            }
+        }
+    }
     Ok(backup_dir)
 }
 fn set_opencode_variant(v: &mut serde_json::Value, model: &str, effort: &str) {

@@ -400,6 +400,22 @@
       "kind": "cheap",
       "model": "kilo-auto/small",
       "effort": "default"
+    },
+    {
+      "harness": "dsh",
+      "scope": "CCGame",
+      "role": "primary",
+      "kind": "general",
+      "model": "deepseek-v4-pro",
+      "effort": "default"
+    },
+    {
+      "harness": "dsh",
+      "scope": "CCGame",
+      "role": "small_model",
+      "kind": "cheap",
+      "model": "deepseek-v4-flash",
+      "effort": "default"
     }
   ]
 }

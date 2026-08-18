@@ -359,18 +359,39 @@ fn handle_key(
                     .collect();
                 if !chosen.is_empty() {
                     let all: Vec<&str> = engine::all_key_values(keys);
-                    let (changed, skipped) = engine::switch_files_to_key(new_key, &chosen, &all);
-                    *result_lines = changed
+                    let dsh_selected = chosen.iter().any(|f| engine::is_dsh_env_target(f));
+                    let file_chosen: Vec<_> = chosen
                         .iter()
-                        .map(|f| {
+                        .filter(|f| !engine::is_dsh_env_target(f))
+                        .cloned()
+                        .collect();
+                    let (changed, mut skipped) =
+                        engine::switch_files_to_key(new_key, &file_chosen, &all);
+                    let mut dsh_result: Option<String> = None;
+                    if dsh_selected {
+                        let (ok, message) = engine::switch_dsh_env_to_key(new_key, keys);
+                        if ok {
+                            dsh_result = Some(message);
+                        } else {
+                            skipped.push(message);
+                        }
+                    }
+                    *result_lines = dsh_result
+                        .into_iter()
+                        .map(|message| ("✓ 已切".to_string(), message))
+                        .chain(changed.iter().map(|f| {
                             (
                                 "✓ 已切".to_string(),
                                 format!("{}  {}", engine::label_for_path(f), f.display()),
                             )
-                        })
+                        }))
                         .chain(skipped.iter().map(|s| ("- 跳过".to_string(), s.clone())))
                         .collect();
-                    *result_summary = format!("完成：{} 个文件切到 {}", changed.len(), new_label);
+                    *result_summary = format!(
+                        "完成：{} 个文件切到 {}",
+                        changed.len() + usize::from(dsh_selected),
+                        new_label
+                    );
                     *stage = Stage::ShowResult;
                 }
             }
@@ -396,13 +417,18 @@ fn load_files(
 ) {
     let home = dirs_home();
     *files = engine::get_key_target_files(&home);
+    files.push(engine::dsh_env_target());
     let all: Vec<&str> = engine::all_key_values(keys);
     *cur_labels = files
         .iter()
         .map(|f| {
-            engine::find_file_key(f, &all)
-                .and_then(|k| engine::label_of(&k, keys).map(|s| s.to_string()))
-                .unwrap_or_else(|| "(无已知 key)".to_string())
+            if engine::is_dsh_env_target(f) {
+                format!("DSH 使用 LITELLM_API_KEY · {}", engine::dsh_env_label(keys))
+            } else {
+                engine::find_file_key(f, &all)
+                    .and_then(|k| engine::label_of(&k, keys).map(|s| s.to_string()))
+                    .unwrap_or_else(|| "(无已知 key)".to_string())
+            }
         })
         .collect();
     *checked = vec![true; files.len()];
