@@ -18,7 +18,7 @@ public class RawArrayToRowsTests
         var raw = new object[rows + 1, cols + 1]; // 1-based → 上界 = count
         for (int r = 0; r < rows; r++)
             for (int c = 0; c < values[r].Length; c++)
-                raw[r + 1, c + 1] = values[r][c];
+                raw[r + 1, c + 1] = values[r][c]!;
         return raw;
     }
 

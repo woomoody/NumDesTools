@@ -359,7 +359,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             };
             grid.ItemsSource = state.View;
             // 默认定位到 A1：加载完成后光标停在第一个单元格，方便立即编辑
-            grid.Dispatcher.BeginInvoke(
+            _ = grid.Dispatcher.BeginInvoke(
                 System.Windows.Threading.DispatcherPriority.Loaded,
                 new Action(() =>
                 {
@@ -898,7 +898,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             MarkCurrentFileDirty();
 
             // P13：修复编辑态残留的 MaxHeight，强制重新测量行高
-            grid.Dispatcher.BeginInvoke(
+            _ = grid.Dispatcher.BeginInvoke(
                 System.Windows.Threading.DispatcherPriority.Loaded,
                 new Action(() =>
                 {
@@ -1851,6 +1851,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         }
         catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[xlsx-editor] clipboard copy failed: {ex.Message}");
         }
     }
 
@@ -2332,7 +2333,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             MarkCurrentFileDirty();
 
             // P13：修复编辑态残留的 MaxHeight，强制重新测量行高
-            grid.Dispatcher.BeginInvoke(
+            _ = grid.Dispatcher.BeginInvoke(
                 System.Windows.Threading.DispatcherPriority.Loaded,
                 new Action(() =>
                 {
