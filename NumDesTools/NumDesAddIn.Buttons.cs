@@ -83,27 +83,16 @@ public partial class NumDesAddIn
                         return;
                     // 2秒防抖：切换过渡中CTP会短暂False再变True，X关闭则永久False
                     var _smP = smPane2;
-                    System
-                        .Threading.Tasks.Task.Delay(2000)
-                        .ContinueWith(__ =>
+                    StartConfirmCtpClosed(
+                        _smP,
+                        "[CTP][X] SheetMenu X-close confirmed",
+                        () =>
                         {
-                            try
-                            {
-                                if (_smP.Visible)
-                                    return;
-                            }
-                            catch
-                            {
-                                return;
-                            }
-                            ExcelAsyncUtil.QueueAsMacro(() =>
-                            {
-                                PluginLog.Verbose("[CTP][X] SheetMenu X-close confirmed");
-                                SheetMenuText = "表格目录：关闭";
-                                CustomRibbon?.InvalidateControl("SheetMenu");
-                                GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
-                            });
-                        });
+                            SheetMenuText = "表格目录：关闭";
+                            CustomRibbon?.InvalidateControl("SheetMenu");
+                            GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
+                        }
+                    );
                 };
             }
         }
@@ -142,27 +131,16 @@ public partial class NumDesAddIn
                     if (!string.IsNullOrEmpty(chatWin) && chatActiveWin != chatWin)
                         return;
                     var _chatP = chatPane2;
-                    System
-                        .Threading.Tasks.Task.Delay(2000)
-                        .ContinueWith(__ =>
+                    StartConfirmCtpClosed(
+                        _chatP,
+                        "[CTP][X] Chat X-close confirmed",
+                        () =>
                         {
-                            try
-                            {
-                                if (_chatP.Visible)
-                                    return;
-                            }
-                            catch
-                            {
-                                return;
-                            }
-                            ExcelAsyncUtil.QueueAsMacro(() =>
-                            {
-                                PluginLog.Verbose("[CTP][X] Chat X-close confirmed");
-                                ShowAiText = "AI对话：关闭";
-                                CustomRibbon?.InvalidateControl("ShowAI");
-                                GlobalValue.SaveValue("ShowAIText", ShowAiText);
-                            });
-                        });
+                            ShowAiText = "AI对话：关闭";
+                            CustomRibbon?.InvalidateControl("ShowAI");
+                            GlobalValue.SaveValue("ShowAIText", ShowAiText);
+                        }
+                    );
                 };
             }
         }
@@ -201,26 +179,15 @@ public partial class NumDesAddIn
                     if (!string.IsNullOrEmpty(agentWin) && agentActiveWin != agentWin)
                         return;
                     var _agentP = agentPane2;
-                    System
-                        .Threading.Tasks.Task.Delay(2000)
-                        .ContinueWith(__ =>
+                    StartConfirmCtpClosed(
+                        _agentP,
+                        "[CTP][X] Agent X-close confirmed",
+                        () =>
                         {
-                            try
-                            {
-                                if (_agentP.Visible)
-                                    return;
-                            }
-                            catch
-                            {
-                                return;
-                            }
-                            ExcelAsyncUtil.QueueAsMacro(() =>
-                            {
-                                PluginLog.Verbose("[CTP][X] Agent X-close confirmed");
-                                _agentMode = false;
-                                CustomRibbon?.InvalidateControl("ShowAIAgent");
-                            });
-                        });
+                            _agentMode = false;
+                            CustomRibbon?.InvalidateControl("ShowAIAgent");
+                        }
+                    );
                 };
             }
         }
@@ -2557,29 +2524,16 @@ public partial class NumDesAddIn
                     if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin)
                         return;
                     var _sp2 = sheetPane;
-                    System
-                        .Threading.Tasks.Task.Delay(2000)
-                        .ContinueWith(__ =>
+                    StartConfirmCtpClosed(
+                        _sp2,
+                        "[CTP][X] SheetMenu(ShowSheetMenu) X-close confirmed",
+                        () =>
                         {
-                            try
-                            {
-                                if (_sp2.Visible)
-                                    return;
-                            }
-                            catch
-                            {
-                                return;
-                            }
-                            ExcelAsyncUtil.QueueAsMacro(() =>
-                            {
-                                PluginLog.Verbose(
-                                    "[CTP][X] SheetMenu(ShowSheetMenu) X-close confirmed"
-                                );
-                                SheetMenuText = "表格目录：关闭";
-                                CustomRibbon?.InvalidateControl("SheetMenu");
-                                GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
-                            });
-                        });
+                            SheetMenuText = "表格目录：关闭";
+                            CustomRibbon?.InvalidateControl("SheetMenu");
+                            GlobalValue.SaveValue("SheetMenuText", SheetMenuText);
+                        }
+                    );
                 };
             }
         }
@@ -2721,26 +2675,15 @@ public partial class NumDesAddIn
                     if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin)
                         return;
                     var _ap2 = agentPane;
-                    System
-                        .Threading.Tasks.Task.Delay(2000)
-                        .ContinueWith(__ =>
+                    StartConfirmCtpClosed(
+                        _ap2,
+                        "[CTP][X] Agent(ShowAIAgent) X-close confirmed",
+                        () =>
                         {
-                            try
-                            {
-                                if (_ap2.Visible)
-                                    return;
-                            }
-                            catch
-                            {
-                                return;
-                            }
-                            ExcelAsyncUtil.QueueAsMacro(() =>
-                            {
-                                PluginLog.Verbose("[CTP][X] Agent(ShowAIAgent) X-close confirmed");
-                                _agentMode = false;
-                                CustomRibbon?.InvalidateControl("ShowAIAgent");
-                            });
-                        });
+                            _agentMode = false;
+                            CustomRibbon?.InvalidateControl("ShowAIAgent");
+                        }
+                    );
                 };
             }
         }
@@ -2806,27 +2749,16 @@ public partial class NumDesAddIn
                         if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin)
                             return;
                         var _cp2 = chatPane;
-                        System
-                            .Threading.Tasks.Task.Delay(2000)
-                            .ContinueWith(__ =>
-                            {
-                                try
-                                {
-                                    if (_cp2.Visible)
-                                        return;
-                                }
-                                catch
-                                {
-                                    return;
-                                }
-                                ExcelAsyncUtil.QueueAsMacro(() =>
-                                {
-                                    PluginLog.Verbose("[CTP][X] Chat(ShowAi) X-close confirmed");
-                                    ShowAiText = "AI对话：关闭";
-                                    CustomRibbon?.InvalidateControl("ShowAI");
-                                    GlobalValue.SaveValue("ShowAIText", ShowAiText);
-                                });
-                            });
+                    StartConfirmCtpClosed(
+                        _cp2,
+                        "[CTP][X] Chat(ShowAi) X-close confirmed",
+                        () =>
+                        {
+                            ShowAiText = "AI对话：关闭";
+                            CustomRibbon?.InvalidateControl("ShowAI");
+                            GlobalValue.SaveValue("ShowAIText", ShowAiText);
+                        }
+                    );
                     };
                 }
             }
@@ -3019,9 +2951,38 @@ public partial class NumDesAddIn
         }
     }
 
+    private static async Task ConfirmCtpClosedAsync(
+        CustomTaskPane pane,
+        string logMessage,
+        System.Action onClosed
+    )
+    {
+        await Task.Delay(2000);
+        try
+        {
+            if (pane.Visible)
+                return;
+        }
+        catch (Exception ex)
+        {
+            PluginLog.Verbose($"[CTP] close check skipped: {ex.Message}");
+            return;
+        }
+        ExcelAsyncUtil.QueueAsMacro(() =>
+        {
+            PluginLog.Verbose(logMessage);
+            onClosed();
+        });
+    }
+
+    private static async void StartConfirmCtpClosed(
+        CustomTaskPane pane,
+        string logMessage,
+        System.Action onClosed
+    ) => await ConfirmCtpClosedAsync(pane, logMessage, onClosed);
+
     private static string WpfInputBox(string prompt, string title)
     {
-        CrosslightController.Pause();
         try
         {
             var dlg = new UI.InputBoxDialog(prompt, title);
