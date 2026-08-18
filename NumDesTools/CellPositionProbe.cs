@@ -167,7 +167,7 @@ internal static class CellPositionProbe
 
             // rect 已是纯值类型，可安全跨线程传递
             var rectCopy = rect;
-            Task.Run(() => FlashCellBorder(rectCopy));
+            _ = Task.Run(() => FlashCellBorder(rectCopy));
 
             var zoom = (int)(double)app.ActiveWindow.Zoom;
             return $"{rect.Left},{rect.Top},{rect.Width},{rect.Height} [{cell.Address[false, false]} zoom={zoom}%]";
