@@ -2467,7 +2467,10 @@ public static class PubMetToExcelFunc
         {
             var excelsRoot = ExcelIndex.ExcelIndexManager.Instance.ExcelsRoot;
             var idx = ExcelIndex.ExcelIndexManager.Instance.Index;
-            if (excelsRoot != null && idx != null)
+            if (excelsRoot != null
+                && idx != null
+                && files.Length > 0
+                && ExcelIndex.ExcelIndexManager.Instance.IsCurrentProject(files[0]))
             {
                 PluginLog.Write($"[ExcelIndex] ModelSearch index hit: {findValues.Count} ids");
                 return BuildModelResultFromIndex(findValues, idx, excelsRoot);
