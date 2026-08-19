@@ -385,6 +385,10 @@ session-report-*.html
 
 # claude_token_stats 运行时生成（每天刷新模型价格），不提交
 NumDesTools.Tests/model_prices.json
+NumDesTools.Tests/aihot_leaderboard.json
+tools/lazymodel/aihot_leaderboard.json
+NumDesTools.Tests/lazytoken_stats.json
+NumDesTools.Tests/token_stats_history.json
 
 # Rust cargo 构建产物
 target/
