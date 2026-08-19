@@ -7,7 +7,7 @@
       "role": "primary",
       "kind": "general",
       "model": "gpt-5.6-luna",
-      "effort": "low"
+      "effort": "medium"
     },
     {
       "harness": "opencode",
@@ -23,7 +23,7 @@
       "role": "primary",
       "kind": "general",
       "model": "gpt-5.6-luna",
-      "effort": "low"
+      "effort": "medium"
     },
     {
       "harness": "opencode",
@@ -39,7 +39,7 @@
       "role": "primary",
       "kind": "general",
       "model": "gpt-5.6-luna",
-      "effort": "low"
+      "effort": "medium"
     },
     {
       "harness": "opencode",
@@ -55,7 +55,7 @@
       "role": "primary",
       "kind": "general",
       "model": "gpt-5.6-luna",
-      "effort": "low"
+      "effort": "medium"
     },
     {
       "harness": "opencode",
@@ -71,7 +71,7 @@
       "role": "primary",
       "kind": "general",
       "model": "gpt-5.6-luna",
-      "effort": "low"
+      "effort": "medium"
     },
     {
       "harness": "opencode",
@@ -87,7 +87,7 @@
       "role": "agents.hephaestus",
       "kind": "general",
       "model": "gpt-5.6-terra",
-      "effort": "low"
+      "effort": "medium"
     },
     {
       "harness": "oh-my-openagent",
@@ -95,7 +95,7 @@
       "role": "agents.oracle",
       "kind": "general",
       "model": "gpt-5.6-sol",
-      "effort": "low"
+      "effort": "xhigh"
     },
     {
       "harness": "oh-my-openagent",
@@ -127,7 +127,7 @@
       "role": "agents.prometheus",
       "kind": "general",
       "model": "gpt-5.6-luna",
-      "effort": "low"
+      "effort": "high"
     },
     {
       "harness": "oh-my-openagent",
@@ -143,7 +143,7 @@
       "role": "agents.momus",
       "kind": "general",
       "model": "gpt-5.6-sol",
-      "effort": "low"
+      "effort": "high"
     },
     {
       "harness": "oh-my-openagent",
@@ -151,7 +151,7 @@
       "role": "agents.atlas",
       "kind": "general",
       "model": "gpt-5.6-luna",
-      "effort": "low"
+      "effort": "medium"
     },
     {
       "harness": "oh-my-openagent",
@@ -159,7 +159,7 @@
       "role": "agents.sisyphus-junior",
       "kind": "general",
       "model": "gpt-5.6-terra",
-      "effort": "low"
+      "effort": "medium"
     },
     {
       "harness": "oh-my-openagent",
@@ -175,7 +175,7 @@
       "role": "categories.ultrabrain",
       "kind": "general",
       "model": "gpt-5.6-sol",
-      "effort": "low"
+      "effort": "xhigh"
     },
     {
       "harness": "oh-my-openagent",
@@ -183,7 +183,7 @@
       "role": "categories.deep",
       "kind": "general",
       "model": "gpt-5.6-luna",
-      "effort": "low"
+      "effort": "high"
     },
     {
       "harness": "oh-my-openagent",
@@ -215,7 +215,7 @@
       "role": "categories.unspecified-high",
       "kind": "general",
       "model": "gpt-5.6-luna",
-      "effort": "low"
+      "effort": "high"
     },
     {
       "harness": "oh-my-openagent",
@@ -231,7 +231,7 @@
       "role": "agents.oracle",
       "kind": "general",
       "model": "gpt-5.6-sol",
-      "effort": "low"
+      "effort": "xhigh"
     },
     {
       "harness": "oh-my-openagent",
@@ -327,7 +327,7 @@
       "role": "delegation.model",
       "kind": "general",
       "model": "gpt-5.6-luna",
-      "effort": "low"
+      "effort": "medium"
     },
     {
       "harness": "hermes",
