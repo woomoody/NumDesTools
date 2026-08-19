@@ -22,6 +22,20 @@ pub struct Catalog {
     pub models: Vec<String>,
     #[serde(default)]
     pub info: std::collections::HashMap<String, ModelInfo>,
+    #[serde(default)]
+    pub aihot: std::collections::HashMap<String, AihotInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AihotInfo {
+    pub name: String,
+    pub provider: String,
+    pub score: Option<f64>,
+    pub coverage_percent: Option<f64>,
+    pub input_cny_per_million: Option<f64>,
+    pub output_cny_per_million: Option<f64>,
+    pub pricing_source: String,
+    pub leaderboard_url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -73,6 +87,7 @@ pub fn load_catalog() -> Catalog {
             date: String::new(),
             models: vec![],
             info: std::collections::HashMap::new(),
+            aihot: std::collections::HashMap::new(),
         })
 }
 
@@ -114,9 +129,128 @@ pub fn model_info(_catalog: &Catalog, model: &str) -> ModelInfo {
     info
 }
 
+pub fn aihot_info(catalog: &Catalog, model: &str) -> AihotInfo {
+    let normalized = model
+        .replace("litellm/", "")
+        .replace('/', "-")
+        .to_lowercase();
+    catalog
+        .aihot
+        .iter()
+        .find(|(key, _)| {
+            normalized == **key
+                || normalized.starts_with(&format!("{}-", key))
+                || key.starts_with(&normalized)
+        })
+        .map(|(_, value)| value.clone())
+        .unwrap_or_default()
+}
+
+pub fn refresh_aihot(catalog: &mut Catalog) -> Option<String> {
+    let today = Local::now().format("%Y-%m-%d").to_string();
+    let cache = root().join("aihot_leaderboard.json");
+    if catalog.date == today && !catalog.aihot.is_empty() {
+        return None;
+    }
+    if let Ok(text) = fs::read_to_string(&cache) {
+        if let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) {
+            if value["date"].as_str() == Some(&today) {
+                if let Some(map) = value["models"].as_object() {
+                    catalog.aihot = map
+                        .iter()
+                        .filter_map(|(k, v)| {
+                            serde_json::from_value(v.clone())
+                                .ok()
+                                .map(|x| (k.clone(), x))
+                        })
+                        .collect();
+                    return None;
+                }
+            }
+        }
+    }
+    let response = match ureq::get("https://aihot.virxact.com/leaderboard")
+        .set("User-Agent", "lazymodel/0.1")
+        .call()
+    {
+        Ok(x) => x,
+        Err(e) => return Some(format!("AIHOT 请求失败：{e}")),
+    };
+    let page = match response.into_string() {
+        Ok(x) => x,
+        Err(e) => return Some(format!("AIHOT 读取失败：{e}")),
+    };
+    let row_re = regex::Regex::new(
+        r#"(?s)<a class="lb-row"[^>]*href="(/leaderboard/[^\"]+)"[^>]*>(.*?)</a>"#,
+    )
+    .unwrap();
+    let mut models = std::collections::HashMap::new();
+    for row in row_re.captures_iter(&page) {
+        let body = row.get(2).unwrap().as_str();
+        let Some(model) = regex::Regex::new(r#"(?s)<strong>(.*?)</strong>\s*<small>(.*?)</small>"#)
+            .unwrap()
+            .captures(body)
+        else {
+            continue;
+        };
+        let name = regex::Regex::new(r"<[^>]+>")
+            .unwrap()
+            .replace_all(model.get(1).unwrap().as_str(), "")
+            .trim()
+            .to_string();
+        let key = row
+            .get(1)
+            .unwrap()
+            .as_str()
+            .rsplit('/')
+            .next()
+            .unwrap_or_default()
+            .to_string();
+        let number = |class_name: &str| -> Option<f64> {
+            let re = regex::Regex::new(&format!(
+                r#"(?s)<span class="[^"]*{}[^"]*"[^>]*>(.*?)</span>"#,
+                class_name
+            ))
+            .ok()?;
+            let cap = re.captures(body)?;
+            regex::Regex::new(r"\d+(?:\.\d+)?")
+                .ok()?
+                .find(cap.get(1)?.as_str())?
+                .as_str()
+                .parse()
+                .ok()
+        };
+        models.insert(
+            key,
+            AihotInfo {
+                name,
+                provider: model.get(2).unwrap().as_str().to_string(),
+                score: number("lb-score"),
+                coverage_percent: number("lb-completeness"),
+                input_cny_per_million: number("lb-input-price"),
+                output_cny_per_million: number("lb-output-price"),
+                pricing_source: "AIHOT leaderboard".into(),
+                leaderboard_url: format!(
+                    "https://aihot.virxact.com{}",
+                    row.get(1).unwrap().as_str()
+                ),
+            },
+        );
+    }
+    if models.is_empty() {
+        return Some("AIHOT 榜单没有解析到模型".into());
+    }
+    catalog.aihot = models.clone();
+    let _ = fs::write(
+        cache,
+        serde_json::json!({"date": today, "models": models}).to_string(),
+    );
+    None
+}
 pub fn refresh_catalog() -> Catalog {
     let mut c = load_catalog();
     let today = Local::now().format("%Y-%m-%d").to_string();
+    let _ = refresh_aihot(&mut c);
     if c.date == today && !c.models.is_empty() {
         return c;
     }
@@ -141,6 +275,7 @@ pub fn refresh_catalog() -> Catalog {
                     date: today,
                     models: m,
                     info: std::collections::HashMap::new(),
+                    aihot: c.aihot,
                 };
                 let _ = fs::write(
                     catalog_path(),

@@ -121,21 +121,28 @@ fn strength(model: &str) -> String {
     "通用任务".into()
 }
 
-fn info(c: &Catalog, m: &str) -> (String, String, String) {
+fn info(c: &Catalog, m: &str) -> (String, String, String, String) {
     let i = engine::model_info(c, m);
-    if i.tier != "-" {
-        return (i.tier.clone(), i.csharp, cost_label(&i.tier));
-    }
-    let tier = if m.starts_with("deepseek") || m.contains("flash-lite") || m.contains("mini") {
-        "便宜"
-    } else if m.starts_with("kilo-auto") {
-        "便宜"
-    } else if m.starts_with("gemini") {
-        "中"
+    let a = engine::aihot_info(c, m);
+    let local_tier = if i.tier != "-" {
+        i.tier.clone()
     } else {
-        "-"
+        "-".into()
     };
-    (tier.to_string(), "-".into(), cost_label(tier))
+    let aihot = a
+        .score
+        .map(|v| format!("{v:.1}"))
+        .unwrap_or_else(|| "-".into());
+    let cny = match (a.input_cny_per_million, a.output_cny_per_million) {
+        (Some(input), Some(output)) => format!("¥{input:.2}/{output:.2}"),
+        _ => "-".into(),
+    };
+    (
+        local_tier,
+        i.csharp,
+        cost_label(&i.tier),
+        format!("{} / {}", aihot, cny),
+    )
 }
 
 struct ModelPicker {
@@ -167,7 +174,7 @@ fn loop_ui(
                 .iter()
                 .enumerate()
                 .map(|(i, r)| {
-                    let (tier, csharp, price) = info(catalog, &r.model);
+                    let (tier, csharp, price, aihot) = info(catalog, &r.model);
                     Row::new(vec![
                         Cell::from(if marked.contains(&i) { "[x]" } else { "[ ]" }),
                         Cell::from(r.harness.clone()),
@@ -177,6 +184,7 @@ fn loop_ui(
                         Cell::from(r.effort.clone()),
                         Cell::from(format!("{} / {}", tier, csharp)),
                         Cell::from(price),
+                        Cell::from(aihot),
                         Cell::from(strength(&r.model)),
                         Cell::from(target(&r.scope, &r.harness)),
                     ])
@@ -195,6 +203,7 @@ fn loop_ui(
                     Constraint::Length(8),
                     Constraint::Length(12),
                     Constraint::Length(14),
+                    Constraint::Length(18),
                     Constraint::Min(28),
                     Constraint::Min(35),
                 ],
@@ -209,7 +218,7 @@ fn loop_ui(
                     "Effort",
                     "性能",
                     "价格",
-                    "定位/擅长",
+                    "AIHOT分/¥价",
                     "目标文件",
                 ])
                 .style(
@@ -343,12 +352,13 @@ fn render_model_picker(f: &mut Frame, size: Rect, p: &ModelPicker, c: &Catalog) 
         .models
         .iter()
         .map(|m| {
-            let (tier, score, price) = info(c, m);
+            let (tier, score, price, aihot) = info(c, m);
             Row::new(vec![
                 Cell::from(m.clone()),
                 Cell::from(tier),
                 Cell::from(score),
                 Cell::from(price),
+                Cell::from(aihot),
                 Cell::from(strength(m)),
             ])
         })
@@ -358,14 +368,13 @@ fn render_model_picker(f: &mut Frame, size: Rect, p: &ModelPicker, c: &Catalog) 
     let t = Table::new(
         rows,
         [
-            Constraint::Length(30),
-            Constraint::Length(10),
-            Constraint::Length(10),
             Constraint::Length(20),
+            Constraint::Length(18),
+            Constraint::Min(30),
         ],
     )
     .header(
-        Row::new(["模型", "档位", "C#性能", "价格", "定位/擅长"]).style(
+        Row::new(["模型", "档位", "C#性能", "价格", "AIHOT分/¥价", "定位/擅长"]).style(
             Style::default()
                 .fg(Color::Yellow)
                 .add_modifier(Modifier::BOLD),

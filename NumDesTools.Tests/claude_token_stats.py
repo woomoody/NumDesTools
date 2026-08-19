@@ -7,6 +7,7 @@ import os, json, sys, subprocess, webbrowser, argparse, sqlite3
 from collections import defaultdict
 from datetime import datetime, date, timedelta
 from token_model_catalog import load_api_key_from_hermes_config, sync_daily_catalog
+from aihot_leaderboard import find_reference, sync_leaderboard
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -34,6 +35,7 @@ else:
 _PRICE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model_prices.json')
 _SNAP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'token_stats_history.json')
 _MODEL_CATALOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'litellm_model_catalog.json')
+_AIHOT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'aihot_leaderboard.json')
 
 def _sync_litellm_model_catalog():
     """Refresh the gateway model list once per day before calculating prices."""
@@ -92,6 +94,11 @@ def _load_prices():
 
 MODEL_PRICES, _PRICE_FALLBACK = _load_prices()
 _LITELLM_MODELS = _sync_litellm_model_catalog()
+_AIHOT_MODELS, _AIHOT_REFRESHED, _AIHOT_WARNING = sync_leaderboard(_AIHOT_FILE)
+if _AIHOT_REFRESHED:
+    print(f'  AIHOT leaderboard refreshed: {len(_AIHOT_MODELS)} models')
+if _AIHOT_WARNING:
+    print(f'  [warn] {_AIHOT_WARNING}')
 if _LITELLM_MODELS:
     known_prefixes = {p['prefix'].lower() for p in MODEL_PRICES}
     for model_id in _LITELLM_MODELS:
@@ -109,6 +116,10 @@ def _model_price(model: str):
 def calc_cost(inp, out, cr, cw, model=''):
     pi, po, pcr, pcw = _model_price(model)
     return (inp * pi + out * po + cr * pcr + cw * pcw) / 1_000_000
+
+def _aihot_reference(model: str):
+    """Return current AIHOT CNY input/output reference; never changes USD cost."""
+    return find_reference(_AIHOT_MODELS, model)
 
 def _load_snap():
     """读完整快照（含 frozen_date）。"""
@@ -642,12 +653,27 @@ _daily_plain = {d: {'input': v['input'], 'output': v['output'], 'cache_read': v[
 daily_js = _json.dumps(_daily_plain)
 _today_iso = today.isoformat()
 _model_price_map = {m: dict(zip(['in','out','cr','cw'], _model_price(m))) for m in {mm for _md in _model_daily_plain.values() for mm in _md}}
+_aihot_price_map = {}
+for _model in {mm for _md in _model_daily_plain.values() for mm in _md}:
+    _ref = _aihot_reference(_model)
+    if _ref:
+        _aihot_price_map[_model] = {
+            'input_cny': _ref.get('input_cny_per_million'),
+            'output_cny': _ref.get('output_cny_per_million'),
+            'score': _ref.get('score'),
+            'coverage': _ref.get('coverage_percent'),
+            'source': _ref.get('pricing_source'),
+            'verified_at': _ref.get('pricing_source', '').split('核验于 ')[-1].split('；')[0],
+            'url': _ref.get('leaderboard_url'),
+        }
 model_price_js = _json.dumps(_model_price_map)
+aihot_price_js = _json.dumps(_aihot_price_map, ensure_ascii=False)
 _all_dates_sorted = sorted(_model_daily_plain.keys())
 _date_min = _all_dates_sorted[0] if _all_dates_sorted else today.isoformat()
 _date_max = _all_dates_sorted[-1] if _all_dates_sorted else today.isoformat()
 model_date_js = r'''const MODEL_DAILY = ''' + model_daily_js + r''';
 const MODEL_PRICE = ''' + model_price_js + r''';
+const AIHOT_PRICE = ''' + aihot_price_js + r''';
 const DAILY = ''' + daily_js + r''';
 const TODAY = "''' + _today_iso + r'''";
 const DATE_MIN = "''' + _date_min + r'''";
@@ -663,7 +689,7 @@ function renderMdTable(start, end, sortBy){
   var arr=Object.keys(agg).map(function(m){var x=agg[m];x.m=m;x.quota=x.input+x.output+x.cache_read+x.cache_write;return x;}).filter(function(x){return x.quota>0;});
   arr.sort(function(a,b){return (b[sortBy]||0)-(a[sortBy]||0);});
   var tbody=document.getElementById('mdTbody');
-  tbody.innerHTML = arr.length===0 ? '<tr><td colspan="8" style="text-align:center;color:#666;">该时间段无数据</td></tr>' : arr.map(function(x){ return '<tr><td>'+x.m+'</td><td>'+(MODEL_PRICE[x.m]?(MODEL_PRICE[x.m].in.toFixed(2)+'/'+MODEL_PRICE[x.m].out.toFixed(2)):'-')+'</td><td>'+fmtN(x.input)+'</td><td>'+fmtN(x.output)+'</td><td>'+fmtN(x.cache_read)+'</td><td>'+fmtN(x.cache_write)+'</td><td>'+fmtN(x.quota)+'</td><td>$'+x.cost.toFixed(2)+'</td></tr>'; }).join('');
+  tbody.innerHTML = arr.length===0 ? '<tr><td colspan="10" style="text-align:center;color:#666;">该时间段无数据</td></tr>' : arr.map(function(x){ var a=AIHOT_PRICE[x.m]; return '<tr><td>'+x.m+'</td><td>'+(MODEL_PRICE[x.m]?(MODEL_PRICE[x.m].in.toFixed(2)+'/'+MODEL_PRICE[x.m].out.toFixed(2)):'-')+'</td><td>'+(a?(a.input_cny?.toFixed(2)+'/'+a.output_cny?.toFixed(2)):'-')+'</td><td>'+(a?(a.score??'-'):'-')+'</td><td>'+(a?(a.coverage?.toFixed(1)+'%'):'-')+'</td><td>'+fmtN(x.input)+'</td><td>'+fmtN(x.output)+'</td><td>'+fmtN(x.cache_read)+'</td><td>'+fmtN(x.cache_write)+'</td><td>$'+x.cost.toFixed(2)+'</td></tr>'; }).join('');
   document.getElementById('mdTitle').textContent='📅 '+start+' ~ '+end+' · 按模型消耗 Token';
   if(mdChart)mdChart.destroy();
   mdChart=new Chart(document.getElementById('mdChart'),{type:'bar',data:{labels:arr.map(function(x){return x.m;}),datasets:[{label:'费用 USD',data:arr.map(function(x){return +x.cost.toFixed(2);}),backgroundColor:'rgba(245,166,35,0.7)'}]},options:{responsive:true,plugins:{legend:{labels:{color:'#aaa'}}},scales:{x:{ticks:{color:tickColor,maxRotation:45},grid:{color:gridColor}},y:{ticks:{color:tickColor,callback:function(v){return '$'+v;}},grid:{color:gridColor}}}}});
@@ -798,7 +824,7 @@ html = f'''<!DOCTYPE html>
   </div>
   <canvas id="mdChart" height="60"></canvas>
   <table class="data">
-    <thead><tr><th>模型</th><th>价格 $/MTok (in/out)</th><th>input</th><th>output</th><th>缓存读</th><th>缓存写</th><th>配额消耗(全)</th><th>费用USD</th></tr></thead>
+    <thead><tr><th>模型</th><th>现有 USD/MTok (in/out)</th><th>AIHOT ¥/MTok (in/out)</th><th>AIHOT分</th><th>评测完整度</th><th>input</th><th>output</th><th>缓存读</th><th>缓存写</th><th>费用USD</th></tr></thead>
     <tbody id="mdTbody"></tbody>
   </table>
 </div>
@@ -845,7 +871,9 @@ html = f'''<!DOCTYPE html>
   口径说明：<br>
   · 实计(in+out) = input + output，纯生成 token 量<br>
   · 配额消耗(全) = input + output + 缓存读 + 缓存写<br>
-  · 费用 USD 按当天价格文件计算（model_prices.json），每天刷新一次<br>
+  · 费用 USD 按当天 canonical 价格文件计算（model_prices.json），每天刷新一次<br>
+  · AIHOT ¥/MTok、共识分、评测完整度仅作为当前公开参考，不改变 USD 或缓存计费口径<br>
+  · AIHOT 价格来源和核验日期来自 leaderboard；刷新失败继续使用上一次缓存<br>
   · 增减模型价格：编辑 claude_token_stats.py 中 _DEFAULT_PRICES，次日自动生效
 </div>
 
