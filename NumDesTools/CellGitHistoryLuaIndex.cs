@@ -26,8 +26,9 @@ internal sealed record LuaHistoryEvent(
 /// 且一次覆盖全部历史（不受 xlsx 500 提交窗口限制）。
 ///
 /// 映射关系（导出机制 ExcelExporter/LuaCodeGenerator 的逆过程）：
-///   主表 {表名}.lua.txt：拆表时只存 [行键] = _sub_table_id 索引；非拆表则 [行键] = {...} 全量。
-///   子表 {表名}_{_sub_table_id}.lua.txt：该行键的整行数据，每行一条。
+///   非 $ 工作簿：主表 {工作簿名}.lua.txt；含 $ 工作簿：主表 {Sheet名}.lua.txt。
+///   拆表时主表只存 [行键] = _sub_table_id 索引；非拆表则 [行键] = {...} 全量。
+///   子表 {导出表名}_{_sub_table_id}.lua.txt：该行键的整行数据，每行一条。
 ///
 /// 已知限制（设计取舍）：lua 是"导表快照"，滞后于 xlsx 的未导表改动。
 /// 因此调用方只把本结果用于"较早历史"，最近改动仍以 xlsx 扫描为准（见 QueryHistoryStreaming）。
@@ -40,6 +41,7 @@ internal static class CellGitHistoryLuaIndex
     /// </summary>
     public static List<LuaHistoryEvent>? TryQueryHistory(
         string absFilePath,
+        string sheetName,
         string rowKey,
         string colName,
         out string reason
@@ -55,24 +57,38 @@ internal static class CellGitHistoryLuaIndex
                 return null;
             }
 
-            var baseName = Path.GetFileNameWithoutExtension(absFilePath);
+            var workbookBaseName = Path.GetFileNameWithoutExtension(absFilePath);
+            var luaBaseName = GetExportLuaBaseName(workbookBaseName, sheetName);
+            if (luaBaseName is null)
+            {
+                reason =
+                    $"含 $ 工作簿缺少有效 Sheet 名，无法确定导出 lua 路径: workbook={workbookBaseName}, sheet={sheetName}";
+                return null;
+            }
+
             var mainLua = Path.Combine(
                 unityRoot,
                 "Assets",
                 "LuaScripts",
                 "Tables",
-                $"{baseName}.lua.txt"
+                $"{luaBaseName}.lua.txt"
             );
             if (!File.Exists(mainLua))
             {
-                reason = $"主表 lua 不存在: {Path.GetFileName(mainLua)}";
+                reason =
+                    $"主表 lua 不存在: {mainLua} (workbook={workbookBaseName}, sheet={sheetName}, exportName={luaBaseName})";
                 return null;
             }
 
-            var targetFile = ResolveTargetLuaFile(mainLua, baseName, rowKey);
+            var targetFile = ResolveTargetLuaFile(
+                mainLua,
+                luaBaseName,
+                rowKey,
+                out var targetReason
+            );
             if (targetFile == null)
             {
-                reason = "该行未导出到 lua（或非标准结构）";
+                reason = targetReason;
                 return null;
             }
 
@@ -137,8 +153,14 @@ internal static class CellGitHistoryLuaIndex
 
     // ── 目标文件定位（主表索引 → 分片）────────────────────────────────────────
 
-    private static string? ResolveTargetLuaFile(string mainLua, string baseName, string rowKey)
+    internal static string? ResolveTargetLuaFile(
+        string mainLua,
+        string baseName,
+        string rowKey,
+        out string reason
+    )
     {
+        reason = "";
         var dir = Path.GetDirectoryName(mainLua)!;
         foreach (var line in File.ReadLines(mainLua))
         {
@@ -150,17 +172,31 @@ internal static class CellGitHistoryLuaIndex
             if (m.Success)
             {
                 var shard = Path.Combine(dir, $"{baseName}_{m.Groups[1].Value}.lua.txt");
-                return File.Exists(shard) ? shard : null;
+                if (File.Exists(shard))
+                    return shard;
+
+                reason = $"主表行 {rowKey} 指向的子表 lua 不存在: {shard}";
+                return null;
             }
 
             // 非拆表内联行：[行键] = { ... } → 数据就在主表
             if (line.Contains("= {", StringComparison.Ordinal))
                 return mainLua;
 
+            reason = $"主表行 {rowKey} 不是内联数据或数字子表索引: {mainLua}";
             return null;
         }
+
+        reason = $"主表中未找到行 {rowKey}: {mainLua}";
         return null;
     }
+
+    internal static string? GetExportLuaBaseName(string workbookBaseName, string sheetName) =>
+        workbookBaseName.Contains('$', StringComparison.Ordinal)
+            ? string.IsNullOrWhiteSpace(sheetName)
+                ? null
+                : sheetName
+            : workbookBaseName;
 
     // ── 行/字段解析 ───────────────────────────────────────────────────────────
 

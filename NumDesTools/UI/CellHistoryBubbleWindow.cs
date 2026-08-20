@@ -82,7 +82,7 @@ public sealed class CellHistoryBubbleWindow : Window
         Loaded += (_, _) => Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this);
     }
 
-    public bool IsActiveBubble => false;
+    public bool IsActiveBubble => IsVisible;
 
     internal void SetEntries(List<CellHistoryEntry> entries)
     {

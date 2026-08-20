@@ -56,6 +56,7 @@ public sealed class CellGitHistoryTip
     internal void ShowBubble(List<CellHistoryEntry> results)
     {
         CellHistoryBubbleWindow.EnsureWpfInitialized();
+        _scrollTimer.Stop();
         _window.SetEntries(results);
         if (!_window.IsVisible)
             _window.Show();
@@ -78,6 +79,7 @@ public sealed class CellGitHistoryTip
     internal void ShowBubble(string text)
     {
         CellHistoryBubbleWindow.EnsureWpfInitialized();
+        _scrollTimer.Stop();
         _window.SetMessage(text);
         if (!_window.IsVisible)
             _window.Show();
@@ -114,16 +116,8 @@ public sealed class CellGitHistoryTip
 
     private void OnScrollCheck(object? sender, EventArgs e)
     {
-        try
-        {
-            var win = AppServices.App.ActiveWindow;
-            if (win.ScrollRow != _lastScrollRow || win.ScrollColumn != _lastScrollCol)
-                ClearBubble();
-        }
-        catch
-        {
-            ClearBubble();
-        }
+        // 历史气泡由“选中新单元格”或显式关闭控制，不因滚动/焦点切换自动消失。
+        // 保留 timer 仅兼容既有生命周期；不再主动 ClearBubble。
     }
 
     public static void DisposeInstance()
@@ -396,6 +390,7 @@ internal static class CellGitHistoryService
             // 这里只补更早的历史；按（旧值,新值）对去重，避免与阶段1已找到的变更重复计数。
             var luaEvents = CellGitHistoryLuaIndex.TryQueryHistory(
                 absFilePath,
+                sheetName,
                 rowKey,
                 colName,
                 out var luaReason
@@ -638,9 +633,10 @@ internal static class CellGitHistoryService
         string msg,
         string? oldVal,
         string? newVal
-    ) => !string.IsNullOrEmpty(sha)
-        ? sha
-        : string.Join('\u0001', date, author, msg, NormVal(oldVal), NormVal(newVal));
+    ) =>
+        !string.IsNullOrEmpty(sha)
+            ? sha
+            : string.Join('\u0001', date, author, msg, NormVal(oldVal), NormVal(newVal));
 
     private static List<(string sha, string date, string author, string msg)> GetRecentCommits(
         string absFilePath,
@@ -830,10 +826,19 @@ internal static class CellGitHistoryService
         using var sub = xr.ReadSubtree();
         while (sub.Read())
         {
-            if (sub.NodeType == System.Xml.XmlNodeType.Element && (sub.LocalName == "v" || sub.LocalName == "t"))
+            if (
+                sub.NodeType == System.Xml.XmlNodeType.Element
+                && (sub.LocalName == "v" || sub.LocalName == "t")
+            )
                 v = sub.ReadElementContentAsString();
         }
-        if (t == "s" && v != null && int.TryParse(v, out var si) && si >= 0 && si < sharedStrings.Count)
+        if (
+            t == "s"
+            && v != null
+            && int.TryParse(v, out var si)
+            && si >= 0
+            && si < sharedStrings.Count
+        )
             return sharedStrings[si];
         return v;
     }
@@ -879,7 +884,11 @@ internal static class CellGitHistoryService
                 if (
                     xr.NodeType == System.Xml.XmlNodeType.Element
                     && xr.LocalName == "sheet"
-                    && string.Equals(xr.GetAttribute("name"), sheetName, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(
+                        xr.GetAttribute("name"),
+                        sheetName,
+                        StringComparison.OrdinalIgnoreCase
+                    )
                 )
                 {
                     rid = xr.GetAttribute(
@@ -939,9 +948,7 @@ internal static class CellGitHistoryService
     }
 
     // sha → 所在分支（首个非 HEAD 的 refname:short）。失败/无返回空串。
-    private static readonly Dictionary<string, string> _branchCache = new(
-        StringComparer.Ordinal
-    );
+    private static readonly Dictionary<string, string> _branchCache = new(StringComparer.Ordinal);
 
     /// <summary>
     /// 查询某 commit 所在分支（取首个不含 HEAD 的短引用名）。
@@ -956,8 +963,7 @@ internal static class CellGitHistoryService
         var branch = "";
         try
         {
-            var args =
-                $"-C \"{gitRoot}\" branch -a --contains {sha} --format=%(refname:short)";
+            var args = $"-C \"{gitRoot}\" branch -a --contains {sha} --format=%(refname:short)";
             var output = RunGit(gitRoot, args);
             foreach (var line in output.Split('\n'))
             {
