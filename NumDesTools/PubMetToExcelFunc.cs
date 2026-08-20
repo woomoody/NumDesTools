@@ -1978,9 +1978,9 @@ public static class PubMetToExcelFunc
         var filesCollection = new SelfExcelFileCollector(rootPath);
         var files = filesCollection.GetAllExcelFilesPath();
 
-        var targetList = new List<(string, string, int, int)>();
+        var targetList = new ConcurrentBag<(string, string, int, int)>();
 
-        var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+        var options = new ParallelOptions { MaxDegreeOfParallelism = 2 };
 
         Action<string> processFile = file =>
         {
@@ -2060,23 +2060,8 @@ public static class PubMetToExcelFunc
                                 }
                             }
 
-                            // 整理格式
                             if (isWrite)
-                            {
-                                var range = sheet.Cells[sheet.Dimension.Address];
-                                // 设置字体格式
-                                range.Style.Font.Name = "微软雅黑";
-                                range.Style.Font.Size = 10;
-
-                                // 设置对齐方式
-                                range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
-                                range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-
-                                targetList.Add((file, sheet.Name + "：整理格式", 2, 2));
-
-                                // 检测是否有多个Sheet被选中
                                 sheet.View.TabSelected = false;
-                            }
                         }
                         if (isWrite)
                         {
@@ -2107,7 +2092,7 @@ public static class PubMetToExcelFunc
                 processFile(file);
             }
         }
-        return targetList;
+        return targetList.ToList();
     }
 
     //MiniExcel查询：全局查询
@@ -2124,10 +2109,12 @@ public static class PubMetToExcelFunc
         var idx = ExcelIndex.ExcelIndexManager.Instance.Index;
 
         // 内存索引重建中但磁盘有旧索引时，* 搜索用磁盘缓存，避免回落全文件扫描
-        if (idx == null
+        if (
+            idx == null
             && excelsRoot != null
             && ExcelIndex.ExcelIndexManager.Instance.IsCurrentProject(rootPath)
-            && findValue.Contains('*'))
+            && findValue.Contains('*')
+        )
         {
             var jsonPath = ExcelIndex.ExcelSearchIndex.GetIndexPath(excelsRoot);
             var diskIdx = ExcelIndex.ExcelSearchIndex.LoadFromDisk(jsonPath);
@@ -2140,7 +2127,11 @@ public static class PubMetToExcelFunc
             }
         }
 
-        if (idx != null && excelsRoot != null && ExcelIndex.ExcelIndexManager.Instance.IsCurrentProject(rootPath))
+        if (
+            idx != null
+            && excelsRoot != null
+            && ExcelIndex.ExcelIndexManager.Instance.IsCurrentProject(rootPath)
+        )
         {
             if (!findValue.Contains('*'))
             {
@@ -2467,10 +2458,12 @@ public static class PubMetToExcelFunc
         {
             var excelsRoot = ExcelIndex.ExcelIndexManager.Instance.ExcelsRoot;
             var idx = ExcelIndex.ExcelIndexManager.Instance.Index;
-            if (excelsRoot != null
+            if (
+                excelsRoot != null
                 && idx != null
                 && files.Length > 0
-                && ExcelIndex.ExcelIndexManager.Instance.IsCurrentProject(files[0]))
+                && ExcelIndex.ExcelIndexManager.Instance.IsCurrentProject(files[0])
+            )
             {
                 PluginLog.Write($"[ExcelIndex] ModelSearch index hit: {findValues.Count} ids");
                 return BuildModelResultFromIndex(findValues, idx, excelsRoot);

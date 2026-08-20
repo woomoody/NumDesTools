@@ -1,12 +1,6 @@
 namespace NumDesTools;
 
-
 using System.Collections.Concurrent;
-using NumDesTools.AutoInsert;
-using NumDesTools.Activity;
-using NumDesTools.Battle;
-using NumDesTools.Export;
-using NumDesTools.Sync;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,11 +8,16 @@ using MiniExcelLibs;
 using MiniExcelLibs.OpenXml;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
+using NumDesTools.Activity;
 using NumDesTools.Advance;
+using NumDesTools.AutoInsert;
+using NumDesTools.Battle;
 using NumDesTools.Com;
 using NumDesTools.Config;
 using NumDesTools.ConflictResolver;
 using NumDesTools.ExcelToLua;
+using NumDesTools.Export;
+using NumDesTools.Sync;
 using NumDesTools.UI;
 using OfficeOpenXml;
 using Button = System.Windows.Forms.Button;
@@ -32,7 +31,7 @@ using TabControl = System.Windows.Forms.TabControl;
 
 public partial class NumDesAddIn
 {
-    #pragma warning disable CA1416
+#pragma warning disable CA1416
     #region Ribbon点击命令
 
 
@@ -1585,34 +1584,33 @@ public partial class NumDesAddIn
             .ToList();
 
         App.StatusBar = $"正在扫描 {files.Length} 个文件...";
-        var merged = await Task.Run(() => PubMetToExcelFunc.SearchModelKeyMiniExcelMulti(ids, files, true));
+        var merged = await Task.Run(() =>
+            PubMetToExcelFunc.SearchModelKeyMiniExcelMulti(ids, files, true)
+        );
         ExcelAsyncUtil.QueueAsMacro(() =>
         {
             if (App.ActiveWorkbook?.FullName != workbookFullName)
                 return;
             var targetList = merged
-                        .ToDictionary(
-                            kv => kv.Key,
-                            kv =>
-                            {
-                                var sorted = kv
-                                    .Value.OrderBy(v => v, StringComparer.Ordinal)
-                                    .ToList();
-                                return sorted.Count > 1
-                                    ? new List<string> { sorted.First(), sorted.Last() }
-                                    : new List<string> { sorted.First(), sorted.First() };
-                            },
-                            StringComparer.Ordinal
-                        )
-                        .OrderBy(x => x.Key, StringComparer.Ordinal)
-                        .ToDictionary(x => x.Key, x => x.Value);
+                .ToDictionary(
+                    kv => kv.Key,
+                    kv =>
+                    {
+                        var sorted = kv.Value.OrderBy(v => v, StringComparer.Ordinal).ToList();
+                        return sorted.Count > 1
+                            ? new List<string> { sorted.First(), sorted.Last() }
+                            : new List<string> { sorted.First(), sorted.First() };
+                    },
+                    StringComparer.Ordinal
+                )
+                .OrderBy(x => x.Key, StringComparer.Ordinal)
+                .ToDictionary(x => x.Key, x => x.Value);
 
-                    var rows = targetList.Values.Sum(list => list.Count);
-                    var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, 3);
-                    var maxRow = targetValue.GetLength(0);
-                    var maxCol = targetValue.GetLength(1);
-                    ws.Range[ws.Cells[2, 3], ws.Cells[2 + maxRow - 1, 3 + maxCol - 1]].Value2 =
-                        targetValue;
+            var rows = targetList.Values.Sum(list => list.Count);
+            var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, 3);
+            var maxRow = targetValue.GetLength(0);
+            var maxCol = targetValue.GetLength(1);
+            ws.Range[ws.Cells[2, 3], ws.Cells[2 + maxRow - 1, 3 + maxCol - 1]].Value2 = targetValue;
             App.StatusBar = false;
         });
     }
@@ -1644,17 +1642,19 @@ public partial class NumDesAddIn
             .ToArray();
 
         App.StatusBar = $"正在扫描 {files.Length} 个文件...";
-        var targetList = await Task.Run(() => PubMetToExcelFunc.SearchModelKeyMiniExcel(seachValue, files, false, false));
+        var targetList = await Task.Run(() =>
+            PubMetToExcelFunc.SearchModelKeyMiniExcel(seachValue, files, false, false)
+        );
         ExcelAsyncUtil.QueueAsMacro(() =>
         {
             if (App.ActiveWorkbook?.FullName != workbookFullName)
                 return;
             var rows = targetList.Values.Sum(list => list.Count);
-                    var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, 3);
-                    var maxRow = targetValue.GetLength(0);
-                    var maxCol = targetValue.GetLength(1);
-                    ws.Range[ws.Cells[3, 17], ws.Cells[3 + maxRow - 1, 17 + maxCol - 1]].Value2 =
-                        targetValue;
+            var targetValue = PubMetToExcel.DictionaryTo2DArrayKey(targetList, rows, 3);
+            var maxRow = targetValue.GetLength(0);
+            var maxCol = targetValue.GetLength(1);
+            ws.Range[ws.Cells[3, 17], ws.Cells[3 + maxRow - 1, 17 + maxCol - 1]].Value2 =
+                targetValue;
             App.StatusBar = false;
         });
     }
@@ -1973,14 +1973,21 @@ public partial class NumDesAddIn
         GC.Collect();
     }
 
-    public void CheckColFromExcelMulti_Click(IRibbonControl control)
+    public async void CheckColFromExcelMulti_Click(IRibbonControl control)
     {
         var wk = App.ActiveWorkbook;
         var path = wk.FullName;
-        var targetList = PubMetToExcelFunc.CheckColFromExcelMulti(path);
+        App.StatusBar = "正在扫描并清理冗余列...";
+        var targetList = await Task.Run(() => PubMetToExcelFunc.CheckColFromExcelMulti(path));
+        ExcelAsyncUtil.QueueAsMacro(() => ShowRedundantColumnResults(targetList));
+    }
+
+    private void ShowRedundantColumnResults(List<(string, string, int, int)> targetList)
+    {
         if (targetList.Count == 0)
         {
             MessageBox.Show(@"表格格式正确，没有处理任何表格");
+            App.StatusBar = "删除冗余列完成：没有需要处理的表格";
         }
         else
         {
@@ -2000,6 +2007,7 @@ public partial class NumDesAddIn
                     new SheetSeachResult(tupleList),
                     MsoCTPDockPosition.msoCTPDockPositionRight
                 );
+            App.StatusBar = $"删除冗余列完成：处理 {targetList.Count} 项";
         }
     }
 
@@ -2749,16 +2757,16 @@ public partial class NumDesAddIn
                         if (!string.IsNullOrEmpty(createdWin) && activeWin != createdWin)
                             return;
                         var _cp2 = chatPane;
-                    StartConfirmCtpClosed(
-                        _cp2,
-                        "[CTP][X] Chat(ShowAi) X-close confirmed",
-                        () =>
-                        {
-                            ShowAiText = "AI对话：关闭";
-                            CustomRibbon?.InvalidateControl("ShowAI");
-                            GlobalValue.SaveValue("ShowAIText", ShowAiText);
-                        }
-                    );
+                        StartConfirmCtpClosed(
+                            _cp2,
+                            "[CTP][X] Chat(ShowAi) X-close confirmed",
+                            () =>
+                            {
+                                ShowAiText = "AI对话：关闭";
+                                CustomRibbon?.InvalidateControl("ShowAI");
+                                GlobalValue.SaveValue("ShowAIText", ShowAiText);
+                            }
+                        );
                     };
                 }
             }
