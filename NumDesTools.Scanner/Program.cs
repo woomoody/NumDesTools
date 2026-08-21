@@ -29,6 +29,9 @@ internal class Program
         if (args.Contains("--conflict-manager-tui"))
             return ConflictManagerTui.Run(args);
 
+        if (args.Contains("--conflict-semantic-noop"))
+            return ConflictSemanticNoOp.Run(args);
+
         if (args.Contains("--conflict"))
             return ConflictTui.Run(args);
 
