@@ -10,6 +10,60 @@ namespace NumDesTools.ConflictResolver;
 /// </summary>
 public static class ConflictApplier
 {
+    /// <summary>
+    /// Resolves an xlsx conflict when SOURCE's table semantics are already in TARGET.
+    /// The TARGET index blob is copied byte-for-byte; EPPlus is never used to save it.
+    /// </summary>
+    public static bool TryResolveSemanticNoOp(string repoRoot, string relativePath)
+    {
+        if (!relativePath.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var normalizedPath = relativePath.Replace('\\', '/');
+        using var repo = new Repository(repoRoot);
+        var conflict = repo.Index.Conflicts[normalizedPath];
+        if (conflict?.Ancestor is null || conflict.Ours is null || conflict.Theirs is null)
+            return false;
+
+        var tempDirectory = Path.Combine(
+            Path.GetTempPath(),
+            "NumDesSemanticNoOp",
+            Guid.NewGuid().ToString("N")
+        );
+        Directory.CreateDirectory(tempDirectory);
+        var basePath = Path.Combine(tempDirectory, "base.xlsx");
+        var sourcePath = Path.Combine(tempDirectory, "source.xlsx");
+        var targetPath = Path.Combine(tempDirectory, "target.xlsx");
+        var workingPath = Path.Combine(
+            repoRoot,
+            relativePath.Replace('/', Path.DirectorySeparatorChar)
+        );
+
+        try
+        {
+            WriteBlob(repo, conflict.Ancestor, basePath);
+            WriteBlob(repo, conflict.Theirs, sourcePath);
+            WriteBlob(repo, conflict.Ours, targetPath);
+
+            if (!ExcelConflictDiffer.IsSemanticNoOp(basePath, sourcePath, targetPath))
+                return false;
+
+            WriteBlob(repo, conflict.Ours, workingPath);
+            repo.Index.Add(normalizedPath);
+            repo.Index.Write();
+            AppendMergeMsg(repoRoot, Path.GetFileName(relativePath));
+            return true;
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempDirectory, recursive: true);
+            }
+            catch { }
+        }
+    }
+
     public static void Apply(FileDiff diff, string outPath, bool gitAdd = true)
     {
         // 以 OURS 文件为基础复制到目标路径（若路径不同）
@@ -299,11 +353,15 @@ public static class ConflictApplier
         for (int row = 5; row <= sheet.Dimension.End.Row; row++)
         {
             var key = sheet.Cells[row, keyCol].Value?.ToString();
-            if (string.IsNullOrEmpty(key)) continue;
-            if (!map.TryAdd(key, row)) duplicates.Add(key);
+            if (string.IsNullOrEmpty(key))
+                continue;
+            if (!map.TryAdd(key, row))
+                duplicates.Add(key);
         }
         if (duplicates.Count > 0)
-            throw new InvalidOperationException($"冲突文件存在重复 key，禁止自动写回：{string.Join(", ", duplicates.Take(20))}");
+            throw new InvalidOperationException(
+                $"冲突文件存在重复 key，禁止自动写回：{string.Join(", ", duplicates.Take(20))}"
+            );
         return map;
     }
 
@@ -319,6 +377,16 @@ public static class ConflictApplier
         repo.Index.Add(relativePath);
         repo.Index.Write();
         AppendMergeMsg(repoRoot, Path.GetFileName(filePath));
+    }
+
+    private static void WriteBlob(Repository repo, IndexEntry entry, string outputPath)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        var blob =
+            repo.Lookup<Blob>(entry.Id) ?? throw new InvalidOperationException("找不到冲突 blob");
+        using var source = blob.GetContentStream();
+        using var target = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+        source.CopyTo(target);
     }
 
     // 把解决的文件名写入当前 git 操作对应的消息文件，确保所有冲突解决场景都有日志

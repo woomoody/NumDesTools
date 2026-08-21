@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MiniExcelLibs;
@@ -15,6 +16,32 @@ namespace NumDesTools.ConflictResolver;
 /// </summary>
 public static class ExcelConflictDiffer
 {
+    /// <summary>
+    /// 判断 SOURCE 相对 BASE 的语义变化是否已经完整存在于 TARGET。
+    /// 只比较配置表语义，不比较 OOXML 包的序列化、样式或压缩差异。
+    /// </summary>
+    public static bool IsSemanticNoOp(string basePath, string sourcePath, string targetPath)
+    {
+        var baseAtoms = ReadSemanticAtoms(basePath);
+        var sourceAtoms = ReadSemanticAtoms(sourcePath);
+        var targetAtoms = ReadSemanticAtoms(targetPath);
+
+        foreach (var key in baseAtoms.Keys.Union(sourceAtoms.Keys).Distinct(StringComparer.Ordinal))
+        {
+            baseAtoms.TryGetValue(key, out var baseValue);
+            sourceAtoms.TryGetValue(key, out var sourceValue);
+            targetAtoms.TryGetValue(key, out var targetValue);
+
+            if (
+                !string.Equals(baseValue, sourceValue, StringComparison.Ordinal)
+                && !string.Equals(sourceValue, targetValue, StringComparison.Ordinal)
+            )
+                return false;
+        }
+
+        return true;
+    }
+
     /// <param name="basePath">merge-base 版本的 xlsx 路径，有值时对 Modified 行做三方预选</param>
     public static FileDiff Diff(string oursPath, string theirsPath, string? basePath = null)
     {
@@ -202,6 +229,69 @@ public static class ExcelConflictDiffer
         return bundle;
     }
 
+    private static Dictionary<string, string> ReadSemanticAtoms(string path)
+    {
+        using var package = new ExcelPackage(new FileInfo(path));
+        var sheetNames = package.Workbook.Worksheets.Select(sheet => sheet.Name).ToList();
+        var bundle = ReadAllSheets(path, sheetNames, readMeta: true);
+        var atoms = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var sheetName in sheetNames)
+        {
+            var sheet = bundle.Sheets[sheetName];
+            AddAtom(atoms, "sheet", sheetName, "present");
+            AddAtom(atoms, "columns", sheetName, JsonSerializer.Serialize(sheet.Columns ?? []));
+
+            foreach (var column in sheet.Columns ?? [])
+            {
+                AddAtom(
+                    atoms,
+                    "type",
+                    sheetName,
+                    column,
+                    sheet.TypeRow?.GetValueOrDefault(column, string.Empty) ?? string.Empty
+                );
+                AddAtom(
+                    atoms,
+                    "label",
+                    sheetName,
+                    column,
+                    sheet.LabelRow?.GetValueOrDefault(column, string.Empty) ?? string.Empty
+                );
+            }
+
+            var keyIndex = sheet.Columns?.Count > 1 ? 1 : -1;
+            for (var rowIndex = 0; rowIndex < (sheet.Rows?.Count ?? 0); rowIndex++)
+            {
+                var row = sheet.Rows![rowIndex];
+                var rowKey =
+                    keyIndex >= 0 && keyIndex < row.Length && !string.IsNullOrEmpty(row[keyIndex])
+                        ? row[keyIndex]
+                        : $"#row:{rowIndex}";
+                AddAtom(atoms, "row", sheetName, rowKey, "present");
+                for (var columnIndex = 0; columnIndex < (sheet.Columns?.Count ?? 0); columnIndex++)
+                {
+                    AddAtom(
+                        atoms,
+                        "cell",
+                        sheetName,
+                        rowKey,
+                        sheet.Columns![columnIndex],
+                        columnIndex < row.Length ? row[columnIndex] : string.Empty
+                    );
+                }
+            }
+        }
+
+        return atoms;
+    }
+
+    private static void AddAtom(Dictionary<string, string> atoms, params string[] parts)
+    {
+        var key = JsonSerializer.Serialize(parts[..^1]);
+        atoms[key] = parts[^1];
+    }
+
     // ── Diff ──────────────────────────────────────────────────────────────────
 
     private static SheetDiff DiffSheets(
@@ -246,7 +336,11 @@ public static class ExcelConflictDiffer
         }
 
         var rows = new List<RowConflict>(oursDict.Count + theirsDict.Count / 4);
-        var duplicateKeys = oursDuplicates.Concat(theirsDuplicates).Distinct(StringComparer.Ordinal).OrderBy(x => x).ToList();
+        var duplicateKeys = oursDuplicates
+            .Concat(theirsDuplicates)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(x => x)
+            .ToList();
 
         foreach (var (key, oursRowIdx) in oursDict)
         {
@@ -461,8 +555,10 @@ public static class ExcelConflictDiffer
         for (int i = 0; i < rows.Count; i++)
         {
             var key = keyColIdx < rows[i].Length ? rows[i][keyColIdx] : string.Empty;
-            if (string.IsNullOrEmpty(key)) continue;
-            if (!dict.TryAdd(key, i)) duplicateSet.Add(key);
+            if (string.IsNullOrEmpty(key))
+                continue;
+            if (!dict.TryAdd(key, i))
+                duplicateSet.Add(key);
         }
         duplicates = duplicateSet.ToList();
         return dict;
